@@ -1,4 +1,4 @@
-package txhelper
+package ethtxhelper
 
 import (
 	"context"
