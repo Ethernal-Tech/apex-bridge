@@ -6,12 +6,12 @@ require (
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240304122249-96df03a6203e
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/hashicorp/go-hclog v1.6.2
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/blinklabs-io/gouroboros v0.71.0 // indirect
-	github.com/boltdb/bolt v1.3.1 // indirect
+	github.com/boltdb/bolt v1.3.1
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
@@ -29,7 +29,7 @@ require (
 	github.com/ethereum/c-kzg-4844 v0.4.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/uuid v1.3.0 // indirect

@@ -66,8 +66,8 @@ func main() {
 			return err
 		}
 
-		for _, b := range confirmedTxs {
-			logger.Info("Tx has been processed", "tx", b)
+		for _, tx := range confirmedTxs {
+			logger.Info("Tx has been processed", "tx", tx)
 		}
 
 		return dbs.MarkConfirmedTxsProcessed(confirmedTxs)
