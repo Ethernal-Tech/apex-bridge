@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -70,13 +71,44 @@ func (r *Relayer) Execute(ctx context.Context) {
 }
 
 func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
-	metadata, err := CreateMetaData(smartContractData.Dummy)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(r.config.Cardano.BlockfrostUrl, r.config.Cardano.BlockfrostAPIKey)
 	if err != nil {
 		return err
 	}
 
-	txRaw, err := CreateTx(r.config, metadata,
-		smartContractData.KeyHashesMultiSig, smartContractData.KeyHashesMultiSigFee)
+	defer txProvider.Dispose()
+
+	// TODO: some things here are hardcoded and contains dummy values
+	outputs := dummyOutputs
+
+	txInfos, err := cardanotx.NewTxInputInfos(
+		smartContractData.KeyHashesMultiSig, smartContractData.KeyHashesMultiSigFee, r.config.Cardano.TestNetMagic)
+	if err != nil {
+		return err
+	}
+
+	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), r.config.Cardano.PotentialFee)
+	if err != nil {
+		return err
+	}
+
+	metadata, err := cardanotx.CreateMetaData(smartContractData.Dummy)
+	if err != nil {
+		return err
+	}
+
+	protocolParams, err := txProvider.GetProtocolParameters()
+	if err != nil {
+		return err
+	}
+
+	slotNumber, err := txProvider.GetSlot()
+	if err != nil {
+		return err
+	}
+
+	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+TTLSlotNumberInc,
+		metadata, txInfos, outputs)
 	if err != nil {
 		return err
 	}
@@ -85,17 +117,10 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 	copy(witnesses, smartContractData.WitnessesMultiSig)
 	copy(witnesses[len(smartContractData.WitnessesMultiSig):], smartContractData.WitnessesMultiSigFee)
 
-	txSigned, txHash, err := AssemblyFinalTx(txRaw, witnesses)
+	txSigned, txHash, err := cardanotx.AssemblyFinalTx(txRaw, witnesses)
 	if err != nil {
 		return err
 	}
-
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(r.config.Cardano.BlockfrostUrl, r.config.Cardano.BlockfrostAPIKey)
-	if err != nil {
-		return err
-	}
-
-	defer txProvider.Dispose()
 
 	if err := txProvider.SubmitTx(txSigned); err != nil {
 		return err

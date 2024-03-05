@@ -4,11 +4,15 @@ import (
 	"context"
 	"math/big"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )
+
+const TTLSlotNumberInc = 200
 
 // TODO: real sc data
 type SmartContractData struct {
@@ -35,7 +39,14 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	metadata, err := CreateMetaData(v)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(r.config.Cardano.BlockfrostUrl, r.config.Cardano.BlockfrostAPIKey)
+	if err != nil {
+		return nil, err
+	}
+
+	defer txProvider.Dispose()
+
+	metadata, err := cardanotx.CreateMetaData(v)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +54,30 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 	// TODO: should retrieved from sc
 	keyHashesMultiSig := dummyKeyHashes[:len(dummyKeyHashes)/2]
 	keyHashesMultiSigFee := dummyKeyHashes[len(dummyKeyHashes)/2:]
+	outputs := dummyOutputs
 
-	txRaw, err := CreateTx(r.config, metadata, keyHashesMultiSig, keyHashesMultiSigFee)
+	txInfos, err := cardanotx.NewTxInputInfos(keyHashesMultiSig, keyHashesMultiSigFee, r.config.Cardano.TestNetMagic)
+	if err != nil {
+		return nil, err
+	}
+
+	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), r.config.Cardano.PotentialFee)
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParams, err := txProvider.GetProtocolParameters()
+	if err != nil {
+		return nil, err
+	}
+
+	slotNumber, err := txProvider.GetSlot()
+	if err != nil {
+		return nil, err
+	}
+
+	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+TTLSlotNumberInc,
+		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, err
 	}
@@ -52,15 +85,15 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 	witnessesMultiSig := make([][]byte, len(dummySigningKeys)/2)
 	witnessesMultiSigFee := make([][]byte, len(dummySigningKeys)/2)
 	for i := range witnessesMultiSig {
-		sigKey := NewSigningKey(dummySigningKeys[i])
-		sigKeyFee := NewSigningKey(dummySigningKeys[i+len(dummySigningKeys)/2])
+		sigKey := cardanotx.NewSigningKey(dummySigningKeys[i])
+		sigKeyFee := cardanotx.NewSigningKey(dummySigningKeys[i+len(dummySigningKeys)/2])
 
-		witnessesMultiSig[i], err = AddTxWitness(sigKey, txRaw)
+		witnessesMultiSig[i], err = cardanotx.AddTxWitness(sigKey, txRaw)
 		if err != nil {
 			return nil, err
 		}
 
-		witnessesMultiSigFee[i], err = AddTxWitness(sigKeyFee, txRaw)
+		witnessesMultiSigFee[i], err = cardanotx.AddTxWitness(sigKeyFee, txRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -91,5 +124,11 @@ var (
 		"5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6",
 		"58202bf1bed17d19f44f53ac64fa4621c879f8295af52080cffb2a8d9d10117ae772",
 		"58202cdf4d3b56f3d9ea7b7c9424d841273e2adb1bd11a98a4370ad22f3bac9104e2",
+	}
+	dummyOutputs = []cardanowallet.TxOutput{
+		{
+			Addr:   "addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u",
+			Amount: cardanowallet.MinUTxODefaultValue,
+		},
 	}
 )
