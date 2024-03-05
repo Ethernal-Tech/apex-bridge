@@ -3,7 +3,7 @@ module github.com/Ethernal-Tech/apex-bridge
 go 1.20
 
 require (
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240304122249-96df03a6203e
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240305082803-8868d9c05658
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/hashicorp/go-hclog v1.6.2
 	gopkg.in/yaml.v3 v3.0.1

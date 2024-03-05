@@ -1,6 +1,6 @@
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240304122249-96df03a6203e h1:h6NrDER2WJi795b2/WwsMnQnoFUCP4C1sRFcQPlKMq8=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240304122249-96df03a6203e/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240305082803-8868d9c05658 h1:ReKj138jvNnt5zzsOwGukry/v2c5RhQivM0y0yS+CGk=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240305082803-8868d9c05658/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=
