@@ -66,13 +66,13 @@ func (bd *BoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, err
 		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
 
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			var block *core.CardanoTx
+			var cardanoTx *core.CardanoTx
 
-			if err := json.Unmarshal(v, &block); err != nil {
+			if err := json.Unmarshal(v, &cardanoTx); err != nil {
 				return err
 			}
 
-			result = append(result, block)
+			result = append(result, cardanoTx)
 			if threshold > 0 && len(result) == threshold {
 				break
 			}

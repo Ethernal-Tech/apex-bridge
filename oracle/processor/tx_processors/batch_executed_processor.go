@@ -35,7 +35,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := core.UnmarshalBridgingRequestMetadata(tx.Metadata)
+	metadata, err := core.UnmarshalBatchExecutedMetadata(tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
@@ -44,15 +44,32 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 		return fmt.Errorf("validation failed for tx: %v", tx)
 	}
 
-	// TODO: implement logic for creating a claim for tx
-	claim := core.BatchExecutedClaim{}
-
-	claims.BatchExecuted = append(claims.BatchExecuted, claim)
+	p.addBatchExecutedClaim(claims, tx, metadata)
 
 	return nil
 }
 
-func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
-	// TODO: implement validating the tx for this specific claim
+func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BatchExecutedMetadata) {
+	var utxos []core.Utxo
+	for _, utxo := range tx.Outputs {
+		utxos = append(utxos, core.Utxo{
+			Address: utxo.Address,
+			Amount:  utxo.Amount,
+		})
+	}
+
+	claim := core.BatchExecutedClaim{
+		TxHash:       tx.Hash,
+		BatchNonceId: metadata.BatchNonceId,
+		OutputUtxos:  utxos,
+	}
+
+	claims.BatchExecuted = append(claims.BatchExecuted, claim)
+}
+
+func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+	// TODO: implement validating the tx for this specific claim if it is needed
+	// once we figure out the structure of metadata and how the batch is applied
+	// to destination chain
 	return nil
 }

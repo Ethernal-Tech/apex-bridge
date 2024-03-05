@@ -36,10 +36,10 @@ func UnmarshalBaseMetadata(data []byte) (*BaseMetadata, error) {
 }
 
 type BridgingRequestMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type"`
-	ChainId        string         `cbor:"chainId"`
-	SenderAddr     string         `cbor:"senderAddr"`
-	Transactions   []struct {
+	BridgingTxType     BridgingTxType `cbor:"type"`
+	DestinationChainId string         `cbor:"destinationChainId"`
+	SenderAddr         string         `cbor:"senderAddr"`
+	Transactions       []struct {
 		Address string `cbor:"address"`
 		Amount  uint64 `cbor:"amount"`
 	}
@@ -64,7 +64,7 @@ func UnmarshalBridgingRequestMetadata(data []byte) (*BridgingRequestMetadata, er
 
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"type"`
-	OriginChainId  string         `cbor:"chainId"`
+	BatchNonceId   string         `cbor:"batchNonceId"`
 }
 
 type BatchExecutedMetadataMap struct {
@@ -73,6 +73,27 @@ type BatchExecutedMetadataMap struct {
 
 func UnmarshalBatchExecutedMetadata(data []byte) (*BatchExecutedMetadata, error) {
 	var metadataMap BatchExecutedMetadataMap
+	err := cbor.Unmarshal(data, &metadataMap)
+
+	if err != nil {
+		var metadata interface{}
+		cbor.Unmarshal(data, &metadata)
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v", metadata)
+	} else {
+		return &metadataMap.Value, nil
+	}
+}
+
+type RefundExecutedMetadata struct {
+	BridgingTxType BridgingTxType `cbor:"type"`
+}
+
+type RefundExecutedMetadataMap struct {
+	Value RefundExecutedMetadata `cbor:"1,keyasint"`
+}
+
+func UnmarshalRefundExecutedMetadata(data []byte) (*RefundExecutedMetadata, error) {
+	var metadataMap RefundExecutedMetadataMap
 	err := cbor.Unmarshal(data, &metadataMap)
 
 	if err != nil {

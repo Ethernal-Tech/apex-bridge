@@ -15,26 +15,26 @@ const (
 	CheckUnprocessedTxsTickTimeMs = 1000
 )
 
-type CardanoBlockProcessorImpl struct {
+type CardanoTxsProcessorImpl struct {
 	appConfig       *core.AppConfig
-	db              core.CardanoBlockProcessorDb
+	db              core.CardanoTxsProcessorDb
 	txProcessors    []core.CardanoTxProcessor
 	claimsSubmitter core.ClaimsSubmitter
 	logger          hclog.Logger
 	closeCh         chan bool
 }
 
-var _ core.CardanoBlockProcessor = (*CardanoBlockProcessorImpl)(nil)
+var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
 
-func NewCardanoBlockProcessor(
+func NewCardanoTxsProcessor(
 	appConfig *core.AppConfig,
-	db core.CardanoBlockProcessorDb,
+	db core.CardanoTxsProcessorDb,
 	txProcessors []core.CardanoTxProcessor,
 	claimsSubmitter core.ClaimsSubmitter,
 	logger hclog.Logger,
-) *CardanoBlockProcessorImpl {
+) *CardanoTxsProcessorImpl {
 
-	return &CardanoBlockProcessorImpl{
+	return &CardanoTxsProcessorImpl{
 		appConfig:       appConfig,
 		db:              db,
 		txProcessors:    txProcessors,
@@ -44,7 +44,7 @@ func NewCardanoBlockProcessor(
 	}
 }
 
-func (bp *CardanoBlockProcessorImpl) NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error {
+func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error {
 	bp.logger.Debug("NewUnprocessedTxs", "txs", txs)
 
 	var relevantTxs []*core.CardanoTx
@@ -83,8 +83,8 @@ func (bp *CardanoBlockProcessorImpl) NewUnprocessedTxs(originChainId string, txs
 	return nil
 }
 
-func (bp *CardanoBlockProcessorImpl) Start() error {
-	bp.logger.Debug("Starting CardanoBlockProcessor")
+func (bp *CardanoTxsProcessorImpl) Start() error {
+	bp.logger.Debug("Starting CardanoTxsProcessor")
 	ticker := time.NewTicker(CheckUnprocessedTxsTickTimeMs * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -97,13 +97,13 @@ func (bp *CardanoBlockProcessorImpl) Start() error {
 	}
 }
 
-func (bp *CardanoBlockProcessorImpl) Stop() error {
+func (bp *CardanoTxsProcessorImpl) Stop() error {
 	bp.closeCh <- true
-	bp.logger.Debug("Stopping CardanoBlockProcessor")
+	bp.logger.Debug("Stopping CardanoTxsProcessor")
 	return nil
 }
 
-func (bp *CardanoBlockProcessorImpl) checkUnprocessedTxs() {
+func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 	bp.logger.Debug("Checking unprocessed txs")
 
 	unprocessedTxs, err := bp.db.GetUnprocessedTxs(bp.appConfig.Settings.MaxBridgingClaimsToGroup)

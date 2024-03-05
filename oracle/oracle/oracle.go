@@ -21,7 +21,7 @@ const (
 
 type OracleImpl struct {
 	appConfig             *core.AppConfig
-	cardanoBlockProcessor core.CardanoBlockProcessor
+	cardanoTxsProcessor   core.CardanoTxsProcessor
 	cardanoChainObservers []core.CardanoChainObserver
 	db                    core.Database
 	logger                hclog.Logger
@@ -60,11 +60,11 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	var txProcessors []core.CardanoTxProcessor
 	txProcessors = append(txProcessors, tx_processors.NewBatchExecutedProcessor())
 	txProcessors = append(txProcessors, tx_processors.NewBridgingRequestedProcessor())
-	txProcessors = append(txProcessors, tx_processors.NewRefundExecutedProcessor())
+	// txProcessors = append(txProcessors, tx_processors.NewRefundExecutedProcessor())
 
 	claimsSubmitter := bridge.NewClaimsSubmitter(logger.Named("claims_submitter"))
 
-	cardanoBlockProcessor := processor.NewCardanoBlockProcessor(appConfig, db, txProcessors, claimsSubmitter, logger.Named("cardano_block_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, claimsSubmitter, logger.Named("cardano_txs_processor"))
 
 	var cardanoChainObservers []core.CardanoChainObserver
 
@@ -72,13 +72,13 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		initialUtxosForChain := (*initialUtxos)[cardanoChainConfig.ChainId]
 		cardanoChainObservers = append(
 			cardanoChainObservers,
-			chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoBlockProcessor),
+			chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor),
 		)
 	}
 
 	return &OracleImpl{
 		appConfig:             appConfig,
-		cardanoBlockProcessor: cardanoBlockProcessor,
+		cardanoTxsProcessor:   cardanoTxsProcessor,
 		cardanoChainObservers: cardanoChainObservers,
 		db:                    db,
 		logger:                logger,
@@ -87,7 +87,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 }
 
 func (o *OracleImpl) Start() error {
-	go o.cardanoBlockProcessor.Start()
+	go o.cardanoTxsProcessor.Start()
 
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
@@ -110,7 +110,7 @@ func (o *OracleImpl) Stop() error {
 		}
 	}
 
-	o.cardanoBlockProcessor.Stop()
+	o.cardanoTxsProcessor.Stop()
 	o.db.Close()
 
 	close(o.errorCh)

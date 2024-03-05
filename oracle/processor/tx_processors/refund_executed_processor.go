@@ -35,7 +35,7 @@ func (p *RefundExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeCla
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := core.UnmarshalBridgingRequestMetadata(tx.Metadata)
+	metadata, err := core.UnmarshalRefundExecutedMetadata(tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
@@ -44,15 +44,22 @@ func (p *RefundExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeCla
 		return fmt.Errorf("validation failed for tx: %v", tx)
 	}
 
-	// TODO: implement logic for creating a claim for tx
-	claim := core.RefundExecutedClaim{}
-
-	claims.RefundExecuted = append(claims.RefundExecuted, claim)
+	p.addRefundExecutedClaim(claims, tx, metadata)
 
 	return nil
 }
 
-func (*RefundExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
-	// TODO: implement validating the tx for this specific claim
+func (*RefundExecutedProcessorImpl) addRefundExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.RefundExecutedMetadata) {
+	/*
+		// TODO: implement logic for creating a claim for tx
+		claim := core.RefundExecutedClaim{}
+
+		claims.RefundExecuted = append(claims.RefundExecuted, claim)
+	*/
+}
+
+func (*RefundExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.RefundExecutedMetadata, appConfig *core.AppConfig) error {
+	// TODO: implement validating the tx for this specific claim if it is needed
+	// once we figure out the structure of metadata and how the refund is applied
 	return nil
 }
