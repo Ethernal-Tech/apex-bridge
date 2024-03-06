@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,16 +8,16 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
-	"gopkg.in/yaml.v3"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 )
 
 func main() {
-	appConfig, err := loadConfig()
+	appConfig, err := utils.LoadJson[core.AppConfig]("config.json")
 	if err != nil {
 		os.Exit(1)
 	}
 
-	initialUtxos, err := loadInitialUtxos()
+	initialUtxos, err := utils.LoadJson[core.InitialUtxos]("initialUtxos.json")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -41,44 +40,4 @@ func main() {
 	case <-signalChannel:
 	case <-oracle.ErrorCh():
 	}
-}
-
-func loadInitialUtxos() (*core.InitialUtxos, error) {
-	f, err := os.Open("initialUtxos.json")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open initialUtxos.json. error: %v\n", err)
-		return nil, err
-	}
-
-	defer f.Close()
-
-	var initialUtxos core.InitialUtxos
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&initialUtxos)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode initialUtxos.json. error: %v\n", err)
-		return nil, err
-	}
-
-	return &initialUtxos, nil
-}
-
-func loadConfig() (*core.AppConfig, error) {
-	f, err := os.Open("config.yml")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open config.yml. error: %v\n", err)
-		return nil, err
-	}
-
-	defer f.Close()
-
-	var appConfig core.AppConfig
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&appConfig)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode config.yml. error: %v\n", err)
-		return nil, err
-	}
-
-	return &appConfig, nil
 }
