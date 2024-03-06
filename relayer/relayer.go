@@ -78,46 +78,11 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 
 	defer txProvider.Dispose()
 
-	// TODO: some things here are hardcoded and contains dummy values
-	outputs := dummyOutputs
+	witnesses := make([][]byte, len(smartContractData.multisigSignatures)+len(smartContractData.feePayerMultisigSignatures))
+	copy(witnesses, smartContractData.multisigSignatures)
+	copy(witnesses[len(smartContractData.multisigSignatures):], smartContractData.feePayerMultisigSignatures)
 
-	txInfos, err := cardanotx.NewTxInputInfos(
-		smartContractData.KeyHashesMultiSig, smartContractData.KeyHashesMultiSigFee, r.config.Cardano.TestNetMagic)
-	if err != nil {
-		return err
-	}
-
-	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), r.config.Cardano.PotentialFee)
-	if err != nil {
-		return err
-	}
-
-	metadata, err := cardanotx.CreateMetaData(smartContractData.Dummy)
-	if err != nil {
-		return err
-	}
-
-	protocolParams, err := txProvider.GetProtocolParameters()
-	if err != nil {
-		return err
-	}
-
-	slotNumber, err := txProvider.GetSlot()
-	if err != nil {
-		return err
-	}
-
-	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
-		metadata, txInfos, outputs)
-	if err != nil {
-		return err
-	}
-
-	witnesses := make([][]byte, len(smartContractData.KeyHashesMultiSig)+len(smartContractData.KeyHashesMultiSigFee))
-	copy(witnesses, smartContractData.WitnessesMultiSig)
-	copy(witnesses[len(smartContractData.WitnessesMultiSig):], smartContractData.WitnessesMultiSigFee)
-
-	txSigned, txHash, err := cardanotx.AssemblyFinalTx(txRaw, witnesses)
+	txSigned, txHash, err := cardanotx.AssemblyFinalTx(smartContractData.rawTransaction, witnesses)
 	if err != nil {
 		return err
 	}
