@@ -36,7 +36,7 @@ type IEthTxHelper interface {
 	PopulateTxOpts(ctx context.Context, from string, isDynamic bool, txOpts *bind.TransactOpts) error
 }
 
-type EThTxHelper struct {
+type EthTxHelperImpl struct {
 	client           *ethclient.Client
 	nodeUrl          string
 	writer           io.Writer
@@ -45,10 +45,10 @@ type EThTxHelper struct {
 	gasFeeMultiplier float64
 }
 
-var _ IEthTxHelper = (*EThTxHelper)(nil)
+var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
 
-func NewEThTxHelper(opts ...TxRelayerOption) (*EThTxHelper, error) {
-	t := &EThTxHelper{
+func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
+	t := &EthTxHelperImpl{
 		receiptWaitTime:  50 * time.Millisecond,
 		numRetries:       defaultNumRetries,
 		gasFeeMultiplier: defaultGasFeeMultiplier,
@@ -69,11 +69,11 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EThTxHelper, error) {
 	return t, nil
 }
 
-func (t EThTxHelper) GetClient() bind.ContractBackend {
+func (t EthTxHelperImpl) GetClient() bind.ContractBackend {
 	return t.client
 }
 
-func (t EThTxHelper) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
+func (t EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
 	if pending {
 		return t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
 	}
@@ -81,7 +81,7 @@ func (t EThTxHelper) GetNonce(ctx context.Context, addr string, pending bool) (u
 	return t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
 }
 
-func (t EThTxHelper) Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
+func (t EthTxHelperImpl) Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
 	abiData abi.ABI, bytecode []byte, wallet *EthTxWallet) (string, string, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
@@ -111,7 +111,7 @@ func (t EThTxHelper) Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64
 	return contractAddress.String(), tx.Hash().String(), nil
 }
 
-func (t EThTxHelper) WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error) {
+func (t EthTxHelperImpl) WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error) {
 	for count := 0; count < t.numRetries; count++ {
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
@@ -132,7 +132,7 @@ func (t EThTxHelper) WaitForReceipt(ctx context.Context, hash string, skipNotFou
 	return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", hash)
 }
 
-func (t EThTxHelper) SendTx(ctx context.Context, wallet *EthTxWallet, txOptsParam bind.TransactOpts,
+func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet *EthTxWallet, txOptsParam bind.TransactOpts,
 	isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
@@ -186,7 +186,7 @@ func (t EThTxHelper) SendTx(ctx context.Context, wallet *EthTxWallet, txOptsPara
 	return sendTxHandler(txOptsRes)
 }
 
-func (t EThTxHelper) PopulateTxOpts(ctx context.Context, from string, isDynamic bool, txOpts *bind.TransactOpts) error {
+func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from string, isDynamic bool, txOpts *bind.TransactOpts) error {
 	txOpts.Context = ctx
 	txOpts.From = common.HexToAddress(from)
 
@@ -232,28 +232,28 @@ func (t EThTxHelper) PopulateTxOpts(ctx context.Context, from string, isDynamic 
 	return nil
 }
 
-type TxRelayerOption func(*EThTxHelper)
+type TxRelayerOption func(*EthTxHelperImpl)
 
 func WithClient(client *ethclient.Client) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.client = client
 	}
 }
 
 func WithNodeUrl(nodeUrl string) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.nodeUrl = nodeUrl
 	}
 }
 
 func WithReceiptWaitTime(receiptWaitTime time.Duration) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.receiptWaitTime = receiptWaitTime
 	}
 }
 
 func WithWriter(writer io.Writer) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.writer = writer
 	}
 }
@@ -262,13 +262,13 @@ func WithWriter(writer io.Writer) TxRelayerOption {
 // before considering the transaction sending as timed out. Set to -1 to disable
 // waitForReceipt and not wait for the transaction receipt
 func WithNumRetries(numRetries int) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.numRetries = numRetries
 	}
 }
 
 func WithGasFeeMultiplier(gasFeeMultiplier float64) TxRelayerOption {
-	return func(t *EThTxHelper) {
+	return func(t *EthTxHelperImpl) {
 		t.gasFeeMultiplier = gasFeeMultiplier
 	}
 }

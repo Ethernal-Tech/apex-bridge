@@ -9,6 +9,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 )
 
+const TTLSlotNumberInc = 200
+
 func CreateTx(testNetMagic uint,
 	protocolParams []byte,
 	timeToLive uint64,
@@ -47,7 +49,7 @@ func CreateTx(testNetMagic uint,
 	return builder.Build()
 }
 
-func AddTxWitness(key SigningKey, txRaw []byte) ([]byte, error) {
+func AddTxWitness(key cardanowallet.ISigningKeyRetriver, txRaw []byte) ([]byte, error) {
 	builder, err := cardanowallet.NewTxBuilder()
 	if err != nil {
 		return nil, err

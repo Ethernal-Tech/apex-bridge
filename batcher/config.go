@@ -1,0 +1,26 @@
+package batcher
+
+import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
+
+type CardanoConfig struct {
+	TestNetMagic          uint    `json:"testnetMagic"`
+	BlockfrostUrl         string  `json:"blockfrostUrl"`
+	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
+	AtLeastValidators     float64 `json:"atLeastValidators"`
+	PotentialFee          uint64  `json:"potentialFee"`
+	SigningKeyMultiSig    string  `json:"signingKey"`    // hex+cbor representation of private key
+	SigningKeyMultiSigFee string  `json:"signingKeyFee"` // hex+cbor representation of private key
+}
+
+type BridgeConfig struct {
+	NodeUrl              string `json:"NodeUrl"`
+	SmartContractAddress string `json:"scAddress"`  // TOOD: probably will be more than just one
+	SigningKey           string `json:"signingKey"` // hex representation of private signing key
+}
+
+type BatcherConfiguration struct {
+	Bridge        BridgeConfig        `json:"bridge"`
+	Cardano       CardanoConfig       `json:"cardano"`
+	PullTimeMilis uint64              `json:"pullTime"`
+	Logger        logger.LoggerConfig `json:"logger"`
+}

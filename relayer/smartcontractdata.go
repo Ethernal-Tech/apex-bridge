@@ -12,8 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const TTLSlotNumberInc = 200
-
 // TODO: real sc data
 type SmartContractData struct {
 	Dummy                *big.Int
@@ -76,7 +74,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+TTLSlotNumberInc,
+	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, err

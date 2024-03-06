@@ -107,7 +107,7 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 		return err
 	}
 
-	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+TTLSlotNumberInc,
+	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return err
