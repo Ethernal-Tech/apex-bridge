@@ -108,8 +108,6 @@ func (o *OracleImpl) Start() error {
 func (o *OracleImpl) Stop() error {
 	o.logger.Debug("Stopping Oracle")
 
-	o.closeCh <- true
-
 	for _, co := range o.cardanoChainObservers {
 		err := co.Stop()
 		if err != nil {

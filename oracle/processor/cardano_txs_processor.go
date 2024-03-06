@@ -98,8 +98,8 @@ func (bp *CardanoTxsProcessorImpl) Start() error {
 }
 
 func (bp *CardanoTxsProcessorImpl) Stop() error {
-	bp.closeCh <- true
 	bp.logger.Debug("Stopping CardanoTxsProcessor")
+	close(bp.closeCh)
 	return nil
 }
 
