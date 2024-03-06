@@ -21,9 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBatchSubmission(t *testing.T) {
-
-	// TODO: read from file
+func TestRelayConfig(t *testing.T) {
 	config := &relayer.RelayerConfiguration{
 		Cardano: relayer.CardanoConfig{
 			TestNetMagic:      uint(2),
@@ -44,6 +42,20 @@ func TestBatchSubmission(t *testing.T) {
 			AppendFile:    true,
 		},
 	}
+
+	loadedConfig, err := relayer.LoadConfig()
+	assert.NoError(t, err)
+
+	assert.Equal(t, config.Cardano, loadedConfig.Cardano)
+	assert.Equal(t, config.Bridge, loadedConfig.Bridge)
+	assert.Equal(t, config.PullTimeMilis, loadedConfig.PullTimeMilis)
+	assert.Equal(t, config.Logger, loadedConfig.Logger)
+}
+
+func TestBatchSubmission(t *testing.T) {
+
+	config, err := relayer.LoadConfig()
+	assert.NoError(t, err)
 
 	signedBatchId := big.NewInt(1)
 

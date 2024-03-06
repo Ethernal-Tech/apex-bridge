@@ -2,6 +2,8 @@ package relayer
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -9,6 +11,7 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
+	"gopkg.in/yaml.v2"
 )
 
 type Relayer struct {
@@ -103,4 +106,20 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 	r.logger.Info("transaction has been included in block", "hash", txHash, "block", txData["block"])
 
 	return nil
+}
+
+func LoadConfig() (*RelayerConfiguration, error) {
+	f, err := os.Open("config.yml")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var appConfig RelayerConfiguration
+	decoder := yaml.NewDecoder(f)
+	if err := decoder.Decode(&appConfig); err != nil {
+		return nil, fmt.Errorf("error decoding YAML: %v", err)
+	}
+
+	return &appConfig, nil
 }
