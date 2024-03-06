@@ -22,12 +22,12 @@ const (
 type OracleImpl struct {
 	appConfig             *core.AppConfig
 	cardanoTxsProcessor   core.CardanoTxsProcessor
-	cardanoChainObservers []core.CardanoChainObserver
+	cardanoChainObservers map[string]core.CardanoChainObserver
 	db                    core.Database
 	logger                hclog.Logger
 
-	// TODO: implement critical error handling
 	errorCh chan error
+	closeCh chan bool
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -66,14 +66,11 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, claimsSubmitter, logger.Named("cardano_txs_processor"))
 
-	var cardanoChainObservers []core.CardanoChainObserver
+	var cardanoChainObservers map[string]core.CardanoChainObserver = make(map[string]core.CardanoChainObserver)
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		initialUtxosForChain := (*initialUtxos)[cardanoChainConfig.ChainId]
-		cardanoChainObservers = append(
-			cardanoChainObservers,
-			chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor),
-		)
+		cardanoChainObservers[cardanoChainConfig.ChainId] = chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor)
 	}
 
 	return &OracleImpl{
@@ -82,26 +79,37 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		cardanoChainObservers: cardanoChainObservers,
 		db:                    db,
 		logger:                logger,
-		errorCh:               make(chan error, 1),
+		closeCh:               make(chan bool, 1),
 	}
 }
 
 func (o *OracleImpl) Start() error {
+	o.logger.Debug("Starting Oracle")
+
 	go o.cardanoTxsProcessor.Start()
 
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
 		if err != nil {
-			// TODO: handle retry start
 			fmt.Fprintf(os.Stderr, "Failed to start cardano chain observer: %v. error: %v\n", co.GetConfig().ChainId, err)
 			o.logger.Error("Failed to start cardano chain observer", "err", err)
+			return err
 		}
 	}
+
+	o.errorCh = make(chan error, 1)
+	go o.errorHandler()
+
+	o.logger.Debug("Started Oracle")
 
 	return nil
 }
 
 func (o *OracleImpl) Stop() error {
+	o.logger.Debug("Stopping Oracle")
+
+	o.closeCh <- true
+
 	for _, co := range o.cardanoChainObservers {
 		err := co.Stop()
 		if err != nil {
@@ -114,10 +122,46 @@ func (o *OracleImpl) Stop() error {
 	o.db.Close()
 
 	close(o.errorCh)
+	close(o.closeCh)
+
+	o.logger.Debug("Stopped Oracle")
 
 	return nil
 }
 
 func (o *OracleImpl) ErrorCh() <-chan error {
 	return o.errorCh
+}
+
+type ErrorOrigin struct {
+	err    error
+	origin string
+}
+
+func (o *OracleImpl) errorHandler() {
+	agg := make(chan ErrorOrigin)
+	defer close(agg)
+
+	for _, co := range o.cardanoChainObservers {
+		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
+			select {
+			case err := <-errChan:
+				agg <- ErrorOrigin{
+					err:    err,
+					origin: origin,
+				}
+			case <-closeChan:
+			}
+			o.logger.Debug("Exiting error handler", "origin", origin)
+		}(co.ErrorCh(), o.closeCh, co.GetConfig().ChainId)
+	}
+
+	select {
+	case errorOrigin := <-agg:
+		fmt.Fprintf(os.Stderr, "%v cardano chain observer critical error: %v\n", errorOrigin.origin, errorOrigin.err)
+		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
+		o.errorCh <- errorOrigin.err
+	case <-o.closeCh:
+	}
+	o.logger.Debug("Exiting oracle error handler")
 }

@@ -14,6 +14,7 @@ type BoltDatabase struct {
 
 var (
 	unprocessedTxsBucket = []byte("UnprocessedTxs")
+	invalidTxsBucket     = []byte("InvalidTxs")
 )
 
 var _ core.Database = (*BoltDatabase)(nil)
@@ -27,7 +28,7 @@ func (bd *BoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, invalidTxsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
@@ -92,6 +93,23 @@ func (bd *BoltDatabase) MarkTxsAsProcessed(processedTxs []*core.CardanoTx) error
 		for _, processedTx := range processedTxs {
 			if err := tx.Bucket(unprocessedTxsBucket).Delete(processedTx.Key()); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %v", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (bd *BoltDatabase) AddInvalidTxs(invalidTxs []*core.CardanoTx) error {
+	return bd.db.Update(func(tx *bolt.Tx) error {
+		for _, invalidTx := range invalidTxs {
+			bytes, err := json.Marshal(invalidTx)
+			if err != nil {
+				return fmt.Errorf("could not marshal invalid tx: %v", err)
+			}
+
+			if err = tx.Bucket(invalidTxsBucket).Put(invalidTx.Key(), bytes); err != nil {
+				return fmt.Errorf("invalid tx write error: %v", err)
 			}
 		}
 
