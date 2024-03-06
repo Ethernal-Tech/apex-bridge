@@ -4,14 +4,14 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
-type CardanoBlockProcessorDb interface {
+type CardanoTxsProcessorDb interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(threshold int) ([]*CardanoTx, error)
 	MarkTxsAsProcessed(processedTxs []*CardanoTx) error
 }
 
 type Database interface {
-	CardanoBlockProcessorDb
+	CardanoTxsProcessorDb
 	Init(filePath string) error
 	Close() error
 }
@@ -29,7 +29,7 @@ type CardanoChainObserver interface {
 	ErrorCh() <-chan error
 }
 
-type CardanoBlockProcessor interface {
+type CardanoTxsProcessor interface {
 	NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error
 	Start() error
 	Stop() error

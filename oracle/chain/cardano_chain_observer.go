@@ -27,7 +27,7 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
 	settings core.AppSettings, config core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
-	blockProcessor core.CardanoBlockProcessor,
+	txsProcessor core.CardanoTxsProcessor,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(settings.LogLevel),
@@ -70,7 +70,7 @@ func NewCardanoChainObserver(
 		}
 
 		// Process confirmed Txs
-		err = blockProcessor.NewUnprocessedTxs(config.ChainId, txs)
+		err = txsProcessor.NewUnprocessedTxs(config.ChainId, txs)
 		if err != nil {
 			return err
 		}
