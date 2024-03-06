@@ -100,15 +100,15 @@ func (bd *BoltDatabase) MarkTxsAsProcessed(processedTxs []*core.CardanoTx) error
 	})
 }
 
-func (bd *BoltDatabase) AddInvalidTxs(invalidTxs []*core.CardanoTx) error {
+func (bd *BoltDatabase) AddInvalidTxHashes(invalidTxHashes []string) error {
 	return bd.db.Update(func(tx *bolt.Tx) error {
-		for _, invalidTx := range invalidTxs {
-			bytes, err := json.Marshal(invalidTx)
+		for _, invalidTxHash := range invalidTxHashes {
+			bytes, err := json.Marshal(invalidTxHash)
 			if err != nil {
 				return fmt.Errorf("could not marshal invalid tx: %v", err)
 			}
 
-			if err = tx.Bucket(invalidTxsBucket).Put(invalidTx.Key(), bytes); err != nil {
+			if err = tx.Bucket(invalidTxsBucket).Put([]byte(invalidTxHash), bytes); err != nil {
 				return fmt.Errorf("invalid tx write error: %v", err)
 			}
 		}

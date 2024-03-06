@@ -118,7 +118,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 	}
 
 	var processedTxs []*core.CardanoTx
-	var invalidTxs []*core.CardanoTx
+	var invalidTxHashes []string
 	bridgeClaims := &core.BridgeClaims{}
 
 	for _, unprocessedTx := range unprocessedTxs {
@@ -147,7 +147,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 
 		if !txProcessed {
 			// transfer an unprocessed tx to invalid txs bucket, to keep as history
-			invalidTxs = append(invalidTxs, unprocessedTx)
+			invalidTxHashes = append(invalidTxHashes, unprocessedTx.Hash)
 			// and mark it as processed to prevent it from being fetched again as unprocessed
 			processedTxs = append(processedTxs, unprocessedTx)
 		}
@@ -163,9 +163,9 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 		}
 	}
 
-	if len(invalidTxs) > 0 {
-		bp.logger.Debug("Saving invalid txs", "txs", invalidTxs)
-		err := bp.db.AddInvalidTxs(invalidTxs)
+	if len(invalidTxHashes) > 0 {
+		bp.logger.Debug("Saving invalid txs", "txs", invalidTxHashes)
+		err := bp.db.AddInvalidTxHashes(invalidTxHashes)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to save invalid txs. error: %v\n", err)
 			bp.logger.Error("Failed to save invalid txs", "err", err)
