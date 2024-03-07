@@ -3,6 +3,7 @@ package relayer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -57,7 +58,7 @@ func (r *Relayer) Execute(ctx context.Context) {
 		// in the case of error ethClient should be set to nil in order to redial again next time
 
 		// invoke smart contract(s)
-		smartContractData, err := r.getSmartContractData(ctx, ethTxHelper)
+		smartContractData, err := r.getSmartContractData(ctx, ethTxHelper, fmt.Sprint(r.config.Cardano.TestNetMagic))
 		if err != nil {
 			r.logger.Error("Failed to query bridge sc", "err", err)
 

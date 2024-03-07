@@ -3,6 +3,7 @@ package relayer
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -120,7 +121,7 @@ func TestBatchSubmissionContract(t *testing.T) {
 
 		r := NewRelayer(config, logger)
 
-		res, err := r.getSmartContractData(ctx, txHelper)
+		res, err := r.getSmartContractData(ctx, txHelper, fmt.Sprint(r.config.Cardano.TestNetMagic))
 		assert.NoError(t, err)
 
 		assert.Equal(t, expectedReturn.id, res.id)

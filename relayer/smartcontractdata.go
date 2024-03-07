@@ -18,7 +18,7 @@ type SmartContractData struct {
 }
 
 // TODO: update smart contract query with real parameter
-func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper) (*SmartContractData, error) {
+func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, destinationChain string) (*SmartContractData, error) {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(r.config.Bridge.SmartContractAddress),
 		ethTxHelper.GetClient())
@@ -28,7 +28,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 
 	v, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
-	}, "destinationChain")
+	}, destinationChain)
 	if err != nil {
 		return nil, err
 	}
