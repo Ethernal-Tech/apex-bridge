@@ -42,4 +42,5 @@ type CardanoTxProcessor interface {
 
 type ClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
+	Dispose() error
 }

@@ -25,6 +25,7 @@ type OracleImpl struct {
 	cardanoChainObservers []core.CardanoChainObserver
 	db                    core.Database
 	logger                hclog.Logger
+	claimsSubmitter       core.ClaimsSubmitter
 
 	// TODO: implement critical error handling
 	errorCh chan error
@@ -62,7 +63,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	txProcessors = append(txProcessors, tx_processors.NewBridgingRequestedProcessor())
 	// txProcessors = append(txProcessors, tx_processors.NewRefundExecutedProcessor())
 
-	claimsSubmitter := bridge.NewClaimsSubmitter(logger.Named("claims_submitter"))
+	claimsSubmitter := bridge.NewClaimsSubmitter(appConfig, logger.Named("claims_submitter"))
 
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, claimsSubmitter, logger.Named("cardano_txs_processor"))
 
@@ -80,6 +81,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		appConfig:             appConfig,
 		cardanoTxsProcessor:   cardanoTxsProcessor,
 		cardanoChainObservers: cardanoChainObservers,
+		claimsSubmitter:       claimsSubmitter,
 		db:                    db,
 		logger:                logger,
 		errorCh:               make(chan error, 1),
@@ -111,6 +113,7 @@ func (o *OracleImpl) Stop() error {
 	}
 
 	o.cardanoTxsProcessor.Stop()
+	o.claimsSubmitter.Dispose()
 	o.db.Close()
 
 	close(o.errorCh)
