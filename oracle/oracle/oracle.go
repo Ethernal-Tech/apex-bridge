@@ -1,8 +1,10 @@
 package oracle
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
@@ -17,6 +19,10 @@ import (
 
 const (
 	MainComponentName = "oracle"
+)
+
+var (
+	errBlockSyncerFatal = errors.New("block syncer fatal error")
 )
 
 type OracleImpl struct {
@@ -142,13 +148,21 @@ func (o *OracleImpl) errorHandler() {
 
 	for _, co := range o.cardanoChainObservers {
 		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
-			select {
-			case err := <-errChan:
-				agg <- ErrorOrigin{
-					err:    err,
-					origin: origin,
+		outsideloop:
+			for {
+				select {
+				case err := <-errChan:
+					o.logger.Error("chain observer error", "origin", origin, "err", err)
+					if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
+						agg <- ErrorOrigin{
+							err:    err,
+							origin: origin,
+						}
+						break outsideloop
+					}
+				case <-closeChan:
+					break outsideloop
 				}
-			case <-closeChan:
 			}
 			o.logger.Debug("Exiting error handler", "origin", origin)
 		}(co.ErrorCh(), o.closeCh, co.GetConfig().ChainId)
