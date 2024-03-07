@@ -31,7 +31,7 @@ func TestRelayConfig(t *testing.T) {
 		},
 		Bridge: BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0x55d7056e2230db95a0979569D87558Cf6c618969",
+			SmartContractAddress: "0xF146ba6fAF3741df932a5d4074f414A15a621797",
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
@@ -94,10 +94,11 @@ func TestBatchSubmissionContract(t *testing.T) {
 
 	t.Run("check get data directly from contract", func(t *testing.T) {
 		// Get value for comparison
+		// TODO: Update with real parameter
 		res, err := contract.GetConfirmedBatch(&bind.CallOpts{
 			Context: ctx,
 			From:    wallet.GetAddress(),
-		})
+		}, "destinationChain")
 		require.NoError(t, err)
 
 		assert.Equal(t, valueToSet.Id, res.Id)

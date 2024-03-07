@@ -29,7 +29,10 @@ contract TestContract {
         confirmedBatch = _newValue;
     }
 
-    function getConfirmedBatch() public view returns (ConfirmedBatch memory) {
-        return confirmedBatch;
+    function getConfirmedBatch(string calldata destinationChain) public view returns (ConfirmedBatch memory) {
+        if (keccak256(abi.encodePacked(destinationChain)) == keccak256(abi.encodePacked("prime")))
+            return confirmedBatch;
+        else 
+            return confirmedBatch;
     }
 }

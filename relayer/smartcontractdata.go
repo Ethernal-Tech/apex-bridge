@@ -17,7 +17,7 @@ type SmartContractData struct {
 	feePayerMultisigSignatures [][]byte
 }
 
-// TODO: update smart contract query
+// TODO: update smart contract query with real parameter
 func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper) (*SmartContractData, error) {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(r.config.Bridge.SmartContractAddress),
@@ -28,7 +28,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 
 	v, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
-	})
+	}, "destinationChain")
 	if err != nil {
 		return nil, err
 	}
