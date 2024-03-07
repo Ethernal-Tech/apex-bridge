@@ -2,7 +2,7 @@ package relayer
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -11,7 +11,6 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
-	"gopkg.in/yaml.v2"
 )
 
 type Relayer struct {
@@ -109,16 +108,17 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 }
 
 func LoadConfig() (*RelayerConfiguration, error) {
-	f, err := os.Open("config.yml")
+	f, err := os.Open("config.json")
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
 	var appConfig RelayerConfiguration
-	decoder := yaml.NewDecoder(f)
-	if err := decoder.Decode(&appConfig); err != nil {
-		return nil, fmt.Errorf("error decoding YAML: %v", err)
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&appConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	return &appConfig, nil
