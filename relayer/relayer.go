@@ -3,7 +3,6 @@ package relayer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -15,14 +14,16 @@ import (
 )
 
 type Relayer struct {
-	config *RelayerConfiguration
-	logger hclog.Logger
+	config     *RelayerConfiguration
+	logger     hclog.Logger
+	operations IChainOperations
 }
 
-func NewRelayer(config *RelayerConfiguration, logger hclog.Logger) *Relayer {
+func NewRelayer(config *RelayerConfiguration, logger hclog.Logger, operations IChainOperations) *Relayer {
 	return &Relayer{
-		config: config,
-		logger: logger,
+		config:     config,
+		logger:     logger,
+		operations: operations,
 	}
 }
 
@@ -52,13 +53,17 @@ func (r *Relayer) Execute(ctx context.Context) {
 			}
 		}
 
-		ethTxHelper, _ := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
+		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
 
-		// TODO: handle lost connection errors from ethClient ->
-		// in the case of error ethClient should be set to nil in order to redial again next time
+		if err != nil {
+			// In case of error, reset ethClient to nil to try again in the next iteration.
+			ethClient = nil
+			r.logger.Error("Failed to create EThTxHelper with given ethClient", "err", err)
+			continue
+		}
 
 		// invoke smart contract(s)
-		smartContractData, err := r.getSmartContractData(ctx, ethTxHelper, fmt.Sprint(r.config.Cardano.TestNetMagic))
+		smartContractData, err := r.operations.GetConfirmedBatch(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
 		if err != nil {
 			r.logger.Error("Failed to query bridge sc", "err", err)
 
@@ -73,7 +78,7 @@ func (r *Relayer) Execute(ctx context.Context) {
 	}
 }
 
-func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
+func (r *Relayer) SendTx(smartContractData *ConfirmedBatch) error {
 	txProvider, err := cardanowallet.NewTxProviderBlockFrost(r.config.Cardano.BlockfrostUrl, r.config.Cardano.BlockfrostAPIKey)
 	if err != nil {
 		return err

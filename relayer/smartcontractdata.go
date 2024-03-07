@@ -10,17 +10,59 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type SmartContractData struct {
+type ConfirmedBatch struct {
 	id                         string
 	rawTransaction             []byte
 	multisigSignatures         [][]byte
 	feePayerMultisigSignatures [][]byte
 }
 
-// TODO: update smart contract query with real parameter
-func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, destinationChain string) (*SmartContractData, error) {
+type IChainOperations interface {
+	GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error)
+}
+
+type PrimeChainOperations struct {
+	chainId string
+}
+
+func NewPrimeChainOperations(chainId string) *PrimeChainOperations {
+	return &PrimeChainOperations{
+		chainId: chainId,
+	}
+}
+
+func (c *PrimeChainOperations) GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error) {
+	return getSmartContractData(ctx, ethTxHelper, smartContractAddress, c.chainId)
+}
+
+type VectorChainOperations struct {
+	chainId string
+}
+
+func NewVectorChainOperations(chainId string) *VectorChainOperations {
+	return &VectorChainOperations{
+		chainId: chainId,
+	}
+}
+
+func (c *VectorChainOperations) GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error) {
+	return getSmartContractData(ctx, ethTxHelper, smartContractAddress, c.chainId)
+}
+
+func GetOperations(testnetMagic uint) IChainOperations {
+	switch testnetMagic {
+	case 1:
+		return NewPrimeChainOperations("prime")
+	case 2:
+		return NewVectorChainOperations("vector")
+	}
+
+	return nil
+}
+
+func getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string) (*ConfirmedBatch, error) {
 	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(r.config.Bridge.SmartContractAddress),
+		common.HexToAddress(smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, err // TODO: recoverable error?
@@ -58,7 +100,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	return &SmartContractData{
+	return &ConfirmedBatch{
 		id:                         v.Id,
 		rawTransaction:             rawTx,
 		multisigSignatures:         multisigSignatures,

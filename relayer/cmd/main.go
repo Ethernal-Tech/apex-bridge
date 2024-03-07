@@ -26,7 +26,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	relayer := relayer.NewRelayer(config, logger)
+	operations := relayer.GetOperations(config.Cardano.TestNetMagic)
+
+	relayer := relayer.NewRelayer(config, logger, operations)
 
 	go relayer.Execute(ctx)
 

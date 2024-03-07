@@ -3,7 +3,6 @@ package relayer
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -109,7 +108,7 @@ func TestBatchSubmissionContract(t *testing.T) {
 	})
 
 	t.Run("check data from relayer.getSmartContractData()", func(t *testing.T) {
-		expectedReturn := SmartContractData{
+		expectedReturn := ConfirmedBatch{
 			id:                         signedBatchId.String(),
 			rawTransaction:             txRaw,
 			multisigSignatures:         witnessesBytes[0:3],
@@ -119,9 +118,10 @@ func TestBatchSubmissionContract(t *testing.T) {
 		logger, err := logger.NewLogger(config.Logger)
 		assert.NoError(t, err)
 
-		r := NewRelayer(config, logger)
+		operations := GetOperations(config.Cardano.TestNetMagic)
+		r := NewRelayer(config, logger, operations)
 
-		res, err := r.getSmartContractData(ctx, txHelper, fmt.Sprint(r.config.Cardano.TestNetMagic))
+		res, err := r.operations.GetConfirmedBatch(ctx, txHelper, r.config.Bridge.SmartContractAddress)
 		assert.NoError(t, err)
 
 		assert.Equal(t, expectedReturn.id, res.id)
