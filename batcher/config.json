@@ -1,0 +1,34 @@
+{
+    "bridge": {
+        "NodeUrl": "https://polygon-mumbai-pokt.nodies.app",
+        "scAddress": "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
+        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23"
+    },
+    "cardanoChains": {
+        "prime": {
+            "testnetMagic": 2,
+            "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+            "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+            "atLeastValidators": 0.6666666666666666,
+            "potentialFee": 300000,
+            "signingKey": "58201217236ac24d8ac12684b308cf9468f68ef5283096896dc1c5c3caf8351e2847",
+            "signingKeyFee": "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6"
+        },
+        "vector": {
+            "testnetMagic": 2,
+            "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+            "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+            "atLeastValidators": 0.6666666666666666,
+            "potentialFee": 300000,
+            "signingKey": "58201217236ac24d8ac12684b308cf9468f68ef5283096896dc1c5c3caf8351e2847",
+            "signingKeyFee": "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6"
+        }
+    },
+    "pullTime": 1000,
+    "logger": {
+        "logFilePath": "./batcher_logs",
+        "logLevel": 2,
+        "jsonLogFormat": false,
+        "appendFile": true
+    }
+}

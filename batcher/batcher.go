@@ -2,7 +2,9 @@ package batcher
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
+	"os"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -59,23 +61,26 @@ func (b *Batcher) Execute(ctx context.Context) {
 		// TODO: handle lost connection errors from ethClient ->
 		// in the case of error ethClient should be set to nil in order to redial again next time
 
-		// invoke smart contract(s)
-		smartContractData, err := b.getSmartContractData(ctx, ethTxHelper)
-		if err != nil {
-			b.logger.Error("Failed to query bridge sc", "err", err)
+		for chain := range b.config.CardanoChains {
+			// TODO: Update smart contract calls depeding of configuration
+			// invoke smart contract(s)
+			smartContractData, err := b.getSmartContractData(ctx, ethTxHelper)
+			if err != nil {
+				b.logger.Error("Failed to query bridge sc", "err", err)
 
-			return // TODO: recoverable error handling?
-		}
+				return // TODO: recoverable error handling?
+			}
 
-		if err := b.sendTx(ctx, smartContractData, ethTxHelper); err != nil {
-			b.logger.Error("failed to send tx", "err", err)
+			if err := b.sendTx(ctx, smartContractData, ethTxHelper, chain); err != nil {
+				b.logger.Error("failed to send tx", "err", err)
+			}
 		}
 
 		timer.Reset(timerTime)
 	}
 }
 
-func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelper ethtxhelper.IEthTxHelper) error {
+func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelper ethtxhelper.IEthTxHelper, destinationChain string) error {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(b.config.Bridge.SmartContractAddress), ethTxHelper.GetClient())
 	if err != nil {
@@ -87,7 +92,7 @@ func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelpe
 		return err
 	}
 
-	witnessMultiSig, witnessMultiSigFee, err := b.createCardanoTxWitness(ctx, data)
+	witnessMultiSig, witnessMultiSigFee, err := b.createCardanoTxWitness(ctx, data, b.config.CardanoChains[destinationChain])
 	if err != nil {
 		return err
 	}
@@ -113,11 +118,11 @@ func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelpe
 	return nil
 }
 
-func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractData) ([]byte, []byte, error) {
-	sigKey := cardanotx.NewSigningKey(b.config.Cardano.SigningKeyMultiSig)
-	sigKeyFee := cardanotx.NewSigningKey(b.config.Cardano.SigningKeyMultiSigFee)
+func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractData, cardanoChain CardanoChainConfig) ([]byte, []byte, error) {
+	sigKey := cardanotx.NewSigningKey(cardanoChain.SigningKeyMultiSig)
+	sigKeyFee := cardanotx.NewSigningKey(cardanoChain.SigningKeyMultiSigFee)
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(b.config.Cardano.BlockfrostUrl, b.config.Cardano.BlockfrostAPIKey)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChain.BlockfrostUrl, cardanoChain.BlockfrostAPIKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,12 +139,12 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 	keyHashesMultiSigFee := data.KeyHashesMultiSigFee
 	outputs := dummyOutputs
 
-	txInfos, err := cardanotx.NewTxInputInfos(keyHashesMultiSig, keyHashesMultiSigFee, b.config.Cardano.TestNetMagic)
+	txInfos, err := cardanotx.NewTxInputInfos(keyHashesMultiSig, keyHashesMultiSigFee, cardanoChain.TestNetMagic)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), b.config.Cardano.PotentialFee)
+	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), cardanoChain.PotentialFee)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -154,7 +159,7 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 		return nil, nil, err
 	}
 
-	txRaw, err := cardanotx.CreateTx(b.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	txRaw, err := cardanotx.CreateTx(cardanoChain.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, nil, err
@@ -171,4 +176,21 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 	}
 
 	return witnessMultiSig, witnessMultiSigFee, err
+}
+
+func LoadConfig() (*BatcherConfiguration, error) {
+	f, err := os.Open("config.json")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var appConfig BatcherConfiguration
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&appConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &appConfig, nil
 }
