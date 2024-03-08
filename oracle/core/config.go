@@ -23,6 +23,12 @@ type CardanoChainConfig struct {
 	OtherAddressesOfInterest []string                   `json:"otherAddressesOfInterest"`
 }
 
+type BridgeConfig struct {
+	NodeUrl              string `json:"nodeUrl"`
+	SmartContractAddress string `json:"smartContractAddress"`
+	SigningKey           string `json:"signingKey"`
+}
+
 type AppSettings struct {
 	DbsPath                  string `json:"dbsPath"`
 	LogsPath                 string `json:"logsPath"`
@@ -37,6 +43,7 @@ type BridgingSettings struct {
 
 type AppConfig struct {
 	CardanoChains    map[string]CardanoChainConfig `json:"cardanoChains"`
+	Bridge           BridgeConfig                  `json:"bridge"`
 	Settings         AppSettings                   `json:"appSettings"`
 	BridgingSettings BridgingSettings              `json:"bridgingSettings"`
 }
