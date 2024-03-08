@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
 func main() {
@@ -20,15 +19,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger, err := logger.NewLogger(config.Logger)
+	batcherManager := batcher.NewBatcherManager(config, ctx)
+
+	err = batcherManager.Start()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to start bachers. error: %v\n", err)
 		os.Exit(1)
 	}
 
-	batcher := batcher.NewBatcher(config, logger)
-
-	go batcher.Execute(ctx)
+	//defer batcherManager.Stop()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

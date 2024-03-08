@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBatcherConfig(t *testing.T) {
-	expectedConfig := &BatcherConfiguration{
+func TestBatcherManagerConfig(t *testing.T) {
+	expectedConfig := &BatcherManagerConfiguration{
 		CardanoChains: map[string]CardanoChainConfig{
 			"prime": {
 				TestNetMagic:          uint(2),

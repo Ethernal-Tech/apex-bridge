@@ -6,6 +6,7 @@
     },
     "cardanoChains": {
         "prime": {
+            "chainId": "prime",
             "testnetMagic": 2,
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
@@ -15,6 +16,7 @@
             "signingKeyFee": "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6"
         },
         "vector": {
+            "chainId": "vector",
             "testnetMagic": 2,
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",

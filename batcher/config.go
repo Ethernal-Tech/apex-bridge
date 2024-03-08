@@ -3,6 +3,7 @@ package batcher
 import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 
 type CardanoChainConfig struct {
+	ChainId               string  `json:"chainId"`
 	TestNetMagic          uint    `json:"testnetMagic"`
 	BlockfrostUrl         string  `json:"blockfrostUrl"`
 	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
@@ -19,6 +20,13 @@ type BridgeConfig struct {
 }
 
 type BatcherConfiguration struct {
+	Bridge        BridgeConfig        `json:"bridge"`
+	CardanoChain  CardanoChainConfig  `json:"cardanoChains"`
+	PullTimeMilis uint64              `json:"pullTime"`
+	Logger        logger.LoggerConfig `json:"logger"`
+}
+
+type BatcherManagerConfiguration struct {
 	Bridge        BridgeConfig                  `json:"bridge"`
 	CardanoChains map[string]CardanoChainConfig `json:"cardanoChains"`
 	PullTimeMilis uint64                        `json:"pullTime"`
