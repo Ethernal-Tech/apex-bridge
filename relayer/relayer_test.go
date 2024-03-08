@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,7 +74,9 @@ func TestBatchSubmissionContract(t *testing.T) {
 	wallet, err := ethtxhelper.NewEthTxWallet(dummyMumbaiAccPk)
 	require.NoError(t, err)
 
-	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeUrl(config.Bridge.NodeUrl))
+	ethClient, err := ethclient.Dial(config.Bridge.NodeUrl)
+	require.NoError(t, err)
+	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -121,7 +124,7 @@ func TestBatchSubmissionContract(t *testing.T) {
 		operations := GetOperations(config.Cardano.TestNetMagic)
 		r := NewRelayer(config, logger, operations)
 
-		res, err := r.operations.GetConfirmedBatch(ctx, txHelper, r.config.Bridge.SmartContractAddress)
+		res, err := r.operations.GetConfirmedBatch(ctx, ethClient, r.config.Bridge.SmartContractAddress)
 		assert.NoError(t, err)
 
 		assert.Equal(t, expectedReturn.id, res.id)

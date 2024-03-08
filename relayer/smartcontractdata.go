@@ -8,6 +8,7 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type ConfirmedBatch struct {
@@ -18,7 +19,7 @@ type ConfirmedBatch struct {
 }
 
 type IChainOperations interface {
-	GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error)
+	GetConfirmedBatch(ctx context.Context, ethClient *ethclient.Client, smartContractAddress string) (*ConfirmedBatch, error)
 }
 
 type PrimeChainOperations struct {
@@ -31,8 +32,8 @@ func NewPrimeChainOperations(chainId string) *PrimeChainOperations {
 	}
 }
 
-func (c *PrimeChainOperations) GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error) {
-	return getSmartContractData(ctx, ethTxHelper, smartContractAddress, c.chainId)
+func (c *PrimeChainOperations) GetConfirmedBatch(ctx context.Context, ethClient *ethclient.Client, smartContractAddress string) (*ConfirmedBatch, error) {
+	return getSmartContractData(ctx, ethClient, smartContractAddress, c.chainId)
 }
 
 type VectorChainOperations struct {
@@ -45,8 +46,8 @@ func NewVectorChainOperations(chainId string) *VectorChainOperations {
 	}
 }
 
-func (c *VectorChainOperations) GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*ConfirmedBatch, error) {
-	return getSmartContractData(ctx, ethTxHelper, smartContractAddress, c.chainId)
+func (c *VectorChainOperations) GetConfirmedBatch(ctx context.Context, ethClient *ethclient.Client, smartContractAddress string) (*ConfirmedBatch, error) {
+	return getSmartContractData(ctx, ethClient, smartContractAddress, c.chainId)
 }
 
 func GetOperations(testnetMagic uint) IChainOperations {
@@ -60,12 +61,21 @@ func GetOperations(testnetMagic uint) IChainOperations {
 	return nil
 }
 
-func getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string) (*ConfirmedBatch, error) {
+func getSmartContractData(ctx context.Context, ethClient *ethclient.Client, smartContractAddress string, destinationChain string) (*ConfirmedBatch, error) {
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
+	if err != nil {
+		// In case of error, reset ethClient to nil to try again in the next iteration.
+		ethClient = nil
+		return nil, err
+	}
+
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, err // TODO: recoverable error?
+		// In case of error, reset ethClient to nil to try again in the next iteration.
+		ethClient = nil
+		return nil, err
 	}
 
 	v, err := contract.GetConfirmedBatch(&bind.CallOpts{

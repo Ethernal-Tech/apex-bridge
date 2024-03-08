@@ -7,7 +7,6 @@ import (
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
@@ -53,21 +52,12 @@ func (r *Relayer) Execute(ctx context.Context) {
 			}
 		}
 
-		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
-
-		if err != nil {
-			// In case of error, reset ethClient to nil to try again in the next iteration.
-			ethClient = nil
-			r.logger.Error("Failed to create EThTxHelper with given ethClient", "err", err)
-			continue
-		}
-
 		// invoke smart contract(s)
-		smartContractData, err := r.operations.GetConfirmedBatch(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
+		smartContractData, err := r.operations.GetConfirmedBatch(ctx, ethClient, r.config.Bridge.SmartContractAddress)
 		if err != nil {
 			r.logger.Error("Failed to query bridge sc", "err", err)
 
-			return // TODO: recoverable error handling?
+			continue
 		}
 
 		if err := r.SendTx(smartContractData); err != nil {
