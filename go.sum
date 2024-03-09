@@ -1,6 +1,10 @@
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240305082803-8868d9c05658 h1:ReKj138jvNnt5zzsOwGukry/v2c5RhQivM0y0yS+CGk=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240305082803-8868d9c05658/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309083825-f706d0bca734 h1:aq52hun7xQWUa+VX++llqMEOpc1mtNfxLcHhevHcFsQ=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309083825-f706d0bca734/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309090746-4510ee1736c0 h1:ci+ibn9AKgVlA83t5sngL7VQeX6FBubPlZysy/sST3c=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309090746-4510ee1736c0/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309091047-d80e5ae5f0af h1:cF6dewdTWabon9Bnjzax3Yjgt/WoTbiSOC7JJ1s2B/o=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240309091047-d80e5ae5f0af/go.mod h1:3gJw3wmCTF4el4qYybaqktIlVz8WA9sqQX1mRRBuJfY=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=
@@ -140,6 +144,7 @@ github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible/go
 github.com/status-im/keycard-go v0.2.0 h1:QDLFswOQu1r5jsycloeQh3bVU8n/NatHHaZobtDnDzA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=
+github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=

@@ -74,7 +74,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	_, txHash, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, err
@@ -86,12 +86,12 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		sigKey := cardanotx.NewSigningKey(dummySigningKeys[i])
 		sigKeyFee := cardanotx.NewSigningKey(dummySigningKeys[i+len(dummySigningKeys)/2])
 
-		witnessesMultiSig[i], err = cardanotx.AddTxWitness(sigKey, txRaw)
+		witnessesMultiSig[i], err = cardanotx.CreateTxWitness(txHash, sigKey)
 		if err != nil {
 			return nil, err
 		}
 
-		witnessesMultiSigFee[i], err = cardanotx.AddTxWitness(sigKeyFee, txRaw)
+		witnessesMultiSigFee[i], err = cardanotx.CreateTxWitness(txHash, sigKeyFee)
 		if err != nil {
 			return nil, err
 		}
