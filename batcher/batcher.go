@@ -157,7 +157,7 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 		return nil, nil, err
 	}
 
-	_, txHash, err := cardanotx.CreateTx(b.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	_, txHash, err := cardanotx.CreateTx(b.config.CardanoChain.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, nil, err
