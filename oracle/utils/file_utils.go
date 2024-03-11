@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 )
 
@@ -11,4 +13,24 @@ func CreateDirectoryIfNotExists(dirPath string) error {
 	}
 
 	return nil
+}
+
+func LoadJson[TReturn any](path string) (*TReturn, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open %v. error: %v\n", path, err)
+		return nil, err
+	}
+
+	defer f.Close()
+
+	var value TReturn
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&value)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to decode %v. error: %v\n", path, err)
+		return nil, err
+	}
+
+	return &value, nil
 }

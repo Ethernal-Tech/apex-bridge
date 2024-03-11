@@ -8,6 +8,7 @@ type CardanoTxsProcessorDb interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(threshold int) ([]*CardanoTx, error)
 	MarkTxsAsProcessed(processedTxs []*CardanoTx) error
+	AddInvalidTxHashes(invalidTxHashes []string) error
 }
 
 type Database interface {
@@ -42,4 +43,5 @@ type CardanoTxProcessor interface {
 
 type ClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
+	Dispose() error
 }

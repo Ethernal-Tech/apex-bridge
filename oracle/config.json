@@ -1,0 +1,55 @@
+{
+    "cardanoChains": {
+        "prime": {
+            "chainId": "prime",
+            "networkAddress": "localhost:13001",
+            "networkMagic": "142",
+            "startBlockHash": "",
+            "startSlot": "0",
+            "startBlockNumber": "0",
+            "confirmationBlockCount": 10,
+            "feeAddress": "",
+            "bridgingAddresses": {
+                "vector": {
+                    "chainId": "vector",
+                    "address": "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660",
+                    "feeAddress": ""
+                }
+            },
+            "otherAddressesOfInterest": []
+        },
+        "vector": {
+            "chainId": "vector",
+            "networkAddress": "localhost:23001",
+            "networkMagic": "242",
+            "startBlockHash": "",
+            "startSlot": "0",
+            "startBlockNumber": "0",
+            "confirmationBlockCount": 10,
+            "feeAddress": "",
+            "bridgingAddresses": {
+                "prime": {
+                    "chainId": "prime",
+                    "address": "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw",
+                    "feeAddress": ""
+                }
+            },
+            "otherAddressesOfInterest": []
+        }
+    },
+    "bridge": {
+        "nodeUrl": "https://polygon-mumbai-pokt.nodies.app",
+        "smartContractAddress": "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
+        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23"
+    },
+    "bridgingSettings": {
+        "minFeeForBridging": 10,
+        "utxoMinValue": 1000000
+    },
+    "appSettings": {
+        "dbsPath": "./db/",
+        "logsPath": "./logs/",
+        "maxBridgingClaimsToGroup": 10,
+        "logLevel": 2
+    }
+}

@@ -5,40 +5,47 @@ import (
 )
 
 type BridgingAddress struct {
-	ChainId    string `yaml:"chain_id"`
-	Address    string `yaml:"address"`
-	FeeAddress string `yaml:"fee_address"`
+	ChainId    string `json:"chainId"`
+	Address    string `json:"address"`
+	FeeAddress string `json:"feeAddress"`
 }
 
 type CardanoChainConfig struct {
-	ChainId                  string            `yaml:"chain_id"`
-	NetworkAddress           string            `yaml:"network_address"`
-	NetworkMagic             string            `yaml:"network_magic"`
-	StartBlockHash           string            `yaml:"start_block_hash"`
-	StartSlot                string            `yaml:"start_slot"`
-	StartBlockNumber         string            `yaml:"start_block_number"`
-	FeeAddress               string            `yaml:"fee_address"`
-	BridgingAddresses        []BridgingAddress `yaml:"bridging_addresses"`
-	OtherAddressesOfInterest []string          `yaml:"other_addresses_of_interest"`
-	ConfirmationBlockCount   uint              `yaml:"confirmation_block_count"`
+	ChainId                  string                     `json:"chainId"`
+	NetworkAddress           string                     `json:"networkAddress"`
+	NetworkMagic             string                     `json:"networkMagic"`
+	StartBlockHash           string                     `json:"startBlockHash"`
+	StartSlot                string                     `json:"startSlot"`
+	StartBlockNumber         string                     `json:"startBlockNumber"`
+	ConfirmationBlockCount   uint                       `json:"confirmationBlockCount"`
+	FeeAddress               string                     `json:"feeAddress"`
+	BridgingAddresses        map[string]BridgingAddress `json:"bridgingAddresses"`
+	OtherAddressesOfInterest []string                   `json:"otherAddressesOfInterest"`
+}
+
+type BridgeConfig struct {
+	NodeUrl              string `json:"nodeUrl"`
+	SmartContractAddress string `json:"smartContractAddress"`
+	SigningKey           string `json:"signingKey"`
 }
 
 type AppSettings struct {
-	DbsPath                  string `yaml:"dbs_path"`
-	LogsPath                 string `yaml:"logs_path"`
-	MaxBridgingClaimsToGroup int    `yaml:"max_bridging_claims_to_group"`
-	LogLevel                 int32  `yaml:"log_level"`
+	DbsPath                  string `json:"dbsPath"`
+	LogsPath                 string `json:"logsPath"`
+	MaxBridgingClaimsToGroup int    `json:"maxBridgingClaimsToGroup"`
+	LogLevel                 int32  `json:"logLevel"`
 }
 
 type BridgingSettings struct {
-	MinFeeForBridging uint64 `yaml:"min_fee_for_bridging"`
-	UtxoMinValue      uint64 `yaml:"utxo_min_value"`
+	MinFeeForBridging uint64 `json:"minFeeForBridging"`
+	UtxoMinValue      uint64 `json:"utxoMinValue"`
 }
 
 type AppConfig struct {
-	CardanoChains    []CardanoChainConfig `yaml:"cardano_chains"`
-	Settings         AppSettings          `yaml:"app_settings"`
-	BridgingSettings BridgingSettings     `yaml:"bridging_settings"`
+	CardanoChains    map[string]CardanoChainConfig `json:"cardanoChains"`
+	Bridge           BridgeConfig                  `json:"bridge"`
+	Settings         AppSettings                   `json:"appSettings"`
+	BridgingSettings BridgingSettings              `json:"bridgingSettings"`
 }
 
 type InitialUtxos map[string][]*indexer.TxInputOutput

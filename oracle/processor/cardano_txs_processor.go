@@ -98,8 +98,8 @@ func (bp *CardanoTxsProcessorImpl) Start() error {
 }
 
 func (bp *CardanoTxsProcessorImpl) Stop() error {
-	bp.closeCh <- true
 	bp.logger.Debug("Stopping CardanoTxsProcessor")
+	close(bp.closeCh)
 	return nil
 }
 
@@ -118,14 +118,16 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 	}
 
 	var processedTxs []*core.CardanoTx
+	var invalidTxHashes []string
 	bridgeClaims := &core.BridgeClaims{}
 
 	for _, unprocessedTx := range unprocessedTxs {
+		var txProcessed = false
 		for _, txProcessor := range bp.txProcessors {
 			relevant, err := txProcessor.IsTxRelevant(unprocessedTx, bp.appConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-				bp.logger.Error("Failed to check if tx is relevant", "err", err)
+				bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
 				continue
 			}
 
@@ -133,13 +135,21 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 				err := txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
-					bp.logger.Error("Failed to ValidateAndAddClaim", "err", err)
+					bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
 					continue
 				}
 
 				processedTxs = append(processedTxs, unprocessedTx)
+				txProcessed = true
 				break
 			}
+		}
+
+		if !txProcessed {
+			// transfer an unprocessed tx to invalid txs bucket, to keep as history
+			invalidTxHashes = append(invalidTxHashes, unprocessedTx.Hash)
+			// and mark it as processed to prevent it from being fetched again as unprocessed
+			processedTxs = append(processedTxs, unprocessedTx)
 		}
 	}
 
@@ -149,6 +159,16 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 			bp.logger.Error("Failed to submit claims", "err", err)
+			return
+		}
+	}
+
+	if len(invalidTxHashes) > 0 {
+		bp.logger.Debug("Saving invalid txs", "txs", invalidTxHashes)
+		err := bp.db.AddInvalidTxHashes(invalidTxHashes)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to save invalid txs. error: %v\n", err)
+			bp.logger.Error("Failed to save invalid txs", "err", err)
 			return
 		}
 	}
