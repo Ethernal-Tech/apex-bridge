@@ -80,7 +80,7 @@ func (r *Relayer) SendTx(smartContractData *ConfirmedBatch) error {
 	copy(witnesses, smartContractData.multisigSignatures)
 	copy(witnesses[len(smartContractData.multisigSignatures):], smartContractData.feePayerMultisigSignatures)
 
-	txSigned, txHash, err := cardanotx.AssemblyFinalTx(smartContractData.rawTransaction, witnesses)
+	txSigned, err := cardanotx.AssembleTxWitnesses(smartContractData.rawTransaction, witnesses)
 	if err != nil {
 		return err
 	}
@@ -88,17 +88,6 @@ func (r *Relayer) SendTx(smartContractData *ConfirmedBatch) error {
 	if err := txProvider.SubmitTx(txSigned); err != nil {
 		return err
 	}
-
-	r.logger.Info("transaction has been sent", "hash", txHash)
-
-	// TODO: relayer should not wait for confirmation of block including
-	// that is the job for oracle
-	txData, err := cardanowallet.WaitForTransaction(context.Background(), txProvider, txHash, 100, time.Second*2)
-	if err != nil {
-		return err
-	}
-
-	r.logger.Info("transaction has been included in block", "hash", txHash, "block", txData["block"])
 
 	return nil
 }

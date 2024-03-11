@@ -59,8 +59,8 @@ func TestBatchSubmissionContract(t *testing.T) {
 
 	signedBatchId := big.NewInt(1)
 
-	txRaw := createTxRawHelper(t, config, signedBatchId)
-	witnessesString, witnessesBytes := generateWitnesses(t, txRaw)
+	txRaw, txHash := createTxRawHelper(t, config, signedBatchId)
+	witnessesString, witnessesBytes := generateWitnesses(t, txHash)
 
 	valueToSet := contractbinding.TestContractConfirmedBatch{
 		Id:                         signedBatchId.String(),
@@ -134,7 +134,7 @@ func TestBatchSubmissionContract(t *testing.T) {
 	})
 }
 
-func createTxRawHelper(t *testing.T, config *RelayerConfiguration, signedBatchId *big.Int) (txRaw []byte) {
+func createTxRawHelper(t *testing.T, config *RelayerConfiguration, signedBatchId *big.Int) (txRaw []byte, txHash string) {
 	txInfos, err := cardanotx.NewTxInputInfos(
 		dummyKeyHashes[0:3], dummyKeyHashes[3:], config.Cardano.TestNetMagic)
 	assert.NoError(t, err)
@@ -154,18 +154,18 @@ func createTxRawHelper(t *testing.T, config *RelayerConfiguration, signedBatchId
 	slotNumber, err := txProvider.GetSlot()
 	assert.NoError(t, err)
 
-	txRaw, err = cardanotx.CreateTx(config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	txRaw, txHash, err = cardanotx.CreateTx(config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, dummyOutputs)
 	assert.NoError(t, err)
 
 	return
 }
 
-func generateWitnesses(t *testing.T, txRaw []byte) ([]string, [][]byte) {
+func generateWitnesses(t *testing.T, txHash string) ([]string, [][]byte) {
 	var witnessesString []string
 	var witnessesBytes [][]byte
 	for _, key := range dummySigningKeys {
-		witness, err := cardanotx.AddTxWitness(cardanotx.NewSigningKey(key), txRaw)
+		witness, err := cardanotx.CreateTxWitness(txHash, cardanotx.NewSigningKey(key))
 		assert.NoError(t, err)
 		witnessesBytes = append(witnessesBytes, witness)
 		witnessesString = append(witnessesString, hex.EncodeToString(witness))
