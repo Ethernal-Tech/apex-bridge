@@ -107,7 +107,7 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 		return err
 	}
 
-	txRaw, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	txRaw, txHash, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (r *Relayer) SendTx(smartContractData *SmartContractData) error {
 	copy(witnesses, smartContractData.WitnessesMultiSig)
 	copy(witnesses[len(smartContractData.WitnessesMultiSig):], smartContractData.WitnessesMultiSigFee)
 
-	txSigned, txHash, err := cardanotx.AssemblyFinalTx(txRaw, witnesses)
+	txSigned, err := cardanotx.AssembleTxWitnesses(txRaw, witnesses)
 	if err != nil {
 		return err
 	}
