@@ -14,25 +14,26 @@ import (
 
 type BatchManagerImpl struct {
 	config          *core.BatcherManagerConfiguration
-	cardanoBatchers map[string]*batcher.BatcherImpl
+	cardanoBatchers map[string]core.Batcher
 	cancelCtx       context.CancelFunc
 }
 
+var _ core.BatcherManager = (*BatchManagerImpl)(nil)
+
 func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerImpl {
-	var batchers = map[string]*batcher.BatcherImpl{}
+	var batchers = map[string]core.Batcher{}
 	for chain, cardanoChainConfig := range config.CardanoChains {
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
 			os.Exit(1)
 		}
-		logger = logger.Named(strings.ToUpper(chain))
 
 		batchers[chain] = batcher.NewBatcher(&core.BatcherConfiguration{
 			Bridge:        config.Bridge,
 			CardanoChain:  cardanoChainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger)
+		}, logger.Named(strings.ToUpper(chain)))
 	}
 
 	return &BatchManagerImpl{

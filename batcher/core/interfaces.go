@@ -8,5 +8,5 @@ type BatcherManager interface {
 }
 
 type Batcher interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context)
 }

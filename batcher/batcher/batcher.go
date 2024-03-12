@@ -24,6 +24,8 @@ type BatcherImpl struct {
 	ethClient *ethclient.Client
 }
 
+var _ core.Batcher = (*BatcherImpl)(nil)
+
 func NewBatcher(config *core.BatcherConfiguration, logger hclog.Logger) *BatcherImpl {
 	return &BatcherImpl{
 		config:    config,
