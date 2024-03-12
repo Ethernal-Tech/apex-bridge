@@ -28,7 +28,7 @@ func NewBatcher(config *BatcherConfiguration, logger hclog.Logger) *Batcher {
 	}
 }
 
-func (b *Batcher) Execute(ctx context.Context) {
+func (b *Batcher) Start(ctx context.Context) {
 	var (
 		ethClient *ethclient.Client
 		err       error
@@ -49,35 +49,39 @@ func (b *Batcher) Execute(ctx context.Context) {
 			ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
 			if err != nil {
 				b.logger.Error("Failed to dial bridge", "err", err, "chainId", b.config.CardanoChain.ChainId)
-
-				continue
 			}
 		}
 
-		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
-		if err != nil {
-			// In case of error, reset ethClient to nil to try again in the next iteration.
-			ethClient = nil
-			timer.Reset(timerTime)
-			continue
-		}
-
-		// TODO: Update smart contract calls depeding of configuration
-		// invoke smart contract(s)
-		smartContractData, err := b.getSmartContractData(ctx, ethTxHelper)
-		if err != nil {
-			b.logger.Error("Failed to query bridge sc", "err", err, "chainId", b.config.CardanoChain.ChainId)
-
-			ethClient = nil
-			timer.Reset(timerTime)
-			continue
-		}
-
-		if err := b.sendTx(ctx, smartContractData, ethTxHelper); err != nil {
-			b.logger.Error("failed to send tx", "err", err, "chainId", b.config.CardanoChain.ChainId)
-		}
+		b.execute(ctx, ethClient)
 
 		timer.Reset(timerTime)
+	}
+}
+
+func (b Batcher) execute(ctx context.Context, ethClient *ethclient.Client) {
+	var (
+		err error
+	)
+
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
+	if err != nil {
+		// In case of error, reset ethClient to nil to try again in the next iteration.
+		ethClient = nil
+		return
+	}
+
+	// TODO: Update smart contract calls depeding of configuration
+	// invoke smart contract(s)
+	smartContractData, err := b.getSmartContractData(ctx, ethTxHelper)
+	if err != nil {
+		b.logger.Error("Failed to query bridge sc", "err", err, "chainId", b.config.CardanoChain.ChainId)
+
+		ethClient = nil
+		return
+	}
+
+	if err := b.sendTx(ctx, smartContractData, ethTxHelper); err != nil {
+		b.logger.Error("failed to send tx", "err", err, "chainId", b.config.CardanoChain.ChainId)
 	}
 }
 

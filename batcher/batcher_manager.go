@@ -47,7 +47,7 @@ func (bm *BatchManagerImpl) Start() error {
 	bm.cancelCtx = cancelCtx
 
 	for chain, b := range bm.cardanoBatchers {
-		go b.Execute(ctx)
+		go b.Start(ctx)
 
 		fmt.Fprintf(os.Stdin, "Started batcher for: %v chain\n", chain)
 		b.logger.Debug(fmt.Sprintf("%s batcher started", chain))
