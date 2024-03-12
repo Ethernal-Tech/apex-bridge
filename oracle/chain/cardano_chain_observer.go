@@ -127,6 +127,10 @@ func (co *CardanoChainObserverImpl) GetConfig() core.CardanoChainConfig {
 	return co.config
 }
 
+func (co *CardanoChainObserverImpl) GetDb() indexer.Database {
+	return co.dbs
+}
+
 func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
 }

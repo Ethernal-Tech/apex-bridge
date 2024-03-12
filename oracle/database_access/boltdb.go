@@ -15,6 +15,7 @@ type BoltDatabase struct {
 var (
 	unprocessedTxsBucket = []byte("UnprocessedTxs")
 	invalidTxsBucket     = []byte("InvalidTxs")
+	expectedTxsBucket    = []byte("ExpectedTxs")
 )
 
 var _ core.Database = (*BoltDatabase)(nil)
@@ -28,7 +29,7 @@ func (bd *BoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, invalidTxsBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, invalidTxsBucket, expectedTxsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
@@ -88,7 +89,7 @@ func (bd *BoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, err
 	return result, nil
 }
 
-func (bd *BoltDatabase) MarkTxsAsProcessed(processedTxs []*core.CardanoTx) error {
+func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.CardanoTx) error {
 	return bd.db.Update(func(tx *bolt.Tx) error {
 		for _, processedTx := range processedTxs {
 			if err := tx.Bucket(unprocessedTxsBucket).Delete(processedTx.Key()); err != nil {
@@ -110,6 +111,118 @@ func (bd *BoltDatabase) AddInvalidTxHashes(invalidTxHashes []string) error {
 
 			if err = tx.Bucket(invalidTxsBucket).Put([]byte(invalidTxHash), bytes); err != nil {
 				return fmt.Errorf("invalid tx write error: %v", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (bd *BoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(expectedTxsBucket)
+		for _, expectedTx := range expectedTxs {
+			if data := bucket.Get(expectedTx.Key()); len(data) == 0 {
+				expectedDbTx := &core.BridgeExpectedCardanoDbTx{
+					BridgeExpectedCardanoTx: *expectedTx,
+					IsProcessed:             false,
+					IsInvalid:               false,
+				}
+
+				bytes, err := json.Marshal(expectedDbTx)
+				if err != nil {
+					return fmt.Errorf("could not marshal expected tx: %v", err)
+				}
+
+				if err = bucket.Put(expectedDbTx.Key(), bytes); err != nil {
+					return fmt.Errorf("expected tx write error: %v", err)
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
+func (bd *BoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
+	var result []*core.BridgeExpectedCardanoTx
+
+	err := bd.db.View(func(tx *bolt.Tx) error {
+		cursor := tx.Bucket(expectedTxsBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var expectedTx *core.BridgeExpectedCardanoDbTx
+
+			if err := json.Unmarshal(v, &expectedTx); err != nil {
+				return err
+			}
+
+			if !expectedTx.IsProcessed && !expectedTx.IsInvalid {
+				result = append(result, &expectedTx.BridgeExpectedCardanoTx)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(expectedTxsBucket)
+		for _, expectedTx := range expectedTxs {
+			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
+				var dbExpectedTx *core.BridgeExpectedCardanoDbTx
+
+				if err := json.Unmarshal(data, &dbExpectedTx); err != nil {
+					return err
+				}
+
+				dbExpectedTx.IsProcessed = true
+
+				bytes, err := json.Marshal(dbExpectedTx)
+				if err != nil {
+					return fmt.Errorf("could not marshal db expected tx: %v", err)
+				}
+
+				if err := bucket.Put(dbExpectedTx.Key(), bytes); err != nil {
+					return fmt.Errorf("db expected tx write error: %v", err)
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
+func (bd *BoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(expectedTxsBucket)
+		for _, expectedTx := range expectedTxs {
+			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
+				var dbExpectedTx *core.BridgeExpectedCardanoDbTx
+
+				if err := json.Unmarshal(data, &dbExpectedTx); err != nil {
+					return err
+				}
+
+				dbExpectedTx.IsInvalid = true
+
+				bytes, err := json.Marshal(dbExpectedTx)
+				if err != nil {
+					return fmt.Errorf("could not marshal db expected tx: %v", err)
+				}
+
+				if err := bucket.Put(dbExpectedTx.Key(), bytes); err != nil {
+					return fmt.Errorf("db expected tx write error: %v", err)
+				}
 			}
 		}
 

@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -8,6 +10,20 @@ type CardanoTx struct {
 	OriginChainId string `json:"origin_chain_id"`
 
 	indexer.Tx
+}
+
+type BridgeExpectedCardanoTx struct {
+	ChainId  string `json:"chain_id"`
+	Hash     string `json:"hash"`
+	Metadata []byte `json:"metadata"`
+	Ttl      uint64 `json:"ttl"`
+}
+
+type BridgeExpectedCardanoDbTx struct {
+	BridgeExpectedCardanoTx
+
+	IsProcessed bool `json:"is_processed"`
+	IsInvalid   bool `json:"is_invalid"`
 }
 
 type UtxoTransaction struct {
@@ -65,14 +81,34 @@ type BridgeClaims struct {
 	// RefundExecuted       []RefundExecutedClaim
 }
 
-func (bc BridgeClaims) Any() bool {
-	return len(bc.BridgingRequest) > 0 ||
-		len(bc.BatchExecuted) > 0 ||
-		len(bc.BatchExecutionFailed) > 0 /*||
-		len(bc.RefundRequest) > 0 ||
-		len(bc.RefundExecuted) > 0*/
+func (bc BridgeClaims) Count() int {
+	return len(bc.BridgingRequest) +
+		len(bc.BatchExecuted) +
+		len(bc.BatchExecutionFailed) /* +
+		len(bc.RefundRequest) +
+		len(bc.RefundExecuted)*/
 }
 
-func (btx CardanoTx) Key() []byte {
-	return []byte(btx.Hash)
+func (bc BridgeClaims) Any() bool {
+	return bc.Count() > 0
+}
+
+func (ctx CardanoTx) StrKey() string {
+	return fmt.Sprintf("%v_%v", ctx.OriginChainId, ctx.Hash)
+}
+
+func (ctx CardanoTx) Key() []byte {
+	return []byte(ctx.StrKey())
+}
+
+func (betx BridgeExpectedCardanoTx) StrKey() string {
+	return fmt.Sprintf("%v_%v", betx.ChainId, betx.Hash)
+}
+
+func (betx BridgeExpectedCardanoTx) Key() []byte {
+	return []byte(betx.StrKey())
+}
+
+func (betx BridgeExpectedCardanoDbTx) Key() []byte {
+	return []byte(fmt.Sprintf("%v_%v", betx.ChainId, betx.Hash))
 }

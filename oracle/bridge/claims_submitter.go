@@ -88,7 +88,7 @@ func (cs *ClaimsSubmitterImpl) sendTx(ethTxHelper ethtxhelper.IEthTxHelper, clai
 	}
 
 	tx, err := ethTxHelper.SendTx(cs.ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-		// replace with real bridge contract call
+		// TODO: replace with real bridge contract call
 		return contract.SetValue(txOpts, new(big.Int).SetUint64(
 			uint64(len(claims.BatchExecuted)+len(claims.BridgingRequest)+len(claims.BatchExecutionFailed)),
 		))

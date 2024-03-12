@@ -4,10 +4,23 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
-type CardanoTxsProcessorDb interface {
+type BridgeExpectedCardanoTxsDb interface {
+	AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error
+	GetExpectedTxs(threshold int) ([]*BridgeExpectedCardanoTx, error)
+	MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error
+	MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error
+}
+
+type UnprocessedCardanoTxsDb interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(threshold int) ([]*CardanoTx, error)
-	MarkTxsAsProcessed(processedTxs []*CardanoTx) error
+	MarkUnprocessedTxsAsProcessed(processedTxs []*CardanoTx) error
+}
+
+type CardanoTxsProcessorDb interface {
+	UnprocessedCardanoTxsDb
+	BridgeExpectedCardanoTxsDb
+
 	AddInvalidTxHashes(invalidTxHashes []string) error
 }
 
@@ -27,6 +40,7 @@ type CardanoChainObserver interface {
 	Start() error
 	Stop() error
 	GetConfig() CardanoChainConfig
+	GetDb() indexer.Database
 	ErrorCh() <-chan error
 }
 
@@ -39,6 +53,16 @@ type CardanoTxsProcessor interface {
 type CardanoTxProcessor interface {
 	IsTxRelevant(tx *CardanoTx, appConfig *AppConfig) (bool, error)
 	ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error
+}
+
+type CardanoTxFailedProcessor interface {
+	IsTxRelevant(tx *BridgeExpectedCardanoTx, appConfig *AppConfig) (bool, error)
+	ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error
+}
+
+type BridgeDataFetcher interface {
+	Start() error
+	Stop() error
 }
 
 type ClaimsSubmitter interface {
