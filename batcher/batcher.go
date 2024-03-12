@@ -17,21 +17,21 @@ import (
 )
 
 type Batcher struct {
-	config *BatcherConfiguration
-	logger hclog.Logger
+	config    *BatcherConfiguration
+	logger    hclog.Logger
+	ethClient *ethclient.Client
 }
 
 func NewBatcher(config *BatcherConfiguration, logger hclog.Logger) *Batcher {
 	return &Batcher{
-		config: config,
-		logger: logger,
+		config:    config,
+		logger:    logger,
+		ethClient: nil,
 	}
 }
 
 func (b *Batcher) Start(ctx context.Context) {
 	var (
-		ethClient *ethclient.Client
-		err       error
 		timerTime = time.Millisecond * time.Duration(b.config.PullTimeMilis)
 	)
 
@@ -45,28 +45,28 @@ func (b *Batcher) Start(ctx context.Context) {
 			return
 		}
 
-		if ethClient == nil {
-			ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
-			if err != nil {
-				b.logger.Error("Failed to dial bridge", "err", err, "chainId", b.config.CardanoChain.ChainId)
-			}
-		}
-
-		b.execute(ctx, ethClient)
+		b.execute(ctx)
 
 		timer.Reset(timerTime)
 	}
 }
 
-func (b Batcher) execute(ctx context.Context, ethClient *ethclient.Client) {
+func (b *Batcher) execute(ctx context.Context) {
 	var (
 		err error
 	)
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
+	if b.ethClient == nil {
+		b.ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
+		if err != nil {
+			b.logger.Error("Failed to dial bridge", "err", err, "chainId", b.config.CardanoChain.ChainId)
+		}
+	}
+
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(b.ethClient)) // nolint
 	if err != nil {
 		// In case of error, reset ethClient to nil to try again in the next iteration.
-		ethClient = nil
+		b.ethClient = nil
 		return
 	}
 
@@ -76,7 +76,7 @@ func (b Batcher) execute(ctx context.Context, ethClient *ethclient.Client) {
 	if err != nil {
 		b.logger.Error("Failed to query bridge sc", "err", err, "chainId", b.config.CardanoChain.ChainId)
 
-		ethClient = nil
+		b.ethClient = nil
 		return
 	}
 
