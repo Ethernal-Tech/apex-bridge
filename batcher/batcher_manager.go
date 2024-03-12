@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -10,15 +11,16 @@ import (
 
 type BatcherManager interface {
 	Start() error
+	Stop() error
 }
 
 type BatchManagerImpl struct {
 	config          *BatcherManagerConfiguration
 	cardanoBatchers map[string]*Batcher
-	ctx             context.Context
+	cancelCtx       context.CancelFunc
 }
 
-func NewBatcherManager(config *BatcherManagerConfiguration, ctx context.Context) *BatchManagerImpl {
+func NewBatcherManager(config *BatcherManagerConfiguration) *BatchManagerImpl {
 	var batchers = map[string]*Batcher{}
 	for chain, cardanoChainConfig := range config.CardanoChains {
 		logger, err := logger.NewLogger(config.Logger)
@@ -37,17 +39,42 @@ func NewBatcherManager(config *BatcherManagerConfiguration, ctx context.Context)
 	return &BatchManagerImpl{
 		config:          config,
 		cardanoBatchers: batchers,
-		ctx:             ctx,
 	}
 }
 
 func (bm *BatchManagerImpl) Start() error {
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	bm.cancelCtx = cancelCtx
+
 	for chain, b := range bm.cardanoBatchers {
-		go b.Execute(bm.ctx)
+		go b.Execute(ctx)
 
 		fmt.Fprintf(os.Stdin, "Started batcher for: %v chain\n", chain)
 		b.logger.Debug(fmt.Sprintf("%s batcher started", chain))
 	}
 
 	return nil
+}
+
+func (bm *BatchManagerImpl) Stop() error {
+	bm.cancelCtx()
+
+	return nil
+}
+
+func LoadConfig() (*BatcherManagerConfiguration, error) {
+	f, err := os.Open("config.json")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var appConfig BatcherManagerConfiguration
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&appConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &appConfig, nil
 }

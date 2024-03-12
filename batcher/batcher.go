@@ -2,9 +2,7 @@ package batcher
 
 import (
 	"context"
-	"encoding/json"
 	"math/big"
-	"os"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -56,10 +54,13 @@ func (b *Batcher) Execute(ctx context.Context) {
 			}
 		}
 
-		ethTxHelper, _ := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
-
-		// TODO: handle lost connection errors from ethClient ->
-		// in the case of error ethClient should be set to nil in order to redial again next time
+		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient)) // nolint
+		if err != nil {
+			// In case of error, reset ethClient to nil to try again in the next iteration.
+			ethClient = nil
+			timer.Reset(timerTime)
+			continue
+		}
 
 		// TODO: Update smart contract calls depeding of configuration
 		// invoke smart contract(s)
@@ -67,7 +68,9 @@ func (b *Batcher) Execute(ctx context.Context) {
 		if err != nil {
 			b.logger.Error("Failed to query bridge sc", "err", err, "chainId", b.config.CardanoChain.ChainId)
 
-			return // TODO: recoverable error handling?
+			ethClient = nil
+			timer.Reset(timerTime)
+			continue
 		}
 
 		if err := b.sendTx(ctx, smartContractData, ethTxHelper); err != nil {
@@ -174,21 +177,4 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 	}
 
 	return witnessMultiSig, witnessMultiSigFee, err
-}
-
-func LoadConfig() (*BatcherManagerConfiguration, error) {
-	f, err := os.Open("config.json")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var appConfig BatcherManagerConfiguration
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&appConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return &appConfig, nil
 }
