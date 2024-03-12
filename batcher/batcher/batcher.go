@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -16,24 +18,28 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type Batcher struct {
-	config    *BatcherConfiguration
+type BatcherImpl struct {
+	config    *core.BatcherConfiguration
 	logger    hclog.Logger
 	ethClient *ethclient.Client
 }
 
-func NewBatcher(config *BatcherConfiguration, logger hclog.Logger) *Batcher {
-	return &Batcher{
+var _ core.Batcher = (*BatcherImpl)(nil)
+
+func NewBatcher(config *core.BatcherConfiguration, logger hclog.Logger) *BatcherImpl {
+	return &BatcherImpl{
 		config:    config,
 		logger:    logger,
 		ethClient: nil,
 	}
 }
 
-func (b *Batcher) Start(ctx context.Context) {
+func (b *BatcherImpl) Start(ctx context.Context) {
 	var (
 		timerTime = time.Millisecond * time.Duration(b.config.PullTimeMilis)
 	)
+
+	b.logger.Debug("Batcher started")
 
 	timer := time.NewTimer(timerTime)
 	defer timer.Stop()
@@ -51,7 +57,7 @@ func (b *Batcher) Start(ctx context.Context) {
 	}
 }
 
-func (b *Batcher) execute(ctx context.Context) {
+func (b *BatcherImpl) execute(ctx context.Context) {
 	var (
 		err error
 	)
@@ -59,7 +65,7 @@ func (b *Batcher) execute(ctx context.Context) {
 	if b.ethClient == nil {
 		b.ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
 		if err != nil {
-			b.logger.Error("Failed to dial bridge", "err", err, "chainId", b.config.CardanoChain.ChainId)
+			b.logger.Error("Failed to dial bridge", "err", err)
 			return
 		}
 	}
@@ -73,20 +79,20 @@ func (b *Batcher) execute(ctx context.Context) {
 
 	// TODO: Update smart contract calls depeding of configuration
 	// invoke smart contract(s)
-	smartContractData, err := b.getSmartContractData(ctx, ethTxHelper)
+	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress)
 	if err != nil {
-		b.logger.Error("Failed to query bridge sc", "err", err, "chainId", b.config.CardanoChain.ChainId)
+		b.logger.Error("Failed to query bridge sc", "err", err)
 
 		b.ethClient = nil
 		return
 	}
 
 	if err := b.sendTx(ctx, smartContractData, ethTxHelper); err != nil {
-		b.logger.Error("failed to send tx", "err", err, "chainId", b.config.CardanoChain.ChainId)
+		b.logger.Error("failed to send tx", "err", err)
 	}
 }
 
-func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelper ethtxhelper.IEthTxHelper) error {
+func (b BatcherImpl) sendTx(ctx context.Context, data *bridge.SmartContractData, ethTxHelper ethtxhelper.IEthTxHelper) error {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(b.config.Bridge.SmartContractAddress), ethTxHelper.GetClient())
 	if err != nil {
@@ -112,19 +118,19 @@ func (b Batcher) sendTx(ctx context.Context, data *SmartContractData, ethTxHelpe
 		return err
 	}
 
-	b.logger.Info("tx has been sent", "tx hash", tx.Hash().String(), "chainId", b.config.CardanoChain.ChainId)
+	b.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
 		return err
 	}
 
-	b.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String(), "chainId", b.config.CardanoChain.ChainId)
+	b.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
 
 	return nil
 }
 
-func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractData) ([]byte, []byte, error) {
+func (b BatcherImpl) createCardanoTxWitness(_ context.Context, data *bridge.SmartContractData) ([]byte, []byte, error) {
 	sigKey := cardanotx.NewSigningKey(b.config.CardanoChain.SigningKeyMultiSig)
 	sigKeyFee := cardanotx.NewSigningKey(b.config.CardanoChain.SigningKeyMultiSigFee)
 
@@ -183,3 +189,12 @@ func (b Batcher) createCardanoTxWitness(_ context.Context, data *SmartContractDa
 
 	return witnessMultiSig, witnessMultiSigFee, err
 }
+
+var (
+	dummyOutputs = []cardanowallet.TxOutput{
+		{
+			Addr:   "addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u",
+			Amount: cardanowallet.MinUTxODefaultValue,
+		},
+	}
+)

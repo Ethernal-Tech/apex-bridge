@@ -1,18 +1,20 @@
-package batcher
+package batcher_manager
 
 import (
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBatcherManagerConfig(t *testing.T) {
-	expectedConfig := &BatcherManagerConfiguration{
-		CardanoChains: map[string]CardanoChainConfig{
+	expectedConfig := &core.BatcherManagerConfiguration{
+		CardanoChains: map[string]core.CardanoChainConfig{
 			"prime": {
 				TestNetMagic:          uint(2),
+				ChainId:               "prime",
 				BlockfrostUrl:         "https://cardano-preview.blockfrost.io/api/v0",
 				BlockfrostAPIKey:      "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 				AtLeastValidators:     2.0 / 3.0,
@@ -22,6 +24,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 			},
 			"vector": {
 				TestNetMagic:          uint(2),
+				ChainId:               "vector",
 				BlockfrostUrl:         "https://cardano-preview.blockfrost.io/api/v0",
 				BlockfrostAPIKey:      "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 				AtLeastValidators:     2.0 / 3.0,
@@ -30,7 +33,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 				SigningKeyMultiSigFee: "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6",
 			},
 		},
-		Bridge: BridgeConfig{
+		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
 			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
@@ -44,7 +47,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 		},
 	}
 
-	loadedConfig, err := LoadConfig()
+	loadedConfig, err := LoadConfig("../config.json")
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedConfig.CardanoChains, loadedConfig.CardanoChains)

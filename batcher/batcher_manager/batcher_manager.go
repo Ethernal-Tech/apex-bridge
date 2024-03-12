@@ -1,27 +1,27 @@
-package batcher
+package batcher_manager
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
-type BatcherManager interface {
-	Start() error
-	Stop() error
-}
-
 type BatchManagerImpl struct {
-	config          *BatcherManagerConfiguration
-	cardanoBatchers map[string]*Batcher
+	config          *core.BatcherManagerConfiguration
+	cardanoBatchers map[string]core.Batcher
 	cancelCtx       context.CancelFunc
 }
 
-func NewBatcherManager(config *BatcherManagerConfiguration) *BatchManagerImpl {
-	var batchers = map[string]*Batcher{}
+var _ core.BatcherManager = (*BatchManagerImpl)(nil)
+
+func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerImpl {
+	var batchers = map[string]core.Batcher{}
 	for chain, cardanoChainConfig := range config.CardanoChains {
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
@@ -29,11 +29,11 @@ func NewBatcherManager(config *BatcherManagerConfiguration) *BatchManagerImpl {
 			os.Exit(1)
 		}
 
-		batchers[chain] = NewBatcher(&BatcherConfiguration{
+		batchers[chain] = batcher.NewBatcher(&core.BatcherConfiguration{
 			Bridge:        config.Bridge,
 			CardanoChain:  cardanoChainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger)
+		}, logger.Named(strings.ToUpper(chain)))
 	}
 
 	return &BatchManagerImpl{
@@ -50,7 +50,6 @@ func (bm *BatchManagerImpl) Start() error {
 		go b.Start(ctx)
 
 		fmt.Fprintf(os.Stdin, "Started batcher for: %v chain\n", chain)
-		b.logger.Debug(fmt.Sprintf("%s batcher started", chain))
 	}
 
 	return nil
@@ -62,14 +61,14 @@ func (bm *BatchManagerImpl) Stop() error {
 	return nil
 }
 
-func LoadConfig() (*BatcherManagerConfiguration, error) {
-	f, err := os.Open("config.json")
+func LoadConfig(path string) (*core.BatcherManagerConfiguration, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var appConfig BatcherManagerConfiguration
+	var appConfig core.BatcherManagerConfiguration
 	decoder := json.NewDecoder(f)
 	err = decoder.Decode(&appConfig)
 	if err != nil {
