@@ -60,10 +60,11 @@ func (b *Batcher) execute(ctx context.Context) {
 		b.ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
 		if err != nil {
 			b.logger.Error("Failed to dial bridge", "err", err, "chainId", b.config.CardanoChain.ChainId)
+			return
 		}
 	}
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(b.ethClient)) // nolint
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(b.ethClient))
 	if err != nil {
 		// In case of error, reset ethClient to nil to try again in the next iteration.
 		b.ethClient = nil
