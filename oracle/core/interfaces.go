@@ -11,17 +11,16 @@ type BridgeExpectedCardanoTxsDb interface {
 	MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error
 }
 
-type UnprocessedCardanoTxsDb interface {
+type CardanoTxsDb interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(threshold int) ([]*CardanoTx, error)
-	MarkUnprocessedTxsAsProcessed(processedTxs []*CardanoTx) error
+	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error
+	GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error)
 }
 
 type CardanoTxsProcessorDb interface {
-	UnprocessedCardanoTxsDb
+	CardanoTxsDb
 	BridgeExpectedCardanoTxsDb
-
-	AddInvalidTxHashes(invalidTxHashes []string) error
 }
 
 type Database interface {

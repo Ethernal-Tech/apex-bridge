@@ -14,7 +14,7 @@ type BoltDatabase struct {
 
 var (
 	unprocessedTxsBucket = []byte("UnprocessedTxs")
-	invalidTxsBucket     = []byte("InvalidTxs")
+	processedTxsBucket   = []byte("ProcessedTxs")
 	expectedTxsBucket    = []byte("ExpectedTxs")
 )
 
@@ -29,7 +29,7 @@ func (bd *BoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, invalidTxsBucket, expectedTxsBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
@@ -89,10 +89,19 @@ func (bd *BoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, err
 	return result, nil
 }
 
-func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.CardanoTx) error {
+func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.ProcessedCardanoTx) error {
 	return bd.db.Update(func(tx *bolt.Tx) error {
 		for _, processedTx := range processedTxs {
-			if err := tx.Bucket(unprocessedTxsBucket).Delete(processedTx.Key()); err != nil {
+			bytes, err := json.Marshal(processedTx)
+			if err != nil {
+				return fmt.Errorf("could not marshal processed tx: %v", err)
+			}
+
+			if err = tx.Bucket(processedTxsBucket).Put(processedTx.Key(), bytes); err != nil {
+				return fmt.Errorf("processed tx write error: %v", err)
+			}
+
+			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToCardanoTxKey())); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %v", err)
 			}
 		}
@@ -101,21 +110,16 @@ func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Carda
 	})
 }
 
-func (bd *BoltDatabase) AddInvalidTxHashes(invalidTxHashes []string) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
-		for _, invalidTxHash := range invalidTxHashes {
-			bytes, err := json.Marshal(invalidTxHash)
-			if err != nil {
-				return fmt.Errorf("could not marshal invalid tx: %v", err)
-			}
-
-			if err = tx.Bucket(invalidTxsBucket).Put([]byte(invalidTxHash), bytes); err != nil {
-				return fmt.Errorf("invalid tx write error: %v", err)
-			}
+func (bd *BoltDatabase) GetProcessedTx(chainId string, txHash string) (result *core.ProcessedCardanoTx, err error) {
+	err = bd.db.View(func(tx *bolt.Tx) error {
+		if data := tx.Bucket(processedTxsBucket).Get([]byte(core.ToCardanoTxKey(chainId, txHash))); len(data) > 0 {
+			return json.Unmarshal(data, &result)
 		}
 
 		return nil
 	})
+
+	return result, err
 }
 
 func (bd *BoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardanoTx) error {

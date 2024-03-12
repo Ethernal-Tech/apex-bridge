@@ -12,6 +12,12 @@ type CardanoTx struct {
 	indexer.Tx
 }
 
+type ProcessedCardanoTx struct {
+	OriginChainId string `json:"origin_chain_id"`
+	Hash          string `json:"hash"`
+	IsInvalid     bool   `json:"is_invalid"`
+}
+
 type BridgeExpectedCardanoTx struct {
 	ChainId  string `json:"chain_id"`
 	Hash     string `json:"hash"`
@@ -93,22 +99,34 @@ func (bc BridgeClaims) Any() bool {
 	return bc.Count() > 0
 }
 
-func (ctx CardanoTx) StrKey() string {
-	return fmt.Sprintf("%v_%v", ctx.OriginChainId, ctx.Hash)
+func ToCardanoTxKey(originChainId string, txHash string) string {
+	return fmt.Sprintf("%v_%v", originChainId, txHash)
 }
 
-func (ctx CardanoTx) Key() []byte {
-	return []byte(ctx.StrKey())
+func (tx CardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.OriginChainId, tx.Hash)
 }
 
-func (betx BridgeExpectedCardanoTx) StrKey() string {
-	return fmt.Sprintf("%v_%v", betx.ChainId, betx.Hash)
+func (tx CardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
 }
 
-func (betx BridgeExpectedCardanoTx) Key() []byte {
-	return []byte(betx.StrKey())
+func (tx ProcessedCardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.OriginChainId, tx.Hash)
 }
 
-func (betx BridgeExpectedCardanoDbTx) Key() []byte {
-	return []byte(fmt.Sprintf("%v_%v", betx.ChainId, betx.Hash))
+func (tx ProcessedCardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
+}
+
+func (tx BridgeExpectedCardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.ChainId, tx.Hash)
+}
+
+func (tx BridgeExpectedCardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
+}
+
+func (tx BridgeExpectedCardanoDbTx) Key() []byte {
+	return []byte(ToCardanoTxKey(tx.ChainId, tx.Hash))
 }

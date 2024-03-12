@@ -46,7 +46,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata)
 	} else {
-		p.addRefundRequestClaim(claims, tx, metadata)
+		return fmt.Errorf("validation failed for tx: %v", tx)
+		// p.addRefundRequestClaim(claims, tx, metadata)
 	}
 
 	return nil
@@ -78,8 +79,9 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.Brid
 	claims.BridgingRequest = append(claims.BridgingRequest, claim)
 }
 
+/*
 func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata) {
-	/*
+
 		var outputUtxos []core.Utxo
 		for _, output := range tx.Outputs {
 			outputUtxos = append(outputUtxos, core.Utxo{
@@ -99,8 +101,9 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 		}
 
 		claims.RefundRequest = append(claims.RefundRequest, claim)
-	*/
+
 }
+*/
 
 func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
 	foundDestinationChainConfig := false

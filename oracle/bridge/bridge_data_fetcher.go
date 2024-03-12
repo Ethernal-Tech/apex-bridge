@@ -81,10 +81,17 @@ func (df *BridgeDataFetcherImpl) fetchData() {
 		df.ethClient = ethClient
 	}
 
-	ethTxHelper, _ := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(df.ethClient))
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(df.ethClient))
+	if err != nil {
+		// ensure redial in case ethClient lost connection
+		df.ethClient = nil
+		df.logger.Error("Failed to create ethTxHelper", "err", err)
+		return
+	}
 
 	expectedTxs, err := df.fetchExpectedTxs(ethTxHelper)
 	if err != nil {
+		// ensure redial in case ethClient lost connection
 		df.ethClient = nil
 		df.logger.Error("Failed to fetch expected txs from bridge", "err", err)
 		return

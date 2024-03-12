@@ -102,7 +102,7 @@ func (bp *CardanoTxsProcessorImpl) Start() error {
 	for {
 		select {
 		case <-timer.C:
-			bp.generateClaims()
+			bp.checkShouldGenerateClaims()
 		case <-bp.closeCh:
 			return nil
 		}
@@ -117,8 +117,8 @@ func (bp *CardanoTxsProcessorImpl) Stop() error {
 	return nil
 }
 
-func (bp *CardanoTxsProcessorImpl) generateClaims() {
-	bp.logger.Debug("Generating claims")
+func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
+	bp.logger.Debug("Checking if should generate claims")
 
 	bridgeClaims := &core.BridgeClaims{}
 
@@ -133,7 +133,7 @@ func (bp *CardanoTxsProcessorImpl) generateClaims() {
 
 	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
 	for _, expectedTx := range expectedTxs {
-		expectedTxsMap[expectedTx.StrKey()] = expectedTx
+		expectedTxsMap[expectedTx.ToCardanoTxKey()] = expectedTx
 	}
 
 	unprocessedTxs, err := bp.db.GetUnprocessedTxs(0)
@@ -143,17 +143,16 @@ func (bp *CardanoTxsProcessorImpl) generateClaims() {
 		return
 	}
 
-	var processedTxs []*core.CardanoTx
-	var invalidTxHashes []string
+	var processedTxs []*core.ProcessedCardanoTx
 
 	// check unprocessed txs from indexers
 	if len(unprocessedTxs) > 0 {
-		processedExpectedTxs, processedTxs, invalidTxHashes = bp.checkUnprocessedTxs(bridgeClaims, unprocessedTxs, expectedTxsMap)
+		processedExpectedTxs, processedTxs = bp.checkUnprocessedTxs(bridgeClaims, unprocessedTxs, expectedTxsMap)
 	}
 
 	// check expected txs from bridge
 	if bridgeClaims.Count() < bp.appConfig.Settings.MaxBridgingClaimsToGroup && len(expectedTxsMap) > 0 {
-		processed, invalid := bp.checkExpectedTxs(bridgeClaims, expectedTxsMap)
+		processed, invalid := bp.checkExpectedTxs(bridgeClaims, expectedTxsMap, unprocessedTxs)
 		processedExpectedTxs = append(processedExpectedTxs, processed...)
 		invalidExpectedTxs = invalid
 	}
@@ -198,17 +197,6 @@ func (bp *CardanoTxsProcessorImpl) generateClaims() {
 			return
 		}
 	}
-
-	// we should only change this in db if submit succeeded
-	if len(invalidTxHashes) > 0 {
-		bp.logger.Debug("Saving invalid txs", "txs", invalidTxHashes)
-		err := bp.db.AddInvalidTxHashes(invalidTxHashes)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to save invalid txs. error: %v\n", err)
-			bp.logger.Error("Failed to save invalid txs", "err", err)
-			return
-		}
-	}
 }
 
 func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
@@ -217,8 +205,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
 ) (
 	processedExpectedTxs []*core.BridgeExpectedCardanoTx,
-	processedTxs []*core.CardanoTx,
-	invalidTxHashes []string,
+	processedTxs []*core.ProcessedCardanoTx,
 ) {
 unprocessedTxsLoop:
 	for _, unprocessedTx := range unprocessedTxs {
@@ -240,13 +227,17 @@ unprocessedTxsLoop:
 					continue txProcessorsLoop
 				}
 
-				expectedTx := expectedTxsMap[unprocessedTx.StrKey()]
+				expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
 				if expectedTx != nil {
 					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-					delete(expectedTxsMap, expectedTx.StrKey())
+					delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
 				}
 
-				processedTxs = append(processedTxs, unprocessedTx)
+				processedTxs = append(processedTxs, &core.ProcessedCardanoTx{
+					OriginChainId: unprocessedTx.OriginChainId,
+					Hash:          unprocessedTx.Hash,
+					IsInvalid:     false,
+				})
 				txProcessed = true
 
 				if bridgeClaims.Count() >= bp.appConfig.Settings.MaxBridgingClaimsToGroup {
@@ -258,19 +249,21 @@ unprocessedTxsLoop:
 		}
 
 		if !txProcessed {
-			// transfer an unprocessed tx to invalid txs bucket, to keep as history
-			invalidTxHashes = append(invalidTxHashes, unprocessedTx.Hash)
-			// and mark it as processed to prevent it from being fetched again as unprocessed
-			processedTxs = append(processedTxs, unprocessedTx)
+			processedTxs = append(processedTxs, &core.ProcessedCardanoTx{
+				OriginChainId: unprocessedTx.OriginChainId,
+				Hash:          unprocessedTx.Hash,
+				IsInvalid:     true,
+			})
 		}
 	}
 
-	return processedExpectedTxs, processedTxs, invalidTxHashes
+	return processedExpectedTxs, processedTxs
 }
 
 func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	bridgeClaims *core.BridgeClaims,
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
+	unprocessedTxs []*core.CardanoTx,
 ) (
 	processedExpectedTxs []*core.BridgeExpectedCardanoTx,
 	invalidExpectedTxs []*core.BridgeExpectedCardanoTx,
@@ -294,6 +287,26 @@ expectedTxsLoop:
 
 		if expectedTx.Ttl+LastExpectedBlockSlotOffset >= latestBlockPoint.BlockSlot {
 			// not expired yet
+			continue
+		}
+
+		for _, unprocessedTx := range unprocessedTxs {
+			if unprocessedTx.ToCardanoTxKey() == expectedTx.ToCardanoTxKey() {
+				// found in unprocessed, can't yet know if we should send failed claim
+				continue expectedTxsLoop
+			}
+		}
+
+		processedTx, err := bp.db.GetProcessedTx(expectedTx.ChainId, expectedTx.Hash)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get processed tx: %v %v. error: %v\n", expectedTx.ChainId, expectedTx.Hash, err)
+			bp.logger.Error("Failed to get processed tx", "chainId", expectedTx.ChainId, "txHash", expectedTx.Hash, "err", err)
+			continue
+		}
+
+		if processedTx != nil && !processedTx.IsInvalid {
+			// already sent the success claim
+			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 			continue
 		}
 

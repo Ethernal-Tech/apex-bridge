@@ -48,7 +48,14 @@ func (cs *ClaimsSubmitterImpl) SubmitClaims(claims *core.BridgeClaims) error {
 		cs.ethClient = ethClient
 	}
 
-	ethTxHelper, _ := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(cs.ethClient))
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(cs.ethClient))
+	if err != nil {
+		// ensure redial in case ethClient lost connection
+		cs.ethClient = nil
+		cs.logger.Error("Failed to create ethTxHelper", "err", err)
+		return err
+	}
+
 	receipt, err := cs.sendTx(ethTxHelper, claims)
 	if err != nil {
 		// ensure redial in case ethClient lost connection

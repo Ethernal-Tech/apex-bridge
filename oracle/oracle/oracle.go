@@ -178,13 +178,15 @@ func (o *OracleImpl) errorHandler() {
 			for {
 				select {
 				case err := <-errChan:
-					o.logger.Error("chain observer error", "origin", origin, "err", err)
-					if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
-						agg <- ErrorOrigin{
-							err:    err,
-							origin: origin,
+					if err != nil {
+						o.logger.Error("chain observer error", "origin", origin, "err", err)
+						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
+							agg <- ErrorOrigin{
+								err:    err,
+								origin: origin,
+							}
+							break outsideloop
 						}
-						break outsideloop
 					}
 				case <-closeChan:
 					break outsideloop
