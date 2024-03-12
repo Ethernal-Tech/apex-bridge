@@ -1,4 +1,4 @@
-package batcher
+package core
 
 import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 
