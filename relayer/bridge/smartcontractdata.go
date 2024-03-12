@@ -1,4 +1,4 @@
-package relayer
+package bridge
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,9 +23,9 @@ type SmartContractData struct {
 }
 
 // TODO: replace with real smart contract query
-func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper) (*SmartContractData, error) {
+func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, config core.CardanoChainConfig, bridgeConfig core.BridgeConfig) (*SmartContractData, error) {
 	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(r.config.Bridge.SmartContractAddress),
+		common.HexToAddress(bridgeConfig.SmartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, err // TODO: recoverable error?
@@ -37,7 +38,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(r.config.Cardano.BlockfrostUrl, r.config.Cardano.BlockfrostAPIKey)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(config.BlockfrostUrl, config.BlockfrostAPIKey)
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +55,12 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 	keyHashesMultiSigFee := dummyKeyHashes[len(dummyKeyHashes)/2:]
 	outputs := dummyOutputs
 
-	txInfos, err := cardanotx.NewTxInputInfos(keyHashesMultiSig, keyHashesMultiSigFee, r.config.Cardano.TestNetMagic)
+	txInfos, err := cardanotx.NewTxInputInfos(keyHashesMultiSig, keyHashesMultiSigFee, config.TestNetMagic)
 	if err != nil {
 		return nil, err
 	}
 
-	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), r.config.Cardano.PotentialFee)
+	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), config.PotentialFee)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (r Relayer) getSmartContractData(ctx context.Context, ethTxHelper ethtxhelp
 		return nil, err
 	}
 
-	_, txHash, err := cardanotx.CreateTx(r.config.Cardano.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	_, txHash, err := cardanotx.CreateTx(config.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, err

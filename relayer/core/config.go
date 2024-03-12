@@ -1,8 +1,9 @@
-package relayer
+package core
 
 import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 
-type CardanoConfig struct {
+type CardanoChainConfig struct {
+	ChainId           string  `json:"chainId"`
 	TestNetMagic      uint    `json:"testnetMagic"`
 	BlockfrostUrl     string  `json:"blockfrostUrl"`
 	BlockfrostAPIKey  string  `json:"blockfrostApiKey"`
@@ -17,7 +18,14 @@ type BridgeConfig struct {
 
 type RelayerConfiguration struct {
 	Bridge        BridgeConfig        `json:"bridge"`
-	Cardano       CardanoConfig       `json:"cardano"`
+	CardanoChain  CardanoChainConfig  `json:"cardanoChain"`
 	PullTimeMilis uint64              `json:"pullTime"`
 	Logger        logger.LoggerConfig `json:"logger"`
+}
+
+type RelayerManagerConfiguration struct {
+	Bridge        BridgeConfig                  `json:"bridge"`
+	CardanoChains map[string]CardanoChainConfig `json:"cardanoChains"`
+	PullTimeMilis uint64                        `json:"pullTime"`
+	Logger        logger.LoggerConfig           `json:"logger"`
 }
