@@ -1,9 +1,8 @@
-package batcher_test
+package batcher_manager
 
 import (
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -48,7 +47,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 		},
 	}
 
-	loadedConfig, err := batcher_manager.LoadConfig("../config.json")
+	loadedConfig, err := LoadConfig("../config.json")
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedConfig.CardanoChains, loadedConfig.CardanoChains)
