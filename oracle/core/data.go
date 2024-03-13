@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -8,6 +10,26 @@ type CardanoTx struct {
 	OriginChainId string `json:"origin_chain_id"`
 
 	indexer.Tx
+}
+
+type ProcessedCardanoTx struct {
+	OriginChainId string `json:"origin_chain_id"`
+	Hash          string `json:"hash"`
+	IsInvalid     bool   `json:"is_invalid"`
+}
+
+type BridgeExpectedCardanoTx struct {
+	ChainId  string `json:"chain_id"`
+	Hash     string `json:"hash"`
+	Metadata []byte `json:"metadata"`
+	Ttl      uint64 `json:"ttl"`
+}
+
+type BridgeExpectedCardanoDbTx struct {
+	BridgeExpectedCardanoTx
+
+	IsProcessed bool `json:"is_processed"`
+	IsInvalid   bool `json:"is_invalid"`
 }
 
 type UtxoTransaction struct {
@@ -65,14 +87,46 @@ type BridgeClaims struct {
 	// RefundExecuted       []RefundExecutedClaim
 }
 
-func (bc BridgeClaims) Any() bool {
-	return len(bc.BridgingRequest) > 0 ||
-		len(bc.BatchExecuted) > 0 ||
-		len(bc.BatchExecutionFailed) > 0 /*||
-		len(bc.RefundRequest) > 0 ||
-		len(bc.RefundExecuted) > 0*/
+func (bc BridgeClaims) Count() int {
+	return len(bc.BridgingRequest) +
+		len(bc.BatchExecuted) +
+		len(bc.BatchExecutionFailed) /* +
+		len(bc.RefundRequest) +
+		len(bc.RefundExecuted)*/
 }
 
-func (btx CardanoTx) Key() []byte {
-	return []byte(btx.Hash)
+func (bc BridgeClaims) Any() bool {
+	return bc.Count() > 0
+}
+
+func ToCardanoTxKey(originChainId string, txHash string) string {
+	return fmt.Sprintf("%v_%v", originChainId, txHash)
+}
+
+func (tx CardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.OriginChainId, tx.Hash)
+}
+
+func (tx CardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
+}
+
+func (tx ProcessedCardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.OriginChainId, tx.Hash)
+}
+
+func (tx ProcessedCardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
+}
+
+func (tx BridgeExpectedCardanoTx) ToCardanoTxKey() string {
+	return ToCardanoTxKey(tx.ChainId, tx.Hash)
+}
+
+func (tx BridgeExpectedCardanoTx) Key() []byte {
+	return []byte(tx.ToCardanoTxKey())
+}
+
+func (tx BridgeExpectedCardanoDbTx) Key() []byte {
+	return []byte(ToCardanoTxKey(tx.ChainId, tx.Hash))
 }

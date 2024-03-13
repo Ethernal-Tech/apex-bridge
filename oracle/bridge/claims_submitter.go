@@ -48,7 +48,14 @@ func (cs *ClaimsSubmitterImpl) SubmitClaims(claims *core.BridgeClaims) error {
 		cs.ethClient = ethClient
 	}
 
-	ethTxHelper, _ := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(cs.ethClient))
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(cs.ethClient))
+	if err != nil {
+		// ensure redial in case ethClient lost connection
+		cs.ethClient = nil
+		cs.logger.Error("Failed to create ethTxHelper", "err", err)
+		return err
+	}
+
 	receipt, err := cs.sendTx(ethTxHelper, claims)
 	if err != nil {
 		// ensure redial in case ethClient lost connection
@@ -88,7 +95,7 @@ func (cs *ClaimsSubmitterImpl) sendTx(ethTxHelper ethtxhelper.IEthTxHelper, clai
 	}
 
 	tx, err := ethTxHelper.SendTx(cs.ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-		// replace with real bridge contract call
+		// TODO: replace with real bridge contract call
 		return contract.SetValue(txOpts, new(big.Int).SetUint64(
 			uint64(len(claims.BatchExecuted)+len(claims.BridgingRequest)+len(claims.BatchExecutionFailed)),
 		))

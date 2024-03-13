@@ -11,8 +11,10 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 )
@@ -30,8 +32,9 @@ type OracleImpl struct {
 	cardanoTxsProcessor   core.CardanoTxsProcessor
 	cardanoChainObservers map[string]core.CardanoChainObserver
 	db                    core.Database
-	logger                hclog.Logger
+	bridgeDataFetcher     *bridge.BridgeDataFetcherImpl
 	claimsSubmitter       core.ClaimsSubmitter
+	logger                hclog.Logger
 
 	errorCh chan error
 	closeCh chan bool
@@ -40,6 +43,9 @@ type OracleImpl struct {
 var _ core.Oracle = (*OracleImpl)(nil)
 
 func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *OracleImpl {
+
+	oracle := &OracleImpl{}
+
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(appConfig.Settings.LogLevel),
 		JSONLogFormat: false,
@@ -64,14 +70,28 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		return nil
 	}
 
+	bridgeDataFetcher := bridge.NewBridgeDataFetcher(appConfig, db, logger.Named("bridge_data_fetcher"))
+	claimsSubmitter := bridge.NewClaimsSubmitter(appConfig, logger.Named("claims_submitter"))
+
 	var txProcessors []core.CardanoTxProcessor
 	txProcessors = append(txProcessors, tx_processors.NewBatchExecutedProcessor())
 	txProcessors = append(txProcessors, tx_processors.NewBridgingRequestedProcessor())
 	// txProcessors = append(txProcessors, tx_processors.NewRefundExecutedProcessor())
 
-	claimsSubmitter := bridge.NewClaimsSubmitter(appConfig, logger.Named("claims_submitter"))
+	var failedTxProcessors []core.CardanoTxFailedProcessor
+	failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewBatchExecutionFailedProcessor())
+	// failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewRefundExecutionFailedProcessor())
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, claimsSubmitter, logger.Named("cardano_txs_processor"))
+	getCardanoChainObserverDb := func(chainId string) indexer.Database {
+		cco := oracle.cardanoChainObservers[chainId]
+		if cco != nil {
+			return cco.GetDb()
+		}
+
+		return nil
+	}
+
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, claimsSubmitter, getCardanoChainObserverDb, logger.Named("cardano_txs_processor"))
 
 	var cardanoChainObservers map[string]core.CardanoChainObserver = make(map[string]core.CardanoChainObserver)
 
@@ -80,21 +100,23 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		cardanoChainObservers[cardanoChainConfig.ChainId] = chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor)
 	}
 
-	return &OracleImpl{
-		appConfig:             appConfig,
-		cardanoTxsProcessor:   cardanoTxsProcessor,
-		cardanoChainObservers: cardanoChainObservers,
-		claimsSubmitter:       claimsSubmitter,
-		db:                    db,
-		logger:                logger,
-		closeCh:               make(chan bool, 1),
-	}
+	oracle.appConfig = appConfig
+	oracle.cardanoTxsProcessor = cardanoTxsProcessor
+	oracle.cardanoChainObservers = cardanoChainObservers
+	oracle.bridgeDataFetcher = bridgeDataFetcher
+	oracle.claimsSubmitter = claimsSubmitter
+	oracle.db = db
+	oracle.logger = logger
+	oracle.closeCh = make(chan bool, 1)
+
+	return oracle
 }
 
 func (o *OracleImpl) Start() error {
 	o.logger.Debug("Starting Oracle")
 
 	go o.cardanoTxsProcessor.Start()
+	go o.bridgeDataFetcher.Start()
 
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
@@ -125,6 +147,7 @@ func (o *OracleImpl) Stop() error {
 	}
 
 	o.cardanoTxsProcessor.Stop()
+	o.bridgeDataFetcher.Stop()
 	o.claimsSubmitter.Dispose()
 	o.db.Close()
 
@@ -155,13 +178,15 @@ func (o *OracleImpl) errorHandler() {
 			for {
 				select {
 				case err := <-errChan:
-					o.logger.Error("chain observer error", "origin", origin, "err", err)
-					if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
-						agg <- ErrorOrigin{
-							err:    err,
-							origin: origin,
+					if err != nil {
+						o.logger.Error("chain observer error", "origin", origin, "err", err)
+						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
+							agg <- ErrorOrigin{
+								err:    err,
+								origin: origin,
+							}
+							break outsideloop
 						}
-						break outsideloop
 					}
 				case <-closeChan:
 					break outsideloop
