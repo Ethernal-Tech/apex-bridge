@@ -1,8 +1,7 @@
 {
     "bridge": {
         "NodeUrl": "https://polygon-mumbai-pokt.nodies.app",
-        "scAddress": "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
-        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23"
+        "scAddress": "0xF146ba6fAF3741df932a5d4074f414A15a621797"
     },
     "cardanoChains": {
         "prime": {

@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type RelayerManagerImpl struct {
@@ -29,11 +30,17 @@ func NewRelayerManager(config *core.RelayerManagerConfiguration) *RelayerManager
 			os.Exit(1)
 		}
 
+		txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error while creating tx provider: %v\n", err)
+			os.Exit(1)
+		}
+
 		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{
 			Bridge:        config.Bridge,
 			CardanoChain:  cardanoChainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)))
+		}, logger.Named(strings.ToUpper(chain)), relayer.NewCardanoChainOperations(txProvider))
 	}
 
 	return &RelayerManagerImpl{
