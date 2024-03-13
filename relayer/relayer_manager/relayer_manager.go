@@ -14,25 +14,26 @@ import (
 
 type RelayerManagerImpl struct {
 	config          *core.RelayerManagerConfiguration
-	cardanoRelayers map[string]*relayer.RelayerImpl
+	cardanoRelayers map[string]core.Relayer
 	cancelCtx       context.CancelFunc
 }
 
+var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
+
 func NewRelayerManager(config *core.RelayerManagerConfiguration) *RelayerManagerImpl {
-	var relayers = map[string]*relayer.RelayerImpl{}
+	var relayers = map[string]core.Relayer{}
 	for chain, cardanoChainConfig := range config.CardanoChains {
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
 			os.Exit(1)
 		}
-		logger = logger.Named(strings.ToUpper(chain))
 
 		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{
 			Bridge:        config.Bridge,
 			CardanoChain:  cardanoChainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger)
+		}, logger.Named(strings.ToUpper(chain)))
 	}
 
 	return &RelayerManagerImpl{

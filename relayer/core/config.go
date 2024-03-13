@@ -13,7 +13,7 @@ type CardanoChainConfig struct {
 
 type BridgeConfig struct {
 	NodeUrl              string `json:"NodeUrl"`
-	SmartContractAddress string `json:"scAddress"` // TOOD: probably will be more than just one
+	SmartContractAddress string `json:"scAddress"` // TODO: probably will be more than just one
 }
 
 type RelayerConfiguration struct {

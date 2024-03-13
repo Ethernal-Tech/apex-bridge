@@ -8,5 +8,5 @@ type RelayerManager interface {
 }
 
 type Relayer interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context)
 }

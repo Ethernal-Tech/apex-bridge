@@ -19,6 +19,8 @@ type RelayerImpl struct {
 	ethClient *ethclient.Client
 }
 
+var _ core.Relayer = (*RelayerImpl)(nil)
+
 func NewRelayer(config *core.RelayerConfiguration, logger hclog.Logger) *RelayerImpl {
 	return &RelayerImpl{
 		config:    config,
