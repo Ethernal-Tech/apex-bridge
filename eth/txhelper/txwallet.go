@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	apexcommon "github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,7 +23,12 @@ type EthTxWallet struct {
 var _ IEthTxWallet = (*EthTxWallet)(nil)
 
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
-	privateKey, err := crypto.HexToECDSA(pk)
+	bytes, err := apexcommon.DecodeHex(pk)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKey, err := crypto.ToECDSA(bytes)
 	if err != nil {
 		return nil, err
 	}
