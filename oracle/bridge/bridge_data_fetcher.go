@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TickTimeMs = 2000
+	TickTimeMs = 5000
 )
 
 type BridgeDataFetcherImpl struct {

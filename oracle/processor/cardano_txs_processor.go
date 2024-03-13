@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	TickTimeMs                  = 2000
-	LastExpectedBlockSlotOffset = 5
+	TickTimeMs         = 2000
+	TtlInsuranceOffset = 2
 )
 
 type CardanoTxsProcessorImpl struct {
@@ -285,7 +285,7 @@ expectedTxsLoop:
 			continue
 		}
 
-		if expectedTx.Ttl+LastExpectedBlockSlotOffset >= latestBlockPoint.BlockSlot {
+		if expectedTx.Ttl+TtlInsuranceOffset >= latestBlockPoint.BlockSlot {
 			// not expired yet
 			continue
 		}
