@@ -18,8 +18,18 @@ func main() {
 	}
 
 	relayerManager := relayer_manager.NewRelayerManager(config)
+	if relayerManager == nil {
+		fmt.Fprintf(os.Stderr, "Failed to create relayer manager")
+		os.Exit(1)
+	}
 
-	go relayerManager.Start()
+	err = relayerManager.Start()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to start relayers. error: %v\n", err)
+		os.Exit(1)
+	}
+
+	defer relayerManager.Stop()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

@@ -27,13 +27,13 @@ func NewRelayerManager(config *core.RelayerManagerConfiguration) *RelayerManager
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
-			os.Exit(1)
+			return nil
 		}
 
 		txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating tx provider: %v\n", err)
-			os.Exit(1)
+			return nil
 		}
 
 		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{

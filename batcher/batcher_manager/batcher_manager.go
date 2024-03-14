@@ -26,7 +26,7 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerIm
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
-			os.Exit(1)
+			return nil
 		}
 
 		batchers[chain] = batcher.NewBatcher(&core.BatcherConfiguration{
