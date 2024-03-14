@@ -18,6 +18,10 @@ func main() {
 	}
 
 	batcherManager := batcher_manager.NewBatcherManager(config)
+	if batcherManager == nil {
+		fmt.Fprintf(os.Stderr, "Failed to create batcher manager.")
+		os.Exit(1)
+	}
 
 	err = batcherManager.Start()
 	if err != nil {
