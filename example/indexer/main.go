@@ -82,7 +82,8 @@ func main() {
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: 10,
 		AddressesOfInterest:    addressesOfInterest,
-		SoftDeleteUtxo:         true,
+		SoftDeleteUtxo:         false, // set to true if you want to keep used utxos in db
+		KeepAllTxOutputsInDb:   false, // set to true if you want to keep all utxos of all txs in db
 	}
 	syncerConfig := &indexer.BlockSyncerConfig{
 		NetworkMagic:   networkMagic,
