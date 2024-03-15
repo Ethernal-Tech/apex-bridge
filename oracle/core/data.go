@@ -99,6 +99,14 @@ func (bc BridgeClaims) Any() bool {
 	return bc.Count() > 0
 }
 
+func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
+	return &ProcessedCardanoTx{
+		OriginChainId: tx.OriginChainId,
+		Hash:          tx.Hash,
+		IsInvalid:     isInvalid,
+	}
+}
+
 func ToCardanoTxKey(originChainId string, txHash string) string {
 	return fmt.Sprintf("%v_%v", originChainId, txHash)
 }

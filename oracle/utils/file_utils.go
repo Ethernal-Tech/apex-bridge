@@ -15,6 +15,14 @@ func CreateDirectoryIfNotExists(dirPath string) error {
 	return nil
 }
 
+func RemoveDirOrFilePathIfExists(dirOrFilePath string) (err error) {
+	if _, err = os.Stat(dirOrFilePath); err == nil {
+		os.RemoveAll(dirOrFilePath)
+	}
+
+	return err
+}
+
 func LoadJson[TReturn any](path string) (*TReturn, error) {
 	f, err := os.Open(path)
 	if err != nil {

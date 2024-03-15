@@ -233,11 +233,7 @@ unprocessedTxsLoop:
 					delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
 				}
 
-				processedTxs = append(processedTxs, &core.ProcessedCardanoTx{
-					OriginChainId: unprocessedTx.OriginChainId,
-					Hash:          unprocessedTx.Hash,
-					IsInvalid:     false,
-				})
+				processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
 				txProcessed = true
 
 				if bridgeClaims.Count() >= bp.appConfig.Settings.MaxBridgingClaimsToGroup {
@@ -249,11 +245,7 @@ unprocessedTxsLoop:
 		}
 
 		if !txProcessed {
-			processedTxs = append(processedTxs, &core.ProcessedCardanoTx{
-				OriginChainId: unprocessedTx.OriginChainId,
-				Hash:          unprocessedTx.Hash,
-				IsInvalid:     true,
-			})
+			processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(true))
 		}
 	}
 
@@ -285,7 +277,7 @@ expectedTxsLoop:
 			continue
 		}
 
-		if expectedTx.Ttl+TtlInsuranceOffset >= latestBlockPoint.BlockSlot {
+		if latestBlockPoint == nil || expectedTx.Ttl+TtlInsuranceOffset >= latestBlockPoint.BlockSlot {
 			// not expired yet
 			continue
 		}

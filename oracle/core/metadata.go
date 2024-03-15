@@ -35,14 +35,16 @@ func UnmarshalBaseMetadata(data []byte) (*BaseMetadata, error) {
 	}
 }
 
+type BridgingRequestMetadataTransaction struct {
+	Address string `cbor:"address"`
+	Amount  uint64 `cbor:"amount"`
+}
+
 type BridgingRequestMetadata struct {
-	BridgingTxType     BridgingTxType `cbor:"type"`
-	DestinationChainId string         `cbor:"destinationChainId"`
-	SenderAddr         string         `cbor:"senderAddr"`
-	Transactions       []struct {
-		Address string `cbor:"address"`
-		Amount  uint64 `cbor:"amount"`
-	}
+	BridgingTxType     BridgingTxType                       `cbor:"type"`
+	DestinationChainId string                               `cbor:"destinationChainId"`
+	SenderAddr         string                               `cbor:"senderAddr"`
+	Transactions       []BridgingRequestMetadataTransaction `cbor:"transactions"`
 }
 
 type BridgingRequestMetadataMap struct {
