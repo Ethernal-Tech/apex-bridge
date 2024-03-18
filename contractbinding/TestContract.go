@@ -37,9 +37,45 @@ type TestContractConfirmedBatch struct {
 	FeePayerMultisigSignatures []string
 }
 
+// TestContractConfirmedTransaction is an auto generated low-level Go binding around an user-defined struct.
+type TestContractConfirmedTransaction struct {
+	Nonce     *big.Int
+	Receivers []TestContractReceiver
+}
+
+// TestContractReceiver is an auto generated low-level Go binding around an user-defined struct.
+type TestContractReceiver struct {
+	DestinationAddress string
+	Amount             *big.Int
+}
+
+// TestContractSignedBatch is an auto generated low-level Go binding around an user-defined struct.
+type TestContractSignedBatch struct {
+	Id                        string
+	DestinationChainId        string
+	RawTransaction            string
+	MultisigSignature         string
+	FeePayerMultisigSignature string
+	IncludedTransactions      []TestContractConfirmedTransaction
+	UsedUTXOs                 TestContractUTXOs
+}
+
+// TestContractUTXO is an auto generated low-level Go binding around an user-defined struct.
+type TestContractUTXO struct {
+	TxHash  string
+	TxIndex *big.Int
+	Amount  *big.Int
+}
+
+// TestContractUTXOs is an auto generated low-level Go binding around an user-defined struct.
+type TestContractUTXOs struct {
+	MultisigOwnedUTXOs []TestContractUTXO
+	FeePayerOwnedUTXOs []TestContractUTXO
+}
+
 // TestContractMetaData contains all meta data concerning the TestContract contract.
 var TestContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"confirmedBatch\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedBatch\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structTestContract.ConfirmedBatch\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structTestContract.ConfirmedBatch\",\"name\":\"_newValue\",\"type\":\"tuple\"}],\"name\":\"setConfirmedBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"setValue\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"confirmedBatch\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedBatch\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structTestContract.ConfirmedBatch\",\"name\":\"batch\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"resetShouldRetrieve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structTestContract.ConfirmedBatch\",\"name\":\"_newValue\",\"type\":\"tuple\"}],\"name\":\"setConfirmedBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"setValue\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"destinationChain\",\"type\":\"string\"}],\"name\":\"shouldCreateBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"shouldRelayerRetrieve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"destinationChainId\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"multisigSignature\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"feePayerMultisigSignature\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"destinationAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structTestContract.Receiver[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"}],\"internalType\":\"structTestContract.ConfirmedTransaction[]\",\"name\":\"includedTransactions\",\"type\":\"tuple[]\"},{\"components\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structTestContract.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structTestContract.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structTestContract.UTXOs\",\"name\":\"usedUTXOs\",\"type\":\"tuple\"}],\"internalType\":\"structTestContract.SignedBatch\",\"name\":\"signedBatch\",\"type\":\"tuple\"}],\"name\":\"submitSignedBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // TestContractABI is the input ABI used to generate the binding from.
@@ -235,7 +271,7 @@ func (_TestContract *TestContractCallerSession) ConfirmedBatch() (struct {
 
 // GetConfirmedBatch is a free data retrieval call binding the contract method 0xd52c54c4.
 //
-// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]))
+// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]) batch)
 func (_TestContract *TestContractCaller) GetConfirmedBatch(opts *bind.CallOpts, destinationChain string) (TestContractConfirmedBatch, error) {
 	var out []interface{}
 	err := _TestContract.contract.Call(opts, &out, "getConfirmedBatch", destinationChain)
@@ -252,14 +288,14 @@ func (_TestContract *TestContractCaller) GetConfirmedBatch(opts *bind.CallOpts, 
 
 // GetConfirmedBatch is a free data retrieval call binding the contract method 0xd52c54c4.
 //
-// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]))
+// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]) batch)
 func (_TestContract *TestContractSession) GetConfirmedBatch(destinationChain string) (TestContractConfirmedBatch, error) {
 	return _TestContract.Contract.GetConfirmedBatch(&_TestContract.CallOpts, destinationChain)
 }
 
 // GetConfirmedBatch is a free data retrieval call binding the contract method 0xd52c54c4.
 //
-// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]))
+// Solidity: function getConfirmedBatch(string destinationChain) view returns((string,string,string[],string[]) batch)
 func (_TestContract *TestContractCallerSession) GetConfirmedBatch(destinationChain string) (TestContractConfirmedBatch, error) {
 	return _TestContract.Contract.GetConfirmedBatch(&_TestContract.CallOpts, destinationChain)
 }
@@ -293,6 +329,89 @@ func (_TestContract *TestContractSession) GetValue() (*big.Int, error) {
 // Solidity: function getValue() view returns(uint256)
 func (_TestContract *TestContractCallerSession) GetValue() (*big.Int, error) {
 	return _TestContract.Contract.GetValue(&_TestContract.CallOpts)
+}
+
+// ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
+//
+// Solidity: function shouldCreateBatch(string destinationChain) view returns(bool)
+func (_TestContract *TestContractCaller) ShouldCreateBatch(opts *bind.CallOpts, destinationChain string) (bool, error) {
+	var out []interface{}
+	err := _TestContract.contract.Call(opts, &out, "shouldCreateBatch", destinationChain)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
+//
+// Solidity: function shouldCreateBatch(string destinationChain) view returns(bool)
+func (_TestContract *TestContractSession) ShouldCreateBatch(destinationChain string) (bool, error) {
+	return _TestContract.Contract.ShouldCreateBatch(&_TestContract.CallOpts, destinationChain)
+}
+
+// ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
+//
+// Solidity: function shouldCreateBatch(string destinationChain) view returns(bool)
+func (_TestContract *TestContractCallerSession) ShouldCreateBatch(destinationChain string) (bool, error) {
+	return _TestContract.Contract.ShouldCreateBatch(&_TestContract.CallOpts, destinationChain)
+}
+
+// ShouldRelayerRetrieve is a free data retrieval call binding the contract method 0x8594d36d.
+//
+// Solidity: function shouldRelayerRetrieve() view returns(bool)
+func (_TestContract *TestContractCaller) ShouldRelayerRetrieve(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _TestContract.contract.Call(opts, &out, "shouldRelayerRetrieve")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// ShouldRelayerRetrieve is a free data retrieval call binding the contract method 0x8594d36d.
+//
+// Solidity: function shouldRelayerRetrieve() view returns(bool)
+func (_TestContract *TestContractSession) ShouldRelayerRetrieve() (bool, error) {
+	return _TestContract.Contract.ShouldRelayerRetrieve(&_TestContract.CallOpts)
+}
+
+// ShouldRelayerRetrieve is a free data retrieval call binding the contract method 0x8594d36d.
+//
+// Solidity: function shouldRelayerRetrieve() view returns(bool)
+func (_TestContract *TestContractCallerSession) ShouldRelayerRetrieve() (bool, error) {
+	return _TestContract.Contract.ShouldRelayerRetrieve(&_TestContract.CallOpts)
+}
+
+// ResetShouldRetrieve is a paid mutator transaction binding the contract method 0x7498aede.
+//
+// Solidity: function resetShouldRetrieve() returns()
+func (_TestContract *TestContractTransactor) ResetShouldRetrieve(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _TestContract.contract.Transact(opts, "resetShouldRetrieve")
+}
+
+// ResetShouldRetrieve is a paid mutator transaction binding the contract method 0x7498aede.
+//
+// Solidity: function resetShouldRetrieve() returns()
+func (_TestContract *TestContractSession) ResetShouldRetrieve() (*types.Transaction, error) {
+	return _TestContract.Contract.ResetShouldRetrieve(&_TestContract.TransactOpts)
+}
+
+// ResetShouldRetrieve is a paid mutator transaction binding the contract method 0x7498aede.
+//
+// Solidity: function resetShouldRetrieve() returns()
+func (_TestContract *TestContractTransactorSession) ResetShouldRetrieve() (*types.Transaction, error) {
+	return _TestContract.Contract.ResetShouldRetrieve(&_TestContract.TransactOpts)
 }
 
 // SetConfirmedBatch is a paid mutator transaction binding the contract method 0xaf8c1b83.
@@ -335,4 +454,25 @@ func (_TestContract *TestContractSession) SetValue(number *big.Int) (*types.Tran
 // Solidity: function setValue(uint256 number) returns()
 func (_TestContract *TestContractTransactorSession) SetValue(number *big.Int) (*types.Transaction, error) {
 	return _TestContract.Contract.SetValue(&_TestContract.TransactOpts, number)
+}
+
+// SubmitSignedBatch is a paid mutator transaction binding the contract method 0x7b0f0761.
+//
+// Solidity: function submitSignedBatch((string,string,string,string,string,(uint256,(string,uint256)[])[],((string,uint256,uint256)[],(string,uint256,uint256)[])) signedBatch) returns()
+func (_TestContract *TestContractTransactor) SubmitSignedBatch(opts *bind.TransactOpts, signedBatch TestContractSignedBatch) (*types.Transaction, error) {
+	return _TestContract.contract.Transact(opts, "submitSignedBatch", signedBatch)
+}
+
+// SubmitSignedBatch is a paid mutator transaction binding the contract method 0x7b0f0761.
+//
+// Solidity: function submitSignedBatch((string,string,string,string,string,(uint256,(string,uint256)[])[],((string,uint256,uint256)[],(string,uint256,uint256)[])) signedBatch) returns()
+func (_TestContract *TestContractSession) SubmitSignedBatch(signedBatch TestContractSignedBatch) (*types.Transaction, error) {
+	return _TestContract.Contract.SubmitSignedBatch(&_TestContract.TransactOpts, signedBatch)
+}
+
+// SubmitSignedBatch is a paid mutator transaction binding the contract method 0x7b0f0761.
+//
+// Solidity: function submitSignedBatch((string,string,string,string,string,(uint256,(string,uint256)[])[],((string,uint256,uint256)[],(string,uint256,uint256)[])) signedBatch) returns()
+func (_TestContract *TestContractTransactorSession) SubmitSignedBatch(signedBatch TestContractSignedBatch) (*types.Transaction, error) {
+	return _TestContract.Contract.SubmitSignedBatch(&_TestContract.TransactOpts, signedBatch)
 }

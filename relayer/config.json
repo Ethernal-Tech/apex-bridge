@@ -1,19 +1,11 @@
 {
     "bridge": {
         "NodeUrl": "https://polygon-mumbai-pokt.nodies.app",
-        "scAddress": "0xF146ba6fAF3741df932a5d4074f414A15a621797"
+        "scAddress": "0xaE9d7040978152349c488b1A29b653e04dcca1f3"
     },
     "cardanoChains": {
         "prime": {
             "chainId": "prime",
-            "testnetMagic": 2,
-            "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-            "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-            "atLeastValidators": 0.6666666666666666,
-            "potentialFee": 300000
-        },
-        "vector": {
-            "chainId": "vector",
             "testnetMagic": 2,
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",

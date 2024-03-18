@@ -24,12 +24,12 @@ import (
 )
 
 func TestRelayer(t *testing.T) {
-	signedBatchId := big.NewInt(1)
+	signedBatchId := big.NewInt(2)
 
 	relayerConfig := &core.RelayerConfiguration{
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0xF146ba6fAF3741df932a5d4074f414A15a621797",
+			SmartContractAddress: "0xaE9d7040978152349c488b1A29b653e04dcca1f3",
 		},
 		CardanoChain: core.CardanoChainConfig{
 			TestNetMagic:      uint(2),
@@ -88,6 +88,7 @@ func TestRelayer(t *testing.T) {
 
 	t.Run("check get data directly from contract", func(t *testing.T) {
 		// Get value for comparison
+
 		res, err := contract.GetConfirmedBatch(&bind.CallOpts{
 			Context: ctx,
 			From:    wallet.GetAddress(),
@@ -179,20 +180,20 @@ func generateWitnessesHelper(t *testing.T, txHash string) ([]string, [][]byte) {
 var (
 	dummyMumbaiAccPk = "3761f6deeb2e0b2aa8b843e804d880afa6e5fecf1631f411e267641a72d0ca20"
 	dummyKeyHashes   = []string{
-		"089732e4f6fc248b599c6b24b75187c39842f515733c833e0f09795b",
-		"474187985a19732d1abbe1114c1af4cf084d58511884800ddfca3a82",
-		"d92df0aff3bf46f084c5744ef25ef33f34318621027a66790b66da31",
-		"cd0f2d9b43edb2cfa501f4d7c64413ed57c9147ce0c3aac520bfc565",
-		"f8dd5736c4bc7b0d07bff7f018948838f87c703c01b368a38f2cf234",
-		"004ee443c6b1a1aa59699545b7bfdf25db64c4d3a64fd1fe10d20829",
+		"eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205",
+		"ad8e0ab92e1febfcaf44889d68c3ae78b59dc9c5fa9e05a272214c13",
+		"bfd1c0eb0a453a7b7d668166ce5ca779c655e09e11487a6fac72dd6f",
+		"b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56",
+		"39c196d28f804f70704b6dec5991fbb1112e648e067d17ca7abe614b",
+		"adea661341df075349cbb2ad02905ce1828f8cf3e66f5012d48c3168",
 	}
 	dummySigningKeys = []string{
-		"58201217236ac24d8ac12684b308cf9468f68ef5283096896dc1c5c3caf8351e2847",
-		"58207e62090b7c574dd71423d4d1d089675bcde049fb2c677fea7add2d94120f01de",
-		"582060d76923536885313a7a9dc5a8ed68a22a5e0edee88ca5eb8b10f1e162c57530",
-		"5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6",
-		"58202bf1bed17d19f44f53ac64fa4621c879f8295af52080cffb2a8d9d10117ae772",
-		"58202cdf4d3b56f3d9ea7b7c9424d841273e2adb1bd11a98a4370ad22f3bac9104e2",
+		"58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0",
+		"5820ccdae0d1cd3fa9be16a497941acff33b9aa20bdbf2f9aa5715942d152988e083",
+		"582094bfc7d65a5d936e7b527c93ea6bf75de51029290b1ef8c8877bffe070398b40",
+		"58204cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9",
+		"58208fcc8cac6b7fedf4c30aed170633df487642cb22f7e8615684e2b98e367fcaa3",
+		"582058fb35da120c65855ad691dadf5681a2e4fc62e9dcda0d0774ff6fdc463a679a",
 	}
 	dummyOutputs = []cardanowallet.TxOutput{
 		{

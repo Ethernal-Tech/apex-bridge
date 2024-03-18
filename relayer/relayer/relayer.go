@@ -34,6 +34,8 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 		timerTime = time.Millisecond * time.Duration(r.config.PullTimeMilis)
 	)
 
+	r.logger.Debug("Relayer started")
+
 	timer := time.NewTimer(timerTime)
 	defer timer.Stop()
 
@@ -70,6 +72,20 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 		return
 	}
 
+	// TODO: Remove - added for testing
+	shouldRetreive, err := bridge.ShouldRetreive(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
+	if err != nil {
+		r.logger.Error("Failed to retrieve data from bridge", "err", err)
+		// In case of error, reset ethClient to nil to try again in the next iteration.
+		r.ethClient = nil
+		return
+	}
+
+	if !shouldRetreive {
+		r.logger.Info("Waiting for submited signed batch")
+		return
+	}
+
 	// invoke smart contract(s)
 	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, r.config.CardanoChain.ChainId, r.config.Bridge.SmartContractAddress)
 	if err != nil {
@@ -78,8 +94,21 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 		r.ethClient = nil
 		return
 	}
+	r.logger.Info("Signed batch retrieved from contract")
+
+	// TODO: Remove - added for testing
+	err = bridge.ResetShouldRetreive(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
+	if err != nil {
+		r.logger.Error("Failed to reset should retrieve", "err", err)
+
+		r.ethClient = nil
+		return
+	}
 
 	if err := r.operations.SendTx(smartContractData); err != nil {
 		r.logger.Error("failed to send tx", "err", err)
+		return
 	}
+
+	r.logger.Info("Transaction successfully submited")
 }
