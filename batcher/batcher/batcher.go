@@ -115,6 +115,8 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 		return
 	}
 
+	b.logger.Info("Batch successfully signed")
+
 	// TODO: Update ID
 	// Submit batch to smart contract
 	signedBatch := contractbinding.SignedBatch{

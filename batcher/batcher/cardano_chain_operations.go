@@ -57,7 +57,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	protocolParams, err := cco.txProvider.GetProtocolParameters()
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}

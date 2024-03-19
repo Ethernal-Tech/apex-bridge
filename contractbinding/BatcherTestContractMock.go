@@ -1,6 +1,7 @@
 package contractbinding
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
@@ -76,14 +77,16 @@ func (m *BatcherTestContractMock) GetAvailableUTXOs(destinationChain string, txC
 		return retVal, err
 	}
 
-	err = txInfos.CalculateWithRetriever(txProvider, txCost.Uint64(), uint64(300000))
+	ctx, cancelCtx := context.WithCancel(context.Background())
+
+	err = txInfos.CalculateWithRetriever(ctx, txProvider, txCost.Uint64(), uint64(300000))
 	if err != nil {
 		return retVal, err
 	}
 
 	// Get multisig utxos for amount and place them into map
 	var utxoAmount map[string]*big.Int = make(map[string]*big.Int)
-	multisigUtxos, err := txProvider.GetUtxos(txInfos.MultiSig.Address)
+	multisigUtxos, err := txProvider.GetUtxos(ctx, txInfos.MultiSig.Address)
 	if err != nil {
 		return retVal, err
 	}
@@ -101,7 +104,7 @@ func (m *BatcherTestContractMock) GetAvailableUTXOs(destinationChain string, txC
 
 	// Get multisig fee utxos for amount and place them into map
 	utxoAmount = make(map[string]*big.Int)
-	multisigUtxos, err = txProvider.GetUtxos(txInfos.MultiSigFee.Address)
+	multisigUtxos, err = txProvider.GetUtxos(ctx, txInfos.MultiSigFee.Address)
 	if err != nil {
 		return retVal, err
 	}
@@ -117,6 +120,7 @@ func (m *BatcherTestContractMock) GetAvailableUTXOs(destinationChain string, txC
 		})
 	}
 
+	cancelCtx()
 	return retVal, nil
 }
 
