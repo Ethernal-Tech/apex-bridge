@@ -64,7 +64,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	}
 
 	db, err := database_access.NewDatabase(appConfig.Settings.DbsPath + MainComponentName + ".db")
-	if err != nil {
+	if db == nil || err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Open database failed", "err", err)
 		return nil
@@ -97,7 +97,14 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		initialUtxosForChain := (*initialUtxos)[cardanoChainConfig.ChainId]
-		cardanoChainObservers[cardanoChainConfig.ChainId] = chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor)
+		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor)
+		if cco == nil {
+			fmt.Fprintf(os.Stderr, "failed to create cardano chain observer for chain: %v\n", cardanoChainConfig.ChainId)
+			logger.Error("failed to create cardano chain observer for chain", "chainId", cardanoChainConfig.ChainId)
+			return nil
+		}
+
+		cardanoChainObservers[cardanoChainConfig.ChainId] = cco
 	}
 
 	oracle.appConfig = appConfig

@@ -37,8 +37,9 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MinFeeForBridging uint64 `json:"minFeeForBridging"`
-	UtxoMinValue      uint64 `json:"utxoMinValue"`
+	MinFeeForBridging              uint64 `json:"minFeeForBridging"`
+	UtxoMinValue                   uint64 `json:"utxoMinValue"`
+	MaxReceiversPerBridgingRequest int    `json:"maxReceiversPerBridgingRequest"`
 }
 
 type AppConfig struct {
