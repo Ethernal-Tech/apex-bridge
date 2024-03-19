@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -75,7 +76,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, chain := range loadedConfig.Chains {
-		chainOp, err := GetChainSpecificOperations(chain.ChainSpecific)
+		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific)
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)

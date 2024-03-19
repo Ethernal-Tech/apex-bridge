@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func ShouldCreateBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string) (bool, error) {
@@ -58,7 +57,6 @@ func GetAvailableUTXOs(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper
 }
 
 func SubmitSignedBatch(
-	ethClient *ethclient.Client,
 	ctx context.Context,
 	ethTxHelper ethtxhelper.IEthTxHelper,
 	smartContractAddress string,

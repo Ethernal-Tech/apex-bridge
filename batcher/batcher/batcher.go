@@ -3,12 +3,16 @@ package batcher
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 )
@@ -128,11 +132,37 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 		UsedUTXOs:                 *utxos,
 	}
 
-	err = bridge.SubmitSignedBatch(b.ethClient, ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, signedBatch, b.config.Bridge.SigningKey)
+	err = bridge.SubmitSignedBatch(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, signedBatch, b.config.Bridge.SigningKey)
 	if err != nil {
 		b.ethClient = nil
 		b.logger.Error("Failed to submit signed batch", "err", err)
 		return
 	}
 	b.logger.Info("Batch successfully submited")
+}
+
+// GetChainSpecificOperations returns the chain-specific operations based on the chain type
+func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
+	var operations core.ChainOperations
+
+	// Create the appropriate chain-specific configuration based on the chain type
+	switch config.ChainType {
+	case "Cardano":
+		var cardanoChainConfig core.CardanoChainConfig
+		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
+		}
+
+		txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error while creating tx provider: %v\n", err)
+			return nil, err
+		}
+
+		operations = NewCardanoChainOperations(txProvider, cardanoChainConfig)
+	default:
+		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
+	}
+
+	return operations, nil
 }

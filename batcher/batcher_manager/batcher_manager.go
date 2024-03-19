@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type BatchManagerImpl struct {
@@ -30,7 +29,7 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerIm
 			return nil
 		}
 
-		operations, err := GetChainSpecificOperations(chainConfig.ChainSpecific)
+		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
 			return nil
@@ -83,30 +82,4 @@ func LoadConfig(path string) (*core.BatcherManagerConfiguration, error) {
 	}
 
 	return &appConfig, nil
-}
-
-// GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
-	var operations core.ChainOperations
-
-	// Create the appropriate chain-specific configuration based on the chain type
-	switch config.ChainType {
-	case "Cardano":
-		var cardanoChainConfig core.CardanoChainConfig
-		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
-		}
-
-		txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while creating tx provider: %v\n", err)
-			return nil, err
-		}
-
-		operations = batcher.NewCardanoChainOperations(txProvider, cardanoChainConfig)
-	default:
-		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
-	}
-
-	return operations, nil
 }
