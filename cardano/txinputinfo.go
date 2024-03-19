@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"context"
 	"fmt"
 
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -47,12 +48,12 @@ func (txinfos *TxInputInfos) Calculate(utxos, utxosFee []cardanowallet.Utxo, des
 	return txinfos.MultiSigFee.Calculate(utxosFee, desiredFee)
 }
 
-func (txinfos *TxInputInfos) CalculateWithRetriever(retriever cardanowallet.IUTxORetriever, desired, desiredFee uint64) error {
-	if err := txinfos.MultiSig.CalculateWithRetriever(retriever, desired); err != nil {
+func (txinfos *TxInputInfos) CalculateWithRetriever(ctx context.Context, retriever cardanowallet.IUTxORetriever, desired, desiredFee uint64) error {
+	if err := txinfos.MultiSig.CalculateWithRetriever(ctx, retriever, desired); err != nil {
 		return err
 	}
 
-	return txinfos.MultiSigFee.CalculateWithRetriever(retriever, desiredFee)
+	return txinfos.MultiSigFee.CalculateWithRetriever(ctx, retriever, desiredFee)
 }
 
 type TxInputInfo struct {
@@ -100,8 +101,8 @@ func (txinfo *TxInputInfo) Calculate(utxos []cardanowallet.Utxo, desired uint64)
 	return fmt.Errorf("not enough funds to generate the transaction: %d available vs %d required", amountSum, desired)
 }
 
-func (txinfo *TxInputInfo) CalculateWithRetriever(retriever cardanowallet.IUTxORetriever, desired uint64) error {
-	utxos, err := retriever.GetUtxos(txinfo.Address)
+func (txinfo *TxInputInfo) CalculateWithRetriever(ctx context.Context, retriever cardanowallet.IUTxORetriever, desired uint64) error {
+	utxos, err := retriever.GetUtxos(ctx, txinfo.Address)
 	if err != nil {
 		return err
 	}
