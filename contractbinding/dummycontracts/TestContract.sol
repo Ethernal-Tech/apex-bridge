@@ -106,7 +106,12 @@ contract TestContract {
         return shouldRetrieve;
     }
     function resetShouldRetrieve() external {
-        shouldRetrieve = !shouldRetrieve;
+        shouldRetrieve = false;
+        delete multisigSigs;
+        delete multisigFeeSigs;
+        batcher1submitted = true;
+        batcher2submitted = true;
+        batcher3submitted = true;
     }
 
     function submitSignedBatch(SignedBatch calldata signedBatch) external {
@@ -133,16 +138,8 @@ contract TestContract {
             newBatch.multisigSignatures = multisigSigs;
             newBatch.feePayerMultisigSignatures = multisigFeeSigs;
 
-            if (!shouldRetrieve) {
-                setConfirmedBatch(newBatch);
-                shouldRetrieve = true;
-
-                delete multisigSigs;
-                delete multisigFeeSigs;
-                batcher1submitted = true;
-                batcher2submitted = true;
-                batcher3submitted = true;
-            }
+            setConfirmedBatch(newBatch);
+            shouldRetrieve = true;
         }
     }
 }

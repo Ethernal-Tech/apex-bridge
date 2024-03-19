@@ -96,6 +96,18 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 	}
 	r.logger.Info("Signed batch retrieved from contract")
 
+	if err := r.operations.SendTx(smartContractData); err != nil {
+		r.logger.Error("failed to send tx", "err", err)
+		return
+	}
+
+	r.logger.Info("Transaction successfully submited")
+
+	// TODO: Remove - added for testing
+	// Delay needed because of preview testnet wait time for tx to pass
+	// Makes continuous testing possible
+	time.Sleep(70 * time.Second)
+
 	// TODO: Remove - added for testing
 	err = bridge.ResetShouldRetreive(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
 	if err != nil {
@@ -104,11 +116,4 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 		r.ethClient = nil
 		return
 	}
-
-	if err := r.operations.SendTx(smartContractData); err != nil {
-		r.logger.Error("failed to send tx", "err", err)
-		return
-	}
-
-	r.logger.Info("Transaction successfully submited")
 }
