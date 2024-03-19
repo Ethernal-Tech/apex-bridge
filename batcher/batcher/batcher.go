@@ -130,7 +130,7 @@ func (b BatcherImpl) sendTx(ctx context.Context, data *bridge.SmartContractData,
 	return nil
 }
 
-func (b BatcherImpl) createCardanoTxWitness(_ context.Context, data *bridge.SmartContractData) ([]byte, []byte, error) {
+func (b BatcherImpl) createCardanoTxWitness(ctx context.Context, data *bridge.SmartContractData) ([]byte, []byte, error) {
 	sigKey := cardanotx.NewSigningKey(b.config.CardanoChain.SigningKeyMultiSig)
 	sigKeyFee := cardanotx.NewSigningKey(b.config.CardanoChain.SigningKeyMultiSigFee)
 
@@ -156,17 +156,17 @@ func (b BatcherImpl) createCardanoTxWitness(_ context.Context, data *bridge.Smar
 		return nil, nil, err
 	}
 
-	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(outputs), b.config.CardanoChain.PotentialFee)
+	err = txInfos.CalculateWithRetriever(ctx, txProvider, cardanowallet.GetOutputsSum(outputs), b.config.CardanoChain.PotentialFee)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	protocolParams, err := txProvider.GetProtocolParameters()
+	protocolParams, err := txProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	slotNumber, err := txProvider.GetSlot()
+	slotNumber, err := txProvider.GetSlot(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

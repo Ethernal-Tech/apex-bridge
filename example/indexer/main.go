@@ -58,7 +58,7 @@ func main() {
 
 	defer dbs.Close()
 
-	confirmedHandler := func(txs []*indexer.Tx) error {
+	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
 		logger.Info("Confirmed txs", "len", len(txs))
 
 		confirmedTxs, err := dbs.GetUnprocessedConfirmedTxs(0)
@@ -79,11 +79,12 @@ func main() {
 			BlockHash:   startBlockHash,
 			BlockNumber: startBlockNum,
 		},
-		AddressCheck:           indexer.AddressCheckAll,
-		ConfirmationBlockCount: 10,
-		AddressesOfInterest:    addressesOfInterest,
-		SoftDeleteUtxo:         false, // set to true if you want to keep used utxos in db
-		KeepAllTxOutputsInDb:   false, // set to true if you want to keep all utxos of all txs in db
+		AddressCheck:            indexer.AddressCheckAll,
+		ConfirmationBlockCount:  10,
+		AddressesOfInterest:     addressesOfInterest,
+		SoftDeleteUtxo:          false, // set to true if you want to keep used utxos in db
+		KeepAllTxOutputsInDb:    false, // set to true if you want to keep all utxos of all txs in db
+		KeepAllTxsHashesInBlock: true,  // set to false if you dont want to keep all tx hashes in block
 	}
 	syncerConfig := &indexer.BlockSyncerConfig{
 		NetworkMagic:   networkMagic,
@@ -93,7 +94,7 @@ func main() {
 		KeepAlive:      true,
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedHandler, dbs, logger.Named("block_indexer"))
+	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, dbs, logger.Named("block_indexer"))
 
 	blockSyncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 	defer blockSyncer.Close()

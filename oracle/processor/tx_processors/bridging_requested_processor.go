@@ -157,8 +157,8 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 			break
 		}
 
-		addrInfo := wallet.GetAddressInfo(receiver.Address, wallet.AddressTypeAny)
-		if !addrInfo.IsValid {
+		_, err := wallet.GetAddressInfo(receiver.Address)
+		if err != nil {
 			foundAnInvalidReceiverAddr = true
 			break
 		}
