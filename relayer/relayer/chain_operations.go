@@ -1,6 +1,8 @@
 package relayer
 
 import (
+	"context"
+
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
@@ -30,7 +32,7 @@ func (cco *CardanoChainOperations) SendTx(smartContractData *bridge.ConfirmedBat
 		return err
 	}
 
-	if err := cco.txProvider.SubmitTx(txSigned); err != nil {
+	if err := cco.txProvider.SubmitTx(context.Background(), txSigned); err != nil {
 		return err
 	}
 

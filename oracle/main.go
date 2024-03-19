@@ -23,6 +23,10 @@ func main() {
 	}
 
 	oracle := oracle.NewOracle(appConfig, initialUtxos)
+	if oracle == nil {
+		fmt.Fprintf(os.Stderr, "Failed to create oracle\n")
+		os.Exit(1)
+	}
 
 	err = oracle.Start()
 	if err != nil {

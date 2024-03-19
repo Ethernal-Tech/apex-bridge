@@ -145,16 +145,16 @@ func createTxRawHelper(t *testing.T, config *core.RelayerConfiguration, signedBa
 	txProvider, err := cardanowallet.NewTxProviderBlockFrost(config.CardanoChain.BlockfrostUrl, config.CardanoChain.BlockfrostAPIKey)
 	assert.NoError(t, err)
 
-	err = txInfos.CalculateWithRetriever(txProvider, cardanowallet.GetOutputsSum(dummyOutputs), config.CardanoChain.PotentialFee)
+	err = txInfos.CalculateWithRetriever(context.Background(), txProvider, cardanowallet.GetOutputsSum(dummyOutputs), config.CardanoChain.PotentialFee)
 	assert.NoError(t, err)
 
 	metadata, err := cardanotx.CreateMetaData(signedBatchId)
 	assert.NoError(t, err)
 
-	protocolParams, err := txProvider.GetProtocolParameters()
+	protocolParams, err := txProvider.GetProtocolParameters(context.Background())
 	assert.NoError(t, err)
 
-	slotNumber, err := txProvider.GetSlot()
+	slotNumber, err := txProvider.GetSlot(context.Background())
 	assert.NoError(t, err)
 
 	txRaw, txHash, err = cardanotx.CreateTx(config.CardanoChain.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,

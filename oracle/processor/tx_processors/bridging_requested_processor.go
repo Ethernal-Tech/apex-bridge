@@ -46,7 +46,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata)
 	} else {
-		return fmt.Errorf("validation failed for tx: %v", tx)
+		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
 		// p.addRefundRequestClaim(claims, tx, metadata)
 	}
 
@@ -56,10 +56,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata) {
 	var receivers []core.BridgingRequestReceiver
 	for _, receiver := range metadata.Transactions {
-		receivers = append(receivers, core.BridgingRequestReceiver{
-			Address: receiver.Address,
-			Amount:  receiver.Amount,
-		})
+		receivers = append(receivers, core.BridgingRequestReceiver(receiver))
 	}
 
 	var utxos []core.Utxo
@@ -133,12 +130,20 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 		}
 	}
 
-	if !foundDestinationChainConfig || !foundBridgingAddressOnOrigin {
+	if !foundDestinationChainConfig {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainId)
 	}
 
+	if !foundBridgingAddressOnOrigin {
+		return fmt.Errorf("bridging address on origin not found in utxos: %v", metadata.DestinationChainId)
+	}
+
 	if foundMultipleUtxosToBridgingAddressOnOrigin {
-		return fmt.Errorf("found multiple utxos to the bridging address on origin: %v", tx)
+		return fmt.Errorf("found multiple utxos to the bridging address on origin")
+	}
+
+	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
+		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v", len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
 	var receiverAmountSum uint64 = 0
@@ -152,8 +157,8 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 			break
 		}
 
-		addrInfo := wallet.GetAddressInfo(receiver.Address, wallet.AddressTypeAny)
-		if !addrInfo.IsValid {
+		_, err := wallet.GetAddressInfo(receiver.Address)
+		if err != nil {
 			foundAnInvalidReceiverAddr = true
 			break
 		}

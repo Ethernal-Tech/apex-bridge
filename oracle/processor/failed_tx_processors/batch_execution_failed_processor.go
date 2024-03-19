@@ -41,7 +41,7 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 	}
 
 	if err := p.validate(tx, metadata, appConfig); err != nil {
-		return fmt.Errorf("validation failed for tx: %v", tx)
+		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
 	}
 
 	p.addBatchExecutionFailedClaim(claims, tx, metadata)

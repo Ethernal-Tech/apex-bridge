@@ -61,8 +61,8 @@ func NewCardanoChainObserver(
 		logger.Error("Failed to insert initial UTXOs", "err", err)
 	}
 
-	newConfirmedTxsHandler := func(newConfirmedTxs []*indexer.Tx) error {
-		logger.Info("Confirmed Txs", "txs", newConfirmedTxs)
+	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
+		logger.Info("Confirmed Txs", "txs", len(txs))
 
 		txs, err := dbs.GetUnprocessedConfirmedTxs(0)
 		if err != nil {
@@ -77,14 +77,10 @@ func NewCardanoChainObserver(
 
 		logger.Info("Txs have been processed", "txs", txs)
 
-		if err := dbs.MarkConfirmedTxsProcessed(txs); err != nil {
-			return err
-		}
-
-		return nil
+		return dbs.MarkConfirmedTxsProcessed(txs)
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, newConfirmedTxsHandler, dbs, logger.Named("block_indexer"))
+	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, dbs, logger.Named("block_indexer"))
 
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
