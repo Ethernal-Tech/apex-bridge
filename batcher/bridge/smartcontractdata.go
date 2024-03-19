@@ -117,9 +117,6 @@ func SubmitSignedBatch(
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return fmt.Errorf("Receipts status not successful: %v", receipt.Status)
