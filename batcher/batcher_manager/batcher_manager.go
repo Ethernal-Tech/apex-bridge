@@ -85,7 +85,7 @@ func LoadConfig(path string) (*core.BatcherManagerConfiguration, error) {
 	return &appConfig, nil
 }
 
-// GetChainSPecificOperations returns the chain-specific operations based on the chain type
+// GetChainSpecificOperations returns the chain-specific operations based on the chain type
 func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
 	var operations core.ChainOperations
 
