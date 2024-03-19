@@ -84,7 +84,7 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	}
 
 	if !shouldCreateBatch {
-		b.logger.Error("Called ShouldCreateBatch before it supposed to or already created this batch")
+		b.logger.Info("Called ShouldCreateBatch before it supposed to or already created this batch")
 		return
 	}
 	b.logger.Info("Starting batch creation process")
