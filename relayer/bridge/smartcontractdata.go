@@ -3,13 +3,11 @@ package bridge
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type ConfirmedBatch struct {
@@ -65,48 +63,4 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 		MultisigSignatures:         multisigSignatures,
 		FeePayerMultisigSignatures: feePayerMultisigSignatures,
 	}, nil
-}
-
-// TODO: Remove - added for testing
-func ShouldRetreive(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (bool, error) {
-	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(smartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return false, err
-	}
-
-	return contract.ShouldRelayerRetrieve(&bind.CallOpts{
-		Context: ctx,
-	})
-}
-
-// TODO: Remove - added for testing
-func ResetShouldRetreive(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) error {
-	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(smartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return err
-	}
-
-	wallet, err := ethtxhelper.NewEthTxWallet("3761f6deeb2e0b2aa8b843e804d880afa6e5fecf1631f411e267641a72d0ca20")
-
-	tx, err := ethTxHelper.SendTx(ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.ResetShouldRetrieve(txOpts)
-	})
-	if err != nil {
-		return err
-	}
-
-	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
-	if err != nil {
-		return err
-	}
-
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		return fmt.Errorf("Not successfull")
-	}
-
-	return nil
 }

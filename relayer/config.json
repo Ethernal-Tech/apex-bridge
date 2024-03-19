@@ -11,6 +11,14 @@
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
             "atLeastValidators": 0.6666666666666666,
             "potentialFee": 300000
+        },
+        "vector": {
+            "chainId": "vector",
+            "testnetMagic": 2,
+            "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+            "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+            "atLeastValidators": 0.6666666666666666,
+            "potentialFee": 300000
         }
     },
     "pullTime": 1000,

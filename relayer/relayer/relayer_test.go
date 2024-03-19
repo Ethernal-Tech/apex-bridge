@@ -16,7 +16,6 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -48,16 +47,6 @@ func TestRelayer(t *testing.T) {
 		},
 	}
 
-	txRaw, txHash := createTxRawHelper(t, relayerConfig, signedBatchId)
-	witnessesString, witnessesBytes := generateWitnessesHelper(t, txHash)
-
-	valueToSet := contractbinding.TestContractConfirmedBatch{
-		Id:                         signedBatchId.String(),
-		RawTransaction:             hex.EncodeToString(txRaw),
-		MultisigSignatures:         witnessesString[0:3],
-		FeePayerMultisigSignatures: witnessesString[3:],
-	}
-
 	scAddress := relayerConfig.Bridge.SmartContractAddress
 
 	wallet, err := ethtxhelper.NewEthTxWallet(dummyMumbaiAccPk)
@@ -74,18 +63,6 @@ func TestRelayer(t *testing.T) {
 	contract, err := contractbinding.NewTestContract(common.HexToAddress(scAddress), txHelper.GetClient())
 	assert.NoError(t, err)
 
-	t.Run("set value to smart contract", func(t *testing.T) {
-		// Set confirmed batch value
-		tx, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.SetConfirmedBatch(txOpts, valueToSet)
-		})
-		require.NoError(t, err)
-
-		receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
-		assert.NoError(t, err)
-		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
-	})
-
 	t.Run("check get data directly from contract", func(t *testing.T) {
 		// Get value for comparison
 
@@ -95,29 +72,18 @@ func TestRelayer(t *testing.T) {
 		}, relayerConfig.CardanoChain.ChainId)
 		require.NoError(t, err)
 
-		assert.Equal(t, valueToSet.Id, res.Id)
-		assert.Equal(t, valueToSet.RawTransaction, res.RawTransaction)
-		assert.Equal(t, valueToSet.MultisigSignatures, res.MultisigSignatures)
-		assert.Equal(t, valueToSet.FeePayerMultisigSignatures, res.FeePayerMultisigSignatures)
-	})
-
-	var contractData *bridge.ConfirmedBatch
-
-	t.Run("check data from bridge.GetSmartContractData()", func(t *testing.T) {
-		expectedReturn := bridge.ConfirmedBatch{
-			Id:                         signedBatchId.String(),
-			RawTransaction:             txRaw,
-			MultisigSignatures:         witnessesBytes[0:3],
-			FeePayerMultisigSignatures: witnessesBytes[3:],
-		}
-
-		contractData, err = bridge.GetSmartContractData(ctx, txHelper, relayerConfig.CardanoChain.ChainId, relayerConfig.Bridge.SmartContractAddress)
+		contractData, err := bridge.GetSmartContractData(ctx, txHelper, relayerConfig.CardanoChain.ChainId, relayerConfig.Bridge.SmartContractAddress)
 		assert.NoError(t, err)
 
-		assert.Equal(t, expectedReturn.Id, contractData.Id)
-		assert.Equal(t, expectedReturn.RawTransaction, contractData.RawTransaction)
-		assert.Equal(t, expectedReturn.MultisigSignatures, contractData.MultisigSignatures)
-		assert.Equal(t, expectedReturn.FeePayerMultisigSignatures, contractData.FeePayerMultisigSignatures)
+		assert.Equal(t, res.Id, contractData.Id)
+		assert.Equal(t, res.RawTransaction, hex.EncodeToString(contractData.RawTransaction))
+		for i, _ := range contractData.MultisigSignatures {
+			assert.Equal(t, res.MultisigSignatures[i], hex.EncodeToString(contractData.MultisigSignatures[i]))
+		}
+		for i, _ := range contractData.FeePayerMultisigSignatures {
+			assert.Equal(t, res.FeePayerMultisigSignatures[i], hex.EncodeToString(contractData.FeePayerMultisigSignatures[i]))
+		}
+
 	})
 
 	assert.NoError(t, err)
@@ -132,7 +98,17 @@ func TestRelayer(t *testing.T) {
 	r := NewRelayer(relayerConfig, hclog.Default(), NewCardanoChainOperations(txProvider))
 
 	t.Run("submit tx to cardano chain", func(t *testing.T) {
-		err = r.operations.SendTx(contractData)
+		txRaw, txHash := createTxRawHelper(t, relayerConfig, signedBatchId)
+		_, witnessesBytes := generateWitnessesHelper(t, txHash)
+
+		confirmedBatch := bridge.ConfirmedBatch{
+			Id:                         signedBatchId.String(),
+			RawTransaction:             txRaw,
+			MultisigSignatures:         witnessesBytes[0:3],
+			FeePayerMultisigSignatures: witnessesBytes[3:],
+		}
+
+		err = r.operations.SendTx(&confirmedBatch)
 		assert.NoError(t, err)
 	})
 }

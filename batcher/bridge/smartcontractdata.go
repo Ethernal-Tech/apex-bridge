@@ -13,36 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// TODO: real sc data
-type SmartContractData struct {
-	Dummy                *big.Int
-	KeyHashesMultiSig    []string
-	KeyHashesMultiSigFee []string
-}
-
-// TODO: replace with real smart contract query
-func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string) (*SmartContractData, error) {
-	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(smartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return nil, err // TODO: recoverable error?
-	}
-
-	v, err := contract.GetValue(&bind.CallOpts{
-		Context: ctx,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &SmartContractData{
-		Dummy:                v,
-		KeyHashesMultiSig:    dummyKeyHashes[:len(dummyKeyHashes)/2],
-		KeyHashesMultiSigFee: dummyKeyHashes[len(dummyKeyHashes)/2:],
-	}, nil
-}
-
 func ShouldCreateBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string) (bool, error) {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(smartContractAddress),
@@ -56,20 +26,30 @@ func ShouldCreateBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper
 	}, destinationChain)
 }
 
-// TODO: replace with real smart contract query
-func GetConfirmedTransactions(_ctx context.Context, _ethTxHelper ethtxhelper.IEthTxHelper, _smartContractAddress string, destinationChain string) ([]contractbinding.ConfirmedTransaction, error) {
-	// Create an instance of the mock contract
-	mockContract := contractbinding.NewBatcherTestContractMock()
+func GetConfirmedTransactions(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string) ([]contractbinding.TestContractConfirmedTransaction, error) {
+	contract, err := contractbinding.NewTestContract(
+		common.HexToAddress(smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
 
-	return mockContract.GetConfirmedTransactions(destinationChain)
+	return contract.GetConfirmedTransactions(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
 }
 
-// TODO: replace with real smart contract query
-func GetAvailableUTXOs(_ctx context.Context, _ethTxHelper ethtxhelper.IEthTxHelper, _smartContractAddress string, destinationChain string, txCost *big.Int) (*contractbinding.UTXOs, error) {
-	// Create an instance of the mock contract
-	mockContract := contractbinding.NewBatcherTestContractMock()
+func GetAvailableUTXOs(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string, txCost *big.Int) (*contractbinding.TestContractUTXOs, error) {
+	contract, err := contractbinding.NewTestContract(
+		common.HexToAddress(smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
 
-	availableUtxos, err := mockContract.GetAvailableUTXOs(destinationChain, txCost)
+	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain, txCost)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +62,7 @@ func SubmitSignedBatch(
 	ctx context.Context,
 	ethTxHelper ethtxhelper.IEthTxHelper,
 	smartContractAddress string,
-	signedBatch contractbinding.SignedBatch,
+	signedBatch contractbinding.TestContractSignedBatch,
 	signingKey string) error {
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(smartContractAddress),
@@ -92,8 +72,8 @@ func SubmitSignedBatch(
 	}
 
 	newSignedBatch := contractbinding.TestContractSignedBatch{
-		Id:                        signedBatch.ID,
-		DestinationChainId:        signedBatch.DestinationChainID,
+		Id:                        signedBatch.Id,
+		DestinationChainId:        signedBatch.DestinationChainId,
 		RawTransaction:            signedBatch.RawTransaction,
 		MultisigSignature:         signedBatch.MultisigSignature,
 		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,

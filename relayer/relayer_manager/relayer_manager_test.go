@@ -20,14 +20,14 @@ func TestRelayerManagerConfig(t *testing.T) {
 				AtLeastValidators: 2.0 / 3.0,
 				PotentialFee:      300_000,
 			},
-			// "vector": {
-			// 	TestNetMagic:      uint(2),
-			// 	ChainId:           "vector",
-			// 	BlockfrostUrl:     "https://cardano-preview.blockfrost.io/api/v0",
-			// 	BlockfrostAPIKey:  "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-			// 	AtLeastValidators: 2.0 / 3.0,
-			// 	PotentialFee:      300_000,
-			// },
+			"vector": {
+				TestNetMagic:      uint(2),
+				ChainId:           "vector",
+				BlockfrostUrl:     "https://cardano-preview.blockfrost.io/api/v0",
+				BlockfrostAPIKey:  "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+				AtLeastValidators: 2.0 / 3.0,
+				PotentialFee:      300_000,
+			},
 		},
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,

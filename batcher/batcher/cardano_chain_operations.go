@@ -32,17 +32,17 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	ethTxHelper ethtxhelper.IEthTxHelper,
 	smartContractAddress string,
 	destinationChain string,
-	confirmedTransactions []contractbinding.ConfirmedTransaction) ([]byte, string, *contractbinding.UTXOs, error) {
+	confirmedTransactions []contractbinding.TestContractConfirmedTransaction) ([]byte, string, *contractbinding.TestContractUTXOs, error) {
 
 	var outputs []cardanowallet.TxOutput
 	var txCost *big.Int = big.NewInt(0)
 	for _, transaction := range confirmedTransactions {
-		for address, amount := range transaction.Receivers {
+		for _, receiver := range transaction.Receivers {
 			outputs = append(outputs, cardanowallet.TxOutput{
-				Addr:   address,
-				Amount: amount.Uint64(),
+				Addr:   receiver.DestinationAddress,
+				Amount: receiver.Amount.Uint64(),
 			})
-			txCost.Add(txCost, amount)
+			txCost.Add(txCost, receiver.Amount)
 		}
 	}
 

@@ -72,20 +72,6 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 		return
 	}
 
-	// TODO: Remove - added for testing
-	shouldRetreive, err := bridge.ShouldRetreive(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
-	if err != nil {
-		r.logger.Error("Failed to retrieve data from bridge", "err", err)
-		// In case of error, reset ethClient to nil to try again in the next iteration.
-		r.ethClient = nil
-		return
-	}
-
-	if !shouldRetreive {
-		r.logger.Info("Waiting for submited signed batch")
-		return
-	}
-
 	// invoke smart contract(s)
 	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, r.config.CardanoChain.ChainId, r.config.Bridge.SmartContractAddress)
 	if err != nil {
@@ -103,17 +89,4 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 
 	r.logger.Info("Transaction successfully submited")
 
-	// TODO: Remove - added for testing
-	// Delay needed because of preview testnet wait time for tx to pass
-	// Makes continuous testing possible
-	time.Sleep(70 * time.Second)
-
-	// TODO: Remove - added for testing
-	err = bridge.ResetShouldRetreive(ctx, ethTxHelper, r.config.Bridge.SmartContractAddress)
-	if err != nil {
-		r.logger.Error("Failed to reset should retrieve", "err", err)
-
-		r.ethClient = nil
-		return
-	}
 }

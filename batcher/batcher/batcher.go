@@ -90,7 +90,6 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	b.logger.Info("Starting batch creation process")
 
 	// Get confirmed transactions from smart contract
-	// TODO: Update method with batch id
 	confirmedTransactions, err := bridge.GetConfirmedTransactions(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId)
 	if err != nil {
 		b.logger.Error("Failed to query bridge.GetConfirmedTransactions", "err", err)
@@ -119,9 +118,9 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 
 	// TODO: Update ID
 	// Submit batch to smart contract
-	signedBatch := contractbinding.SignedBatch{
-		ID:                        "",
-		DestinationChainID:        b.config.Base.ChainId,
+	signedBatch := contractbinding.TestContractSignedBatch{
+		Id:                        "",
+		DestinationChainId:        b.config.Base.ChainId,
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),
 		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),

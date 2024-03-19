@@ -6,15 +6,7 @@ pragma solidity >0.7.0 <0.9.0;
  */
 
 contract TestContract {
-    struct ConfirmedBatch {
-        string id;
-        string rawTransaction;
-        string[] multisigSignatures;
-        string[] feePayerMultisigSignatures;
-    }
-
     uint256 value;
-    ConfirmedBatch public confirmedBatch;
 
     function setValue(uint256 number) public {
         value = number;
@@ -24,32 +16,57 @@ contract TestContract {
         return value;
     }
 
-    // Dummy function
-    function setConfirmedBatch(ConfirmedBatch memory _newValue) public {
-        confirmedBatch = _newValue;
+    // Batches
+    function submitSignedBatch(
+        SignedBatch calldata signedBatch
+    ) external onlyValidator {}
+
+    // Queries
+
+    // Will determine if enough transactions are confirmed, or the timeout between two batches is exceeded.
+    // It will also check if the given validator already submitted a signed batch and return the response accordingly.
+    function shouldCreateBatch(
+        string calldata destinationChain
+    ) external view returns (bool batch) {}
+
+    // Will return confirmed transactions until NEXT_BATCH_TIMEOUT_BLOCK or maximum number of transactions that
+    // can be included in the batch, if the maximum number of transactions in a batch has been exceeded
+    function getConfirmedTransactions(
+        string calldata destinationChain
+    )
+        external
+        view
+        returns (ConfirmedTransaction[] memory confirmedTransactions)
+    {
+        ConfirmedTransaction[] memory dummyArray;
+        return dummyArray;
+    }
+
+    // Will return available UTXOs that can cover the cost of bridging transactions included in some batch.
+    // Each Batcher will first call the GetConfirmedTransactions() and then calculate (off-chain) how many tokens
+    // should be transfered to users and send this info through the 'txCost' parameter. Based on this input and
+    // number of UTXOs that need to be consolidated, the smart contract will return UTXOs belonging to the multisig address
+    // that can cover the expenses. Additionaly, this method will return available UTXOs belonging to fee payer
+    // multisig address that will cover the network fees (see chapter "2.2.2.3 Batcher" for more details)
+    function getAvailableUTXOs(
+        string calldata destinationChain,
+        uint256 txCost
+    ) external view returns (UTXOs memory availableUTXOs) {
+        UTXOs memory dummyArray;
+        return dummyArray;
     }
 
     function getConfirmedBatch(
         string calldata destinationChain
     ) external view returns (ConfirmedBatch memory batch) {
-        if (
-            keccak256(abi.encodePacked(destinationChain)) ==
-            keccak256(abi.encodePacked("prime"))
-        ) {
-            batch = confirmedBatch;
-        } else {
-            batch = confirmedBatch;
-        }
+        ConfirmedBatch memory dummyArray;
+        return dummyArray;
     }
 
-    // Batcher
-
-    bool batcher1submitted = true;
-    bool batcher2submitted = true;
-    bool batcher3submitted = true;
-    bool shouldRetrieve = false;
-    string[] multisigSigs;
-    string[] multisigFeeSigs;
+    // only allowed for validators
+    modifier onlyValidator() {
+        _;
+    }
 
     struct SignedBatch {
         string id;
@@ -59,6 +76,13 @@ contract TestContract {
         string feePayerMultisigSignature;
         ConfirmedTransaction[] includedTransactions;
         UTXOs usedUTXOs;
+    }
+
+    struct ConfirmedBatch {
+        string id;
+        string rawTransaction;
+        string[] multisigSignatures;
+        string[] feePayerMultisigSignatures;
     }
 
     struct ConfirmedTransaction {
@@ -81,65 +105,5 @@ contract TestContract {
         string txHash;
         uint256 txIndex;
         uint256 amount;
-    }
-
-    function shouldCreateBatch(
-        string calldata destinationChain
-    ) external view returns (bool) {
-        if (
-            keccak256(abi.encodePacked(destinationChain)) ==
-            keccak256(abi.encodePacked("prime1"))
-        ) return batcher1submitted;
-        else if (
-            keccak256(abi.encodePacked(destinationChain)) ==
-            keccak256(abi.encodePacked("prime2"))
-        ) return batcher2submitted;
-        else if (
-            keccak256(abi.encodePacked(destinationChain)) ==
-            keccak256(abi.encodePacked("prime3"))
-        ) return batcher3submitted;
-        return false;
-    }
-
-    // Dummy for testing
-    function shouldRelayerRetrieve() external view returns (bool) {
-        return shouldRetrieve;
-    }
-    function resetShouldRetrieve() external {
-        shouldRetrieve = false;
-        delete multisigSigs;
-        delete multisigFeeSigs;
-        batcher1submitted = true;
-        batcher2submitted = true;
-        batcher3submitted = true;
-    }
-
-    function submitSignedBatch(SignedBatch calldata signedBatch) external {
-        if (
-            keccak256(abi.encodePacked(signedBatch.destinationChainId)) ==
-            keccak256(abi.encodePacked("prime1"))
-        ) batcher1submitted = false;
-        if (
-            keccak256(abi.encodePacked(signedBatch.destinationChainId)) ==
-            keccak256(abi.encodePacked("prime2"))
-        ) batcher2submitted = false;
-        if (
-            keccak256(abi.encodePacked(signedBatch.destinationChainId)) ==
-            keccak256(abi.encodePacked("prime3"))
-        ) batcher3submitted = false;
-
-        multisigSigs.push(signedBatch.multisigSignature);
-        multisigFeeSigs.push(signedBatch.feePayerMultisigSignature);
-
-        if (multisigSigs.length == 3) {
-            ConfirmedBatch memory newBatch;
-            newBatch.id = "1337";
-            newBatch.rawTransaction = signedBatch.rawTransaction;
-            newBatch.multisigSignatures = multisigSigs;
-            newBatch.feePayerMultisigSignatures = multisigFeeSigs;
-
-            setConfirmedBatch(newBatch);
-            shouldRetrieve = true;
-        }
     }
 }
