@@ -16,6 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/utxorpc/go-codegen v0.4.4 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
