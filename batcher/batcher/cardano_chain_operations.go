@@ -15,14 +15,12 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	txProvider *cardanowallet.TxProviderBlockFrost
-	config     core.CardanoChainConfig
+	config core.CardanoChainConfig
 }
 
-func NewCardanoChainOperations(txProvider *cardanowallet.TxProviderBlockFrost, config core.CardanoChainConfig) *CardanoChainOperations {
+func NewCardanoChainOperations(config core.CardanoChainConfig) *CardanoChainOperations {
 	return &CardanoChainOperations{
-		txProvider: txProvider,
-		config:     config,
+		config: config,
 	}
 }
 
@@ -57,7 +55,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cco.config.BlockfrostUrl, cco.config.BlockfrostAPIKey)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	protocolParams, err := txProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}

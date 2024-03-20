@@ -5,14 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 )
@@ -153,13 +151,7 @@ func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations
 			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
 		}
 
-		txProvider, err := cardanowallet.NewTxProviderBlockFrost(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while creating tx provider: %v\n", err)
-			return nil, err
-		}
-
-		operations = NewCardanoChainOperations(txProvider, cardanoChainConfig)
+		operations = NewCardanoChainOperations(cardanoChainConfig)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}
