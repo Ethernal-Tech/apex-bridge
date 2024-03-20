@@ -18,3 +18,8 @@ type Relayer interface {
 type ChainOperations interface {
 	SendTx(smartContractData *bridge.ConfirmedBatch) error
 }
+
+// ChainSpecificConfig defines the interface for chain-specific configurations
+type ChainSpecificConfig interface {
+	GetChainType() string
+}

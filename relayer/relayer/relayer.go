@@ -2,6 +2,8 @@ package relayer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -73,7 +75,7 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 	}
 
 	// invoke smart contract(s)
-	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, r.config.CardanoChain.ChainId, r.config.Bridge.SmartContractAddress)
+	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, r.config.Base.ChainId, r.config.Bridge.SmartContractAddress)
 	if err != nil {
 		r.logger.Error("Failed to query bridge sc", "err", err)
 
@@ -88,5 +90,24 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 	}
 
 	r.logger.Info("Transaction successfully submited")
+}
 
+// GetChainSpecificOperations returns the chain-specific operations based on the chain type
+func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
+	var operations core.ChainOperations
+
+	// Create the appropriate chain-specific configuration based on the chain type
+	switch config.ChainType {
+	case "Cardano":
+		var cardanoChainConfig core.CardanoChainConfig
+		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
+		}
+
+		operations = NewCardanoChainOperations(cardanoChainConfig)
+	default:
+		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
+	}
+
+	return operations, nil
 }
