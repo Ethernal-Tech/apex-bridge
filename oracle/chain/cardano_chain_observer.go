@@ -196,10 +196,7 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 }
 
 func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
-	var blockPointSc *indexer.BlockPoint
-	var err error
-
-	blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+	blockPointSc, err := bridgeDataFetcher.FetchLatestBlockPoint(chainId)
 	if err != nil {
 		return nil
 	}
