@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -21,7 +22,7 @@ const (
 
 type BridgeDataFetcherImpl struct {
 	appConfig *core.AppConfig
-	db        core.BridgeExpectedCardanoTxsDb
+	db        core.CardanoTxsProcessorDb
 	ctx       context.Context
 	cancelCtx context.CancelFunc
 	ethClient *ethclient.Client
@@ -32,7 +33,7 @@ var _ core.BridgeDataFetcher = (*BridgeDataFetcherImpl)(nil)
 
 func NewBridgeDataFetcher(
 	appConfig *core.AppConfig,
-	db core.BridgeExpectedCardanoTxsDb,
+	db core.CardanoTxsProcessorDb,
 	logger hclog.Logger,
 ) *BridgeDataFetcherImpl {
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -105,9 +106,45 @@ func (df *BridgeDataFetcherImpl) fetchData() {
 			return
 		}
 	}
+
+	blockPoint, err := df.fetchLatestBlockPoint(ethTxHelper)
+	if err != nil {
+		// ensure redial in case ethClient lost connection
+		df.ethClient = nil
+		df.logger.Error("Failed to fetch block point from bridge", "err", err)
+		return
+	}
+
+	// blockPoint can be nil
+	err = df.db.SetLatestBlockPoint(blockPoint)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set latest block point. error: %v\n", err)
+		df.logger.Error("Failed to set latest block point", "err", err)
+		return
+	}
 }
 
 func (df *BridgeDataFetcherImpl) fetchExpectedTxs(ethTxHelper ethtxhelper.IEthTxHelper) ([]*core.BridgeExpectedCardanoTx, error) {
+	// TODO: replace with real bridge contract
+	contract, err := contractbinding.NewTestContract(
+		common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: replace with real bridge contract call
+	_, err = contract.GetValue(&bind.CallOpts{
+		Context: df.ctx,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (df *BridgeDataFetcherImpl) fetchLatestBlockPoint(ethTxHelper ethtxhelper.IEthTxHelper) (*indexer.BlockPoint, error) {
 	// TODO: replace with real bridge contract
 	contract, err := contractbinding.NewTestContract(
 		common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),

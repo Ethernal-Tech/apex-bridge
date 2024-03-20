@@ -34,6 +34,20 @@ func (m *CardanoTxsProcessorMock) Stop() error {
 
 var _ CardanoTxsProcessor = (*CardanoTxsProcessorMock)(nil)
 
+type CardanoBlockPointDbMock struct {
+	mock.Mock
+}
+
+func (m *CardanoBlockPointDbMock) GetLatestBlockPoint() (*indexer.BlockPoint, error) {
+	return nil, nil
+}
+
+func (m *CardanoBlockPointDbMock) SetLatestBlockPoint(*indexer.BlockPoint) error {
+	return nil
+}
+
+var _ CardanoBlockPointDb = (*CardanoBlockPointDbMock)(nil)
+
 type ClaimsSubmitterMock struct {
 	mock.Mock
 }

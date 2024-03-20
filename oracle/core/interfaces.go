@@ -18,9 +18,15 @@ type CardanoTxsDb interface {
 	GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error)
 }
 
+type CardanoBlockPointDb interface {
+	SetLatestBlockPoint(*indexer.BlockPoint) error
+	GetLatestBlockPoint() (*indexer.BlockPoint, error)
+}
+
 type CardanoTxsProcessorDb interface {
 	CardanoTxsDb
 	BridgeExpectedCardanoTxsDb
+	CardanoBlockPointDb
 }
 
 type Database interface {

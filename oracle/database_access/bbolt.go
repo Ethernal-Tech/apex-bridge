@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"go.etcd.io/bbolt"
 )
 
@@ -13,9 +14,10 @@ type BBoltDatabase struct {
 }
 
 var (
-	unprocessedTxsBucket = []byte("UnprocessedTxs")
-	processedTxsBucket   = []byte("ProcessedTxs")
-	expectedTxsBucket    = []byte("ExpectedTxs")
+	unprocessedTxsBucket   = []byte("UnprocessedTxs")
+	processedTxsBucket     = []byte("ProcessedTxs")
+	expectedTxsBucket      = []byte("ExpectedTxs")
+	latestBlockPointBucket = []byte("LatestBlockPoint")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -29,7 +31,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket, latestBlockPointBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
@@ -232,4 +234,31 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 
 		return nil
 	})
+}
+
+func (bd *BBoltDatabase) SetLatestBlockPoint(blockPoint *indexer.BlockPoint) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		bytes, err := json.Marshal(blockPoint)
+		if err != nil {
+			return fmt.Errorf("could not marshal block point: %v", err)
+		}
+
+		// using same key for all
+		if err = tx.Bucket(latestBlockPointBucket).Put([]byte("LatestBlockPoint"), bytes); err != nil {
+			return fmt.Errorf("block point write error: %v", err)
+		}
+		return nil
+	})
+}
+
+func (bd *BBoltDatabase) GetLatestBlockPoint() (result *indexer.BlockPoint, err error) {
+	err = bd.db.View(func(tx *bbolt.Tx) error {
+		if data := tx.Bucket(latestBlockPointBucket).Get([]byte("LatestBlockPoint")); len(data) > 0 {
+			return json.Unmarshal(data, &result)
+		}
+
+		return nil
+	})
+
+	return result, err
 }
