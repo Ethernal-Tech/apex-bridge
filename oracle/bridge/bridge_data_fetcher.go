@@ -145,12 +145,15 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 		return nil, err
 	}
 
-	// TODO: replace with real bridge contract call
-	_, err = contract.GetValue(&bind.CallOpts{
-		Context: df.ctx,
-	})
-	if err != nil {
-		return nil, err
+	for retries := 0; retries < 5; retries++ {
+		// TODO: replace with real bridge contract call
+		_, err = contract.GetValue(&bind.CallOpts{
+			Context: df.ctx,
+		})
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Millisecond * 500)
 	}
 
 	return nil, nil

@@ -28,7 +28,7 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
 	settings core.AppSettings, config core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
-	txsProcessor core.CardanoTxsProcessor, bridgeDataFetcher core.BridgeDataFetcher, oracleDb core.CardanoTxsProcessorDb,
+	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(settings.LogLevel),
@@ -62,7 +62,7 @@ func NewCardanoChainObserver(
 		logger.Error("Failed to insert initial UTXOs", "err", err)
 	}
 
-	err = updateLastConfirmedBlockFromSc(dbs, bridgeDataFetcher, oracleDb, config.ChainId)
+	err = updateLastConfirmedBlockFromSc(dbs, oracleDb, bridgeDataFetcher, config.ChainId)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Update latest confirmed block from Smart Contract failed", "err", err)
@@ -195,23 +195,20 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 	return db.OpenTx().AddTxOutputs(nonExistingUtxos).Execute()
 }
 
-func updateLastConfirmedBlockFromSc(dbs indexer.Database, bridgeDataFetcher core.BridgeDataFetcher, oracleDb core.CardanoTxsProcessorDb, chainId string) error {
+func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
 	var blockPointSc *indexer.BlockPoint
 	var err error
 
-	for retries := 0; retries < 5; retries++ {
-		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
+	blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+	if err != nil {
+		return nil
 	}
 
 	if blockPointSc == nil {
 		return nil
 	}
 
-	blockPointDb, err := dbs.GetLatestBlockPoint()
+	blockPointDb, err := indexerDb.GetLatestBlockPoint()
 	if err != nil {
 		return err
 	}
@@ -230,5 +227,5 @@ func updateLastConfirmedBlockFromSc(dbs indexer.Database, bridgeDataFetcher core
 		return err
 	}
 
-	return dbs.OpenTx().SetLatestBlockPoint(blockPointSc).Execute()
+	return indexerDb.OpenTx().SetLatestBlockPoint(blockPointSc).Execute()
 }

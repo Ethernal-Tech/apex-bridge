@@ -14,10 +14,9 @@ type BBoltDatabase struct {
 }
 
 var (
-	unprocessedTxsBucket   = []byte("UnprocessedTxs")
-	processedTxsBucket     = []byte("ProcessedTxs")
-	expectedTxsBucket      = []byte("ExpectedTxs")
-	latestBlockPointBucket = []byte("LatestBlockPoint")
+	unprocessedTxsBucket = []byte("UnprocessedTxs")
+	processedTxsBucket   = []byte("ProcessedTxs")
+	expectedTxsBucket    = []byte("ExpectedTxs")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -31,7 +30,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket, latestBlockPointBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
@@ -102,8 +101,7 @@ func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
 			}
 
 			if strings.Compare(unprocessedTx.OriginChainId, chainId) == 0 {
-				// Removes the current key/value under the cursor from the bucket.
-				if err := cursor.Bucket().Cursor().Delete(); err != nil {
+				if err := cursor.Bucket().Delete(unprocessedTx.Key()); err != nil {
 					return err
 				}
 			}
@@ -213,8 +211,7 @@ func (bd *BBoltDatabase) ClearExpectedTxs(chainId string) error {
 			}
 
 			if strings.Compare(expectedTx.ChainId, chainId) == 0 {
-				// Removes the current key/value under the cursor from the bucket.
-				if err := cursor.Bucket().Cursor().Delete(); err != nil {
+				if err := cursor.Bucket().Delete(expectedTx.Key()); err != nil {
 					return err
 				}
 			}

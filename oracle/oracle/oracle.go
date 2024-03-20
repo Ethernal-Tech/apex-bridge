@@ -97,7 +97,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		initialUtxosForChain := (*initialUtxos)[cardanoChainConfig.ChainId]
-		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor, bridgeDataFetcher, db)
+		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor, db, bridgeDataFetcher)
 		if cco == nil {
 			fmt.Fprintf(os.Stderr, "failed to create cardano chain observer for chain: %v\n", cardanoChainConfig.ChainId)
 			logger.Error("failed to create cardano chain observer for chain", "chainId", cardanoChainConfig.ChainId)
