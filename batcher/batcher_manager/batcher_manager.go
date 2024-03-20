@@ -22,18 +22,24 @@ var _ core.BatcherManager = (*BatchManagerImpl)(nil)
 
 func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerImpl {
 	var batchers = map[string]core.Batcher{}
-	for chain, cardanoChainConfig := range config.CardanoChains {
+	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
 			return nil
 		}
 
+		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
+			return nil
+		}
+
 		batchers[chain] = batcher.NewBatcher(&core.BatcherConfiguration{
 			Bridge:        config.Bridge,
-			CardanoChain:  cardanoChainConfig,
+			Base:          chainConfig.Base,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)))
+		}, logger.Named(strings.ToUpper(chain)), operations)
 	}
 
 	return &BatchManagerImpl{

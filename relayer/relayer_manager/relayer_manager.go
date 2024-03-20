@@ -56,7 +56,7 @@ func (rm *RelayerManagerImpl) Start() error {
 	for chain, r := range rm.cardanoRelayers {
 		go r.Start(ctx)
 
-		fmt.Fprintf(os.Stdin, "Started batcher for: %v chain\n", chain)
+		fmt.Fprintf(os.Stdin, "Started relayer for: %v chain\n", chain)
 	}
 
 	return nil

@@ -25,7 +25,7 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 		return nil, err
 	}
 
-	v, err := contract.GetConfirmedBatch(&bind.CallOpts{
+	confirmedBatch, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
 	}, destinationChain)
 	if err != nil {
@@ -34,7 +34,7 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 
 	// Convert string arrays to byte arrays
 	var multisigSignatures [][]byte
-	for _, sig := range v.MultisigSignatures {
+	for _, sig := range confirmedBatch.MultisigSignatures {
 		sigBytes, err := hex.DecodeString(sig)
 		if err != nil {
 			return nil, err
@@ -43,7 +43,7 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 	}
 
 	var feePayerMultisigSignatures [][]byte
-	for _, sig := range v.FeePayerMultisigSignatures {
+	for _, sig := range confirmedBatch.FeePayerMultisigSignatures {
 		sigBytes, err := hex.DecodeString(sig)
 		if err != nil {
 			return nil, err
@@ -52,13 +52,13 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 	}
 
 	// Convert rawTransaction from string to byte array
-	rawTx, err := hex.DecodeString(v.RawTransaction)
+	rawTx, err := hex.DecodeString(confirmedBatch.RawTransaction)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ConfirmedBatch{
-		Id:                         v.Id,
+		Id:                         confirmedBatch.Id,
 		RawTransaction:             rawTx,
 		MultisigSignatures:         multisigSignatures,
 		FeePayerMultisigSignatures: feePayerMultisigSignatures,

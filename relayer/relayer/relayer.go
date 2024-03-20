@@ -34,6 +34,8 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 		timerTime = time.Millisecond * time.Duration(r.config.PullTimeMilis)
 	)
 
+	r.logger.Debug("Relayer started")
+
 	timer := time.NewTimer(timerTime)
 	defer timer.Stop()
 
@@ -78,8 +80,13 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 		r.ethClient = nil
 		return
 	}
+	r.logger.Info("Signed batch retrieved from contract")
 
 	if err := r.operations.SendTx(smartContractData); err != nil {
 		r.logger.Error("failed to send tx", "err", err)
+		return
 	}
+
+	r.logger.Info("Transaction successfully submited")
+
 }

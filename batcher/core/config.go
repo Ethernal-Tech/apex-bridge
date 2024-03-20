@@ -1,17 +1,10 @@
 package core
 
-import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
+import (
+	"encoding/json"
 
-type CardanoChainConfig struct {
-	ChainId               string  `json:"chainId"`
-	TestNetMagic          uint    `json:"testnetMagic"`
-	BlockfrostUrl         string  `json:"blockfrostUrl"`
-	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
-	AtLeastValidators     float64 `json:"atLeastValidators"`
-	PotentialFee          uint64  `json:"potentialFee"`
-	SigningKeyMultiSig    string  `json:"signingKey"`    // hex+cbor representation of private key
-	SigningKeyMultiSigFee string  `json:"signingKeyFee"` // hex+cbor representation of private key
-}
+	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+)
 
 type BridgeConfig struct {
 	NodeUrl              string `json:"NodeUrl"`
@@ -21,14 +14,28 @@ type BridgeConfig struct {
 
 type BatcherConfiguration struct {
 	Bridge        BridgeConfig        `json:"bridge"`
-	CardanoChain  CardanoChainConfig  `json:"cardanoChain"`
+	Base          BaseConfig          `json:"base"`
 	PullTimeMilis uint64              `json:"pullTime"`
 	Logger        logger.LoggerConfig `json:"logger"`
 }
 
+type BaseConfig struct {
+	ChainId               string `json:"chainId"`
+	SigningKeyMultiSig    string `json:"signingKey"`    // hex+cbor representation of private key
+	SigningKeyMultiSigFee string `json:"signingKeyFee"` // hex+cbor representation of private key
+}
+type ChainSpecific struct {
+	ChainType string          `json:"chainType"`
+	Config    json.RawMessage `json:"config"`
+}
+type ChainConfig struct {
+	Base          BaseConfig    `json:"baseConfig"`
+	ChainSpecific ChainSpecific `json:"chainSpecific"`
+}
+
 type BatcherManagerConfiguration struct {
-	Bridge        BridgeConfig                  `json:"bridge"`
-	CardanoChains map[string]CardanoChainConfig `json:"cardanoChains"`
-	PullTimeMilis uint64                        `json:"pullTime"`
-	Logger        logger.LoggerConfig           `json:"logger"`
+	Bridge        BridgeConfig           `json:"bridge"`
+	Chains        map[string]ChainConfig `json:"chains"`
+	PullTimeMilis uint64                 `json:"pullTime"`
+	Logger        logger.LoggerConfig    `json:"logger"`
 }

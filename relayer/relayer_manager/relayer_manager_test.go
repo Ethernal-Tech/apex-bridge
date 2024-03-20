@@ -31,7 +31,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 		},
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
+			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
