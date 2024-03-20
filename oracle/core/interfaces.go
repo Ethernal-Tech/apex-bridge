@@ -7,6 +7,7 @@ import (
 type BridgeExpectedCardanoTxsDb interface {
 	AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error
 	GetExpectedTxs(threshold int) ([]*BridgeExpectedCardanoTx, error)
+	ClearExpectedTxs(chainId string) error
 	MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error
 	MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error
 }
@@ -14,19 +15,14 @@ type BridgeExpectedCardanoTxsDb interface {
 type CardanoTxsDb interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(threshold int) ([]*CardanoTx, error)
+	ClearUnprocessedTxs(chainId string) error
 	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error
 	GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error)
-}
-
-type CardanoBlockPointDb interface {
-	SetLatestBlockPoint(*indexer.BlockPoint) error
-	GetLatestBlockPoint() (*indexer.BlockPoint, error)
 }
 
 type CardanoTxsProcessorDb interface {
 	CardanoTxsDb
 	BridgeExpectedCardanoTxsDb
-	CardanoBlockPointDb
 }
 
 type Database interface {
@@ -68,6 +64,7 @@ type CardanoTxFailedProcessor interface {
 type BridgeDataFetcher interface {
 	Start() error
 	Stop() error
+	FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error)
 }
 
 type ClaimsSubmitter interface {

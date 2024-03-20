@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -280,54 +279,5 @@ func TestBoltDatabase(t *testing.T) {
 		txs, err = db.GetExpectedTxs(0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
-	})
-
-	t.Run("SetLatestBlockPoint", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		err := db.Init(filePath)
-		require.NoError(t, err)
-
-		err = db.SetLatestBlockPoint(nil)
-		require.NoError(t, err)
-
-		blockPointFromDb, err := db.GetLatestBlockPoint()
-		require.NoError(t, err)
-		require.Nil(t, blockPointFromDb)
-
-		blockPoint := &indexer.BlockPoint{
-			BlockSlot:   1000,
-			BlockHash:   []byte("String to be hashed"),
-			BlockNumber: 1000,
-		}
-
-		err = db.SetLatestBlockPoint(blockPoint)
-		require.NoError(t, err)
-
-		blockPointFromDb, err = db.GetLatestBlockPoint()
-		require.NoError(t, err)
-		require.EqualValues(t, blockPoint, blockPointFromDb)
-	})
-
-	t.Run("GetExpectedTxs", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		err := db.Init(filePath)
-		require.NoError(t, err)
-
-		blockPoint := &indexer.BlockPoint{
-			BlockSlot:   1000,
-			BlockHash:   []byte("String to be hashed"),
-			BlockNumber: 1000,
-		}
-
-		err = db.SetLatestBlockPoint(blockPoint)
-		require.NoError(t, err)
-
-		blockPointFromDb, err := db.GetLatestBlockPoint()
-		require.NoError(t, err)
-		require.EqualValues(t, blockPoint, blockPointFromDb)
 	})
 }

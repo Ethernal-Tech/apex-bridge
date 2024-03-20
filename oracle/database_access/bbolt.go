@@ -3,9 +3,9 @@ package database_access
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"go.etcd.io/bbolt"
 )
 
@@ -89,6 +89,28 @@ func (bd *BBoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, er
 	}
 
 	return result, nil
+}
+
+func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var unprocessedTx *core.CardanoTx
+
+			if err := json.Unmarshal(v, &unprocessedTx); err != nil {
+				return err
+			}
+
+			if strings.Compare(unprocessedTx.OriginChainId, chainId) == 0 {
+				// Removes the current key/value under the cursor from the bucket.
+				if err := cursor.Bucket().Cursor().Delete(); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.ProcessedCardanoTx) error {
@@ -180,6 +202,28 @@ func (bd *BBoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCa
 	return result, nil
 }
 
+func (bd *BBoltDatabase) ClearExpectedTxs(chainId string) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(expectedTxsBucket).Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var expectedTx *core.BridgeExpectedCardanoDbTx
+
+			if err := json.Unmarshal(v, &expectedTx); err != nil {
+				return err
+			}
+
+			if strings.Compare(expectedTx.ChainId, chainId) == 0 {
+				// Removes the current key/value under the cursor from the bucket.
+				if err := cursor.Bucket().Cursor().Delete(); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 func (bd *BBoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExpectedCardanoTx) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
@@ -234,31 +278,4 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 
 		return nil
 	})
-}
-
-func (bd *BBoltDatabase) SetLatestBlockPoint(blockPoint *indexer.BlockPoint) error {
-	return bd.db.Update(func(tx *bbolt.Tx) error {
-		bytes, err := json.Marshal(blockPoint)
-		if err != nil {
-			return fmt.Errorf("could not marshal block point: %v", err)
-		}
-
-		// using same key for all
-		if err = tx.Bucket(latestBlockPointBucket).Put([]byte("LatestBlockPoint"), bytes); err != nil {
-			return fmt.Errorf("block point write error: %v", err)
-		}
-		return nil
-	})
-}
-
-func (bd *BBoltDatabase) GetLatestBlockPoint() (result *indexer.BlockPoint, err error) {
-	err = bd.db.View(func(tx *bbolt.Tx) error {
-		if data := tx.Bucket(latestBlockPointBucket).Get([]byte("LatestBlockPoint")); len(data) > 0 {
-			return json.Unmarshal(data, &result)
-		}
-
-		return nil
-	})
-
-	return result, err
 }

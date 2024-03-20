@@ -40,7 +40,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check ErrorCh", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoBlockPointDbMock{})
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.BridgeDataFetcherMock{}, &core.CardanoTxsProcessorDbMock{})
 		require.NotNil(t, chainObserver)
 
 		errChan := chainObserver.ErrorCh()
@@ -50,7 +50,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetConfig", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoBlockPointDbMock{})
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.BridgeDataFetcherMock{}, &core.CardanoTxsProcessorDbMock{})
 		require.NotNil(t, chainObserver)
 
 		config := chainObserver.GetConfig()
@@ -61,7 +61,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetDb", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoBlockPointDbMock{})
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.BridgeDataFetcherMock{}, &core.CardanoTxsProcessorDbMock{})
 		require.NotNil(t, chainObserver)
 
 		db := chainObserver.GetDb()
@@ -71,7 +71,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check start stop", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoBlockPointDbMock{})
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.BridgeDataFetcherMock{}, &core.CardanoTxsProcessorDbMock{})
 		require.NotNil(t, chainObserver)
 
 		err := chainObserver.Start()
@@ -87,7 +87,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		txsProcessor := &core.CardanoTxsProcessorMock{}
 		txsProcessor.On("NewUnprocessedTxs").Return()
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, &core.CardanoBlockPointDbMock{})
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, &core.BridgeDataFetcherMock{}, &core.CardanoTxsProcessorDbMock{})
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
