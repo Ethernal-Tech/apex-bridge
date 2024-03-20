@@ -22,7 +22,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("Init", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 	})
@@ -30,7 +30,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("Init should fail", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init("")
 		require.Error(t, err)
 	})
@@ -38,7 +38,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("Close", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -49,7 +49,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("AddUnprocessedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -69,7 +69,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetUnprocessedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -98,7 +98,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("MarkUnprocessedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -133,7 +133,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetProcessedTx", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -175,7 +175,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("AddExpectedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -195,7 +195,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetExpectedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -224,7 +224,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
@@ -254,7 +254,7 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("MarkExpectedTxsAsInvalid", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BoltDatabase{}
+		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 

@@ -5,7 +5,7 @@ import (
 )
 
 func NewDatabase(filePath string) (core.Database, error) {
-	db := &BoltDatabase{}
+	db := &BBoltDatabase{}
 	if err := db.Init(filePath); err != nil {
 		return nil, err
 	}

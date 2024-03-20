@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/boltdb/bolt"
+	"go.etcd.io/bbolt"
 )
 
-type BoltDatabase struct {
-	db *bolt.DB
+type BBoltDatabase struct {
+	db *bbolt.DB
 }
 
 var (
@@ -18,17 +18,17 @@ var (
 	expectedTxsBucket    = []byte("ExpectedTxs")
 )
 
-var _ core.Database = (*BoltDatabase)(nil)
+var _ core.Database = (*BBoltDatabase)(nil)
 
-func (bd *BoltDatabase) Init(filePath string) error {
-	db, err := bolt.Open(filePath, 0600, nil)
+func (bd *BBoltDatabase) Init(filePath string) error {
+	db, err := bbolt.Open(filePath, 0600, nil)
 	if err != nil {
 		return fmt.Errorf("could not open db: %v", err)
 	}
 
 	bd.db = db
 
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
@@ -40,12 +40,12 @@ func (bd *BoltDatabase) Init(filePath string) error {
 	})
 }
 
-func (bd *BoltDatabase) Close() error {
+func (bd *BBoltDatabase) Close() error {
 	return bd.db.Close()
 }
 
-func (bd *BoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
 		for _, unprocessedTx := range unprocessedTxs {
 			bytes, err := json.Marshal(unprocessedTx)
 			if err != nil {
@@ -61,10 +61,10 @@ func (bd *BoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) erro
 	})
 }
 
-func (bd *BoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, error) {
+func (bd *BBoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, error) {
 	var result []*core.CardanoTx
 
-	err := bd.db.View(func(tx *bolt.Tx) error {
+	err := bd.db.View(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
 
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
@@ -89,8 +89,8 @@ func (bd *BoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, err
 	return result, nil
 }
 
-func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.ProcessedCardanoTx) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.ProcessedCardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
 		for _, processedTx := range processedTxs {
 			bytes, err := json.Marshal(processedTx)
 			if err != nil {
@@ -110,8 +110,8 @@ func (bd *BoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proce
 	})
 }
 
-func (bd *BoltDatabase) GetProcessedTx(chainId string, txHash string) (result *core.ProcessedCardanoTx, err error) {
-	err = bd.db.View(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) GetProcessedTx(chainId string, txHash string) (result *core.ProcessedCardanoTx, err error) {
+	err = bd.db.View(func(tx *bbolt.Tx) error {
 		if data := tx.Bucket(processedTxsBucket).Get([]byte(core.ToCardanoTxKey(chainId, txHash))); len(data) > 0 {
 			return json.Unmarshal(data, &result)
 		}
@@ -122,8 +122,8 @@ func (bd *BoltDatabase) GetProcessedTx(chainId string, txHash string) (result *c
 	return result, err
 }
 
-func (bd *BoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardanoTx) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
 			if data := bucket.Get(expectedTx.Key()); len(data) == 0 {
@@ -148,10 +148,10 @@ func (bd *BoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardano
 	})
 }
 
-func (bd *BoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
+func (bd *BBoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
 	var result []*core.BridgeExpectedCardanoTx
 
-	err := bd.db.View(func(tx *bolt.Tx) error {
+	err := bd.db.View(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(expectedTxsBucket).Cursor()
 
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
@@ -178,8 +178,8 @@ func (bd *BoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCar
 	return result, nil
 }
 
-func (bd *BoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExpectedCardanoTx) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
 			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
@@ -206,8 +206,8 @@ func (bd *BoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExp
 	})
 }
 
-func (bd *BoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpectedCardanoTx) error {
-	return bd.db.Update(func(tx *bolt.Tx) error {
+func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpectedCardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
 			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
