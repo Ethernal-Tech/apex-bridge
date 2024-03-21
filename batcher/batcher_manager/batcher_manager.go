@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
@@ -29,7 +30,7 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerIm
 			return nil
 		}
 
-		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific, chainConfig.Base.KeysDirPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
 			return nil

@@ -1,8 +1,13 @@
 package batcher_manager
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
@@ -27,9 +32,8 @@ func TestBatcherManagerConfig(t *testing.T) {
 		Chains: map[string]core.ChainConfig{
 			"prime": {
 				Base: core.BaseConfig{
-					ChainId:               "prime",
-					SigningKeyMultiSig:    "58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0",
-					SigningKeyMultiSigFee: "58204cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9",
+					ChainId:     "prime",
+					KeysDirPath: "./keys/prime",
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -38,9 +42,8 @@ func TestBatcherManagerConfig(t *testing.T) {
 			},
 			"vector": {
 				Base: core.BaseConfig{
-					ChainId:               "vector",
-					SigningKeyMultiSig:    "58201217236ac24d8ac12684b308cf9468f68ef5283096896dc1c5c3caf8351e2847",
-					SigningKeyMultiSigFee: "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6",
+					ChainId:     "vector",
+					KeysDirPath: "./keys/vector",
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -76,10 +79,76 @@ func TestBatcherManagerOperations(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, chain := range loadedConfig.Chains {
-		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific)
+		testKeysPath := "../" + chain.Base.KeysDirPath[1:]
+
+		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testKeysPath)
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
 		assert.NotNil(t, operationsType)
+
+		// check keys
+		concreteChainOp, ok := chainOp.(*batcher.CardanoChainOperations)
+		if ok {
+			// check config
+			cardanoChainConfig, err := core.ToCardanoChainConfig(chain.ChainSpecific)
+			assert.NoError(t, err)
+			assert.Equal(t, cardanoChainConfig, &concreteChainOp.Config)
+
+			multisigAddress, multisigFeeAddress, err := walletLoadingHelper(testKeysPath)
+			assert.NoError(t, err)
+
+			// remove cbor prefix
+			assert.Equal(t, multisigAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSig.GetSigningKey()))
+			assert.Equal(t, multisigFeeAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSigFee.GetSigningKey()))
+		}
 	}
+}
+
+func walletLoadingHelper(directory string) (string, string, error) {
+	type FileContent struct {
+		Type        string `json:"type"`
+		Description string `json:"description"`
+		CborHex     string `json:"cborHex"`
+	}
+
+	var multisigAddress, multisigFeeAddress string
+
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(info.Name(), "payment.skey") {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			var fileContent FileContent
+			if err := json.Unmarshal(content, &fileContent); err != nil {
+				return err
+			}
+
+			if strings.Contains(path, "multisig/") {
+				multisigAddress = fileContent.CborHex
+			} else if strings.Contains(path, "multisigfee/") {
+				multisigFeeAddress = fileContent.CborHex
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	if multisigAddress == "" || multisigFeeAddress == "" {
+		return "", "", fmt.Errorf("payment.skey files not found in both multisig and multisigfee directories")
+	}
+
+	return multisigAddress, multisigFeeAddress, nil
 }

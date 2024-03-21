@@ -8,8 +8,7 @@
         "prime": {
             "baseConfig": {
                 "chainId": "prime",
-                "signingKey": "58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0",
-                "signingKeyFee": "58204cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9"
+                "keysDirPath": "./keys/prime"
             },
             "chainSpecific": {
                 "chainType": "Cardano",
@@ -25,8 +24,7 @@
         "vector": {
             "baseConfig": {
                 "chainId": "vector",
-                "signingKey": "58201217236ac24d8ac12684b308cf9468f68ef5283096896dc1c5c3caf8351e2847",
-                "signingKeyFee": "5820f2c3b9527ec2f0d70e6ee2db5752e27066fe63f5c84d1aa5bf20a5fc4d2411e6"
+                "keysDirPath": "./keys/vector"
             },
             "chainSpecific": {
                 "chainType": "Cardano",
