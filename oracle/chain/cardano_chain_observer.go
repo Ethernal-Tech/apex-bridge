@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -27,7 +28,7 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
 	settings core.AppSettings, config core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
-	txsProcessor core.CardanoTxsProcessor,
+	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(settings.LogLevel),
@@ -59,6 +60,13 @@ func NewCardanoChainObserver(
 		err := initUtxos(dbs, initialUtxosForChain)
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Failed to insert initial UTXOs", "err", err)
+	}
+
+	err = updateLastConfirmedBlockFromSc(dbs, oracleDb, bridgeDataFetcher, config.ChainId)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		logger.Error("Update latest confirmed block from Smart Contract failed", "err", err)
+		return nil
 	}
 
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
@@ -185,4 +193,36 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 	}
 
 	return db.OpenTx().AddTxOutputs(nonExistingUtxos).Execute()
+}
+
+func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
+	blockPointSc, err := bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+	if err != nil {
+		return nil
+	}
+
+	if blockPointSc == nil {
+		return nil
+	}
+
+	blockPointDb, err := indexerDb.GetLatestBlockPoint()
+	if err != nil {
+		return err
+	}
+
+	if bytes.Equal(blockPointDb.BlockHash, blockPointSc.BlockHash) &&
+		blockPointDb.BlockNumber == blockPointSc.BlockNumber &&
+		blockPointDb.BlockSlot == blockPointSc.BlockSlot {
+		return nil
+	}
+
+	if err := oracleDb.ClearUnprocessedTxs(chainId); err != nil {
+		return err
+	}
+
+	if err := oracleDb.ClearExpectedTxs(chainId); err != nil {
+		return err
+	}
+
+	return indexerDb.OpenTx().SetLatestBlockPoint(blockPointSc).Execute()
 }

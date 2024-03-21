@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -125,4 +126,47 @@ func (df *BridgeDataFetcherImpl) fetchExpectedTxs(ethTxHelper ethtxhelper.IEthTx
 	}
 
 	return nil, nil
+}
+
+func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
+	var blockPoint *indexer.BlockPoint
+
+	// TODO: Configurable number of retries?
+	for retries := 1; retries <= 5; retries++ {
+		ethClient, err := ethclient.Dial(df.appConfig.Bridge.NodeUrl)
+		if err != nil {
+			df.logger.Error("Failed to dial bridge while fetching latest block", "retry:", retries, "err", err)
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
+		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
+		if err != nil {
+			// ensure redial in case ethClient lost connection
+			ethClient = nil
+			df.logger.Error("Failed to create ethTxHelper while fetching latest block", "retry:", retries, "err", err)
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
+		// TODO: replace with real bridge contract
+		contract, err := contractbinding.NewTestContract(
+			common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
+			ethTxHelper.GetClient())
+		if err != nil {
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
+		// TODO: replace with real bridge contract call
+		_, err = contract.GetValue(&bind.CallOpts{
+			Context: df.ctx,
+		})
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Millisecond * 500)
+	}
+
+	return blockPoint, nil
 }

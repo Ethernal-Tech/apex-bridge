@@ -3,6 +3,7 @@ package database_access
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"go.etcd.io/bbolt"
@@ -87,6 +88,27 @@ func (bd *BBoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, er
 	}
 
 	return result, nil
+}
+
+func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var unprocessedTx *core.CardanoTx
+
+			if err := json.Unmarshal(v, &unprocessedTx); err != nil {
+				return err
+			}
+
+			if strings.Compare(unprocessedTx.OriginChainId, chainId) == 0 {
+				if err := cursor.Bucket().Delete(unprocessedTx.Key()); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.ProcessedCardanoTx) error {
@@ -176,6 +198,27 @@ func (bd *BBoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCa
 	}
 
 	return result, nil
+}
+
+func (bd *BBoltDatabase) ClearExpectedTxs(chainId string) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(expectedTxsBucket).Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var expectedTx *core.BridgeExpectedCardanoDbTx
+
+			if err := json.Unmarshal(v, &expectedTx); err != nil {
+				return err
+			}
+
+			if strings.Compare(expectedTx.ChainId, chainId) == 0 {
+				if err := cursor.Bucket().Delete(expectedTx.Key()); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
 func (bd *BBoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeExpectedCardanoTx) error {

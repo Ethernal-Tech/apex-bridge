@@ -95,6 +95,39 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[0], txs[0])
 	})
 
+	t.Run("ClearUnprocessedTxs", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		expectedTxs := []*core.CardanoTx{
+			{OriginChainId: "prime"},
+			{OriginChainId: "vector"},
+		}
+
+		err = db.AddUnprocessedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		err = db.ClearUnprocessedTxs("prime")
+		require.NoError(t, err)
+
+		txs, err := db.GetUnprocessedTxs(0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+		require.Equal(t, expectedTxs[1], txs[0])
+
+		err = db.ClearUnprocessedTxs("vector")
+		require.NoError(t, err)
+
+		txs, err = db.GetUnprocessedTxs(0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+		require.Len(t, txs, 0)
+	})
+
 	t.Run("MarkUnprocessedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -219,6 +252,39 @@ func TestBoltDatabase(t *testing.T) {
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
 		require.Equal(t, expectedTxs[0], txs[0])
+	})
+
+	t.Run("ClearExpectedTxs", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		expectedTxs := []*core.BridgeExpectedCardanoTx{
+			{ChainId: "prime"},
+			{ChainId: "vector"},
+		}
+
+		err = db.AddExpectedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		err = db.ClearExpectedTxs("prime")
+		require.NoError(t, err)
+
+		txs, err := db.GetExpectedTxs(0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+		require.Equal(t, expectedTxs[1], txs[0])
+
+		err = db.ClearExpectedTxs("vector")
+		require.NoError(t, err)
+
+		txs, err = db.GetExpectedTxs(0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+		require.Len(t, txs, 0)
 	})
 
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {

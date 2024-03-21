@@ -34,6 +34,70 @@ func (m *CardanoTxsProcessorMock) Stop() error {
 
 var _ CardanoTxsProcessor = (*CardanoTxsProcessorMock)(nil)
 
+type BridgeDataFetcherMock struct {
+	mock.Mock
+}
+
+func (m *BridgeDataFetcherMock) Start() error {
+	return nil
+}
+
+func (m *BridgeDataFetcherMock) Stop() error {
+	return nil
+}
+
+func (m *BridgeDataFetcherMock) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
+	return nil, nil
+}
+
+var _ BridgeDataFetcher = (*BridgeDataFetcherMock)(nil)
+
+type CardanoTxsProcessorDbMock struct {
+	mock.Mock
+}
+
+func (m *CardanoTxsProcessorDbMock) AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(threshold int) ([]*BridgeExpectedCardanoTx, error) {
+	return nil, nil
+}
+
+func (m *CardanoTxsProcessorDbMock) ClearExpectedTxs(chainId string) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(threshold int) ([]*CardanoTx, error) {
+	return nil, nil
+}
+
+func (m *CardanoTxsProcessorDbMock) ClearUnprocessedTxs(chainId string) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error {
+	return nil
+}
+
+func (m *CardanoTxsProcessorDbMock) GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error) {
+	return nil, nil
+}
+
+var _ CardanoTxsProcessorDb = (*CardanoTxsProcessorDbMock)(nil)
+
 type ClaimsSubmitterMock struct {
 	mock.Mock
 }
