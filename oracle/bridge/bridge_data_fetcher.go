@@ -129,23 +129,35 @@ func (df *BridgeDataFetcherImpl) fetchExpectedTxs(ethTxHelper ethtxhelper.IEthTx
 }
 
 func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(df.ethClient))
-	if err != nil {
-		// ensure redial in case ethClient lost connection
-		df.ethClient = nil
-		df.logger.Error("Failed to create ethTxHelper", "err", err)
-		return nil, err
-	}
+	var blockPoint *indexer.BlockPoint
 
-	// TODO: replace with real bridge contract
-	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return nil, err
-	}
+	// TODO: Configurable number of retries?
+	for retries := 1; retries <= 5; retries++ {
+		ethClient, err := ethclient.Dial(df.appConfig.Bridge.NodeUrl)
+		if err != nil {
+			df.logger.Error("Failed to dial bridge while fetching latest block", "retry:", retries, "err", err)
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
 
-	for retries := 0; retries < 5; retries++ {
+		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
+		if err != nil {
+			// ensure redial in case ethClient lost connection
+			ethClient = nil
+			df.logger.Error("Failed to create ethTxHelper while fetching latest block", "retry:", retries, "err", err)
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
+		// TODO: replace with real bridge contract
+		contract, err := contractbinding.NewTestContract(
+			common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
+			ethTxHelper.GetClient())
+		if err != nil {
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
 		// TODO: replace with real bridge contract call
 		_, err = contract.GetValue(&bind.CallOpts{
 			Context: df.ctx,
@@ -156,5 +168,5 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 		time.Sleep(time.Millisecond * 500)
 	}
 
-	return nil, nil
+	return blockPoint, nil
 }
