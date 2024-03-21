@@ -3,6 +3,7 @@ package relayer
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"math/big"
 	"testing"
 	"time"
@@ -30,13 +31,8 @@ func TestRelayer(t *testing.T) {
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 		},
-		CardanoChain: core.CardanoChainConfig{
-			TestNetMagic:      uint(2),
-			ChainId:           "prime",
-			BlockfrostUrl:     "https://cardano-preview.blockfrost.io/api/v0",
-			BlockfrostAPIKey:  "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-			AtLeastValidators: 2.0 / 3.0,
-			PotentialFee:      300_000,
+		Base: core.BaseConfig{
+			ChainId: "prime",
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
@@ -45,6 +41,19 @@ func TestRelayer(t *testing.T) {
 			JSONLogFormat: false,
 			AppendFile:    true,
 		},
+	}
+
+	jsonData := []byte(`{
+		"testnetMagic": 2,
+		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+		"atLeastValidators": 0.6666666666666666,
+		"potentialFee": 300000
+		}`)
+
+	chainSpecificConfig := core.ChainSpecific{
+		ChainType: "Cardano",
+		Config:    json.RawMessage(jsonData),
 	}
 
 	scAddress := relayerConfig.Bridge.SmartContractAddress
@@ -69,10 +78,10 @@ func TestRelayer(t *testing.T) {
 		res, err := contract.GetConfirmedBatch(&bind.CallOpts{
 			Context: ctx,
 			From:    wallet.GetAddress(),
-		}, relayerConfig.CardanoChain.ChainId)
+		}, relayerConfig.Base.ChainId)
 		require.NoError(t, err)
 
-		contractData, err := bridge.GetSmartContractData(ctx, txHelper, relayerConfig.CardanoChain.ChainId, relayerConfig.Bridge.SmartContractAddress)
+		contractData, err := bridge.GetSmartContractData(ctx, txHelper, relayerConfig.Base.ChainId, relayerConfig.Bridge.SmartContractAddress)
 		assert.NoError(t, err)
 
 		assert.Equal(t, res.Id, contractData.Id)
@@ -88,17 +97,16 @@ func TestRelayer(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(relayerConfig.CardanoChain.BlockfrostUrl, relayerConfig.CardanoChain.BlockfrostAPIKey)
-	if err != nil {
-		return
-	}
+	operations, err := GetChainSpecificOperations(chainSpecificConfig)
+	assert.NoError(t, err)
 
-	defer txProvider.Dispose()
-
-	r := NewRelayer(relayerConfig, hclog.Default(), NewCardanoChainOperations(txProvider))
+	r := NewRelayer(relayerConfig, hclog.Default(), operations)
 
 	t.Run("submit tx to cardano chain", func(t *testing.T) {
-		txRaw, txHash := createTxRawHelper(t, relayerConfig, signedBatchId)
+		cardanoChainConfig, err := core.ToCardanoChainConfig(chainSpecificConfig)
+		assert.NoError(t, err)
+
+		txRaw, txHash := createTxRawHelper(t, cardanoChainConfig, signedBatchId)
 		_, witnessesBytes := generateWitnessesHelper(t, txHash)
 
 		confirmedBatch := bridge.ConfirmedBatch{
@@ -113,15 +121,15 @@ func TestRelayer(t *testing.T) {
 	})
 }
 
-func createTxRawHelper(t *testing.T, config *core.RelayerConfiguration, signedBatchId *big.Int) (txRaw []byte, txHash string) {
+func createTxRawHelper(t *testing.T, config *core.CardanoChainConfig, signedBatchId *big.Int) (txRaw []byte, txHash string) {
 	txInfos, err := cardanotx.NewTxInputInfos(
-		dummyKeyHashes[0:3], dummyKeyHashes[3:], config.CardanoChain.TestNetMagic)
+		dummyKeyHashes[0:3], dummyKeyHashes[3:], config.TestNetMagic)
 	assert.NoError(t, err)
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(config.CardanoChain.BlockfrostUrl, config.CardanoChain.BlockfrostAPIKey)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(config.BlockfrostUrl, config.BlockfrostAPIKey)
 	assert.NoError(t, err)
 
-	err = txInfos.CalculateWithRetriever(context.Background(), txProvider, cardanowallet.GetOutputsSum(dummyOutputs), config.CardanoChain.PotentialFee)
+	err = txInfos.CalculateWithRetriever(context.Background(), txProvider, cardanowallet.GetOutputsSum(dummyOutputs), config.PotentialFee)
 	assert.NoError(t, err)
 
 	metadata, err := cardanotx.CreateMetaData(signedBatchId)
@@ -133,7 +141,7 @@ func createTxRawHelper(t *testing.T, config *core.RelayerConfiguration, signedBa
 	slotNumber, err := txProvider.GetSlot(context.Background())
 	assert.NoError(t, err)
 
-	txRaw, txHash, err = cardanotx.CreateTx(config.CardanoChain.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	txRaw, txHash, err = cardanotx.CreateTx(config.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
 		metadata, txInfos, dummyOutputs)
 	assert.NoError(t, err)
 
