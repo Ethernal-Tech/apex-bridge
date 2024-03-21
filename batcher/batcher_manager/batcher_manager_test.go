@@ -12,6 +12,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -101,6 +102,13 @@ func TestBatcherManagerOperations(t *testing.T) {
 			// remove cbor prefix
 			assert.Equal(t, multisigAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSig.GetSigningKey()))
 			assert.Equal(t, multisigFeeAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSigFee.GetSigningKey()))
+
+			// test signatures
+			sigWithString, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", cardano.NewSigningKey(multisigAddress))
+			assert.NoError(t, err)
+			sigWithWallet, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", concreteChainOp.CardanoWallet.MultiSig)
+
+			assert.Equal(t, sigWithString, sigWithWallet)
 		}
 	}
 }
