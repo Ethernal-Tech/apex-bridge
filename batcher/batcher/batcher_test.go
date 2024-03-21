@@ -19,9 +19,8 @@ import (
 func TestBridgeMethods(t *testing.T) {
 	config := &core.BatcherConfiguration{
 		Base: core.BaseConfig{
-			ChainId:               "prime",
-			SigningKeyMultiSig:    "58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0",
-			SigningKeyMultiSigFee: "58204cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9",
+			ChainId:     "prime",
+			KeysDirPath: "./keys/prime",
 		},
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,

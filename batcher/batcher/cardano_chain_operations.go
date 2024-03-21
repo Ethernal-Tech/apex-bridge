@@ -6,7 +6,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -15,12 +15,14 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	config core.CardanoChainConfig
+	Config        core.CardanoChainConfig
+	CardanoWallet cardano.CardanoWallet
 }
 
-func NewCardanoChainOperations(config core.CardanoChainConfig) *CardanoChainOperations {
+func NewCardanoChainOperations(config core.CardanoChainConfig, wallet cardano.CardanoWallet) *CardanoChainOperations {
 	return &CardanoChainOperations{
-		config: config,
+		Config:        config,
+		CardanoWallet: wallet,
 	}
 }
 
@@ -50,12 +52,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	// TODO: Create correct metadata
-	metadata, err := cardanotx.CreateMetaData(big.NewInt(1))
+	metadata, err := cardano.CreateMetaData(big.NewInt(1))
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cco.config.BlockfrostUrl, cco.config.BlockfrostAPIKey)
+	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cco.Config.BlockfrostUrl, cco.Config.BlockfrostAPIKey)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -101,24 +103,24 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		multisigFeeInputsSum += utxo.Amount.Uint64()
 	}
 
-	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(cco.config.TestNetMagic)
+	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
 		return nil, "", nil, err
 	}
-	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(cco.config.TestNetMagic)
+	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	txInfos := &cardanotx.TxInputInfos{
-		TestNetMagic: cco.config.TestNetMagic,
-		MultiSig: &cardanotx.TxInputInfo{
+	txInfos := &cardano.TxInputInfos{
+		TestNetMagic: cco.Config.TestNetMagic,
+		MultiSig: &cardano.TxInputInfo{
 			PolicyScript: multisigPolicyScript,
 			Inputs:       multisigInputs,
 			InputsSum:    multisigInputsSum,
 			Address:      multisigAddress,
 		},
-		MultiSigFee: &cardanotx.TxInputInfo{
+		MultiSigFee: &cardano.TxInputInfo{
 			PolicyScript: multisigFeePolicyScript,
 			Inputs:       multisigFeeInputs,
 			InputsSum:    multisigFeeInputsSum,
@@ -126,7 +128,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		},
 	}
 
-	rawTx, txHash, err := cardanotx.CreateTx(cco.config.TestNetMagic, protocolParams, slotNumber+cardanotx.TTLSlotNumberInc,
+	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
 		metadata, txInfos, outputs)
 	if err != nil {
 		return nil, "", nil, err
@@ -136,16 +138,14 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 }
 
 // SignBatchTransaction implements core.ChainOperations.
-func (*CardanoChainOperations) SignBatchTransaction(txHash string, signingKey string, signingKeyFee string) ([]byte, []byte, error) {
-	sigKey := cardanotx.NewSigningKey(signingKey)
-	sigKeyFee := cardanotx.NewSigningKey(signingKeyFee)
+func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
 
-	witnessMultiSig, err := cardanotx.CreateTxWitness(txHash, sigKey)
+	witnessMultiSig, err := cardano.CreateTxWitness(txHash, cco.CardanoWallet.MultiSig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	witnessMultiSigFee, err := cardanotx.CreateTxWitness(txHash, sigKeyFee)
+	witnessMultiSigFee, err := cardano.CreateTxWitness(txHash, cco.CardanoWallet.MultiSigFee)
 	if err != nil {
 		return nil, nil, err
 	}

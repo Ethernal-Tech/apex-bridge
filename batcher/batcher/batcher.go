@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	wallet "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -24,7 +25,10 @@ type BatcherImpl struct {
 
 var _ core.Batcher = (*BatcherImpl)(nil)
 
-func NewBatcher(config *core.BatcherConfiguration, logger hclog.Logger, operations core.ChainOperations) *BatcherImpl {
+func NewBatcher(
+	config *core.BatcherConfiguration,
+	logger hclog.Logger,
+	operations core.ChainOperations) *BatcherImpl {
 	return &BatcherImpl{
 		config:     config,
 		logger:     logger,
@@ -110,7 +114,7 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	b.logger.Info("Created tx", "txHash", txHash)
 
 	// Sign batch transaction
-	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash, b.config.Base.SigningKeyMultiSig, b.config.Base.SigningKeyMultiSigFee)
+	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash)
 	if err != nil {
 		b.logger.Error("Failed to sign batch transaction", "err", err)
 		return
@@ -140,7 +144,7 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
+func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.ChainOperations, error) {
 	var operations core.ChainOperations
 
 	// Create the appropriate chain-specific configuration based on the chain type
@@ -151,7 +155,12 @@ func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations
 			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
 		}
 
-		operations = NewCardanoChainOperations(cardanoChainConfig)
+		cardanoWallet, err := wallet.LoadWallet(pkPath, false)
+		if err != nil {
+			return nil, fmt.Errorf("error while loading wallet info: %v\n", err)
+		}
+
+		operations = NewCardanoChainOperations(cardanoChainConfig, *cardanoWallet)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

@@ -20,9 +20,8 @@ type BatcherConfiguration struct {
 }
 
 type BaseConfig struct {
-	ChainId               string `json:"chainId"`
-	SigningKeyMultiSig    string `json:"signingKey"`    // hex+cbor representation of private key
-	SigningKeyMultiSigFee string `json:"signingKeyFee"` // hex+cbor representation of private key
+	ChainId     string `json:"chainId"`
+	KeysDirPath string `json:"keysDirPath"`
 }
 type ChainSpecific struct {
 	ChainType string          `json:"chainType"`

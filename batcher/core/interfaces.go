@@ -18,7 +18,7 @@ type Batcher interface {
 
 type ChainOperations interface {
 	GenerateBatchTransaction(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string, confirmedTransactions []contractbinding.TestContractConfirmedTransaction) ([]byte, string, *contractbinding.TestContractUTXOs, error)
-	SignBatchTransaction(txHash string, signingKey string, signingKeyFee string) ([]byte, []byte, error)
+	SignBatchTransaction(txHash string) ([]byte, []byte, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations
