@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"slices"
+	"sort"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -143,7 +143,7 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	for k := range bp.appConfig.CardanoChains {
 		keys = append(keys, k)
 	}
-	slices.Sort(keys)
+	sort.Strings(keys)
 
 	for _, key := range keys {
 		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId, unprocessedTxs, expectedTxs)
@@ -302,7 +302,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	for k := range expectedTxsMap {
 		keys = append(keys, k)
 	}
-	slices.Sort(keys)
+	sort.Strings(keys)
 
 	for _, key := range keys {
 		expectedTx := expectedTxsMap[key]
