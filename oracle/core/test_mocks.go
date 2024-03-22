@@ -100,10 +100,15 @@ var _ CardanoTxsProcessorDb = (*CardanoTxsProcessorDbMock)(nil)
 
 type ClaimsSubmitterMock struct {
 	mock.Mock
+	OnSubmitClaims func(claims *BridgeClaims)
 }
 
 // SubmitClaims implements ClaimsSubmitter.
 func (m *ClaimsSubmitterMock) SubmitClaims(claims *BridgeClaims) error {
+	if m.OnSubmitClaims != nil {
+		m.OnSubmitClaims(claims)
+	}
+
 	args := m.Called()
 	return args.Error(0)
 }

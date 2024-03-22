@@ -53,7 +53,7 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 				return fmt.Errorf("could not marshal unprocessed tx: %v", err)
 			}
 
-			if err = tx.Bucket(unprocessedTxsBucket).Put(unprocessedTx.Key(), bytes); err != nil {
+			if err = tx.Bucket(unprocessedTxsBucket).Put([]byte(unprocessedTx.ToUnprocessedTxKey()), bytes); err != nil {
 				return fmt.Errorf("unprocessed tx write error: %v", err)
 			}
 		}
@@ -101,7 +101,7 @@ func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
 			}
 
 			if strings.Compare(unprocessedTx.OriginChainId, chainId) == 0 {
-				if err := cursor.Bucket().Delete(unprocessedTx.Key()); err != nil {
+				if err := cursor.Bucket().Delete([]byte(unprocessedTx.ToUnprocessedTxKey())); err != nil {
 					return err
 				}
 			}
@@ -123,7 +123,7 @@ func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proc
 				return fmt.Errorf("processed tx write error: %v", err)
 			}
 
-			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToCardanoTxKey())); err != nil {
+			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToUnprocessedTxKey())); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %v", err)
 			}
 		}
