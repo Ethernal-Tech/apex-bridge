@@ -13,32 +13,26 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	const utxoMinValue = 1000000
 	const minFeeForBridging = 10000010
-	const primeToVectorBridgingAddr = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-	const primeToVectorBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-	const vectorToPrimeBridgingAddr = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
-	const vectorToPrimeBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
+	const primeBridgingAddr = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+	const primeBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+	const vectorBridgingAddr = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
+	const vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
 
 	proc := NewBridgingRequestedProcessor()
 	appConfig := &core.AppConfig{
 		CardanoChains: map[string]core.CardanoChainConfig{
 			"prime": {
 				ChainId: "prime",
-				BridgingAddresses: map[string]core.BridgingAddress{
-					"vector": {
-						ChainId:    "vector",
-						Address:    primeToVectorBridgingAddr,
-						FeeAddress: primeToVectorBridgingFeeAddr,
-					},
+				BridgingAddresses: core.BridgingAddresses{
+					BridgingAddress: primeBridgingAddr,
+					FeeAddress:      primeBridgingFeeAddr,
 				},
 			},
 			"vector": {
 				ChainId: "vector",
-				BridgingAddresses: map[string]core.BridgingAddress{
-					"prime": {
-						ChainId:    "prime",
-						Address:    vectorToPrimeBridgingAddr,
-						FeeAddress: vectorToPrimeBridgingFeeAddr,
-					},
+				BridgingAddresses: core.BridgingAddresses{
+					BridgingAddress: vectorBridgingAddr,
+					FeeAddress:      vectorBridgingFeeAddr,
 				},
 			},
 		},
@@ -201,8 +195,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
-			{Address: primeToVectorBridgingAddr, Amount: 2},
+			{Address: primeBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 2},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -222,10 +216,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
 				Transactions: []core.BridgingRequestMetadataTransaction{
-					{Address: primeToVectorBridgingFeeAddr, Amount: 2},
-					{Address: primeToVectorBridgingFeeAddr, Amount: 2},
-					{Address: primeToVectorBridgingFeeAddr, Amount: 2},
-					{Address: primeToVectorBridgingFeeAddr, Amount: 2},
+					{Address: vectorBridgingFeeAddr, Amount: 2},
+					{Address: vectorBridgingFeeAddr, Amount: 2},
+					{Address: vectorBridgingFeeAddr, Amount: 2},
+					{Address: vectorBridgingFeeAddr, Amount: 2},
 				},
 			},
 		})
@@ -234,7 +228,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -261,7 +255,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -281,7 +275,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
 				Transactions: []core.BridgingRequestMetadataTransaction{
-					{Address: primeToVectorBridgingFeeAddr, Amount: 2},
+					{Address: vectorBridgingFeeAddr, Amount: 2},
 				},
 			},
 		})
@@ -290,7 +284,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -310,7 +304,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
 				Transactions: []core.BridgingRequestMetadataTransaction{
-					{Address: primeToVectorBridgingFeeAddr, Amount: utxoMinValue},
+					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
 					{Address: "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661", Amount: utxoMinValue},
 				},
 			},
@@ -320,7 +314,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -340,7 +334,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
 				Transactions: []core.BridgingRequestMetadataTransaction{
-					{Address: primeToVectorBridgingFeeAddr, Amount: minFeeForBridging - 1},
+					{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging - 1},
 				},
 			},
 		})
@@ -349,7 +343,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -366,7 +360,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		const destinationChainId = "vector"
 		const txHash = "test_hash"
 		receivers := []core.BridgingRequestMetadataTransaction{
-			{Address: primeToVectorBridgingFeeAddr, Amount: minFeeForBridging},
+			{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging},
 		}
 
 		validMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
@@ -382,7 +376,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeToVectorBridgingAddr, Amount: 1},
+			{Address: primeBridgingAddr, Amount: 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
