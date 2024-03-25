@@ -124,20 +124,6 @@ func (bp *CardanoTxsProcessorImpl) Stop() error {
 func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	bp.logger.Debug("Checking if should generate claims")
 
-	expectedTxs, err := bp.db.GetExpectedTxs(0)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
-		bp.logger.Error("Failed to get expected txs", "err", err)
-		return
-	}
-
-	unprocessedTxs, err := bp.db.GetUnprocessedTxs(0)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
-		bp.logger.Error("Failed to get unprocessed txs", "err", err)
-		return
-	}
-
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
 	var keys []string
 	for k := range bp.appConfig.CardanoChains {
@@ -146,7 +132,7 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId, unprocessedTxs, expectedTxs)
+		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId)
 
 		time.Sleep(time.Millisecond * bp.tickTime)
 	}
@@ -170,38 +156,29 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaims(
 	minSlot := uint64(math.MaxUint64)
 	var blockHash string
 
-	for _, unprocessedTx := range unprocessedTxs {
-		if unprocessedTx.OriginChainId == chainId {
-			minSlot = unprocessedTx.BlockSlot
-			blockHash = unprocessedTx.BlockHash
-			found = true
-			// unprocessed are ordered by slot, so first in collection is min
-			break
-		}
+	if len(unprocessedTxs) > 0 {
+		// unprocessed are ordered by slot, so first in collection is min
+		minSlot = unprocessedTxs[0].BlockSlot
+		blockHash = unprocessedTxs[0].BlockHash
+		found = true
 	}
 
-	for _, expectedTx := range expectedTxs {
-		if expectedTx.ChainId == chainId {
-			// expected are ordered by ttl, so first in collection is min
-			fromSlot := expectedTx.Ttl + TtlInsuranceOffset
-			if ccoDb == nil {
-				break
-			}
-
+	if len(expectedTxs) > 0 {
+		// expected are ordered by ttl, so first in collection is min
+		expectedTx := expectedTxs[0]
+		fromSlot := expectedTx.Ttl + TtlInsuranceOffset
+		if ccoDb != nil {
 			blocks, err := ccoDb.GetConfirmedBlocksFrom(fromSlot, 1)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get confirmed blocks from slot: %v, for %v. error: %v\n", fromSlot, expectedTx.ChainId, err)
-				bp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", expectedTx.ChainId, "err", err)
-				break
+				fmt.Fprintf(os.Stderr, "Failed to get confirmed blocks from slot: %v, for %v. error: %v\n", fromSlot, chainId, err)
+				bp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", chainId, "err", err)
+			} else {
+				if len(blocks) > 0 && blocks[0].Slot < minSlot {
+					minSlot = blocks[0].Slot
+					blockHash = blocks[0].Hash
+					found = true
+				}
 			}
-
-			if len(blocks) > 0 && blocks[0].Slot < minSlot {
-				minSlot = blocks[0].Slot
-				blockHash = blocks[0].Hash
-				found = true
-			}
-
-			break
 		}
 	}
 
@@ -306,22 +283,20 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 
 	for _, key := range keys {
 		expectedTx := expectedTxsMap[key]
-		if expectedTx.ChainId == bridgeClaims.BlockInfo.ChainId {
-			if ccoDb == nil {
-				break
-			}
+		if ccoDb == nil {
+			break
+		}
 
-			fromSlot := expectedTx.Ttl + TtlInsuranceOffset
-			blocks, err := ccoDb.GetConfirmedBlocksFrom(fromSlot, 1)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get confirmed blocks from slot: %v, for %v. error: %v\n", fromSlot, expectedTx.ChainId, err)
-				bp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", expectedTx.ChainId, "err", err)
-				break
-			}
+		fromSlot := expectedTx.Ttl + TtlInsuranceOffset
+		blocks, err := ccoDb.GetConfirmedBlocksFrom(fromSlot, 1)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get confirmed blocks from slot: %v, for %v. error: %v\n", fromSlot, expectedTx.ChainId, err)
+			bp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", expectedTx.ChainId, "err", err)
+			break
+		}
 
-			if len(blocks) == 1 && bridgeClaims.BlockInfoEqualWithExpected(expectedTx, blocks[0]) {
-				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
-			}
+		if len(blocks) == 1 && bridgeClaims.BlockInfoEqualWithExpected(expectedTx, blocks[0]) {
+			relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 		}
 	}
 
@@ -379,9 +354,20 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 
 func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	chainId string,
-	unprocessedTxs []*core.CardanoTx,
-	expectedTxs []*core.BridgeExpectedCardanoTx,
 ) {
+	expectedTxs, err := bp.db.GetExpectedTxs(chainId, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
+		bp.logger.Error("Failed to get expected txs", "err", err)
+		return
+	}
+
+	unprocessedTxs, err := bp.db.GetUnprocessedTxs(chainId, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
+		bp.logger.Error("Failed to get unprocessed txs", "err", err)
+		return
+	}
 
 	bridgeClaims, ccoDb := bp.constructBridgeClaims(chainId, unprocessedTxs, expectedTxs)
 	if bridgeClaims == nil {
@@ -411,7 +397,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	}
 
 	bp.logger.Debug("Submitting bridge claims", "claims", bridgeClaims)
-	err := bp.claimsSubmitter.SubmitClaims(bridgeClaims)
+	err = bp.claimsSubmitter.SubmitClaims(bridgeClaims)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 		bp.logger.Error("Failed to submit claims", "err", err)

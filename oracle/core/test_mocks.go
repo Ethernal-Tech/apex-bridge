@@ -60,7 +60,7 @@ func (m *CardanoTxsProcessorDbMock) AddExpectedTxs(expectedTxs []*BridgeExpected
 	return nil
 }
 
-func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(threshold int) ([]*BridgeExpectedCardanoTx, error) {
+func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(chainId string, threshold int) ([]*BridgeExpectedCardanoTx, error) {
 	return nil, nil
 }
 
@@ -80,7 +80,7 @@ func (m *CardanoTxsProcessorDbMock) AddUnprocessedTxs(unprocessedTxs []*CardanoT
 	return nil
 }
 
-func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(threshold int) ([]*CardanoTx, error) {
+func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(chainId string, threshold int) ([]*CardanoTx, error) {
 	return nil, nil
 }
 

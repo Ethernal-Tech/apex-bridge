@@ -109,7 +109,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc.NewUnprocessedTxs("prime", nil)
 
-		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, err := oracleDb.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 	})
@@ -128,7 +128,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc.NewUnprocessedTxs("prime", []*indexer.Tx{})
 
-		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, err := oracleDb.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 	})
@@ -152,7 +152,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			{Hash: "test_hash"},
 		})
 
-		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, err := oracleDb.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 	})
@@ -176,7 +176,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			{Hash: "test_hash"},
 		})
 
-		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, err := oracleDb.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 	})
@@ -202,7 +202,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			{Hash: txHash},
 		})
 
-		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, err := oracleDb.GetUnprocessedTxs(originChainId, 0)
 		require.NoError(t, err)
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, txHash, unprocessedTxs[0].Hash)
@@ -243,7 +243,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(originChainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(originChainId, txHash)
 		require.NotNil(t, processedTx)
@@ -285,7 +285,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(originChainId, 0)
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, txHash, unprocessedTxs[0].Hash)
 		require.Equal(t, originChainId, unprocessedTxs[0].OriginChainId)
@@ -328,7 +328,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(originChainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(originChainId, txHash)
 		require.NotNil(t, processedTx)
@@ -375,7 +375,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 	})
 
@@ -419,7 +419,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.NotNil(t, expectedTxs)
 	})
 
@@ -465,7 +465,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.NotNil(t, expectedTxs)
 		require.Nil(t, submittedClaims)
 	})
@@ -514,7 +514,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 1)
@@ -578,13 +578,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -650,13 +650,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -724,13 +724,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -803,13 +803,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -879,13 +879,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId1, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId1, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId2, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -966,13 +966,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId1, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId1, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId2, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -1059,13 +1059,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			proc.checkShouldGenerateClaims()
 		}
 
-		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(0)
+		unprocessedTxs, _ := oracleDb.GetUnprocessedTxs(chainId1, 0)
 		require.Nil(t, unprocessedTxs)
 		processedTx, _ := oracleDb.GetProcessedTx(chainId1, txHash1)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDb.GetExpectedTxs(0)
+		expectedTxs, _ := oracleDb.GetExpectedTxs(chainId2, 0)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
