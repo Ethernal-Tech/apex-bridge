@@ -71,3 +71,8 @@ type ClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
 	Dispose() error
 }
+
+type ConfirmedBlocksSubmitter interface {
+	StartSubmit() error
+	Dispose() error
+}

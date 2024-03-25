@@ -23,10 +23,16 @@ type CardanoChainConfig struct {
 	OtherAddressesOfInterest []string                   `json:"otherAddressesOfInterest"`
 }
 
+type SubmitConfig struct {
+	ConfirmedBlocksThreshhold int `json:"confirmedBlocksThreshhold"`
+	ConfirmedBlocksSubmitTime int `json:"confirmedBlocksSubmitTime"`
+}
+
 type BridgeConfig struct {
-	NodeUrl              string `json:"nodeUrl"`
-	SmartContractAddress string `json:"smartContractAddress"`
-	SigningKey           string `json:"signingKey"`
+	NodeUrl              string       `json:"nodeUrl"`
+	SmartContractAddress string       `json:"smartContractAddress"`
+	SigningKey           string       `json:"signingKey"`
+	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
 type AppSettings struct {
