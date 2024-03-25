@@ -40,7 +40,11 @@
     "bridge": {
         "nodeUrl": "https://polygon-mumbai-pokt.nodies.app",
         "smartContractAddress": "0xb2B87f7e652Aa847F98Cc05e130d030b91c7B37d",
-        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23"
+        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
+        "submitConfig": {
+            "confirmedBlocksThreshhold": 10,
+            "confirmedBlocksSubmitTime": 5000
+        }
     },
     "bridgingSettings": {
         "minFeeForBridging": 1000010,
