@@ -28,13 +28,14 @@ var (
 )
 
 type OracleImpl struct {
-	appConfig             *core.AppConfig
-	cardanoTxsProcessor   core.CardanoTxsProcessor
-	cardanoChainObservers map[string]core.CardanoChainObserver
-	db                    core.Database
-	bridgeDataFetcher     *bridge.BridgeDataFetcherImpl
-	claimsSubmitter       core.ClaimsSubmitter
-	logger                hclog.Logger
+	appConfig                *core.AppConfig
+	cardanoTxsProcessor      core.CardanoTxsProcessor
+	cardanoChainObservers    map[string]core.CardanoChainObserver
+	db                       core.Database
+	bridgeDataFetcher        *bridge.BridgeDataFetcherImpl
+	claimsSubmitter          core.ClaimsSubmitter
+	confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter
+	logger                   hclog.Logger
 
 	errorCh chan error
 	closeCh chan bool
@@ -94,6 +95,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, claimsSubmitter, getCardanoChainObserverDb, logger.Named("cardano_txs_processor"))
 
 	var cardanoChainObservers map[string]core.CardanoChainObserver = make(map[string]core.CardanoChainObserver)
+	var confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter = make(map[string]core.ConfirmedBlocksSubmitter)
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		initialUtxosForChain := (*initialUtxos)[cardanoChainConfig.ChainId]
@@ -105,6 +107,15 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		}
 
 		cardanoChainObservers[cardanoChainConfig.ChainId] = cco
+
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(appConfig, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submiter_"+cardanoChainConfig.ChainId))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create cardano block submiter for chain: %v error: %v\n", cardanoChainConfig.ChainId, err)
+			logger.Error("failed to create cardano block submiter for chain", "chainId", cardanoChainConfig.ChainId, "error:", err)
+			return nil
+		}
+
+		confirmedBlockSubmitters[cardanoChainConfig.ChainId] = cbs
 	}
 
 	oracle.appConfig = appConfig
@@ -112,6 +123,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	oracle.cardanoChainObservers = cardanoChainObservers
 	oracle.bridgeDataFetcher = bridgeDataFetcher
 	oracle.claimsSubmitter = claimsSubmitter
+	oracle.confirmedBlockSubmitters = confirmedBlockSubmitters
 	oracle.db = db
 	oracle.logger = logger
 	oracle.closeCh = make(chan bool, 1)
@@ -134,6 +146,15 @@ func (o *OracleImpl) Start() error {
 		}
 	}
 
+	for _, cbs := range o.confirmedBlockSubmitters {
+		err := cbs.StartSubmit()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to start block submiter. error: %v\n", err)
+			o.logger.Error("Failed to start block submiter cardano", "err", err)
+			return err
+		}
+	}
+
 	o.errorCh = make(chan error, 1)
 	go o.errorHandler()
 
@@ -150,6 +171,15 @@ func (o *OracleImpl) Stop() error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to stop cardano chain observer: %v. error: %v\n", co.GetConfig().ChainId, err)
 			o.logger.Error("Failed to stop cardano chain observer", "err", err)
+		}
+	}
+
+	for _, cbs := range o.confirmedBlockSubmitters {
+		err := cbs.Dispose()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to stop block submiter. error: %v\n", err)
+			o.logger.Error("Failed to stop block submiter cardano", "err", err)
+			return err
 		}
 	}
 

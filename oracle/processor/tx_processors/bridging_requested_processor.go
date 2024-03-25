@@ -104,29 +104,25 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 
 func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
 	foundDestinationChainConfig := false
-	var bridgingAddressOnOrigin *core.BridgingAddress
+	var bridgingAddressesOnDestination core.BridgingAddresses
 	var utxoToBridgingAddressOnOrigin *indexer.TxOutput = nil
 	foundBridgingAddressOnOrigin := false
 	foundMultipleUtxosToBridgingAddressOnOrigin := false
 	for _, chainConfig := range appConfig.CardanoChains {
 		if chainConfig.ChainId == tx.OriginChainId {
-			for _, bridgingAddress := range chainConfig.BridgingAddresses {
-				if bridgingAddress.ChainId == metadata.DestinationChainId {
-					for _, utxo := range tx.Outputs {
-						if utxo.Address == bridgingAddress.Address {
-							if utxoToBridgingAddressOnOrigin != nil {
-								foundMultipleUtxosToBridgingAddressOnOrigin = true
-							} else {
-								bridgingAddressOnOrigin = &bridgingAddress
-								utxoToBridgingAddressOnOrigin = utxo
-								foundBridgingAddressOnOrigin = true
-							}
-						}
+			for _, utxo := range tx.Outputs {
+				if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
+					if utxoToBridgingAddressOnOrigin != nil {
+						foundMultipleUtxosToBridgingAddressOnOrigin = true
+					} else {
+						utxoToBridgingAddressOnOrigin = utxo
+						foundBridgingAddressOnOrigin = true
 					}
 				}
 			}
 		} else if metadata.DestinationChainId == chainConfig.ChainId {
 			foundDestinationChainConfig = true
+			bridgingAddressesOnDestination = chainConfig.BridgingAddresses
 		}
 	}
 
@@ -135,7 +131,7 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 	}
 
 	if !foundBridgingAddressOnOrigin {
-		return fmt.Errorf("bridging address on origin not found in utxos: %v", metadata.DestinationChainId)
+		return fmt.Errorf("bridging address on origin not found in utxos")
 	}
 
 	if foundMultipleUtxosToBridgingAddressOnOrigin {
@@ -163,7 +159,7 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 			break
 		}
 
-		if receiver.Address == bridgingAddressOnOrigin.FeeAddress {
+		if receiver.Address == bridgingAddressesOnDestination.FeeAddress {
 			foundTheFeeReceiverAddr = true
 			feeSum += receiver.Amount
 		}

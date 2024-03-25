@@ -4,29 +4,33 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
-type BridgingAddress struct {
-	ChainId    string `json:"chainId"`
-	Address    string `json:"address"`
-	FeeAddress string `json:"feeAddress"`
+type BridgingAddresses struct {
+	BridgingAddress string `json:"address"`
+	FeeAddress      string `json:"feeAddress"`
 }
 
 type CardanoChainConfig struct {
-	ChainId                  string                     `json:"chainId"`
-	NetworkAddress           string                     `json:"networkAddress"`
-	NetworkMagic             string                     `json:"networkMagic"`
-	StartBlockHash           string                     `json:"startBlockHash"`
-	StartSlot                string                     `json:"startSlot"`
-	StartBlockNumber         string                     `json:"startBlockNumber"`
-	ConfirmationBlockCount   uint                       `json:"confirmationBlockCount"`
-	FeeAddress               string                     `json:"feeAddress"`
-	BridgingAddresses        map[string]BridgingAddress `json:"bridgingAddresses"`
-	OtherAddressesOfInterest []string                   `json:"otherAddressesOfInterest"`
+	ChainId                  string            `json:"chainId"`
+	NetworkAddress           string            `json:"networkAddress"`
+	NetworkMagic             string            `json:"networkMagic"`
+	StartBlockHash           string            `json:"startBlockHash"`
+	StartSlot                string            `json:"startSlot"`
+	StartBlockNumber         string            `json:"startBlockNumber"`
+	ConfirmationBlockCount   uint              `json:"confirmationBlockCount"`
+	BridgingAddresses        BridgingAddresses `json:"bridgingAddresses"`
+	OtherAddressesOfInterest []string          `json:"otherAddressesOfInterest"`
+}
+
+type SubmitConfig struct {
+	ConfirmedBlocksThreshhold int `json:"confirmedBlocksThreshhold"`
+	ConfirmedBlocksSubmitTime int `json:"confirmedBlocksSubmitTime"`
 }
 
 type BridgeConfig struct {
-	NodeUrl              string `json:"nodeUrl"`
-	SmartContractAddress string `json:"smartContractAddress"`
-	SigningKey           string `json:"signingKey"`
+	NodeUrl              string       `json:"nodeUrl"`
+	SmartContractAddress string       `json:"smartContractAddress"`
+	SigningKey           string       `json:"signingKey"`
+	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
 type AppSettings struct {
