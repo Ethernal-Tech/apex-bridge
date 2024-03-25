@@ -139,13 +139,11 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	t.Run("validate method fail", func(t *testing.T) {
 		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
 		cardanoChains["prime"] = core.CardanoChainConfig{
-			ChainId:    "prime",
-			FeeAddress: "addr1",
-			BridgingAddresses: map[string]core.BridgingAddress{"prime": core.BridgingAddress{
-				ChainId:    "prime",
-				Address:    "addr2",
-				FeeAddress: "addr3",
-			}},
+			ChainId: "prime",
+			BridgingAddresses: core.BridgingAddresses{
+				BridgingAddress: "addr1",
+				FeeAddress:      "addr2",
+			},
 		}
 
 		config := core.AppConfig{
@@ -159,7 +157,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
 					Output: indexer.TxOutput{
-						Address: "addr4",
+						Address: "addr3",
 						IsUsed:  true,
 					},
 				}),
@@ -173,13 +171,11 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	t.Run("validate method pass", func(t *testing.T) {
 		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
 		cardanoChains["prime"] = core.CardanoChainConfig{
-			ChainId:    "prime",
-			FeeAddress: "addr1",
-			BridgingAddresses: map[string]core.BridgingAddress{"prime": core.BridgingAddress{
-				ChainId:    "prime",
-				Address:    "addr2",
-				FeeAddress: "addr3",
-			}},
+			ChainId: "prime",
+			BridgingAddresses: core.BridgingAddresses{
+				BridgingAddress: "addr1",
+				FeeAddress:      "addr2",
+			},
 		}
 
 		config := core.AppConfig{
@@ -193,7 +189,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
 					Output: indexer.TxOutput{
-						Address: "addr2",
+						Address: "addr1",
 						IsUsed:  true,
 					},
 				}),
@@ -203,7 +199,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
 		require.NoError(t, err)
 
-		tx.Tx.Inputs[0].Output.Address = "addr3"
+		tx.Tx.Inputs[0].Output.Address = "addr2"
 		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
 		require.NoError(t, err)
 	})
