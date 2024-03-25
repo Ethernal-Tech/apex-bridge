@@ -135,4 +135,76 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[1].Address, txOutputs[1].Address)
 		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[1].Amount, txOutputs[1].Amount)
 	})
+
+	t.Run("validate method fail", func(t *testing.T) {
+		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
+		cardanoChains["prime"] = core.CardanoChainConfig{
+			ChainId:    "prime",
+			FeeAddress: "addr1",
+			BridgingAddresses: map[string]core.BridgingAddress{"prime": core.BridgingAddress{
+				ChainId:    "prime",
+				Address:    "addr2",
+				FeeAddress: "addr3",
+			}},
+		}
+
+		config := core.AppConfig{
+			CardanoChains:    cardanoChains,
+			Bridge:           core.BridgeConfig{},
+			Settings:         core.AppSettings{},
+			BridgingSettings: core.BridgingSettings{},
+		}
+		tx := core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Output: indexer.TxOutput{
+						Address: "addr4",
+						IsUsed:  true,
+					},
+				}),
+			},
+		}
+
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.Error(t, err)
+	})
+
+	t.Run("validate method pass", func(t *testing.T) {
+		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
+		cardanoChains["prime"] = core.CardanoChainConfig{
+			ChainId:    "prime",
+			FeeAddress: "addr1",
+			BridgingAddresses: map[string]core.BridgingAddress{"prime": core.BridgingAddress{
+				ChainId:    "prime",
+				Address:    "addr2",
+				FeeAddress: "addr3",
+			}},
+		}
+
+		config := core.AppConfig{
+			CardanoChains:    cardanoChains,
+			Bridge:           core.BridgeConfig{},
+			Settings:         core.AppSettings{},
+			BridgingSettings: core.BridgingSettings{},
+		}
+		tx := core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Output: indexer.TxOutput{
+						Address: "addr2",
+						IsUsed:  true,
+					},
+				}),
+			},
+		}
+
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.NoError(t, err)
+
+		tx.Tx.Inputs[0].Output.Address = "addr3"
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.NoError(t, err)
+	})
 }
