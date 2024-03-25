@@ -152,9 +152,9 @@ func loadSyncerConfigs(config core.CardanoChainConfig) (*indexer.BlockIndexerCon
 	startSlot, _ := strconv.ParseUint(config.StartSlot, 10, 64)
 	startBlockNum, _ := strconv.ParseUint(config.StartBlockNumber, 10, 32)
 
-	var addressesOfInterest []string
-	for _, bridgingAddress := range config.BridgingAddresses {
-		addressesOfInterest = append(addressesOfInterest, bridgingAddress.Address)
+	addressesOfInterest := []string{
+		config.BridgingAddresses.BridgingAddress,
+		config.BridgingAddresses.FeeAddress,
 	}
 
 	addressesOfInterest = append(addressesOfInterest, config.OtherAddressesOfInterest...)

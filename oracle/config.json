@@ -8,13 +8,9 @@
             "startSlot": "0",
             "startBlockNumber": "0",
             "confirmationBlockCount": 10,
-            "feeAddress": "",
             "bridgingAddresses": {
-                "vector": {
-                    "chainId": "vector",
-                    "address": "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660",
-                    "feeAddress": ""
-                }
+                "address": "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660",
+                "feeAddress": ""
             },
             "otherAddressesOfInterest": []
         },
@@ -26,13 +22,9 @@
             "startSlot": "0",
             "startBlockNumber": "0",
             "confirmationBlockCount": 10,
-            "feeAddress": "",
             "bridgingAddresses": {
-                "prime": {
-                    "chainId": "prime",
-                    "address": "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw",
-                    "feeAddress": ""
-                }
+                "address": "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw",
+                "feeAddress": ""
             },
             "otherAddressesOfInterest": []
         }
