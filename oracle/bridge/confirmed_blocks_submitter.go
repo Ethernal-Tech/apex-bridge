@@ -2,9 +2,7 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -35,12 +33,10 @@ func NewConfirmedBlocksSubmitter(
 	appConfig *core.AppConfig,
 	chainId string,
 	logger hclog.Logger,
-) *ConfirmedBlocksSubmitterImpl {
+) (*ConfirmedBlocksSubmitterImpl, error) {
 	indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+chainId+".db")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Open database failed", "err", err)
-		return nil
+		return nil, err
 	}
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -52,7 +48,7 @@ func NewConfirmedBlocksSubmitter(
 		logger:    logger,
 		ctx:       ctx,
 		cancelCtx: cancelCtx,
-	}
+	}, nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
