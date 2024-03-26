@@ -166,6 +166,17 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
 		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected address found in tx input")
+
+		tx.Inputs[0].Output.Address = "addr1"
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "fee address not found in tx intpus")
+
+		tx.Inputs[0].Output.Address = "addr2"
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging address not found in tx inptus")
 	})
 
 	t.Run("validate method pass", func(t *testing.T) {
@@ -187,9 +198,14 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+				Inputs: append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
 					Output: indexer.TxOutput{
 						Address: "addr1",
+						IsUsed:  true,
+					},
+				}), &indexer.TxInputOutput{
+					Output: indexer.TxOutput{
+						Address: "addr2",
 						IsUsed:  true,
 					},
 				}),
@@ -199,7 +215,21 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
 		require.NoError(t, err)
 
-		tx.Tx.Inputs[0].Output.Address = "addr2"
+		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
+			Output: indexer.TxOutput{
+				Address: "addr1",
+				IsUsed:  true,
+			},
+		})
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		require.NoError(t, err)
+
+		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
+			Output: indexer.TxOutput{
+				Address: "addr2",
+				IsUsed:  true,
+			},
+		})
 		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
 		require.NoError(t, err)
 	})
