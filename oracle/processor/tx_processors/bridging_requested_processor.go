@@ -103,7 +103,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 */
 
 func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
-	err := utils.ValidateTxOutputs(tx, appConfig)
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
 	if err != nil {
 		return err
 	}
@@ -148,6 +148,10 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 		}
 
 		receiverAmountSum += receiver.Amount
+	}
+
+	if receiverAmountSum != multisigUtxo.Amount {
+		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v", receiverAmountSum, multisigUtxo.Amount)
 	}
 
 	if foundAUtxoValueBelowMinimumValue {

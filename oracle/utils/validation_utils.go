@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
 // Validate if all tx inputs belong to the multisig address or fee address
@@ -37,16 +38,17 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 }
 
 // Validate if there is one and only one tx output that belongs to the multisig address
-func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
-	foundMultisigOutput := false
+// Returns found multisig output utxo
+func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) (*indexer.TxOutput, error) {
+	var multisigUtxoOutput *indexer.TxOutput = nil
 	for _, chainConfig := range appConfig.CardanoChains {
 		if chainConfig.ChainId == tx.OriginChainId {
 			for _, utxo := range tx.Tx.Outputs {
 				if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
-					if !foundMultisigOutput {
-						foundMultisigOutput = true
+					if multisigUtxoOutput == nil {
+						multisigUtxoOutput = utxo
 					} else {
-						return fmt.Errorf("found multiple utxos to the bridging address on origin")
+						return nil, fmt.Errorf("found multiple utxos to the bridging address on origin")
 					}
 				}
 			}
@@ -54,9 +56,9 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 		}
 	}
 
-	if !foundMultisigOutput {
-		return fmt.Errorf("bridging address on origin not found in utxos")
+	if multisigUtxoOutput == nil {
+		return nil, fmt.Errorf("bridging address on origin not found in utxos")
 	}
 
-	return nil
+	return multisigUtxoOutput, nil
 }
