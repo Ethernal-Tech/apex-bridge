@@ -13,9 +13,9 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 	for _, chainConfig := range appConfig.CardanoChains {
 		if chainConfig.ChainId == tx.OriginChainId {
 			for _, utxo := range tx.Tx.Inputs {
-				if utxo.Output.Address == chainConfig.BridgingAddresses.BridgingAddress && !foundBridgingAddress {
+				if utxo.Output.Address == chainConfig.BridgingAddresses.BridgingAddress {
 					foundBridgingAddress = true
-				} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress && !foundFeeAddress {
+				} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
 					foundFeeAddress = true
 				} else {
 					return fmt.Errorf("unexpected address found in tx input", "address", utxo.Output.Address)
