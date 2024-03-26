@@ -13,6 +13,28 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	proc := NewBatchExecutedProcessor()
 
+	appConfing := core.AppConfig{
+		CardanoChains: map[string]core.CardanoChainConfig{"prime": core.CardanoChainConfig{
+			ChainId: "prime",
+			BridgingAddresses: core.BridgingAddresses{
+				BridgingAddress: "addr_bridging",
+				FeeAddress:      "addr_fee",
+			},
+		}},
+	}
+
+	txInputs := append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+		Input: indexer.TxInput{},
+		Output: indexer.TxOutput{
+			Address: "addr_bridging",
+		},
+	}), &indexer.TxInputOutput{
+		Input: indexer.TxInput{},
+		Output: indexer.TxOutput{
+			Address: "addr_fee",
+		},
+	})
+
 	t.Run("IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.CardanoTx{}, nil)
 		require.Error(t, err)
@@ -54,7 +76,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &core.BridgeClaims{}
 
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, nil)
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, &appConfing)
 		require.Error(t, err)
 	})
 
@@ -72,7 +94,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
-		}, nil)
+		}, &appConfing)
 		require.Error(t, err)
 	})
 
@@ -87,10 +109,12 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			OriginChainId: "prime",
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
+				Inputs:   txInputs,
 			},
-		}, nil)
+		}, &appConfing)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecuted, 1)
@@ -117,12 +141,14 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			{Address: "addr2", Amount: 2},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			OriginChainId: "prime",
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: relevantFullMetadata,
 				Outputs:  txOutputs,
+				Inputs:   txInputs,
 			},
-		}, nil)
+		}, &appConfing)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecuted, 1)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -103,24 +103,15 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 */
 
 func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
+	if err != nil {
+		return err
+	}
+
 	foundDestinationChainConfig := false
 	var bridgingAddressesOnDestination core.BridgingAddresses
-	var utxoToBridgingAddressOnOrigin *indexer.TxOutput = nil
-	foundBridgingAddressOnOrigin := false
-	foundMultipleUtxosToBridgingAddressOnOrigin := false
 	for _, chainConfig := range appConfig.CardanoChains {
-		if chainConfig.ChainId == tx.OriginChainId {
-			for _, utxo := range tx.Outputs {
-				if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
-					if utxoToBridgingAddressOnOrigin != nil {
-						foundMultipleUtxosToBridgingAddressOnOrigin = true
-					} else {
-						utxoToBridgingAddressOnOrigin = utxo
-						foundBridgingAddressOnOrigin = true
-					}
-				}
-			}
-		} else if metadata.DestinationChainId == chainConfig.ChainId {
+		if metadata.DestinationChainId == chainConfig.ChainId {
 			foundDestinationChainConfig = true
 			bridgingAddressesOnDestination = chainConfig.BridgingAddresses
 		}
@@ -128,14 +119,6 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 
 	if !foundDestinationChainConfig {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainId)
-	}
-
-	if !foundBridgingAddressOnOrigin {
-		return fmt.Errorf("bridging address on origin not found in utxos")
-	}
-
-	if foundMultipleUtxosToBridgingAddressOnOrigin {
-		return fmt.Errorf("found multiple utxos to the bridging address on origin")
 	}
 
 	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
@@ -165,6 +148,10 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 		}
 
 		receiverAmountSum += receiver.Amount
+	}
+
+	if receiverAmountSum != multisigUtxo.Amount {
+		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v", receiverAmountSum, multisigUtxo.Amount)
 	}
 
 	if foundAUtxoValueBelowMinimumValue {
