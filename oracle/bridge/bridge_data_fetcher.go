@@ -98,8 +98,16 @@ func (df *BridgeDataFetcherImpl) fetchData() {
 		return
 	}
 
-	if len(expectedTxs) > 0 {
-		err = df.db.AddExpectedTxs(expectedTxs)
+	var validExpectedTxs []*core.BridgeExpectedCardanoTx
+	for _, expectedTx := range expectedTxs {
+		chainConfig := df.appConfig.CardanoChains[expectedTx.ChainId]
+		if chainConfig.ChainId == expectedTx.ChainId {
+			validExpectedTxs = append(validExpectedTxs, expectedTx)
+		}
+	}
+
+	if len(validExpectedTxs) > 0 {
+		err = df.db.AddExpectedTxs(validExpectedTxs)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to add expected txs. error: %v\n", err)
 			df.logger.Error("Failed to add expected txs", "err", err)

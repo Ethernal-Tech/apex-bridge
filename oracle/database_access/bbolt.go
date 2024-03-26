@@ -53,7 +53,7 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 				return fmt.Errorf("could not marshal unprocessed tx: %v", err)
 			}
 
-			if err = tx.Bucket(unprocessedTxsBucket).Put(unprocessedTx.Key(), bytes); err != nil {
+			if err = tx.Bucket(unprocessedTxsBucket).Put([]byte(unprocessedTx.ToUnprocessedTxKey()), bytes); err != nil {
 				return fmt.Errorf("unprocessed tx write error: %v", err)
 			}
 		}
@@ -62,7 +62,7 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 	})
 }
 
-func (bd *BBoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, error) {
+func (bd *BBoltDatabase) GetUnprocessedTxs(chainId string, threshold int) ([]*core.CardanoTx, error) {
 	var result []*core.CardanoTx
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -75,9 +75,11 @@ func (bd *BBoltDatabase) GetUnprocessedTxs(threshold int) ([]*core.CardanoTx, er
 				return err
 			}
 
-			result = append(result, cardanoTx)
-			if threshold > 0 && len(result) == threshold {
-				break
+			if cardanoTx.OriginChainId == chainId {
+				result = append(result, cardanoTx)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
 			}
 		}
 
@@ -101,7 +103,7 @@ func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
 			}
 
 			if strings.Compare(unprocessedTx.OriginChainId, chainId) == 0 {
-				if err := cursor.Bucket().Delete(unprocessedTx.Key()); err != nil {
+				if err := cursor.Bucket().Delete([]byte(unprocessedTx.ToUnprocessedTxKey())); err != nil {
 					return err
 				}
 			}
@@ -123,7 +125,7 @@ func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proc
 				return fmt.Errorf("processed tx write error: %v", err)
 			}
 
-			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToCardanoTxKey())); err != nil {
+			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToUnprocessedTxKey())); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %v", err)
 			}
 		}
@@ -170,7 +172,7 @@ func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardan
 	})
 }
 
-func (bd *BBoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
+func (bd *BBoltDatabase) GetExpectedTxs(chainId string, threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
 	var result []*core.BridgeExpectedCardanoTx
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -183,7 +185,7 @@ func (bd *BBoltDatabase) GetExpectedTxs(threshold int) ([]*core.BridgeExpectedCa
 				return err
 			}
 
-			if !expectedTx.IsProcessed && !expectedTx.IsInvalid {
+			if expectedTx.ChainId == chainId && !expectedTx.IsProcessed && !expectedTx.IsInvalid {
 				result = append(result, &expectedTx.BridgeExpectedCardanoTx)
 				if threshold > 0 && len(result) == threshold {
 					break

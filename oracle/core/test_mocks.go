@@ -60,7 +60,7 @@ func (m *CardanoTxsProcessorDbMock) AddExpectedTxs(expectedTxs []*BridgeExpected
 	return nil
 }
 
-func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(threshold int) ([]*BridgeExpectedCardanoTx, error) {
+func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(chainId string, threshold int) ([]*BridgeExpectedCardanoTx, error) {
 	return nil, nil
 }
 
@@ -80,7 +80,7 @@ func (m *CardanoTxsProcessorDbMock) AddUnprocessedTxs(unprocessedTxs []*CardanoT
 	return nil
 }
 
-func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(threshold int) ([]*CardanoTx, error) {
+func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(chainId string, threshold int) ([]*CardanoTx, error) {
 	return nil, nil
 }
 
@@ -100,10 +100,15 @@ var _ CardanoTxsProcessorDb = (*CardanoTxsProcessorDbMock)(nil)
 
 type ClaimsSubmitterMock struct {
 	mock.Mock
+	OnSubmitClaims func(claims *BridgeClaims)
 }
 
 // SubmitClaims implements ClaimsSubmitter.
 func (m *ClaimsSubmitterMock) SubmitClaims(claims *BridgeClaims) error {
+	if m.OnSubmitClaims != nil {
+		m.OnSubmitClaims(claims)
+	}
+
 	args := m.Called()
 	return args.Error(0)
 }

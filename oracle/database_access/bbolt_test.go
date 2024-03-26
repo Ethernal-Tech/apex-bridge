@@ -81,18 +81,17 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddUnprocessedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetUnprocessedTxs(0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-		require.Len(t, txs, 2)
-		require.Equal(t, expectedTxs[0], txs[0])
-		require.Equal(t, expectedTxs[1], txs[1])
-
-		txs, err = db.GetUnprocessedTxs(1)
+		txs, err := db.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
 		require.Equal(t, expectedTxs[0], txs[0])
+
+		txs, err = db.GetUnprocessedTxs("vector", 1)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+		require.Equal(t, expectedTxs[1], txs[0])
 	})
 
 	t.Run("ClearUnprocessedTxs", func(t *testing.T) {
@@ -113,19 +112,16 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.ClearUnprocessedTxs("prime")
 		require.NoError(t, err)
 
-		txs, err := db.GetUnprocessedTxs(0)
+		txs, err := db.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
-		require.NotNil(t, txs)
-		require.Len(t, txs, 1)
-		require.Equal(t, expectedTxs[1], txs[0])
+		require.Nil(t, txs)
 
 		err = db.ClearUnprocessedTxs("vector")
 		require.NoError(t, err)
 
-		txs, err = db.GetUnprocessedTxs(0)
+		txs, err = db.GetUnprocessedTxs("vector", 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
-		require.Len(t, txs, 0)
 	})
 
 	t.Run("MarkUnprocessedTxsAsProcessed", func(t *testing.T) {
@@ -143,22 +139,35 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddUnprocessedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetUnprocessedTxs(0)
+		var expectedProcessedTxs []*core.ProcessedCardanoTx
+
+		txs, err := db.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.MarkUnprocessedTxsAsProcessed([]*core.ProcessedCardanoTx{})
-		require.NoError(t, err)
-
-		var expectedProcessedTxs []*core.ProcessedCardanoTx
 		for _, tx := range txs {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
 		}
 
+		txs, err = db.GetUnprocessedTxs("vector", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		for _, tx := range txs {
+			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
+		}
+
+		err = db.MarkUnprocessedTxsAsProcessed([]*core.ProcessedCardanoTx{})
+		require.NoError(t, err)
+
 		err = db.MarkUnprocessedTxsAsProcessed(expectedProcessedTxs)
 		require.NoError(t, err)
 
-		txs, err = db.GetUnprocessedTxs(0)
+		txs, err = db.GetUnprocessedTxs("prime", 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		txs, err = db.GetUnprocessedTxs("vector", 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})
@@ -178,11 +187,20 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddUnprocessedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetUnprocessedTxs(0)
+		var expectedProcessedTxs []*core.ProcessedCardanoTx
+
+		txs, err := db.GetUnprocessedTxs("prime", 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		var expectedProcessedTxs []*core.ProcessedCardanoTx
+		for _, tx := range txs {
+			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
+		}
+
+		txs, err = db.GetUnprocessedTxs("vector", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
 		for _, tx := range txs {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
 		}
@@ -240,18 +258,17 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs(0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-		require.Len(t, txs, 2)
-		require.Equal(t, expectedTxs[0], txs[0])
-		require.Equal(t, expectedTxs[1], txs[1])
-
-		txs, err = db.GetExpectedTxs(1)
+		txs, err := db.GetExpectedTxs("prime", 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
 		require.Equal(t, expectedTxs[0], txs[0])
+
+		txs, err = db.GetExpectedTxs("vector", 1)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+		require.Len(t, txs, 1)
+		require.Equal(t, expectedTxs[1], txs[0])
 	})
 
 	t.Run("ClearExpectedTxs", func(t *testing.T) {
@@ -272,19 +289,16 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.ClearExpectedTxs("prime")
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs(0)
+		txs, err := db.GetExpectedTxs("prime", 0)
 		require.NoError(t, err)
-		require.NotNil(t, txs)
-		require.Len(t, txs, 1)
-		require.Equal(t, expectedTxs[1], txs[0])
+		require.Nil(t, txs)
 
 		err = db.ClearExpectedTxs("vector")
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs(0)
+		txs, err = db.GetExpectedTxs("vector", 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
-		require.Len(t, txs, 0)
 	})
 
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
@@ -302,17 +316,28 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs(0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-
 		err = db.MarkExpectedTxsAsProcessed([]*core.BridgeExpectedCardanoTx{})
 		require.NoError(t, err)
+
+		txs, err := db.GetExpectedTxs("prime", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsProcessed(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs(0)
+		txs, err = db.GetExpectedTxs("vector", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MarkExpectedTxsAsProcessed(txs)
+		require.NoError(t, err)
+
+		txs, err = db.GetExpectedTxs("prime", 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		txs, err = db.GetExpectedTxs("vector", 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})
@@ -332,17 +357,28 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs(0)
-		require.NoError(t, err)
-		require.NotNil(t, txs)
-
 		err = db.MarkExpectedTxsAsInvalid([]*core.BridgeExpectedCardanoTx{})
 		require.NoError(t, err)
+
+		txs, err := db.GetExpectedTxs("prime", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsInvalid(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs(0)
+		txs, err = db.GetExpectedTxs("vector", 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		err = db.MarkExpectedTxsAsInvalid(txs)
+		require.NoError(t, err)
+
+		txs, err = db.GetExpectedTxs("prime", 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		txs, err = db.GetExpectedTxs("vector", 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})

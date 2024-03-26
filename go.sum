@@ -1,6 +1,6 @@
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240319093434-9aac38a6bea4 h1:cwbHwYP+uLmZ4xno01sUBmNBvqjvY9PnI02RxcFoWls=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240319093434-9aac38a6bea4/go.mod h1:kS8XloA3EI+PRUbdF5rbETR9qc/cCSCzovdfo/Vbw0s=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240320155812-d62ad9f70b78 h1:wnL/ZGIKUjFwKOara8AXdIifEtSrLBbwIS8KKOKewe0=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240320155812-d62ad9f70b78/go.mod h1:kS8XloA3EI+PRUbdF5rbETR9qc/cCSCzovdfo/Vbw0s=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/VictoriaMetrics/fastcache v1.12.1 h1:i0mICQuojGDL3KblA7wUNlY5lOK6a4bwt3uRKnkZU40=
