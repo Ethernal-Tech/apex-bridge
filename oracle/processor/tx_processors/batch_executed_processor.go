@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 )
 
 var _ core.CardanoTxProcessor = (*BatchExecutedProcessorImpl)(nil)
@@ -71,5 +72,5 @@ func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.B
 	// TODO: implement validating the tx for this specific claim if it is needed
 	// once we figure out the structure of metadata and how the batch is applied
 	// to destination chain
-	return nil
+	return utils.ValidateTxInputs(tx, appConfig)
 }
