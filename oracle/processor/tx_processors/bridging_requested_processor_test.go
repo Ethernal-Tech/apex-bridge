@@ -141,6 +141,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 1},
 			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
