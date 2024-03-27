@@ -26,17 +26,6 @@ type BridgeClaims struct {
 	ContractClaims
 }
 
-// type BridgeClaims struct {
-// 	BridgingRequest      []BridgingRequestClaim
-// 	BatchExecuted        []BatchExecutedClaim
-// 	BatchExecutionFailed []BatchExecutionFailedClaim
-// 	// RefundRequest        []RefundRequestClaim
-// 	// RefundExecuted       []RefundExecutedClaim
-
-// 	BlockInfo          *BridgeClaimsBlockInfo
-// 	BlockFullyObserved bool
-// }
-
 func (bi *BridgeClaimsBlockInfo) EqualWithUnprocessed(tx *CardanoTx) bool {
 	return bi.ChainId == tx.OriginChainId && bi.Slot == tx.BlockSlot && bi.Hash == tx.BlockHash
 }
