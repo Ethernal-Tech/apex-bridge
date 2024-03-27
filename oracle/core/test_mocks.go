@@ -135,7 +135,7 @@ func (m *CardanoTxProcessorMock) IsTxRelevant(tx *CardanoTx, appConfig *AppConfi
 // ValidateAndAddClaim implements CardanoTxProcessor.
 func (m *CardanoTxProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error {
 	if m.ShouldAddClaim {
-		claims.BridgingRequest = append(claims.BridgingRequest, BridgingRequestClaim{})
+		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, BridgingRequestClaim{})
 	}
 
 	args := m.Called()
@@ -158,7 +158,7 @@ func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx,
 // ValidateAndAddClaim implements CardanoTxFailedProcessor.
 func (m *CardanoTxFailedProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error {
 	if m.ShouldAddClaim {
-		claims.BatchExecutionFailed = append(claims.BatchExecutionFailed, BatchExecutionFailedClaim{})
+		claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{})
 	}
 
 	args := m.Called()

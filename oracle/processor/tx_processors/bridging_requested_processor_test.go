@@ -1,6 +1,7 @@
 package tx_processors
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -395,15 +396,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
-		require.Len(t, claims.BridgingRequest, 1)
-		require.Equal(t, txHash, claims.BridgingRequest[0].TxHash)
-		require.Equal(t, destinationChainId, claims.BridgingRequest[0].DestinationChainId)
-		require.Len(t, claims.BridgingRequest[0].Receivers, len(receivers))
-		require.Equal(t, receivers[0].Address, claims.BridgingRequest[0].Receivers[0].Address)
-		require.Equal(t, receivers[0].Amount, claims.BridgingRequest[0].Receivers[0].Amount)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainId, claims.BridgingRequestClaims[0].DestinationChainID)
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, receivers[0].Address, claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, big.NewInt(int64(receivers[0].Amount)), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 
-		require.Len(t, claims.BridgingRequest[0].OutputUtxos, len(txOutputs))
-		require.Equal(t, txOutputs[0].Address, claims.BridgingRequest[0].OutputUtxos[0].Address)
-		require.Equal(t, txOutputs[0].Amount, claims.BridgingRequest[0].OutputUtxos[0].Amount)
+		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
+		require.Equal(t, txOutputs[0].Address, claims.BridgingRequestClaims[0].OutputUTXO.AddressUTXO)
+		require.Equal(t, big.NewInt(int64(txOutputs[0].Amount)), claims.BridgingRequestClaims[0].OutputUTXO.Amount)
 	})
 }

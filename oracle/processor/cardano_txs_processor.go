@@ -138,12 +138,12 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	}
 }
 
-func (bp *CardanoTxsProcessorImpl) constructBridgeClaims(
+func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
 	chainId string,
 	unprocessedTxs []*core.CardanoTx,
 	expectedTxs []*core.BridgeExpectedCardanoTx,
 ) (
-	*core.BridgeClaims,
+	*core.BridgeClaimsBlockInfo,
 	indexer.Database,
 ) {
 	ccoDb := bp.getCardanoChainObserverDb(chainId)
@@ -183,13 +183,11 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaims(
 	}
 
 	if found {
-		return &core.BridgeClaims{
+		return &core.BridgeClaimsBlockInfo{
+			ChainId:            chainId,
+			Slot:               minSlot,
+			Hash:               blockHash,
 			BlockFullyObserved: false,
-			BlockInfo: &core.BridgeClaimsBlockInfo{
-				ChainId: chainId,
-				Slot:    minSlot,
-				Hash:    blockHash,
-			},
 		}, ccoDb
 	}
 
@@ -197,6 +195,7 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaims(
 }
 
 func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
+	blockInfo *core.BridgeClaimsBlockInfo,
 	bridgeClaims *core.BridgeClaims,
 	unprocessedTxs []*core.CardanoTx,
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
@@ -207,7 +206,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 ) {
 	var relevantUnprocessedTxs []*core.CardanoTx
 	for _, unprocessedTx := range unprocessedTxs {
-		if bridgeClaims.BlockInfoEqualWithUnprocessed(unprocessedTx) {
+		if blockInfo.EqualWithUnprocessed(unprocessedTx) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
 	}
@@ -264,6 +263,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 }
 
 func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
+	blockInfo *core.BridgeClaimsBlockInfo,
 	bridgeClaims *core.BridgeClaims,
 	ccoDb indexer.Database,
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
@@ -295,7 +295,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 			break
 		}
 
-		if len(blocks) == 1 && bridgeClaims.BlockInfoEqualWithExpected(expectedTx, blocks[0]) {
+		if len(blocks) == 1 && blockInfo.EqualWithExpected(expectedTx, blocks[0]) {
 			relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 		}
 	}
@@ -369,21 +369,23 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		return
 	}
 
-	bridgeClaims, ccoDb := bp.constructBridgeClaims(chainId, unprocessedTxs, expectedTxs)
-	if bridgeClaims == nil {
+	blockInfo, ccoDb := bp.constructBridgeClaimsBlockInfo(chainId, unprocessedTxs, expectedTxs)
+	if blockInfo == nil {
 		return
 	}
+
+	bridgeClaims := &core.BridgeClaims{}
 
 	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
 	for _, expectedTx := range expectedTxs {
 		expectedTxsMap[expectedTx.ToCardanoTxKey()] = expectedTx
 	}
 
-	relevantUnprocessedTxs, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(bridgeClaims, unprocessedTxs, expectedTxsMap)
-	relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(bridgeClaims, ccoDb, expectedTxsMap)
+	relevantUnprocessedTxs, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap)
+	relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(blockInfo, bridgeClaims, ccoDb, expectedTxsMap)
 	processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
 
-	bridgeClaims.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
+	blockInfo.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
 		len(processedRelevantExpiredTxs)+len(invalidRelevantExpiredTxs) == len(relevantExpiredTxs)
 
 	// if expected/expired tx is invalid, we should mark them regardless of if submit failed or not

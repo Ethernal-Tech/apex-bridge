@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -25,19 +26,22 @@ func TestClaimsSubmitter(t *testing.T) {
 		defer claimsSubmitter.Dispose()
 
 		err := claimsSubmitter.SubmitClaims(&core.BridgeClaims{
-			BridgingRequest: []core.BridgingRequestClaim{
-				{
-					TxHash:             "test",
-					DestinationChainId: "prime",
-					OutputUtxos:        []core.Utxo{},
-					Receivers:          []core.BridgingRequestReceiver{},
+			ContractClaims: core.ContractClaims{
+				BridgingRequestClaims: []core.BridgingRequestClaim{
+					{
+						ObservedTransactionHash: "test",
+						SourceChainID:           "vector",
+						DestinationChainID:      "prime",
+						OutputUTXO:              core.UTXO{},
+						Receivers:               []core.BridgingRequestReceiver{},
+					},
 				},
-			},
-			BatchExecuted: []core.BatchExecutedClaim{
-				{
-					TxHash:       "test",
-					BatchNonceId: "test",
-					OutputUtxos:  []core.Utxo{},
+				BatchExecutedClaims: []core.BatchExecutedClaim{
+					{
+						ObservedTransactionHash: "test",
+						BatchNonceID:            big.NewInt(1),
+						OutputUTXOs:             core.UTXOs{},
+					},
 				},
 			},
 		})

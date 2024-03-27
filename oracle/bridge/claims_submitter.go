@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -82,8 +81,7 @@ func (cs *ClaimsSubmitterImpl) Dispose() error {
 }
 
 func (cs *ClaimsSubmitterImpl) sendTx(ethTxHelper ethtxhelper.IEthTxHelper, claims *core.BridgeClaims) (*types.Receipt, error) {
-	// TODO: replace with real bridge contract
-	contract, err := contractbinding.NewTestContract(
+	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(cs.appConfig.Bridge.SmartContractAddress), ethTxHelper.GetClient())
 	if err != nil {
 		return nil, err
@@ -95,10 +93,7 @@ func (cs *ClaimsSubmitterImpl) sendTx(ethTxHelper ethtxhelper.IEthTxHelper, clai
 	}
 
 	tx, err := ethTxHelper.SendTx(cs.ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-		// TODO: replace with real bridge contract call
-		return contract.SetValue(txOpts, new(big.Int).SetUint64(
-			uint64(len(claims.BatchExecuted)+len(claims.BridgingRequest)+len(claims.BatchExecutionFailed)),
-		))
+		return contract.SubmitClaims(txOpts, claims.ContractClaims)
 	})
 	if err != nil {
 		return nil, err
