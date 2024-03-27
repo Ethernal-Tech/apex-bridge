@@ -197,11 +197,7 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 
 func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
 	blockPointSc, err := bridgeDataFetcher.FetchLatestBlockPoint(chainId)
-	if err != nil {
-		return nil
-	}
-
-	if blockPointSc == nil {
+	if blockPointSc == nil || err != nil {
 		return nil
 	}
 
@@ -210,8 +206,11 @@ func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.Ca
 		return err
 	}
 
+	if blockPointDb.BlockSlot > blockPointSc.BlockSlot {
+		return nil
+	}
+
 	if bytes.Equal(blockPointDb.BlockHash, blockPointSc.BlockHash) &&
-		blockPointDb.BlockNumber == blockPointSc.BlockNumber &&
 		blockPointDb.BlockSlot == blockPointSc.BlockSlot {
 		return nil
 	}
