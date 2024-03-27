@@ -24,7 +24,8 @@ const (
 )
 
 var (
-	errBlockSyncerFatal = errors.New("block syncer fatal error")
+	errBlockSyncerFatal              = errors.New("block syncer fatal error")
+	errConfirmedBlocksSubmitterFatal = errors.New("confirmed blocks submitter fatal error")
 )
 
 type OracleImpl struct {
@@ -231,6 +232,30 @@ func (o *OracleImpl) errorHandler() {
 			}
 			o.logger.Debug("Exiting error handler", "origin", origin)
 		}(co.ErrorCh(), o.closeCh, co.GetConfig().ChainId)
+	}
+
+	for _, cbs := range o.confirmedBlockSubmitters {
+		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
+		outsideloop:
+			for {
+				select {
+				case err := <-errChan:
+					if err != nil {
+						o.logger.Error("chain confirmed block submitter error", "origin", origin, "err", err)
+						if strings.Contains(err.Error(), errConfirmedBlocksSubmitterFatal.Error()) {
+							agg <- ErrorOrigin{
+								err:    err,
+								origin: origin,
+							}
+							break outsideloop
+						}
+					}
+				case <-closeChan:
+					break outsideloop
+				}
+			}
+			o.logger.Debug("Exiting error handler", "origin", origin)
+		}(cbs.ErrorCh(), o.closeCh, cbs.GetChainId())
 	}
 
 	select {

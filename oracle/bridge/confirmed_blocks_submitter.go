@@ -2,12 +2,14 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -25,6 +27,8 @@ type ConfirmedBlocksSubmitterImpl struct {
 	ctx       context.Context
 	cancelCtx context.CancelFunc
 	ethClient *ethclient.Client
+
+	errorCh chan error
 }
 
 var _ core.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
@@ -34,6 +38,10 @@ func NewConfirmedBlocksSubmitter(
 	chainId string,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
+	if err := utils.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+		return nil, err
+	}
+
 	indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+chainId+".db")
 	if err != nil {
 		return nil, err
@@ -48,48 +56,57 @@ func NewConfirmedBlocksSubmitter(
 		logger:    logger,
 		ctx:       ctx,
 		cancelCtx: cancelCtx,
+		errorCh:   make(chan error, 1),
 	}, nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
-	for {
-		select {
-		case <-bs.ctx.Done():
-			return nil
-		default:
-			blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
-			if err != nil {
-				bs.logger.Error("Error submiting confirmed blocks", "err:", err)
-				return err
-			}
-
-			if bs.ethClient == nil {
-				ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
+	go func() {
+		for {
+			select {
+			case <-bs.ctx.Done():
+				return
+			default:
+				blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
 				if err != nil {
-					bs.logger.Error("Failed to dial bridge", "err", err)
-					return err
+					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks: %w", err)
+					continue
 				}
 
-				bs.ethClient = ethClient
+				if bs.ethClient == nil {
+					ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
+					if err != nil {
+						bs.errorCh <- fmt.Errorf("failed to dial bridge: %w", err)
+						continue
+					}
+
+					bs.ethClient = ethClient
+				}
+
+				ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(bs.ethClient))
+				if err != nil {
+					// ensure redial in case ethClient lost connection
+					bs.ethClient = nil
+					bs.errorCh <- fmt.Errorf("failed to create ethTxHelper: %w", err)
+					continue
+				}
+
+				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks); err != nil {
+					bs.errorCh <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+					continue
+				}
+
+				time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
 			}
-
-			ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(bs.ethClient))
-			if err != nil {
-				// ensure redial in case ethClient lost connection
-				bs.ethClient = nil
-				bs.logger.Error("Failed to create ethTxHelper", "err", err)
-				return err
-			}
-
-			bs.submitConfirmedBlocks(ethTxHelper, blocks)
-
-			time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
 		}
-	}
+	}()
+
+	return nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
 	bs.cancelCtx()
+	close(bs.errorCh)
 
 	if bs.ethClient != nil {
 		bs.ethClient.Close()
@@ -97,6 +114,14 @@ func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
 	}
 
 	return nil
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) ErrorCh() <-chan error {
+	return bs.errorCh
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) GetChainId() string {
+	return bs.chainId
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) submitConfirmedBlocks(ethTxHelper *ethtxhelper.EthTxHelperImpl, blocks []*indexer.CardanoBlock) (*types.Receipt, error) {
