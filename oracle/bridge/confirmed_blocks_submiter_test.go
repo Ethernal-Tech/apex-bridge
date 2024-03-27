@@ -40,13 +40,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, blocksSubmitter)
 
-		errChan := blocksSubmitter.StartSubmit()
+		err = blocksSubmitter.StartSubmit()
 
 		time.Sleep(time.Second * 3)
-		blocksSubmitter.Dispose()
-
 		// ethTxHelper.SendTx#132 is returning error when sending Tx, can be ignored for now
-		require.NoError(t, <-errChan)
+		require.NoError(t, <-blocksSubmitter.ErrorCh())
+
+		blocksSubmitter.Dispose()
+		require.NoError(t, err)
 	})
 
 	t.Run("dispose", func(t *testing.T) {

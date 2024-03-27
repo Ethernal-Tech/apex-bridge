@@ -147,13 +147,12 @@ func (o *OracleImpl) Start() error {
 	}
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		errChan := cbs.StartSubmit()
-		go func(errChan <-chan error) {
-			for err := range errChan {
-				fmt.Fprintf(os.Stderr, "Failed to start block submiter. error: %v\n", err)
-				o.logger.Error("Failed to start block submiter cardano", "err", err)
-			}
-		}(errChan)
+		err := cbs.StartSubmit()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to start block submiter. error: %v\n", err)
+			o.logger.Error("Failed to start block submiter cardano", "err", err)
+			return err
+		}
 	}
 
 	o.errorCh = make(chan error, 1)
@@ -232,6 +231,30 @@ func (o *OracleImpl) errorHandler() {
 			}
 			o.logger.Debug("Exiting error handler", "origin", origin)
 		}(co.ErrorCh(), o.closeCh, co.GetConfig().ChainId)
+	}
+
+	for _, cbs := range o.confirmedBlockSubmitters {
+		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
+		outsideloop:
+			for {
+				select {
+				case err := <-errChan:
+					if err != nil {
+						o.logger.Error("chain confirmed block submitter error", "origin", origin, "err", err)
+						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
+							agg <- ErrorOrigin{
+								err:    err,
+								origin: origin,
+							}
+							break outsideloop
+						}
+					}
+				case <-closeChan:
+					break outsideloop
+				}
+			}
+			o.logger.Debug("Exiting error handler", "origin", origin)
+		}(cbs.ErrorCh(), o.closeCh, cbs.GetChainId())
 	}
 
 	select {

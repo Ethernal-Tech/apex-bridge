@@ -27,6 +27,8 @@ type ConfirmedBlocksSubmitterImpl struct {
 	ctx       context.Context
 	cancelCtx context.CancelFunc
 	ethClient *ethclient.Client
+
+	errorCh chan error
 }
 
 var _ core.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
@@ -54,30 +56,27 @@ func NewConfirmedBlocksSubmitter(
 		logger:    logger,
 		ctx:       ctx,
 		cancelCtx: cancelCtx,
+		errorCh:   make(chan error, 1),
 	}, nil
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() chan error {
-	errChan := make(chan error)
-
-	go func() error {
-		defer close(errChan)
-
+func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
+	go func() {
 		for {
 			select {
 			case <-bs.ctx.Done():
-				return nil
+				return
 			default:
 				blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
 				if err != nil {
-					errChan <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks: %w", err)
 					continue
 				}
 
 				if bs.ethClient == nil {
 					ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
 					if err != nil {
-						errChan <- fmt.Errorf("failed to dial bridge: %w", err)
+						bs.errorCh <- fmt.Errorf("failed to dial bridge: %w", err)
 						continue
 					}
 
@@ -88,12 +87,12 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() chan error {
 				if err != nil {
 					// ensure redial in case ethClient lost connection
 					bs.ethClient = nil
-					errChan <- fmt.Errorf("failed to create ethTxHelper: %w", err)
+					bs.errorCh <- fmt.Errorf("failed to create ethTxHelper: %w", err)
 					continue
 				}
 
 				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks); err != nil {
-					errChan <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+					bs.errorCh <- fmt.Errorf("error submitting confirmed blocks: %w", err)
 					continue
 				}
 
@@ -102,11 +101,12 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() chan error {
 		}
 	}()
 
-	return errChan
+	return nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
 	bs.cancelCtx()
+	close(bs.errorCh)
 
 	if bs.ethClient != nil {
 		bs.ethClient.Close()
@@ -114,6 +114,14 @@ func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
 	}
 
 	return nil
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) ErrorCh() <-chan error {
+	return bs.errorCh
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) GetChainId() string {
+	return bs.chainId
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) submitConfirmedBlocks(ethTxHelper *ethtxhelper.EthTxHelperImpl, blocks []*indexer.CardanoBlock) (*types.Receipt, error) {
