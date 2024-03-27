@@ -24,7 +24,8 @@ const (
 )
 
 var (
-	errBlockSyncerFatal = errors.New("block syncer fatal error")
+	errBlockSyncerFatal              = errors.New("block syncer fatal error")
+	errConfirmedBlocksSubmitterFatal = errors.New("confirmed blocks submitter fatal error")
 )
 
 type OracleImpl struct {
@@ -241,7 +242,7 @@ func (o *OracleImpl) errorHandler() {
 				case err := <-errChan:
 					if err != nil {
 						o.logger.Error("chain confirmed block submitter error", "origin", origin, "err", err)
-						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
+						if strings.Contains(err.Error(), errConfirmedBlocksSubmitterFatal.Error()) {
 							agg <- ErrorOrigin{
 								err:    err,
 								origin: origin,
