@@ -73,6 +73,6 @@ type ClaimsSubmitter interface {
 }
 
 type ConfirmedBlocksSubmitter interface {
-	StartSubmit() error
+	StartSubmit() chan error
 	Dispose() error
 }

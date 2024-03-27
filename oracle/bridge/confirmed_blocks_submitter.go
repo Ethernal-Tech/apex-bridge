@@ -2,12 +2,14 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -34,6 +36,10 @@ func NewConfirmedBlocksSubmitter(
 	chainId string,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
+	if err := utils.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+		return nil, err
+	}
+
 	indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+chainId+".db")
 	if err != nil {
 		return nil, err
@@ -51,41 +57,52 @@ func NewConfirmedBlocksSubmitter(
 	}, nil
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
-	for {
-		select {
-		case <-bs.ctx.Done():
-			return nil
-		default:
-			blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
-			if err != nil {
-				bs.logger.Error("Error submiting confirmed blocks", "err:", err)
-				return err
-			}
+func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() chan error {
+	errChan := make(chan error)
 
-			if bs.ethClient == nil {
-				ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
+	go func() error {
+		defer close(errChan)
+
+		for {
+			select {
+			case <-bs.ctx.Done():
+				return nil
+			default:
+				blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
 				if err != nil {
-					bs.logger.Error("Failed to dial bridge", "err", err)
-					return err
+					errChan <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+					continue
 				}
 
-				bs.ethClient = ethClient
+				if bs.ethClient == nil {
+					ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
+					if err != nil {
+						errChan <- fmt.Errorf("failed to dial bridge: %w", err)
+						continue
+					}
+
+					bs.ethClient = ethClient
+				}
+
+				ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(bs.ethClient))
+				if err != nil {
+					// ensure redial in case ethClient lost connection
+					bs.ethClient = nil
+					errChan <- fmt.Errorf("failed to create ethTxHelper: %w", err)
+					continue
+				}
+
+				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks); err != nil {
+					errChan <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+					continue
+				}
+
+				time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
 			}
-
-			ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(bs.ethClient))
-			if err != nil {
-				// ensure redial in case ethClient lost connection
-				bs.ethClient = nil
-				bs.logger.Error("Failed to create ethTxHelper", "err", err)
-				return err
-			}
-
-			bs.submitConfirmedBlocks(ethTxHelper, blocks)
-
-			time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
 		}
-	}
+	}()
+
+	return errChan
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
