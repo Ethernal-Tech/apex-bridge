@@ -109,7 +109,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 
 		cardanoChainObservers[cardanoChainConfig.ChainId] = cco
 
-		cbs, err := bridge.NewConfirmedBlocksSubmitter(appConfig, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submiter_"+cardanoChainConfig.ChainId))
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(appConfig, db, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submiter_"+cardanoChainConfig.ChainId))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create cardano block submiter for chain: %v error: %v\n", cardanoChainConfig.ChainId, err)
 			logger.Error("failed to create cardano block submiter for chain", "chainId", cardanoChainConfig.ChainId, "error:", err)

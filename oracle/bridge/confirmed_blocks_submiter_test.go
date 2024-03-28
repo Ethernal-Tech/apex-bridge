@@ -36,7 +36,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("start submit", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, "prime", hclog.NewNullLogger())
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, &core.CardanoTxsProcessorDbMock{}, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, blocksSubmitter)
 
@@ -53,7 +53,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("dispose", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, "prime", hclog.NewNullLogger())
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, &core.CardanoTxsProcessorDbMock{}, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, blocksSubmitter)
 
