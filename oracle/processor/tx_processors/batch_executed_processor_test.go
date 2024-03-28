@@ -1,6 +1,7 @@
 package tx_processors
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -14,7 +15,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	proc := NewBatchExecutedProcessor()
 
 	appConfing := core.AppConfig{
-		CardanoChains: map[string]core.CardanoChainConfig{"prime": core.CardanoChainConfig{
+		CardanoChains: map[string]core.CardanoChainConfig{"prime": {
 			ChainId: "prime",
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr_bridging",
@@ -117,14 +118,13 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		}, &appConfing)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
-		require.Len(t, claims.BatchExecuted, 1)
-		require.Equal(t, "", claims.BatchExecuted[0].TxHash)
-		require.Equal(t, "", claims.BatchExecuted[0].BatchNonceId)
-		require.Nil(t, claims.BatchExecuted[0].OutputUtxos)
+		require.Len(t, claims.BatchExecutedClaims, 1)
+		require.Equal(t, "", claims.BatchExecutedClaims[0].ObservedTransactionHash)
+		require.Nil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
-		const batchNonceId = "1"
+		batchNonceId := uint64(1)
 		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
 			Value: core.BatchExecutedMetadata{
 				BridgingTxType: core.BridgingTxTypeBatchExecution,
@@ -151,15 +151,15 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		}, &appConfing)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
-		require.Len(t, claims.BatchExecuted, 1)
-		require.Equal(t, txHash, claims.BatchExecuted[0].TxHash)
-		require.Equal(t, batchNonceId, claims.BatchExecuted[0].BatchNonceId)
-		require.NotNil(t, claims.BatchExecuted[0].OutputUtxos)
-		require.Len(t, claims.BatchExecuted[0].OutputUtxos, len(txOutputs))
-		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[0].Address, txOutputs[0].Address)
-		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[0].Amount, txOutputs[0].Amount)
-		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[1].Address, txOutputs[1].Address)
-		require.Equal(t, claims.BatchExecuted[0].OutputUtxos[1].Amount, txOutputs[1].Amount)
+		require.Len(t, claims.BatchExecutedClaims, 1)
+		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
+		require.Equal(t, big.NewInt(int64(batchNonceId)), claims.BatchExecutedClaims[0].BatchNonceID)
+		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
+		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, len(txOutputs))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].AddressUTXO, txOutputs[0].Address)
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, big.NewInt(int64(txOutputs[0].Amount)))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].AddressUTXO, txOutputs[1].Address)
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].Amount, big.NewInt(int64(txOutputs[1].Amount)))
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {

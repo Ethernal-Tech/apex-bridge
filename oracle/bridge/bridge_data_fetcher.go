@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
@@ -137,8 +138,6 @@ func (df *BridgeDataFetcherImpl) fetchExpectedTxs(ethTxHelper ethtxhelper.IEthTx
 }
 
 func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
-	var blockPoint *indexer.BlockPoint
-
 	// TODO: Configurable number of retries?
 	for retries := 1; retries <= 5; retries++ {
 		ethClient, err := ethclient.Dial(df.appConfig.Bridge.NodeUrl)
@@ -157,8 +156,7 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 			continue
 		}
 
-		// TODO: replace with real bridge contract
-		contract, err := contractbinding.NewTestContract(
+		contract, err := contractbinding.NewBridgeContract(
 			common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
 			ethTxHelper.GetClient())
 		if err != nil {
@@ -166,15 +164,18 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 			continue
 		}
 
-		// TODO: replace with real bridge contract call
-		_, err = contract.GetValue(&bind.CallOpts{
+		block, err := contract.GetLastObservedBlock(&bind.CallOpts{
 			Context: df.ctx,
-		})
+		}, chainId)
 		if err == nil {
-			break
+			hash, _ := hex.DecodeString(block.BlockHash)
+			return &indexer.BlockPoint{
+				BlockSlot: block.BlockSlot,
+				BlockHash: hash,
+			}, nil
 		}
 		time.Sleep(time.Millisecond * 500)
 	}
 
-	return blockPoint, nil
+	return nil, nil
 }

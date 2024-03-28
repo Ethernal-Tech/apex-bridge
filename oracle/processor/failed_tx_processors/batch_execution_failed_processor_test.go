@@ -1,6 +1,7 @@
 package failed_tx_processors
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -84,13 +85,12 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		}, nil)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
-		require.Len(t, claims.BatchExecutionFailed, 1)
-		require.Equal(t, "", claims.BatchExecutionFailed[0].TxHash)
-		require.Equal(t, "", claims.BatchExecutionFailed[0].BatchNonceId)
+		require.Len(t, claims.BatchExecutionFailedClaims, 1)
+		require.Equal(t, "", claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
-		const batchNonceId = "1"
+		batchNonceId := uint64(1)
 		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
 			Value: core.BatchExecutedMetadata{
 				BridgingTxType: core.BridgingTxTypeBatchExecution,
@@ -108,8 +108,8 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		}, nil)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
-		require.Len(t, claims.BatchExecutionFailed, 1)
-		require.Equal(t, txHash, claims.BatchExecutionFailed[0].TxHash)
-		require.Equal(t, batchNonceId, claims.BatchExecutionFailed[0].BatchNonceId)
+		require.Len(t, claims.BatchExecutionFailedClaims, 1)
+		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
+		require.Equal(t, big.NewInt(int64(batchNonceId)), claims.BatchExecutionFailedClaims[0].BatchNonceID)
 	})
 }

@@ -2,6 +2,7 @@ package tx_processors
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
@@ -44,7 +45,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
-		p.addBridgingRequestClaim(claims, tx, metadata)
+		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
 		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
 		// p.addRefundRequestClaim(claims, tx, metadata)
@@ -53,27 +54,35 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 	return nil
 }
 
-func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata) {
+func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) {
 	var receivers []core.BridgingRequestReceiver
 	for _, receiver := range metadata.Transactions {
-		receivers = append(receivers, core.BridgingRequestReceiver(receiver))
-	}
-
-	var utxos []core.Utxo
-	for _, utxo := range tx.Outputs {
-		utxos = append(utxos, core.Utxo{
-			Address: utxo.Address,
-			Amount:  utxo.Amount,
+		receivers = append(receivers, core.BridgingRequestReceiver{
+			DestinationAddress: receiver.Address,
+			Amount:             big.NewInt(int64(receiver.Amount)), // TODO: reconcile indexer and sc types
 		})
 	}
+
+	var outputUtxo core.UTXO
+	for _, utxo := range tx.Outputs {
+		if utxo.Address == appConfig.CardanoChains[tx.OriginChainId].BridgingAddresses.BridgingAddress {
+			outputUtxo = core.UTXO{
+				TxHash:      tx.Hash,
+				TxIndex:     big.NewInt(int64(tx.Indx)), // TODO: is this right?
+				AddressUTXO: utxo.Address,
+				Amount:      big.NewInt(int64(utxo.Amount)), // TODO: reconcile indexer and sc types
+			}
+		}
+	}
 	claim := core.BridgingRequestClaim{
-		TxHash:             tx.Hash,
-		DestinationChainId: metadata.DestinationChainId,
-		Receivers:          receivers,
-		OutputUtxos:        utxos,
+		ObservedTransactionHash: tx.Hash,
+		SourceChainID:           tx.OriginChainId,
+		DestinationChainID:      metadata.DestinationChainId,
+		OutputUTXO:              outputUtxo,
+		Receivers:               receivers,
 	}
 
-	claims.BridgingRequest = append(claims.BridgingRequest, claim)
+	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 }
 
 /*

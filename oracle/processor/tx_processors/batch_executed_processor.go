@@ -2,6 +2,7 @@ package tx_processors
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
@@ -51,21 +52,26 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 }
 
 func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BatchExecutedMetadata) {
-	var utxos []core.Utxo
+	var utxos []core.UTXO
 	for _, utxo := range tx.Outputs {
-		utxos = append(utxos, core.Utxo{
-			Address: utxo.Address,
-			Amount:  utxo.Amount,
+		utxos = append(utxos, core.UTXO{
+			TxHash:      tx.Hash,
+			TxIndex:     big.NewInt(int64(tx.Indx)), // TODO: is this right?
+			AddressUTXO: utxo.Address,
+			Amount:      big.NewInt(int64(utxo.Amount)), // TODO: reconcile indexer and sc types
 		})
 	}
 
 	claim := core.BatchExecutedClaim{
-		TxHash:       tx.Hash,
-		BatchNonceId: metadata.BatchNonceId,
-		OutputUtxos:  utxos,
+		ObservedTransactionHash: tx.Hash,
+		ChainID:                 tx.OriginChainId,
+		BatchNonceID:            big.NewInt(int64(metadata.BatchNonceId)), // TODO: reconcile indexer and sc types
+		OutputUTXOs: core.UTXOs{
+			MultisigOwnedUTXOs: utxos,
+		},
 	}
 
-	claims.BatchExecuted = append(claims.BatchExecuted, claim)
+	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
 }
 
 func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BatchExecutedMetadata, appConfig *core.AppConfig) error {
