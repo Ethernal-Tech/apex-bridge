@@ -22,16 +22,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	proc := NewBridgingRequestedProcessor()
 	appConfig := &core.AppConfig{
-		CardanoChains: map[string]core.CardanoChainConfig{
+		CardanoChains: map[string]*core.CardanoChainConfig{
 			"prime": {
-				ChainId: "prime",
 				BridgingAddresses: core.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
 			},
 			"vector": {
-				ChainId: "vector",
 				BridgingAddresses: core.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
@@ -44,6 +42,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			MaxReceiversPerBridgingRequest: 3,
 		},
 	}
+	appConfig.FillOut()
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.CardanoTx{}, appConfig)

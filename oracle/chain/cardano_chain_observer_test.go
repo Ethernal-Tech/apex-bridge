@@ -24,7 +24,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 	t.Cleanup(foldersCleanup)
 
-	chainConfig := core.CardanoChainConfig{
+	chainConfig := &core.CardanoChainConfig{
 		ChainId:                "prime",
 		NetworkAddress:         "backbone.cardano-mainnet.iohk.io:3001",
 		NetworkMagic:           "764824073",

@@ -41,14 +41,16 @@ func newValidProcessor(
 
 func TestCardanoTxsProcessor(t *testing.T) {
 	appConfig := &core.AppConfig{
-		CardanoChains: map[string]core.CardanoChainConfig{
-			"prime":  {ChainId: "prime"},
-			"vector": {ChainId: "vector"},
+		CardanoChains: map[string]*core.CardanoChainConfig{
+			"prime":  {},
+			"vector": {},
 		},
 		Settings: core.AppSettings{
 			MaxBridgingClaimsToGroup: 10,
 		},
 	}
+
+	appConfig.FillOut()
 
 	const dbFilePath = "temp_test_oracle.db"
 	const primeDbFilePath = "temp_test_prime.db"

@@ -14,15 +14,15 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	proc := NewBatchExecutedProcessor()
 
-	appConfing := core.AppConfig{
-		CardanoChains: map[string]core.CardanoChainConfig{"prime": {
-			ChainId: "prime",
+	appConfig := core.AppConfig{
+		CardanoChains: map[string]*core.CardanoChainConfig{"prime": {
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr_bridging",
 				FeeAddress:      "addr_fee",
 			},
 		}},
 	}
+	appConfig.FillOut()
 
 	txInputs := append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
 		Input: indexer.TxInput{},
@@ -77,7 +77,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &core.BridgeClaims{}
 
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, &appConfing)
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, &appConfig)
 		require.Error(t, err)
 	})
 
@@ -95,7 +95,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
-		}, &appConfing)
+		}, &appConfig)
 		require.Error(t, err)
 	})
 
@@ -115,7 +115,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				Metadata: relevantButNotFullMetadata,
 				Inputs:   txInputs,
 			},
-		}, &appConfing)
+		}, &appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
@@ -148,7 +148,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				Outputs:  txOutputs,
 				Inputs:   txInputs,
 			},
-		}, &appConfing)
+		}, &appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
@@ -163,21 +163,21 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {
-		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
-		cardanoChains["prime"] = core.CardanoChainConfig{
-			ChainId: "prime",
+		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+		cardanoChains["prime"] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
 				FeeAddress:      "addr2",
 			},
 		}
 
-		config := core.AppConfig{
+		config := &core.AppConfig{
 			CardanoChains:    cardanoChains,
 			Bridge:           core.BridgeConfig{},
 			Settings:         core.AppSettings{},
 			BridgingSettings: core.BridgingSettings{},
 		}
+		config.FillOut()
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
@@ -190,37 +190,37 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
-		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unexpected address found in tx input")
 
 		tx.Inputs[0].Output.Address = "addr1"
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "fee address not found in tx intpus")
+		require.ErrorContains(t, err, "fee address not found in tx inputs")
 
 		tx.Inputs[0].Output.Address = "addr2"
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging address not found in tx inptus")
+		require.ErrorContains(t, err, "bridging address not found in tx inputs")
 	})
 
 	t.Run("validate method pass", func(t *testing.T) {
-		var cardanoChains map[string]core.CardanoChainConfig = make(map[string]core.CardanoChainConfig)
-		cardanoChains["prime"] = core.CardanoChainConfig{
-			ChainId: "prime",
+		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+		cardanoChains["prime"] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
 				FeeAddress:      "addr2",
 			},
 		}
 
-		config := core.AppConfig{
+		config := &core.AppConfig{
 			CardanoChains:    cardanoChains,
 			Bridge:           core.BridgeConfig{},
 			Settings:         core.AppSettings{},
 			BridgingSettings: core.BridgingSettings{},
 		}
+		config.FillOut()
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
@@ -238,7 +238,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
-		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 
 		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
@@ -247,7 +247,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				IsUsed:  true,
 			},
 		})
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 
 		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
@@ -256,7 +256,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				IsUsed:  true,
 			},
 		})
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, &config)
+		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 	})
 }
