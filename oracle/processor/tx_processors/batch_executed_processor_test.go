@@ -241,6 +241,33 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "bridging address not found in tx inputs")
 	})
 
+	t.Run("validate method origin chain not registered", func(t *testing.T) {
+		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+
+		config := &core.AppConfig{
+			CardanoChains:    cardanoChains,
+			Bridge:           core.BridgeConfig{},
+			Settings:         core.AppSettings{},
+			BridgingSettings: core.BridgingSettings{},
+		}
+		config.FillOut()
+		tx := core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Output: indexer.TxOutput{
+						Address: "addr3",
+						IsUsed:  true,
+					},
+				}),
+			},
+		}
+
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
+
 	t.Run("validate method pass", func(t *testing.T) {
 		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
 		cardanoChains["prime"] = &core.CardanoChainConfig{

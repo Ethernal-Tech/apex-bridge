@@ -126,7 +126,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
 			Value: core.BridgingRequestMetadata{
 				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
@@ -154,6 +154,36 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "destination chain not registered")
+	})
+
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
+			Value: core.BridgingRequestMetadata{
+				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+				DestinationChainId: "vector",
+				SenderAddr:         "addr1",
+				Transactions:       []core.BridgingRequestMetadataTransaction{},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, destinationChainNonRegisteredMetadata)
+
+		claims := &core.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: destinationChainNonRegisteredMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainId: "invalid",
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
