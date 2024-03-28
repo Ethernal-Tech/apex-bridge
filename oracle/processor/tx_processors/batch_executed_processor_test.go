@@ -124,7 +124,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
-		const batchNonceId = "1"
+		const batchNonceId = uint64(1)
 		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
 			Value: core.BatchExecutedMetadata{
 				BridgingTxType: core.BridgingTxTypeBatchExecution,
@@ -154,7 +154,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 					},
 				}),
 			},
-		}, &appConfing)
+		}, &appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unexpected address found in tx input")
 	})
