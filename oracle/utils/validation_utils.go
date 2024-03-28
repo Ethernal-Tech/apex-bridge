@@ -19,7 +19,7 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 				} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
 					foundFeeAddress = true
 				} else {
-					return fmt.Errorf("unexpected address found in tx input", "address", utxo.Output.Address)
+					return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
 				}
 			}
 			break
@@ -27,11 +27,11 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 	}
 
 	if !foundBridgingAddress {
-		return fmt.Errorf("bridging address not found in tx inptus")
+		return fmt.Errorf("bridging address not found in tx inputs")
 	}
 
 	if !foundFeeAddress {
-		return fmt.Errorf("fee address not found in tx intpus")
+		return fmt.Errorf("fee address not found in tx inputs")
 	}
 
 	return nil

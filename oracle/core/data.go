@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -34,113 +35,7 @@ type BridgeExpectedCardanoDbTx struct {
 	IsInvalid   bool `json:"is_invalid"`
 }
 
-type UtxoTransaction struct {
-}
-
-type Utxo struct {
-	Address string
-	Amount  uint64
-}
-
-type BridgingRequestReceiver struct {
-	Address string
-	Amount  uint64
-}
-
-type BridgingRequestClaim struct {
-	TxHash             string
-	Receivers          []BridgingRequestReceiver
-	OutputUtxos        []Utxo
-	DestinationChainId string
-}
-
-type BatchExecutedClaim struct {
-	TxHash       string
-	BatchNonceId string
-	OutputUtxos  []Utxo
-}
-
-type BatchExecutionFailedClaim struct {
-	TxHash       string
-	BatchNonceId string
-}
-
-type RefundRequestClaim struct {
-	TxHash               string
-	PreviousRefundTxHash string
-	RetryCounter         int32
-	RefundToAddress      string
-	OutputUtxos          []Utxo
-	DestinationChainId   string
-	UtxoTransaction      UtxoTransaction
-}
-
-type RefundExecutedClaim struct {
-	TxHash       string
-	RefundTxHash string
-	OutputUtxos  []Utxo
-}
-
-type BridgeClaimsBlockInfo struct {
-	ChainId string
-	Slot    uint64
-	Hash    string
-}
-
-type BridgeClaims struct {
-	BridgingRequest      []BridgingRequestClaim
-	BatchExecuted        []BatchExecutedClaim
-	BatchExecutionFailed []BatchExecutionFailedClaim
-	// RefundRequest        []RefundRequestClaim
-	// RefundExecuted       []RefundExecutedClaim
-
-	BlockInfo          *BridgeClaimsBlockInfo
-	BlockFullyObserved bool
-}
-
-func (bc *BridgeClaims) Count() int {
-	return len(bc.BridgingRequest) +
-		len(bc.BatchExecuted) +
-		len(bc.BatchExecutionFailed) /* +
-		len(bc.RefundRequest) +
-		len(bc.RefundExecuted)*/
-}
-
-func (bc *BridgeClaims) Any() bool {
-	return bc.Count() > 0
-}
-
-func (bc *BridgeClaims) HasBlockInfo() bool {
-	return bc.BlockInfo != nil
-}
-
-func (bc *BridgeClaims) BlockInfoEqualWithUnprocessed(tx *CardanoTx) bool {
-	return bc.HasBlockInfo() && bc.BlockInfo.ChainId == tx.OriginChainId && bc.BlockInfo.Slot == tx.BlockSlot && bc.BlockInfo.Hash == tx.BlockHash
-}
-
-func (bc *BridgeClaims) BlockInfoEqualWithProcessed(tx *ProcessedCardanoTx) bool {
-	return bc.HasBlockInfo() && bc.BlockInfo.ChainId == tx.OriginChainId && bc.BlockInfo.Slot == tx.BlockSlot && bc.BlockInfo.Hash == tx.BlockHash
-}
-
-func (bc *BridgeClaims) BlockInfoEqualWithExpected(tx *BridgeExpectedCardanoTx, block *indexer.CardanoBlock) bool {
-	return bc.HasBlockInfo() && bc.BlockInfo.ChainId == tx.ChainId && bc.BlockInfo.Slot == block.Slot && bc.BlockInfo.Hash == block.Hash
-}
-
-func (bc *BridgeClaims) SetBlockInfoWithUnprocessed(tx *CardanoTx) {
-	bc.BlockInfo = &BridgeClaimsBlockInfo{
-		ChainId: tx.OriginChainId,
-		Slot:    tx.BlockSlot,
-		Hash:    tx.BlockHash,
-	}
-}
-
-func (bc *BridgeClaims) SetBlockInfoWithProcessed(tx *ProcessedCardanoTx) {
-	bc.BlockInfo = &BridgeClaimsBlockInfo{
-		ChainId: tx.OriginChainId,
-		Slot:    tx.BlockSlot,
-		Hash:    tx.BlockHash,
-	}
-}
+type ContractCardanoBlock = contractbinding.IBridgeContractStructsCardanoBlock
 
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{

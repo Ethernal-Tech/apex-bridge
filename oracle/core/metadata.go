@@ -66,7 +66,7 @@ func UnmarshalBridgingRequestMetadata(data []byte) (*BridgingRequestMetadata, er
 
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"type"`
-	BatchNonceId   string         `cbor:"batchNonceId"`
+	BatchNonceId   uint64         `cbor:"batchNonceId"`
 }
 
 type BatchExecutedMetadataMap struct {

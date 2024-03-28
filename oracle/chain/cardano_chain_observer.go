@@ -21,13 +21,13 @@ type CardanoChainObserverImpl struct {
 	dbs    indexer.Database
 	syncer indexer.BlockSyncer
 	logger hclog.Logger
-	config core.CardanoChainConfig
+	config *core.CardanoChainConfig
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
-	settings core.AppSettings, config core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
+	settings core.AppSettings, config *core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
 	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
@@ -127,7 +127,7 @@ func (co *CardanoChainObserverImpl) Stop() error {
 	return err
 }
 
-func (co *CardanoChainObserverImpl) GetConfig() core.CardanoChainConfig {
+func (co *CardanoChainObserverImpl) GetConfig() *core.CardanoChainConfig {
 	return co.config
 }
 
@@ -139,7 +139,7 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
 }
 
-func loadSyncerConfigs(config core.CardanoChainConfig) (*indexer.BlockIndexerConfig, *indexer.BlockSyncerConfig) {
+func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerConfig, *indexer.BlockSyncerConfig) {
 	networkMagic, _ := strconv.ParseUint(config.NetworkMagic, 10, 32)
 
 	var startBlockHash []byte

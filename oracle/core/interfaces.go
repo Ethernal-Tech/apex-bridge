@@ -40,7 +40,7 @@ type Oracle interface {
 type CardanoChainObserver interface {
 	Start() error
 	Stop() error
-	GetConfig() CardanoChainConfig
+	GetConfig() *CardanoChainConfig
 	GetDb() indexer.Database
 	ErrorCh() <-chan error
 }

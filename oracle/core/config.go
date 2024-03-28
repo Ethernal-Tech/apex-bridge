@@ -10,7 +10,7 @@ type BridgingAddresses struct {
 }
 
 type CardanoChainConfig struct {
-	ChainId                  string            `json:"chainId"`
+	ChainId                  string
 	NetworkAddress           string            `json:"networkAddress"`
 	NetworkMagic             string            `json:"networkMagic"`
 	StartBlockHash           string            `json:"startBlockHash"`
@@ -47,10 +47,16 @@ type BridgingSettings struct {
 }
 
 type AppConfig struct {
-	CardanoChains    map[string]CardanoChainConfig `json:"cardanoChains"`
-	Bridge           BridgeConfig                  `json:"bridge"`
-	Settings         AppSettings                   `json:"appSettings"`
-	BridgingSettings BridgingSettings              `json:"bridgingSettings"`
+	CardanoChains    map[string]*CardanoChainConfig `json:"cardanoChains"`
+	Bridge           BridgeConfig                   `json:"bridge"`
+	Settings         AppSettings                    `json:"appSettings"`
+	BridgingSettings BridgingSettings               `json:"bridgingSettings"`
 }
 
 type InitialUtxos map[string][]*indexer.TxInputOutput
+
+func (appConfig *AppConfig) FillOut() {
+	for chainId, cardanoChainConfig := range appConfig.CardanoChains {
+		cardanoChainConfig.ChainId = chainId
+	}
+}

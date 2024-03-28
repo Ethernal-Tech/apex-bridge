@@ -2,6 +2,7 @@ package failed_tx_processors
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 )
@@ -50,12 +51,11 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 }
 
 func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *core.BatchExecutedMetadata) {
-	claim := core.BatchExecutionFailedClaim{
-		TxHash:       tx.Hash,
-		BatchNonceId: metadata.BatchNonceId,
-	}
-
-	claims.BatchExecutionFailed = append(claims.BatchExecutionFailed, claim)
+	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, core.BatchExecutionFailedClaim{
+		ObservedTransactionHash: tx.Hash,
+		ChainID:                 tx.ChainId,
+		BatchNonceID:            big.NewInt(int64(metadata.BatchNonceId)), // TODO: reconcile indexer and sc types
+	})
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *core.BatchExecutedMetadata, appConfig *core.AppConfig) error {

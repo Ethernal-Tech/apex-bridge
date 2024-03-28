@@ -17,6 +17,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	appConfig.FillOut()
+
 	initialUtxos, err := utils.LoadJson[core.InitialUtxos]("initialUtxos.json")
 	if err != nil {
 		os.Exit(1)

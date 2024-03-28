@@ -41,14 +41,16 @@ func newValidProcessor(
 
 func TestCardanoTxsProcessor(t *testing.T) {
 	appConfig := &core.AppConfig{
-		CardanoChains: map[string]core.CardanoChainConfig{
-			"prime":  {ChainId: "prime"},
-			"vector": {ChainId: "vector"},
+		CardanoChains: map[string]*core.CardanoChainConfig{
+			"prime":  {},
+			"vector": {},
 		},
 		Settings: core.AppSettings{
 			MaxBridgingClaimsToGroup: 10,
 		},
 	}
+
+	appConfig.FillOut()
 
 	const dbFilePath = "temp_test_oracle.db"
 	const primeDbFilePath = "temp_test_prime.db"
@@ -518,9 +520,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 1", func(t *testing.T) {
@@ -589,10 +589,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequest, 1)
-		require.Len(t, submittedClaims[0].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 2", func(t *testing.T) {
@@ -661,12 +659,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 2)
-		require.Len(t, submittedClaims[0].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-		require.Len(t, submittedClaims[1].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[1].BridgingRequestClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 3", func(t *testing.T) {
@@ -735,12 +729,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 2)
-		require.Len(t, submittedClaims[0].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-		require.Len(t, submittedClaims[1].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 4", func(t *testing.T) {
@@ -814,12 +804,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 2)
-		require.Len(t, submittedClaims[0].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-		require.Len(t, submittedClaims[1].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 1", func(t *testing.T) {
@@ -890,14 +876,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 2)
-		require.Len(t, submittedClaims[0].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.Equal(t, submittedClaims[0].BlockInfo.ChainId, chainId1)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-		require.Len(t, submittedClaims[1].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.Equal(t, submittedClaims[1].BlockInfo.ChainId, chainId2)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 2", func(t *testing.T) {
@@ -978,15 +958,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 2)
 
-		require.Len(t, submittedClaims[0].BridgingRequest, 2)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.Equal(t, submittedClaims[0].BlockInfo.ChainId, chainId1)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-
-		require.Len(t, submittedClaims[1].BatchExecutionFailed, 2)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.Equal(t, submittedClaims[1].BlockInfo.ChainId, chainId2)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 2)
+		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 2)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 3", func(t *testing.T) {
@@ -1071,24 +1044,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, submittedClaims)
 		require.Len(t, submittedClaims, 4)
 
-		require.Len(t, submittedClaims[0].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[0].BlockInfo)
-		require.Equal(t, submittedClaims[0].BlockInfo.ChainId, chainId1)
-		require.True(t, submittedClaims[0].BlockFullyObserved)
-
-		require.Len(t, submittedClaims[1].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[1].BlockInfo)
-		require.Equal(t, submittedClaims[1].BlockInfo.ChainId, chainId2)
-		require.True(t, submittedClaims[1].BlockFullyObserved)
-
-		require.Len(t, submittedClaims[2].BridgingRequest, 1)
-		require.NotNil(t, submittedClaims[2].BlockInfo)
-		require.Equal(t, submittedClaims[2].BlockInfo.ChainId, chainId1)
-		require.True(t, submittedClaims[2].BlockFullyObserved)
-
-		require.Len(t, submittedClaims[3].BatchExecutionFailed, 1)
-		require.NotNil(t, submittedClaims[3].BlockInfo)
-		require.Equal(t, submittedClaims[3].BlockInfo.ChainId, chainId2)
-		require.True(t, submittedClaims[3].BlockFullyObserved)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[2].BridgingRequestClaims, 1)
+		require.Len(t, submittedClaims[3].BatchExecutionFailedClaims, 1)
 	})
 }

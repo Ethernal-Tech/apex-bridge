@@ -1,7 +1,6 @@
 {
     "cardanoChains": {
         "prime": {
-            "chainId": "prime",
             "networkAddress": "localhost:13001",
             "networkMagic": "142",
             "startBlockHash": "",
@@ -15,7 +14,6 @@
             "otherAddressesOfInterest": []
         },
         "vector": {
-            "chainId": "vector",
             "networkAddress": "localhost:23001",
             "networkMagic": "242",
             "startBlockHash": "",
