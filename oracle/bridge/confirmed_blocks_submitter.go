@@ -95,14 +95,17 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
 					continue
 				}
 
+				if bs.latestConfirmedSlot != 0 {
+					blocks = blocks[1:]
+				}
+
 				var blockCounter = 0
 				// Skip first block becuase it's already processed
-				for _, block := range blocks[1:] {
-					if bs.checkIfBlockIsProcessed(block) {
-						blockCounter++
-						continue
+				for _, block := range blocks {
+					if !bs.checkIfBlockIsProcessed(block) {
+						break
 					}
-					break
+					blockCounter++
 				}
 
 				if blockCounter == 0 {
@@ -127,11 +130,11 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
 					continue
 				}
 
-				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks); err != nil {
+				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks[:blockCounter]); err != nil {
 					bs.errorCh <- fmt.Errorf("error submitting confirmed blocks: %v", err)
 					continue
 				}
-				bs.latestConfirmedSlot = blocks[blockCounter].Slot
+				bs.latestConfirmedSlot = blocks[blockCounter-1].Slot
 			}
 		}
 	}()
@@ -199,7 +202,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(block *indexer.C
 		return true
 	}
 
-	txsProcessed := true
 	for _, tx := range block.Txs {
 		prTx, err := bs.oracleDb.GetProcessedTx(bs.chainId, tx)
 		if err != nil {
@@ -207,10 +209,9 @@ func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(block *indexer.C
 		}
 
 		if prTx == nil {
-			txsProcessed = false
-			break
+			return false
 		}
 	}
 
-	return txsProcessed
+	return true
 }
