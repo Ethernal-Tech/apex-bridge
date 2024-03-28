@@ -123,6 +123,42 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Nil(t, claims.BatchExecuted[0].OutputUtxos)
 	})
 
+	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
+		const batchNonceId = "1"
+		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
+			Value: core.BatchExecutedMetadata{
+				BridgingTxType: core.BridgingTxTypeBatchExecution,
+				BatchNonceId:   batchNonceId,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, relevantFullMetadata)
+
+		claims := &core.BridgeClaims{}
+		const txHash = "test_hash"
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: relevantFullMetadata,
+				Outputs:  txOutputs,
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Input: indexer.TxInput{},
+					Output: indexer.TxOutput{
+						Address: "addr123",
+					},
+				}),
+			},
+		}, &appConfing)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected address found in tx input")
+	})
+
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
 		const batchNonceId = "1"
 		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{

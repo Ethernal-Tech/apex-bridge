@@ -333,6 +333,66 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
+			Value: core.BridgingRequestMetadata{
+				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+				DestinationChainId: "vector",
+				SenderAddr:         "addr1",
+				Transactions: []core.BridgingRequestMetadataTransaction{
+					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
+					{Address: validTestAddress, Amount: utxoMinValue},
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &core.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue + 1},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: invalidAddrInReceiversMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainId: "prime",
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch: expected 2000000 but got 1000001")
+	})
+
+	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
+			Value: core.BridgingRequestMetadata{
+				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+				DestinationChainId: "vector",
+				SenderAddr:         "addr1",
+				Transactions: []core.BridgingRequestMetadataTransaction{
+					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
+					{Address: validTestAddress, Amount: utxoMinValue},
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &core.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue*2 + 1},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: invalidAddrInReceiversMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainId: "prime",
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch: expected 2000000 but got 2000001")
+	})
+
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
 			Value: core.BridgingRequestMetadata{
