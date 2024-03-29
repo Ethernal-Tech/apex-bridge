@@ -117,16 +117,8 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 		return err
 	}
 
-	foundDestinationChainConfig := false
-	var bridgingAddressesOnDestination core.BridgingAddresses
-	for _, chainConfig := range appConfig.CardanoChains {
-		if metadata.DestinationChainId == chainConfig.ChainId {
-			foundDestinationChainConfig = true
-			bridgingAddressesOnDestination = chainConfig.BridgingAddresses
-		}
-	}
-
-	if !foundDestinationChainConfig {
+	destinationChainConfig := appConfig.CardanoChains[metadata.DestinationChainId]
+	if destinationChainConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainId)
 	}
 
@@ -151,7 +143,7 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 			break
 		}
 
-		if receiver.Address == bridgingAddressesOnDestination.FeeAddress {
+		if receiver.Address == destinationChainConfig.BridgingAddresses.FeeAddress {
 			foundTheFeeReceiverAddr = true
 			feeSum += receiver.Amount
 		}

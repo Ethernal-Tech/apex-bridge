@@ -11,18 +11,18 @@ import (
 func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 	foundBridgingAddress := false
 	foundFeeAddress := false
-	for _, chainConfig := range appConfig.CardanoChains {
-		if chainConfig.ChainId == tx.OriginChainId {
-			for _, utxo := range tx.Tx.Inputs {
-				if utxo.Output.Address == chainConfig.BridgingAddresses.BridgingAddress {
-					foundBridgingAddress = true
-				} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
-					foundFeeAddress = true
-				} else {
-					return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
-				}
-			}
-			break
+	chainConfig := appConfig.CardanoChains[tx.OriginChainId]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainId)
+	}
+
+	for _, utxo := range tx.Tx.Inputs {
+		if utxo.Output.Address == chainConfig.BridgingAddresses.BridgingAddress {
+			foundBridgingAddress = true
+		} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
+			foundFeeAddress = true
+		} else {
+			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
 		}
 	}
 
@@ -41,18 +41,18 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 // Returns found multisig output utxo
 func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) (*indexer.TxOutput, error) {
 	var multisigUtxoOutput *indexer.TxOutput = nil
-	for _, chainConfig := range appConfig.CardanoChains {
-		if chainConfig.ChainId == tx.OriginChainId {
-			for _, utxo := range tx.Tx.Outputs {
-				if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
-					if multisigUtxoOutput == nil {
-						multisigUtxoOutput = utxo
-					} else {
-						return nil, fmt.Errorf("found multiple utxos to the bridging address on origin")
-					}
-				}
+	chainConfig := appConfig.CardanoChains[tx.OriginChainId]
+	if chainConfig == nil {
+		return nil, fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainId)
+	}
+
+	for _, utxo := range tx.Tx.Outputs {
+		if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
+			if multisigUtxoOutput == nil {
+				multisigUtxoOutput = utxo
+			} else {
+				return nil, fmt.Errorf("found multiple utxos to the bridging address on origin")
 			}
-			break
 		}
 	}
 

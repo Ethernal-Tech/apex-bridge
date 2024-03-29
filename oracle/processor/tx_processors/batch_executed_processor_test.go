@@ -123,6 +123,42 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Nil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 	})
 
+	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
+		const batchNonceId = uint64(1)
+		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
+			Value: core.BatchExecutedMetadata{
+				BridgingTxType: core.BridgingTxTypeBatchExecution,
+				BatchNonceId:   batchNonceId,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, relevantFullMetadata)
+
+		claims := &core.BridgeClaims{}
+		const txHash = "test_hash"
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: relevantFullMetadata,
+				Outputs:  txOutputs,
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Input: indexer.TxInput{},
+					Output: indexer.TxOutput{
+						Address: "addr123",
+					},
+				}),
+			},
+		}, &appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected address found in tx input")
+	})
+
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
 		batchNonceId := uint64(1)
 		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
@@ -203,6 +239,33 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging address not found in tx inputs")
+	})
+
+	t.Run("validate method origin chain not registered", func(t *testing.T) {
+		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+
+		config := &core.AppConfig{
+			CardanoChains:    cardanoChains,
+			Bridge:           core.BridgeConfig{},
+			Settings:         core.AppSettings{},
+			BridgingSettings: core.BridgingSettings{},
+		}
+		config.FillOut()
+		tx := core.CardanoTx{
+			OriginChainId: "prime",
+			Tx: indexer.Tx{
+				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
+					Output: indexer.TxOutput{
+						Address: "addr3",
+						IsUsed:  true,
+					},
+				}),
+			},
+		}
+
+		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("validate method pass", func(t *testing.T) {
