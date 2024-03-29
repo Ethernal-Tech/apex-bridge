@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer_manager"
 )
 
@@ -17,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	relayerManager := relayer_manager.NewRelayerManager(config)
+	relayerManager := relayer_manager.NewRelayerManager(config, make(map[string]core.ChainOperations))
 	if relayerManager == nil {
 		fmt.Fprintf(os.Stderr, "Failed to create relayer manager")
 		os.Exit(1)

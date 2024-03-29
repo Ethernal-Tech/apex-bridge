@@ -21,7 +21,7 @@ type RelayerManagerImpl struct {
 
 var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
 
-func NewRelayerManager(config *core.RelayerManagerConfiguration, customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
+func NewRelayerManager(config *core.RelayerManagerConfiguration, customOperations map[string]core.ChainOperations, customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
 	var relayers = map[string]core.Relayer{}
 	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
@@ -30,10 +30,13 @@ func NewRelayerManager(config *core.RelayerManagerConfiguration, customBridgeSc 
 			return nil
 		}
 
-		operations, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
-			return nil
+		var operations core.ChainOperations = customOperations[chain]
+		if operations == nil {
+			operations, err = relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
+				return nil
+			}
 		}
 
 		var bridgeSmartContract eth.IBridgeSmartContract
