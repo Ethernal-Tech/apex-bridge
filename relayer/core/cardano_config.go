@@ -22,7 +22,7 @@ func (*CardanoChainConfig) GetChainType() string {
 
 func ToCardanoChainConfig(config ChainSpecific) (*CardanoChainConfig, error) {
 	if config.ChainType != "Cardano" {
-		return nil, fmt.Errorf("Chain type must be Cardano not", config.ChainType)
+		return nil, fmt.Errorf("chain type must be Cardano not %v", config.ChainType)
 	}
 
 	var cardanoChainConfig CardanoChainConfig

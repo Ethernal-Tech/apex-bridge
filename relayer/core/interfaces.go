@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"github.com/Ethernal-Tech/apex-bridge/relayer/bridge"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 )
 
 type RelayerManager interface {
@@ -16,7 +16,7 @@ type Relayer interface {
 }
 
 type ChainOperations interface {
-	SendTx(smartContractData *bridge.ConfirmedBatch) error
+	SendTx(smartContractData *eth.ConfirmedBatch) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

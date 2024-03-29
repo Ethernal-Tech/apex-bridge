@@ -4,7 +4,7 @@ import (
 	"context"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/bridge"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -22,7 +22,7 @@ func NewCardanoChainOperations(config core.CardanoChainConfig) *CardanoChainOper
 }
 
 // SendTx implements core.ChainOperations.
-func (cco *CardanoChainOperations) SendTx(smartContractData *bridge.ConfirmedBatch) error {
+func (cco *CardanoChainOperations) SendTx(smartContractData *eth.ConfirmedBatch) error {
 	witnesses := make([][]byte, len(smartContractData.MultisigSignatures)+len(smartContractData.FeePayerMultisigSignatures))
 	copy(witnesses, smartContractData.MultisigSignatures)
 	copy(witnesses[len(smartContractData.MultisigSignatures):], smartContractData.FeePayerMultisigSignatures)
@@ -37,9 +37,5 @@ func (cco *CardanoChainOperations) SendTx(smartContractData *bridge.ConfirmedBat
 		return err
 	}
 
-	if err := txProvider.SubmitTx(context.Background(), txSigned); err != nil {
-		return err
-	}
-
-	return nil
+	return txProvider.SubmitTx(context.Background(), txSigned)
 }
