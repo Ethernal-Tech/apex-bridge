@@ -19,6 +19,7 @@ type BridgeSmartContractImpl struct {
 	smartContractAddress string
 	nodeUrl              string
 	ethTxHelper          ethtxhelper.IEthTxHelper
+	wallet               ethtxhelper.IEthTxWallet
 }
 
 func NewBridgeSmartContract(nodeUrl, smartContractAddress string) *BridgeSmartContractImpl {
@@ -26,6 +27,19 @@ func NewBridgeSmartContract(nodeUrl, smartContractAddress string) *BridgeSmartCo
 		nodeUrl:              nodeUrl,
 		smartContractAddress: smartContractAddress,
 	}
+}
+
+func NewBridgeSmartContractWithWallet(nodeUrl, smartContractAddress, signingKey string) (*BridgeSmartContractImpl, error) {
+	ethWallet, err := ethtxhelper.NewEthTxWallet(signingKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BridgeSmartContractImpl{
+		nodeUrl:              nodeUrl,
+		smartContractAddress: smartContractAddress,
+		wallet:               ethWallet,
+	}, nil
 }
 
 func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(ctx context.Context, destinationChain string) (*ConfirmedBatch, error) {
@@ -38,7 +52,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(ctx context.Context, desti
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, err
+		return nil, bsc.processError(err)
 	}
 
 	result, err := contract.GetConfirmedBatch(&bind.CallOpts{
@@ -73,4 +87,28 @@ func (bsc *BridgeSmartContractImpl) processError(err error) error {
 	}
 
 	return err
+}
+
+// sendTx should be called by all public methods that sends tx to the bridge
+func (bsc *BridgeSmartContractImpl) sendTx(ctx context.Context, handler ethtxhelper.SendTxFunc) (string, error) {
+	ethTxHelper, err := bsc.getEthHelper()
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := ethTxHelper.SendTx(ctx, bsc.wallet, bind.TransactOpts{}, true, handler)
+	if err != nil {
+		return "", bsc.processError(err)
+	}
+
+	// TODO: enable logs bsc.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
+
+	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	if err != nil {
+		return "", bsc.processError(err)
+	}
+
+	// TODO: enable logs  bsc.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
+
+	return receipt.BlockHash.String(), nil
 }

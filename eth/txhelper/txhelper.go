@@ -29,11 +29,11 @@ type IEthTxHelper interface {
 	GetClient() bind.ContractBackend
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
 	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
-		abiData abi.ABI, bytecode []byte, wallet *EthTxWallet) (string, string, error)
+		abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context,
-		wallet *EthTxWallet, txOpts bind.TransactOpts, isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error)
-	PopulateTxOpts(ctx context.Context, from string, isDynamic bool, txOpts *bind.TransactOpts) error
+		wallet IEthTxWallet, txOpts bind.TransactOpts, isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error)
+	PopulateTxOpts(ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts) error
 }
 
 type EthTxHelperImpl struct {
@@ -82,7 +82,7 @@ func (t EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool
 }
 
 func (t EthTxHelperImpl) Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
-	abiData abi.ABI, bytecode []byte, wallet *EthTxWallet) (string, string, error) {
+	abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
 	if err != nil {
@@ -98,7 +98,7 @@ func (t EthTxHelperImpl) Deploy(ctx context.Context, nonce *big.Int, gasLimit ui
 	auth.Nonce = nonce
 	auth.GasLimit = gasLimit
 
-	if err := t.PopulateTxOpts(ctx, wallet.GetAddressHex(), isDynamic, auth); err != nil {
+	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), isDynamic, auth); err != nil {
 		return "", "", err
 	}
 
@@ -132,7 +132,7 @@ func (t EthTxHelperImpl) WaitForReceipt(ctx context.Context, hash string, skipNo
 	return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", hash)
 }
 
-func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet *EthTxWallet, txOptsParam bind.TransactOpts,
+func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
 	isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
@@ -153,7 +153,7 @@ func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet *EthTxWallet, txOpts
 	txOptsRes.Nonce = txOptsParam.Nonce
 	txOptsRes.Value = txOptsParam.Value
 
-	if err := t.PopulateTxOpts(ctx, wallet.GetAddressHex(), isDynamic, txOptsRes); err != nil {
+	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), isDynamic, txOptsRes); err != nil {
 		return nil, err
 	}
 
@@ -186,9 +186,9 @@ func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet *EthTxWallet, txOpts
 	return sendTxHandler(txOptsRes)
 }
 
-func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from string, isDynamic bool, txOpts *bind.TransactOpts) error {
+func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts) error {
 	txOpts.Context = ctx
-	txOpts.From = common.HexToAddress(from)
+	txOpts.From = from
 
 	// Nonce retrieval
 	if txOpts.Nonce == nil {

@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	mumbaiNodeUrl    = "https://polygon-mumbai-pokt.nodies.app"
-	dummyMumbaiAccPk = "3761f6deeb2e0b2aa8b843e804d880afa6e5fecf1631f411e267641a72d0ca20"
+	mumbaiNodeUrl    = "https://polygon-mumbai-bor-rpc.publicnode.com"
+	dummyMumbaiAccPk = "61deed8dda92a396e8e9dbcbb5a058bee274de1adc57b2067975691dacdd55c7"
 )
 
 var (
@@ -40,11 +40,11 @@ func TestTxHelper(t *testing.T) {
 		abiData, err := contractbinding.TestContractMetaData.GetAbi()
 		require.NoError(t, err)
 
-		nonce, err := txHelper.GetNonce(ctx, wallet.GetAddressHex(), false)
+		nonce, err := txHelper.GetNonce(ctx, wallet.GetAddress().String(), false)
 		require.NoError(t, err)
 
 		addr, hash, err := txHelper.Deploy(ctx, new(big.Int).SetUint64(nonce),
-			uint64(300000), false, *abiData, scBytecode, wallet)
+			uint64(600000), false, *abiData, scBytecode, wallet)
 		require.NoError(t, err)
 		require.NotEqual(t, common.Address{}, addr)
 
@@ -109,7 +109,7 @@ func TestTxHelper(t *testing.T) {
 			GasLimit: 21000, // default value for transfer
 		}
 
-		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddressHex(), false, &txOpts)
+		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddress(), false, &txOpts)
 		require.NoError(t, err)
 
 		tx := TxOpts2LegacyTx(ethAddr, []byte{}, &txOpts)
@@ -153,7 +153,7 @@ func TestTxHelper(t *testing.T) {
 			GasLimit: 21000, // default value for transfer
 		}
 
-		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddressHex(), true, &txOpts)
+		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddress(), true, &txOpts)
 		require.NoError(t, err)
 
 		tx := TxOpts2DynamicFeeTx(ethAddr, chainID, []byte{}, &txOpts)

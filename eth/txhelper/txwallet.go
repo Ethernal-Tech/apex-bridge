@@ -13,6 +13,7 @@ import (
 
 type IEthTxWallet interface {
 	GetTransactOpts(chainID *big.Int) (*bind.TransactOpts, error)
+	GetAddress() common.Address
 }
 
 type EthTxWallet struct {
@@ -48,10 +49,6 @@ func (w EthTxWallet) GetTransactOpts(chainID *big.Int) (*bind.TransactOpts, erro
 
 func (w EthTxWallet) GetAddress() common.Address {
 	return w.addr
-}
-
-func (w EthTxWallet) GetAddressHex() string {
-	return w.addr.String()
 }
 
 func (w EthTxWallet) SignTx(chainID *big.Int, tx *types.Transaction) (*types.Transaction, error) {
