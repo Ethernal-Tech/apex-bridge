@@ -224,7 +224,7 @@ func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from common.Address
 		}
 
 		gasFeeCap := hs.BaseFee[len(hs.BaseFee)-1]
-		gasFeeCap = gasFeeCap.Add(gasFeeCap, txOpts.GasTipCap)
+		gasFeeCap = gasFeeCap.Add(gasFeeCap, gasTipCap)
 
 		txOpts.GasFeeCap = new(big.Int).SetUint64(uint64(float64(gasFeeCap.Uint64()) * t.gasFeeMultiplier))
 	}
