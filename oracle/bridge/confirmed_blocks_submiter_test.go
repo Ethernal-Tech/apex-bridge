@@ -19,7 +19,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
 			SubmitConfig: core.SubmitConfig{
 				ConfirmedBlocksThreshhold: 10,
-				ConfirmedBlocksSubmitTime: 3000,
+				ConfirmedBlocksSubmitTime: 10,
 			},
 		},
 		Settings: core.AppSettings{
@@ -36,24 +36,22 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	t.Run("start submit", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, "prime", hclog.NewNullLogger())
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, &core.CardanoTxsProcessorDbMock{}, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, blocksSubmitter)
 
-		err = blocksSubmitter.StartSubmit()
+		blocksSubmitter.StartSubmit()
 
-		time.Sleep(time.Second * 3)
-		// ethTxHelper.SendTx#132 is returning error when sending Tx, can be ignored for now
-		require.NoError(t, <-blocksSubmitter.ErrorCh())
+		time.Sleep(time.Millisecond * 100)
 
 		blocksSubmitter.Dispose()
-		require.NoError(t, err)
+		require.NoError(t, <-blocksSubmitter.ErrorCh())
 	})
 
 	t.Run("dispose", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, "prime", hclog.NewNullLogger())
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(appConfig, &core.CardanoTxsProcessorDbMock{}, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, blocksSubmitter)
 

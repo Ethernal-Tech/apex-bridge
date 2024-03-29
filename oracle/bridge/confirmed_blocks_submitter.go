@@ -22,19 +22,22 @@ import (
 type ConfirmedBlocksSubmitterImpl struct {
 	appConfig *core.AppConfig
 	chainId   string
-	db        indexer.Database
+	indexerDb indexer.Database
+	oracleDb  core.CardanoTxsDb
 	logger    hclog.Logger
 	ctx       context.Context
 	cancelCtx context.CancelFunc
 	ethClient *ethclient.Client
 
-	errorCh chan error
+	latestConfirmedSlot uint64
+	errorCh             chan error
 }
 
 var _ core.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
 
 func NewConfirmedBlocksSubmitter(
 	appConfig *core.AppConfig,
+	oracleDb core.CardanoTxsDb,
 	chainId string,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
@@ -47,36 +50,68 @@ func NewConfirmedBlocksSubmitter(
 		return nil, err
 	}
 
+	latestBlockPoint, err := indexerDb.GetLatestBlockPoint()
+	if err != nil {
+		return nil, err
+	}
+	if latestBlockPoint == nil {
+		latestBlockPoint = &indexer.BlockPoint{}
+	}
+
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	return &ConfirmedBlocksSubmitterImpl{
 		appConfig: appConfig,
 		chainId:   chainId,
-		db:        indexerDb,
+		indexerDb: indexerDb,
+		oracleDb:  oracleDb,
 		logger:    logger,
 		ctx:       ctx,
 		cancelCtx: cancelCtx,
-		errorCh:   make(chan error, 1),
+
+		latestConfirmedSlot: latestBlockPoint.BlockSlot,
+		errorCh:             make(chan error, 1),
 	}, nil
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
+func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 	go func() {
+		ticker := time.NewTicker(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-bs.ctx.Done():
 				return
-			default:
-				blocks, err := bs.db.GetLatestConfirmedBlocks(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
+			case <-ticker.C:
+				from := bs.latestConfirmedSlot
+				if from != 0 {
+					from++
+				}
+
+				blocks, err := bs.indexerDb.GetConfirmedBlocksFrom(
+					from,
+					bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
 				if err != nil {
-					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks: %w", err)
+					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks err: %v", err)
+				}
+
+				var blockCounter = 0
+				for _, block := range blocks {
+					if !bs.checkIfBlockIsProcessed(block) {
+						break
+					}
+					blockCounter++
+				}
+
+				if blockCounter == 0 {
 					continue
 				}
 
 				if bs.ethClient == nil {
 					ethClient, err := ethclient.Dial(bs.appConfig.Bridge.NodeUrl)
 					if err != nil {
-						bs.errorCh <- fmt.Errorf("failed to dial bridge: %w", err)
+						bs.errorCh <- fmt.Errorf("failed to dial bridge: %v", err)
 						continue
 					}
 
@@ -87,21 +122,18 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
 				if err != nil {
 					// ensure redial in case ethClient lost connection
 					bs.ethClient = nil
-					bs.errorCh <- fmt.Errorf("failed to create ethTxHelper: %w", err)
+					bs.errorCh <- fmt.Errorf("failed to create ethTxHelper: %v", err)
 					continue
 				}
 
-				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks); err != nil {
-					bs.errorCh <- fmt.Errorf("error submitting confirmed blocks: %w", err)
+				if _, err := bs.submitConfirmedBlocks(ethTxHelper, blocks[:blockCounter]); err != nil {
+					bs.errorCh <- fmt.Errorf("error submitting confirmed blocks: %v", err)
 					continue
 				}
-
-				time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
+				bs.latestConfirmedSlot = blocks[blockCounter-1].Slot
 			}
 		}
 	}()
-
-	return nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
@@ -157,4 +189,23 @@ func (bs *ConfirmedBlocksSubmitterImpl) submitConfirmedBlocks(ethTxHelper *ethtx
 	bs.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
 
 	return receipt, nil
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(block *indexer.CardanoBlock) bool {
+	if len(block.Txs) == 0 {
+		return true
+	}
+
+	for _, tx := range block.Txs {
+		prTx, err := bs.oracleDb.GetProcessedTx(bs.chainId, tx)
+		if err != nil {
+			bs.errorCh <- fmt.Errorf("error getting processed tx for block err: %v", err)
+		}
+
+		if prTx == nil {
+			return false
+		}
+	}
+
+	return true
 }
