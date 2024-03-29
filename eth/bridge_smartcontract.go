@@ -72,7 +72,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return err
+		return bsc.ethHelper.ProcessError(err)
 	}
 
 	newSignedBatch := contractbinding.TestContractSignedBatch{
@@ -89,5 +89,5 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		return contract.SubmitSignedBatch(opts, newSignedBatch)
 	})
 
-	return err
+	return bsc.ethHelper.ProcessError(err)
 }
