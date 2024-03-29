@@ -3,11 +3,13 @@ package eth
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type IBridgeSmartContract interface {
@@ -108,6 +110,9 @@ func (bsc *BridgeSmartContractImpl) sendTx(ctx context.Context, handler ethtxhel
 		return "", bsc.processError(err)
 	}
 
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return receipt.BlockHash.String(), fmt.Errorf("receipts status not successful: %v", receipt.Status)
+	}
 	// TODO: enable logs  bsc.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
 
 	return receipt.BlockHash.String(), nil
