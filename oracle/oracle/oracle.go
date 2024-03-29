@@ -148,12 +148,7 @@ func (o *OracleImpl) Start() error {
 	}
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		err := cbs.StartSubmit()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to start block submiter. error: %v\n", err)
-			o.logger.Error("Failed to start block submiter cardano", "err", err)
-			return err
-		}
+		cbs.StartSubmit()
 	}
 
 	o.errorCh = make(chan error, 1)

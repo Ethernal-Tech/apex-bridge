@@ -73,7 +73,7 @@ type ClaimsSubmitter interface {
 }
 
 type ConfirmedBlocksSubmitter interface {
-	StartSubmit() error
+	StartSubmit()
 	Dispose() error
 	GetChainId() string
 	ErrorCh() <-chan error

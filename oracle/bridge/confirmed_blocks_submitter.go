@@ -74,33 +74,29 @@ func NewConfirmedBlocksSubmitter(
 	}, nil
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
+func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 	go func() {
+		ticker := time.NewTicker(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-bs.ctx.Done():
 				return
-			default:
-				time.Sleep(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
+			case <-ticker.C:
+				from := bs.latestConfirmedSlot
+				if from != 0 {
+					from++
+				}
 
-				// Threshhold +1 because we will ignore first block
 				blocks, err := bs.indexerDb.GetConfirmedBlocksFrom(
-					bs.latestConfirmedSlot,
-					bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold+1)
+					from,
+					bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
 				if err != nil {
 					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks err: %v", err)
 				}
 
-				if len(blocks) == 0 {
-					continue
-				}
-
-				if bs.latestConfirmedSlot != 0 {
-					blocks = blocks[1:]
-				}
-
 				var blockCounter = 0
-				// Skip first block becuase it's already processed
 				for _, block := range blocks {
 					if !bs.checkIfBlockIsProcessed(block) {
 						break
@@ -138,8 +134,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() error {
 			}
 		}
 	}()
-
-	return nil
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) Dispose() error {
