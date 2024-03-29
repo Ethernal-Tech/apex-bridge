@@ -75,7 +75,7 @@ func (r *RelayerImpl) execute(ctx context.Context) {
 	}
 
 	// invoke smart contract(s)
-	smartContractData, err := bridge.GetSmartContractData(ctx, ethTxHelper, r.config.Base.ChainId, r.config.Bridge.SmartContractAddress)
+	smartContractData, err := bridge.GetConfirmedBatch(ctx, ethTxHelper, r.config.Base.ChainId, r.config.Bridge.SmartContractAddress)
 	if err != nil {
 		r.logger.Error("Failed to query bridge sc", "err", err)
 

@@ -81,7 +81,7 @@ func TestRelayer(t *testing.T) {
 		}, relayerConfig.Base.ChainId)
 		require.NoError(t, err)
 
-		contractData, err := bridge.GetSmartContractData(ctx, txHelper, relayerConfig.Base.ChainId, relayerConfig.Bridge.SmartContractAddress)
+		contractData, err := bridge.GetConfirmedBatch(ctx, txHelper, relayerConfig.Base.ChainId, relayerConfig.Bridge.SmartContractAddress)
 		assert.NoError(t, err)
 
 		assert.Equal(t, res.Id, contractData.Id)

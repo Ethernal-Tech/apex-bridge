@@ -17,8 +17,8 @@ type ConfirmedBatch struct {
 	FeePayerMultisigSignatures [][]byte
 }
 
-func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, destinationChain string, smartContractAddress string) (*ConfirmedBatch, error) {
-	contract, err := contractbinding.NewTestContract(
+func GetConfirmedBatch(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, destinationChain string, smartContractAddress string) (*ConfirmedBatch, error) {
+	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
@@ -58,7 +58,7 @@ func GetSmartContractData(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHel
 	}
 
 	return &ConfirmedBatch{
-		Id:                         confirmedBatch.Id,
+		Id:                         confirmedBatch.Id.String(),
 		RawTransaction:             rawTx,
 		MultisigSignatures:         multisigSignatures,
 		FeePayerMultisigSignatures: feePayerMultisigSignatures,
