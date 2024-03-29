@@ -238,7 +238,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -280,7 +280,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -323,7 +323,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -370,7 +370,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -414,7 +414,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -460,7 +460,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -509,7 +509,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -573,7 +573,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -645,7 +645,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(10 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -719,7 +719,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -798,7 +798,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -874,7 +874,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -961,7 +961,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}
@@ -1054,7 +1054,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
 
-		proc.tickTime = 0
+		proc.tickTime = 1000
 		for i := 0; i < 5; i++ {
 			proc.checkShouldGenerateClaims()
 		}

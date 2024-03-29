@@ -99,19 +99,8 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs [
 func (bp *CardanoTxsProcessorImpl) Start() error {
 	bp.logger.Debug("Starting CardanoTxsProcessor")
 
-	timerTime := bp.tickTime * time.Millisecond
-	timer := time.NewTimer(timerTime)
-	defer timer.Stop()
-
 	for {
-		select {
-		case <-timer.C:
-			bp.checkShouldGenerateClaims()
-		case <-bp.closeCh:
-			return nil
-		}
-
-		timer.Reset(timerTime)
+		bp.checkShouldGenerateClaims()
 	}
 }
 
@@ -131,10 +120,17 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	}
 	sort.Strings(keys)
 
-	for _, key := range keys {
-		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId)
+	ticker := time.NewTicker(bp.tickTime * time.Millisecond)
+	defer ticker.Stop()
 
-		time.Sleep(time.Millisecond * bp.tickTime)
+	for _, key := range keys {
+		select {
+		case <-bp.closeCh:
+			return
+		case <-ticker.C:
+		}
+
+		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId)
 	}
 }
 
