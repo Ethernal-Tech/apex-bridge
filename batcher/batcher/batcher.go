@@ -40,14 +40,14 @@ func NewBatcher(
 func (b *BatcherImpl) Start(ctx context.Context) {
 	b.logger.Debug("Batcher started")
 
-	timer := time.NewTicker(time.Millisecond * time.Duration(b.config.PullTimeMilis))
-	defer timer.Stop()
+	ticker := time.NewTicker(time.Millisecond * time.Duration(b.config.PullTimeMilis))
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-timer.C:
+		case <-ticker.C:
 		}
 
 		b.execute(ctx)
