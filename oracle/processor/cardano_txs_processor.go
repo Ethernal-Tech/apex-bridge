@@ -114,7 +114,7 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	bp.logger.Debug("Checking if should generate claims")
 
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
-	var keys []string
+	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
 	for k := range bp.appConfig.CardanoChains {
 		keys = append(keys, k)
 	}
@@ -271,7 +271,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var relevantExpiredTxs []*core.BridgeExpectedCardanoTx
 
 	// ensure always same order of iterating through expectedTxsMap
-	var keys []string
+	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
 	for k := range expectedTxsMap {
 		keys = append(keys, k)
 	}

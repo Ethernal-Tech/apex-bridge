@@ -19,7 +19,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
 			SubmitConfig: core.SubmitConfig{
 				ConfirmedBlocksThreshhold: 10,
-				ConfirmedBlocksSubmitTime: 3000,
+				ConfirmedBlocksSubmitTime: 10,
 			},
 		},
 		Settings: core.AppSettings{
@@ -42,7 +42,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		blocksSubmitter.StartSubmit()
 
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Millisecond * 100)
 
 		blocksSubmitter.Dispose()
 		require.NoError(t, <-blocksSubmitter.ErrorCh())
