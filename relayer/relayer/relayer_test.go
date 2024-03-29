@@ -150,6 +150,10 @@ func (m *bridgeSmartContractMock) GetConfirmedBatch(
 	return args.Get(0).(*eth.ConfirmedBatch), args.Error(1)
 }
 
+func (m *bridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedBatch eth.SignedBatch) error {
+	return m.Called(ctx, signedBatch).Error(0)
+}
+
 type cardanoChainOperationsMock struct {
 	mock.Mock
 }

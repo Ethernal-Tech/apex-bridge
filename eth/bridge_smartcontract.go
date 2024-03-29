@@ -15,6 +15,7 @@ import (
 type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
+	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
 }
 
 type BridgeSmartContractImpl struct {
@@ -65,6 +66,36 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(ctx context.Context, desti
 	}
 
 	return NewConfirmedBatch(result)
+}
+
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
+	ethTxHelper, err := bsc.getEthHelper()
+	if err != nil {
+		return err
+	}
+
+	contract, err := contractbinding.NewTestContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return err
+	}
+
+	newSignedBatch := contractbinding.TestContractSignedBatch{
+		Id:                        signedBatch.Id.String(),
+		DestinationChainId:        signedBatch.DestinationChainId,
+		RawTransaction:            signedBatch.RawTransaction,
+		MultisigSignature:         signedBatch.MultisigSignature,
+		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
+		IncludedTransactions:      []contractbinding.TestContractConfirmedTransaction{},
+		UsedUTXOs:                 contractbinding.TestContractUTXOs{},
+	}
+
+	_, err = bsc.sendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		return contract.SubmitSignedBatch(opts, newSignedBatch)
+	})
+
+	return err
 }
 
 func (bsc *BridgeSmartContractImpl) getEthHelper(opts ...ethtxhelper.TxRelayerOption) (ethtxhelper.IEthTxHelper, error) {

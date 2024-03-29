@@ -6,6 +6,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
+type SignedBatch = contractbinding.IBridgeContractStructsSignedBatch
+
 type ConfirmedBatch struct {
 	Id                         string
 	RawTransaction             []byte
