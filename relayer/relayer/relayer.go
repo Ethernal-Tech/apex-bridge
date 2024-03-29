@@ -4,92 +4,67 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/bridge"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 )
 
 type RelayerImpl struct {
-	config     *core.RelayerConfiguration
-	logger     hclog.Logger
-	ethClient  *ethclient.Client
-	operations core.ChainOperations
+	config              *core.RelayerConfiguration
+	logger              hclog.Logger
+	operations          core.ChainOperations
+	bridgeSmartContract eth.IBridgeSmartContract
 }
 
 var _ core.Relayer = (*RelayerImpl)(nil)
 
-func NewRelayer(config *core.RelayerConfiguration, logger hclog.Logger, operations core.ChainOperations) *RelayerImpl {
+func NewRelayer(config *core.RelayerConfiguration,
+	bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger, operations core.ChainOperations) *RelayerImpl {
 	return &RelayerImpl{
-		config:     config,
-		logger:     logger,
-		ethClient:  nil,
-		operations: operations,
+		config:              config,
+		logger:              logger,
+		bridgeSmartContract: bridgeSmartContract,
+		operations:          operations,
 	}
 }
 
 func (r *RelayerImpl) Start(ctx context.Context) {
-	var (
-		timerTime = time.Millisecond * time.Duration(r.config.PullTimeMilis)
-	)
-
 	r.logger.Debug("Relayer started")
 
-	timer := time.NewTimer(timerTime)
-	defer timer.Stop()
+	ticker := time.NewTicker(time.Millisecond * time.Duration(r.config.PullTimeMilis))
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-timer.C:
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
 		}
 
-		r.execute(ctx)
-
-		timer.Reset(timerTime)
+		if err := r.execute(ctx); err != nil {
+			r.logger.Error("execute failed", "err", err)
+		}
 	}
 }
 
-func (r *RelayerImpl) execute(ctx context.Context) {
-	var (
-		err error
-	)
-
-	if r.ethClient == nil {
-		r.ethClient, err = ethclient.Dial(r.config.Bridge.NodeUrl)
-		if err != nil {
-			r.logger.Error("Failed to dial bridge", "err", err)
-			return
-		}
-	}
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(r.ethClient))
+func (r *RelayerImpl) execute(ctx context.Context) error {
+	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Base.ChainId)
 	if err != nil {
-		// In case of error, reset ethClient to nil to try again in the next iteration.
-		r.ethClient = nil
-		return
+		return fmt.Errorf("failed to retrieve confirmed batch: %v", err)
 	}
 
-	// invoke smart contract(s)
-	smartContractData, err := bridge.GetConfirmedBatch(ctx, ethTxHelper, r.config.Base.ChainId, r.config.Bridge.SmartContractAddress)
-	if err != nil {
-		r.logger.Error("Failed to query bridge sc", "err", err)
-
-		r.ethClient = nil
-		return
-	}
 	r.logger.Info("Signed batch retrieved from contract")
 
-	if err := r.operations.SendTx(smartContractData); err != nil {
-		r.logger.Error("failed to send tx", "err", err)
-		return
+	if err := r.operations.SendTx(confirmedBatch); err != nil {
+		return fmt.Errorf("failed to send confirmed batch: %v", err)
 	}
 
 	r.logger.Info("Transaction successfully submited")
+
+	return nil
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
@@ -97,8 +72,8 @@ func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations
 	var operations core.ChainOperations
 
 	// Create the appropriate chain-specific configuration based on the chain type
-	switch config.ChainType {
-	case "Cardano":
+	switch strings.ToLower(config.ChainType) {
+	case "cardano":
 		var cardanoChainConfig core.CardanoChainConfig
 		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)

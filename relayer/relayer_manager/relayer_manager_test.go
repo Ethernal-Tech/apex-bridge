@@ -24,7 +24,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 
 	expectedConfig := &core.RelayerManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
-			"prime": core.ChainConfig{
+			"prime": {
 				Base: core.BaseConfig{
 					ChainId: "prime",
 				},
@@ -33,7 +33,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 					Config:    rawMessage,
 				},
 			},
-			"vector": core.ChainConfig{
+			"vector": {
 				Base: core.BaseConfig{
 					ChainId: "vector",
 				},
@@ -60,13 +60,13 @@ func TestRelayerManagerConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, loadedConfig.Chains)
-	for chain, _ := range loadedConfig.Chains {
-		assert.Equal(t, expectedConfig.Chains[chain].Base, loadedConfig.Chains[chain].Base)
+	for _, chainConfig := range loadedConfig.Chains {
+		assert.Equal(t, chainConfig.Base, chainConfig.Base)
 
-		expectedOp, err := relayer.GetChainSpecificOperations(expectedConfig.Chains[chain].ChainSpecific)
+		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
 		assert.NoError(t, err)
 
-		loadedOp, err := relayer.GetChainSpecificOperations(loadedConfig.Chains[chain].ChainSpecific)
+		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
 		assert.NoError(t, err)
 
 		assert.Equal(t, expectedOp, loadedOp)

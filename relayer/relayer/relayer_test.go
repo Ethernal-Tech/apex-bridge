@@ -9,23 +9,18 @@ import (
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRelayer(t *testing.T) {
-	signedBatchId := big.NewInt(2)
-
 	relayerConfig := &core.RelayerConfiguration{
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
@@ -56,68 +51,23 @@ func TestRelayer(t *testing.T) {
 		Config:    json.RawMessage(jsonData),
 	}
 
-	scAddress := relayerConfig.Bridge.SmartContractAddress
-
-	wallet, err := ethtxhelper.NewEthTxWallet(dummyMumbaiAccPk)
-	assert.NoError(t, err)
-
-	ethClient, err := ethclient.Dial(relayerConfig.Bridge.NodeUrl)
-	assert.NoError(t, err)
-	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
+	_, err := ethtxhelper.NewEthTxWallet(dummyMumbaiAccPk)
 	assert.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	contract, err := contractbinding.NewTestContract(common.HexToAddress(scAddress), txHelper.GetClient())
-	assert.NoError(t, err)
-
-	t.Run("check get data directly from contract", func(t *testing.T) {
-		// Get value for comparison
-
-		res, err := contract.GetConfirmedBatch(&bind.CallOpts{
-			Context: ctx,
-			From:    wallet.GetAddress(),
-		}, relayerConfig.Base.ChainId)
-		require.NoError(t, err)
-
-		contractData, err := bridge.GetConfirmedBatch(ctx, txHelper, relayerConfig.Base.ChainId, relayerConfig.Bridge.SmartContractAddress)
-		assert.NoError(t, err)
-
-		assert.Equal(t, res.Id, contractData.Id)
-		assert.Equal(t, res.RawTransaction, hex.EncodeToString(contractData.RawTransaction))
-		for i, _ := range contractData.MultisigSignatures {
-			assert.Equal(t, res.MultisigSignatures[i], hex.EncodeToString(contractData.MultisigSignatures[i]))
-		}
-		for i, _ := range contractData.FeePayerMultisigSignatures {
-			assert.Equal(t, res.FeePayerMultisigSignatures[i], hex.EncodeToString(contractData.FeePayerMultisigSignatures[i]))
-		}
-
-	})
-
 	assert.NoError(t, err)
 
 	operations, err := GetChainSpecificOperations(chainSpecificConfig)
-	assert.NoError(t, err)
-
-	r := NewRelayer(relayerConfig, hclog.Default(), operations)
+	require.NoError(t, err)
 
 	t.Run("submit tx to cardano chain", func(t *testing.T) {
-		cardanoChainConfig, err := core.ToCardanoChainConfig(chainSpecificConfig)
-		assert.NoError(t, err)
+		bridgeSmartContractMock := &bridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", mock.Anything, mock.Anything).Return(&eth.ConfirmedBatch{}, nil)
 
-		txRaw, txHash := createTxRawHelper(t, cardanoChainConfig, signedBatchId)
-		_, witnessesBytes := generateWitnessesHelper(t, txHash)
-
-		confirmedBatch := bridge.ConfirmedBatch{
-			Id:                         signedBatchId.String(),
-			RawTransaction:             txRaw,
-			MultisigSignatures:         witnessesBytes[0:3],
-			FeePayerMultisigSignatures: witnessesBytes[3:],
-		}
-
-		err = r.operations.SendTx(&confirmedBatch)
-		assert.NoError(t, err)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operations)
+		require.NoError(t, r.execute(ctx))
 	})
 }
 
@@ -186,3 +136,14 @@ var (
 		},
 	}
 )
+
+type bridgeSmartContractMock struct {
+	mock.Mock
+}
+
+func (m *bridgeSmartContractMock) GetConfirmedBatch(
+	ctx context.Context, destinationChain string) (*eth.ConfirmedBatch, error) {
+	args := m.Called(ctx, destinationChain)
+
+	return args.Get(0).(*eth.ConfirmedBatch), args.Error(1)
+}

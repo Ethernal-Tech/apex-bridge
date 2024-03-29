@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
@@ -20,7 +21,7 @@ type RelayerManagerImpl struct {
 
 var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
 
-func NewRelayerManager(config *core.RelayerManagerConfiguration) *RelayerManagerImpl {
+func NewRelayerManager(config *core.RelayerManagerConfiguration, customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
 	var relayers = map[string]core.Relayer{}
 	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
@@ -35,11 +36,18 @@ func NewRelayerManager(config *core.RelayerManagerConfiguration) *RelayerManager
 			return nil
 		}
 
+		var bridgeSmartContract eth.IBridgeSmartContract
+		if len(customBridgeSc) == 0 {
+			bridgeSmartContract = eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress)
+		} else {
+			bridgeSmartContract = customBridgeSc[0]
+		}
+
 		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{
 			Bridge:        config.Bridge,
 			Base:          chainConfig.Base,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)), operations)
+		}, bridgeSmartContract, logger.Named(strings.ToUpper(chain)), operations)
 	}
 
 	return &RelayerManagerImpl{
