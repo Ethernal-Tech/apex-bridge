@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
@@ -142,8 +143,8 @@ func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.
 	var operations core.ChainOperations
 
 	// Create the appropriate chain-specific configuration based on the chain type
-	switch config.ChainType {
-	case "Cardano":
+	switch strings.ToLower(config.ChainType) {
+	case "cardano":
 		var cardanoChainConfig core.CardanoChainConfig
 		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
@@ -151,7 +152,7 @@ func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.
 
 		cardanoWallet, err := wallet.LoadWallet(pkPath, false)
 		if err != nil {
-			return nil, fmt.Errorf("error while loading wallet info: %v\n", err)
+			return nil, fmt.Errorf("error while loading wallet info: %v", err)
 		}
 
 		operations = NewCardanoChainOperations(cardanoChainConfig, *cardanoWallet)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -50,8 +51,10 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 }
 
 func (e *EthHelperWrapper) ProcessError(err error) error {
-	// TODO: handle connection lost error to trigger recreation of a eth tx helper/client
-	if errors.Is(err, errors.New("connection lost")) {
+	// TODO: verify if these errors are the only ones we need to handle
+	if errors.Is(err, net.ErrClosed) || errors.Is(err, context.DeadlineExceeded) {
+		e.ethTxHelper = nil
+	} else if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 		e.ethTxHelper = nil
 	}
 
