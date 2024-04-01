@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBatcherManagerConfig(t *testing.T) {
@@ -111,6 +112,73 @@ func TestBatcherManagerOperations(t *testing.T) {
 			assert.Equal(t, sigWithString, sigWithWallet)
 		}
 	}
+}
+
+func TestBatcherManagerCreation(t *testing.T) {
+	jsonData := []byte(`{
+		"testnetMagic": 2,
+		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+		"atLeastValidators": 0.6666666666666666,
+		"potentialFee": 300000
+		}`)
+
+	rawMessage := json.RawMessage(jsonData)
+
+	config := &core.BatcherManagerConfiguration{
+		Chains: map[string]core.ChainConfig{
+			"prime": {
+				Base: core.BaseConfig{
+					ChainId:     "prime",
+					KeysDirPath: "../keys/prime",
+				},
+				ChainSpecific: core.ChainSpecific{
+					ChainType: "Cardano",
+					Config:    rawMessage,
+				},
+			},
+		},
+		Bridge: core.BridgeConfig{
+			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
+			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
+			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
+		},
+		PullTimeMilis: 2500,
+	}
+
+	t.Run("creation fails - invalid operations", func(t *testing.T) {
+		invalidConfig := &core.BatcherManagerConfiguration{
+			Chains: map[string]core.ChainConfig{
+				"prime": {
+					Base: core.BaseConfig{
+						ChainId: "prime",
+					},
+					ChainSpecific: core.ChainSpecific{
+						ChainType: "Cardano",
+						Config:    json.RawMessage(""),
+					},
+				},
+			},
+		}
+
+		manager := NewBatcherManager(invalidConfig, make(map[string]core.ChainOperations))
+		require.Nil(t, manager)
+	})
+
+	t.Run("create manager without mocks", func(t *testing.T) {
+		manager := NewBatcherManager(config, make(map[string]core.ChainOperations))
+		require.NotNil(t, manager)
+	})
+
+	t.Run("create manager with chain operations mock", func(t *testing.T) {
+		manager := NewBatcherManager(config, map[string]core.ChainOperations{"prime": nil})
+		require.NotNil(t, manager)
+	})
+
+	t.Run("create manager with chain operations and bridge mock", func(t *testing.T) {
+		manager := NewBatcherManager(config, map[string]core.ChainOperations{"prime": nil}, nil)
+		require.NotNil(t, manager)
+	})
 }
 
 func walletLoadingHelper(directory string) (string, string, error) {

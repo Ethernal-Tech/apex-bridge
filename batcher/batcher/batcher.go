@@ -49,11 +49,13 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 		case <-ticker.C:
 		}
 
-		b.execute(ctx)
+		if err := b.execute(ctx); err != nil {
+			b.logger.Error("execute failed", "err", err)
+		}
 	}
 }
 
-func (b *BatcherImpl) execute(ctx context.Context) {
+func (b *BatcherImpl) execute(ctx context.Context) error {
 	var (
 		err error
 	)
@@ -61,13 +63,12 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	// Check if I should create batch
 	shouldCreateBatch, err := b.bridgeSmartContract.ShouldCreateBatch(ctx, b.config.Base.ChainId)
 	if err != nil {
-		b.logger.Error("Failed to query bridge.ShouldCreateBatch", "err", err)
-		return
+		return fmt.Errorf("failed to query bridge.ShouldCreateBatch: %v", err)
 	}
 
 	if !shouldCreateBatch {
 		b.logger.Info("Called ShouldCreateBatch before it supposed to or already created this batch")
-		return
+		return nil
 	}
 	b.logger.Info("Starting batch creation process")
 
@@ -75,16 +76,14 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Base.ChainId)
 	if err != nil {
-		b.logger.Error("Failed to query bridge.GetConfirmedTransactions", "err", err)
-		return
+		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %v", err)
 	}
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
 	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions)
 	if err != nil {
-		b.logger.Error("Failed to generate batch transaction", "err", err)
-		return
+		return fmt.Errorf("failed to generate batch transaction: %v", err)
 	}
 
 	b.logger.Info("Created tx", "txHash", txHash)
@@ -92,8 +91,7 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash)
 	if err != nil {
-		b.logger.Error("Failed to sign batch transaction", "err", err)
-		return
+		return fmt.Errorf("failed to sign batch transaction: %v", err)
 	}
 
 	b.logger.Info("Batch successfully signed")
@@ -113,10 +111,11 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	b.logger.Info("Submiting signed batch to smart contract")
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
-		b.logger.Error("Failed to submit signed batch", "err", err)
-		return
+		return fmt.Errorf("failed to submit signed batch: %v", err)
 	}
 	b.logger.Info("Batch successfully submited")
+
+	return nil
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
