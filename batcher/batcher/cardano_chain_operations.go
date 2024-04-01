@@ -4,11 +4,9 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -29,10 +27,9 @@ func NewCardanoChainOperations(config core.CardanoChainConfig, wallet cardano.Ca
 // GenerateBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	ctx context.Context,
-	ethTxHelper ethtxhelper.IEthTxHelper,
-	smartContractAddress string,
+	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
-	confirmedTransactions []contractbinding.TestContractConfirmedTransaction) ([]byte, string, *contractbinding.TestContractUTXOs, error) {
+	confirmedTransactions []eth.ConfirmedTransaction) ([]byte, string, *eth.UTXOs, error) {
 
 	var outputs []cardanowallet.TxOutput
 	var txCost *big.Int = big.NewInt(0)
@@ -46,7 +43,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		}
 	}
 
-	inputUtxos, err := bridge.GetAvailableUTXOs(ctx, ethTxHelper, smartContractAddress, destinationChain, txCost)
+	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain, txCost)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -161,13 +158,5 @@ var (
 		"b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56",
 		"39c196d28f804f70704b6dec5991fbb1112e648e067d17ca7abe614b",
 		"adea661341df075349cbb2ad02905ce1828f8cf3e66f5012d48c3168",
-	}
-	dummySigningKeys = []string{
-		"58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0",
-		"5820ccdae0d1cd3fa9be16a497941acff33b9aa20bdbf2f9aa5715942d152988e083",
-		"582094bfc7d65a5d936e7b527c93ea6bf75de51029290b1ef8c8877bffe070398b40",
-		"58204cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9",
-		"58208fcc8cac6b7fedf4c30aed170633df487642cb22f7e8615684e2b98e367fcaa3",
-		"582058fb35da120c65855ad691dadf5681a2e4fc62e9dcda0d0774ff6fdc463a679a",
 	}
 )

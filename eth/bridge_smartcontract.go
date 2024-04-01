@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -13,12 +14,17 @@ type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
+	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
+	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
+	GetAvailableUTXOs(ctx context.Context, destinationChain string, txCost *big.Int) (*UTXOs, error)
 }
 
 type BridgeSmartContractImpl struct {
 	smartContractAddress string
 	ethHelper            *EthHelperWrapper
 }
+
+var _ IBridgeSmartContract = (*BridgeSmartContractImpl)(nil)
 
 func NewBridgeSmartContract(nodeUrl, smartContractAddress string) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
@@ -68,21 +74,21 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		return err
 	}
 
-	contract, err := contractbinding.NewTestContract(
+	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}
 
-	newSignedBatch := contractbinding.TestContractSignedBatch{
-		Id:                        signedBatch.Id.String(),
+	newSignedBatch := SignedBatch{
+		Id:                        signedBatch.Id,
 		DestinationChainId:        signedBatch.DestinationChainId,
 		RawTransaction:            signedBatch.RawTransaction,
 		MultisigSignature:         signedBatch.MultisigSignature,
 		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
-		IncludedTransactions:      []contractbinding.TestContractConfirmedTransaction{},
-		UsedUTXOs:                 contractbinding.TestContractUTXOs{},
+		IncludedTransactions:      []ConfirmedTransaction{},
+		UsedUTXOs:                 UTXOs{},
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -90,4 +96,65 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	})
 
 	return bsc.ethHelper.ProcessError(err)
+}
+
+func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return false, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return false, bsc.ethHelper.ProcessError(err)
+	}
+
+	return contract.ShouldCreateBatch(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
+}
+
+func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		return contract.GetConfirmedTransactions(opts, destinationChain)
+	})
+
+	return nil, bsc.ethHelper.ProcessError(err)
+}
+
+func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string, txCost *big.Int) (*UTXOs, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain, txCost)
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return &availableUtxos, nil
 }

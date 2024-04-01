@@ -107,7 +107,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 			sigWithString, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", cardano.NewSigningKey(multisigAddress))
 			assert.NoError(t, err)
 			sigWithWallet, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", concreteChainOp.CardanoWallet.MultiSig)
-
+			assert.NoError(t, err)
 			assert.Equal(t, sigWithString, sigWithWallet)
 		}
 	}

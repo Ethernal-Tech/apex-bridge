@@ -46,7 +46,7 @@ func TestRelayerExecute(t *testing.T) {
 	testError := errors.New("test err")
 
 	t.Run("execute test fail to retrieve", func(t *testing.T) {
-		bridgeSmartContractMock := &bridgeSmartContractMock{}
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(nil, testError)
 
@@ -57,7 +57,7 @@ func TestRelayerExecute(t *testing.T) {
 	})
 
 	t.Run("execute test fail to send", func(t *testing.T) {
-		bridgeSmartContractMock := &bridgeSmartContractMock{}
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(testError)
@@ -69,7 +69,7 @@ func TestRelayerExecute(t *testing.T) {
 	})
 
 	t.Run("execute test valid", func(t *testing.T) {
-		bridgeSmartContractMock := &bridgeSmartContractMock{}
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(nil)
@@ -133,25 +133,6 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})
-}
-
-type bridgeSmartContractMock struct {
-	mock.Mock
-}
-
-func (m *bridgeSmartContractMock) GetConfirmedBatch(
-	ctx context.Context, destinationChain string) (*eth.ConfirmedBatch, error) {
-	args := m.Called(ctx, destinationChain)
-
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	return args.Get(0).(*eth.ConfirmedBatch), args.Error(1)
-}
-
-func (m *bridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedBatch eth.SignedBatch) error {
-	return m.Called(ctx, signedBatch).Error(0)
 }
 
 type cardanoChainOperationsMock struct {

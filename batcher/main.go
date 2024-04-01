@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 )
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	batcherManager := batcher_manager.NewBatcherManager(config)
+	batcherManager := batcher_manager.NewBatcherManager(config, make(map[string]core.ChainOperations))
 	if batcherManager == nil {
 		fmt.Fprintf(os.Stderr, "Failed to create batcher manager.")
 		os.Exit(1)

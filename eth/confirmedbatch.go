@@ -7,6 +7,8 @@ import (
 )
 
 type SignedBatch = contractbinding.IBridgeContractStructsSignedBatch
+type ConfirmedTransaction = contractbinding.IBridgeContractStructsConfirmedTransaction
+type UTXOs = contractbinding.IBridgeContractStructsUTXOs
 
 type ConfirmedBatch struct {
 	Id                         string

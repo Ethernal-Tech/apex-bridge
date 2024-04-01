@@ -5,23 +5,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	wallet "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
 )
 
 type BatcherImpl struct {
-	config     *core.BatcherConfiguration
-	logger     hclog.Logger
-	ethClient  *ethclient.Client
-	operations core.ChainOperations
+	config              *core.BatcherConfiguration
+	logger              hclog.Logger
+	operations          core.ChainOperations
+	bridgeSmartContract eth.IBridgeSmartContract
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -29,12 +27,12 @@ var _ core.Batcher = (*BatcherImpl)(nil)
 func NewBatcher(
 	config *core.BatcherConfiguration,
 	logger hclog.Logger,
-	operations core.ChainOperations) *BatcherImpl {
+	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract) *BatcherImpl {
 	return &BatcherImpl{
-		config:     config,
-		logger:     logger,
-		ethClient:  nil,
-		operations: operations,
+		config:              config,
+		logger:              logger,
+		operations:          operations,
+		bridgeSmartContract: bridgeSmartContract,
 	}
 }
 
@@ -60,27 +58,10 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 		err error
 	)
 
-	if b.ethClient == nil {
-		b.ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
-		if err != nil {
-			b.logger.Error("Failed to dial bridge", "err", err)
-			return
-		}
-	}
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(b.ethClient))
-	if err != nil {
-		// In case of error, reset ethClient to nil to try again in the next iteration.
-		b.ethClient = nil
-		return
-	}
-
 	// Check if I should create batch
-	shouldCreateBatch, err := bridge.ShouldCreateBatch(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId)
+	shouldCreateBatch, err := b.bridgeSmartContract.ShouldCreateBatch(ctx, b.config.Base.ChainId)
 	if err != nil {
 		b.logger.Error("Failed to query bridge.ShouldCreateBatch", "err", err)
-
-		b.ethClient = nil
 		return
 	}
 
@@ -90,17 +71,17 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	}
 	b.logger.Info("Starting batch creation process")
 
+	b.logger.Info("Query smart contract for confirmed transactions")
 	// Get confirmed transactions from smart contract
-	confirmedTransactions, err := bridge.GetConfirmedTransactions(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId)
+	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Base.ChainId)
 	if err != nil {
 		b.logger.Error("Failed to query bridge.GetConfirmedTransactions", "err", err)
-
-		b.ethClient = nil
 		return
 	}
+	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
-	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId, confirmedTransactions)
+	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions)
 	if err != nil {
 		b.logger.Error("Failed to generate batch transaction", "err", err)
 		return
@@ -119,8 +100,8 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 
 	// TODO: Update ID
 	// Submit batch to smart contract
-	signedBatch := contractbinding.TestContractSignedBatch{
-		Id:                        "",
+	signedBatch := eth.SignedBatch{
+		Id:                        big.NewInt(0),
 		DestinationChainId:        b.config.Base.ChainId,
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),
@@ -129,9 +110,9 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 		UsedUTXOs:                 *utxos,
 	}
 
-	err = bridge.SubmitSignedBatch(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, signedBatch, b.config.Bridge.SigningKey)
+	b.logger.Info("Submiting signed batch to smart contract")
+	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
-		b.ethClient = nil
 		b.logger.Error("Failed to submit signed batch", "err", err)
 		return
 	}
