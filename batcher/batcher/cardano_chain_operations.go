@@ -43,7 +43,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		}
 	}
 
-	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain, txCost)
+	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
 	if err != nil {
 		return nil, "", nil, err
 	}

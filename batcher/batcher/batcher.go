@@ -98,13 +98,14 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	// TODO: Update ID
 	// Submit batch to smart contract
+	// TODO: What are the included txs? nonces?
 	signedBatch := eth.SignedBatch{
 		Id:                        big.NewInt(0),
 		DestinationChainId:        b.config.Base.ChainId,
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),
 		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),
-		IncludedTransactions:      confirmedTransactions,
+		IncludedTransactions:      []*big.Int{},
 		UsedUTXOs:                 *utxos,
 	}
 

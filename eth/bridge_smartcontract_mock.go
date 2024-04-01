@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -33,8 +32,8 @@ func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destina
 	return args.Get(0).(bool), args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destinationChain string, txCost *big.Int) (*UTXOs, error) {
-	args := m.Called(ctx, destinationChain, txCost)
+func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error) {
+	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

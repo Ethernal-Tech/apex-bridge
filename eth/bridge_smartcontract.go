@@ -16,7 +16,7 @@ type IBridgeSmartContract interface {
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
-	GetAvailableUTXOs(ctx context.Context, destinationChain string, txCost *big.Int) (*UTXOs, error)
+	GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -87,7 +87,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		RawTransaction:            signedBatch.RawTransaction,
 		MultisigSignature:         signedBatch.MultisigSignature,
 		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
-		IncludedTransactions:      []ConfirmedTransaction{},
+		IncludedTransactions:      []*big.Int{},
 		UsedUTXOs:                 UTXOs{},
 	}
 
@@ -129,14 +129,12 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(ctx context.Context
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
-	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.GetConfirmedTransactions(opts, destinationChain)
-	})
-
-	return nil, bsc.ethHelper.ProcessError(err)
+	return contract.GetConfirmedTransactions(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
 }
 
-func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string, txCost *big.Int) (*UTXOs, error) {
+func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -151,7 +149,7 @@ func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, desti
 
 	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain, txCost)
+	}, destinationChain)
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
