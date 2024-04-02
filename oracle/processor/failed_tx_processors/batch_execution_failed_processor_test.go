@@ -110,6 +110,6 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
-		require.Equal(t, big.NewInt(int64(batchNonceId)), claims.BatchExecutionFailedClaims[0].BatchNonceID)
+		require.Equal(t, new(big.Int).SetUint64(batchNonceId), claims.BatchExecutionFailedClaims[0].BatchNonceID)
 	})
 }

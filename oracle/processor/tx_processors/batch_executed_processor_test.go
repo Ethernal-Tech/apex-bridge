@@ -189,13 +189,13 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Equal(t, big.NewInt(int64(batchNonceId)), claims.BatchExecutedClaims[0].BatchNonceID)
+		require.Equal(t, new(big.Int).SetUint64(batchNonceId), claims.BatchExecutedClaims[0].BatchNonceID)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, len(txOutputs))
 		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].AddressUTXO, txOutputs[0].Address)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, big.NewInt(int64(txOutputs[0].Amount)))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[0].Amount))
 		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].AddressUTXO, txOutputs[1].Address)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].Amount, big.NewInt(int64(txOutputs[1].Amount)))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].Amount, new(big.Int).SetUint64(txOutputs[1].Amount))
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {
