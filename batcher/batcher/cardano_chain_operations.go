@@ -64,9 +64,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	// TODO: Get slot from smart contract
-	slotNumber := uint64(44102853 + 5*24*60*60)
-
 	// TODO: Get keyhashes and atLeast from contract
 	// TODO: Create PolicyScript from keyhashes and atLeast
 	// TODO: Generate multisig addresses from keyhashes and atLeast
@@ -89,7 +86,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	txUtxos, multisigUtxos, multisigFeeUtxos, err := GetTxUtxos(ctx, bridgeSmartContract, destinationChain, txCost)
+	txUtxos, err := GetInputUtxos(ctx, bridgeSmartContract, destinationChain, txCost)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -97,22 +94,15 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	txInfos := &cardano.TxInputInfos{
 		TestNetMagic: cco.Config.TestNetMagic,
 		MultiSig: &cardano.TxInputInfo{
-			TxInputUTXOs: *multisigUtxos,
 			PolicyScript: multisigPolicyScript,
 			Address:      multisigAddress,
 		},
 		MultiSigFee: &cardano.TxInputInfo{
-			TxInputUTXOs: *multisigFeeUtxos,
 			PolicyScript: multisigFeePolicyScript,
 			Address:      multisigFeeAddress,
 		},
 	}
-
-	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
-		metadata, txInfos, outputs)
-	if err != nil {
-		return nil, "", nil, err
-	}
+	rawTx, txHash, txUtxos, nil := cco.CreateBatchTx(txUtxos, txCost, metadata, protocolParams, txInfos, outputs)
 
 	return rawTx, txHash, txUtxos, nil
 }
@@ -133,20 +123,12 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 	return witnessMultiSig, witnessMultiSigFee, nil
 }
 
-func GetTxUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int) (
-	*contractbinding.IBridgeContractStructsUTXOs, *cardano.TxInputUTXOs, *cardano.TxInputUTXOs, error) {
+func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBridgeContractStructsUTXOs, txCost *big.Int,
+	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos, outputs []cardanowallet.TxOutput) (
+	[]byte, string, *eth.UTXOs, error) {
 
-	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.MultisigOwnedUTXOs[i].Amount.Cmp(inputUtxos.MultisigOwnedUTXOs[j].Amount) < 0
-	})
-	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.FeePayerOwnedUTXOs[i].Amount.Cmp(inputUtxos.FeePayerOwnedUTXOs[j].Amount) < 0
-	})
+	// TODO: Get slot from smart contract
+	slotNumber := uint64(44102853 + 5*24*60*60)
 
 	var multisigInputsCount uint64 = 0
 	var multisigInputs []cardanowallet.TxInput
@@ -177,13 +159,38 @@ func GetTxUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContrac
 		// multisigFeeInputsCount++
 	}
 
+	// TODO: zakomplikovati
 	inputUtxos.MultisigOwnedUTXOs = inputUtxos.MultisigOwnedUTXOs[0:multisigInputsCount]
 	// utxos.FeePayerOwnedUTXOs = utxos.FeePayerOwnedUTXOs[0:multisigFeeInputsCount]
 
-	multisigUtxos := &cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
-	multisigFeeUtxos := &cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
+	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
+	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
 
-	return inputUtxos, multisigUtxos, multisigFeeUtxos, nil
+	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
+		metadata, txInfos, outputs)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	return rawTx, txHash, inputUtxos, err
+}
+
+func GetInputUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int) (
+	*contractbinding.IBridgeContractStructsUTXOs, error) {
+
+	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.MultisigOwnedUTXOs[i].Amount.Cmp(inputUtxos.MultisigOwnedUTXOs[j].Amount) < 0
+	})
+	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.FeePayerOwnedUTXOs[i].Amount.Cmp(inputUtxos.FeePayerOwnedUTXOs[j].Amount) < 0
+	})
+
+	return inputUtxos, err
 }
 
 var (
