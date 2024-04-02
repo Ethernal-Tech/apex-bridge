@@ -80,8 +80,10 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
+	// TODO: Change when smart contract gets updated
+	batchNonceId := big.NewInt(0)
 	// Generate batch transaction
-	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions)
+	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchNonceId)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction: %v", err)
 	}

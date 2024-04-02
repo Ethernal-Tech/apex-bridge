@@ -10,6 +10,8 @@ type SignedBatch = contractbinding.IBridgeContractStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeContractStructsConfirmedTransaction
 type UTXOs = contractbinding.IBridgeContractStructsUTXOs
 type UTXO = contractbinding.IBridgeContractStructsUTXO
+type CardanoBlock = contractbinding.IBridgeContractStructsCardanoBlock
+type ValidatorCardanoData = contractbinding.IBridgeContractStructsValidatorCardanoData
 
 type ConfirmedBatch struct {
 	Id                         string

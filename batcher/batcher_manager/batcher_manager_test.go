@@ -24,7 +24,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 		"testnetMagic": 2,
 		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
 		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-		"atLeastValidators": 0.6666666666666666,
+		"atLeastValidators": 3,
 		"potentialFee": 300000
 		}`)
 

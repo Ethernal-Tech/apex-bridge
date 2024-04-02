@@ -51,3 +51,23 @@ func (m *BridgeSmartContractMock) GetConfirmedTransactions(ctx context.Context, 
 
 	return args.Get(0).([]ConfirmedTransaction), args.Error(1)
 }
+
+func (m *BridgeSmartContractMock) GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error) {
+	args := m.Called(ctx, destinationChain)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).(*CardanoBlock), args.Error(1)
+}
+
+func (m *BridgeSmartContractMock) GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error) {
+	args := m.Called(ctx, destinationChain)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).([]ValidatorCardanoData), args.Error(1)
+}
