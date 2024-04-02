@@ -59,7 +59,7 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.Brid
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiver.Address,
-			Amount:             new(big.Int).SetUint64(receiver.Amount), // TODO: reconcile indexer and sc types
+			Amount:             new(big.Int).SetUint64(receiver.Amount),
 		})
 	}
 

@@ -56,15 +56,15 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClai
 	for _, utxo := range tx.Outputs {
 		utxos = append(utxos, core.UTXO{
 			TxHash:  tx.Hash,
-			TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)), // TODO: is this right?
-			Amount:  new(big.Int).SetUint64(utxo.Amount),     // TODO: reconcile indexer and sc types
+			TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
+			Amount:  new(big.Int).SetUint64(utxo.Amount),
 		})
 	}
 
 	claim := core.BatchExecutedClaim{
 		ObservedTransactionHash: tx.Hash,
 		ChainID:                 tx.OriginChainId,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId), // TODO: reconcile indexer and sc types
+		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId),
 		OutputUTXOs: core.UTXOs{
 			MultisigOwnedUTXOs: utxos,
 		},

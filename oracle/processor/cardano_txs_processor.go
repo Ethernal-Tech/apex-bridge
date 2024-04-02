@@ -100,7 +100,9 @@ func (bp *CardanoTxsProcessorImpl) Start() error {
 	bp.logger.Debug("Starting CardanoTxsProcessor")
 
 	for {
-		bp.checkShouldGenerateClaims()
+		if !bp.checkShouldGenerateClaims() {
+			return nil
+		}
 	}
 }
 
@@ -110,7 +112,7 @@ func (bp *CardanoTxsProcessorImpl) Stop() error {
 	return nil
 }
 
-func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
+func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
 	bp.logger.Debug("Checking if should generate claims")
 
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
@@ -126,12 +128,14 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() {
 	for _, key := range keys {
 		select {
 		case <-bp.closeCh:
-			return
+			return false
 		case <-ticker.C:
 		}
 
 		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainId)
 	}
+
+	return true
 }
 
 func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
