@@ -54,7 +54,7 @@ func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *c
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, core.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
 		ChainID:                 tx.ChainId,
-		BatchNonceID:            big.NewInt(int64(metadata.BatchNonceId)), // TODO: reconcile indexer and sc types
+		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId), // TODO: reconcile indexer and sc types
 	})
 }
 

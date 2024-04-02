@@ -490,10 +490,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, destinationChainId, claims.BridgingRequestClaims[0].DestinationChainID)
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, receivers[0].Address, claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		require.Equal(t, big.NewInt(int64(receivers[0].Amount)), claims.BridgingRequestClaims[0].Receivers[0].Amount)
+		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 
 		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
-		//require.Equal(t, txOutputs[0].Address, claims.BridgingRequestClaims[0].OutputUTXO.AddressUTXO)
-		require.Equal(t, big.NewInt(int64(txOutputs[0].Amount)), claims.BridgingRequestClaims[0].OutputUTXO.Amount)
+		require.Equal(t, new(big.Int).SetUint64(txOutputs[0].Amount), claims.BridgingRequestClaims[0].OutputUTXO.Amount)
 	})
 }
