@@ -7,11 +7,15 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
+
+// TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
+var minUtxoAmount = uint64(1000000)
 
 type CardanoChainOperations struct {
 	Config        core.CardanoChainConfig
@@ -43,17 +47,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 			txCost.Add(txCost, receiver.Amount)
 		}
 	}
-
-	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
-	if err != nil {
-		return nil, "", nil, err
-	}
-	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.MultisigOwnedUTXOs[i].Nonce < inputUtxos.MultisigOwnedUTXOs[j].Nonce
-	})
-	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.FeePayerOwnedUTXOs[i].Nonce < inputUtxos.FeePayerOwnedUTXOs[j].Nonce
-	})
 
 	// TODO: Create correct metadata
 	metadata, err := cardano.CreateMetaData(big.NewInt(1))
@@ -87,26 +80,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	var multisigInputs []cardanowallet.TxInput
-	var multisigInputsSum uint64 = 0
-	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
-		multisigInputs = append(multisigInputs, cardanowallet.TxInput{
-			Hash:  utxo.TxHash,
-			Index: uint32(utxo.TxIndex.Uint64()),
-		})
-		multisigInputsSum += utxo.Amount.Uint64()
-	}
-
-	var multisigFeeInputs []cardanowallet.TxInput
-	var multisigFeeInputsSum uint64 = 0
-	for _, utxo := range inputUtxos.FeePayerOwnedUTXOs {
-		multisigFeeInputs = append(multisigFeeInputs, cardanowallet.TxInput{
-			Hash:  utxo.TxHash,
-			Index: uint32(utxo.TxIndex.Uint64()),
-		})
-		multisigFeeInputsSum += utxo.Amount.Uint64()
-	}
-
 	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
 		return nil, "", nil, err
@@ -116,18 +89,21 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
+	txUtxos, multisigUtxos, multisigFeeUtxos, err := GetTxUtxos(ctx, bridgeSmartContract, destinationChain, txCost)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
 	txInfos := &cardano.TxInputInfos{
 		TestNetMagic: cco.Config.TestNetMagic,
 		MultiSig: &cardano.TxInputInfo{
+			TxInputUTXOs: *multisigUtxos,
 			PolicyScript: multisigPolicyScript,
-			Inputs:       multisigInputs,
-			InputsSum:    multisigInputsSum,
 			Address:      multisigAddress,
 		},
 		MultiSigFee: &cardano.TxInputInfo{
+			TxInputUTXOs: *multisigFeeUtxos,
 			PolicyScript: multisigFeePolicyScript,
-			Inputs:       multisigFeeInputs,
-			InputsSum:    multisigFeeInputsSum,
 			Address:      multisigFeeAddress,
 		},
 	}
@@ -138,7 +114,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	return rawTx, txHash, inputUtxos, nil
+	return rawTx, txHash, txUtxos, nil
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -155,6 +131,59 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 	}
 
 	return witnessMultiSig, witnessMultiSigFee, nil
+}
+
+func GetTxUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int) (
+	*contractbinding.IBridgeContractStructsUTXOs, *cardano.TxInputUTXOs, *cardano.TxInputUTXOs, error) {
+
+	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.MultisigOwnedUTXOs[i].Amount.Cmp(inputUtxos.MultisigOwnedUTXOs[j].Amount) < 0
+	})
+	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.FeePayerOwnedUTXOs[i].Amount.Cmp(inputUtxos.FeePayerOwnedUTXOs[j].Amount) < 0
+	})
+
+	var multisigInputsCount uint64 = 0
+	var multisigInputs []cardanowallet.TxInput
+	var multisigInputsSum uint64 = 0
+	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
+		multisigInputs = append(multisigInputs, cardanowallet.TxInput{
+			Hash:  utxo.TxHash,
+			Index: uint32(utxo.TxIndex.Uint64()),
+		})
+		multisigInputsSum += utxo.Amount.Uint64()
+		multisigInputsCount++
+
+		if multisigInputsSum > txCost.Uint64()+minUtxoAmount || multisigInputsSum == txCost.Uint64() {
+			break
+		}
+	}
+
+	// We are taking all available UTXOs for fee so no need to check anything (for now)
+	// var multisigFeeInputsCount uint64 = 0
+	var multisigFeeInputs []cardanowallet.TxInput
+	var multisigFeeInputsSum uint64 = 0
+	for _, utxo := range inputUtxos.FeePayerOwnedUTXOs {
+		multisigFeeInputs = append(multisigFeeInputs, cardanowallet.TxInput{
+			Hash:  utxo.TxHash,
+			Index: uint32(utxo.TxIndex.Uint64()),
+		})
+		multisigFeeInputsSum += utxo.Amount.Uint64()
+		// multisigFeeInputsCount++
+	}
+
+	inputUtxos.MultisigOwnedUTXOs = inputUtxos.MultisigOwnedUTXOs[0:multisigInputsCount]
+	// utxos.FeePayerOwnedUTXOs = utxos.FeePayerOwnedUTXOs[0:multisigFeeInputsCount]
+
+	multisigUtxos := &cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
+	multisigFeeUtxos := &cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
+
+	return inputUtxos, multisigUtxos, multisigFeeUtxos, nil
 }
 
 var (
