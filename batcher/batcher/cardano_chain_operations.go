@@ -3,6 +3,7 @@ package batcher
 import (
 	"context"
 	"math/big"
+	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -47,6 +48,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	if err != nil {
 		return nil, "", nil, err
 	}
+	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.MultisigOwnedUTXOs[i].Nonce < inputUtxos.MultisigOwnedUTXOs[j].Nonce
+	})
+	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
+		return inputUtxos.FeePayerOwnedUTXOs[i].Nonce < inputUtxos.FeePayerOwnedUTXOs[j].Nonce
+	})
 
 	// TODO: Create correct metadata
 	metadata, err := cardano.CreateMetaData(big.NewInt(1))
