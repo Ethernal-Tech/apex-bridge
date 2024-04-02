@@ -114,12 +114,6 @@ func TestRelayerManagerCreation(t *testing.T) {
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 		},
 		PullTimeMilis: 1000,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   "./relayer_logs",
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
 	}
 
 	t.Run("create manager fail - invalid operations", func(t *testing.T) {

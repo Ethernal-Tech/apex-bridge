@@ -3,8 +3,7 @@ package core
 import (
 	"context"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 )
 
 type BatcherManager interface {
@@ -17,7 +16,7 @@ type Batcher interface {
 }
 
 type ChainOperations interface {
-	GenerateBatchTransaction(ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, smartContractAddress string, destinationChain string, confirmedTransactions []contractbinding.TestContractConfirmedTransaction) ([]byte, string, *contractbinding.TestContractUTXOs, error)
+	GenerateBatchTransaction(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction) ([]byte, string, *eth.UTXOs, error)
 	SignBatchTransaction(txHash string) ([]byte, []byte, error)
 }
 

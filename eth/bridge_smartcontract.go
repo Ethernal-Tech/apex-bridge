@@ -2,12 +2,10 @@ package eth
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -15,37 +13,40 @@ import (
 type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
+	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
+	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
+	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
+	GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error)
 }
 
 type BridgeSmartContractImpl struct {
 	smartContractAddress string
-	nodeUrl              string
-	ethTxHelper          ethtxhelper.IEthTxHelper
-	wallet               ethtxhelper.IEthTxWallet
+	ethHelper            *EthHelperWrapper
 }
+
+var _ IBridgeSmartContract = (*BridgeSmartContractImpl)(nil)
 
 func NewBridgeSmartContract(nodeUrl, smartContractAddress string) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
-		nodeUrl:              nodeUrl,
 		smartContractAddress: smartContractAddress,
+		ethHelper:            NewEthHelperWrapper(nodeUrl),
 	}
 }
 
 func NewBridgeSmartContractWithWallet(nodeUrl, smartContractAddress, signingKey string) (*BridgeSmartContractImpl, error) {
-	ethWallet, err := ethtxhelper.NewEthTxWallet(signingKey)
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeUrl, signingKey)
 	if err != nil {
 		return nil, err
 	}
 
 	return &BridgeSmartContractImpl{
-		nodeUrl:              nodeUrl,
 		smartContractAddress: smartContractAddress,
-		wallet:               ethWallet,
+		ethHelper:            ethHelper,
 	}, nil
 }
 
 func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(ctx context.Context, destinationChain string) (*ConfirmedBatch, error) {
-	ethTxHelper, err := bsc.getEthHelper()
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
 	}
@@ -54,66 +55,104 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(ctx context.Context, desti
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.processError(err)
+		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
 	result, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
 	}, destinationChain)
 	if err != nil {
-		return nil, bsc.processError(err)
+		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
 	return NewConfirmedBatch(result)
 }
 
-func (bsc *BridgeSmartContractImpl) getEthHelper(opts ...ethtxhelper.TxRelayerOption) (ethtxhelper.IEthTxHelper, error) {
-	if bsc.ethTxHelper != nil {
-		return bsc.ethTxHelper, nil
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return err
 	}
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(opts...)
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return bsc.ethHelper.ProcessError(err)
+	}
+
+	newSignedBatch := SignedBatch{
+		Id:                        signedBatch.Id,
+		DestinationChainId:        signedBatch.DestinationChainId,
+		RawTransaction:            signedBatch.RawTransaction,
+		MultisigSignature:         signedBatch.MultisigSignature,
+		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
+		IncludedTransactions:      []*big.Int{},
+		UsedUTXOs:                 UTXOs{},
+	}
+
+	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		return contract.SubmitSignedBatch(opts, newSignedBatch)
+	})
+
+	return bsc.ethHelper.ProcessError(err)
+}
+
+func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return false, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return false, bsc.ethHelper.ProcessError(err)
+	}
+
+	return contract.ShouldCreateBatch(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
+}
+
+func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
 	}
 
-	bsc.ethTxHelper = ethTxHelper
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
 
-	return ethTxHelper, nil
+	return contract.GetConfirmedTransactions(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
 }
 
-func (bsc *BridgeSmartContractImpl) processError(err error) error {
-	// TODO: handle connection lost error to trigger recreation of a eth tx helper/client
-	if errors.Is(err, errors.New("connection lost")) {
-		bsc.ethTxHelper = nil
-	}
-
-	return err
-}
-
-// sendTx should be called by all public methods that sends tx to the bridge
-func (bsc *BridgeSmartContractImpl) sendTx(ctx context.Context, handler ethtxhelper.SendTxFunc) (string, error) {
-	ethTxHelper, err := bsc.getEthHelper()
+func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	tx, err := ethTxHelper.SendTx(ctx, bsc.wallet, bind.TransactOpts{}, true, handler)
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
 	if err != nil {
-		return "", bsc.processError(err)
+		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
-	// TODO: enable logs bsc.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
-
-	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
 	if err != nil {
-		return "", bsc.processError(err)
+		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		return receipt.BlockHash.String(), fmt.Errorf("receipts status not successful: %v", receipt.Status)
-	}
-	// TODO: enable logs  bsc.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
-
-	return receipt.BlockHash.String(), nil
+	return &availableUtxos, nil
 }

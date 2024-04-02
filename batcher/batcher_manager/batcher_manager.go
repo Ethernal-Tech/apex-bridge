@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
@@ -21,7 +22,7 @@ type BatchManagerImpl struct {
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
 
-func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerImpl {
+func NewBatcherManager(config *core.BatcherManagerConfiguration, customOperations map[string]core.ChainOperations, customBridgeSc ...eth.IBridgeSmartContract) *BatchManagerImpl {
 	var batchers = map[string]core.Batcher{}
 	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
@@ -30,17 +31,31 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration) *BatchManagerIm
 			return nil
 		}
 
-		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific, chainConfig.Base.KeysDirPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
-			return nil
+		var operations core.ChainOperations = customOperations[chain]
+		if operations == nil {
+			operations, err = batcher.GetChainSpecificOperations(chainConfig.ChainSpecific, chainConfig.Base.KeysDirPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
+				return nil
+			}
+		}
+
+		var bridgeSmartContract eth.IBridgeSmartContract
+		if len(customBridgeSc) == 0 {
+			bridgeSmartContract, err = eth.NewBridgeSmartContractWithWallet(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress, config.Bridge.SigningKey)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error while creating bridge smart contract instance: %v\n", err)
+				return nil
+			}
+		} else {
+			bridgeSmartContract = customBridgeSc[0]
 		}
 
 		batchers[chain] = batcher.NewBatcher(&core.BatcherConfiguration{
 			Bridge:        config.Bridge,
 			Base:          chainConfig.Base,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)), operations)
+		}, logger.Named(strings.ToUpper(chain)), operations, bridgeSmartContract)
 	}
 
 	return &BatchManagerImpl{

@@ -5,22 +5,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	wallet "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
 )
 
 type BatcherImpl struct {
-	config     *core.BatcherConfiguration
-	logger     hclog.Logger
-	ethClient  *ethclient.Client
-	operations core.ChainOperations
+	config              *core.BatcherConfiguration
+	logger              hclog.Logger
+	operations          core.ChainOperations
+	bridgeSmartContract eth.IBridgeSmartContract
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -28,12 +27,12 @@ var _ core.Batcher = (*BatcherImpl)(nil)
 func NewBatcher(
 	config *core.BatcherConfiguration,
 	logger hclog.Logger,
-	operations core.ChainOperations) *BatcherImpl {
+	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract) *BatcherImpl {
 	return &BatcherImpl{
-		config:     config,
-		logger:     logger,
-		ethClient:  nil,
-		operations: operations,
+		config:              config,
+		logger:              logger,
+		operations:          operations,
+		bridgeSmartContract: bridgeSmartContract,
 	}
 }
 
@@ -50,59 +49,41 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 		case <-ticker.C:
 		}
 
-		b.execute(ctx)
+		if err := b.execute(ctx); err != nil {
+			b.logger.Error("execute failed", "err", err)
+		}
 	}
 }
 
-func (b *BatcherImpl) execute(ctx context.Context) {
+func (b *BatcherImpl) execute(ctx context.Context) error {
 	var (
 		err error
 	)
 
-	if b.ethClient == nil {
-		b.ethClient, err = ethclient.Dial(b.config.Bridge.NodeUrl)
-		if err != nil {
-			b.logger.Error("Failed to dial bridge", "err", err)
-			return
-		}
-	}
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(b.ethClient))
-	if err != nil {
-		// In case of error, reset ethClient to nil to try again in the next iteration.
-		b.ethClient = nil
-		return
-	}
-
 	// Check if I should create batch
-	shouldCreateBatch, err := bridge.ShouldCreateBatch(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId)
+	shouldCreateBatch, err := b.bridgeSmartContract.ShouldCreateBatch(ctx, b.config.Base.ChainId)
 	if err != nil {
-		b.logger.Error("Failed to query bridge.ShouldCreateBatch", "err", err)
-
-		b.ethClient = nil
-		return
+		return fmt.Errorf("failed to query bridge.ShouldCreateBatch: %v", err)
 	}
 
 	if !shouldCreateBatch {
 		b.logger.Info("Called ShouldCreateBatch before it supposed to or already created this batch")
-		return
+		return nil
 	}
 	b.logger.Info("Starting batch creation process")
 
+	b.logger.Info("Query smart contract for confirmed transactions")
 	// Get confirmed transactions from smart contract
-	confirmedTransactions, err := bridge.GetConfirmedTransactions(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId)
+	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Base.ChainId)
 	if err != nil {
-		b.logger.Error("Failed to query bridge.GetConfirmedTransactions", "err", err)
-
-		b.ethClient = nil
-		return
+		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %v", err)
 	}
+	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
-	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, b.config.Base.ChainId, confirmedTransactions)
+	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions)
 	if err != nil {
-		b.logger.Error("Failed to generate batch transaction", "err", err)
-		return
+		return fmt.Errorf("failed to generate batch transaction: %v", err)
 	}
 
 	b.logger.Info("Created tx", "txHash", txHash)
@@ -110,31 +91,31 @@ func (b *BatcherImpl) execute(ctx context.Context) {
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash)
 	if err != nil {
-		b.logger.Error("Failed to sign batch transaction", "err", err)
-		return
+		return fmt.Errorf("failed to sign batch transaction: %v", err)
 	}
 
 	b.logger.Info("Batch successfully signed")
 
 	// TODO: Update ID
 	// Submit batch to smart contract
-	signedBatch := contractbinding.TestContractSignedBatch{
-		Id:                        "",
+	signedBatch := eth.SignedBatch{
+		Id:                        big.NewInt(0),
 		DestinationChainId:        b.config.Base.ChainId,
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),
 		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),
-		IncludedTransactions:      confirmedTransactions,
+		IncludedTransactions:      []*big.Int{},
 		UsedUTXOs:                 *utxos,
 	}
 
-	err = bridge.SubmitSignedBatch(ctx, ethTxHelper, b.config.Bridge.SmartContractAddress, signedBatch, b.config.Bridge.SigningKey)
+	b.logger.Info("Submiting signed batch to smart contract")
+	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
-		b.ethClient = nil
-		b.logger.Error("Failed to submit signed batch", "err", err)
-		return
+		return fmt.Errorf("failed to submit signed batch: %v", err)
 	}
 	b.logger.Info("Batch successfully submited")
+
+	return nil
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
@@ -142,8 +123,8 @@ func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.
 	var operations core.ChainOperations
 
 	// Create the appropriate chain-specific configuration based on the chain type
-	switch config.ChainType {
-	case "Cardano":
+	switch strings.ToLower(config.ChainType) {
+	case "cardano":
 		var cardanoChainConfig core.CardanoChainConfig
 		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
@@ -151,7 +132,7 @@ func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.
 
 		cardanoWallet, err := wallet.LoadWallet(pkPath, false)
 		if err != nil {
-			return nil, fmt.Errorf("error while loading wallet info: %v\n", err)
+			return nil, fmt.Errorf("error while loading wallet info: %v", err)
 		}
 
 		operations = NewCardanoChainOperations(cardanoChainConfig, *cardanoWallet)

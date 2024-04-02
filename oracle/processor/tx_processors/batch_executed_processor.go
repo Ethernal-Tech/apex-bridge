@@ -55,10 +55,9 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClai
 	var utxos []core.UTXO
 	for _, utxo := range tx.Outputs {
 		utxos = append(utxos, core.UTXO{
-			TxHash:      tx.Hash,
-			TxIndex:     new(big.Int).SetUint64(uint64(tx.Indx)),
-			AddressUTXO: utxo.Address,
-			Amount:      new(big.Int).SetUint64(utxo.Amount),
+			TxHash:  tx.Hash,
+			TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
+			Amount:  new(big.Int).SetUint64(utxo.Amount),
 		})
 	}
 

@@ -493,7 +493,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 
 		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
-		require.Equal(t, txOutputs[0].Address, claims.BridgingRequestClaims[0].OutputUTXO.AddressUTXO)
 		require.Equal(t, new(big.Int).SetUint64(txOutputs[0].Amount), claims.BridgingRequestClaims[0].OutputUTXO.Amount)
 	})
 }
