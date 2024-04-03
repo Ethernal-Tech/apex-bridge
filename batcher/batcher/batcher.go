@@ -66,7 +66,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to query bridge.GetNextBatchId: %v", err)
 	}
 
-	if batchId == big.NewInt(0) {
+	if batchId.Cmp(big.NewInt(0)) == 0 {
 		b.logger.Info("Waiting on a new batch")
 		return nil
 	}
