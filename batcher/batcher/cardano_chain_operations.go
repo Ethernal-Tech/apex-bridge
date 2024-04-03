@@ -160,9 +160,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos, outputs []cardanowallet.TxOutput, slotNumber uint64) (
 	[]byte, string, *eth.UTXOs, error) {
 
-	var err error = nil
-
-	// We are taking all available UTXOs as fee (for now)
+	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	var multisigFeeInputs []cardanowallet.TxInput
 	var multisigFeeInputsSum uint64 = 0
 	for _, utxo := range inputUtxos.FeePayerOwnedUTXOs {
@@ -174,7 +172,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 	}
 	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
 
-	// Create initial UTXO set
+	// Create initial UTXO set with maximum consolidation
 	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, len(inputUtxos.MultisigOwnedUTXOs))
 	var chosenUTXOsCount = 0
 	var chosenUTXOsSum uint64 = 0
@@ -193,11 +191,12 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 		// reduce outputs
 		// adjust txCost
 		// continue
-		err = fmt.Errorf("fatal error, not enough resources")
+		err := fmt.Errorf("fatal error, not enough resources")
 		return nil, "", nil, err
 	}
 
 	for {
+		// Create inputs and sums needed for tx from chosenUTXOs set
 		var multisigInputs []cardanowallet.TxInput
 		var multisigInputsSum uint64 = 0
 		for _, utxo := range chosenUTXOs {
@@ -208,9 +207,10 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 			multisigInputsSum += utxo.Amount.Uint64()
 		}
 
-		inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
+		// inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
 		txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
 
+		// Create Tx
 		rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
 			metadata, txInfos, outputs)
 		if err != nil {
@@ -218,31 +218,38 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 		}
 
 		// TODO: Get real tx size from protocolParams/config
+		// Check if Tx size is appropriate
 		if len(rawTx) < 16000 {
-			// Check if we used big UTXO replace it with biggest acceptable one
+			// Check if we used big UTXO, if yes replace it with smallest acceptable one
+			// len(chosenUTXOs) == chosenUTXOsCount + 1 || chosenUTXOs + big UTXO
 			if len(chosenUTXOs) > chosenUTXOsCount {
 				offset := len(inputUtxos.MultisigOwnedUTXOs) - 1
 				neededAmount := txCost.Uint64() - multisigInputsSum
 				for {
+					// Find last UTXO that covers needed cost and
 					if neededAmount+inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64() > 0 {
 						offset--
 						continue
 					}
+					// Adjust count so we don't return to this loop
+					// len(chosenUTXOs) == chosenUTXOsCount
 					chosenUTXOsCount++
 					break
 				}
 
+				// Replace biggest UTXO with smallest acceptable one and recreate Tx
 				chosenUTXOs[chosenUTXOsCount] = inputUtxos.MultisigOwnedUTXOs[offset+1]
 				continue
 			}
 
 			return rawTx, txHash, inputUtxos, err
 		}
-
-		// Reduce chosenUTXOs by one and add largest one
+		// If Tx size is not appropriate we need to reduce input count
+		// If this is first pass we replace last 2 UTXOs with biggest one
 		if len(chosenUTXOs) == chosenUTXOsCount {
 			chosenUTXOsCount--
 		}
+		// Replace last UTXO with biggest UTXO we have || reducing input size by 1
 		chosenUTXOsCount--
 		chosenUTXOs = chosenUTXOs[:chosenUTXOsCount]
 		chosenUTXOs = append(chosenUTXOs, inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)])
