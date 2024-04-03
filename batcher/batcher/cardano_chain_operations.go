@@ -136,9 +136,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 			Address:      multisigFeeAddress,
 		},
 	}
-	rawTx, txHash, txUtxos, nil := cco.CreateBatchTx(txUtxos, txCost, metadata, protocolParams, txInfos, outputs, lastObservedBlock.BlockSlot)
 
-	return rawTx, txHash, txUtxos, nil
+	return cco.CreateBatchTx(txUtxos, txCost, metadata, protocolParams, txInfos, outputs, lastObservedBlock.BlockSlot)
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -161,24 +160,9 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos, outputs []cardanowallet.TxOutput, slotNumber uint64) (
 	[]byte, string, *eth.UTXOs, error) {
 
-	var multisigInputsCount uint64 = 0
-	var multisigInputs []cardanowallet.TxInput
-	var multisigInputsSum uint64 = 0
-	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
-		multisigInputs = append(multisigInputs, cardanowallet.TxInput{
-			Hash:  utxo.TxHash,
-			Index: uint32(utxo.TxIndex.Uint64()),
-		})
-		multisigInputsSum += utxo.Amount.Uint64()
-		multisigInputsCount++
+	var err error = nil
 
-		if multisigInputsSum > txCost.Uint64()+minUtxoAmount || multisigInputsSum == txCost.Uint64() {
-			break
-		}
-	}
-
-	// We are taking all available UTXOs for fee so no need to check anything (for now)
-	// var multisigFeeInputsCount uint64 = 0
+	// We are taking all available UTXOs as fee (for now)
 	var multisigFeeInputs []cardanowallet.TxInput
 	var multisigFeeInputsSum uint64 = 0
 	for _, utxo := range inputUtxos.FeePayerOwnedUTXOs {
@@ -187,23 +171,82 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 			Index: uint32(utxo.TxIndex.Uint64()),
 		})
 		multisigFeeInputsSum += utxo.Amount.Uint64()
-		// multisigFeeInputsCount++
 	}
-
-	// TODO: zakomplikovati
-	inputUtxos.MultisigOwnedUTXOs = inputUtxos.MultisigOwnedUTXOs[0:multisigInputsCount]
-	// utxos.FeePayerOwnedUTXOs = utxos.FeePayerOwnedUTXOs[0:multisigFeeInputsCount]
-
-	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
 	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
 
-	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
-		metadata, txInfos, outputs)
-	if err != nil {
+	// Create initial UTXO set
+	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, len(inputUtxos.MultisigOwnedUTXOs))
+	var chosenUTXOsCount = 0
+	var chosenUTXOsSum uint64 = 0
+	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
+		chosenUTXOs = append(chosenUTXOs, utxo)
+		chosenUTXOsSum += utxo.Amount.Uint64()
+		chosenUTXOsCount++
+
+		if chosenUTXOsSum > txCost.Uint64()+minUtxoAmount || chosenUTXOsSum == txCost.Uint64() {
+			break
+		}
+	}
+
+	if chosenUTXOsSum < txCost.Uint64()+minUtxoAmount {
+		// TODO:
+		// reduce outputs
+		// adjust txCost
+		// continue
+		err = fmt.Errorf("fatal error, not enough resources")
 		return nil, "", nil, err
 	}
 
-	return rawTx, txHash, inputUtxos, err
+	for {
+		var multisigInputs []cardanowallet.TxInput
+		var multisigInputsSum uint64 = 0
+		for _, utxo := range chosenUTXOs {
+			multisigInputs = append(multisigInputs, cardanowallet.TxInput{
+				Hash:  utxo.TxHash,
+				Index: uint32(utxo.TxIndex.Uint64()),
+			})
+			multisigInputsSum += utxo.Amount.Uint64()
+		}
+
+		inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
+		txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
+
+		rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
+			metadata, txInfos, outputs)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		// TODO: Get real tx size from protocolParams/config
+		if len(rawTx) < 16000 {
+			// Check if we used big UTXO replace it with biggest acceptable one
+			if len(chosenUTXOs) > chosenUTXOsCount {
+				offset := len(inputUtxos.MultisigOwnedUTXOs) - 1
+				neededAmount := txCost.Uint64() - multisigInputsSum
+				for {
+					if neededAmount+inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64() > 0 {
+						offset--
+						continue
+					}
+					chosenUTXOsCount++
+					break
+				}
+
+				chosenUTXOs[chosenUTXOsCount] = inputUtxos.MultisigOwnedUTXOs[offset+1]
+				continue
+			}
+
+			return rawTx, txHash, inputUtxos, err
+		}
+
+		// Reduce chosenUTXOs by one and add largest one
+		if len(chosenUTXOs) == chosenUTXOsCount {
+			chosenUTXOsCount--
+		}
+		chosenUTXOsCount--
+		chosenUTXOs = chosenUTXOs[:chosenUTXOsCount]
+		chosenUTXOs = append(chosenUTXOs, inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)])
+	}
 }
 
 func GetInputUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int) (
