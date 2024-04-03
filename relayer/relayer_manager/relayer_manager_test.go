@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -130,23 +131,29 @@ func TestRelayerManagerCreation(t *testing.T) {
 				},
 			},
 		}
-		manager := NewRelayerManager(config, make(map[string]core.ChainOperations))
+		manager := NewRelayerManager(config, make(map[string]core.ChainOperations), make(map[string]core.Database))
 		require.Nil(t, manager)
 	})
 
-	t.Run("create manager without mocks", func(t *testing.T) {
-		manager := NewRelayerManager(config, make(map[string]core.ChainOperations))
+	t.Run("create manager with db mock", func(t *testing.T) {
+		var dbMocks map[string]core.Database = make(map[string]core.Database, 2)
+		dbMocks["prime"] = &database_access.DbMock{}
+		dbMocks["vector"] = &database_access.DbMock{}
+
+		manager := NewRelayerManager(config, make(map[string]core.ChainOperations), dbMocks)
 		require.NotNil(t, manager)
 	})
 
-	t.Run("create manager with chain operations mock", func(t *testing.T) {
-		manager := NewRelayerManager(config, map[string]core.ChainOperations{"prime": nil})
+	t.Run("create manager with chain operations mock and db mock", func(t *testing.T) {
+		var dbMocks map[string]core.Database = make(map[string]core.Database, 2)
+		dbMocks["prime"] = &database_access.DbMock{}
+		dbMocks["vector"] = &database_access.DbMock{}
+
+		var operationsMocks map[string]core.ChainOperations = make(map[string]core.ChainOperations, 2)
+		operationsMocks["prime"] = &database_access.CardanoChainOperationsMock{}
+		operationsMocks["vector"] = &database_access.CardanoChainOperationsMock{}
+
+		manager := NewRelayerManager(config, operationsMocks, dbMocks)
 		require.NotNil(t, manager)
 	})
-
-	t.Run("create manager with chain operations and bridge mock", func(t *testing.T) {
-		manager := NewRelayerManager(config, map[string]core.ChainOperations{"prime": nil}, nil)
-		require.NotNil(t, manager)
-	})
-
 }

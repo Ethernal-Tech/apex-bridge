@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
@@ -37,7 +39,7 @@ func TestRelayerExecute(t *testing.T) {
 	defer cancelCtx()
 
 	confirmedBatchRet := &eth.ConfirmedBatch{
-		Id:                         "1",
+		Id:                         "",
 		RawTransaction:             []byte{},
 		MultisigSignatures:         [][]byte{},
 		FeePayerMultisigSignatures: [][]byte{},
@@ -47,34 +49,110 @@ func TestRelayerExecute(t *testing.T) {
 
 	t.Run("execute test fail to retrieve", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		operationsMock := &cardanoChainOperationsMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(nil, testError)
+		dbMock := &database_access.DbMock{}
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to retrieve confirmed batch")
 	})
 
+	t.Run("execute test fail to get last submitted batch", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(nil, testError)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get last submitted batch id from db")
+	})
+
+	lastConfirmedBatchId := big.NewInt(1)
+	t.Run("execute test fail to convert id", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to convert confirmed batch id to int")
+	})
+
+	confirmedBatchRet.Id = "0"
+	t.Run("execute test last submitted id greater than received id", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "last submitted batch id greater than received: last submitted 1 > received 0")
+	})
+
+	confirmedBatchRet.Id = "1"
+	t.Run("execute test same ids", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.NoError(t, err)
+	})
+
+	confirmedBatchRet.Id = "2"
 	t.Run("execute test fail to send", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		operationsMock := &cardanoChainOperationsMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(testError)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to send confirmed batch")
 	})
 
+	t.Run("execute test test fail to add to db", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
+		operationsMock.On("SendTx", confirmedBatchRet).Return(nil)
+		dbMock.On("AddLastSubmittedBatchId", "prime", mock.Anything).Return(testError)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
+	})
+
 	t.Run("execute test valid", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		operationsMock := &cardanoChainOperationsMock{}
+		operationsMock := &database_access.CardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+		dbMock := &database_access.DbMock{}
+		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchId, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(nil)
+		dbMock.On("AddLastSubmittedBatchId", "prime", mock.Anything).Return(nil)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		require.NoError(t, r.execute(ctx))
 	})
 }
@@ -133,14 +211,4 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})
-}
-
-type cardanoChainOperationsMock struct {
-	mock.Mock
-}
-
-func (m *cardanoChainOperationsMock) SendTx(smartContractData *eth.ConfirmedBatch) error {
-	args := m.Called(smartContractData)
-
-	return args.Error(0)
 }
