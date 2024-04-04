@@ -46,18 +46,16 @@ func (f *ExpectedTxsFetcherImpl) Start() error {
 	f.logger.Debug("Starting ExpectedTxsFetcher")
 
 	timerTime := TickTimeMs * time.Millisecond
-	timer := time.NewTimer(timerTime)
-	defer timer.Stop()
+	ticker := time.NewTicker(timerTime)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			f.fetchData()
 		case <-f.ctx.Done():
 			return nil
 		}
-
-		timer.Reset(timerTime)
 	}
 }
 
