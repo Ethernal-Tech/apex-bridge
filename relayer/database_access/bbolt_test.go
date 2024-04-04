@@ -68,12 +68,12 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
+		res, err := db.GetLastSubmittedBatchId("prime")
+		require.NoError(t, err)
+		require.Nil(t, res)
+
 		err = db.AddLastSubmittedBatchId("prime", expectedOutput)
 		require.NoError(t, err)
-
-		res, err := db.GetLastSubmittedBatchId("invalid")
-		require.Error(t, err)
-		require.Nil(t, res)
 
 		res, err = db.GetLastSubmittedBatchId("prime")
 		require.NoError(t, err)

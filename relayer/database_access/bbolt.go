@@ -63,7 +63,7 @@ func (bd *BBoltDatabase) GetLastSubmittedBatchId(chainId string) (*big.Int, erro
 	err := bd.db.View(func(tx *bbolt.Tx) error {
 		bytes := tx.Bucket(submittedBatchIdBucket).Get([]byte(chainId))
 		if bytes == nil {
-			return fmt.Errorf("last submitted batch ID not found for chain ID: %s", chainId)
+			return nil
 		}
 
 		result = new(big.Int)

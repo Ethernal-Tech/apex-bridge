@@ -40,12 +40,6 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 	ticker := time.NewTicker(time.Millisecond * time.Duration(r.config.PullTimeMilis))
 	defer ticker.Stop()
 
-	err := r.db.AddLastSubmittedBatchId(r.config.Base.ChainId, big.NewInt(0))
-	if err != nil {
-		r.logger.Error("Failed to enter initial value to db: %v", err)
-		return
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -78,11 +72,13 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to convert confirmed batch id to big int")
 	}
 
-	if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
-		r.logger.Info("Waiting on new signed batch")
-		return nil
-	} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
-		return fmt.Errorf("last submitted batch id greater than received: last submitted %v > received %v", lastSubmittedBatchId.String(), receivedBatchId.String())
+	if lastSubmittedBatchId != nil {
+		if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
+			r.logger.Info("Waiting on new signed batch")
+			return nil
+		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
+			return fmt.Errorf("last submitted batch id greater than received: last submitted %v > received %v", lastSubmittedBatchId.String(), receivedBatchId.String())
+		}
 	}
 
 	if err := r.operations.SendTx(confirmedBatch); err != nil {
