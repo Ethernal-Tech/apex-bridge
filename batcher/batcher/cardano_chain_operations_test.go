@@ -23,7 +23,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
 		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(42)
+		txInfos := GenerateTxInfos(t, 42)
 		outputs := GenerateUTXOOutputs(100, 1000000) // 100x 1Ada
 		txCost := CalculateTxCost(outputs)
 
@@ -41,7 +41,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
 		inputs := GenerateUTXOInputs(50, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(42)
+		txInfos := GenerateTxInfos(t, 42)
 		outputs := GenerateUTXOOutputs(100, 1000000) // 100x 1Ada
 		txCost := CalculateTxCost(outputs)
 
@@ -60,7 +60,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
 		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(42)
+		txInfos := GenerateTxInfos(t, 42)
 		outputs := GenerateUTXOOutputs(500, 1000000) // 500x 1Ada
 		txCost := CalculateTxCost(outputs)
 
@@ -79,7 +79,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
 		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(42)
+		txInfos := GenerateTxInfos(t, 42)
 		outputs := GenerateUTXOOutputs(500, 2000000) // 500x 2Ada
 		txCost := CalculateTxCost(outputs)
 
@@ -98,7 +98,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
 		inputs := GenerateUTXOInputs(10, 1000000) // 10x 1Ada
-		txInfos := GenerateTxInfos(42)
+		txInfos := GenerateTxInfos(t, 42)
 		outputs := GenerateUTXOOutputs(500, 10000000) // 500x 10Ada
 		txCost := CalculateTxCost(outputs)
 
@@ -159,22 +159,25 @@ func GenerateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOu
 	return
 }
 
-func GenerateTxInfos(testnetMagic uint) *cardano.TxInputInfos {
-	keyHashes := []string{
-		"ea0934197f2ae54fa8577d03e88ab3095058a3615f4d667aada1b5822c6140e7",
-		"ea0934197f2ae54fa8577d03e88ab3095058a3615f4d667aada1b5822c6140e7",
-		"ea0934197f2ae54fa8577d03e88ab3095058a3615f4d667aada1b5822c6140e7",
-		"ea0934197f2ae54fa8577d03e88ab3095058a3615f4d667aada1b5822c6140e7",
-		"ea0934197f2ae54fa8577d03e88ab3095058a3615f4d667aada1b5822c6140e7",
+func GenerateTxInfos(t *testing.T, testnetMagic uint) *cardano.TxInputInfos {
+	dummyKeyHashes := []string{
+		"eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205",
+		"ad8e0ab92e1febfcaf44889d68c3ae78b59dc9c5fa9e05a272214c13",
+		"bfd1c0eb0a453a7b7d668166ce5ca779c655e09e11487a6fac72dd6f",
+		"b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56",
+		"39c196d28f804f70704b6dec5991fbb1112e648e067d17ca7abe614b",
+		"adea661341df075349cbb2ad02905ce1828f8cf3e66f5012d48c3168",
 	}
 
-	multisigPolicyScript, _ := cardanowallet.NewPolicyScript(keyHashes, 3)
-	multisigFeePolicyScript, _ := cardanowallet.NewPolicyScript(keyHashes, 3)
+	multisigPolicyScript, err := cardanowallet.NewPolicyScript(dummyKeyHashes[0:3], 3)
+	require.NoError(t, err)
+	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(dummyKeyHashes[3:], 3)
+	require.NoError(t, err)
 
-	// multisigAddress, _ := multisigPolicyScript.CreateMultiSigAddress(testnetMagic)
-	multisigAddress := "addr_test1vq7vsmgan2adwapu6r3xs5049s6dsf8hlgex68mwgxzraks4c0dpp"
-	// multisigFeeAddress, _ := multisigFeePolicyScript.CreateMultiSigAddress(testnetMagic)
-	multisigFeeAddress := "addr_test1vq7vsmgan2adwapu6r3xs5049s6dsf8hlgex68mwgxzraks4c0dpp"
+	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(testnetMagic)
+	require.NoError(t, err)
+	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(testnetMagic)
+	require.NoError(t, err)
 
 	txInfos := &cardano.TxInputInfos{
 		TestNetMagic: testnetMagic,
