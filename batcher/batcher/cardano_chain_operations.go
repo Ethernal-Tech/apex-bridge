@@ -173,7 +173,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
 
 	// Create initial UTXO set with maximum consolidation
-	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, len(inputUtxos.MultisigOwnedUTXOs))
+	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, 0)
 	var chosenUTXOsCount = 0
 	var chosenUTXOsSum uint64 = 0
 	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
@@ -186,7 +186,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 		}
 	}
 
-	if chosenUTXOsSum < txCost.Uint64()+minUtxoAmount {
+	if chosenUTXOsSum < txCost.Uint64()+minUtxoAmount && chosenUTXOsSum != txCost.Uint64() {
 		// TODO:
 		// reduce outputs
 		// adjust txCost
