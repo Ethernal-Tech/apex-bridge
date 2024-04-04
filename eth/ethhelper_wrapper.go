@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,6 +16,7 @@ type EthHelperWrapper struct {
 	nodeUrl     string
 	wallet      ethtxhelper.IEthTxWallet
 	ethTxHelper ethtxhelper.IEthTxHelper
+	lock        sync.Mutex
 }
 
 func NewEthHelperWrapper(nodeUrl string) *EthHelperWrapper {
@@ -36,6 +38,9 @@ func NewEthHelperWrapperWithWallet(nodeUrl, signingKey string) (*EthHelperWrappe
 }
 
 func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (ethtxhelper.IEthTxHelper, error) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
 	if e.ethTxHelper != nil {
 		return e.ethTxHelper, nil
 	}
@@ -53,9 +58,13 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 func (e *EthHelperWrapper) ProcessError(err error) error {
 	// TODO: verify if these errors are the only ones we need to handle
 	if errors.Is(err, net.ErrClosed) || errors.Is(err, context.DeadlineExceeded) {
+		e.lock.Lock()
 		e.ethTxHelper = nil
+		e.lock.Unlock()
 	} else if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+		e.lock.Lock()
 		e.ethTxHelper = nil
+		e.lock.Unlock()
 	}
 
 	return err

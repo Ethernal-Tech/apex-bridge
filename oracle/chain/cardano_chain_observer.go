@@ -206,13 +206,15 @@ func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.Ca
 		return err
 	}
 
-	if blockPointDb.BlockSlot > blockPointSc.BlockSlot {
-		return nil
-	}
+	if blockPointDb != nil {
+		if blockPointDb.BlockSlot > blockPointSc.BlockSlot {
+			return nil
+		}
 
-	if bytes.Equal(blockPointDb.BlockHash, blockPointSc.BlockHash) &&
-		blockPointDb.BlockSlot == blockPointSc.BlockSlot {
-		return nil
+		if bytes.Equal(blockPointDb.BlockHash, blockPointSc.BlockHash) &&
+			blockPointDb.BlockSlot == blockPointSc.BlockSlot {
+			return nil
+		}
 	}
 
 	if err := oracleDb.ClearUnprocessedTxs(chainId); err != nil {

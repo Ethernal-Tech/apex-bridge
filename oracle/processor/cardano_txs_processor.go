@@ -23,7 +23,7 @@ type CardanoTxsProcessorImpl struct {
 	db                        core.CardanoTxsProcessorDb
 	txProcessors              []core.CardanoTxProcessor
 	failedTxProcessors        []core.CardanoTxFailedProcessor
-	claimsSubmitter           core.ClaimsSubmitter
+	bridgeSubmitter           core.BridgeSubmitter
 	getCardanoChainObserverDb GetCardanoChainObserverDbCallback
 	logger                    hclog.Logger
 	closeCh                   chan bool
@@ -39,7 +39,7 @@ func NewCardanoTxsProcessor(
 	db core.CardanoTxsProcessorDb,
 	txProcessors []core.CardanoTxProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
-	claimsSubmitter core.ClaimsSubmitter,
+	bridgeSubmitter core.BridgeSubmitter,
 	getCardanoChainObserverDb GetCardanoChainObserverDbCallback,
 	logger hclog.Logger,
 ) *CardanoTxsProcessorImpl {
@@ -49,7 +49,7 @@ func NewCardanoTxsProcessor(
 		db:                        db,
 		txProcessors:              txProcessors,
 		failedTxProcessors:        failedTxProcessors,
-		claimsSubmitter:           claimsSubmitter,
+		bridgeSubmitter:           bridgeSubmitter,
 		getCardanoChainObserverDb: getCardanoChainObserverDb,
 		logger:                    logger,
 		closeCh:                   make(chan bool, 1),
@@ -399,7 +399,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	}
 
 	bp.logger.Debug("Submitting bridge claims", "claims", bridgeClaims)
-	err = bp.claimsSubmitter.SubmitClaims(bridgeClaims)
+	err = bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 		bp.logger.Error("Failed to submit claims", "err", err)

@@ -18,7 +18,7 @@ func newValidProcessor(
 	oracleDb core.Database,
 	txProcessor core.CardanoTxProcessor,
 	failedTxProcessor core.CardanoTxFailedProcessor,
-	claimsSubmitter core.ClaimsSubmitter,
+	bridgeSubmitter core.BridgeSubmitter,
 	ccoDbs map[string]indexer.Database,
 ) *CardanoTxsProcessorImpl {
 
@@ -32,7 +32,7 @@ func newValidProcessor(
 	cardanoTxsProcessor := NewCardanoTxsProcessor(
 		appConfig, oracleDb,
 		txProcessors, failedTxProcessors,
-		claimsSubmitter, getCardanoChainObserverDb,
+		bridgeSubmitter, getCardanoChainObserverDb,
 		hclog.NewNullLogger(),
 	)
 
@@ -88,7 +88,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			oracleDb,
 			[]core.CardanoTxProcessor{},
 			[]core.CardanoTxFailedProcessor{},
-			&core.ClaimsSubmitterMock{}, getCardanoChainObserverDb, hclog.NewNullLogger(),
+			&core.BridgeSubmitterMock{}, getCardanoChainObserverDb, hclog.NewNullLogger(),
 		)
 		require.NotNil(t, proc)
 	})
@@ -99,11 +99,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		validTxProc := &core.CardanoTxProcessorMock{}
 		failedTxProc := &core.CardanoTxFailedProcessorMock{}
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -219,13 +219,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc.On("IsTxRelevant").Return(true, nil)
 		validTxProc.On("ValidateAndAddClaim").Return(fmt.Errorf("test err"))
 
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, nil, claimsSubmitter,
+			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -260,13 +260,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc.On("IsTxRelevant").Return(true, nil)
 		validTxProc.On("ValidateAndAddClaim").Return(nil)
 
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(fmt.Errorf("test err"))
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(fmt.Errorf("test err"))
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, nil, claimsSubmitter,
+			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -303,13 +303,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc.On("IsTxRelevant").Return(true, nil)
 		validTxProc.On("ValidateAndAddClaim").Return(nil)
 
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, nil, claimsSubmitter,
+			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -345,13 +345,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("IsTxRelevant").Return(true, nil)
 		failedTxProc.On("ValidateAndAddClaim").Return(fmt.Errorf("test err"))
 
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, claimsSubmitter,
+			nil, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -389,13 +389,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("IsTxRelevant").Return(true, nil)
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(fmt.Errorf("test err"))
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(fmt.Errorf("test err"))
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, claimsSubmitter,
+			nil, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -434,16 +434,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, claimsSubmitter,
+			nil, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -481,16 +481,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, claimsSubmitter,
+			nil, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -536,16 +536,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -606,16 +606,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -676,16 +676,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -746,16 +746,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -822,16 +822,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -894,16 +894,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
@@ -976,16 +976,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim").Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
-		claimsSubmitter := &core.ClaimsSubmitterMock{}
-		claimsSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.OnSubmitClaims = func(claims *core.BridgeClaims) {
 			submittedClaims = append(submittedClaims, claims)
 		}
-		claimsSubmitter.On("Dispose").Return(nil)
-		claimsSubmitter.On("SubmitClaims").Return(nil)
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims").Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			validTxProc, failedTxProc, claimsSubmitter,
+			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 		)
 
