@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
@@ -21,7 +22,11 @@ type RelayerManagerImpl struct {
 
 var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
 
-func NewRelayerManager(config *core.RelayerManagerConfiguration, customOperations map[string]core.ChainOperations, customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
+func NewRelayerManager(
+	config *core.RelayerManagerConfiguration,
+	customOperations map[string]core.ChainOperations,
+	customDatabases map[string]core.Database,
+	customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
 	var relayers = map[string]core.Relayer{}
 	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
@@ -46,11 +51,20 @@ func NewRelayerManager(config *core.RelayerManagerConfiguration, customOperation
 			bridgeSmartContract = customBridgeSc[0]
 		}
 
+		var db core.Database = customDatabases[chain]
+		if db == nil {
+			db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
+			if db == nil || err != nil {
+				fmt.Fprintf(os.Stderr, "error while creating database: %v\n", err)
+				return nil
+			}
+		}
+
 		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{
 			Bridge:        config.Bridge,
 			Base:          chainConfig.Base,
 			PullTimeMilis: config.PullTimeMilis,
-		}, bridgeSmartContract, logger.Named(strings.ToUpper(chain)), operations)
+		}, bridgeSmartContract, logger.Named(strings.ToUpper(chain)), operations, db)
 	}
 
 	return &RelayerManagerImpl{

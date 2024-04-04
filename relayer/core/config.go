@@ -20,6 +20,7 @@ type RelayerConfiguration struct {
 
 type BaseConfig struct {
 	ChainId string `json:"chainId"`
+	DbsPath string `json:"dbsPath"`
 }
 
 type ChainSpecific struct {

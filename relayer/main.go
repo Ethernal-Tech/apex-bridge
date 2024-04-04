@@ -18,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	relayerManager := relayer_manager.NewRelayerManager(config, make(map[string]core.ChainOperations))
+	relayerManager := relayer_manager.NewRelayerManager(config, make(map[string]core.ChainOperations), make(map[string]core.Database))
 	if relayerManager == nil {
 		fmt.Fprintf(os.Stderr, "Failed to create relayer manager")
 		os.Exit(1)
