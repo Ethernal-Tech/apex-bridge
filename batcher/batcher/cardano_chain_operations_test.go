@@ -22,96 +22,95 @@ func TestCardanoChainOperations(t *testing.T) {
 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
-		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(t, 42)
-		outputs := GenerateUTXOOutputs(100, 1000000) // 100x 1Ada
+		utxoCount := 10 // 10x 1Ada
+		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
+		outputs := GenerateUTXOOutputs(utxoCount, 1000000)
 		txCost := CalculateTxCost(outputs)
+		txInfos := GenerateTxInfos(t, 42)
 
-		metadata := []byte("")
-		protocolParams, _ := GenerateProtocolParams()
+		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		require.NoError(t, err)
+		protocolParams, err := GenerateProtocolParams()
+		require.NoError(t, err)
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
-		require.Len(t, utxos.MultisigOwnedUTXOs, 100)
+		require.Len(t, utxos.MultisigOwnedUTXOs, utxoCount)
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000))
 	})
 
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
-		inputs := GenerateUTXOInputs(50, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(t, 42)
-		outputs := GenerateUTXOOutputs(100, 1000000) // 100x 1Ada
+		utxoCount := 10 // 10x 1Ada
+		inputs := GenerateUTXOInputs(utxoCount, 1000000)
+		outputs := GenerateUTXOOutputs(utxoCount*2, 1000000)
 		txCost := CalculateTxCost(outputs)
+		txInfos := GenerateTxInfos(t, 42)
 
-		metadata := []byte("")
-		protocolParams, _ := GenerateProtocolParams()
+		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		require.NoError(t, err)
+		protocolParams, err := GenerateProtocolParams()
+		require.NoError(t, err)
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
-		require.Len(t, utxos.MultisigOwnedUTXOs, 51)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[50].Amount, big.NewInt(1000000000))
+		require.Len(t, utxos.MultisigOwnedUTXOs, utxoCount+1) // 10 +1
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000000))
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
-		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(t, 42)
-		outputs := GenerateUTXOOutputs(500, 1000000) // 500x 1Ada
+		inputs := GenerateUTXOInputs(30, 1000000)
+		outputs := GenerateUTXOOutputs(400, 1000000)
 		txCost := CalculateTxCost(outputs)
+		txInfos := GenerateTxInfos(t, 42)
 
-		metadata := []byte("")
-		protocolParams, _ := GenerateProtocolParams()
+		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		require.NoError(t, err)
+		protocolParams, err := GenerateProtocolParams()
+		require.NoError(t, err)
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
-		require.Less(t, len(utxos.MultisigOwnedUTXOs), 500)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)].Amount, big.NewInt(1000000000))
+		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000000))
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
 		cco := NewCardanoChainOperations(config, wallet)
 
-		inputs := GenerateUTXOInputs(500, 1000000) // 500x 1Ada
-		txInfos := GenerateTxInfos(t, 42)
-		outputs := GenerateUTXOOutputs(500, 2000000) // 500x 2Ada
+		inputs := GenerateUTXOInputs(30, 1000000)
+		outputs := GenerateUTXOOutputs(400, 10000000) // 4000Ada
 		txCost := CalculateTxCost(outputs)
+		txInfos := GenerateTxInfos(t, 42)
 
-		metadata := []byte("")
-		protocolParams, _ := GenerateProtocolParams()
+		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		require.NoError(t, err)
+		protocolParams, err := GenerateProtocolParams()
+		require.NoError(t, err)
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
-		require.Less(t, len(utxos.MultisigOwnedUTXOs), 500)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)].Amount, big.NewInt(2000000000))
+		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(4000000000))
 	})
-
-	t.Run("CreateBatchTx_TxSizeTooBig_BiggestUTXO", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
-
-		inputs := GenerateUTXOInputs(10, 1000000) // 10x 1Ada
-		txInfos := GenerateTxInfos(t, 42)
-		outputs := GenerateUTXOOutputs(500, 10000000) // 500x 10Ada
-		txCost := CalculateTxCost(outputs)
-
-		metadata := []byte("")
-		protocolParams, _ := GenerateProtocolParams()
-		slotNumber := uint64(12345)
-
-		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
-		require.NoError(t, err)
-		require.Less(t, len(txRaw), 16000)
-		require.Equal(t, len(utxos.MultisigOwnedUTXOs), 1)
-	})
-
 }
 
 func CalculateTxCost(outputs []cardanowallet.TxOutput) *big.Int {

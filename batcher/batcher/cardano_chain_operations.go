@@ -224,10 +224,10 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 			// len(chosenUTXOs) == chosenUTXOsCount + 1 || chosenUTXOs + big UTXO
 			if len(chosenUTXOs) > chosenUTXOsCount {
 				offset := len(inputUtxos.MultisigOwnedUTXOs) - 1
-				neededAmount := txCost.Uint64() - multisigInputsSum
+				neededAmount := txCost.Uint64() - (multisigInputsSum - inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64())
 				for {
 					// Find last UTXO that covers needed cost and
-					if neededAmount+inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64() > 0 {
+					if inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64() > neededAmount {
 						offset--
 						continue
 					}
@@ -238,10 +238,11 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 				}
 
 				// Replace biggest UTXO with smallest acceptable one and recreate Tx
-				chosenUTXOs[chosenUTXOsCount] = inputUtxos.MultisigOwnedUTXOs[offset+1]
+				chosenUTXOs[chosenUTXOsCount-1] = inputUtxos.MultisigOwnedUTXOs[offset+1]
 				continue
 			}
 
+			inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
 			return rawTx, txHash, inputUtxos, err
 		}
 		// If Tx size is not appropriate we need to reduce input count
@@ -250,9 +251,9 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 			chosenUTXOsCount--
 		}
 		// Replace last UTXO with biggest UTXO we have || reducing input size by 1
-		chosenUTXOsCount--
 		chosenUTXOs = chosenUTXOs[:chosenUTXOsCount]
-		chosenUTXOs = append(chosenUTXOs, inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)])
+		chosenUTXOsCount--
+		chosenUTXOs[chosenUTXOsCount] = inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)-1]
 	}
 }
 
