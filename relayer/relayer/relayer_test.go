@@ -83,7 +83,7 @@ func TestRelayerExecute(t *testing.T) {
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to convert confirmed batch id to int")
+		require.ErrorContains(t, err, "failed to convert confirmed batch id to big int")
 	})
 
 	confirmedBatchRet.Id = "0"

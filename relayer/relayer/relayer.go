@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -73,12 +72,12 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to get last submitted batch id from db: %v", err)
 	}
 
-	receivedId, err := strconv.Atoi(confirmedBatch.Id)
-	if err != nil {
-		return fmt.Errorf("failed to convert confirmed batch id to int: %v", err)
+	receivedBatchId := new(big.Int)
+	receivedBatchId, ok := receivedBatchId.SetString(confirmedBatch.Id, 10)
+	if !ok {
+		return fmt.Errorf("failed to convert confirmed batch id to big int")
 	}
 
-	receivedBatchId := big.NewInt(int64(receivedId))
 	if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
 		r.logger.Info("Waiting on new signed batch")
 		return nil
