@@ -40,7 +40,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check ErrorCh", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoTxsProcessorDbMock{}, &core.BridgeDataFetcherMock{})
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDbMock{}
+		db.On("ClearUnprocessedTxs").Return(nil)
+		db.On("ClearExpectedTxs").Return(nil)
+
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		errChan := chainObserver.ErrorCh()
@@ -50,7 +56,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetConfig", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoTxsProcessorDbMock{}, &core.BridgeDataFetcherMock{})
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDbMock{}
+		db.On("ClearUnprocessedTxs").Return(nil)
+		db.On("ClearExpectedTxs").Return(nil)
+
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		config := chainObserver.GetConfig()
@@ -61,7 +73,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetDb", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoTxsProcessorDbMock{}, &core.BridgeDataFetcherMock{})
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		dbMock := &core.CardanoTxsProcessorDbMock{}
+		dbMock.On("ClearUnprocessedTxs").Return(nil)
+		dbMock.On("ClearExpectedTxs").Return(nil)
+
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, dbMock, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		db := chainObserver.GetDb()
@@ -71,7 +89,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check start stop", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, &core.CardanoTxsProcessorDbMock{}, &core.BridgeDataFetcherMock{})
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDbMock{}
+		db.On("ClearUnprocessedTxs").Return(nil)
+		db.On("ClearExpectedTxs").Return(nil)
+
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		err := chainObserver.Start()
@@ -87,7 +111,13 @@ func TestCardanoChainObserver(t *testing.T) {
 		txsProcessor := &core.CardanoTxsProcessorMock{}
 		txsProcessor.On("NewUnprocessedTxs").Return()
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, &core.CardanoTxsProcessorDbMock{}, &core.BridgeDataFetcherMock{})
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDbMock{}
+		db.On("ClearUnprocessedTxs").Return(nil)
+		db.On("ClearExpectedTxs").Return(nil)
+
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, db, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)

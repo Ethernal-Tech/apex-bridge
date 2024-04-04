@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -33,8 +34,9 @@ type OracleImpl struct {
 	cardanoTxsProcessor      core.CardanoTxsProcessor
 	cardanoChainObservers    map[string]core.CardanoChainObserver
 	db                       core.Database
+	expectedTxsFetcher       core.ExpectedTxsFetcher
 	bridgeDataFetcher        *bridge.BridgeDataFetcherImpl
-	claimsSubmitter          core.ClaimsSubmitter
+	bridgeSubmitter          core.BridgeSubmitter
 	confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter
 	logger                   hclog.Logger
 
@@ -72,8 +74,18 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		return nil
 	}
 
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(appConfig, db, logger.Named("bridge_data_fetcher"))
-	claimsSubmitter := bridge.NewClaimsSubmitter(appConfig, logger.Named("claims_submitter"))
+	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
+	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress, appConfig.Bridge.SigningKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		logger.Error("Failed to create OracleBridgeSmartContractWithWallet", "err", err)
+		return nil
+	}
+
+	bridgeDataFetcher := bridge.NewBridgeDataFetcher(bridgeSC, logger.Named("bridge_data_fetcher"))
+	bridgeSubmitter := bridge.NewBridgeSubmitter(bridgeSCWithWallet, logger.Named("bridge_submitter"))
+
+	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
 	var txProcessors []core.CardanoTxProcessor
 	txProcessors = append(txProcessors, tx_processors.NewBatchExecutedProcessor())
@@ -93,7 +105,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		return nil
 	}
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, claimsSubmitter, getCardanoChainObserverDb, logger.Named("cardano_txs_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, getCardanoChainObserverDb, logger.Named("cardano_txs_processor"))
 
 	var cardanoChainObservers map[string]core.CardanoChainObserver = make(map[string]core.CardanoChainObserver)
 	var confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter = make(map[string]core.ConfirmedBlocksSubmitter)
@@ -109,7 +121,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 
 		cardanoChainObservers[cardanoChainConfig.ChainId] = cco
 
-		cbs, err := bridge.NewConfirmedBlocksSubmitter(appConfig, db, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submiter_"+cardanoChainConfig.ChainId))
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(bridgeSubmitter, appConfig, db, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submiter_"+cardanoChainConfig.ChainId))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create cardano block submiter for chain: %v error: %v\n", cardanoChainConfig.ChainId, err)
 			logger.Error("failed to create cardano block submiter for chain", "chainId", cardanoChainConfig.ChainId, "error:", err)
@@ -122,8 +134,9 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 	oracle.appConfig = appConfig
 	oracle.cardanoTxsProcessor = cardanoTxsProcessor
 	oracle.cardanoChainObservers = cardanoChainObservers
+	oracle.expectedTxsFetcher = expectedTxsFetcher
 	oracle.bridgeDataFetcher = bridgeDataFetcher
-	oracle.claimsSubmitter = claimsSubmitter
+	oracle.bridgeSubmitter = bridgeSubmitter
 	oracle.confirmedBlockSubmitters = confirmedBlockSubmitters
 	oracle.db = db
 	oracle.logger = logger
@@ -136,7 +149,7 @@ func (o *OracleImpl) Start() error {
 	o.logger.Debug("Starting Oracle")
 
 	go o.cardanoTxsProcessor.Start()
-	go o.bridgeDataFetcher.Start()
+	go o.expectedTxsFetcher.Start()
 
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
@@ -180,8 +193,9 @@ func (o *OracleImpl) Stop() error {
 	}
 
 	o.cardanoTxsProcessor.Stop()
-	o.bridgeDataFetcher.Stop()
-	o.claimsSubmitter.Dispose()
+	o.expectedTxsFetcher.Stop()
+	o.bridgeSubmitter.Dispose()
+	o.bridgeDataFetcher.Dispose()
 	o.db.Close()
 
 	close(o.errorCh)
