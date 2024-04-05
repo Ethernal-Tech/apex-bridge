@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -17,17 +18,19 @@ type RelayerImpl struct {
 	logger              hclog.Logger
 	operations          core.ChainOperations
 	bridgeSmartContract eth.IBridgeSmartContract
+	db                  core.Database
 }
 
 var _ core.Relayer = (*RelayerImpl)(nil)
 
 func NewRelayer(config *core.RelayerConfiguration,
-	bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger, operations core.ChainOperations) *RelayerImpl {
+	bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger, operations core.ChainOperations, db core.Database) *RelayerImpl {
 	return &RelayerImpl{
 		config:              config,
 		logger:              logger,
 		bridgeSmartContract: bridgeSmartContract,
 		operations:          operations,
+		db:                  db,
 	}
 }
 
@@ -58,11 +61,35 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 
 	r.logger.Info("Signed batch retrieved from contract")
 
+	lastSubmittedBatchId, err := r.db.GetLastSubmittedBatchId(r.config.Base.ChainId)
+	if err != nil {
+		return fmt.Errorf("failed to get last submitted batch id from db: %v", err)
+	}
+
+	receivedBatchId := new(big.Int)
+	receivedBatchId, ok := receivedBatchId.SetString(confirmedBatch.Id, 10)
+	if !ok {
+		return fmt.Errorf("failed to convert confirmed batch id to big int")
+	}
+
+	if lastSubmittedBatchId != nil {
+		if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
+			r.logger.Info("Waiting on new signed batch")
+			return nil
+		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
+			return fmt.Errorf("last submitted batch id greater than received: last submitted %v > received %v", lastSubmittedBatchId.String(), receivedBatchId.String())
+		}
+	}
+
 	if err := r.operations.SendTx(confirmedBatch); err != nil {
 		return fmt.Errorf("failed to send confirmed batch: %v", err)
 	}
 
 	r.logger.Info("Transaction successfully submited")
+
+	if err := r.db.AddLastSubmittedBatchId(r.config.Base.ChainId, receivedBatchId); err != nil {
+		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)
+	}
 
 	return nil
 }

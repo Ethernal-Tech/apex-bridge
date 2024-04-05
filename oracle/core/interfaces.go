@@ -61,14 +61,20 @@ type CardanoTxFailedProcessor interface {
 	ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error
 }
 
-type BridgeDataFetcher interface {
+type ExpectedTxsFetcher interface {
 	Start() error
 	Stop() error
-	FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error)
 }
 
-type ClaimsSubmitter interface {
+type BridgeDataFetcher interface {
+	FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error)
+	FetchExpectedTx(chainId string) (*BridgeExpectedCardanoTx, error)
+	Dispose() error
+}
+
+type BridgeSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
+	SubmitConfirmedBlocks(chainId string, blocks []*indexer.CardanoBlock) error
 	Dispose() error
 }
 

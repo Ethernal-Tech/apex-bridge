@@ -4,178 +4,96 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/go-hclog"
 )
 
 const (
-	TickTimeMs = 5000
+	MaxRetries = 5
 )
 
 type BridgeDataFetcherImpl struct {
-	appConfig *core.AppConfig
-	db        core.BridgeExpectedCardanoTxsDb
+	bridgeSC  eth.IOracleBridgeSmartContract
 	ctx       context.Context
 	cancelCtx context.CancelFunc
-	ethClient *ethclient.Client
 	logger    hclog.Logger
 }
 
 var _ core.BridgeDataFetcher = (*BridgeDataFetcherImpl)(nil)
 
 func NewBridgeDataFetcher(
-	appConfig *core.AppConfig,
-	db core.BridgeExpectedCardanoTxsDb,
+	bridgeSC eth.IOracleBridgeSmartContract,
 	logger hclog.Logger,
 ) *BridgeDataFetcherImpl {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &BridgeDataFetcherImpl{
-		appConfig: appConfig,
-		db:        db,
+		bridgeSC:  bridgeSC,
 		ctx:       ctx,
 		cancelCtx: cancelCtx,
 		logger:    logger,
 	}
 }
 
-func (df *BridgeDataFetcherImpl) Start() error {
-	df.logger.Debug("Starting BridgeDataFetcher")
-
-	timerTime := TickTimeMs * time.Millisecond
-	timer := time.NewTimer(timerTime)
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-timer.C:
-			df.fetchData()
-		case <-df.ctx.Done():
-			return nil
-		}
-
-		timer.Reset(timerTime)
-	}
-}
-
-func (df *BridgeDataFetcherImpl) Stop() error {
-	df.logger.Debug("Stopping BridgeDataFetcher")
-	df.cancelCtx()
-	return nil
-}
-
-func (df *BridgeDataFetcherImpl) fetchData() {
-	if df.ethClient == nil {
-		ethClient, err := ethclient.Dial(df.appConfig.Bridge.NodeUrl)
-		if err != nil {
-			df.logger.Error("Failed to dial bridge", "err", err)
-			return
-		}
-
-		df.ethClient = ethClient
-	}
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(df.ethClient))
-	if err != nil {
-		// ensure redial in case ethClient lost connection
-		df.ethClient = nil
-		df.logger.Error("Failed to create ethTxHelper", "err", err)
-		return
-	}
-
-	expectedTxs, err := df.fetchExpectedTxs(ethTxHelper)
-	if err != nil {
-		// ensure redial in case ethClient lost connection
-		df.ethClient = nil
-		df.logger.Error("Failed to fetch expected txs from bridge", "err", err)
-		return
-	}
-
-	var validExpectedTxs []*core.BridgeExpectedCardanoTx
-	for _, expectedTx := range expectedTxs {
-		chainConfig := df.appConfig.CardanoChains[expectedTx.ChainId]
-		if chainConfig.ChainId == expectedTx.ChainId {
-			validExpectedTxs = append(validExpectedTxs, expectedTx)
-		}
-	}
-
-	if len(validExpectedTxs) > 0 {
-		err = df.db.AddExpectedTxs(validExpectedTxs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to add expected txs. error: %v\n", err)
-			df.logger.Error("Failed to add expected txs", "err", err)
-			return
-		}
-	}
-}
-
-func (df *BridgeDataFetcherImpl) fetchExpectedTxs(ethTxHelper ethtxhelper.IEthTxHelper) ([]*core.BridgeExpectedCardanoTx, error) {
-	// TODO: replace with real bridge contract
-	contract, err := contractbinding.NewTestContract(
-		common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: replace with real bridge contract call
-	_, err = contract.GetValue(&bind.CallOpts{
-		Context: df.ctx,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
-}
-
 func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
-	// TODO: Configurable number of retries?
-	for retries := 1; retries <= 5; retries++ {
-		ethClient, err := ethclient.Dial(df.appConfig.Bridge.NodeUrl)
-		if err != nil {
-			df.logger.Error("Failed to dial bridge while fetching latest block", "retry:", retries, "err", err)
-			time.Sleep(time.Millisecond * 500)
-			continue
-		}
-
-		ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithClient(ethClient))
-		if err != nil {
-			// ensure redial in case ethClient lost connection
-			ethClient = nil
-			df.logger.Error("Failed to create ethTxHelper while fetching latest block", "retry:", retries, "err", err)
-			time.Sleep(time.Millisecond * 500)
-			continue
-		}
-
-		contract, err := contractbinding.NewBridgeContract(
-			common.HexToAddress(df.appConfig.Bridge.SmartContractAddress),
-			ethTxHelper.GetClient())
-		if err != nil {
-			time.Sleep(time.Millisecond * 500)
-			continue
-		}
-
-		block, err := contract.GetLastObservedBlock(&bind.CallOpts{
-			Context: df.ctx,
-		}, chainId)
+	for retries := 1; retries <= MaxRetries; retries++ {
+		block, err := df.bridgeSC.GetLastObservedBlock(df.ctx, chainId)
 		if err == nil {
-			hash, _ := hex.DecodeString(block.BlockHash)
-			return &indexer.BlockPoint{
-				BlockSlot: block.BlockSlot,
-				BlockHash: hash,
-			}, nil
+			var blockPoint *indexer.BlockPoint
+			if block != nil {
+				hash, _ := hex.DecodeString(block.BlockHash)
+				blockPoint = &indexer.BlockPoint{
+					BlockSlot: block.BlockSlot,
+					BlockHash: hash,
+				}
+			}
+
+			return blockPoint, nil
+		} else {
+			df.logger.Error("Failed to GetLastObservedBlock from Bridge SC", "err", err)
 		}
+
 		time.Sleep(time.Millisecond * 500)
 	}
 
-	return nil, nil
+	df.logger.Info("Failed to FetchLatestBlockPoint from Bridge SC", "retries", MaxRetries)
+	return nil, fmt.Errorf("failed to FetchLatestBlockPoint from Bridge SC")
+}
+
+func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeExpectedCardanoTx, error) {
+	for retries := 1; retries <= MaxRetries; retries++ {
+		rawTx, err := df.bridgeSC.GetExpectedTx(df.ctx, chainId)
+		if err == nil {
+			tx, err := indexer.ParseTxInfo([]byte(rawTx))
+			if err != nil {
+				df.logger.Error("Failed to ParseTxInfo", "rawTx", rawTx, "err", err)
+				return nil, fmt.Errorf("failed to ParseTxInfo. err: %v", err)
+			}
+
+			expectedTx := &core.BridgeExpectedCardanoTx{
+				ChainId:  chainId,
+				Hash:     tx.Hash,
+				Ttl:      tx.TTL,
+				Metadata: tx.MetaData,
+			}
+
+			return expectedTx, nil
+		} else {
+			df.logger.Error("Failed to GetExpectedTx from Bridge SC", "err", err)
+		}
+
+		time.Sleep(time.Millisecond * 500)
+	}
+
+	df.logger.Info("Failed to FetchExpectedTx from Bridge SC", "retries", MaxRetries)
+	return nil, fmt.Errorf("failed to FetchExpectedTx from Bridge SC")
+}
+
+func (df *BridgeDataFetcherImpl) Dispose() error {
+	df.cancelCtx()
+
+	return nil
 }

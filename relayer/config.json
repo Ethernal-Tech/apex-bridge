@@ -6,7 +6,8 @@
     "chains": {
         "prime": {
             "baseConfig": {
-                "chainId": "prime"
+                "chainId": "prime",
+                "dbsPath": "./db/"
             },
             "chainSpecific": {
                 "chainType": "Cardano",
@@ -21,7 +22,8 @@
         },
         "vector": {
             "baseConfig": {
-                "chainId": "vector"
+                "chainId": "vector",
+                "dbsPath": "./db/"
             },
             "chainSpecific": {
                 "chainType": "Cardano",
