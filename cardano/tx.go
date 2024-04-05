@@ -99,3 +99,14 @@ func CreateMetaData(v *big.Int) ([]byte, error) {
 
 	return json.Marshal(metadata)
 }
+
+func CreateBatchMetaData(v *big.Int) ([]byte, error) {
+	metadata := map[string]interface{}{
+		"0": map[string]interface{}{
+			"type":         "batchExecution",
+			"batchNonceId": v.String(),
+		},
+	}
+
+	return json.Marshal(metadata)
+}
