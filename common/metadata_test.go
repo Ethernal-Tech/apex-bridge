@@ -39,9 +39,6 @@ func TestMetadata(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		a := string(result)
-		require.Nil(t, a)
-
 		metadata, err := UnmarshalMetadata[BaseMetadata](MetadataEncodingTypeJson, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
