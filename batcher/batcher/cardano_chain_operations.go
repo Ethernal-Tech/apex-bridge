@@ -17,7 +17,10 @@ var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 // TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 var minUtxoAmount = uint64(1000000)
-var maxUtxoCount = 430
+var maxUtxoCount = 410
+
+// TODO: Get real tx size from protocolParams/config
+var maxTxSize = 16000
 
 type CardanoChainOperations struct {
 	Config        core.CardanoChainConfig
@@ -157,117 +160,99 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 	return witnessMultiSig, witnessMultiSigFee, nil
 }
 
+/* UTXOs are sorted by Nonce and taken from first to last until txCost has been met or maxUtxoCount reached
+ * if txCost has been met, tx is created regularly
+ * if maxUtxoCount has been reached, we replace last UTXO by first biggest one that will cover txCost
+ */
 func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBridgeContractStructsUTXOs, txCost *big.Int,
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos, outputs []cardanowallet.TxOutput, slotNumber uint64) (
 	[]byte, string, *eth.UTXOs, error) {
 
-	// This should never happen since SC is controling tx count
+	// This should never happen since SC is controling tx output count
 	if len(outputs) > 410 {
 		err := fmt.Errorf("fatal error, input too large")
 		return nil, "", nil, err
 	}
+	utxoCount := len(outputs)
 
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	var multisigFeeInputs []cardanowallet.TxInput
-	var multisigFeeInputsSum uint64 = 0
+	multisigFeeInputsSum := big.NewInt(0)
 	for _, utxo := range inputUtxos.FeePayerOwnedUTXOs {
 		multisigFeeInputs = append(multisigFeeInputs, cardanowallet.TxInput{
 			Hash:  utxo.TxHash,
 			Index: uint32(utxo.TxIndex.Uint64()),
 		})
-		multisigFeeInputsSum += utxo.Amount.Uint64()
+		multisigFeeInputsSum.Add(multisigFeeInputsSum, utxo.Amount)
+		utxoCount++
 	}
-	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum}
+	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigFeeInputs, InputsSum: multisigFeeInputsSum.Uint64()}
 
-	totalUTXOCount := len(outputs)
-	// Create initial UTXO set with maximum consolidation
+	// Create initial UTXO set
+	txCostWithFee := big.NewInt(0)
+	txCostWithFee.Add(txCost, big.NewInt(int64(minUtxoAmount)))
+
 	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, 0)
-	var chosenUTXOsCount = 0
-	var chosenUTXOsSum uint64 = 0
+	chosenUTXOsSum := big.NewInt(0)
 	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
-		chosenUTXOs = append(chosenUTXOs, utxo)
-		chosenUTXOsSum += utxo.Amount.Uint64()
-		chosenUTXOsCount++
-		totalUTXOCount++
 
-		if chosenUTXOsSum > txCost.Uint64()+minUtxoAmount || chosenUTXOsSum == txCost.Uint64() {
-			break
+		// If max UTXO count is reached we will replace last UTXO with bigger UTXO
+		if utxoCount >= maxUtxoCount {
+			// Check if curent UTXO is bigger than last UTXO
+			if utxo.Amount.Cmp(chosenUTXOs[len(chosenUTXOs)-1].Amount) < 1 {
+				continue
+			}
+			chosenUTXOsSum.Sub(chosenUTXOsSum, chosenUTXOs[len(chosenUTXOs)-1].Amount)
+			chosenUTXOs[len(chosenUTXOs)-1] = utxo
+		} else {
+			chosenUTXOs = append(chosenUTXOs, utxo)
+			utxoCount++
 		}
 
-		if totalUTXOCount >= maxUtxoCount {
-			// If number of UTXOs is too large we have to stop adding more to avoid unnecessary calculations
-			chosenUTXOs = append(chosenUTXOs, inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)-1])
-			chosenUTXOsSum += inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)-1].Amount.Uint64()
+		chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
+
+		// If required txCost was reached we don't need more UTXOs
+		// chosenUTXOsSum > txCostWithFee || chosenUTXOsSum == txCost
+		if chosenUTXOsSum.Cmp(txCostWithFee) == 1 || chosenUTXOsSum.Cmp(txCost) == 0 {
 			break
 		}
 	}
 
-	// This should never happen since SC is controlling UTXOsum
-	if chosenUTXOsSum < txCost.Uint64()+minUtxoAmount && chosenUTXOsSum != txCost.Uint64() {
+	// This should never happen
+	if chosenUTXOsSum.Cmp(txCostWithFee) == -1 && chosenUTXOsSum.Cmp(txCost) != 0 {
 		err := fmt.Errorf("fatal error, not enough resources")
 		return nil, "", nil, err
 	}
 
-	for {
-		// Create inputs and sums needed for tx from chosenUTXOs set
-		var multisigInputs []cardanowallet.TxInput
-		var multisigInputsSum uint64 = 0
-		for _, utxo := range chosenUTXOs {
-			multisigInputs = append(multisigInputs, cardanowallet.TxInput{
-				Hash:  utxo.TxHash,
-				Index: uint32(utxo.TxIndex.Uint64()),
-			})
-			multisigInputsSum += utxo.Amount.Uint64()
-		}
-
-		// inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
-		txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum}
-
-		// Create Tx
-		rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
-			metadata, txInfos, outputs)
-		if err != nil {
-			return nil, "", nil, err
-		}
-
-		// TODO: Get real tx size from protocolParams/config
-		// Check if Tx size is appropriate
-		if len(rawTx) < 16000 {
-			// Check if we used big UTXO, if yes replace it with smallest acceptable one
-			// len(chosenUTXOs) == chosenUTXOsCount + 1 || chosenUTXOs + big UTXO
-			if len(chosenUTXOs) > chosenUTXOsCount {
-				offset := len(inputUtxos.MultisigOwnedUTXOs) - 1
-				neededAmount := txCost.Uint64() - (multisigInputsSum - inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64())
-				for {
-					// Find last UTXO that covers needed cost and
-					if inputUtxos.MultisigOwnedUTXOs[offset].Amount.Uint64() > neededAmount {
-						offset--
-						continue
-					}
-					// Adjust count so we don't return to this loop
-					// len(chosenUTXOs) == chosenUTXOsCount
-					chosenUTXOsCount++
-					break
-				}
-
-				// Replace biggest UTXO with smallest acceptable one and recreate Tx
-				chosenUTXOs[chosenUTXOsCount-1] = inputUtxos.MultisigOwnedUTXOs[offset+1]
-				continue
-			}
-
-			inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
-			return rawTx, txHash, inputUtxos, err
-		}
-		// If Tx size is not appropriate we need to reduce input count
-		// If this is first pass we replace last 2 UTXOs with biggest one
-		if len(chosenUTXOs) == chosenUTXOsCount {
-			chosenUTXOsCount--
-		}
-		// Replace last UTXO with biggest UTXO we have || reducing input size by 1
-		chosenUTXOs = chosenUTXOs[:chosenUTXOsCount]
-		chosenUTXOsCount--
-		chosenUTXOs[chosenUTXOsCount] = inputUtxos.MultisigOwnedUTXOs[len(inputUtxos.MultisigOwnedUTXOs)-1]
+	// for {
+	// Create inputs and sums needed for tx from chosenUTXOs set
+	var multisigInputs []cardanowallet.TxInput
+	multisigInputsSum := big.NewInt(0)
+	for _, utxo := range chosenUTXOs {
+		multisigInputs = append(multisigInputs, cardanowallet.TxInput{
+			Hash:  utxo.TxHash,
+			Index: uint32(utxo.TxIndex.Uint64()),
+		})
+		multisigInputsSum.Add(multisigInputsSum, utxo.Amount)
 	}
+
+	// inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
+	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum.Uint64()}
+
+	// Create Tx
+	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
+		metadata, txInfos, outputs)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	if len(rawTx) > maxTxSize {
+		err = fmt.Errorf("fatal error, tx too big")
+		return nil, "", nil, err
+	}
+
+	inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
+	return rawTx, txHash, inputUtxos, err
 }
 
 func GetInputUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int) (
@@ -279,10 +264,10 @@ func GetInputUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartCont
 	}
 
 	sort.Slice(inputUtxos.MultisigOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.MultisigOwnedUTXOs[i].Amount.Cmp(inputUtxos.MultisigOwnedUTXOs[j].Amount) < 0
+		return inputUtxos.MultisigOwnedUTXOs[i].Nonce < inputUtxos.MultisigOwnedUTXOs[j].Nonce
 	})
 	sort.Slice(inputUtxos.FeePayerOwnedUTXOs, func(i, j int) bool {
-		return inputUtxos.FeePayerOwnedUTXOs[i].Amount.Cmp(inputUtxos.FeePayerOwnedUTXOs[j].Amount) < 0
+		return inputUtxos.FeePayerOwnedUTXOs[i].Nonce < inputUtxos.FeePayerOwnedUTXOs[j].Nonce
 	})
 
 	return inputUtxos, err
