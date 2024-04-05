@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
@@ -65,9 +65,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 	}
 
 	dbCleanup := func() {
-		utils.RemoveDirOrFilePathIfExists(dbFilePath)
-		utils.RemoveDirOrFilePathIfExists(primeDbFilePath)
-		utils.RemoveDirOrFilePathIfExists(vectorDbFilePath)
+		common.RemoveDirOrFilePathIfExists(dbFilePath)
+		common.RemoveDirOrFilePathIfExists(primeDbFilePath)
+		common.RemoveDirOrFilePathIfExists(vectorDbFilePath)
 	}
 
 	t.Cleanup(dbCleanup)

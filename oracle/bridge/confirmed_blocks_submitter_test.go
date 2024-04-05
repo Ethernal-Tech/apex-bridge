@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	}
 
 	foldersCleanup := func() {
-		utils.RemoveDirOrFilePathIfExists(appConfig.Settings.DbsPath)
+		common.RemoveDirOrFilePathIfExists(appConfig.Settings.DbsPath)
 	}
 
 	t.Cleanup(foldersCleanup)

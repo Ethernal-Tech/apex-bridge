@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/fxamacker/cbor/v2"
@@ -41,9 +42,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, relevant)
 
-		irrelevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBridgingRequest,
+		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
 			},
 		})
 		require.NoError(t, err)
@@ -57,9 +58,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, relevant)
 
-		relevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		relevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 			},
 		})
 		require.NoError(t, err)
@@ -82,9 +83,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBridgingRequest,
+		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
 			},
 		})
 		require.NoError(t, err)
@@ -100,9 +101,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid but metadata not full", func(t *testing.T) {
-		relevantButNotFullMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		relevantButNotFullMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 			},
 		})
 		require.NoError(t, err)
@@ -125,9 +126,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
 		const batchNonceId = uint64(1)
-		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
-			Value: core.BatchExecutedMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		relevantFullMetadata, err := cbor.Marshal(common.BatchExecutedMetadataMap{
+			Value: common.BatchExecutedMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceId:   batchNonceId,
 			},
 		})
@@ -161,9 +162,9 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
 		batchNonceId := uint64(1)
-		relevantFullMetadata, err := cbor.Marshal(core.BatchExecutedMetadataMap{
-			Value: core.BatchExecutedMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		relevantFullMetadata, err := cbor.Marshal(common.BatchExecutedMetadataMap{
+			Value: common.BatchExecutedMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceId:   batchNonceId,
 			},
 		})
@@ -224,17 +225,17 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
-		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err := proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unexpected address found in tx input")
 
 		tx.Inputs[0].Output.Address = "addr1"
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "fee address not found in tx inputs")
 
 		tx.Inputs[0].Output.Address = "addr2"
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging address not found in tx inputs")
 	})
@@ -261,7 +262,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
-		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err := proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
@@ -299,7 +300,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
-		err := proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err := proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 
 		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
@@ -308,7 +309,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				IsUsed:  true,
 			},
 		})
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 
 		tx.Tx.Inputs = append(tx.Tx.Inputs, &indexer.TxInputOutput{
@@ -317,7 +318,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				IsUsed:  true,
 			},
 		})
-		err = proc.validate(&tx, &core.BatchExecutedMetadata{}, config)
+		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.NoError(t, err)
 	})
 }

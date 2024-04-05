@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 )
 
@@ -17,10 +18,10 @@ func NewBatchExecutionFailedProcessor() *BatchExecutionFailedProcessorImpl {
 }
 
 func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := core.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
 
 	if err == nil && metadata != nil {
-		return metadata.BridgingTxType == core.BridgingTxTypeBatchExecution, err
+		return metadata.BridgingTxType == common.BridgingTxTypeBatchExecution, err
 	}
 
 	return false, err
@@ -36,7 +37,7 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := core.UnmarshalBatchExecutedMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBatchExecutedMetadata(tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
@@ -50,7 +51,7 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 	return nil
 }
 
-func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *core.BatchExecutedMetadata) {
+func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata) {
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, core.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
 		ChainID:                 tx.ChainId,
@@ -58,9 +59,7 @@ func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *c
 	})
 }
 
-func (*BatchExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *core.BatchExecutedMetadata, appConfig *core.AppConfig) error {
-	// TODO: implement validating the tx for this specific claim if it is needed
-	// once we figure out the structure of metadata and how the batch is applied
-	// to destination chain
+func (*BatchExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+	// no validation needed
 	return nil
 }

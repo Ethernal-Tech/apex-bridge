@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
@@ -35,7 +35,7 @@ func NewConfirmedBlocksSubmitter(
 	chainId string,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
-	if err := utils.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
 		return nil, err
 	}
 

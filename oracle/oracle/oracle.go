@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
@@ -14,7 +15,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -61,7 +61,7 @@ func NewOracle(appConfig *core.AppConfig, initialUtxos *core.InitialUtxos) *Orac
 		return nil
 	}
 
-	if err := utils.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Create directory failed", "err", err)
 		return nil
