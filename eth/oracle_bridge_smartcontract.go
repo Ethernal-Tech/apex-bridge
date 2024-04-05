@@ -12,9 +12,13 @@ import (
 type CardanoBlock = contractbinding.IBridgeContractStructsCardanoBlock
 type Claims = contractbinding.IBridgeContractStructsValidatorClaims
 
+type LastBatchRawTx struct {
+	RawTx string
+}
+
 type IOracleBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error)
-	GetExpectedTx(ctx context.Context, chainID string) (string, error) // TODO: replace with real when implemented
+	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error)
 	SubmitClaims(ctx context.Context, claims Claims) error
 	SubmitLastObservableBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
 }
@@ -68,31 +72,29 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(ctx context.Conte
 	return &result, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetExpectedTx(ctx context.Context, chainID string) (string, error) {
-	return "", nil
-	// TODO: implement when done on SC
-	/*
-		ethTxHelper, err := bsc.ethHelper.GetEthHelper()
-		if err != nil {
-			return nil, err
-		}
+func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
 
-		contract, err := contractbinding.NewBridgeContract(
-			common.HexToAddress(bsc.smartContractAddress),
-			ethTxHelper.GetClient())
-		if err != nil {
-			return nil, bsc.ethHelper.ProcessError(err)
-		}
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
 
-		result, err := contract.GetExpectedTxs(&bind.CallOpts{
-			Context: ctx,
-		})
-		if err != nil {
-			return nil, bsc.ethHelper.ProcessError(err)
-		}
+	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
+		Context: ctx,
+	}, chainID)
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
 
-		return &result, nil
-	*/
+	return &LastBatchRawTx{
+		RawTx: result,
+	}, nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(ctx context.Context, claims Claims) error {

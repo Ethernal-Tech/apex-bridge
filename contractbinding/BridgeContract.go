@@ -159,7 +159,7 @@ type IBridgeContractStructsValidatorClaims struct {
 
 // BridgeContractMetaData contains all meta data concerning the BridgeContract contract.
 var BridgeContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"AlreadyConfirmed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_blockchainID\",\"type\":\"string\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimId\",\"type\":\"string\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_slot\",\"type\":\"uint256\"}],\"name\":\"InvalidSlot\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgeContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsHelper\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsManagerOrBridgeContract\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"NotEnoughBridgingTokensAwailable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchManagerOrBridgeContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RefundRequestClaimNotYetSupporter\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getAllRegisteredChains\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"utxos\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"addressFeePayer\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"tokenQuantity\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Chain[]\",\"name\":\"_chains\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getAvailableUTXOs\",\"outputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"availableUTXOs\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedBatch\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structIBridgeContractStructs.ConfirmedBatch\",\"name\":\"batch\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedTransactions\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockHeight\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"destinationAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Receiver[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.ConfirmedTransaction[]\",\"name\":\"confirmedTransactions\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_sourceChain\",\"type\":\"string\"}],\"name\":\"getLastObservedBlock\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blockSlot\",\"type\":\"uint64\"}],\"internalType\":\"structIBridgeContractStructs.CardanoBlock\",\"name\":\"cblock\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getNextBatchId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_claimHash\",\"type\":\"bytes32\"}],\"name\":\"getNumberOfVotes\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getQuorumNumberOfValidators\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"}],\"name\":\"getValidatorsCardanoData\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData[]\",\"name\":\"validators\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"}],\"name\":\"isChainRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"_initialUTXOs\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_addressFeePayer\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData\",\"name\":\"data\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorAddressCardanoData[]\",\"name\":\"validatorData\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256\",\"name\":\"_tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"registerChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"_initialUTXOs\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_addressFeePayer\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData\",\"name\":\"validatorData\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"registerChainGovernance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"shouldCreateBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"destinationAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Receiver[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"outputUTXO\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"sourceChainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"destinationChainID\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.BridgingRequestClaim[]\",\"name\":\"bridgingRequestClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"batchNonceID\",\"type\":\"uint256\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"outputUTXOs\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.BatchExecutedClaim[]\",\"name\":\"batchExecutedClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"batchNonceID\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.BatchExecutionFailedClaim[]\",\"name\":\"batchExecutionFailedClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"previousRefundTxHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"utxo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"multisigSignature\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"retryCounter\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.RefundRequestClaim[]\",\"name\":\"refundRequestClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"refundTxHash\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"utxo\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.RefundExecutedClaim[]\",\"name\":\"refundExecutedClaims\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorClaims\",\"name\":\"_claims\",\"type\":\"tuple\"}],\"name\":\"submitClaims\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blockSlot\",\"type\":\"uint64\"}],\"internalType\":\"structIBridgeContractStructs.CardanoBlock[]\",\"name\":\"blocks\",\"type\":\"tuple[]\"}],\"name\":\"submitLastObservableBlocks\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"destinationChainId\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"multisigSignature\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"feePayerMultisigSignature\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"includedTransactions\",\"type\":\"uint256[]\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"usedUTXOs\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.SignedBatch\",\"name\":\"_signedBatch\",\"type\":\"tuple\"}],\"name\":\"submitSignedBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_validators\",\"type\":\"address[]\"},{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"},{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"AlreadyConfirmed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_blockchainID\",\"type\":\"string\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimId\",\"type\":\"string\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_slot\",\"type\":\"uint256\"}],\"name\":\"InvalidSlot\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgeContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsHelper\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaimsManagerOrBridgeContract\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_claimTransactionHash\",\"type\":\"string\"}],\"name\":\"NotEnoughBridgingTokensAwailable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchManagerOrBridgeContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RefundRequestClaimNotYetSupporter\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_nonce\",\"type\":\"uint256\"}],\"name\":\"WrongBatchNonce\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getAllRegisteredChains\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"utxos\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"addressFeePayer\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"tokenQuantity\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Chain[]\",\"name\":\"_chains\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getAvailableUTXOs\",\"outputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"availableUTXOs\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"}],\"name\":\"getBatchingTxsCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"counterConfirmedTransactions\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedBatch\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string[]\",\"name\":\"multisigSignatures\",\"type\":\"string[]\"},{\"internalType\":\"string[]\",\"name\":\"feePayerMultisigSignatures\",\"type\":\"string[]\"}],\"internalType\":\"structIBridgeContractStructs.ConfirmedBatch\",\"name\":\"batch\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getConfirmedTransactions\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockHeight\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"destinationAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Receiver[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.ConfirmedTransaction[]\",\"name\":\"_confirmedTransactions\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_sourceChain\",\"type\":\"string\"}],\"name\":\"getLastObservedBlock\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blockSlot\",\"type\":\"uint64\"}],\"internalType\":\"structIBridgeContractStructs.CardanoBlock\",\"name\":\"cblock\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getNextBatchId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"result\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_hash\",\"type\":\"bytes32\"}],\"name\":\"getNumberOfVotes\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getQuorumNumberOfValidators\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"getRawTransactionFromLastBatch\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"}],\"name\":\"getValidatorsCardanoData\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData[]\",\"name\":\"validators\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"isChainRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"nextTimeoutBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"_initialUTXOs\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_addressFeePayer\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData\",\"name\":\"data\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorAddressCardanoData[]\",\"name\":\"validators\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256\",\"name\":\"_tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"registerChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"_initialUTXOs\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_addressMultisig\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_addressFeePayer\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"keyHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"keyHashFee\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKey\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"verifyingKeyFee\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorCardanoData\",\"name\":\"validator\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"registerChainGovernance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsHelper\",\"type\":\"address\"}],\"name\":\"setClaimsHelper\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsManager\",\"type\":\"address\"}],\"name\":\"setClaimsManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_chainId\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_blockNumber\",\"type\":\"uint256\"}],\"name\":\"setNextTimeoutBlock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_signedBatchManager\",\"type\":\"address\"}],\"name\":\"setSignedBatchManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractSlotsManager\",\"name\":\"_slotsManager\",\"type\":\"address\"}],\"name\":\"setSlotsManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_utxosManager\",\"type\":\"address\"}],\"name\":\"setUTXOsManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_destinationChain\",\"type\":\"string\"}],\"name\":\"shouldCreateBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"batch\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"destinationAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.Receiver[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"outputUTXO\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"sourceChainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"destinationChainID\",\"type\":\"string\"}],\"internalType\":\"structIBridgeContractStructs.BridgingRequestClaim[]\",\"name\":\"bridgingRequestClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"batchNonceID\",\"type\":\"uint256\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"outputUTXOs\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.BatchExecutedClaim[]\",\"name\":\"batchExecutedClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"batchNonceID\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.BatchExecutionFailedClaim[]\",\"name\":\"batchExecutionFailedClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"previousRefundTxHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"utxo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"multisigSignature\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"retryCounter\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.RefundRequestClaim[]\",\"name\":\"refundRequestClaims\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"observedTransactionHash\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"refundTxHash\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO\",\"name\":\"utxo\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.RefundExecutedClaim[]\",\"name\":\"refundExecutedClaims\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.ValidatorClaims\",\"name\":\"_claims\",\"type\":\"tuple\"}],\"name\":\"submitClaims\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"chainID\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blockSlot\",\"type\":\"uint64\"}],\"internalType\":\"structIBridgeContractStructs.CardanoBlock[]\",\"name\":\"blocks\",\"type\":\"tuple[]\"}],\"name\":\"submitLastObservableBlocks\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"destinationChainId\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"rawTransaction\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"multisigSignature\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"feePayerMultisigSignature\",\"type\":\"string\"},{\"internalType\":\"uint256[]\",\"name\":\"includedTransactions\",\"type\":\"uint256[]\"},{\"components\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"multisigOwnedUTXOs\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"txIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeContractStructs.UTXO[]\",\"name\":\"feePayerOwnedUTXOs\",\"type\":\"tuple[]\"}],\"internalType\":\"structIBridgeContractStructs.UTXOs\",\"name\":\"usedUTXOs\",\"type\":\"tuple\"}],\"internalType\":\"structIBridgeContractStructs.SignedBatch\",\"name\":\"_signedBatch\",\"type\":\"tuple\"}],\"name\":\"submitSignedBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorsCount\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // BridgeContractABI is the input ABI used to generate the binding from.
@@ -370,6 +370,37 @@ func (_BridgeContract *BridgeContractCallerSession) GetAvailableUTXOs(_destinati
 	return _BridgeContract.Contract.GetAvailableUTXOs(&_BridgeContract.CallOpts, _destinationChain)
 }
 
+// GetBatchingTxsCount is a free data retrieval call binding the contract method 0x44e3bd22.
+//
+// Solidity: function getBatchingTxsCount(string _chainId) view returns(uint256 counterConfirmedTransactions)
+func (_BridgeContract *BridgeContractCaller) GetBatchingTxsCount(opts *bind.CallOpts, _chainId string) (*big.Int, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "getBatchingTxsCount", _chainId)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetBatchingTxsCount is a free data retrieval call binding the contract method 0x44e3bd22.
+//
+// Solidity: function getBatchingTxsCount(string _chainId) view returns(uint256 counterConfirmedTransactions)
+func (_BridgeContract *BridgeContractSession) GetBatchingTxsCount(_chainId string) (*big.Int, error) {
+	return _BridgeContract.Contract.GetBatchingTxsCount(&_BridgeContract.CallOpts, _chainId)
+}
+
+// GetBatchingTxsCount is a free data retrieval call binding the contract method 0x44e3bd22.
+//
+// Solidity: function getBatchingTxsCount(string _chainId) view returns(uint256 counterConfirmedTransactions)
+func (_BridgeContract *BridgeContractCallerSession) GetBatchingTxsCount(_chainId string) (*big.Int, error) {
+	return _BridgeContract.Contract.GetBatchingTxsCount(&_BridgeContract.CallOpts, _chainId)
+}
+
 // GetConfirmedBatch is a free data retrieval call binding the contract method 0xd52c54c4.
 //
 // Solidity: function getConfirmedBatch(string _destinationChain) view returns((uint256,string,string[],string[]) batch)
@@ -403,7 +434,7 @@ func (_BridgeContract *BridgeContractCallerSession) GetConfirmedBatch(_destinati
 
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x595051f9.
 //
-// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] confirmedTransactions)
+// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractCaller) GetConfirmedTransactions(opts *bind.CallOpts, _destinationChain string) ([]IBridgeContractStructsConfirmedTransaction, error) {
 	var out []interface{}
 	err := _BridgeContract.contract.Call(opts, &out, "getConfirmedTransactions", _destinationChain)
@@ -420,14 +451,14 @@ func (_BridgeContract *BridgeContractCaller) GetConfirmedTransactions(opts *bind
 
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x595051f9.
 //
-// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] confirmedTransactions)
+// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractSession) GetConfirmedTransactions(_destinationChain string) ([]IBridgeContractStructsConfirmedTransaction, error) {
 	return _BridgeContract.Contract.GetConfirmedTransactions(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x595051f9.
 //
-// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] confirmedTransactions)
+// Solidity: function getConfirmedTransactions(string _destinationChain) view returns((uint256,uint256,(string,uint256)[])[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractCallerSession) GetConfirmedTransactions(_destinationChain string) ([]IBridgeContractStructsConfirmedTransaction, error) {
 	return _BridgeContract.Contract.GetConfirmedTransactions(&_BridgeContract.CallOpts, _destinationChain)
 }
@@ -465,7 +496,7 @@ func (_BridgeContract *BridgeContractCallerSession) GetLastObservedBlock(_source
 
 // GetNextBatchId is a free data retrieval call binding the contract method 0x3cd9ae3e.
 //
-// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256)
+// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256 result)
 func (_BridgeContract *BridgeContractCaller) GetNextBatchId(opts *bind.CallOpts, _destinationChain string) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeContract.contract.Call(opts, &out, "getNextBatchId", _destinationChain)
@@ -482,24 +513,24 @@ func (_BridgeContract *BridgeContractCaller) GetNextBatchId(opts *bind.CallOpts,
 
 // GetNextBatchId is a free data retrieval call binding the contract method 0x3cd9ae3e.
 //
-// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256)
+// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256 result)
 func (_BridgeContract *BridgeContractSession) GetNextBatchId(_destinationChain string) (*big.Int, error) {
 	return _BridgeContract.Contract.GetNextBatchId(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // GetNextBatchId is a free data retrieval call binding the contract method 0x3cd9ae3e.
 //
-// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256)
+// Solidity: function getNextBatchId(string _destinationChain) view returns(uint256 result)
 func (_BridgeContract *BridgeContractCallerSession) GetNextBatchId(_destinationChain string) (*big.Int, error) {
 	return _BridgeContract.Contract.GetNextBatchId(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // GetNumberOfVotes is a free data retrieval call binding the contract method 0x8d2d814c.
 //
-// Solidity: function getNumberOfVotes(bytes32 _claimHash) view returns(uint8)
-func (_BridgeContract *BridgeContractCaller) GetNumberOfVotes(opts *bind.CallOpts, _claimHash [32]byte) (uint8, error) {
+// Solidity: function getNumberOfVotes(bytes32 _hash) view returns(uint8)
+func (_BridgeContract *BridgeContractCaller) GetNumberOfVotes(opts *bind.CallOpts, _hash [32]byte) (uint8, error) {
 	var out []interface{}
-	err := _BridgeContract.contract.Call(opts, &out, "getNumberOfVotes", _claimHash)
+	err := _BridgeContract.contract.Call(opts, &out, "getNumberOfVotes", _hash)
 
 	if err != nil {
 		return *new(uint8), err
@@ -513,16 +544,16 @@ func (_BridgeContract *BridgeContractCaller) GetNumberOfVotes(opts *bind.CallOpt
 
 // GetNumberOfVotes is a free data retrieval call binding the contract method 0x8d2d814c.
 //
-// Solidity: function getNumberOfVotes(bytes32 _claimHash) view returns(uint8)
-func (_BridgeContract *BridgeContractSession) GetNumberOfVotes(_claimHash [32]byte) (uint8, error) {
-	return _BridgeContract.Contract.GetNumberOfVotes(&_BridgeContract.CallOpts, _claimHash)
+// Solidity: function getNumberOfVotes(bytes32 _hash) view returns(uint8)
+func (_BridgeContract *BridgeContractSession) GetNumberOfVotes(_hash [32]byte) (uint8, error) {
+	return _BridgeContract.Contract.GetNumberOfVotes(&_BridgeContract.CallOpts, _hash)
 }
 
 // GetNumberOfVotes is a free data retrieval call binding the contract method 0x8d2d814c.
 //
-// Solidity: function getNumberOfVotes(bytes32 _claimHash) view returns(uint8)
-func (_BridgeContract *BridgeContractCallerSession) GetNumberOfVotes(_claimHash [32]byte) (uint8, error) {
-	return _BridgeContract.Contract.GetNumberOfVotes(&_BridgeContract.CallOpts, _claimHash)
+// Solidity: function getNumberOfVotes(bytes32 _hash) view returns(uint8)
+func (_BridgeContract *BridgeContractCallerSession) GetNumberOfVotes(_hash [32]byte) (uint8, error) {
+	return _BridgeContract.Contract.GetNumberOfVotes(&_BridgeContract.CallOpts, _hash)
 }
 
 // GetQuorumNumberOfValidators is a free data retrieval call binding the contract method 0xd8718da0.
@@ -554,6 +585,37 @@ func (_BridgeContract *BridgeContractSession) GetQuorumNumberOfValidators() (uin
 // Solidity: function getQuorumNumberOfValidators() view returns(uint8)
 func (_BridgeContract *BridgeContractCallerSession) GetQuorumNumberOfValidators() (uint8, error) {
 	return _BridgeContract.Contract.GetQuorumNumberOfValidators(&_BridgeContract.CallOpts)
+}
+
+// GetRawTransactionFromLastBatch is a free data retrieval call binding the contract method 0x49187cd9.
+//
+// Solidity: function getRawTransactionFromLastBatch(string _destinationChain) view returns(string)
+func (_BridgeContract *BridgeContractCaller) GetRawTransactionFromLastBatch(opts *bind.CallOpts, _destinationChain string) (string, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "getRawTransactionFromLastBatch", _destinationChain)
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// GetRawTransactionFromLastBatch is a free data retrieval call binding the contract method 0x49187cd9.
+//
+// Solidity: function getRawTransactionFromLastBatch(string _destinationChain) view returns(string)
+func (_BridgeContract *BridgeContractSession) GetRawTransactionFromLastBatch(_destinationChain string) (string, error) {
+	return _BridgeContract.Contract.GetRawTransactionFromLastBatch(&_BridgeContract.CallOpts, _destinationChain)
+}
+
+// GetRawTransactionFromLastBatch is a free data retrieval call binding the contract method 0x49187cd9.
+//
+// Solidity: function getRawTransactionFromLastBatch(string _destinationChain) view returns(string)
+func (_BridgeContract *BridgeContractCallerSession) GetRawTransactionFromLastBatch(_destinationChain string) (string, error) {
+	return _BridgeContract.Contract.GetRawTransactionFromLastBatch(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // GetValidatorsCardanoData is a free data retrieval call binding the contract method 0x636b8a0d.
@@ -589,10 +651,10 @@ func (_BridgeContract *BridgeContractCallerSession) GetValidatorsCardanoData(_ch
 
 // IsChainRegistered is a free data retrieval call binding the contract method 0x18c586cd.
 //
-// Solidity: function isChainRegistered(string _chainId) view returns(bool)
-func (_BridgeContract *BridgeContractCaller) IsChainRegistered(opts *bind.CallOpts, _chainId string) (bool, error) {
+// Solidity: function isChainRegistered(string ) view returns(bool)
+func (_BridgeContract *BridgeContractCaller) IsChainRegistered(opts *bind.CallOpts, arg0 string) (bool, error) {
 	var out []interface{}
-	err := _BridgeContract.contract.Call(opts, &out, "isChainRegistered", _chainId)
+	err := _BridgeContract.contract.Call(opts, &out, "isChainRegistered", arg0)
 
 	if err != nil {
 		return *new(bool), err
@@ -606,21 +668,52 @@ func (_BridgeContract *BridgeContractCaller) IsChainRegistered(opts *bind.CallOp
 
 // IsChainRegistered is a free data retrieval call binding the contract method 0x18c586cd.
 //
-// Solidity: function isChainRegistered(string _chainId) view returns(bool)
-func (_BridgeContract *BridgeContractSession) IsChainRegistered(_chainId string) (bool, error) {
-	return _BridgeContract.Contract.IsChainRegistered(&_BridgeContract.CallOpts, _chainId)
+// Solidity: function isChainRegistered(string ) view returns(bool)
+func (_BridgeContract *BridgeContractSession) IsChainRegistered(arg0 string) (bool, error) {
+	return _BridgeContract.Contract.IsChainRegistered(&_BridgeContract.CallOpts, arg0)
 }
 
 // IsChainRegistered is a free data retrieval call binding the contract method 0x18c586cd.
 //
-// Solidity: function isChainRegistered(string _chainId) view returns(bool)
-func (_BridgeContract *BridgeContractCallerSession) IsChainRegistered(_chainId string) (bool, error) {
-	return _BridgeContract.Contract.IsChainRegistered(&_BridgeContract.CallOpts, _chainId)
+// Solidity: function isChainRegistered(string ) view returns(bool)
+func (_BridgeContract *BridgeContractCallerSession) IsChainRegistered(arg0 string) (bool, error) {
+	return _BridgeContract.Contract.IsChainRegistered(&_BridgeContract.CallOpts, arg0)
+}
+
+// NextTimeoutBlock is a free data retrieval call binding the contract method 0x4ae4dd7c.
+//
+// Solidity: function nextTimeoutBlock(string ) view returns(uint256)
+func (_BridgeContract *BridgeContractCaller) NextTimeoutBlock(opts *bind.CallOpts, arg0 string) (*big.Int, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "nextTimeoutBlock", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// NextTimeoutBlock is a free data retrieval call binding the contract method 0x4ae4dd7c.
+//
+// Solidity: function nextTimeoutBlock(string ) view returns(uint256)
+func (_BridgeContract *BridgeContractSession) NextTimeoutBlock(arg0 string) (*big.Int, error) {
+	return _BridgeContract.Contract.NextTimeoutBlock(&_BridgeContract.CallOpts, arg0)
+}
+
+// NextTimeoutBlock is a free data retrieval call binding the contract method 0x4ae4dd7c.
+//
+// Solidity: function nextTimeoutBlock(string ) view returns(uint256)
+func (_BridgeContract *BridgeContractCallerSession) NextTimeoutBlock(arg0 string) (*big.Int, error) {
+	return _BridgeContract.Contract.NextTimeoutBlock(&_BridgeContract.CallOpts, arg0)
 }
 
 // ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
 //
-// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool)
+// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool batch)
 func (_BridgeContract *BridgeContractCaller) ShouldCreateBatch(opts *bind.CallOpts, _destinationChain string) (bool, error) {
 	var out []interface{}
 	err := _BridgeContract.contract.Call(opts, &out, "shouldCreateBatch", _destinationChain)
@@ -637,58 +730,215 @@ func (_BridgeContract *BridgeContractCaller) ShouldCreateBatch(opts *bind.CallOp
 
 // ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
 //
-// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool)
+// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool batch)
 func (_BridgeContract *BridgeContractSession) ShouldCreateBatch(_destinationChain string) (bool, error) {
 	return _BridgeContract.Contract.ShouldCreateBatch(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // ShouldCreateBatch is a free data retrieval call binding the contract method 0x77968b34.
 //
-// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool)
+// Solidity: function shouldCreateBatch(string _destinationChain) view returns(bool batch)
 func (_BridgeContract *BridgeContractCallerSession) ShouldCreateBatch(_destinationChain string) (bool, error) {
 	return _BridgeContract.Contract.ShouldCreateBatch(&_BridgeContract.CallOpts, _destinationChain)
 }
 
-// RegisterChain is a paid mutator transaction binding the contract method 0xb8cd5fd1.
+// ValidatorsCount is a free data retrieval call binding the contract method 0xed612f8c.
 //
-// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractTransactor) RegisterChain(opts *bind.TransactOpts, _chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.contract.Transact(opts, "registerChain", _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function validatorsCount() view returns(uint8)
+func (_BridgeContract *BridgeContractCaller) ValidatorsCount(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "validatorsCount")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// ValidatorsCount is a free data retrieval call binding the contract method 0xed612f8c.
+//
+// Solidity: function validatorsCount() view returns(uint8)
+func (_BridgeContract *BridgeContractSession) ValidatorsCount() (uint8, error) {
+	return _BridgeContract.Contract.ValidatorsCount(&_BridgeContract.CallOpts)
+}
+
+// ValidatorsCount is a free data retrieval call binding the contract method 0xed612f8c.
+//
+// Solidity: function validatorsCount() view returns(uint8)
+func (_BridgeContract *BridgeContractCallerSession) ValidatorsCount() (uint8, error) {
+	return _BridgeContract.Contract.ValidatorsCount(&_BridgeContract.CallOpts)
 }
 
 // RegisterChain is a paid mutator transaction binding the contract method 0xb8cd5fd1.
 //
-// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractSession) RegisterChain(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.Contract.RegisterChain(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validators, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractTransactor) RegisterChain(opts *bind.TransactOpts, _chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validators []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "registerChain", _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validators, _tokenQuantity)
 }
 
 // RegisterChain is a paid mutator transaction binding the contract method 0xb8cd5fd1.
 //
-// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractTransactorSession) RegisterChain(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.Contract.RegisterChain(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validators, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractSession) RegisterChain(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validators []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.RegisterChain(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validators, _tokenQuantity)
+}
+
+// RegisterChain is a paid mutator transaction binding the contract method 0xb8cd5fd1.
+//
+// Solidity: function registerChain(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (address,(string,string,string,string))[] validators, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractTransactorSession) RegisterChain(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validators []IBridgeContractStructsValidatorAddressCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.RegisterChain(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validators, _tokenQuantity)
 }
 
 // RegisterChainGovernance is a paid mutator transaction binding the contract method 0x24362d30.
 //
-// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractTransactor) RegisterChainGovernance(opts *bind.TransactOpts, _chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.contract.Transact(opts, "registerChainGovernance", _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validator, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractTransactor) RegisterChainGovernance(opts *bind.TransactOpts, _chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validator IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "registerChainGovernance", _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validator, _tokenQuantity)
 }
 
 // RegisterChainGovernance is a paid mutator transaction binding the contract method 0x24362d30.
 //
-// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractSession) RegisterChainGovernance(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.Contract.RegisterChainGovernance(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validator, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractSession) RegisterChainGovernance(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validator IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.RegisterChainGovernance(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validator, _tokenQuantity)
 }
 
 // RegisterChainGovernance is a paid mutator transaction binding the contract method 0x24362d30.
 //
-// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validatorData, uint256 _tokenQuantity) returns()
-func (_BridgeContract *BridgeContractTransactorSession) RegisterChainGovernance(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validatorData IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
-	return _BridgeContract.Contract.RegisterChainGovernance(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validatorData, _tokenQuantity)
+// Solidity: function registerChainGovernance(string _chainId, ((uint64,string,uint256,uint256)[],(uint64,string,uint256,uint256)[]) _initialUTXOs, string _addressMultisig, string _addressFeePayer, (string,string,string,string) validator, uint256 _tokenQuantity) returns()
+func (_BridgeContract *BridgeContractTransactorSession) RegisterChainGovernance(_chainId string, _initialUTXOs IBridgeContractStructsUTXOs, _addressMultisig string, _addressFeePayer string, validator IBridgeContractStructsValidatorCardanoData, _tokenQuantity *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.RegisterChainGovernance(&_BridgeContract.TransactOpts, _chainId, _initialUTXOs, _addressMultisig, _addressFeePayer, validator, _tokenQuantity)
+}
+
+// SetClaimsHelper is a paid mutator transaction binding the contract method 0x3021bf78.
+//
+// Solidity: function setClaimsHelper(address _claimsHelper) returns()
+func (_BridgeContract *BridgeContractTransactor) SetClaimsHelper(opts *bind.TransactOpts, _claimsHelper common.Address) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setClaimsHelper", _claimsHelper)
+}
+
+// SetClaimsHelper is a paid mutator transaction binding the contract method 0x3021bf78.
+//
+// Solidity: function setClaimsHelper(address _claimsHelper) returns()
+func (_BridgeContract *BridgeContractSession) SetClaimsHelper(_claimsHelper common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetClaimsHelper(&_BridgeContract.TransactOpts, _claimsHelper)
+}
+
+// SetClaimsHelper is a paid mutator transaction binding the contract method 0x3021bf78.
+//
+// Solidity: function setClaimsHelper(address _claimsHelper) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetClaimsHelper(_claimsHelper common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetClaimsHelper(&_BridgeContract.TransactOpts, _claimsHelper)
+}
+
+// SetClaimsManager is a paid mutator transaction binding the contract method 0x73f195a9.
+//
+// Solidity: function setClaimsManager(address _claimsManager) returns()
+func (_BridgeContract *BridgeContractTransactor) SetClaimsManager(opts *bind.TransactOpts, _claimsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setClaimsManager", _claimsManager)
+}
+
+// SetClaimsManager is a paid mutator transaction binding the contract method 0x73f195a9.
+//
+// Solidity: function setClaimsManager(address _claimsManager) returns()
+func (_BridgeContract *BridgeContractSession) SetClaimsManager(_claimsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetClaimsManager(&_BridgeContract.TransactOpts, _claimsManager)
+}
+
+// SetClaimsManager is a paid mutator transaction binding the contract method 0x73f195a9.
+//
+// Solidity: function setClaimsManager(address _claimsManager) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetClaimsManager(_claimsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetClaimsManager(&_BridgeContract.TransactOpts, _claimsManager)
+}
+
+// SetNextTimeoutBlock is a paid mutator transaction binding the contract method 0x0d32b63e.
+//
+// Solidity: function setNextTimeoutBlock(string _chainId, uint256 _blockNumber) returns()
+func (_BridgeContract *BridgeContractTransactor) SetNextTimeoutBlock(opts *bind.TransactOpts, _chainId string, _blockNumber *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setNextTimeoutBlock", _chainId, _blockNumber)
+}
+
+// SetNextTimeoutBlock is a paid mutator transaction binding the contract method 0x0d32b63e.
+//
+// Solidity: function setNextTimeoutBlock(string _chainId, uint256 _blockNumber) returns()
+func (_BridgeContract *BridgeContractSession) SetNextTimeoutBlock(_chainId string, _blockNumber *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetNextTimeoutBlock(&_BridgeContract.TransactOpts, _chainId, _blockNumber)
+}
+
+// SetNextTimeoutBlock is a paid mutator transaction binding the contract method 0x0d32b63e.
+//
+// Solidity: function setNextTimeoutBlock(string _chainId, uint256 _blockNumber) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetNextTimeoutBlock(_chainId string, _blockNumber *big.Int) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetNextTimeoutBlock(&_BridgeContract.TransactOpts, _chainId, _blockNumber)
+}
+
+// SetSignedBatchManager is a paid mutator transaction binding the contract method 0x49ae9ba8.
+//
+// Solidity: function setSignedBatchManager(address _signedBatchManager) returns()
+func (_BridgeContract *BridgeContractTransactor) SetSignedBatchManager(opts *bind.TransactOpts, _signedBatchManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setSignedBatchManager", _signedBatchManager)
+}
+
+// SetSignedBatchManager is a paid mutator transaction binding the contract method 0x49ae9ba8.
+//
+// Solidity: function setSignedBatchManager(address _signedBatchManager) returns()
+func (_BridgeContract *BridgeContractSession) SetSignedBatchManager(_signedBatchManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetSignedBatchManager(&_BridgeContract.TransactOpts, _signedBatchManager)
+}
+
+// SetSignedBatchManager is a paid mutator transaction binding the contract method 0x49ae9ba8.
+//
+// Solidity: function setSignedBatchManager(address _signedBatchManager) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetSignedBatchManager(_signedBatchManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetSignedBatchManager(&_BridgeContract.TransactOpts, _signedBatchManager)
+}
+
+// SetSlotsManager is a paid mutator transaction binding the contract method 0x45793361.
+//
+// Solidity: function setSlotsManager(address _slotsManager) returns()
+func (_BridgeContract *BridgeContractTransactor) SetSlotsManager(opts *bind.TransactOpts, _slotsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setSlotsManager", _slotsManager)
+}
+
+// SetSlotsManager is a paid mutator transaction binding the contract method 0x45793361.
+//
+// Solidity: function setSlotsManager(address _slotsManager) returns()
+func (_BridgeContract *BridgeContractSession) SetSlotsManager(_slotsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetSlotsManager(&_BridgeContract.TransactOpts, _slotsManager)
+}
+
+// SetSlotsManager is a paid mutator transaction binding the contract method 0x45793361.
+//
+// Solidity: function setSlotsManager(address _slotsManager) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetSlotsManager(_slotsManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetSlotsManager(&_BridgeContract.TransactOpts, _slotsManager)
+}
+
+// SetUTXOsManager is a paid mutator transaction binding the contract method 0x82e82f14.
+//
+// Solidity: function setUTXOsManager(address _utxosManager) returns()
+func (_BridgeContract *BridgeContractTransactor) SetUTXOsManager(opts *bind.TransactOpts, _utxosManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "setUTXOsManager", _utxosManager)
+}
+
+// SetUTXOsManager is a paid mutator transaction binding the contract method 0x82e82f14.
+//
+// Solidity: function setUTXOsManager(address _utxosManager) returns()
+func (_BridgeContract *BridgeContractSession) SetUTXOsManager(_utxosManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetUTXOsManager(&_BridgeContract.TransactOpts, _utxosManager)
+}
+
+// SetUTXOsManager is a paid mutator transaction binding the contract method 0x82e82f14.
+//
+// Solidity: function setUTXOsManager(address _utxosManager) returns()
+func (_BridgeContract *BridgeContractTransactorSession) SetUTXOsManager(_utxosManager common.Address) (*types.Transaction, error) {
+	return _BridgeContract.Contract.SetUTXOsManager(&_BridgeContract.TransactOpts, _utxosManager)
 }
 
 // SubmitClaims is a paid mutator transaction binding the contract method 0xb95a432c.

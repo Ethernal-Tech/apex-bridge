@@ -65,11 +65,21 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 
 func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeExpectedCardanoTx, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
-		rawTx, err := df.bridgeSC.GetExpectedTx(df.ctx, chainId)
+		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainId)
 		if err == nil {
-			tx, err := indexer.ParseTxInfo([]byte(rawTx))
+			if lastBatchRawTx == nil {
+				return nil, nil
+			}
+
+			rawTx, err := hex.DecodeString(lastBatchRawTx.RawTx)
 			if err != nil {
-				df.logger.Error("Failed to ParseTxInfo", "rawTx", rawTx, "err", err)
+				df.logger.Error("Failed to decode rawTx string", "rawTx", lastBatchRawTx.RawTx, "err", err)
+				return nil, fmt.Errorf("failed to decode rawTx string. rawTx: %v. err: %v", lastBatchRawTx.RawTx, err)
+			}
+
+			tx, err := indexer.ParseTxInfo(rawTx)
+			if err != nil {
+				df.logger.Error("Failed to ParseTxInfo", "rawTx", lastBatchRawTx.RawTx, "err", err)
 				return nil, fmt.Errorf("failed to ParseTxInfo. err: %v", err)
 			}
 
