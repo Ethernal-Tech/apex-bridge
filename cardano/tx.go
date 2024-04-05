@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/fxamacker/cbor/v2"
 )
@@ -103,11 +102,10 @@ func CreateMetaData(v *big.Int) ([]byte, error) {
 
 func CreateBatchMetaData(v *big.Int) ([]byte, error) {
 	metadata := map[string]interface{}{
-		"0": core.BatchExecutedMetadata{
-			BridgingTxType: core.BridgingTxTypeBatchExecution,
-			BatchNonceId:   v.Uint64(),
+		"0": map[string]interface{}{
+			"type":         "batchExecution",
+			"batchNonceId": v.String(),
 		},
 	}
-
 	return json.Marshal(metadata)
 }
