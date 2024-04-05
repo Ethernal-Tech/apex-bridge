@@ -86,9 +86,9 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
 		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
-		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000))
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
@@ -109,9 +109,9 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
 		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(4000000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
-		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(4000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000))
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
@@ -132,9 +132,9 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
 		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
-		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000))
 	})
 
 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
