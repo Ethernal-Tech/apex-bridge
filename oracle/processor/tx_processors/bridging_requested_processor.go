@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -19,10 +20,10 @@ func NewBridgingRequestedProcessor() *BridgingRequestedProcessorImpl {
 }
 
 func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := core.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
 
 	if err == nil && metadata != nil {
-		return metadata.BridgingTxType == core.BridgingTxTypeBridgingRequest, err
+		return metadata.BridgingTxType == common.BridgingTxTypeBridgingRequest, err
 	}
 
 	return false, err
@@ -38,7 +39,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := core.UnmarshalBridgingRequestMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBridgingRequestMetadata(tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
@@ -55,7 +56,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 	return nil
 }
 
-func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) {
+func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig) {
 	var receivers []core.BridgingRequestReceiver
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, core.BridgingRequestReceiver{
@@ -86,7 +87,7 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.Brid
 }
 
 /*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BridgingRequestMetadata) {
+func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata) {
 
 		var outputUtxos []core.Utxo
 		for _, output := range tx.Outputs {
@@ -111,7 +112,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 }
 */
 
-func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BridgingRequestMetadata, appConfig *core.AppConfig) error {
+func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig) error {
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
 	if err != nil {
 		return err

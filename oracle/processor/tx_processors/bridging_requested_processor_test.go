@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/fxamacker/cbor/v2"
@@ -49,9 +50,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, relevant)
 
-		irrelevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 			},
 		})
 		require.NoError(t, err)
@@ -65,9 +66,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, relevant)
 
-		relevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBridgingRequest,
+		relevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
 			},
 		})
 		require.NoError(t, err)
@@ -90,9 +91,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBatchExecution,
+		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
 			},
 		})
 		require.NoError(t, err)
@@ -108,9 +109,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
-		relevantButNotFullMetadata, err := cbor.Marshal(core.BaseMetadataMap{
-			Value: core.BaseMetadata{
-				BridgingTxType: core.BridgingTxTypeBridgingRequest,
+		relevantButNotFullMetadata, err := cbor.Marshal(common.BaseMetadataMap{
+			Value: common.BaseMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
 			},
 		})
 		require.NoError(t, err)
@@ -127,12 +128,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		destinationChainNonRegisteredMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "invalid",
 				SenderAddr:         "addr1",
-				Transactions:       []core.BridgingRequestMetadataTransaction{},
+				Transactions:       []common.BridgingRequestMetadataTransaction{},
 			},
 		})
 		require.NoError(t, err)
@@ -157,12 +158,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		destinationChainNonRegisteredMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions:       []core.BridgingRequestMetadataTransaction{},
+				Transactions:       []common.BridgingRequestMetadataTransaction{},
 			},
 		})
 		require.NoError(t, err)
@@ -187,12 +188,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
-		bridgingAddrNotFoundInUtxosMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		bridgingAddrNotFoundInUtxosMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions:       []core.BridgingRequestMetadataTransaction{},
+				Transactions:       []common.BridgingRequestMetadataTransaction{},
 			},
 		})
 		require.NoError(t, err)
@@ -215,12 +216,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
-		multipleUtxosToBridgingAddrMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		multipleUtxosToBridgingAddrMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions:       []core.BridgingRequestMetadataTransaction{},
+				Transactions:       []common.BridgingRequestMetadataTransaction{},
 			},
 		})
 		require.NoError(t, err)
@@ -243,12 +244,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
-		feeAddrNotInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		feeAddrNotInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: vectorBridgingFeeAddr, Amount: 2},
 					{Address: vectorBridgingFeeAddr, Amount: 2},
 					{Address: vectorBridgingFeeAddr, Amount: 2},
@@ -275,12 +276,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fee addr not in receivers in metadata", func(t *testing.T) {
-		feeAddrNotInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		feeAddrNotInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: validTestAddress, Amount: utxoMinValue},
 				},
 			},
@@ -304,12 +305,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
-		utxoValueBelowMinInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		utxoValueBelowMinInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: validTestAddress, Amount: utxoMinValue},
 					{Address: vectorBridgingFeeAddr, Amount: 2},
 				},
@@ -334,12 +335,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		invalidAddrInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
 					{Address: "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661", Amount: utxoMinValue},
 				},
@@ -364,12 +365,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		invalidAddrInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
 					{Address: validTestAddress, Amount: utxoMinValue},
 				},
@@ -394,12 +395,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		invalidAddrInReceiversMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
 					{Address: validTestAddress, Amount: utxoMinValue},
 				},
@@ -424,12 +425,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
-		feeInReceiversLessThanMinMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		feeInReceiversLessThanMinMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: "vector",
 				SenderAddr:         "addr1",
-				Transactions: []core.BridgingRequestMetadataTransaction{
+				Transactions: []common.BridgingRequestMetadataTransaction{
 					{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging - 1},
 				},
 			},
@@ -455,14 +456,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		const destinationChainId = "vector"
 		const txHash = "test_hash"
-		receivers := []core.BridgingRequestMetadataTransaction{
+		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging},
 			{Address: validTestAddress, Amount: utxoMinValue},
 		}
 
-		validMetadata, err := cbor.Marshal(core.BridgingRequestMetadataMap{
-			Value: core.BridgingRequestMetadata{
-				BridgingTxType:     core.BridgingTxTypeBridgingRequest,
+		validMetadata, err := cbor.Marshal(common.BridgingRequestMetadataMap{
+			Value: common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainId: destinationChainId,
 				SenderAddr:         "addr1",
 				Transactions:       receivers,

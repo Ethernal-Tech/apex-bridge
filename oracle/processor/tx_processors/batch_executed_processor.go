@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 )
@@ -18,10 +19,10 @@ func NewBatchExecutedProcessor() *BatchExecutedProcessorImpl {
 }
 
 func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := core.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
 
 	if err == nil && metadata != nil {
-		return metadata.BridgingTxType == core.BridgingTxTypeBatchExecution, err
+		return metadata.BridgingTxType == common.BridgingTxTypeBatchExecution, err
 	}
 
 	return false, err
@@ -37,7 +38,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := core.UnmarshalBatchExecutedMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalBatchExecutedMetadata(tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
@@ -51,7 +52,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 	return nil
 }
 
-func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *core.BatchExecutedMetadata) {
+func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata) {
 	var utxos []core.UTXO
 	for _, utxo := range tx.Outputs {
 		utxos = append(utxos, core.UTXO{
@@ -73,9 +74,7 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClai
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
 }
 
-func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *core.BatchExecutedMetadata, appConfig *core.AppConfig) error {
-	// TODO: implement validating the tx for this specific claim if it is needed
-	// once we figure out the structure of metadata and how the batch is applied
-	// to destination chain
+func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+	// after BridgingTxType and inputs are validated, no further validation needed
 	return utils.ValidateTxInputs(tx, appConfig)
 }

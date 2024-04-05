@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
@@ -18,8 +18,8 @@ func TestCardanoChainObserver(t *testing.T) {
 	}
 
 	foldersCleanup := func() {
-		utils.RemoveDirOrFilePathIfExists(settings.DbsPath)
-		utils.RemoveDirOrFilePathIfExists(settings.LogsPath)
+		common.RemoveDirOrFilePathIfExists(settings.DbsPath)
+		common.RemoveDirOrFilePathIfExists(settings.LogsPath)
 	}
 
 	t.Cleanup(foldersCleanup)

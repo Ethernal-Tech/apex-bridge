@@ -1,4 +1,4 @@
-package core
+package common
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func UnmarshalBaseMetadata(data []byte) (*BaseMetadata, error) {
 	if err != nil {
 		var metadata interface{}
 		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v", metadata)
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
 	} else {
 		return &metadataMap.Value, nil
 	}
@@ -58,7 +58,7 @@ func UnmarshalBridgingRequestMetadata(data []byte) (*BridgingRequestMetadata, er
 	if err != nil {
 		var metadata interface{}
 		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v", metadata)
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
 	} else {
 		return &metadataMap.Value, nil
 	}
@@ -80,7 +80,7 @@ func UnmarshalBatchExecutedMetadata(data []byte) (*BatchExecutedMetadata, error)
 	if err != nil {
 		var metadata interface{}
 		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v", metadata)
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
 	} else {
 		return &metadataMap.Value, nil
 	}
@@ -101,7 +101,7 @@ func UnmarshalRefundExecutedMetadata(data []byte) (*RefundExecutedMetadata, erro
 	if err != nil {
 		var metadata interface{}
 		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v", metadata)
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
 	} else {
 		return &metadataMap.Value, nil
 	}

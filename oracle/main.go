@@ -6,20 +6,20 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 )
 
 func main() {
-	appConfig, err := utils.LoadJson[core.AppConfig]("config.json")
+	appConfig, err := common.LoadJson[core.AppConfig]("config.json")
 	if err != nil {
 		os.Exit(1)
 	}
 
 	appConfig.FillOut()
 
-	initialUtxos, err := utils.LoadJson[core.InitialUtxos]("initialUtxos.json")
+	initialUtxos, err := common.LoadJson[core.InitialUtxos]("initialUtxos.json")
 	if err != nil {
 		os.Exit(1)
 	}

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
@@ -41,7 +41,7 @@ func NewCardanoChainObserver(
 		return nil
 	}
 
-	if err := utils.CreateDirectoryIfNotExists(settings.DbsPath); err != nil {
+	if err := common.CreateDirectoryIfNotExists(settings.DbsPath); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Create directory failed", "err", err)
 		return nil

@@ -3,7 +3,7 @@ package database_access
 import (
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -11,7 +11,7 @@ func TestDatabase(t *testing.T) {
 	const filePath = "temp_test.db"
 
 	dbCleanup := func() {
-		utils.RemoveDirOrFilePathIfExists(filePath)
+		common.RemoveDirOrFilePathIfExists(filePath)
 	}
 
 	t.Cleanup(dbCleanup)
