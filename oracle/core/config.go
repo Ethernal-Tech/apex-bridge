@@ -22,7 +22,7 @@ type CardanoChainConfig struct {
 }
 
 type SubmitConfig struct {
-	ConfirmedBlocksThreshhold int `json:"confirmedBlocksThreshhold"`
+	ConfirmedBlocksThreshold  int `json:"confirmedBlocksThreshold"`
 	ConfirmedBlocksSubmitTime int `json:"confirmedBlocksSubmitTime"`
 }
 

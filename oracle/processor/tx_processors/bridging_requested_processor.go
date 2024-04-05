@@ -48,6 +48,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
 		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
+		// TODO: Refund
 		// p.addRefundRequestClaim(claims, tx, metadata)
 	}
 
@@ -95,7 +96,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 			})
 		}
 
-		// TODO: what goes into UtxoTransaction
+		// what goes into UtxoTransaction
 		claim := core.RefundRequestClaim{
 			TxHash:             tx.Hash,
 			RetryCounter:       0,

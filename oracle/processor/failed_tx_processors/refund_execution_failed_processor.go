@@ -44,6 +44,7 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
 	}
 
+	// TODO: Refund
 	p.addRefundRequestClaim(claims, tx, metadata)
 
 	return nil
@@ -51,7 +52,7 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 
 func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *core.RefundExecutedMetadata) {
 	/*
-		// TODO: implement logic for creating a claim for tx
+		// implement logic for creating a claim for tx
 		claim := core.RefundRequestClaim{}
 
 		claims.RefundRequest = append(claims.RefundRequest, claim)
@@ -59,7 +60,7 @@ func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(claims *core.Br
 }
 
 func (*RefundExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *core.RefundExecutedMetadata, appConfig *core.AppConfig) error {
-	// TODO: implement validating the tx for this specific claim if it is needed
+	// implement validating the tx for this specific claim if it is needed
 	// once we figure out the structure of metadata and how the refund is applied
 	return nil
 }

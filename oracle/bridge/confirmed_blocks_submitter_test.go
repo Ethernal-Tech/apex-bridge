@@ -11,10 +11,10 @@ import (
 )
 
 func TestConfirmedBlocksSubmitter(t *testing.T) {
-	appConfig := &core.AppConfig{ // TODO
+	appConfig := &core.AppConfig{
 		Bridge: core.BridgeConfig{
 			SubmitConfig: core.SubmitConfig{
-				ConfirmedBlocksThreshhold: 10,
+				ConfirmedBlocksThreshold:  10,
 				ConfirmedBlocksSubmitTime: 10,
 			},
 		},

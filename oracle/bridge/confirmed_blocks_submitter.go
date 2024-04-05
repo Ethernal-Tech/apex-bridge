@@ -86,7 +86,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 
 				blocks, err := bs.indexerDb.GetConfirmedBlocksFrom(
 					from,
-					bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshhold)
+					bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
 				if err != nil {
 					bs.errorCh <- fmt.Errorf("error getting latest confirmed blocks err: %v", err)
 				}
