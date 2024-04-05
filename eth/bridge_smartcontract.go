@@ -17,6 +17,9 @@ type IBridgeSmartContract interface {
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
 	GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error)
+	GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error)
+	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
+	GetNextBatchId(ctx context.Context, destinationChain string) (*big.Int, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -155,4 +158,64 @@ func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, desti
 	}
 
 	return &availableUtxos, nil
+}
+
+// GetLastObservedBlock implements IBridgeSmartContract.
+func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	cardanoBlock, err := contract.GetLastObservedBlock(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return &cardanoBlock, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return contract.GetValidatorsCardanoData(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
+}
+
+func (bsc *BridgeSmartContractImpl) GetNextBatchId(ctx context.Context, destinationChain string) (*big.Int, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return contract.GetNextBatchId(&bind.CallOpts{
+		Context: ctx,
+	}, destinationChain)
 }

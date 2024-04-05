@@ -61,13 +61,13 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	)
 
 	// Check if I should create batch
-	shouldCreateBatch, err := b.bridgeSmartContract.ShouldCreateBatch(ctx, b.config.Base.ChainId)
+	batchId, err := b.bridgeSmartContract.GetNextBatchId(ctx, b.config.Base.ChainId)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.ShouldCreateBatch: %v", err)
+		return fmt.Errorf("failed to query bridge.GetNextBatchId: %v", err)
 	}
 
-	if !shouldCreateBatch {
-		b.logger.Info("Called ShouldCreateBatch before it supposed to or already created this batch")
+	if batchId.Cmp(big.NewInt(0)) == 0 {
+		b.logger.Info("Waiting on a new batch")
 		return nil
 	}
 	b.logger.Info("Starting batch creation process")
@@ -81,7 +81,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
-	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions)
+	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchId)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction: %v", err)
 	}
@@ -96,10 +96,9 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	b.logger.Info("Batch successfully signed")
 
-	// TODO: Update ID
 	// Submit batch to smart contract
 	signedBatch := eth.SignedBatch{
-		Id:                        big.NewInt(0),
+		Id:                        batchId,
 		DestinationChainId:        b.config.Base.ChainId,
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),

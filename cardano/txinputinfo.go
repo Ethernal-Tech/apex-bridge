@@ -56,10 +56,14 @@ func (txinfos *TxInputInfos) CalculateWithRetriever(ctx context.Context, retriev
 	return txinfos.MultiSigFee.CalculateWithRetriever(ctx, retriever, desiredFee)
 }
 
+type TxInputUTXOs struct {
+	Inputs    []cardanowallet.TxInput
+	InputsSum uint64
+}
+
 type TxInputInfo struct {
+	TxInputUTXOs
 	PolicyScript *cardanowallet.PolicyScript
-	Inputs       []cardanowallet.TxInput
-	InputsSum    uint64
 	Address      string
 }
 
