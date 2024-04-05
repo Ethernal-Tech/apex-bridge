@@ -1,43 +1,33 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
 )
 
 type BridgingTxType string
+type MetadataEncodingType string
 
 const (
 	BridgingTxTypeBridgingRequest BridgingTxType = "bridgingRequest"
 	BridgingTxTypeBatchExecution  BridgingTxType = "batchExecution"
 	BridgingTxTypeRefundExecution BridgingTxType = "refundExecution"
+
+	MetadataEncodingTypeJson MetadataEncodingType = "json"
+	MetadataEncodingTypeCbor MetadataEncodingType = "cbor"
+
+	MetadataMapKey = 1
 )
 
 type BaseMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type"`
-}
-
-type BaseMetadataMap struct {
-	Value BaseMetadata `cbor:"1,keyasint"`
-}
-
-func UnmarshalBaseMetadata(data []byte) (*BaseMetadata, error) {
-	var metadataMap BaseMetadataMap
-	err := cbor.Unmarshal(data, &metadataMap)
-
-	if err != nil {
-		var metadata interface{}
-		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
-	} else {
-		return &metadataMap.Value, nil
-	}
+	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
 }
 
 type BridgingRequestMetadataTransaction struct {
-	Address string `cbor:"address"`
-	Amount  uint64 `cbor:"amount"`
+	Address string `cbor:"address" json:"address"`
+	Amount  uint64 `cbor:"amount" json:"amount"`
 }
 
 type BridgingRequestMetadata struct {
@@ -47,62 +37,82 @@ type BridgingRequestMetadata struct {
 	Transactions       []BridgingRequestMetadataTransaction `cbor:"transactions"`
 }
 
-type BridgingRequestMetadataMap struct {
-	Value BridgingRequestMetadata `cbor:"1,keyasint"`
-}
-
-func UnmarshalBridgingRequestMetadata(data []byte) (*BridgingRequestMetadata, error) {
-	var metadataMap BridgingRequestMetadataMap
-	err := cbor.Unmarshal(data, &metadataMap)
-
-	if err != nil {
-		var metadata interface{}
-		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
-	} else {
-		return &metadataMap.Value, nil
-	}
-}
-
 type BatchExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type"`
-	BatchNonceId   uint64         `cbor:"batchNonceId"`
-}
-
-type BatchExecutedMetadataMap struct {
-	Value BatchExecutedMetadata `cbor:"1,keyasint"`
-}
-
-func UnmarshalBatchExecutedMetadata(data []byte) (*BatchExecutedMetadata, error) {
-	var metadataMap BatchExecutedMetadataMap
-	err := cbor.Unmarshal(data, &metadataMap)
-
-	if err != nil {
-		var metadata interface{}
-		cbor.Unmarshal(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
-	} else {
-		return &metadataMap.Value, nil
-	}
+	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
+	BatchNonceId   uint64         `cbor:"batchNonceId" json:"batchNonceId"`
 }
 
 type RefundExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type"`
+	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
 }
 
-type RefundExecutedMetadataMap struct {
-	Value RefundExecutedMetadata `cbor:"1,keyasint"`
+type marshalFunc = func(v any) ([]byte, error)
+
+func getMarshalFunc(encodingType MetadataEncodingType) (marshalFunc, error) {
+	if encodingType == MetadataEncodingTypeJson {
+		return json.Marshal, nil
+	} else if encodingType == MetadataEncodingTypeCbor {
+		return cbor.Marshal, nil
+	}
+
+	return nil, fmt.Errorf("unsupported metadata encoding type")
 }
 
-func UnmarshalRefundExecutedMetadata(data []byte) (*RefundExecutedMetadata, error) {
-	var metadataMap RefundExecutedMetadataMap
-	err := cbor.Unmarshal(data, &metadataMap)
+type unmarshalFunc = func(data []byte, v interface{}) error
+
+func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) {
+	if encodingType == MetadataEncodingTypeJson {
+		return json.Unmarshal, nil
+	} else if encodingType == MetadataEncodingTypeCbor {
+		return cbor.Unmarshal, nil
+	}
+
+	return nil, fmt.Errorf("unsupported metadata encoding type")
+}
+
+func MarshalMetadata[
+	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+](
+	encodingType MetadataEncodingType, metadata T,
+) (
+	[]byte, error,
+) {
+	marshalFunc, err := getMarshalFunc(encodingType)
+	if err != nil {
+		return nil, err
+	}
+
+	metadataMap := map[int]T{MetadataMapKey: metadata}
+	result, err := marshalFunc(metadataMap)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %v", metadata, err)
+	}
+
+	return result, nil
+}
+
+func UnmarshalMetadata[
+	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+](
+	encodingType MetadataEncodingType, data []byte,
+) (
+	*T, error,
+) {
+	unmarshalFunc, err := getUnmarshalFunc(encodingType)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadataMap map[int]T
+	err = unmarshalFunc(data, &metadataMap)
 
 	if err != nil {
 		var metadata interface{}
-		cbor.Unmarshal(data, &metadata)
+		unmarshalFunc(data, &metadata)
 		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
 	} else {
-		return &metadataMap.Value, nil
+		metadata := metadataMap[MetadataMapKey]
+		return &metadata, nil
 	}
 }
