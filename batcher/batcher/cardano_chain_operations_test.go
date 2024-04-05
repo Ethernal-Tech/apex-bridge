@@ -109,7 +109,9 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(txRaw), 16000)
 		require.Less(t, len(utxos.MultisigOwnedUTXOs), 30)
-		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(4000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(1000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[1].Amount, big.NewInt(2000000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[2].Amount, big.NewInt(3000000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-2].Amount, big.NewInt(1000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[len(utxos.MultisigOwnedUTXOs)-1].Amount, big.NewInt(1000000))
 	})
@@ -158,6 +160,31 @@ func TestCardanoChainOperations(t *testing.T) {
 
 		utxoSum := CalculateUTXOSum(utxos.MultisigOwnedUTXOs)
 		require.Equal(t, utxoSum.Cmp(txCost), 1)
+	})
+
+	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
+		cco := NewCardanoChainOperations(config, wallet)
+
+		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
+		outputs := GenerateUTXOOutputs(403, 1000000) // 403Ada
+		txCost := CalculateTxCost(outputs)
+		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+
+		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		require.NoError(t, err)
+		protocolParams, err := GenerateProtocolParams()
+		require.NoError(t, err)
+		slotNumber := uint64(12345)
+
+		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		require.NoError(t, err)
+		require.Less(t, len(txRaw), 16000)
+		require.Len(t, utxos.MultisigOwnedUTXOs, 5)
+		require.Equal(t, utxos.MultisigOwnedUTXOs[0].Amount, big.NewInt(50000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[1].Amount, big.NewInt(104000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[2].Amount, big.NewInt(103000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[3].Amount, big.NewInt(101000000))
+		require.Equal(t, utxos.MultisigOwnedUTXOs[4].Amount, big.NewInt(102000000))
 	})
 }
 
@@ -223,6 +250,43 @@ func GenerateUTXORandomInputs(count int, min uint64, max uint64) (inputs *contra
 	}
 	inputs.MultisigOwnedUTXOs[count] = contractbinding.IBridgeContractStructsUTXO{
 		Nonce: uint64(count + 5), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(count + 5)), Amount: big.NewInt(int64(1000000000000)),
+	}
+
+	return
+}
+
+func GenerateUTXOInputsOrdered() (inputs *contractbinding.IBridgeContractStructsUTXOs) {
+	// Count x Input Ada, 1000Ada, 2000Ada, 3000Ada, 4000Ada, 5000Ada
+	inputs = &contractbinding.IBridgeContractStructsUTXOs{
+		MultisigOwnedUTXOs: make([]contractbinding.IBridgeContractStructsUTXO, 8),
+		FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{
+			{Nonce: 1000, TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(1000), Amount: big.NewInt(10000000)},
+			{Nonce: 1001, TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(1001), Amount: big.NewInt(10000000)},
+		},
+	}
+	inputs.MultisigOwnedUTXOs[0] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(0), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(50000000)),
+	}
+	inputs.MultisigOwnedUTXOs[1] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(1), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(40000000)),
+	}
+	inputs.MultisigOwnedUTXOs[2] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(2), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(30000000)),
+	}
+	inputs.MultisigOwnedUTXOs[3] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(3), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(101000000)),
+	}
+	inputs.MultisigOwnedUTXOs[4] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(3), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(102000000)),
+	}
+	inputs.MultisigOwnedUTXOs[5] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(5), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(103000000)),
+	}
+	inputs.MultisigOwnedUTXOs[6] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(6), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(104000000)),
+	}
+	inputs.MultisigOwnedUTXOs[7] = contractbinding.IBridgeContractStructsUTXO{
+		Nonce: uint64(7), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(0)), Amount: big.NewInt(int64(105000000)),
 	}
 
 	return

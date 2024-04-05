@@ -163,7 +163,7 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 
 /* UTXOs are sorted by Nonce and taken from first to last until txCost has been met or maxUtxoCount reached
  * if txCost has been met, tx is created regularly
- * if maxUtxoCount has been reached, we replace smallest UTXO with first biggest one that will cover the txCost
+ * if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach txCost
  */
 func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBridgeContractStructsUTXOs, txCost *big.Int,
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos, outputs []cardanowallet.TxOutput, slotNumber uint64) (
@@ -189,35 +189,20 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 
 	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, 0)
 	chosenUTXOsSum := big.NewInt(0)
-	minChosenUTXO := inputUtxos.MultisigOwnedUTXOs[0]
-	minChosenUTXOIdx := 0
 	isUtxosOk := false
-	for idx, utxo := range inputUtxos.MultisigOwnedUTXOs {
+	for _, utxo := range inputUtxos.MultisigOwnedUTXOs {
+		chosenUTXOs = append(chosenUTXOs, utxo)
+		utxoCount++
+		chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
 
-		// If max UTXO count is reached we will replace last UTXO with bigger UTXO
-		if utxoCount >= maxUtxoCount {
-			// Check if curent UTXO is bigger than smallest UTXO
-			if utxo.Amount.Cmp(minChosenUTXO.Amount) < 1 {
-				continue
-			}
-			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
-			chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
+		if utxoCount > maxUtxoCount {
+			minChosenUTXO, minChosenUTXOIdx := FindMinUtxo(chosenUTXOs)
 
 			chosenUTXOs[minChosenUTXOIdx] = utxo
-			minChosenUTXO = utxo
-		} else {
-			chosenUTXOs = append(chosenUTXOs, utxo)
-			utxoCount++
-			chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
-
-			if utxo.Amount.Cmp(minChosenUTXO.Amount) == -1 {
-				minChosenUTXO = utxo
-				minChosenUTXOIdx = idx
-			}
+			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
+			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
 		}
 
-		// If required txCost was reached we don't need more UTXOs
-		// chosenUTXOsSum >= txCostWithMinUtxo || chosenUTXOsSum == txCost
 		if chosenUTXOsSum.Cmp(txCostWithMinChange) >= 1 || chosenUTXOsSum.Cmp(txCost) == 0 {
 			isUtxosOk = true
 			break
@@ -273,4 +258,16 @@ func GetInputUtxos(ctx context.Context, bridgeSmartContract eth.IBridgeSmartCont
 	})
 
 	return inputUtxos, err
+}
+
+func FindMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
+	min := utxos[0]
+	idx := 0
+	for i, utxo := range utxos[1:] {
+		if utxo.Amount.Cmp(min.Amount) == -1 {
+			min = utxo
+			idx = i + 1
+		}
+	}
+	return min, idx
 }
