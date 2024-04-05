@@ -20,10 +20,14 @@ func (m *OracleBridgeSmartContractMock) GetLastObservedBlock(ctx context.Context
 	return nil, args.Error(1)
 }
 
-// GetExpectedTxs implements IOracleBridgeSmartContract.
-func (m *OracleBridgeSmartContractMock) GetExpectedTx(ctx context.Context, chainID string) (string, error) {
+// GetRawTransactionFromLastBatch implements IOracleBridgeSmartContract.
+func (m *OracleBridgeSmartContractMock) GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error) {
 	args := m.Called()
-	return args.String(0), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).(*LastBatchRawTx), args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 // SubmitClaims implements IOracleBridgeSmartContract.

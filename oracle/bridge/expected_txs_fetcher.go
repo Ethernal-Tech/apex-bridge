@@ -86,7 +86,9 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 			continue
 		}
 
-		expectedTxs = append(expectedTxs, expectedTx)
+		if expectedTx != nil {
+			expectedTxs = append(expectedTxs, expectedTx)
+		}
 	}
 
 	if len(expectedTxs) > 0 {
@@ -95,7 +97,8 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 			fmt.Fprintf(os.Stderr, "Failed to add expected txs. error: %v\n", err)
 			f.logger.Error("Failed to add expected txs", "err", err)
 		}
-		return err
+
+		return fmt.Errorf("failed to add expected txs. err: %v", err)
 	}
 
 	return nil

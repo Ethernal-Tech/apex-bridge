@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("fetchData", func(t *testing.T) {
+	t.Run("fetchData nil", func(t *testing.T) {
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
 		bridgeDataFetcher.On("FetchExpectedTx").Return(nil, nil)
 		db := &core.CardanoTxsProcessorDbMock{}
@@ -51,5 +52,20 @@ func TestExpectedTxsFetcher(t *testing.T) {
 
 		err := expectedTxsFetcher.fetchData()
 		require.NoError(t, err)
+	})
+
+	t.Run("fetchData err", func(t *testing.T) {
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchExpectedTx").Return(&core.BridgeExpectedCardanoTx{}, nil)
+		db := &core.CardanoTxsProcessorDbMock{}
+		db.On("GetExpectedTxs").Return(nil, nil)
+		db.On("AddExpectedTxs").Return(fmt.Errorf("test err"))
+
+		expectedTxsFetcher := NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
+		require.NotNil(t, expectedTxsFetcher)
+
+		err := expectedTxsFetcher.fetchData()
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to add expected txs")
 	})
 }
