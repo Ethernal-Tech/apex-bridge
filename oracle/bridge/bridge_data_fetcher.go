@@ -74,7 +74,7 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeEx
 			rawTx, err := hex.DecodeString(lastBatchRawTx.RawTx)
 			if err != nil {
 				df.logger.Error("Failed to decode rawTx string", "rawTx", lastBatchRawTx.RawTx, "err", err)
-				return nil, fmt.Errorf("failed to ParseTxInfo. err: %v", err)
+				return nil, fmt.Errorf("failed to decode rawTx string. rawTx: %v. err: %v", lastBatchRawTx.RawTx, err)
 			}
 
 			tx, err := indexer.ParseTxInfo(rawTx)
