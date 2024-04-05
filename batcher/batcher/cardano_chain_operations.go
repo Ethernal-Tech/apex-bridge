@@ -201,9 +201,10 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 			chosenUTXOs[minChosenUTXOIdx] = utxo
 			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
 			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
+			utxoCount--
 		}
 
-		if chosenUTXOsSum.Cmp(txCostWithMinChange) >= 1 || chosenUTXOsSum.Cmp(txCost) == 0 {
+		if chosenUTXOsSum.Cmp(txCostWithMinChange) >= 0 || chosenUTXOsSum.Cmp(txCost) == 0 {
 			isUtxosOk = true
 			break
 		}
@@ -213,19 +214,17 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 		return nil, "", nil, errors.New("fatal error, couldn't select UTXOs")
 	}
 
-	// Create inputs and sums needed for tx from chosenUTXOs set
+	// Create inputs needed for tx from chosenUTXOs set
 	var multisigInputs []cardanowallet.TxInput
-	multisigInputsSum := big.NewInt(0)
 	for _, utxo := range chosenUTXOs {
 		multisigInputs = append(multisigInputs, cardanowallet.TxInput{
 			Hash:  utxo.TxHash,
 			Index: uint32(utxo.TxIndex.Uint64()),
 		})
-		multisigInputsSum.Add(multisigInputsSum, utxo.Amount)
 	}
 
-	// inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
-	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: multisigInputsSum.Uint64()}
+	inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
+	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: chosenUTXOsSum.Uint64()}
 
 	// Create Tx
 	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
@@ -238,7 +237,6 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 		return nil, "", nil, errors.New("fatal error, tx size too big")
 	}
 
-	inputUtxos.MultisigOwnedUTXOs = chosenUTXOs
 	return rawTx, txHash, inputUtxos, err
 }
 
