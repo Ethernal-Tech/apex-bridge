@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/fxamacker/cbor/v2"
 )
@@ -101,11 +102,8 @@ func CreateMetaData(v *big.Int) ([]byte, error) {
 }
 
 func CreateBatchMetaData(v *big.Int) ([]byte, error) {
-	metadata := map[string]interface{}{
-		"0": map[string]interface{}{
-			"type":         "batchExecution",
-			"batchNonceId": v.String(),
-		},
-	}
-	return json.Marshal(metadata)
+	return common.MarshalMetadata(common.MetadataEncodingTypeJson, common.BatchExecutedMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceId:   v.Uint64(),
+	})
 }
