@@ -20,7 +20,7 @@ func NewBridgingRequestedProcessor() *BridgingRequestedProcessorImpl {
 }
 
 func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
 		return metadata.BridgingTxType == common.BridgingTxTypeBridgingRequest, err
@@ -39,7 +39,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := common.UnmarshalBridgingRequestMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
