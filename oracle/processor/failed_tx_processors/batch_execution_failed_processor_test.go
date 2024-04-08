@@ -6,7 +6,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,11 +18,10 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, relevant)
 
-		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
-			Value: common.BaseMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
-			},
+		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
+
 		require.NoError(t, err)
 		require.NotNil(t, irrelevantMetadata)
 
@@ -33,10 +31,8 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, relevant)
 
-		relevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
-			Value: common.BaseMetadata{
-				BridgingTxType: common.BridgingTxTypeBatchExecution,
-			},
+		relevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantMetadata)
@@ -56,10 +52,8 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := cbor.Marshal(common.BaseMetadataMap{
-			Value: common.BaseMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
-			},
+		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, irrelevantMetadata)
@@ -72,10 +66,8 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid but metadata not full", func(t *testing.T) {
-		relevantButNotFullMetadata, err := cbor.Marshal(common.BaseMetadataMap{
-			Value: common.BaseMetadata{
-				BridgingTxType: common.BridgingTxTypeBatchExecution,
-			},
+		relevantButNotFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantButNotFullMetadata)
@@ -92,11 +84,9 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
 		batchNonceId := uint64(1)
-		relevantFullMetadata, err := cbor.Marshal(common.BatchExecutedMetadataMap{
-			Value: common.BatchExecutedMetadata{
-				BridgingTxType: common.BridgingTxTypeBatchExecution,
-				BatchNonceId:   batchNonceId,
-			},
+		relevantFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+			BatchNonceId:   batchNonceId,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantFullMetadata)

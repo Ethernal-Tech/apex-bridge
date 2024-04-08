@@ -18,7 +18,7 @@ func NewBatchExecutionFailedProcessor() *BatchExecutionFailedProcessorImpl {
 }
 
 func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
 		return metadata.BridgingTxType == common.BridgingTxTypeBatchExecution, err
@@ -37,7 +37,7 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := common.UnmarshalBatchExecutedMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BatchExecutedMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}

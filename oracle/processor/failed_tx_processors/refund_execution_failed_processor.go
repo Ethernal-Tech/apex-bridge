@@ -17,7 +17,7 @@ func NewRefundExecutionFailedProcessor() *RefundExecutionFailedProcessorImpl {
 }
 
 func (*RefundExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) (bool, error) {
-	metadata, err := common.UnmarshalBaseMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
 		return metadata.BridgingTxType == common.BridgingTxTypeRefundExecution, err
@@ -36,7 +36,7 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	metadata, err := common.UnmarshalRefundExecutedMetadata(tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.RefundExecutedMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
 	}
