@@ -1,7 +1,9 @@
 package batcher
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -80,12 +82,29 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	var keyHashes []string = make([]string, len(validatorsData))
+	var multisigKeyHashes []string = make([]string, len(validatorsData))
+	var multisigFeeKeyHashes []string = make([]string, len(validatorsData))
 	foundVerificationKey := false
-	for _, validator := range validatorsData {
-		keyHashes = append(keyHashes, validator.KeyHash)
-		if string(cco.CardanoWallet.MultiSig.GetVerificationKey()) == validator.VerifyingKey {
+	foundFeeVerificationKey := false
+	for i, validator := range validatorsData {
+		multisigKeyHashes[i] = validator.KeyHash
+		multisigFeeKeyHashes[i] = validator.KeyHashFee
+		validatorKeyBytes, err := hex.DecodeString(validator.VerifyingKey)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		if bytes.Equal(cco.CardanoWallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
 			foundVerificationKey = true
+		}
+
+		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKeyFee)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		if bytes.Equal(cco.CardanoWallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
+			foundFeeVerificationKey = true
 		}
 	}
 
@@ -93,25 +112,16 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, fmt.Errorf("verifying key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	multisigPolicyScript, err := cardanowallet.NewPolicyScript(keyHashes, int(cco.Config.AtLeastValidators))
+	if !foundFeeVerificationKey {
+		return nil, "", nil, fmt.Errorf("verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	}
+
+	multisigPolicyScript, err := cardanowallet.NewPolicyScript(multisigKeyHashes, int(cco.Config.AtLeastValidators))
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	keyHashes = make([]string, len(validatorsData))
-	foundVerificationKey = false
-	for _, validator := range validatorsData {
-		keyHashes = append(keyHashes, validator.KeyHash)
-		if string(cco.CardanoWallet.MultiSigFee.GetVerificationKey()) == validator.VerifyingKeyFee {
-			foundVerificationKey = true
-		}
-	}
-
-	if !foundVerificationKey {
-		return nil, "", nil, fmt.Errorf("verifying fee key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(keyHashes, int(cco.Config.AtLeastValidators))
+	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(multisigFeeKeyHashes, int(cco.Config.AtLeastValidators))
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -120,6 +130,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	if err != nil {
 		return nil, "", nil, err
 	}
+
 	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
 		return nil, "", nil, err

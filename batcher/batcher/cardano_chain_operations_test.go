@@ -1,10 +1,14 @@
 package batcher
 
 import (
+	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -185,6 +189,206 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.Equal(t, utxos.MultisigOwnedUTXOs[2].Amount, big.NewInt(103000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[3].Amount, big.NewInt(101000000))
 		require.Equal(t, utxos.MultisigOwnedUTXOs[4].Amount, big.NewInt(102000000))
+	})
+}
+
+func TestGenerateBatchTransaction(t *testing.T) {
+	config := core.CardanoChainConfig{
+		TestNetMagic:      42,
+		AtLeastValidators: 1,
+		BlockfrostUrl:     "https://cardano-preview.blockfrost.io/api/v0",
+		BlockfrostAPIKey:  "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+	}
+
+	multisigVkeyString := "68fc463c29900b00122423c7e6a39469987786314e07a5e7f5eae76a5fe671bf"
+	multisigVkeyBytes, err := hex.DecodeString(multisigVkeyString)
+	require.NoError(t, err)
+	multisigSkeyString := "1825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0"
+	multisigSkeyBytes, err := hex.DecodeString(multisigSkeyString)
+	require.NoError(t, err)
+	multisigKeyHash := "eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205"
+	multisigStakeVkeyString := "0a809d270f7017c54a63a85fff145733861e671cf423c30428afd0cd7c759ad6"
+	multisigStakeVkeyBytes, err := hex.DecodeString(multisigStakeVkeyString)
+	require.NoError(t, err)
+	multisigStakeSkeyString := "016586a09a19122dddc92aa512fb6ff0f0c3dddfc561dea5e18438e4269d3e00"
+	multisigStakeSkeyBytes, err := hex.DecodeString(multisigStakeSkeyString)
+	require.NoError(t, err)
+
+	multisigFeeVkeyString := "63e95162d952d2fbc5240457750e1c13bfb4a5e3d9a96bf048b90bfe08b13de6"
+	multisigFeeVkeyBytes, err := hex.DecodeString(multisigFeeVkeyString)
+	require.NoError(t, err)
+	multisigFeeSkeyString := "4cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9"
+	multisigFeeSkeyBytes, err := hex.DecodeString(multisigFeeSkeyString)
+	require.NoError(t, err)
+	multisigFeeKeyHash := "b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56"
+	multisigFeeStakeVkeyString := "549b55365bbcdcff3cc8f7c824ba920f28b99e3ca379b0db4cbb895ceefd2765"
+	multisigFeeStakeVkeyBytes, err := hex.DecodeString(multisigFeeStakeVkeyString)
+	require.NoError(t, err)
+	multisigFeeStakeSkeyString := "6da69a3342177847927465c1b03569d8b46af9d274cbc11e35322ce0a86d449a"
+	multisigFeeStakeSkeyBytes, err := hex.DecodeString(multisigFeeStakeSkeyString)
+	require.NoError(t, err)
+
+	wallet := cardano.CardanoWallet{
+		MultiSig:    cardanowallet.NewStakeWallet(multisigVkeyBytes, multisigSkeyBytes, multisigKeyHash, multisigStakeVkeyBytes, multisigStakeSkeyBytes),
+		MultiSigFee: cardanowallet.NewStakeWallet(multisigFeeVkeyBytes, multisigFeeSkeyBytes, multisigFeeKeyHash, multisigFeeStakeVkeyBytes, multisigFeeStakeSkeyBytes),
+	}
+
+	cco := NewCardanoChainOperations(config, wallet)
+	testError := errors.New("test err")
+
+	var confirmedTransactions []eth.ConfirmedTransaction = make([]contractbinding.IBridgeContractStructsConfirmedTransaction, 1)
+	confirmedTransactions[0] = eth.ConfirmedTransaction{
+		Nonce:       big.NewInt(1),
+		BlockHeight: big.NewInt(1),
+		Receivers: []contractbinding.IBridgeContractStructsReceiver{{
+			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+			Amount:             big.NewInt(int64(minUtxoAmount)),
+		}},
+	}
+	batchNonceId := big.NewInt(1)
+	destinationChain := "vector"
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
+
+	t.Run("GetLastObservedBlock returns error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(nil, testError)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	getLastObservedBlockRet := eth.CardanoBlock{
+		BlockHash: "hash",
+		BlockSlot: 1,
+	}
+
+	t.Run("GetValidatorsCardanoData returns error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(nil, testError)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("no vkey for multisig address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+
+		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
+			KeyHash:         "",
+			KeyHashFee:      "",
+			VerifyingKey:    "",
+			VerifyingKeyFee: "",
+		}
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+
+		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
+			KeyHash:         wallet.MultiSig.GetKeyHash(),
+			KeyHashFee:      "",
+			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
+			VerifyingKeyFee: "",
+		}
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("GetAvailableUTXOs return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+
+		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
+			KeyHash:         wallet.MultiSig.GetKeyHash(),
+			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
+			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
+			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
+		}
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
+		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetAvailableUTXOs return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+
+		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
+			KeyHash:         wallet.MultiSig.GetKeyHash(),
+			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
+			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
+			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
+		}
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
+		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
+
+		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
+
+		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
+			KeyHash:         wallet.MultiSig.GetKeyHash(),
+			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
+			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
+			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
+		}
+		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
+
+		getAvailableUTXOsRet := &eth.UTXOs{
+			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{{
+				Nonce:   0,
+				TxHash:  "26a9d1a894c7e3719a79342d0fc788989e5d55f076581327c54bcc0c7693905a",
+				TxIndex: big.NewInt(0),
+				Amount:  big.NewInt(10000000000),
+			}},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{{
+				Nonce:   0,
+				TxHash:  "26a9d1a894c7e3719a79342d0fc788989e5d55f076581327c54bcc0c7693905a",
+				TxIndex: big.NewInt(0),
+				Amount:  big.NewInt(10000000000),
+			}},
+		}
+		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(getAvailableUTXOsRet, nil)
+
+		rawTx, txHash, utxos, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		require.NoError(t, err)
+		require.NotNil(t, rawTx)
+		require.NotEqual(t, "", txHash)
+		require.Equal(t, *utxos, *getAvailableUTXOsRet)
+	})
+
+	t.Run("Test SignBatchTransaction", func(t *testing.T) {
+		witnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction("26a9d1a894c7e3719a79342d0fc788989e5d55f076581327c54bcc0c7693905a")
+		require.NoError(t, err)
+		require.NotNil(t, witnessMultiSig)
+		require.NotNil(t, witnessMultiSigFee)
 	})
 }
 
