@@ -1,4 +1,4 @@
-package cardanowalletcli
+package cliwalletcreate
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -7,10 +7,10 @@ import (
 
 var initParamsData = &initParams{}
 
-func GetInitCommand() *cobra.Command {
+func GetWalletCreateCommand() *cobra.Command {
 	secretsInitCmd := &cobra.Command{
-		Use:     "init",
-		Short:   "Initializes private keys for the cardano multisig and multisig fee addresses and send data to smart contract",
+		Use:     "wallet-create",
+		Short:   "creates cardano wallet for specific chain id",
 		PreRunE: runPreRun,
 		Run:     runCommand,
 	}

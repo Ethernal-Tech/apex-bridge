@@ -1,9 +1,10 @@
-package cardanowalletcli
+package cli
 
 import (
 	"fmt"
 	"os"
 
+	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +15,7 @@ type RootCommand struct {
 func NewRootCommand() *RootCommand {
 	rootCommand := &RootCommand{
 		baseCmd: &cobra.Command{
-			Short: "cardano wallet command for generating cardano wallets for apex bridge",
+			Short: "cli commands for apex bridge",
 		},
 	}
 
@@ -25,7 +26,7 @@ func NewRootCommand() *RootCommand {
 
 func (rc *RootCommand) registerSubCommands() {
 	rc.baseCmd.AddCommand(
-		GetInitCommand(),
+		cliwalletcreate.GetWalletCreateCommand(),
 	)
 }
 
