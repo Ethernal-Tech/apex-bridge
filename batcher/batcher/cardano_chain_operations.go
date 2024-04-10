@@ -82,17 +82,26 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	var multisigKeyHashes []string = make([]string, len(validatorsData))
-	var multisigFeeKeyHashes []string = make([]string, len(validatorsData))
-	foundVerificationKey := false
-	foundFeeVerificationKey := false
+	var (
+		multisigKeyHashes       []string = make([]string, len(validatorsData))
+		multisigFeeKeyHashes    []string = make([]string, len(validatorsData))
+		keyHash                 string
+		validatorKeyBytes       []byte
+		foundVerificationKey    bool = false
+		foundFeeVerificationKey bool = false
+	)
+
 	for i, validator := range validatorsData {
-		multisigKeyHashes[i] = validator.KeyHash
-		multisigFeeKeyHashes[i] = validator.KeyHashFee
-		validatorKeyBytes, err := hex.DecodeString(validator.VerifyingKey)
+		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKey)
 		if err != nil {
 			return nil, "", nil, err
 		}
+
+		keyHash, err = cardanowallet.GetKeyHash(validatorKeyBytes)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		multisigKeyHashes[i] = keyHash
 
 		if bytes.Equal(cco.CardanoWallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
 			foundVerificationKey = true
@@ -102,6 +111,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		if err != nil {
 			return nil, "", nil, err
 		}
+
+		keyHash, err = cardanowallet.GetKeyHash(validatorKeyBytes)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		multisigFeeKeyHashes[i] = keyHash
 
 		if bytes.Equal(cco.CardanoWallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
 			foundFeeVerificationKey = true
