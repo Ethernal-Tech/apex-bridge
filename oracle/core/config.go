@@ -12,10 +12,10 @@ type BridgingAddresses struct {
 type CardanoChainConfig struct {
 	ChainId                  string
 	NetworkAddress           string            `json:"networkAddress"`
-	NetworkMagic             string            `json:"networkMagic"`
+	NetworkMagic             uint32            `json:"networkMagic"`
 	StartBlockHash           string            `json:"startBlockHash"`
-	StartSlot                string            `json:"startSlot"`
-	StartBlockNumber         string            `json:"startBlockNumber"`
+	StartSlot                uint64            `json:"startSlot"`
+	StartBlockNumber         uint64            `json:"startBlockNumber"`
 	ConfirmationBlockCount   uint              `json:"confirmationBlockCount"`
 	BridgingAddresses        BridgingAddresses `json:"bridgingAddresses"`
 	OtherAddressesOfInterest []string          `json:"otherAddressesOfInterest"`
@@ -28,22 +28,22 @@ type SubmitConfig struct {
 
 type BridgeConfig struct {
 	NodeUrl              string       `json:"nodeUrl"`
-	SmartContractAddress string       `json:"smartContractAddress"`
+	SmartContractAddress string       `json:"scAddress"`
 	SigningKey           string       `json:"signingKey"`
 	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
 type AppSettings struct {
-	DbsPath                  string `json:"dbsPath"`
-	LogsPath                 string `json:"logsPath"`
-	MaxBridgingClaimsToGroup int    `json:"maxBridgingClaimsToGroup"`
-	LogLevel                 int32  `json:"logLevel"`
+	DbsPath  string `json:"dbsPath"`
+	LogsPath string `json:"logsPath"`
+	LogLevel int32  `json:"logLevel"`
 }
 
 type BridgingSettings struct {
 	MinFeeForBridging              uint64 `json:"minFeeForBridging"`
 	UtxoMinValue                   uint64 `json:"utxoMinValue"`
 	MaxReceiversPerBridgingRequest int    `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int    `json:"maxBridgingClaimsToGroup"`
 }
 
 type AppConfig struct {
@@ -51,6 +51,7 @@ type AppConfig struct {
 	Bridge           BridgeConfig                   `json:"bridge"`
 	Settings         AppSettings                    `json:"appSettings"`
 	BridgingSettings BridgingSettings               `json:"bridgingSettings"`
+	InitialUtxos     InitialUtxos                   `json:"initialUtxos"`
 }
 
 type InitialUtxos map[string][]*indexer.TxInputOutput

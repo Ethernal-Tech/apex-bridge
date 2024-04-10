@@ -8,11 +8,12 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 func main() {
 
-	config, err := batcher_manager.LoadConfig("config.json")
+	config, err := common.LoadJson[core.BatcherManagerConfiguration]("config.json")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while loading configuration: %v\n", err)
 		os.Exit(1)

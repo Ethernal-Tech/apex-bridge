@@ -19,18 +19,16 @@ const (
 )
 
 type CardanoTxsProcessorImpl struct {
-	appConfig                 *core.AppConfig
-	db                        core.CardanoTxsProcessorDb
-	txProcessors              []core.CardanoTxProcessor
-	failedTxProcessors        []core.CardanoTxFailedProcessor
-	bridgeSubmitter           core.BridgeSubmitter
-	getCardanoChainObserverDb GetCardanoChainObserverDbCallback
-	logger                    hclog.Logger
-	closeCh                   chan bool
-	tickTime                  time.Duration
+	appConfig          *core.AppConfig
+	db                 core.CardanoTxsProcessorDb
+	txProcessors       []core.CardanoTxProcessor
+	failedTxProcessors []core.CardanoTxFailedProcessor
+	bridgeSubmitter    core.BridgeSubmitter
+	indexerDbs         map[string]indexer.Database
+	logger             hclog.Logger
+	closeCh            chan bool
+	tickTime           time.Duration
 }
-
-type GetCardanoChainObserverDbCallback = func(chainId string) indexer.Database
 
 var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
 
@@ -40,20 +38,20 @@ func NewCardanoTxsProcessor(
 	txProcessors []core.CardanoTxProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
-	getCardanoChainObserverDb GetCardanoChainObserverDbCallback,
+	indexerDbs map[string]indexer.Database,
 	logger hclog.Logger,
 ) *CardanoTxsProcessorImpl {
 
 	return &CardanoTxsProcessorImpl{
-		appConfig:                 appConfig,
-		db:                        db,
-		txProcessors:              txProcessors,
-		failedTxProcessors:        failedTxProcessors,
-		bridgeSubmitter:           bridgeSubmitter,
-		getCardanoChainObserverDb: getCardanoChainObserverDb,
-		logger:                    logger,
-		closeCh:                   make(chan bool, 1),
-		tickTime:                  TickTimeMs,
+		appConfig:          appConfig,
+		db:                 db,
+		txProcessors:       txProcessors,
+		failedTxProcessors: failedTxProcessors,
+		bridgeSubmitter:    bridgeSubmitter,
+		indexerDbs:         indexerDbs,
+		logger:             logger,
+		closeCh:            make(chan bool, 1),
+		tickTime:           TickTimeMs,
 	}
 }
 
@@ -146,7 +144,7 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
 	*core.BridgeClaimsBlockInfo,
 	indexer.Database,
 ) {
-	ccoDb := bp.getCardanoChainObserverDb(chainId)
+	ccoDb := bp.indexerDbs[chainId]
 	if ccoDb == nil {
 		fmt.Fprintf(os.Stderr, "Failed to get cardano chain observer db for: %v\n", chainId)
 		bp.logger.Error("Failed to get cardano chain observer db", "chainId", chainId)
@@ -245,7 +243,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 					processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
 					txProcessed = true
 
-					if bridgeClaims.Count() >= bp.appConfig.Settings.MaxBridgingClaimsToGroup {
+					if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
 						break unprocessedTxsLoop
 					} else {
 						break txProcessorsLoop
@@ -303,7 +301,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var invalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
 	var processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
 
-	if bridgeClaims.Count() < bp.appConfig.Settings.MaxBridgingClaimsToGroup && len(relevantExpiredTxs) > 0 {
+	if bridgeClaims.Count() < bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup && len(relevantExpiredTxs) > 0 {
 	expiredTxsLoop:
 		for _, expiredTx := range relevantExpiredTxs {
 			processedTx, _ := bp.db.GetProcessedTx(expiredTx.ChainId, expiredTx.Hash)
@@ -334,7 +332,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 					processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
 					expiredTxProcessed = true
 
-					if bridgeClaims.Count() >= bp.appConfig.Settings.MaxBridgingClaimsToGroup {
+					if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
 						break expiredTxsLoop
 					} else {
 						break failedTxProcessorsLoop

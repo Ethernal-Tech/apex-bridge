@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -32,18 +30,10 @@ func NewConfirmedBlocksSubmitter(
 	bridgeSubmitter core.BridgeSubmitter,
 	appConfig *core.AppConfig,
 	oracleDb core.CardanoTxsDb,
+	indexerDb indexer.Database,
 	chainId string,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
-		return nil, err
-	}
-
-	indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+chainId+".db")
-	if err != nil {
-		return nil, err
-	}
-
 	latestBlockPoint, err := indexerDb.GetLatestBlockPoint()
 	if err != nil {
 		return nil, err

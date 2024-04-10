@@ -5,30 +5,27 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 
 	"github.com/hashicorp/go-hclog"
 )
 
 type CardanoChainObserverImpl struct {
-	dbs    indexer.Database
-	syncer indexer.BlockSyncer
-	logger hclog.Logger
-	config *core.CardanoChainConfig
+	indexerDb indexer.Database
+	syncer    indexer.BlockSyncer
+	logger    hclog.Logger
+	config    *core.CardanoChainConfig
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
 	settings core.AppSettings, config *core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
-	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher,
+	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(settings.LogLevel),
@@ -41,28 +38,15 @@ func NewCardanoChainObserver(
 		return nil
 	}
 
-	if err := common.CreateDirectoryIfNotExists(settings.DbsPath); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Create directory failed", "err", err)
-		return nil
-	}
-
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	dbs, err := indexerDb.NewDatabaseInit("", settings.DbsPath+config.ChainId+".db")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Open database failed", "err", err)
-		return nil
-	}
-
 	if len(initialUtxosForChain) > 0 {
-		err := initUtxos(dbs, initialUtxosForChain)
+		err := initUtxos(indexerDb, initialUtxosForChain)
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Failed to insert initial UTXOs", "err", err)
 	}
 
-	err = updateLastConfirmedBlockFromSc(dbs, oracleDb, bridgeDataFetcher, config.ChainId)
+	err = updateLastConfirmedBlockFromSc(indexerDb, oracleDb, bridgeDataFetcher, config.ChainId)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Update latest confirmed block from Smart Contract failed", "err", err)
@@ -72,7 +56,7 @@ func NewCardanoChainObserver(
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
 		logger.Info("Confirmed Txs", "txs", len(txs))
 
-		txs, err := dbs.GetUnprocessedConfirmedTxs(0)
+		txs, err := indexerDb.GetUnprocessedConfirmedTxs(0)
 		if err != nil {
 			return err
 		}
@@ -85,18 +69,18 @@ func NewCardanoChainObserver(
 
 		logger.Info("Txs have been processed", "txs", txs)
 
-		return dbs.MarkConfirmedTxsProcessed(txs)
+		return indexerDb.MarkConfirmedTxsProcessed(txs)
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, dbs, logger.Named("block_indexer"))
+	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDb, logger.Named("block_indexer"))
 
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
-		dbs:    dbs,
-		syncer: syncer,
-		logger: logger,
-		config: config,
+		indexerDb: indexerDb,
+		syncer:    syncer,
+		logger:    logger,
+		config:    config,
 	}
 }
 
@@ -118,12 +102,6 @@ func (co *CardanoChainObserverImpl) Stop() error {
 		co.logger.Error("Syncer close failed", "err", err)
 	}
 
-	err = co.dbs.Close()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		co.logger.Error("DB Close failed", "err", err)
-	}
-
 	return err
 }
 
@@ -131,26 +109,17 @@ func (co *CardanoChainObserverImpl) GetConfig() *core.CardanoChainConfig {
 	return co.config
 }
 
-func (co *CardanoChainObserverImpl) GetDb() indexer.Database {
-	return co.dbs
-}
-
 func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
 }
 
 func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerConfig, *indexer.BlockSyncerConfig) {
-	networkMagic, _ := strconv.ParseUint(config.NetworkMagic, 10, 32)
-
 	var startBlockHash []byte
 	if config.StartBlockHash == "" {
 		startBlockHash = []byte(nil)
 	} else {
 		startBlockHash, _ = hex.DecodeString(config.StartBlockHash)
 	}
-
-	startSlot, _ := strconv.ParseUint(config.StartSlot, 10, 64)
-	startBlockNum, _ := strconv.ParseUint(config.StartBlockNumber, 10, 32)
 
 	addressesOfInterest := []string{
 		config.BridgingAddresses.BridgingAddress,
@@ -161,9 +130,9 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
-			BlockSlot:   startSlot,
+			BlockSlot:   config.StartSlot,
 			BlockHash:   startBlockHash,
-			BlockNumber: startBlockNum - 1,
+			BlockNumber: config.StartBlockNumber - 1,
 		},
 		AddressCheck:           indexer.AddressCheckOutputs,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
@@ -171,7 +140,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 		SoftDeleteUtxo:         true,
 	}
 	syncerConfig := &indexer.BlockSyncerConfig{
-		NetworkMagic:   uint32(networkMagic),
+		NetworkMagic:   config.NetworkMagic,
 		NodeAddress:    config.NetworkAddress,
 		RestartOnError: true,
 		RestartDelay:   time.Second * 2,

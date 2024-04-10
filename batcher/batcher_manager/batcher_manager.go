@@ -2,7 +2,6 @@ package batcher_manager
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -81,21 +80,4 @@ func (bm *BatchManagerImpl) Stop() error {
 	bm.cancelCtx()
 
 	return nil
-}
-
-func LoadConfig(path string) (*core.BatcherManagerConfiguration, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var appConfig core.BatcherManagerConfiguration
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&appConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return &appConfig, nil
 }
