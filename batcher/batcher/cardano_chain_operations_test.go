@@ -280,8 +280,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
-			KeyHash:         "",
-			KeyHashFee:      "",
 			VerifyingKey:    "",
 			VerifyingKeyFee: "",
 		}
@@ -298,8 +296,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
-			KeyHash:         wallet.MultiSig.GetKeyHash(),
-			KeyHashFee:      "",
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: "",
 		}
@@ -316,8 +312,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
-			KeyHash:         wallet.MultiSig.GetKeyHash(),
-			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
 		}
@@ -335,8 +329,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
-			KeyHash:         wallet.MultiSig.GetKeyHash(),
-			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
 		}
@@ -354,8 +346,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
-			KeyHash:         wallet.MultiSig.GetKeyHash(),
-			KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
 		}
