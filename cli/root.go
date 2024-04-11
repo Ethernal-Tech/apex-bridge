@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +28,7 @@ func NewRootCommand() *RootCommand {
 func (rc *RootCommand) registerSubCommands() {
 	rc.baseCmd.AddCommand(
 		cliwalletcreate.GetWalletCreateCommand(),
+		cliregisterchain.GetRegisterChainCommand(),
 	)
 }
 

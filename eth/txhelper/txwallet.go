@@ -2,9 +2,14 @@ package ethtxhelper
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
+	"os"
+	"path"
+	"strings"
 
 	apexcommon "github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,8 +28,27 @@ type EthTxWallet struct {
 
 var _ IEthTxWallet = (*EthTxWallet)(nil)
 
+func NewEthTxWalletFromSecretManager(secretsManager secrets.SecretsManager) (*EthTxWallet, error) {
+	secret, err := secretsManager.GetSecret(secrets.ValidatorKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewEthTxWallet(string(secret))
+}
+
+func NewEthTxWalletFromBladeFile(filePath string) (*EthTxWallet, error) {
+	filePath = path.Join(path.Clean(filePath), secrets.ConsensusFolderLocal, secrets.ValidatorKeyLocal)
+	secret, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read validator ECDSA key from disk (%s), %w", filePath, err)
+	}
+
+	return NewEthTxWallet(string(secret))
+}
+
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
-	bytes, err := apexcommon.DecodeHex(pk)
+	bytes, err := apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
 	if err != nil {
 		return nil, err
 	}
