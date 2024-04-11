@@ -3,7 +3,7 @@ module github.com/Ethernal-Tech/apex-bridge
 go 1.20
 
 require (
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240408115508-f8c920004b2d
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240410080117-e0c104d2c509
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/hashicorp/go-hclog v1.6.2
 	go.etcd.io/bbolt v1.3.9
@@ -32,7 +32,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.2 // indirect
-	github.com/fatih/color v1.13.0 // indirect
+	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/ryanuber/columnize v2.1.2+incompatible
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect

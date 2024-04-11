@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	directoryFlag        = "directory"
+	directoryFlag        = "dir"
 	chainIDFlag          = "chain"
 	generateStakeKeyFlag = "stake"
 	forceRegenerateFlag  = "force"
@@ -38,7 +38,7 @@ func (ip *initParams) validateFlags() error {
 	}
 
 	if ip.chainID == "" {
-		return errors.New("networkID is empty, --network flag not specified")
+		return errors.New("--chain flag not specified")
 	}
 
 	return nil
