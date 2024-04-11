@@ -19,24 +19,18 @@ func main() {
 
 	appConfig.FillOut()
 
-	initialUtxos, err := common.LoadJson[core.InitialUtxos]("initialUtxos.json")
-	if err != nil {
-		os.Exit(1)
-	}
-
-	oracle := oracle.NewOracle(appConfig, initialUtxos)
+	oracle := oracle.NewOracle(appConfig)
 	if oracle == nil {
 		fmt.Fprintf(os.Stderr, "Failed to create oracle\n")
 		os.Exit(1)
 	}
 
 	err = oracle.Start()
+	defer oracle.Stop()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start oracle. error: %v\n", err)
 		os.Exit(1)
 	}
-
-	defer oracle.Stop()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

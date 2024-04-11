@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 		},
 	}
 
-	loadedConfig, err := LoadConfig("../config.json")
+	loadedConfig, err := common.LoadJson[core.BatcherManagerConfiguration]("../config.json")
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, loadedConfig.Chains)
@@ -77,7 +78,7 @@ func TestBatcherManagerConfig(t *testing.T) {
 }
 
 func TestBatcherManagerOperations(t *testing.T) {
-	loadedConfig, err := LoadConfig("../config.json")
+	loadedConfig, err := common.LoadJson[core.BatcherManagerConfiguration]("../config.json")
 	assert.NoError(t, err)
 
 	for _, chain := range loadedConfig.Chains {

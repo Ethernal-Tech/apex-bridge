@@ -41,7 +41,6 @@ type CardanoChainObserver interface {
 	Start() error
 	Stop() error
 	GetConfig() *CardanoChainConfig
-	GetDb() indexer.Database
 	ErrorCh() <-chan error
 }
 

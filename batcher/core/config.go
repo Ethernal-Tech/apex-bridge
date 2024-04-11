@@ -7,7 +7,7 @@ import (
 )
 
 type BridgeConfig struct {
-	NodeUrl              string `json:"NodeUrl"`
+	NodeUrl              string `json:"nodeUrl"`
 	SmartContractAddress string `json:"scAddress"`  // TOOD: probably will be more than just one
 	SigningKey           string `json:"signingKey"` // hex representation of private signing key
 }

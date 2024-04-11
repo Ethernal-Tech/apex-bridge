@@ -25,14 +25,10 @@ func newValidProcessor(
 	txProcessors := []core.CardanoTxProcessor{txProcessor}
 	failedTxProcessors := []core.CardanoTxFailedProcessor{failedTxProcessor}
 
-	getCardanoChainObserverDb := func(chainId string) indexer.Database {
-		return ccoDbs[chainId]
-	}
-
 	cardanoTxsProcessor := NewCardanoTxsProcessor(
 		appConfig, oracleDb,
 		txProcessors, failedTxProcessors,
-		bridgeSubmitter, getCardanoChainObserverDb,
+		bridgeSubmitter, ccoDbs,
 		hclog.NewNullLogger(),
 	)
 
@@ -45,7 +41,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			"prime":  {},
 			"vector": {},
 		},
-		Settings: core.AppSettings{
+		BridgingSettings: core.BridgingSettings{
 			MaxBridgingClaimsToGroup: 10,
 		},
 	}
@@ -79,16 +75,14 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc := NewCardanoTxsProcessor(nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 
-		getCardanoChainObserverDb := func(chainId string) indexer.Database {
-			return (map[string]indexer.Database{"prime": primeDb, "vector": vectorDb})[chainId]
-		}
+		indexerDbs := map[string]indexer.Database{"prime": primeDb, "vector": vectorDb}
 
 		proc = NewCardanoTxsProcessor(
 			appConfig,
 			oracleDb,
 			[]core.CardanoTxProcessor{},
 			[]core.CardanoTxFailedProcessor{},
-			&core.BridgeSubmitterMock{}, getCardanoChainObserverDb, hclog.NewNullLogger(),
+			&core.BridgeSubmitterMock{}, indexerDbs, hclog.NewNullLogger(),
 		)
 		require.NotNil(t, proc)
 	})
