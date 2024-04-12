@@ -1,50 +1,29 @@
 package batcher_manager
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"io/fs"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"path"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatcherManagerOperations(t *testing.T) {
-	testDir := "./test-dir"
-	err := os.Mkdir(testDir, fs.ModePerm)
+	testDir, err := os.MkdirTemp("", "cardano-prime")
 	require.NoError(t, err)
 
 	defer func() {
 		os.RemoveAll(testDir)
 		os.Remove(testDir)
 	}()
-
-	command := "go"
-	args := []string{"run", "../../cli/cmd/main.go", "wallet-create", "--chain", "prime", "--dir", testDir}
-
-	cmd := exec.Command(command, args...)
-
-	// Capture the output
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	// Run the command
-	err = cmd.Run()
-	if err != nil {
-		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
-	}
 
 	jsonData := []byte(`{
 		"testnetMagic": 2,
@@ -61,7 +40,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 			"prime": {
 				Base: core.BaseConfig{
 					ChainId:     "prime",
-					KeysDirPath: testDir + "/prime",
+					KeysDirPath: testDir,
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -77,9 +56,10 @@ func TestBatcherManagerOperations(t *testing.T) {
 	}
 
 	for _, chain := range config.Chains {
-		testKeysPath := "." + chain.Base.KeysDirPath[1:]
+		wallet, err := cardano.GenerateWallet(testDir, false, true)
+		require.NoError(t, err)
 
-		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testKeysPath)
+		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testDir)
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
@@ -93,15 +73,12 @@ func TestBatcherManagerOperations(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, cardanoChainConfig, &concreteChainOp.Config)
 
-			multisigAddress, multisigFeeAddress, err := walletLoadingHelper(testKeysPath)
-			assert.NoError(t, err)
-
 			// remove cbor prefix
-			assert.Equal(t, multisigAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSig.GetSigningKey()))
-			assert.Equal(t, multisigFeeAddress[4:], hex.EncodeToString(concreteChainOp.CardanoWallet.MultiSigFee.GetSigningKey()))
+			assert.Equal(t, wallet.MultiSig.GetSigningKey(), concreteChainOp.CardanoWallet.MultiSig.GetSigningKey())
+			assert.Equal(t, wallet.MultiSigFee.GetSigningKey(), concreteChainOp.CardanoWallet.MultiSigFee.GetSigningKey())
 
 			// test signatures
-			sigWithString, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", cardano.NewSigningKey(multisigAddress))
+			sigWithString, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", wallet.MultiSig)
 			assert.NoError(t, err)
 			sigWithWallet, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", concreteChainOp.CardanoWallet.MultiSig)
 			assert.NoError(t, err)
@@ -111,8 +88,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 }
 
 func TestBatcherManagerCreation(t *testing.T) {
-	testDir := "./test-dir"
-	err := os.Mkdir(testDir, fs.ModePerm)
+	testDir, err := os.MkdirTemp("", "cardano-prime")
 	require.NoError(t, err)
 
 	defer func() {
@@ -120,30 +96,16 @@ func TestBatcherManagerCreation(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	command := "go"
-	args := []string{"run", "../../cli/cmd/main.go", "wallet-create", "--chain", "prime", "--dir", testDir}
+	_, err = cardano.GenerateWallet(testDir, false, true)
+	require.NoError(t, err)
 
-	cmd := exec.Command(command, args...)
+	ecdsaValidatoSecretDirPath := path.Join(testDir, secrets.ConsensusFolderLocal)
+	require.NoError(t, common.CreateDirSafe(ecdsaValidatoSecretDirPath, 0770))
 
-	// Capture the output
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	// Run the command
-	err = cmd.Run()
-	if err != nil {
-		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
-	}
-
-	command = "blade"
-	args = []string{"secrets", "init", "--insecure", "--data-dir", testDir}
-
-	// Execute the command
-	cmd = exec.Command(command, args...)
-	err = cmd.Run()
-	if err != nil {
-		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
-	}
+	ecdsaValidatoSecretFilePath := path.Join(ecdsaValidatoSecretDirPath, secrets.ValidatorKeyLocal)
+	require.NoError(t, os.WriteFile(ecdsaValidatoSecretFilePath, []byte(
+		"6a9d5cf2d80878afcd6c268fc4972f23eab59ac258435d8c9ac5790b5e15da6d",
+	), 0770))
 
 	jsonData := []byte(`{
 		"testnetMagic": 2,
@@ -160,7 +122,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			"prime": {
 				Base: core.BaseConfig{
 					ChainId:     "prime",
-					KeysDirPath: testDir + "/prime",
+					KeysDirPath: testDir,
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -212,52 +174,4 @@ func TestBatcherManagerCreation(t *testing.T) {
 		manager := NewBatcherManager(config, map[string]core.ChainOperations{"prime": nil}, nil)
 		require.NotNil(t, manager)
 	})
-}
-
-func walletLoadingHelper(directory string) (string, string, error) {
-	type FileContent struct {
-		Type        string `json:"type"`
-		Description string `json:"description"`
-		CborHex     string `json:"cborHex"`
-	}
-
-	var multisigAddress, multisigFeeAddress string
-
-	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(info.Name(), "payment.skey") {
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			var fileContent FileContent
-			if err := json.Unmarshal(content, &fileContent); err != nil {
-				return err
-			}
-
-			if strings.Contains(path, "multisig/") {
-				multisigAddress = fileContent.CborHex
-			} else if strings.Contains(path, "multisigfee/") {
-				multisigFeeAddress = fileContent.CborHex
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	if multisigAddress == "" || multisigFeeAddress == "" {
-		return "", "", fmt.Errorf("payment.skey files not found in both multisig and multisigfee directories")
-	}
-
-	return multisigAddress, multisigFeeAddress, nil
 }

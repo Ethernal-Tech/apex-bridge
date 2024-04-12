@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"os"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
@@ -152,8 +155,18 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		"potentialFee": 300000
 		}`)
 
-	validPath := "../keys/prime"
-	invalidPath := "invalidPath"
+	validPath, err := os.MkdirTemp("", "cardano-prime")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(validPath)
+		os.Remove(validPath)
+	}()
+
+	invalidPath := path.Join(validPath, "something_that_does_not_exist")
+
+	_, err = cardanotx.GenerateWallet(validPath, false, true)
+	require.NoError(t, err)
 
 	t.Run("invalid chain type", func(t *testing.T) {
 		chainSpecificConfig := core.ChainSpecific{
@@ -198,8 +211,8 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
-		require.NotNil(t, chainOp)
 		require.NoError(t, err)
+		require.NotNil(t, chainOp)
 	})
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
@@ -209,8 +222,8 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
-		require.NotNil(t, chainOp)
 		require.NoError(t, err)
+		require.NotNil(t, chainOp)
 	})
 }
 
