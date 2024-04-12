@@ -1,10 +1,13 @@
 package batcher_manager
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -19,6 +22,30 @@ import (
 )
 
 func TestBatcherManagerOperations(t *testing.T) {
+	testDir := "./test-dir"
+	err := os.Mkdir(testDir, fs.ModePerm)
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	command := "go"
+	args := []string{"run", "../../cli/cmd/main.go", "wallet-create", "--chain", "prime", "--dir", testDir}
+
+	cmd := exec.Command(command, args...)
+
+	// Capture the output
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// Run the command
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
+	}
+
 	jsonData := []byte(`{
 		"testnetMagic": 2,
 		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -34,7 +61,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 			"prime": {
 				Base: core.BaseConfig{
 					ChainId:     "prime",
-					KeysDirPath: "../keys/prime",
+					KeysDirPath: testDir + "/prime",
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -50,7 +77,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 	}
 
 	for _, chain := range config.Chains {
-		testKeysPath := "../" + chain.Base.KeysDirPath[1:]
+		testKeysPath := "." + chain.Base.KeysDirPath[1:]
 
 		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testKeysPath)
 		assert.NoError(t, err)
@@ -84,6 +111,40 @@ func TestBatcherManagerOperations(t *testing.T) {
 }
 
 func TestBatcherManagerCreation(t *testing.T) {
+	testDir := "./test-dir"
+	err := os.Mkdir(testDir, fs.ModePerm)
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	command := "go"
+	args := []string{"run", "../../cli/cmd/main.go", "wallet-create", "--chain", "prime", "--dir", testDir}
+
+	cmd := exec.Command(command, args...)
+
+	// Capture the output
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// Run the command
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
+	}
+
+	command = "blade"
+	args = []string{"secrets", "init", "--insecure", "--data-dir", testDir}
+
+	// Execute the command
+	cmd = exec.Command(command, args...)
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("Command failed with error: %v\nstderr: %s", err, stderr.String())
+	}
+
 	jsonData := []byte(`{
 		"testnetMagic": 2,
 		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -99,7 +160,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			"prime": {
 				Base: core.BaseConfig{
 					ChainId:     "prime",
-					KeysDirPath: "../keys/prime",
+					KeysDirPath: testDir + "/prime",
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -112,7 +173,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 			SecretsManager: &secrets.SecretsManagerConfig{
 				Type: "local",
-				Path: "../../blade-secrets",
+				Path: testDir,
 			},
 		},
 		PullTimeMilis: 2500,
