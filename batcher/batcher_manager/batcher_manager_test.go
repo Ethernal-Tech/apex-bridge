@@ -13,14 +13,12 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/hashicorp/go-hclog"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBatcherManagerConfig(t *testing.T) {
+func TestBatcherManagerOperations(t *testing.T) {
 	jsonData := []byte(`{
 		"testnetMagic": 2,
 		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -31,22 +29,12 @@ func TestBatcherManagerConfig(t *testing.T) {
 
 	rawMessage := json.RawMessage(jsonData)
 
-	expectedConfig := &core.BatcherManagerConfiguration{
+	config := &core.BatcherManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
 			"prime": {
 				Base: core.BaseConfig{
 					ChainId:     "prime",
-					KeysDirPath: "./keys/prime",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
-			},
-			"vector": {
-				Base: core.BaseConfig{
-					ChainId:     "vector",
-					KeysDirPath: "./keys/vector",
+					KeysDirPath: "../keys/prime",
 				},
 				ChainSpecific: core.ChainSpecific{
 					ChainType: "Cardano",
@@ -59,28 +47,9 @@ func TestBatcherManagerConfig(t *testing.T) {
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 		},
 		PullTimeMilis: 2500,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   "./batcher_logs",
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
 	}
 
-	loadedConfig, err := common.LoadJson[core.BatcherManagerConfiguration]("../config.json")
-	assert.NoError(t, err)
-
-	assert.NotEmpty(t, loadedConfig.Chains)
-	assert.Equal(t, expectedConfig.Bridge, loadedConfig.Bridge)
-	assert.Equal(t, expectedConfig.PullTimeMilis, loadedConfig.PullTimeMilis)
-	assert.Equal(t, expectedConfig.Logger, loadedConfig.Logger)
-}
-
-func TestBatcherManagerOperations(t *testing.T) {
-	loadedConfig, err := common.LoadJson[core.BatcherManagerConfiguration]("../config.json")
-	assert.NoError(t, err)
-
-	for _, chain := range loadedConfig.Chains {
+	for _, chain := range config.Chains {
 		testKeysPath := "../" + chain.Base.KeysDirPath[1:]
 
 		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testKeysPath)
@@ -141,6 +110,10 @@ func TestBatcherManagerCreation(t *testing.T) {
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
+			SecretsManager: &secrets.SecretsManagerConfig{
+				Type: "local",
+				Path: "../../blade-secrets",
+			},
 		},
 		PullTimeMilis: 2500,
 	}

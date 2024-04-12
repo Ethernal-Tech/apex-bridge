@@ -40,7 +40,10 @@
     "bridge": {
         "nodeUrl": "https://polygon-mumbai-pokt.nodies.app",
         "scAddress": "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
-        "signingKey": "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
+        "secretsManager": {
+            "type": "local",
+            "path": "./blade-dir"
+        },
         "submitConfig": {
             "confirmedBlocksThreshold": 10,
             "confirmedBlocksSubmitTime": 5000
@@ -59,11 +62,7 @@
     },
     "batcherPullTime": 2500,
     "initialUtxos": {
-        "prime": [
-    
-        ],
-        "vector": [
-            
-        ]
+        "prime": [],
+        "vector": []
     }
 }
