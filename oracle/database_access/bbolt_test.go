@@ -2,6 +2,7 @@ package database_access
 
 import (
 	"os"
+	"path"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -9,15 +10,21 @@ import (
 )
 
 func TestBoltDatabase(t *testing.T) {
-	const filePath = "temp_test.db"
+	testDir, err := os.MkdirTemp("", "boltdb-test")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	filePath := path.Join(testDir, "temp_test.db")
 
 	dbCleanup := func() {
 		if _, err := os.Stat(filePath); err == nil {
 			os.Remove(filePath)
 		}
 	}
-
-	t.Cleanup(dbCleanup)
 
 	t.Run("Init", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
