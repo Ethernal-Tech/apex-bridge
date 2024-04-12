@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	mumbaiNodeUrl    = "https://polygon-mumbai-bor-rpc.publicnode.com"
+	mumbaiNodeUrl    = "https://polygon-mumbai.blockpi.network/v1/rpc/public"
 	dummyMumbaiAccPk = "61deed8dda92a396e8e9dbcbb5a058bee274de1adc57b2067975691dacdd55c7"
 )
 
@@ -25,6 +25,9 @@ var (
 )
 
 func TestTxHelper(t *testing.T) {
+	// this test works with real live node, so it should be run only on special occasions
+	t.Skip()
+
 	scAddress := "0xA4B44930686aC7179FC63688749EC60e0C4A96C3"
 
 	wallet, err := NewEthTxWallet(dummyMumbaiAccPk)
