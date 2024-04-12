@@ -27,13 +27,19 @@ var maxTxSize = 16000
 
 type CardanoChainOperations struct {
 	Config        core.CardanoChainConfig
+	TxProvider    cardanowallet.ITxDataRetriever
 	CardanoWallet cardano.CardanoWallet
 }
 
-func NewCardanoChainOperations(config core.CardanoChainConfig, wallet cardano.CardanoWallet) *CardanoChainOperations {
+func NewCardanoChainOperations(
+	config core.CardanoChainConfig,
+	wallet cardano.CardanoWallet,
+	txProvider cardanowallet.ITxDataRetriever,
+) *CardanoChainOperations {
 	return &CardanoChainOperations{
-		Config:        config,
+		TxProvider:    txProvider,
 		CardanoWallet: wallet,
+		Config:        config,
 	}
 }
 
@@ -62,12 +68,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, err
 	}
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cco.Config.BlockfrostUrl, cco.Config.BlockfrostAPIKey)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	protocolParams, err := txProvider.GetProtocolParameters(ctx)
+	protocolParams, err := cco.TxProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}

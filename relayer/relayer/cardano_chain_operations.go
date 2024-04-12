@@ -12,12 +12,16 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	config core.CardanoChainConfig
+	config     core.CardanoChainConfig
+	txProvider cardanowallet.ITxSubmitter
 }
 
-func NewCardanoChainOperations(config core.CardanoChainConfig) *CardanoChainOperations {
+func NewCardanoChainOperations(
+	txProvider cardanowallet.ITxSubmitter, config core.CardanoChainConfig,
+) *CardanoChainOperations {
 	return &CardanoChainOperations{
-		config: config,
+		txProvider: txProvider,
+		config:     config,
 	}
 }
 
@@ -32,10 +36,5 @@ func (cco *CardanoChainOperations) SendTx(smartContractData *eth.ConfirmedBatch)
 		return err
 	}
 
-	txProvider, err := cardanowallet.NewTxProviderBlockFrost(cco.config.BlockfrostUrl, cco.config.BlockfrostAPIKey)
-	if err != nil {
-		return err
-	}
-
-	return txProvider.SubmitTx(context.Background(), txSigned)
+	return cco.txProvider.SubmitTx(context.Background(), txSigned)
 }

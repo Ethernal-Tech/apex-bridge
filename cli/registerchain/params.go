@@ -22,12 +22,12 @@ const (
 	directoryFlag           = "dir"
 	validatorDirectoryFlag  = "validator-dir"
 	validatorPrivateKeyFlag = "validator-pk"
-	blockfrostUrlFlag       = "block-frost"    // https://cardano-preview.blockfrost.io/api/v0
-	blockfrostProjectIDFlag = "block-frost-id" // preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE
-	multisigAddrFlag        = "addr"           // addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh
-	multisigFeeAddrFlag     = "addr-fee"       // addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u
-	bridgeUrlFlag           = "bridge-url"     // https://polygon-mumbai-pokt.nodies.app
-	bridgeSCAddrFlag        = "bridge-addr"    // 0x69b6eEAff0A5c5F80a242104B79F4aC5c40E5130
+	blockfrostUrlFlag       = "block-frost"
+	blockfrostProjectIDFlag = "block-frost-id"
+	multisigAddrFlag        = "addr"
+	multisigFeeAddrFlag     = "addr-fee"
+	bridgeUrlFlag           = "bridge-url"
+	bridgeSCAddrFlag        = "bridge-addr"
 	chainIDFlag             = "chain"
 	initialTokenSupplyFlag  = "token-supply"
 

@@ -27,8 +27,6 @@ func TestBatcherManagerOperations(t *testing.T) {
 
 	jsonData := []byte(`{
 		"testnetMagic": 2,
-		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
 		}`)
@@ -48,10 +46,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 				},
 			},
 		},
-		Bridge: core.BridgeConfig{
-			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
-		},
+		Bridge:        core.BridgeConfig{},
 		PullTimeMilis: 2500,
 	}
 
@@ -109,8 +104,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	jsonData := []byte(`{
 		"testnetMagic": 2,
-		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
 		}`)
@@ -131,8 +124,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 			},
 		},
 		Bridge: core.BridgeConfig{
-			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
 			SecretsManager: &secrets.SecretsManagerConfig{
 				Type: "local",
 				Path: testDir,

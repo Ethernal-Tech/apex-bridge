@@ -20,14 +20,20 @@ import (
 )
 
 func TestBatcherExecute(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "cardano-prime")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
 	config := &core.BatcherConfiguration{
 		Base: core.BaseConfig{
 			ChainId:     "prime",
-			KeysDirPath: "../keys/prime",
+			KeysDirPath: testDir,
 		},
 		Bridge: core.BridgeConfig{
-			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0x4c7aBbe2c5A44d758b70BE5C3c07eEB573304Db4",
 			SecretsManager: &secrets.SecretsManagerConfig{
 				Type: secrets.Local,
 				Path: "dummy",
@@ -149,8 +155,6 @@ func TestBatcherExecute(t *testing.T) {
 func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	jsonData := []byte(`{
 		"testnetMagic": 2,
-		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 		"atLeastValidators": 3,
 		"potentialFee": 300000
 		}`)
