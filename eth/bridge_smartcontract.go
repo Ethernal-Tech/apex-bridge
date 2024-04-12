@@ -6,6 +6,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -36,8 +37,10 @@ func NewBridgeSmartContract(nodeUrl, smartContractAddress string) *BridgeSmartCo
 	}
 }
 
-func NewBridgeSmartContractWithWallet(nodeUrl, smartContractAddress, signingKey string) (*BridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeUrl, signingKey)
+func NewBridgeSmartContractWithWallet(
+	nodeUrl, smartContractAddress string, wallet *ethtxhelper.EthTxWallet,
+) (*BridgeSmartContractImpl, error) {
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeUrl, wallet)
 	if err != nil {
 		return nil, err
 	}

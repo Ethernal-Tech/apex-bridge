@@ -134,7 +134,12 @@ func GetChainSpecificOperations(config core.ChainSpecific, pkPath string) (core.
 			return nil, fmt.Errorf("error while loading wallet info: %v", err)
 		}
 
-		operations = NewCardanoChainOperations(cardanoChainConfig, *cardanoWallet)
+		txProvider, err := wallet.GetTxProvider(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tx provider: %w", err)
+		}
+
+		operations = NewCardanoChainOperations(cardanoChainConfig, *cardanoWallet, txProvider)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

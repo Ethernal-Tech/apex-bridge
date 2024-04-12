@@ -9,7 +9,6 @@ import (
 )
 
 func TestToCardanoChainConfig(t *testing.T) {
-
 	t.Run("Invalid chain type", func(t *testing.T) {
 		chainSpecificConfig := core.ChainSpecific{
 			ChainType: "NotCardano",
@@ -36,8 +35,8 @@ func TestToCardanoChainConfig(t *testing.T) {
 
 	jsonData := []byte(`{
 		"testnetMagic": 2,
-		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+		"blockfrostUrl": "pera",
+		"blockfrostApiKey": "zdera",
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
 		}`)
@@ -52,7 +51,7 @@ func TestToCardanoChainConfig(t *testing.T) {
 	require.NotNil(t, config)
 	require.Equal(t, "Cardano", config.GetChainType())
 	require.Equal(t, uint(2), config.TestNetMagic)
-	require.Equal(t, "https://cardano-preview.blockfrost.io/api/v0", config.BlockfrostUrl)
-	require.Equal(t, "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE", config.BlockfrostAPIKey)
+	require.Equal(t, "pera", config.BlockfrostUrl)
+	require.Equal(t, "zdera", config.BlockfrostAPIKey)
 	require.Equal(t, uint64(300000), config.PotentialFee)
 }

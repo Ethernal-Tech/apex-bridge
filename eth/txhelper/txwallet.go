@@ -10,6 +10,7 @@ import (
 
 	apexcommon "github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -28,13 +29,13 @@ type EthTxWallet struct {
 
 var _ IEthTxWallet = (*EthTxWallet)(nil)
 
-func NewEthTxWalletFromSecretManager(secretsManager secrets.SecretsManager) (*EthTxWallet, error) {
-	secret, err := secretsManager.GetSecret(secrets.ValidatorKey)
+func NewEthTxWalletFromSecretManager(config *secrets.SecretsManagerConfig) (*EthTxWallet, error) {
+	privateKey, err := secretsHelper.GetValidatorKey(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewEthTxWallet(string(secret))
+	return NewEthTxWallet(string(privateKey))
 }
 
 func NewEthTxWalletFromBladeFile(filePath string) (*EthTxWallet, error) {

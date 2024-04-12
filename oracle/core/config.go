@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 )
 
 type BridgingAddresses struct {
@@ -27,10 +28,10 @@ type SubmitConfig struct {
 }
 
 type BridgeConfig struct {
-	NodeUrl              string       `json:"nodeUrl"`
-	SmartContractAddress string       `json:"scAddress"`
-	SigningKey           string       `json:"signingKey"`
-	SubmitConfig         SubmitConfig `json:"submitConfig"`
+	NodeUrl              string                        `json:"nodeUrl"`
+	SmartContractAddress string                        `json:"scAddress"`
+	SecretsManager       *secrets.SecretsManagerConfig `json:"secrets"`
+	SubmitConfig         SubmitConfig                  `json:"submitConfig"`
 }
 
 type AppSettings struct {

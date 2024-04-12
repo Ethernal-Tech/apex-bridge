@@ -1,7 +1,8 @@
 package chain
 
 import (
-	"fmt"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -13,9 +14,17 @@ import (
 )
 
 func TestCardanoChainObserver(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "boltdb-test")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
 	settings := core.AppSettings{
-		DbsPath:  "./tests_temp/",
-		LogsPath: "./tests_temp/",
+		DbsPath:  testDir,
+		LogsPath: testDir,
 		LogLevel: 2,
 	}
 
@@ -23,8 +32,6 @@ func TestCardanoChainObserver(t *testing.T) {
 		common.RemoveDirOrFilePathIfExists(settings.DbsPath)
 		common.RemoveDirOrFilePathIfExists(settings.LogsPath)
 	}
-
-	t.Cleanup(foldersCleanup)
 
 	chainConfig := &core.CardanoChainConfig{
 		ChainId:                "prime",
@@ -39,16 +46,15 @@ func TestCardanoChainObserver(t *testing.T) {
 		},
 	}
 
-	initDb := func() (indexer.Database, error) {
-		if err := common.CreateDirectoryIfNotExists(settings.DbsPath); err != nil {
-			return nil, fmt.Errorf("failed to create db dir")
-		}
-		indexerDb, err := indexerDb.NewDatabaseInit("", settings.DbsPath+chainConfig.ChainId+".db")
-		if err != nil {
-			return nil, fmt.Errorf("failed to open db")
-		}
+	initDb := func(t *testing.T) indexer.Database {
+		t.Helper()
 
-		return indexerDb, err
+		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath))
+
+		indexerDb, err := indexerDb.NewDatabaseInit("", path.Join(settings.DbsPath, chainConfig.ChainId+".db"))
+		require.NoError(t, err)
+
+		return indexerDb
 	}
 
 	t.Run("check ErrorCh", func(t *testing.T) {
@@ -60,8 +66,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		db.On("ClearUnprocessedTxs").Return(nil)
 		db.On("ClearExpectedTxs").Return(nil)
 
-		indexerDb, err := initDb()
-		require.NoError(t, err)
+		indexerDb := initDb(t)
 
 		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
@@ -79,8 +84,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		db.On("ClearUnprocessedTxs").Return(nil)
 		db.On("ClearExpectedTxs").Return(nil)
 
-		indexerDb, err := initDb()
-		require.NoError(t, err)
+		indexerDb := initDb(t)
 
 		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
@@ -99,8 +103,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		db.On("ClearUnprocessedTxs").Return(nil)
 		db.On("ClearExpectedTxs").Return(nil)
 
-		indexerDb, err := initDb()
-		require.NoError(t, err)
+		indexerDb := initDb(t)
 
 		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
@@ -124,8 +127,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		db.On("ClearUnprocessedTxs").Return(nil)
 		db.On("ClearExpectedTxs").Return(nil)
 
-		indexerDb, err := initDb()
-		require.NoError(t, err)
+		indexerDb := initDb(t)
 
 		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
@@ -149,7 +151,6 @@ func TestCardanoChainObserver(t *testing.T) {
 		select {
 		case <-timer.C:
 			t.Fail()
-			close(doneCh)
 		case <-doneCh:
 		}
 	})

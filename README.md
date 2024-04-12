@@ -16,6 +16,11 @@ $ solcjs -p --abi contractbinding/dummycontracts/TestContract.sol -o ./contractb
 $ go run ./cli/cmd/main.go wallet-create --chain prime --dir /home/bbs/cardano --show-pk
 ```
 
+# How to generate blade secrets
+```shell
+$ blade secrets init --insecure --data-dir ./blade-secrets
+```
+
 # How to register chain for validator
 ```shell
 $ go run ./cli/cmd/main.go register-chain \

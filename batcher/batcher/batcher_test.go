@@ -5,26 +5,39 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"os"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatcherExecute(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "cardano-prime")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
 	config := &core.BatcherConfiguration{
 		Base: core.BaseConfig{
 			ChainId:     "prime",
-			KeysDirPath: "../keys/prime",
+			KeysDirPath: testDir,
 		},
 		Bridge: core.BridgeConfig{
-			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
-			SmartContractAddress: "0x4c7aBbe2c5A44d758b70BE5C3c07eEB573304Db4",
-			SigningKey:           "3761f6deeb2e0b2aa8b843e804d880afa6e5fecf1631f411e267641a72d0ca20",
+			SecretsManager: &secrets.SecretsManagerConfig{
+				Type: secrets.Local,
+				Path: "dummy",
+			},
 		},
 		PullTimeMilis: 2500,
 	}
@@ -142,14 +155,22 @@ func TestBatcherExecute(t *testing.T) {
 func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	jsonData := []byte(`{
 		"testnetMagic": 2,
-		"blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-		"blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
 		"atLeastValidators": 3,
 		"potentialFee": 300000
 		}`)
 
-	validPath := "../keys/prime"
-	invalidPath := "invalidPath"
+	validPath, err := os.MkdirTemp("", "cardano-prime")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(validPath)
+		os.Remove(validPath)
+	}()
+
+	invalidPath := path.Join(validPath, "something_that_does_not_exist")
+
+	_, err = cardanotx.GenerateWallet(validPath, false, true)
+	require.NoError(t, err)
 
 	t.Run("invalid chain type", func(t *testing.T) {
 		chainSpecificConfig := core.ChainSpecific{
@@ -194,8 +215,8 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
-		require.NotNil(t, chainOp)
 		require.NoError(t, err)
+		require.NotNil(t, chainOp)
 	})
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
@@ -205,8 +226,8 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
-		require.NotNil(t, chainOp)
 		require.NoError(t, err)
+		require.NotNil(t, chainOp)
 	})
 }
 

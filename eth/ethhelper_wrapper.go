@@ -25,15 +25,10 @@ func NewEthHelperWrapper(nodeUrl string) *EthHelperWrapper {
 	}
 }
 
-func NewEthHelperWrapperWithWallet(nodeUrl, signingKey string) (*EthHelperWrapper, error) {
-	ethWallet, err := ethtxhelper.NewEthTxWallet(signingKey)
-	if err != nil {
-		return nil, err
-	}
-
+func NewEthHelperWrapperWithWallet(nodeUrl string, wallet *ethtxhelper.EthTxWallet) (*EthHelperWrapper, error) {
 	return &EthHelperWrapper{
 		nodeUrl: nodeUrl,
-		wallet:  ethWallet,
+		wallet:  wallet,
 	}, nil
 }
 

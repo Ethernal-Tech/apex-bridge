@@ -22,11 +22,13 @@ func TestCardanoChainOperations(t *testing.T) {
 	config := core.CardanoChainConfig{
 		TestNetMagic: 42,
 	}
-
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
 	wallet := cardano.CardanoWallet{}
 
 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
@@ -49,7 +51,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount, 1000000)
@@ -73,7 +75,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
@@ -96,7 +98,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 10000000) // 4000Ada
@@ -121,7 +123,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		inputs := GenerateUTXOInputs(400, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
@@ -144,7 +146,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		inputs := GenerateUTXORandomInputs(100, 1000000, 10000000)
 		outputs := GenerateUTXORandomOutputs(200, 1000000, 10000000)
@@ -167,7 +169,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet)
+		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 
 		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
 		outputs := GenerateUTXOOutputs(403, 1000000) // 403Ada
@@ -196,8 +198,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	config := core.CardanoChainConfig{
 		TestNetMagic:      42,
 		AtLeastValidators: 1,
-		BlockfrostUrl:     "https://cardano-preview.blockfrost.io/api/v0",
-		BlockfrostAPIKey:  "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+	}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
 	}
 
 	multisigVkeyString := "68fc463c29900b00122423c7e6a39469987786314e07a5e7f5eae76a5fe671bf"
@@ -233,7 +236,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		MultiSigFee: cardanowallet.NewStakeWallet(multisigFeeVkeyBytes, multisigFeeSkeyBytes, multisigFeeKeyHash, multisigFeeStakeVkeyBytes, multisigFeeStakeSkeyBytes),
 	}
 
-	cco := NewCardanoChainOperations(config, wallet)
+	cco := NewCardanoChainOperations(config, wallet, txProviderMock)
 	testError := errors.New("test err")
 
 	var confirmedTransactions []eth.ConfirmedTransaction = make([]contractbinding.IBridgeContractStructsConfirmedTransaction, 1)
