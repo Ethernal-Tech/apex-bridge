@@ -57,7 +57,6 @@ func TestBatcherManagerConfig(t *testing.T) {
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
-			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
 		},
 		PullTimeMilis: 2500,
 		Logger: logger.LoggerConfig{
@@ -142,7 +141,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA",
-			SigningKey:           "93c91e490bfd3736d17d04f53a10093e9cf2435309f4be1f5751381c8e201d23",
 		},
 		PullTimeMilis: 2500,
 	}

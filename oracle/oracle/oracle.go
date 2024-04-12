@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -76,8 +77,16 @@ func NewOracle(appConfig *core.AppConfig) *OracleImpl {
 		return nil
 	}
 
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(appConfig.Bridge.SecretsManager)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while creating wallet for bridge: %v\n", err)
+		logger.Error("error while creating wallet for bridge", "err", err)
+		return nil
+	}
+
 	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
-	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress, appConfig.Bridge.SigningKey)
+	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
+		appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress, wallet)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Failed to create OracleBridgeSmartContractWithWallet", "err", err)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,10 @@ func TestBatcherExecute(t *testing.T) {
 		Bridge: core.BridgeConfig{
 			NodeUrl:              "https://polygon-mumbai-pokt.nodies.app", // will be our node,
 			SmartContractAddress: "0x4c7aBbe2c5A44d758b70BE5C3c07eEB573304Db4",
-			SigningKey:           "3761f6deeb2e0b2aa8b843e804d880afa6e5fecf1631f411e267641a72d0ca20",
+			SecretsManager: &secrets.SecretsManagerConfig{
+				Type: secrets.Local,
+				Path: "dummy",
+			},
 		},
 		PullTimeMilis: 2500,
 	}

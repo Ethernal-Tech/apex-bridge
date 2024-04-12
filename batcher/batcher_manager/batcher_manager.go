@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
@@ -35,15 +36,25 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration, customOperation
 			operations, err = batcher.GetChainSpecificOperations(chainConfig.ChainSpecific, chainConfig.Base.KeysDirPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
+				logger.Error("error while creating operations", "err", err)
 				return nil
 			}
 		}
 
 		var bridgeSmartContract eth.IBridgeSmartContract
 		if len(customBridgeSc) == 0 {
-			bridgeSmartContract, err = eth.NewBridgeSmartContractWithWallet(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress, config.Bridge.SigningKey)
+			wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(config.Bridge.SecretsManager)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error while creating wallet for bridge: %v\n", err)
+				logger.Error("error while creating wallet for bridge", "err", err)
+				return nil
+			}
+
+			bridgeSmartContract, err = eth.NewBridgeSmartContractWithWallet(
+				config.Bridge.NodeUrl, config.Bridge.SmartContractAddress, wallet)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error while creating bridge smart contract instance: %v\n", err)
+				logger.Error("error while creating bridge smart contract instance", "err", err)
 				return nil
 			}
 		} else {

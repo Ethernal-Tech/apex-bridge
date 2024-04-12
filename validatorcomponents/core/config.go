@@ -83,7 +83,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Bridge: batcherCore.BridgeConfig{
 			NodeUrl:              appConfig.Bridge.NodeUrl,
 			SmartContractAddress: appConfig.Bridge.SmartContractAddress,
-			SigningKey:           appConfig.Bridge.SigningKey,
+			SecretsManager:       appConfig.Bridge.SecretsManager,
 		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Logger: logger.LoggerConfig{
