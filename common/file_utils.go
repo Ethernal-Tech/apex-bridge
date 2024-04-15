@@ -58,7 +58,12 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 			return nil, err
 		}
 
-		configPath = path.Join(filepath.Dir(ex), strings.Join([]string{configPrefix, "config.json"}, "_"))
+		if strings.TrimSpace(configPrefix) != "" {
+			configPath = path.Join(filepath.Dir(ex), strings.Join([]string{configPrefix, "config.json"}, "_"))
+		} else {
+			configPath = path.Join(filepath.Dir(ex), "config.json")
+		}
+
 	}
 
 	config, err = LoadJson[TReturn](configPath)
