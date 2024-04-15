@@ -68,7 +68,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		errChan := chainObserver.ErrorCh()
@@ -86,7 +86,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		config := chainObserver.GetConfig()
@@ -105,7 +105,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		err = chainObserver.Start()
@@ -129,7 +129,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, []*indexer.TxInputOutput{}, txsProcessor, db, indexerDb, bridgeDataFetcher)
+		chainObserver := NewCardanoChainObserver(settings, chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher)
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
