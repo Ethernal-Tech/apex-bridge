@@ -1,11 +1,8 @@
 package clivalidatorcomponents
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -37,7 +34,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	config, err := loadConfig(initParamsData)
+	config, err := common.LoadConfig[vcCore.AppConfig](initParamsData.config, "")
 	if err != nil {
 		outputter.SetError(err)
 		return
@@ -68,30 +65,4 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	outputter.SetCommandResult(&CmdResult{})
-}
-
-func loadConfig(initParamsData *initParams) (
-	*vcCore.AppConfig, error,
-) {
-	var (
-		config     *vcCore.AppConfig
-		err        error
-		configPath string = initParamsData.config
-	)
-
-	if configPath == "" {
-		ex, err := os.Executable()
-		if err != nil {
-			return nil, err
-		}
-
-		configPath = path.Join(filepath.Dir(ex), "config.json")
-	}
-
-	config, err = common.LoadJson[vcCore.AppConfig](configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %v", err)
-	}
-
-	return config, nil
 }
