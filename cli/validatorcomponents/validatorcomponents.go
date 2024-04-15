@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"syscall"
 
@@ -84,7 +85,7 @@ func loadConfig(initParamsData *initParams) (
 			return nil, err
 		}
 
-		configPath = filepath.Dir(ex) + "/config.json"
+		configPath = path.Join(filepath.Dir(ex), "config.json")
 	}
 
 	config, err = common.LoadJson[vcCore.AppConfig](configPath)
