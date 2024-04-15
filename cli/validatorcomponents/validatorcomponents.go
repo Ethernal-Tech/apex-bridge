@@ -17,7 +17,7 @@ var initParamsData = &initParams{}
 
 func GetValidatorComponentsCommand() *cobra.Command {
 	secretsInitCmd := &cobra.Command{
-		Use:     "validator-components",
+		Use:     "run-validator-components",
 		Short:   "runs validator components",
 		PreRunE: runPreRun,
 		Run:     runCommand,
