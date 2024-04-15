@@ -259,6 +259,7 @@ func (o *OracleImpl) errorHandler() {
 
 	select {
 	case errorOrigin := <-agg:
+		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
 		o.errorCh <- errorOrigin.err
 	case <-o.closeCh:
 	}
