@@ -24,8 +24,9 @@ type CardanoChainObserverImpl struct {
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
-	settings core.AppSettings, config *core.CardanoChainConfig, initialUtxosForChain []*indexer.TxInputOutput,
-	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb, indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
+	settings core.AppSettings, config *core.CardanoChainConfig,
+	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb,
+	indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
 ) *CardanoChainObserverImpl {
 	logger, err := logger.NewLogger(logger.LoggerConfig{
 		LogLevel:      hclog.Level(settings.LogLevel),
@@ -40,8 +41,8 @@ func NewCardanoChainObserver(
 
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	if len(initialUtxosForChain) > 0 {
-		err := initUtxos(indexerDb, initialUtxosForChain)
+	if len(config.InitialUtxos) > 0 {
+		err := initUtxos(indexerDb, config.InitialUtxos)
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		logger.Error("Failed to insert initial UTXOs", "err", err)
 	}

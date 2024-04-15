@@ -135,8 +135,7 @@ func NewOracle(appConfig *core.AppConfig) *OracleImpl {
 
 		confirmedBlockSubmitters[cardanoChainConfig.ChainId] = cbs
 
-		initialUtxosForChain := appConfig.InitialUtxos[cardanoChainConfig.ChainId]
-		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, initialUtxosForChain, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher)
+		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher)
 		if cco == nil {
 			fmt.Fprintf(os.Stderr, "failed to create cardano chain observer for chain: %v\n", cardanoChainConfig.ChainId)
 			logger.Error("failed to create cardano chain observer for chain", "chainId", cardanoChainConfig.ChainId)
