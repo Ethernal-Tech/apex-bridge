@@ -5,6 +5,7 @@ import (
 	"os"
 
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
+	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
 	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
 	"github.com/spf13/cobra"
@@ -31,6 +32,7 @@ func (rc *RootCommand) registerSubCommands() {
 		cliwalletcreate.GetWalletCreateCommand(),
 		cliregisterchain.GetRegisterChainCommand(),
 		clivalidatorcomponents.GetValidatorComponentsCommand(),
+		clirelayer.GetRunRelayerCommand(),
 	)
 }
 

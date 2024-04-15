@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 func CreateDirectoryIfNotExists(dirPath string) error {
@@ -39,4 +42,29 @@ func LoadJson[TReturn any](path string) (*TReturn, error) {
 	}
 
 	return &value, nil
+}
+
+// Loads config from defined path or from root
+// Prefix defined as: (prefix)_config.json
+func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, error) {
+	var (
+		config *TReturn
+		err    error
+	)
+
+	if configPath == "" {
+		ex, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+
+		configPath = path.Join(filepath.Dir(ex), strings.Join([]string{configPrefix, "config.json"}, "_"))
+	}
+
+	config, err = LoadJson[TReturn](configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }

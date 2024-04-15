@@ -1,7 +1,6 @@
 package clivalidatorcomponents
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,7 +15,7 @@ var initParamsData = &initParams{}
 
 func GetValidatorComponentsCommand() *cobra.Command {
 	secretsInitCmd := &cobra.Command{
-		Use:     "validator-components",
+		Use:     "run-validator-components",
 		Short:   "runs validator components",
 		PreRunE: runPreRun,
 		Run:     runCommand,
@@ -35,7 +34,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	config, err := loadConfig(initParamsData)
+	config, err := common.LoadConfig[vcCore.AppConfig](initParamsData.config, "")
 	if err != nil {
 		outputter.SetError(err)
 		return
@@ -66,30 +65,4 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	outputter.SetCommandResult(&CmdResult{})
-}
-
-func loadConfig(initParamsData *initParams) (
-	*vcCore.AppConfig, error,
-) {
-	var config *vcCore.AppConfig
-	var err error
-
-	if initParamsData.config != "" {
-		config, err = common.LoadJson[vcCore.AppConfig](initParamsData.config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config: %v", err)
-		}
-	} else {
-		configPath := "config.json"
-		config, err = common.LoadJson[vcCore.AppConfig](configPath)
-		if err != nil {
-			configPath = "../validatorcomponents/" + configPath
-			config, err = common.LoadJson[vcCore.AppConfig](configPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load config: %v", err)
-			}
-		}
-	}
-
-	return config, nil
 }
