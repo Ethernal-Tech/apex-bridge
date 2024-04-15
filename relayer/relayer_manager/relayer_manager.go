@@ -15,7 +15,7 @@ import (
 
 type RelayerManagerImpl struct {
 	config          *core.RelayerManagerConfiguration
-	cardanoRelayers map[string]core.Relayer
+	cardanoRelayers []core.Relayer
 	cancelCtx       context.CancelFunc
 }
 
@@ -25,7 +25,7 @@ func NewRelayerManager(
 	config *core.RelayerManagerConfiguration,
 	logger hclog.Logger,
 ) (*RelayerManagerImpl, error) {
-	relayers := make(map[string]core.Relayer, len(config.Chains))
+	relayers := make([]core.Relayer, 0, len(config.Chains))
 
 	for chain, chainConfig := range config.Chains {
 		operations, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
@@ -38,7 +38,7 @@ func NewRelayerManager(
 			return nil, err
 		}
 
-		relayers[chain] = relayer.NewRelayer(
+		relayers = append(relayers, relayer.NewRelayer(
 			&core.RelayerConfiguration{
 				Bridge:        config.Bridge,
 				Base:          chainConfig.Base,
@@ -48,7 +48,7 @@ func NewRelayerManager(
 			logger.Named(strings.ToUpper(chain)),
 			operations,
 			db,
-		)
+		))
 	}
 
 	return &RelayerManagerImpl{
