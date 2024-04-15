@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer_manager"
+	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -37,25 +38,41 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
+	_, _ = outputter.Write([]byte("Starting relayer...\n"))
+
 	config, err := loadConfig(initParamsData)
 	if err != nil {
 		outputter.SetError(err)
 		return
 	}
 
-	relayerManager, err := relayer_manager.NewRelayerManager(config, make(map[string]relayerCore.ChainOperations), make(map[string]relayerCore.Database))
+	logger, err := logger.NewLogger(config.Logger)
 	if err != nil {
+		outputter.SetError(err)
+		return
+	}
+
+	relayerManager, err := relayer_manager.NewRelayerManager(config, logger)
+	if err != nil {
+		logger.Error("relayer manager creation failed", "err", err)
 		outputter.SetError(err)
 		return
 	}
 
 	err = relayerManager.Start()
 	if err != nil {
+		logger.Error("relayer manager start failed", "err", err)
 		outputter.SetError(err)
 		return
 	}
 
-	defer relayerManager.Stop()
+	_, _ = outputter.Write([]byte("Relayer has been started\n"))
+
+	defer func() {
+		if err := relayerManager.Stop(); err != nil {
+			logger.Error("relayer manager stop failed", "err", err)
+		}
+	}()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

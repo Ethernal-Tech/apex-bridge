@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -96,39 +95,6 @@ func TestRelayerManagerConfig(t *testing.T) {
 }
 
 func TestRelayerManagerCreation(t *testing.T) {
-	jsonData := []byte(`{
-		"testnetMagic": 2,
-		"atLeastValidators": 0.6666666666666666,
-		"potentialFee": 300000
-		}`)
-
-	rawMessage := json.RawMessage(jsonData)
-
-	config := &core.RelayerManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			"prime": {
-				Base: core.BaseConfig{
-					ChainId: "prime",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
-			},
-			"vector": {
-				Base: core.BaseConfig{
-					ChainId: "vector",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
-			},
-		},
-		Bridge:        core.BridgeConfig{},
-		PullTimeMilis: 1000,
-	}
-
 	t.Run("create manager fail - invalid operations", func(t *testing.T) {
 		config := &core.RelayerManagerConfiguration{
 			Chains: map[string]core.ChainConfig{
@@ -143,33 +109,9 @@ func TestRelayerManagerCreation(t *testing.T) {
 				},
 			},
 		}
-		manager, err := NewRelayerManager(config, make(map[string]core.ChainOperations), make(map[string]core.Database))
+		manager, err := NewRelayerManager(config, hclog.NewNullLogger())
 		require.Nil(t, manager)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
-	})
-
-	t.Run("create manager with db mock", func(t *testing.T) {
-		var dbMocks map[string]core.Database = make(map[string]core.Database, 2)
-		dbMocks["prime"] = &database_access.DbMock{}
-		dbMocks["vector"] = &database_access.DbMock{}
-
-		manager, err := NewRelayerManager(config, make(map[string]core.ChainOperations), dbMocks)
-		require.NotNil(t, manager)
-		require.NoError(t, err)
-	})
-
-	t.Run("create manager with chain operations mock and db mock", func(t *testing.T) {
-		var dbMocks map[string]core.Database = make(map[string]core.Database, 2)
-		dbMocks["prime"] = &database_access.DbMock{}
-		dbMocks["vector"] = &database_access.DbMock{}
-
-		var operationsMocks map[string]core.ChainOperations = make(map[string]core.ChainOperations, 2)
-		operationsMocks["prime"] = &database_access.CardanoChainOperationsMock{}
-		operationsMocks["vector"] = &database_access.CardanoChainOperationsMock{}
-
-		manager, err := NewRelayerManager(config, operationsMocks, dbMocks)
-		require.NotNil(t, manager)
-		require.NoError(t, err)
 	})
 }

@@ -3,7 +3,9 @@ package database_access
 import (
 	"fmt"
 	"math/big"
+	"path"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"go.etcd.io/bbolt"
 )
@@ -19,6 +21,10 @@ type BBoltDatabase struct {
 var _ core.Database = (*BBoltDatabase)(nil)
 
 func (bd *BBoltDatabase) Init(filePath string) error {
+	if err := common.CreateDirectoryIfNotExists(path.Dir(filePath)); err != nil {
+		return err
+	}
+
 	db, err := bbolt.Open(filePath, 0600, nil)
 	if err != nil {
 		return fmt.Errorf("could not open db: %v", err)

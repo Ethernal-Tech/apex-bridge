@@ -3,7 +3,6 @@ package relayer_manager
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	"github.com/hashicorp/go-hclog"
 )
 
 type RelayerManagerImpl struct {
@@ -24,44 +23,32 @@ var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
 
 func NewRelayerManager(
 	config *core.RelayerManagerConfiguration,
-	customOperations map[string]core.ChainOperations,
-	customDatabases map[string]core.Database,
-	customBridgeSc ...eth.IBridgeSmartContract) (*RelayerManagerImpl, error) {
-	var relayers = map[string]core.Relayer{}
+	logger hclog.Logger,
+) (*RelayerManagerImpl, error) {
+	relayers := make(map[string]core.Relayer, len(config.Chains))
+
 	for chain, chainConfig := range config.Chains {
-		logger, err := logger.NewLogger(config.Logger)
+		operations, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
 		if err != nil {
 			return nil, err
 		}
 
-		var operations core.ChainOperations = customOperations[chain]
-		if operations == nil {
-			operations, err = relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
-			if err != nil {
-				return nil, err
-			}
+		db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
+		if err != nil {
+			return nil, err
 		}
 
-		var bridgeSmartContract eth.IBridgeSmartContract
-		if len(customBridgeSc) == 0 {
-			bridgeSmartContract = eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress)
-		} else {
-			bridgeSmartContract = customBridgeSc[0]
-		}
-
-		var db core.Database = customDatabases[chain]
-		if db == nil {
-			db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
-			if db == nil || err != nil {
-				return nil, err
-			}
-		}
-
-		relayers[chain] = relayer.NewRelayer(&core.RelayerConfiguration{
-			Bridge:        config.Bridge,
-			Base:          chainConfig.Base,
-			PullTimeMilis: config.PullTimeMilis,
-		}, bridgeSmartContract, logger.Named(strings.ToUpper(chain)), operations, db)
+		relayers[chain] = relayer.NewRelayer(
+			&core.RelayerConfiguration{
+				Bridge:        config.Bridge,
+				Base:          chainConfig.Base,
+				PullTimeMilis: config.PullTimeMilis,
+			},
+			eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress),
+			logger.Named(strings.ToUpper(chain)),
+			operations,
+			db,
+		)
 	}
 
 	return &RelayerManagerImpl{
@@ -74,10 +61,8 @@ func (rm *RelayerManagerImpl) Start() error {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	rm.cancelCtx = cancelCtx
 
-	for chain, r := range rm.cardanoRelayers {
+	for _, r := range rm.cardanoRelayers {
 		go r.Start(ctx)
-
-		fmt.Fprintf(os.Stdin, "Started relayer for: %v chain\n", chain)
 	}
 
 	return nil
@@ -97,8 +82,8 @@ func LoadConfig(path string) (*core.RelayerManagerConfiguration, error) {
 	defer f.Close()
 
 	var appConfig core.RelayerManagerConfiguration
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&appConfig)
+
+	err = json.NewDecoder(f).Decode(&appConfig)
 	if err != nil {
 		return nil, err
 	}
