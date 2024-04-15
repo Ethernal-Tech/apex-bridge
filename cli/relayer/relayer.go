@@ -68,25 +68,24 @@ func runCommand(cmd *cobra.Command, _ []string) {
 func loadConfig(initParamsData *initParams) (
 	*relayerCore.RelayerManagerConfiguration, error,
 ) {
-	var config *relayerCore.RelayerManagerConfiguration
-	var err error
+	var (
+		config     *relayerCore.RelayerManagerConfiguration
+		err        error
+		configPath string = initParamsData.config
+	)
 
-	if initParamsData.config != "" {
-		config, err = common.LoadJson[relayerCore.RelayerManagerConfiguration](initParamsData.config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config: %v", err)
-		}
-	} else {
+	if configPath == "" {
 		ex, err := os.Executable()
 		if err != nil {
 			return nil, err
 		}
 
-		configPath := filepath.Dir(ex) + "/relayer_config.json"
-		config, err = common.LoadJson[relayerCore.RelayerManagerConfiguration](configPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load config: %v", err)
-		}
+		configPath = filepath.Dir(ex) + "/relayer_config.json"
+	}
+
+	config, err = common.LoadJson[relayerCore.RelayerManagerConfiguration](configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
 	return config, nil

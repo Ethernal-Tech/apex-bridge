@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -71,24 +72,24 @@ func runCommand(cmd *cobra.Command, _ []string) {
 func loadConfig(initParamsData *initParams) (
 	*vcCore.AppConfig, error,
 ) {
-	var config *vcCore.AppConfig
-	var err error
+	var (
+		config     *vcCore.AppConfig
+		err        error
+		configPath string = initParamsData.config
+	)
 
-	if initParamsData.config != "" {
-		config, err = common.LoadJson[vcCore.AppConfig](initParamsData.config)
+	if configPath == "" {
+		ex, err := os.Executable()
 		if err != nil {
-			return nil, fmt.Errorf("failed to load config: %v", err)
+			return nil, err
 		}
-	} else {
-		configPath := "config.json"
-		config, err = common.LoadJson[vcCore.AppConfig](configPath)
-		if err != nil {
-			configPath = "../validatorcomponents/" + configPath
-			config, err = common.LoadJson[vcCore.AppConfig](configPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load config: %v", err)
-			}
-		}
+
+		configPath = filepath.Dir(ex) + "/config.json"
+	}
+
+	config, err = common.LoadJson[vcCore.AppConfig](configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
 	return config, nil
