@@ -26,21 +26,19 @@ func NewRelayerManager(
 	config *core.RelayerManagerConfiguration,
 	customOperations map[string]core.ChainOperations,
 	customDatabases map[string]core.Database,
-	customBridgeSc ...eth.IBridgeSmartContract) *RelayerManagerImpl {
+	customBridgeSc ...eth.IBridgeSmartContract) (*RelayerManagerImpl, error) {
 	var relayers = map[string]core.Relayer{}
 	for chain, chainConfig := range config.Chains {
 		logger, err := logger.NewLogger(config.Logger)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error while creating logger: %v\n", err)
-			return nil
+			return nil, err
 		}
 
 		var operations core.ChainOperations = customOperations[chain]
 		if operations == nil {
 			operations, err = relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error while creating operations: %v\n", err)
-				return nil
+				return nil, err
 			}
 		}
 
@@ -55,8 +53,7 @@ func NewRelayerManager(
 		if db == nil {
 			db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
 			if db == nil || err != nil {
-				fmt.Fprintf(os.Stderr, "error while creating database: %v\n", err)
-				return nil
+				return nil, err
 			}
 		}
 
@@ -70,7 +67,7 @@ func NewRelayerManager(
 	return &RelayerManagerImpl{
 		config:          config,
 		cardanoRelayers: relayers,
-	}
+	}, nil
 }
 
 func (rm *RelayerManagerImpl) Start() error {

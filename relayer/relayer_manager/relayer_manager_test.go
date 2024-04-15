@@ -143,8 +143,10 @@ func TestRelayerManagerCreation(t *testing.T) {
 				},
 			},
 		}
-		manager := NewRelayerManager(config, make(map[string]core.ChainOperations), make(map[string]core.Database))
+		manager, err := NewRelayerManager(config, make(map[string]core.ChainOperations), make(map[string]core.Database))
 		require.Nil(t, manager)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
 
 	t.Run("create manager with db mock", func(t *testing.T) {
@@ -152,8 +154,9 @@ func TestRelayerManagerCreation(t *testing.T) {
 		dbMocks["prime"] = &database_access.DbMock{}
 		dbMocks["vector"] = &database_access.DbMock{}
 
-		manager := NewRelayerManager(config, make(map[string]core.ChainOperations), dbMocks)
+		manager, err := NewRelayerManager(config, make(map[string]core.ChainOperations), dbMocks)
 		require.NotNil(t, manager)
+		require.NoError(t, err)
 	})
 
 	t.Run("create manager with chain operations mock and db mock", func(t *testing.T) {
@@ -165,7 +168,8 @@ func TestRelayerManagerCreation(t *testing.T) {
 		operationsMocks["prime"] = &database_access.CardanoChainOperationsMock{}
 		operationsMocks["vector"] = &database_access.CardanoChainOperationsMock{}
 
-		manager := NewRelayerManager(config, operationsMocks, dbMocks)
+		manager, err := NewRelayerManager(config, operationsMocks, dbMocks)
 		require.NotNil(t, manager)
+		require.NoError(t, err)
 	})
 }
