@@ -10,19 +10,18 @@ import (
 )
 
 type CardanoChainConfig struct {
-	NetworkAddress           string                       `json:"networkAddress"`
-	NetworkMagic             uint32                       `json:"networkMagic"`
-	StartBlockHash           string                       `json:"startBlockHash"`
-	StartSlot                uint64                       `json:"startSlot"`
-	StartBlockNumber         uint64                       `json:"startBlockNumber"`
-	ConfirmationBlockCount   uint                         `json:"confirmationBlockCount"`
-	BridgingAddresses        oracleCore.BridgingAddresses `json:"bridgingAddresses"`
-	OtherAddressesOfInterest []string                     `json:"otherAddressesOfInterest"`
-	KeysDirPath              string                       `json:"keysDirPath"`
-	BlockfrostUrl            string                       `json:"blockfrostUrl"`
-	BlockfrostAPIKey         string                       `json:"blockfrostApiKey"`
-	AtLeastValidators        float64                      `json:"atLeastValidators"`
-	PotentialFee             uint64                       `json:"potentialFee"`
+	NetworkAddress           string   `json:"networkAddress"`
+	NetworkMagic             uint32   `json:"networkMagic"`
+	StartBlockHash           string   `json:"startBlockHash"`
+	StartSlot                uint64   `json:"startSlot"`
+	StartBlockNumber         uint64   `json:"startBlockNumber"`
+	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
+	KeysDirPath              string   `json:"keysDirPath"`
+	BlockfrostUrl            string   `json:"blockfrostUrl"`
+	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
+	AtLeastValidators        float64  `json:"atLeastValidators"`
+	PotentialFee             uint64   `json:"potentialFee"`
 }
 
 type AppConfig struct {
@@ -31,7 +30,6 @@ type AppConfig struct {
 	BridgingSettings     oracleCore.BridgingSettings    `json:"bridgingSettings"`
 	Settings             oracleCore.AppSettings         `json:"appSettings"`
 	BatcherPullTimeMilis uint64                         `json:"batcherPullTime"`
-	InitialUtxos         oracleCore.InitialUtxos        `json:"initialUtxos"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {
@@ -47,7 +45,6 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			StartSlot:                ccConfig.StartSlot,
 			StartBlockNumber:         ccConfig.StartBlockNumber,
 			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
-			BridgingAddresses:        ccConfig.BridgingAddresses,
 			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
 		}
 
@@ -75,7 +72,6 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Bridge:           appConfig.Bridge,
 		Settings:         appConfig.Settings,
 		BridgingSettings: appConfig.BridgingSettings,
-		InitialUtxos:     appConfig.InitialUtxos,
 		CardanoChains:    oracleCardanoChains,
 	}
 

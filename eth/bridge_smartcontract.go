@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type Chain = contractbinding.IBridgeContractStructsChain
+
 type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
@@ -21,6 +23,7 @@ type IBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error)
 	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
 	GetNextBatchId(ctx context.Context, destinationChain string) (*big.Int, error)
+	GetAllRegisteredChains(ctx context.Context) ([]Chain, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -221,4 +224,27 @@ func (bsc *BridgeSmartContractImpl) GetNextBatchId(ctx context.Context, destinat
 	return contract.GetNextBatchId(&bind.CallOpts{
 		Context: ctx,
 	}, destinationChain)
+}
+
+func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	result, err := contract.GetAllRegisteredChains(&bind.CallOpts{
+		Context: ctx,
+	})
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return result, nil
 }

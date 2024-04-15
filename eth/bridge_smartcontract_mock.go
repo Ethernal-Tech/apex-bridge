@@ -82,3 +82,12 @@ func (m *BridgeSmartContractMock) GetNextBatchId(ctx context.Context, destinatio
 
 	return args.Get(0).(*big.Int), args.Error(1)
 }
+
+func (m *BridgeSmartContractMock) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
+	args := m.Called(ctx)
+	if args.Get(0) != nil {
+		return args.Get(0).([]Chain), args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
