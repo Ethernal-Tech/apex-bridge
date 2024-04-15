@@ -31,7 +31,7 @@ func NewValidatorComponents(
 
 	err := populateUtxosAndAddresses(
 		context.Background(), oracleConfig,
-		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress)
+		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress),
 	)
 	if err != nil {
 		return nil, err
