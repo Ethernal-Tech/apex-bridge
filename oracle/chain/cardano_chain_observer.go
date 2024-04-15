@@ -3,13 +3,10 @@ package chain
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -24,34 +21,23 @@ type CardanoChainObserverImpl struct {
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
-	settings core.AppSettings, config *core.CardanoChainConfig,
+	config *core.CardanoChainConfig,
 	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb,
 	indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
-) *CardanoChainObserverImpl {
-	logger, err := logger.NewLogger(logger.LoggerConfig{
-		LogLevel:      hclog.Level(settings.LogLevel),
-		JSONLogFormat: false,
-		AppendFile:    true,
-		LogFilePath:   settings.LogsPath + config.ChainId,
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return nil
-	}
-
+	logger hclog.Logger,
+) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
 	if len(config.InitialUtxos) > 0 {
 		err := initUtxos(indexerDb, config.InitialUtxos)
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Failed to insert initial UTXOs", "err", err)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	err = updateLastConfirmedBlockFromSc(indexerDb, oracleDb, bridgeDataFetcher, config.ChainId)
+	err := updateLastConfirmedBlockFromSc(indexerDb, oracleDb, bridgeDataFetcher, config.ChainId)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Update latest confirmed block from Smart Contract failed", "err", err)
-		return nil
+		return nil, err
 	}
 
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
@@ -82,13 +68,12 @@ func NewCardanoChainObserver(
 		syncer:    syncer,
 		logger:    logger,
 		config:    config,
-	}
+	}, nil
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
 	err := co.syncer.Sync()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		co.logger.Error("Start syncing failed", "err", err)
 	}
 
@@ -96,10 +81,8 @@ func (co *CardanoChainObserverImpl) Start() error {
 }
 
 func (co *CardanoChainObserverImpl) Stop() error {
-
 	err := co.syncer.Close()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		co.logger.Error("Syncer close failed", "err", err)
 	}
 

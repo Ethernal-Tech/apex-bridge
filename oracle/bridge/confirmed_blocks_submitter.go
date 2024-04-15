@@ -50,7 +50,7 @@ func NewConfirmedBlocksSubmitter(
 		chainId:         chainId,
 		indexerDb:       indexerDb,
 		oracleDb:        oracleDb,
-		logger:          logger,
+		logger:          logger.Named("confirmed_blocks_submitter_" + chainId),
 		ctx:             ctx,
 		cancelCtx:       cancelCtx,
 
