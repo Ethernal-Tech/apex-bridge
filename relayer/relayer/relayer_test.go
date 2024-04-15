@@ -11,7 +11,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -24,12 +23,6 @@ func TestRelayerExecute(t *testing.T) {
 			ChainId: "prime",
 		},
 		PullTimeMilis: 1000,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   "./relayer_logs",
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)

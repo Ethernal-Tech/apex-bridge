@@ -50,7 +50,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	initDb := func(t *testing.T) indexer.Database {
 		t.Helper()
 
-		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath))
+		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath, 0750))
 
 		indexerDb, err := indexerDb.NewDatabaseInit("", path.Join(settings.DbsPath, chainConfig.ChainId+".db"))
 		require.NoError(t, err)

@@ -48,7 +48,7 @@ type OracleImpl struct {
 var _ core.Oracle = (*OracleImpl)(nil)
 
 func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0660); err != nil {
 		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
 	}
 
@@ -85,7 +85,8 @@ func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, err
 
 	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
-		indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+cardanoChainConfig.ChainId+".db")
+		indexerDb, err := indexerDb.NewDatabaseInit("",
+			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainId+".db"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}

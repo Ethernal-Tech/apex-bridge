@@ -21,7 +21,7 @@ type BBoltDatabase struct {
 var _ core.Database = (*BBoltDatabase)(nil)
 
 func (bd *BBoltDatabase) Init(filePath string) error {
-	if err := common.CreateDirectoryIfNotExists(path.Dir(filePath)); err != nil {
+	if err := common.CreateDirectoryIfNotExists(path.Dir(filePath), 0600); err != nil {
 		return err
 	}
 

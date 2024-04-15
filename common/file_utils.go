@@ -3,16 +3,17 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 )
 
-func CreateDirectoryIfNotExists(dirPath string) error {
+func CreateDirectoryIfNotExists(dirPath string, perm fs.FileMode) error {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		// If the directory doesn't exist, create it
-		return os.MkdirAll(dirPath, os.ModePerm)
+		return os.MkdirAll(dirPath, perm)
 	}
 
 	return nil
@@ -58,12 +59,11 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 			return nil, err
 		}
 
-		if strings.TrimSpace(configPrefix) != "" {
-			configPath = path.Join(filepath.Dir(ex), strings.Join([]string{configPrefix, "config.json"}, "_"))
+		if prfx := strings.TrimSpace(configPrefix); prfx != "" {
+			configPath = path.Join(filepath.Dir(ex), strings.Join([]string{prfx, "config.json"}, "_"))
 		} else {
 			configPath = path.Join(filepath.Dir(ex), "config.json")
 		}
-
 	}
 
 	config, err = LoadJson[TReturn](configPath)

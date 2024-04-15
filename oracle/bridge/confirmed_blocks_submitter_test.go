@@ -2,6 +2,8 @@ package bridge
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -14,6 +16,14 @@ import (
 )
 
 func TestConfirmedBlocksSubmitter(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "block-submitter")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
 	chainId := "prime"
 	appConfig := &core.AppConfig{
 		Bridge: core.BridgeConfig{
@@ -23,7 +33,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			},
 		},
 		Settings: core.AppSettings{
-			DbsPath: "./tests_temp/",
+			DbsPath: testDir,
 		},
 	}
 
@@ -32,18 +42,16 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	}
 
 	initDb := func() (indexer.Database, error) {
-		if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
+		if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0750); err != nil {
 			return nil, fmt.Errorf("failed to create db dir")
 		}
-		indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+chainId+".db")
+		indexerDb, err := indexerDb.NewDatabaseInit("", path.Join(appConfig.Settings.DbsPath, chainId+".db"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to open db")
 		}
 
 		return indexerDb, err
 	}
-
-	t.Cleanup(foldersCleanup)
 
 	t.Run("start submit", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
