@@ -9,7 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/validatorcomponents"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	loggerInfra "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
@@ -43,10 +43,10 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	logger, err := logger.NewLogger(logger.LoggerConfig{
+	logger, err := loggerInfra.NewLogger(loggerInfra.LoggerConfig{
 		LogLevel:    hclog.Level(config.Settings.LogLevel),
 		AppendFile:  true,
-		LogFilePath: path.Join(config.Settings.LogsPath, "oracle.log"),
+		LogFilePath: path.Join(config.Settings.LogsPath, "components.log"),
 	})
 	if err != nil {
 		outputter.SetError(err)
