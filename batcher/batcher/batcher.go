@@ -11,15 +11,17 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	wallet "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
 )
 
 type BatcherImpl struct {
-	config              *core.BatcherConfiguration
-	logger              hclog.Logger
-	operations          core.ChainOperations
-	bridgeSmartContract eth.IBridgeSmartContract
+	config                      *core.BatcherConfiguration
+	logger                      hclog.Logger
+	operations                  core.ChainOperations
+	bridgeSmartContract         eth.IBridgeSmartContract
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -27,12 +29,14 @@ var _ core.Batcher = (*BatcherImpl)(nil)
 func NewBatcher(
 	config *core.BatcherConfiguration,
 	logger hclog.Logger,
-	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract) *BatcherImpl {
+	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater) *BatcherImpl {
 	return &BatcherImpl{
-		config:              config,
-		logger:              logger,
-		operations:          operations,
-		bridgeSmartContract: bridgeSmartContract,
+		config:                      config,
+		logger:                      logger,
+		operations:                  operations,
+		bridgeSmartContract:         bridgeSmartContract,
+		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 	}
 }
 
@@ -112,7 +116,20 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to submit signed batch: %v", err)
 	}
-	b.logger.Info("Batch successfully submited")
+	b.logger.Info("Batch successfully submitted")
+
+	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(confirmedTransactions))
+	for _, confirmedTx := range confirmedTransactions {
+		txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
+			SourceChainId: confirmedTx.SourceChainID,
+			SourceTxHash:  confirmedTx.ObservedTransactionHash,
+		})
+	}
+
+	err = b.bridgingRequestStateUpdater.IncludedInBatch(signedBatch.DestinationChainId, signedBatch.Id.Uint64(), txsInBatch)
+	if err != nil {
+		b.logger.Error("error while updating bridging request states to IncludedInBatch", "destinationChainId", signedBatch.DestinationChainId, "batchId", signedBatch.Id.Uint64())
+	}
 
 	return nil
 }

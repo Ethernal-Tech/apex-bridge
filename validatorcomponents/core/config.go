@@ -24,12 +24,22 @@ type CardanoChainConfig struct {
 	PotentialFee             uint64   `json:"potentialFee"`
 }
 
+type ApiConfig struct {
+	Port           uint32   `json:"port"`
+	PathPrefix     string   `json:"pathPrefix"`
+	AllowedHeaders []string `json:"allowedHeaders"`
+	AllowedOrigins []string `json:"allowedOrigins"`
+	AllowedMethods []string `json:"allowedMethods"`
+}
+
 type AppConfig struct {
-	CardanoChains        map[string]*CardanoChainConfig `json:"cardanoChains"`
-	Bridge               oracleCore.BridgeConfig        `json:"bridge"`
-	BridgingSettings     oracleCore.BridgingSettings    `json:"bridgingSettings"`
-	Settings             oracleCore.AppSettings         `json:"appSettings"`
-	BatcherPullTimeMilis uint64                         `json:"batcherPullTime"`
+	CardanoChains                map[string]*CardanoChainConfig `json:"cardanoChains"`
+	Bridge                       oracleCore.BridgeConfig        `json:"bridge"`
+	BridgingSettings             oracleCore.BridgingSettings    `json:"bridgingSettings"`
+	Settings                     oracleCore.AppSettings         `json:"appSettings"`
+	RelayerImitatorPullTimeMilis uint64                         `json:"relayerImitatorPullTime"`
+	BatcherPullTimeMilis         uint64                         `json:"batcherPullTime"`
+	ApiConfig                    ApiConfig                      `json:"api"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {

@@ -185,10 +185,20 @@ var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
 type CardanoTxProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
+	Type           TxProcessorType
+}
+
+// GetType implements CardanoTxProcessor.
+func (m *CardanoTxProcessorMock) GetType() TxProcessorType {
+	if m.Type != "" {
+		return m.Type
+	}
+
+	return "unspecified"
 }
 
 // IsTxRelevant implements CardanoTxProcessor.
-func (m *CardanoTxProcessorMock) IsTxRelevant(tx *CardanoTx, appConfig *AppConfig) (bool, error) {
+func (m *CardanoTxProcessorMock) IsTxRelevant(tx *CardanoTx) (bool, error) {
 	args := m.Called()
 	return args.Bool(0), args.Error(1)
 }
@@ -208,10 +218,20 @@ var _ CardanoTxProcessor = (*CardanoTxProcessorMock)(nil)
 type CardanoTxFailedProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
+	Type           TxProcessorType
+}
+
+// GetType implements CardanoTxProcessor.
+func (m *CardanoTxFailedProcessorMock) GetType() TxProcessorType {
+	if m.Type != "" {
+		return m.Type
+	}
+
+	return "unspecified"
 }
 
 // IsTxRelevant implements CardanoTxFailedProcessor.
-func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx, appConfig *AppConfig) (bool, error) {
+func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx) (bool, error) {
 	args := m.Called()
 	return args.Bool(0), args.Error(1)
 }

@@ -45,7 +45,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	appConfig.FillOut()
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
-		relevant, err := proc.IsTxRelevant(&core.CardanoTx{}, appConfig)
+		relevant, err := proc.IsTxRelevant(&core.CardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
 
@@ -59,7 +59,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
-		}, appConfig)
+		})
 		require.NoError(t, err)
 		require.False(t, relevant)
 
@@ -73,7 +73,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: relevantMetadata,
 			},
-		}, appConfig)
+		})
 		require.NoError(t, err)
 		require.True(t, relevant)
 	})

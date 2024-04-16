@@ -10,7 +10,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	infraCommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -96,7 +97,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 	require.NoError(t, err)
 
 	ecdsaValidatoSecretDirPath := path.Join(testDir, secrets.ConsensusFolderLocal)
-	require.NoError(t, common.CreateDirSafe(ecdsaValidatoSecretDirPath, 0770))
+	require.NoError(t, infraCommon.CreateDirSafe(ecdsaValidatoSecretDirPath, 0770))
 
 	ecdsaValidatoSecretFilePath := path.Join(ecdsaValidatoSecretDirPath, secrets.ValidatorKeyLocal)
 	require.NoError(t, os.WriteFile(ecdsaValidatoSecretFilePath, []byte(
@@ -118,7 +119,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			},
 		}
 
-		_, err := NewBatcherManager(invalidConfig, hclog.NewNullLogger())
+		_, err := NewBatcherManager(invalidConfig, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.Error(t, err)
 	})
 }

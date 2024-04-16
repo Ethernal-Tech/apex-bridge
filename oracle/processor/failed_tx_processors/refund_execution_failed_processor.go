@@ -16,7 +16,11 @@ func NewRefundExecutionFailedProcessor() *RefundExecutionFailedProcessorImpl {
 	return &RefundExecutionFailedProcessorImpl{}
 }
 
-func (*RefundExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) (bool, error) {
+func (*RefundExecutionFailedProcessorImpl) GetType() core.TxProcessorType {
+	return core.TxProcessorTypeRefundExecuted
+}
+
+func (*RefundExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx) (bool, error) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
@@ -27,7 +31,7 @@ func (*RefundExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedC
 }
 
 func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) error {
-	relevant, err := p.IsTxRelevant(tx, appConfig)
+	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
 	}

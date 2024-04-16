@@ -46,7 +46,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	logger, err := loggerInfra.NewLogger(loggerInfra.LoggerConfig{
 		LogLevel:    hclog.Level(config.Settings.LogLevel),
 		AppendFile:  true,
-		LogFilePath: path.Join(config.Settings.LogsPath, "components.log"),
+		LogFilePath: path.Join(config.Settings.LogsPath, "components"),
 	})
 	if err != nil {
 		outputter.SetError(err)

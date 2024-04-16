@@ -18,7 +18,11 @@ func NewBatchExecutedProcessor() *BatchExecutedProcessorImpl {
 	return &BatchExecutedProcessorImpl{}
 }
 
-func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *core.AppConfig) (bool, error) {
+func (*BatchExecutedProcessorImpl) GetType() core.TxProcessorType {
+	return core.TxProcessorTypeBatchExecuted
+}
+
+func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
@@ -29,7 +33,7 @@ func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *c
 }
 
 func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig) error {
-	relevant, err := p.IsTxRelevant(tx, appConfig)
+	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
 	}

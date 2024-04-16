@@ -48,8 +48,8 @@ type OracleImpl struct {
 
 var _ core.Oracle = (*OracleImpl)(nil)
 
-func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0660); err != nil {
+func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.BridgingRequestStateUpdater, logger hclog.Logger) (*OracleImpl, error) {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
 		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
 	}
 
@@ -95,7 +95,7 @@ func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, err
 		indexerDbs[cardanoChainConfig.ChainId] = indexerDb
 	}
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, logger.Named("cardano_txs_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))

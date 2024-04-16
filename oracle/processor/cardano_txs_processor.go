@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -19,15 +20,16 @@ const (
 )
 
 type CardanoTxsProcessorImpl struct {
-	appConfig          *core.AppConfig
-	db                 core.CardanoTxsProcessorDb
-	txProcessors       []core.CardanoTxProcessor
-	failedTxProcessors []core.CardanoTxFailedProcessor
-	bridgeSubmitter    core.BridgeSubmitter
-	indexerDbs         map[string]indexer.Database
-	logger             hclog.Logger
-	closeCh            chan bool
-	tickTime           time.Duration
+	appConfig                   *core.AppConfig
+	db                          core.CardanoTxsProcessorDb
+	txProcessors                []core.CardanoTxProcessor
+	failedTxProcessors          []core.CardanoTxFailedProcessor
+	bridgeSubmitter             core.BridgeSubmitter
+	indexerDbs                  map[string]indexer.Database
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
+	logger                      hclog.Logger
+	closeCh                     chan bool
+	tickTime                    time.Duration
 }
 
 var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
@@ -39,25 +41,28 @@ func NewCardanoTxsProcessor(
 	failedTxProcessors []core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) *CardanoTxsProcessorImpl {
 
 	return &CardanoTxsProcessorImpl{
-		appConfig:          appConfig,
-		db:                 db,
-		txProcessors:       txProcessors,
-		failedTxProcessors: failedTxProcessors,
-		bridgeSubmitter:    bridgeSubmitter,
-		indexerDbs:         indexerDbs,
-		logger:             logger,
-		closeCh:            make(chan bool, 1),
-		tickTime:           TickTimeMs,
+		appConfig:                   appConfig,
+		db:                          db,
+		txProcessors:                txProcessors,
+		failedTxProcessors:          failedTxProcessors,
+		bridgeSubmitter:             bridgeSubmitter,
+		indexerDbs:                  indexerDbs,
+		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
+		logger:                      logger,
+		closeCh:                     make(chan bool, 1),
+		tickTime:                    TickTimeMs,
 	}
 }
 
 func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error {
 	bp.logger.Debug("NewUnprocessedTxs", "txs", txs)
 
+	var bridgingRequests []*indexer.Tx
 	var relevantTxs []*core.CardanoTx
 	for _, tx := range txs {
 		cardanoTx := &core.CardanoTx{
@@ -66,7 +71,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs [
 		}
 
 		for _, txProcessor := range bp.txProcessors {
-			relevant, err := txProcessor.IsTxRelevant(cardanoTx, bp.appConfig)
+			relevant, err := txProcessor.IsTxRelevant(cardanoTx)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
 				bp.logger.Error("Failed to check if tx is relevant", "err", err)
@@ -75,6 +80,11 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs [
 
 			if relevant {
 				relevantTxs = append(relevantTxs, cardanoTx)
+
+				if txProcessor.GetType() == core.TxProcessorTypeBridgingRequest {
+					bridgingRequests = append(bridgingRequests, tx)
+				}
+
 				break
 			}
 		}
@@ -89,6 +99,11 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs [
 
 			return err
 		}
+	}
+
+	err := bp.bridgingRequestStateUpdater.NewMultiple(originChainId, bridgingRequests)
+	if err != nil {
+		bp.logger.Error("error while adding new bridging request states", "err", err)
 	}
 
 	return nil
@@ -219,7 +234,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 			var txProcessed = false
 		txProcessorsLoop:
 			for _, txProcessor := range bp.txProcessors {
-				relevant, err := txProcessor.IsTxRelevant(unprocessedTx, bp.appConfig)
+				relevant, err := txProcessor.IsTxRelevant(unprocessedTx)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
 					bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
@@ -314,7 +329,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 			var expiredTxProcessed = false
 		failedTxProcessorsLoop:
 			for _, txProcessor := range bp.failedTxProcessors {
-				relevant, err := txProcessor.IsTxRelevant(expiredTx, bp.appConfig)
+				relevant, err := txProcessor.IsTxRelevant(expiredTx)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
 					bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
@@ -348,6 +363,81 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	}
 
 	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
+}
+
+func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
+	bridgeClaims *core.BridgeClaims,
+	unprocessedTxs []*core.CardanoTx,
+	processedTxs []*core.ProcessedCardanoTx,
+) error {
+	if len(bridgeClaims.BridgingRequestClaims) > 0 {
+		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
+			err := bp.bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
+				SourceChainId: brClaim.SourceChainID,
+				SourceTxHash:  brClaim.ObservedTransactionHash,
+			}, brClaim.DestinationChainID)
+
+			if err != nil {
+				bp.logger.Error("error while updating a bridging request state to SubmittedToBridge", "sourceChainId", brClaim.SourceChainID, "sourceTxHash", brClaim.ObservedTransactionHash)
+			}
+		}
+	}
+
+	if len(bridgeClaims.BatchExecutedClaims) > 0 {
+		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
+			err := bp.bridgingRequestStateUpdater.ExecutedOnDestination(beClaim.ChainID, beClaim.BatchNonceID.Uint64(), beClaim.ObservedTransactionHash)
+
+			if err != nil {
+				bp.logger.Error("error while updating bridging request states to ExecutedOnDestination", "destinationChainId", beClaim.ChainID, "batchId", beClaim.BatchNonceID.Uint64(), "destinationTxHash", beClaim.ObservedTransactionHash)
+			}
+		}
+	}
+
+	if len(bridgeClaims.BatchExecutionFailedClaims) > 0 {
+		for _, befClaim := range bridgeClaims.BatchExecutionFailedClaims {
+			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(befClaim.ChainID, befClaim.BatchNonceID.Uint64())
+
+			if err != nil {
+				bp.logger.Error("error while updating bridging request states to FailedToExecuteOnDestination", "destinationChainId", befClaim.ChainID, "batchId", befClaim.BatchNonceID.Uint64(), "destinationTxHash", befClaim.ObservedTransactionHash)
+			}
+		}
+	}
+
+	var bridgingRequestTxProcessor core.CardanoTxProcessor
+	for _, txProcessor := range bp.txProcessors {
+		if txProcessor.GetType() == core.TxProcessorTypeBridgingRequest {
+			bridgingRequestTxProcessor = txProcessor
+			break
+		}
+	}
+
+	if bridgingRequestTxProcessor == nil {
+		return fmt.Errorf("failed to find bridging request tx processor")
+	}
+
+	for _, tx := range processedTxs {
+		if tx.IsInvalid {
+			for _, unprocessedTx := range unprocessedTxs {
+				if unprocessedTx.ToCardanoTxKey() == tx.ToCardanoTxKey() {
+					relevant, err := bridgingRequestTxProcessor.IsTxRelevant(unprocessedTx)
+					if relevant && err == nil {
+						err := bp.bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
+							SourceChainId: tx.OriginChainId,
+							SourceTxHash:  tx.Hash,
+						})
+
+						if err != nil {
+							bp.logger.Error("error while updating a bridging request state to Invalid", "sourceChainId", tx.OriginChainId, "sourceTxHash", tx.Hash)
+						}
+
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (bp *CardanoTxsProcessorImpl) processAllForChain(
@@ -402,6 +492,11 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 		bp.logger.Error("Failed to submit claims", "err", err)
 		return
+	}
+
+	err = bp.notifyBridgingRequestStateUpdater(bridgeClaims, unprocessedTxs, processedTxs)
+	if err != nil {
+		bp.logger.Error("Error while updating bridging request states", "err", err)
 	}
 
 	// we should only change this in db if submit succeeded
