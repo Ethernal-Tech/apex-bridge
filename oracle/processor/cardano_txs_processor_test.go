@@ -357,7 +357,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -402,7 +402,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -451,7 +451,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -499,7 +499,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc := newValidProcessor(
 			appConfig, oracleDb,
-			nil, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{"prime": primeDb, "vector": vectorDb},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)

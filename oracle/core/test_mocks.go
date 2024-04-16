@@ -1,6 +1,8 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
@@ -239,7 +241,7 @@ func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx)
 // ValidateAndAddClaim implements CardanoTxFailedProcessor.
 func (m *CardanoTxFailedProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error {
 	if m.ShouldAddClaim {
-		claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{})
+		claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{BatchNonceID: big.NewInt(1)})
 	}
 
 	args := m.Called()
