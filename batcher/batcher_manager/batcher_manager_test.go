@@ -12,6 +12,7 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,36 +103,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 		"6a9d5cf2d80878afcd6c268fc4972f23eab59ac258435d8c9ac5790b5e15da6d",
 	), 0770))
 
-	jsonData := []byte(`{
-		"testnetMagic": 2,
-		"atLeastValidators": 0.6666666666666666,
-		"potentialFee": 300000
-		}`)
-
-	rawMessage := json.RawMessage(jsonData)
-
-	config := &core.BatcherManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			"prime": {
-				Base: core.BaseConfig{
-					ChainId:     "prime",
-					KeysDirPath: testDir,
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
-			},
-		},
-		Bridge: core.BridgeConfig{
-			SecretsManager: &secrets.SecretsManagerConfig{
-				Type: "local",
-				Path: testDir,
-			},
-		},
-		PullTimeMilis: 2500,
-	}
-
 	t.Run("creation fails - invalid operations", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
 			Chains: map[string]core.ChainConfig{
@@ -147,22 +118,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			},
 		}
 
-		manager := NewBatcherManager(invalidConfig, make(map[string]core.ChainOperations))
-		require.Nil(t, manager)
-	})
-
-	t.Run("create manager without mocks", func(t *testing.T) {
-		manager := NewBatcherManager(config, make(map[string]core.ChainOperations))
-		require.NotNil(t, manager)
-	})
-
-	t.Run("create manager with chain operations mock", func(t *testing.T) {
-		manager := NewBatcherManager(config, map[string]core.ChainOperations{"prime": nil})
-		require.NotNil(t, manager)
-	})
-
-	t.Run("create manager with chain operations and bridge mock", func(t *testing.T) {
-		manager := NewBatcherManager(config, map[string]core.ChainOperations{"prime": nil}, nil)
-		require.NotNil(t, manager)
+		_, err := NewBatcherManager(invalidConfig, hclog.NewNullLogger())
+		require.Error(t, err)
 	})
 }

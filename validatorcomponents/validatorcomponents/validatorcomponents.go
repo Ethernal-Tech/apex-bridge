@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -22,23 +23,28 @@ type ValidatorComponentsImpl struct {
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
 
-func NewValidatorComponents(appConfig *core.AppConfig) (*ValidatorComponentsImpl, error) {
+func NewValidatorComponents(
+	appConfig *core.AppConfig,
+	logger hclog.Logger,
+) (*ValidatorComponentsImpl, error) {
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
-	err := populateUtxosAndAddresses(context.Background(), oracleConfig,
-		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress))
+	err := populateUtxosAndAddresses(
+		context.Background(), oracleConfig,
+		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	oracle := oracle.NewOracle(oracleConfig)
-	if oracle == nil {
+	oracle, err := oracle.NewOracle(oracleConfig, logger.Named("oracle"))
+	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle")
 	}
 
-	batcherManager := batcher_manager.NewBatcherManager(batcherConfig, make(map[string]batcherCore.ChainOperations))
-	if batcherManager == nil {
-		return nil, fmt.Errorf("failed to create batcher manager")
+	batcherManager, err := batcher_manager.NewBatcherManager(batcherConfig, logger.Named("batcher"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
 
 	return &ValidatorComponentsImpl{

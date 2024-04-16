@@ -3,11 +3,14 @@ package clivalidatorcomponents
 import (
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/validatorcomponents"
+	loggerInfra "github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
 
@@ -40,14 +43,26 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(config)
+	logger, err := loggerInfra.NewLogger(loggerInfra.LoggerConfig{
+		LogLevel:    hclog.Level(config.Settings.LogLevel),
+		AppendFile:  true,
+		LogFilePath: path.Join(config.Settings.LogsPath, "components.log"),
+	})
 	if err != nil {
+		outputter.SetError(err)
+		return
+	}
+
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(config, logger)
+	if err != nil {
+		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
 		return
 	}
 
 	err = validatorComponents.Start()
 	if err != nil {
+		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)
 		return
 	}

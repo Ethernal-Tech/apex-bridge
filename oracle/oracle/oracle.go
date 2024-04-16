@@ -3,7 +3,7 @@ package oracle
 import (
 	"errors"
 	"fmt"
-	"os"
+	"path"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -18,7 +18,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -35,12 +34,12 @@ type OracleImpl struct {
 	appConfig                *core.AppConfig
 	cardanoTxsProcessor      core.CardanoTxsProcessor
 	indexerDbs               map[string]indexer.Database
-	cardanoChainObservers    map[string]core.CardanoChainObserver
+	cardanoChainObservers    []core.CardanoChainObserver
 	db                       core.Database
 	expectedTxsFetcher       core.ExpectedTxsFetcher
 	bridgeDataFetcher        *bridge.BridgeDataFetcherImpl
 	bridgeSubmitter          core.BridgeSubmitter
-	confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter
+	confirmedBlockSubmitters []core.ConfirmedBlocksSubmitter
 	logger                   hclog.Logger
 
 	errorCh chan error
@@ -49,48 +48,26 @@ type OracleImpl struct {
 
 var _ core.Oracle = (*OracleImpl)(nil)
 
-func NewOracle(appConfig *core.AppConfig) *OracleImpl {
+func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, error) {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0660); err != nil {
+		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
+	}
 
-	oracle := &OracleImpl{}
-
-	logger, err := logger.NewLogger(logger.LoggerConfig{
-		LogLevel:      hclog.Level(appConfig.Settings.LogLevel),
-		JSONLogFormat: false,
-		AppendFile:    true,
-		LogFilePath:   appConfig.Settings.LogsPath + MainComponentName,
-	})
+	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return nil
-	}
-
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Create directory failed", "err", err)
-		return nil
-	}
-
-	db, err := database_access.NewDatabase(appConfig.Settings.DbsPath + MainComponentName + ".db")
-	if db == nil || err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Open database failed", "err", err)
-		return nil
+		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
 	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(appConfig.Bridge.SecretsManager)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error while creating wallet for bridge: %v\n", err)
-		logger.Error("error while creating wallet for bridge", "err", err)
-		return nil
+		return nil, fmt.Errorf("failed to create oracle wallet: %w", err)
 	}
 
 	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
 	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
 		appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress, wallet)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		logger.Error("Failed to create OracleBridgeSmartContractWithWallet", "err", err)
-		return nil
+		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
 
 	bridgeDataFetcher := bridge.NewBridgeDataFetcher(bridgeSC, logger.Named("bridge_data_fetcher"))
@@ -107,13 +84,12 @@ func NewOracle(appConfig *core.AppConfig) *OracleImpl {
 	failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewBatchExecutionFailedProcessor())
 	// failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewRefundExecutionFailedProcessor())
 
-	var indexerDbs map[string]indexer.Database = make(map[string]indexer.Database)
+	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
-		indexerDb, err := indexerDb.NewDatabaseInit("", appConfig.Settings.DbsPath+cardanoChainConfig.ChainId+".db")
+		indexerDb, err := indexerDb.NewDatabaseInit("",
+			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainId+".db"))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			logger.Error("Failed to open indexer database failed", "chainId", cardanoChainConfig.ChainId, "err", err)
-			return nil
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}
 
 		indexerDbs[cardanoChainConfig.ChainId] = indexerDb
@@ -121,43 +97,41 @@ func NewOracle(appConfig *core.AppConfig) *OracleImpl {
 
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, logger.Named("cardano_txs_processor"))
 
-	var cardanoChainObservers map[string]core.CardanoChainObserver = make(map[string]core.CardanoChainObserver)
-	var confirmedBlockSubmitters map[string]core.ConfirmedBlocksSubmitter = make(map[string]core.ConfirmedBlocksSubmitter)
+	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
+	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		indexerDb := indexerDbs[cardanoChainConfig.ChainId]
-		cbs, err := bridge.NewConfirmedBlocksSubmitter(bridgeSubmitter, appConfig, db, indexerDb, cardanoChainConfig.ChainId, logger.Named("confirmed_blocks_submitter_"+cardanoChainConfig.ChainId))
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, db, indexerDb, cardanoChainConfig.ChainId, logger)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create cardano block submitter for chain: %v error: %v\n", cardanoChainConfig.ChainId, err)
-			logger.Error("failed to create cardano block submitter for chain", "chainId", cardanoChainConfig.ChainId, "error:", err)
-			return nil
+			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}
 
-		confirmedBlockSubmitters[cardanoChainConfig.ChainId] = cbs
+		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
-		cco := chain.NewCardanoChainObserver(appConfig.Settings, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher)
-		if cco == nil {
-			fmt.Fprintf(os.Stderr, "failed to create cardano chain observer for chain: %v\n", cardanoChainConfig.ChainId)
-			logger.Error("failed to create cardano chain observer for chain", "chainId", cardanoChainConfig.ChainId)
-			return nil
+		cco, err := chain.NewCardanoChainObserver(
+			cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}
 
-		cardanoChainObservers[cardanoChainConfig.ChainId] = cco
+		cardanoChainObservers = append(cardanoChainObservers, cco)
 	}
 
-	oracle.appConfig = appConfig
-	oracle.cardanoTxsProcessor = cardanoTxsProcessor
-	oracle.cardanoChainObservers = cardanoChainObservers
-	oracle.indexerDbs = indexerDbs
-	oracle.expectedTxsFetcher = expectedTxsFetcher
-	oracle.bridgeDataFetcher = bridgeDataFetcher
-	oracle.bridgeSubmitter = bridgeSubmitter
-	oracle.confirmedBlockSubmitters = confirmedBlockSubmitters
-	oracle.db = db
-	oracle.logger = logger
-	oracle.closeCh = make(chan bool, 1)
-
-	return oracle
+	return &OracleImpl{
+		appConfig:                appConfig,
+		cardanoTxsProcessor:      cardanoTxsProcessor,
+		cardanoChainObservers:    cardanoChainObservers,
+		indexerDbs:               indexerDbs,
+		expectedTxsFetcher:       expectedTxsFetcher,
+		bridgeDataFetcher:        bridgeDataFetcher,
+		bridgeSubmitter:          bridgeSubmitter,
+		confirmedBlockSubmitters: confirmedBlockSubmitters,
+		db:                       db,
+		logger:                   logger,
+		closeCh:                  make(chan bool, 1),
+	}, nil
 }
 
 func (o *OracleImpl) Start() error {
@@ -169,9 +143,7 @@ func (o *OracleImpl) Start() error {
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to start cardano chain observer: %v. error: %v\n", co.GetConfig().ChainId, err)
-			o.logger.Error("Failed to start cardano chain observer", "err", err)
-			return err
+			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().ChainId, err)
 		}
 	}
 
@@ -193,15 +165,13 @@ func (o *OracleImpl) Stop() error {
 	for _, co := range o.cardanoChainObservers {
 		err := co.Stop()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to stop cardano chain observer: %v. error: %v\n", co.GetConfig().ChainId, err)
-			o.logger.Error("Failed to stop cardano chain observer", "err", err)
+			o.logger.Error("Failed to stop cardano chain observer", "chain", co.GetConfig().ChainId, "err", err)
 		}
 	}
 
 	for _, cbs := range o.confirmedBlockSubmitters {
 		err := cbs.Dispose()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to stop block submitter. error: %v\n", err)
 			o.logger.Error("Failed to stop block submitter cardano", "err", err)
 			return err
 		}
@@ -210,7 +180,6 @@ func (o *OracleImpl) Stop() error {
 	for _, indexerDb := range o.indexerDbs {
 		err := indexerDb.Close()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			o.logger.Error("Failed to close indexer db", "err", err)
 		}
 	}
@@ -292,7 +261,6 @@ func (o *OracleImpl) errorHandler() {
 
 	select {
 	case errorOrigin := <-agg:
-		fmt.Fprintf(os.Stderr, "%v cardano chain observer critical error: %v\n", errorOrigin.origin, errorOrigin.err)
 		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
 		o.errorCh <- errorOrigin.err
 	case <-o.closeCh:

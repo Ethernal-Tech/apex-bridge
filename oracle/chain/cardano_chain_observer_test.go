@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +50,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	initDb := func(t *testing.T) indexer.Database {
 		t.Helper()
 
-		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath))
+		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath, 0750))
 
 		indexerDb, err := indexerDb.NewDatabaseInit("", path.Join(settings.DbsPath, chainConfig.ChainId+".db"))
 		require.NoError(t, err)
@@ -68,7 +69,8 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		errChan := chainObserver.ErrorCh()
@@ -86,7 +88,8 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		config := chainObserver.GetConfig()
@@ -105,7 +108,8 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher)
+		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		err = chainObserver.Start()
@@ -129,7 +133,8 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver := NewCardanoChainObserver(settings, chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher)
+		chainObserver, err := NewCardanoChainObserver(chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
