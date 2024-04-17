@@ -92,8 +92,7 @@ func NewValidatorComponents(
 			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
 		}
 
-		apiControllers := make([]core.ApiController, 0)
-		apiControllers = append(apiControllers, bridgingRequestStateController)
+		apiControllers := []core.ApiController{bridgingRequestStateController}
 
 		apiObj, err = api.NewApi(appConfig.ApiConfig, apiControllers, logger.Named("api"))
 		if err != nil {
