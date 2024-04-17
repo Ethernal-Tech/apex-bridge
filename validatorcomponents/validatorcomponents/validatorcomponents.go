@@ -51,7 +51,7 @@ func NewValidatorComponents(
 	}
 
 	bridgingRequestStateManager, err := NewBridgingRequestStateManager(db, logger.Named("bridging_request_state_manager"))
-	if bridgingRequestStateManager == nil || err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
@@ -78,7 +78,7 @@ func NewValidatorComponents(
 	relayerBridgeSmartContract := eth.NewBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
 
 	relayerImitator, err := NewRelayerImitatorImpl(appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db, logger.Named("relayer_imitator"))
-	if relayerImitator == nil || err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
 

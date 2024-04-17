@@ -39,7 +39,7 @@
     },
     "pullTime": 1000,
     "logger": {
-        "logFilePath": "./relayer_logs",
+        "logFilePath": "./logs/relayer_logs.log",
         "logLevel": 2,
         "jsonLogFormat": false,
         "appendFile": true
