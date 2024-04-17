@@ -51,12 +51,14 @@ type CardanoTxsProcessor interface {
 }
 
 type CardanoTxProcessor interface {
-	IsTxRelevant(tx *CardanoTx, appConfig *AppConfig) (bool, error)
+	GetType() TxProcessorType
+	IsTxRelevant(tx *CardanoTx) (bool, error)
 	ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error
 }
 
 type CardanoTxFailedProcessor interface {
-	IsTxRelevant(tx *BridgeExpectedCardanoTx, appConfig *AppConfig) (bool, error)
+	GetType() TxProcessorType
+	IsTxRelevant(tx *BridgeExpectedCardanoTx) (bool, error)
 	ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error
 }
 

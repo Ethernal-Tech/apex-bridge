@@ -14,7 +14,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	proc := NewBatchExecutionFailedProcessor()
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
-		relevant, err := proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{}, nil)
+		relevant, err := proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
 
@@ -27,7 +27,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 
 		relevant, err = proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{
 			Metadata: irrelevantMetadata,
-		}, nil)
+		})
 		require.NoError(t, err)
 		require.False(t, relevant)
 
@@ -39,7 +39,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 
 		relevant, err = proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{
 			Metadata: relevantMetadata,
-		}, nil)
+		})
 		require.NoError(t, err)
 		require.True(t, relevant)
 	})

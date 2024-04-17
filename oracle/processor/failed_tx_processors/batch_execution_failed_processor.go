@@ -17,7 +17,11 @@ func NewBatchExecutionFailedProcessor() *BatchExecutionFailedProcessorImpl {
 	return &BatchExecutionFailedProcessorImpl{}
 }
 
-func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) (bool, error) {
+func (*BatchExecutionFailedProcessorImpl) GetType() core.TxProcessorType {
+	return core.TxProcessorTypeBatchExecuted
+}
+
+func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCardanoTx) (bool, error) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
@@ -28,7 +32,7 @@ func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCa
 }
 
 func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) error {
-	relevant, err := p.IsTxRelevant(tx, appConfig)
+	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
 	}

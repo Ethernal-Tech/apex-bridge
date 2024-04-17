@@ -19,7 +19,11 @@ func NewBridgingRequestedProcessor() *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{}
 }
 
-func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfig *core.AppConfig) (bool, error) {
+func (*BridgingRequestedProcessorImpl) GetType() core.TxProcessorType {
+	return core.TxProcessorTypeBridgingRequest
+}
+
+func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 
 	if err == nil && metadata != nil {
@@ -30,7 +34,7 @@ func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx, appConfi
 }
 
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig) error {
-	relevant, err := p.IsTxRelevant(tx, appConfig)
+	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
 	}

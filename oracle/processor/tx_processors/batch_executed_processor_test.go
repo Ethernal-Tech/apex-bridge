@@ -37,7 +37,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
-		relevant, err := proc.IsTxRelevant(&core.CardanoTx{}, nil)
+		relevant, err := proc.IsTxRelevant(&core.CardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
 
@@ -51,7 +51,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
-		}, nil)
+		})
 		require.NoError(t, err)
 		require.False(t, relevant)
 
@@ -65,7 +65,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: relevantMetadata,
 			},
-		}, nil)
+		})
 		require.NoError(t, err)
 		require.True(t, relevant)
 	})

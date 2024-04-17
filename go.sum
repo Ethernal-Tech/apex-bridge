@@ -10,8 +10,8 @@ cloud.google.com/go/secretmanager v1.12.0 h1:e5pIo/QEgiFiHPVJPxM5jbtUr4O/u5h2zLH
 cloud.google.com/go/secretmanager v1.12.0/go.mod h1:Y1Gne3Ag+fZ2TDTiJc8ZJCMFbi7k1rYT4Rw30GXfvlk=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240412093145-62ee9103e5cd h1:7j1ARilEuNfWGIxame4Twf6RR7XguRxP0g/4nqZ7rMQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240412093145-62ee9103e5cd/go.mod h1:uUILjX32PAOPxk31ivGVbCwY7vpqijuEwRec3UMbYOs=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240416120515-356ccc3685f5 h1:2EQUsPXOjYvwxcBbsYT5XZWwDThgHTNLiLid2ldcd6E=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240416120515-356ccc3685f5/go.mod h1:uUILjX32PAOPxk31ivGVbCwY7vpqijuEwRec3UMbYOs=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/VictoriaMetrics/fastcache v1.12.1 h1:i0mICQuojGDL3KblA7wUNlY5lOK6a4bwt3uRKnkZU40=
@@ -142,6 +142,10 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.2 h1:Vie5ybvEvT75RniqhfF
 github.com/googleapis/enterprise-certificate-proxy v0.3.2/go.mod h1:VLSiSSBs/ksPL8kq3OBOQ6WRI2QnaFynd1DCjZ62+V0=
 github.com/googleapis/gax-go/v2 v2.12.2 h1:mhN09QQW1jEWeMF74zGR81R30z4VJzjZsfkUhuHF+DA=
 github.com/googleapis/gax-go/v2 v2.12.2/go.mod h1:61M8vcyyXR2kqKFxKrfA22jaA8JGF7Dc8App1U3H6jc=
+github.com/gorilla/handlers v1.5.2 h1:cLTUSsNkgcwhgRqvCNmdbRWG0A3N4F+M2nWKdScwyEE=
+github.com/gorilla/handlers v1.5.2/go.mod h1:dX+xVpaxdSw+q0Qek8SSsl3dfMk3jNddUkMzo0GtH0w=
+github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
+github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

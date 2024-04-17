@@ -86,7 +86,7 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to send confirmed batch: %v", err)
 	}
 
-	r.logger.Info("Transaction successfully submited")
+	r.logger.Info("Transaction successfully submitted")
 
 	if err := r.db.AddLastSubmittedBatchId(r.config.Base.ChainId, receivedBatchId); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)

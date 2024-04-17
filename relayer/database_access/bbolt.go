@@ -21,11 +21,11 @@ type BBoltDatabase struct {
 var _ core.Database = (*BBoltDatabase)(nil)
 
 func (bd *BBoltDatabase) Init(filePath string) error {
-	if err := common.CreateDirectoryIfNotExists(path.Dir(filePath), 0600); err != nil {
+	if err := common.CreateDirectoryIfNotExists(path.Dir(filePath), 0770); err != nil {
 		return err
 	}
 
-	db, err := bbolt.Open(filePath, 0600, nil)
+	db, err := bbolt.Open(filePath, 0660, nil)
 	if err != nil {
 		return fmt.Errorf("could not open db: %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/hashicorp/go-hclog"
@@ -19,7 +20,7 @@ type BatchManagerImpl struct {
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
 
-func NewBatcherManager(config *core.BatcherManagerConfiguration, logger hclog.Logger) (*BatchManagerImpl, error) {
+func NewBatcherManager(config *core.BatcherManagerConfiguration, bridgingRequestStateUpdater common.BridgingRequestStateUpdater, logger hclog.Logger) (*BatchManagerImpl, error) {
 	var batchers = make([]core.Batcher, len(config.Chains))
 
 	for chain, chainConfig := range config.Chains {
@@ -43,7 +44,7 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration, logger hclog.Lo
 			Bridge:        config.Bridge,
 			Base:          chainConfig.Base,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)), operations, bridgeSmartContract))
+		}, logger.Named(strings.ToUpper(chain)), operations, bridgeSmartContract, bridgingRequestStateUpdater))
 	}
 
 	return &BatchManagerImpl{

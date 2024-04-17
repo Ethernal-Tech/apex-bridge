@@ -22,7 +22,7 @@ var (
 var _ core.Database = (*BBoltDatabase)(nil)
 
 func (bd *BBoltDatabase) Init(filePath string) error {
-	db, err := bbolt.Open(filePath, 0600, nil)
+	db, err := bbolt.Open(filePath, 0660, nil)
 	if err != nil {
 		return fmt.Errorf("could not open db: %v", err)
 	}

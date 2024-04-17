@@ -12,6 +12,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
@@ -53,7 +54,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock := &cardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetNextBatchId", ctx, "prime").Return(big.NewInt(0), testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -65,7 +66,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock := &cardanoChainOperationsMock{}
 		bridgeSmartContractMock.On("GetNextBatchId", ctx, "prime").Return(big.NewInt(0), nil)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -77,7 +78,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchId", ctx, "prime").Return(batchNonceId, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(nil, testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -93,7 +94,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceId).Return(nil, "", nil, testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -113,7 +114,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceId).Return([]byte{0}, "txHash", utxos, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return(nil, nil, testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -129,7 +130,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -145,7 +146,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(nil)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock)
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
 
 		require.NoError(t, err)

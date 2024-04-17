@@ -134,7 +134,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservableBlocks(ctx context
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.SubmitLastObservableBlocks(opts, chainID, blocks)
+		return contract.SubmitLastObservedBlocks(opts, chainID, blocks)
 	})
 
 	return bsc.ethHelper.ProcessError(err)

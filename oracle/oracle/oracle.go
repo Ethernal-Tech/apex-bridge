@@ -48,8 +48,8 @@ type OracleImpl struct {
 
 var _ core.Oracle = (*OracleImpl)(nil)
 
-func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0660); err != nil {
+func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.BridgingRequestStateUpdater, logger hclog.Logger) (*OracleImpl, error) {
+	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
 		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
 	}
 
@@ -75,14 +75,16 @@ func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, err
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
-	var txProcessors []core.CardanoTxProcessor
-	txProcessors = append(txProcessors, tx_processors.NewBatchExecutedProcessor())
-	txProcessors = append(txProcessors, tx_processors.NewBridgingRequestedProcessor())
-	// txProcessors = append(txProcessors, tx_processors.NewRefundExecutedProcessor())
+	txProcessors := []core.CardanoTxProcessor{
+		tx_processors.NewBatchExecutedProcessor(),
+		tx_processors.NewBridgingRequestedProcessor(),
+		// tx_processors.NewRefundExecutedProcessor(),
+	}
 
-	var failedTxProcessors []core.CardanoTxFailedProcessor
-	failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewBatchExecutionFailedProcessor())
-	// failedTxProcessors = append(failedTxProcessors, failed_tx_processors.NewRefundExecutionFailedProcessor())
+	failedTxProcessors := []core.CardanoTxFailedProcessor{
+		failed_tx_processors.NewBatchExecutionFailedProcessor(),
+		// failed_tx_processors.NewRefundExecutionFailedProcessor(),
+	}
 
 	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
@@ -95,7 +97,7 @@ func NewOracle(appConfig *core.AppConfig, logger hclog.Logger) (*OracleImpl, err
 		indexerDbs[cardanoChainConfig.ChainId] = indexerDb
 	}
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, logger.Named("cardano_txs_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))

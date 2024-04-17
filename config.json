@@ -7,10 +7,6 @@
             "startSlot": 0,
             "startBlockNumber": 0,
             "confirmationBlockCount": 10,
-            "bridgingAddresses": {
-                "address": "addr_test1vrhy5ctkp93ntgkdz8fj6gxykszy49s2c0ef2wnjjh3meuqaz0l0z",
-                "feeAddress": ""
-            },
             "otherAddressesOfInterest": [],
             "keysDirPath": "./keys/prime",
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -25,10 +21,6 @@
             "startSlot": 0,
             "startBlockNumber": 0,
             "confirmationBlockCount": 10,
-            "bridgingAddresses": {
-                "address": "addr_test1vr6hxvjhc7g64fdjmwzjgfjguc6w0jddnlsdznd2adqenrcrfrlgh",
-                "feeAddress": ""
-            },
             "otherAddressesOfInterest": [],
             "keysDirPath": "./keys/vector",
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -60,13 +52,19 @@
         "logsPath": "./logs/",
         "logLevel": 2
     },
+    "relayerImitatorPullTime": 1000,
     "batcherPullTime": 2500,
-    "initialUtxos": {
-        "prime": [
-    
+    "api": {
+        "port": 10000,
+        "pathPrefix": "api",
+        "allowedHeaders": [
+            "Content-Type"
         ],
-        "vector": [
-            
+        "allowedOrigins": [
+            "*"
+        ],
+        "allowedMethods": [
+            "GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"
         ]
     }
 }
