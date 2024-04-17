@@ -49,11 +49,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, error) {
+	batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, []*big.Int, error) {
 
 	var outputs []cardanowallet.TxOutput
 	var txCost *big.Int = big.NewInt(0)
+	var includedConfirmedTransactionNonces []*big.Int = make([]*big.Int, 0, len(confirmedTransactions))
 	for _, transaction := range confirmedTransactions {
+		includedConfirmedTransactionNonces = append(includedConfirmedTransactionNonces, transaction.Nonce)
 		for _, receiver := range transaction.Receivers {
 			outputs = append(outputs, cardanowallet.TxOutput{
 				Addr:   receiver.DestinationAddress,
@@ -65,22 +67,22 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 	metadata, err := cardano.CreateBatchMetaData(batchNonceId)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	protocolParams, err := cco.TxProvider.GetProtocolParameters(ctx)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, destinationChain)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	var (
@@ -94,12 +96,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	for i, validator := range validatorsData {
 		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKey)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, nil, err
 		}
 
 		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, nil, err
 		}
 
 		if bytes.Equal(cco.CardanoWallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
@@ -108,12 +110,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKeyFee)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, nil, err
 		}
 
 		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", nil, nil, err
 		}
 
 		if bytes.Equal(cco.CardanoWallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
@@ -122,36 +124,36 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	if !foundVerificationKey {
-		return nil, "", nil, fmt.Errorf("verifying key of current batcher wasn't found in validators data queried from smart contract")
+		return nil, "", nil, nil, fmt.Errorf("verifying key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
 	if !foundFeeVerificationKey {
-		return nil, "", nil, fmt.Errorf("verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+		return nil, "", nil, nil, fmt.Errorf("verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
 	multisigPolicyScript, err := cardanowallet.NewPolicyScript(multisigKeyHashes, int(cco.Config.AtLeastValidators))
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(multisigFeeKeyHashes, int(cco.Config.AtLeastValidators))
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	txUtxos, err := GetInputUtxos(ctx, bridgeSmartContract, destinationChain, txCost)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, "", nil, nil, err
 	}
 
 	txInfos := &cardano.TxInputInfos{
@@ -166,7 +168,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		},
 	}
 
-	return cco.CreateBatchTx(txUtxos, txCost, metadata, protocolParams, txInfos, outputs, lastObservedBlock.BlockSlot)
+	rawTx, txHash, utxos, err := cco.CreateBatchTx(txUtxos, txCost, metadata, protocolParams, txInfos, outputs, lastObservedBlock.BlockSlot)
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+
+	return rawTx, txHash, utxos, includedConfirmedTransactionNonces, nil
 }
 
 // SignBatchTransaction implements core.ChainOperations.

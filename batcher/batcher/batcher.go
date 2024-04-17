@@ -85,7 +85,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
-	rawTx, txHash, utxos, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchId)
+	rawTx, txHash, utxos, includedConfirmedTransactionsNonces, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchId)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction: %v", err)
 	}
@@ -107,23 +107,28 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		RawTransaction:            hex.EncodeToString(rawTx),
 		MultisigSignature:         hex.EncodeToString(multisigSignature),
 		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),
-		IncludedTransactions:      []*big.Int{},
+		IncludedTransactions:      includedConfirmedTransactionsNonces,
 		UsedUTXOs:                 *utxos,
 	}
 
-	b.logger.Info("Submiting signed batch to smart contract")
+	b.logger.Info("Submitting signed batch to smart contract")
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
 		return fmt.Errorf("failed to submit signed batch: %v", err)
 	}
 	b.logger.Info("Batch successfully submitted")
 
-	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(confirmedTransactions))
+	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(includedConfirmedTransactionsNonces))
 	for _, confirmedTx := range confirmedTransactions {
-		txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
-			SourceChainId: confirmedTx.SourceChainID,
-			SourceTxHash:  confirmedTx.ObservedTransactionHash,
-		})
+		for _, includedTx := range includedConfirmedTransactionsNonces {
+			if confirmedTx.Nonce.Cmp(includedTx) == 0 {
+				txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
+					SourceChainId: confirmedTx.SourceChainID,
+					SourceTxHash:  confirmedTx.ObservedTransactionHash,
+				})
+				break
+			}
+		}
 	}
 
 	err = b.bridgingRequestStateUpdater.IncludedInBatch(signedBatch.DestinationChainId, signedBatch.Id.Uint64(), txsInBatch)
