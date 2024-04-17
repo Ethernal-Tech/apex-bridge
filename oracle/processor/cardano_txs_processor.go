@@ -398,7 +398,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(befClaim.ChainID, befClaim.BatchNonceID.Uint64())
 
 			if err != nil {
-				bp.logger.Error("error while updating bridging request states to FailedToExecuteOnDestination", "destinationChainId", befClaim.ChainID, "batchId", befClaim.BatchNonceID.Uint64(), "destinationTxHash", befClaim.ObservedTransactionHash)
+				bp.logger.Error("error while updating bridging request states to FailedToExecuteOnDestination", "destinationChainId", befClaim.ChainID, "batchId", befClaim.BatchNonceID.Uint64())
 			}
 		}
 	}
