@@ -420,7 +420,9 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 			for _, unprocessedTx := range unprocessedTxs {
 				if unprocessedTx.ToCardanoTxKey() == tx.ToCardanoTxKey() {
 					relevant, err := bridgingRequestTxProcessor.IsTxRelevant(unprocessedTx)
-					if relevant && err == nil {
+					if err != nil {
+						bp.logger.Error("Failed to check if unprocessedTx is relevant", "unprocessedTx", unprocessedTx, "err", err)
+					} else if relevant {
 						err := bp.bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
 							SourceChainId: tx.OriginChainId,
 							SourceTxHash:  tx.Hash,
@@ -429,9 +431,9 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 						if err != nil {
 							bp.logger.Error("error while updating a bridging request state to Invalid", "sourceChainId", tx.OriginChainId, "sourceTxHash", tx.Hash)
 						}
-
-						break
 					}
+
+					break
 				}
 			}
 		}

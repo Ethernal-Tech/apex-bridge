@@ -1,6 +1,7 @@
 package validatorcomponents
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -41,17 +42,17 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainId string, tx *indexer.
 
 // NewMultiple implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) NewMultiple(sourceChainId string, txs []*indexer.Tx) error {
-	hasErrors := false
+	errs := make([]error, 0)
 	for _, tx := range txs {
 		err := m.New(sourceChainId, tx)
 		if err != nil {
-			hasErrors = true
+			errs = append(errs, err)
 		}
 	}
 
-	if hasErrors {
-		m.logger.Error("failed to add some new BridgingRequestStates")
-		return fmt.Errorf("failed to add some new BridgingRequestStates")
+	if len(errs) > 0 {
+		m.logger.Error("failed to add some new BridgingRequestStates", "errors", errors.Join(errs...))
+		return fmt.Errorf("failed to add some new BridgingRequestStates. errors: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -73,7 +74,7 @@ func (m *BridgingRequestStateManagerImpl) SubmittedToBridge(key common.BridgingR
 
 // IncludedInBatch implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) IncludedInBatch(destinationChainId string, batchId uint64, txs []common.BridgingRequestStateKey) error {
-	hasErrors := false
+	errs := make([]error, 0)
 	for _, key := range txs {
 		state, err := m.db.GetBridgingRequestState(key.SourceChainId, key.SourceTxHash)
 		if state == nil || err != nil {
@@ -82,27 +83,27 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(destinationChainId str
 
 		if state.DestinationChainId != destinationChainId {
 			m.logger.Error("batch destinationChainId not equal to BridgingRequestState.DestinationChainId", "sourceChainId", key.SourceChainId, "sourceTxHash", key.SourceTxHash)
-			hasErrors = true
+			errs = append(errs, fmt.Errorf("batch destinationChainId not equal to BridgingRequestState.DestinationChainId. sourceChainId: %v, sourceTxHash: %v", key.SourceChainId, key.SourceTxHash))
 			continue
 		}
 
 		err = state.ToIncludedInBatch(batchId)
 		if err != nil {
 			m.logger.Error("failed to update a BridgingRequestState", "sourceChainId", key.SourceChainId, "sourceTxHash", key.SourceTxHash, "err", err)
-			hasErrors = true
+			errs = append(errs, fmt.Errorf("failed to update a BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w", key.SourceChainId, key.SourceTxHash, err))
 			continue
 		}
 
 		err = m.db.UpdateBridgingRequestState(state)
 		if err != nil {
 			m.logger.Error("failed to save updated BridgingRequestState", "sourceChainId", key.SourceChainId, "sourceTxHash", key.SourceTxHash, "err", err)
-			hasErrors = true
+			errs = append(errs, fmt.Errorf("failed to save updated BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w", key.SourceChainId, key.SourceTxHash, err))
 		}
 	}
 
-	if hasErrors {
-		m.logger.Error("failed to update some BridgingRequestStates")
-		return fmt.Errorf("failed to update some BridgingRequestStates")
+	if len(errs) > 0 {
+		m.logger.Error("failed to update some BridgingRequestStates", "errors", errors.Join(errs...))
+		return fmt.Errorf("failed to update some BridgingRequestStates. errors: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -185,25 +186,25 @@ func (m *BridgingRequestStateManagerImpl) updateStatesByBatchId(destinationChain
 		return fmt.Errorf("failed to get BridgingRequestStates. destinationChainId: %v, batchId: %v, err: %w", destinationChainId, batchId, err)
 	}
 
-	hasErrors := false
+	errs := make([]error, 0)
 	for _, state := range states {
 		err := updateState(state)
 		if err != nil {
 			m.logger.Error("failed to update a BridgingRequestState", "sourceChainId", state.SourceChainId, "sourceTxHash", state.SourceTxHash, "err", err)
-			hasErrors = true
+			errs = append(errs, fmt.Errorf("failed to update a BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w", state.SourceChainId, state.SourceTxHash, err))
 			continue
 		}
 
 		err = m.db.UpdateBridgingRequestState(state)
 		if err != nil {
 			m.logger.Error("failed to save updated BridgingRequestState", "sourceChainId", state.SourceChainId, "sourceTxHash", state.SourceTxHash, "err", err)
-			hasErrors = true
+			errs = append(errs, fmt.Errorf("failed to save updated BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w", state.SourceChainId, state.SourceTxHash, err))
 		}
 	}
 
-	if hasErrors {
-		m.logger.Error("failed to update some BridgingRequestStates")
-		return fmt.Errorf("failed to update some BridgingRequestStates")
+	if len(errs) > 0 {
+		m.logger.Error("failed to update some BridgingRequestStates", "errors", errors.Join(errs...))
+		return fmt.Errorf("failed to update some BridgingRequestStates. errors: %w", errors.Join(errs...))
 	}
 
 	return nil
