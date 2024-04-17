@@ -27,6 +27,7 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
+	shouldRunApi    bool
 	db              core.Database
 	oracle          oracleCore.Oracle
 	batcherManager  batcherCore.BatcherManager
@@ -39,6 +40,7 @@ var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
 
 func NewValidatorComponents(
 	appConfig *core.AppConfig,
+	shouldRunApi bool,
 	logger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
 	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
@@ -67,7 +69,7 @@ func NewValidatorComponents(
 
 	oracle, err := oracle.NewOracle(oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle")
+		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
 	batcherManager, err := batcher_manager.NewBatcherManager(batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
@@ -82,25 +84,30 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
 
-	bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
-	}
+	var apiObj *api.ApiImpl
 
-	apiControllers := make([]core.ApiController, 0)
-	apiControllers = append(apiControllers, bridgingRequestStateController)
+	if shouldRunApi {
+		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
+		}
 
-	api, err := api.NewApi(appConfig.ApiConfig, apiControllers, logger.Named("api"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create api: %w", err)
+		apiControllers := make([]core.ApiController, 0)
+		apiControllers = append(apiControllers, bridgingRequestStateController)
+
+		apiObj, err = api.NewApi(appConfig.ApiConfig, apiControllers, logger.Named("api"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create api: %w", err)
+		}
 	}
 
 	return &ValidatorComponentsImpl{
+		shouldRunApi:    shouldRunApi,
 		db:              db,
 		oracle:          oracle,
 		batcherManager:  batcherManager,
 		relayerImitator: relayerImitator,
-		api:             api,
+		api:             apiObj,
 		logger:          logger,
 	}, nil
 }
@@ -119,7 +126,10 @@ func (v *ValidatorComponentsImpl) Start() error {
 	}
 
 	go v.relayerImitator.Start()
-	go v.api.Start()
+
+	if v.shouldRunApi {
+		go v.api.Start()
+	}
 
 	v.logger.Debug("Started ValidatorComponents")
 
@@ -132,7 +142,12 @@ func (v *ValidatorComponentsImpl) Stop() error {
 	errb := v.batcherManager.Stop()
 	erro := v.oracle.Stop()
 	errri := v.relayerImitator.Stop()
-	errapi := v.api.Stop()
+
+	var errapi error
+	if v.shouldRunApi {
+		errapi = v.api.Stop()
+	}
+
 	errdb := v.db.Close()
 
 	v.logger.Debug("Stopped ValidatorComponents")

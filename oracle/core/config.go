@@ -31,7 +31,7 @@ type SubmitConfig struct {
 type BridgeConfig struct {
 	NodeUrl              string                        `json:"nodeUrl"`
 	SmartContractAddress string                        `json:"scAddress"`
-	SecretsManager       *secrets.SecretsManagerConfig `json:"secrets"`
+	SecretsManager       *secrets.SecretsManagerConfig `json:"secretsManager"`
 	SubmitConfig         SubmitConfig                  `json:"submitConfig"`
 }
 

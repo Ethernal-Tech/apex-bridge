@@ -53,7 +53,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(config, logger)
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(config, initParamsData.runApi, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
