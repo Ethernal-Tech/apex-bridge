@@ -21,7 +21,7 @@ type IOracleBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error)
 	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error)
 	SubmitClaims(ctx context.Context, claims Claims) error
-	SubmitLastObservableBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
+	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
 }
 
 type OracleBridgeSmartContractImpl struct {
@@ -120,7 +120,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(ctx context.Context, clai
 	return bsc.ethHelper.ProcessError(err)
 }
 
-func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservableBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
+func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return err

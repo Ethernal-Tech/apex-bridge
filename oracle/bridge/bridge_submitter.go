@@ -51,7 +51,7 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainId string, blocks []*i
 		})
 	}
 
-	err := bs.bridgeSC.SubmitLastObservableBlocks(bs.ctx, chainId, contractBlocks)
+	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainId, contractBlocks)
 
 	return err
 }
