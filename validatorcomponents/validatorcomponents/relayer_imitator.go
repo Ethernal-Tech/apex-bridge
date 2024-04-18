@@ -24,7 +24,7 @@ type RelayerImitatorImpl struct {
 
 var _ core.RelayerImitator = (*RelayerImitatorImpl)(nil)
 
-func NewRelayerImitatorImpl(
+func NewRelayerImitator(
 	config *core.AppConfig,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgeSmartContract eth.IBridgeSmartContract,
@@ -93,7 +93,10 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) erro
 		}
 	}
 
-	ri.bridgingRequestStateUpdater.SubmittedToDestination(chainId, receivedBatchId.Uint64())
+	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainId, receivedBatchId.Uint64())
+	if err != nil {
+		ri.logger.Error("error while updating bridging request states to SubmittedToDestination", "destinationChainId", chainId, "batchId", receivedBatchId.Uint64())
+	}
 
 	ri.logger.Info("Transaction successfully submitted")
 

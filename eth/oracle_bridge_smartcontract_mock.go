@@ -36,8 +36,8 @@ func (m *OracleBridgeSmartContractMock) SubmitClaims(ctx context.Context, claims
 	return args.Error(0)
 }
 
-// SubmitLastObservableBlocks implements IOracleBridgeSmartContract.
-func (m *OracleBridgeSmartContractMock) SubmitLastObservableBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
+// SubmitLastObservedBlocks implements IOracleBridgeSmartContract.
+func (m *OracleBridgeSmartContractMock) SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
 	args := m.Called()
 	return args.Error(0)
 }

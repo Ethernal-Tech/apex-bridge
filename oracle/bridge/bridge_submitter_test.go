@@ -47,7 +47,7 @@ func TestBridgeSubmitter(t *testing.T) {
 
 	t.Run("submit confirmed blocks", func(t *testing.T) {
 		bridgeSC := eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("SubmitLastObservableBlocks").Return(nil)
+		bridgeSC.On("SubmitLastObservedBlocks").Return(nil)
 
 		bridgeSubmitter := NewBridgeSubmitter(&bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
