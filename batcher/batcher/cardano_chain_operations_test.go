@@ -257,7 +257,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -272,7 +272,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -288,7 +288,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -304,7 +304,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -321,7 +321,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -338,7 +338,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -370,11 +370,13 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(getAvailableUTXOsRet, nil)
 
-		rawTx, txHash, utxos, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		rawTx, txHash, utxos, includedConfirmedTransactionNonces, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
 		require.NoError(t, err)
 		require.NotNil(t, rawTx)
 		require.NotEqual(t, "", txHash)
 		require.Equal(t, *utxos, *getAvailableUTXOsRet)
+		require.Equal(t, len(confirmedTransactions), len(includedConfirmedTransactionNonces))
+		require.Equal(t, confirmedTransactions[0].Nonce.Cmp(includedConfirmedTransactionNonces[confirmedTransactions[0].Nonce.Uint64()].Nonce), 0)
 	})
 
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
