@@ -376,7 +376,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NotEqual(t, "", txHash)
 		require.Equal(t, *utxos, *getAvailableUTXOsRet)
 		require.Equal(t, len(confirmedTransactions), len(includedConfirmedTransactionNonces))
-		require.Equal(t, confirmedTransactions[0].Nonce.Cmp(includedConfirmedTransactionNonces[0]), 0)
+		require.Equal(t, confirmedTransactions[0].Nonce.Cmp(includedConfirmedTransactionNonces[confirmedTransactions[0].Nonce.Uint64()].Nonce), 0)
 	})
 
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {

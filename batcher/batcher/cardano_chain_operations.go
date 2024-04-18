@@ -49,13 +49,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, []*big.Int, error) {
+	batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error) {
 
 	var outputs []cardanowallet.TxOutput
 	var txCost *big.Int = big.NewInt(0)
-	var includedConfirmedTransactionNonces []*big.Int = make([]*big.Int, 0, len(confirmedTransactions))
+	var includedConfirmedTransactions map[uint64]eth.ConfirmedTransaction = make(map[uint64]contractbinding.IBridgeContractStructsConfirmedTransaction)
 	for _, transaction := range confirmedTransactions {
-		includedConfirmedTransactionNonces = append(includedConfirmedTransactionNonces, transaction.Nonce)
+		includedConfirmedTransactions[transaction.Nonce.Uint64()] = transaction
 		for _, receiver := range transaction.Receivers {
 			outputs = append(outputs, cardanowallet.TxOutput{
 				Addr:   receiver.DestinationAddress,
@@ -173,7 +173,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, nil, err
 	}
 
-	return rawTx, txHash, utxos, includedConfirmedTransactionNonces, nil
+	return rawTx, txHash, utxos, includedConfirmedTransactions, nil
 }
 
 // SignBatchTransaction implements core.ChainOperations.

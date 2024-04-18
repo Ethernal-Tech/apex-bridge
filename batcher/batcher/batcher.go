@@ -85,9 +85,14 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
-	rawTx, txHash, utxos, includedConfirmedTransactionsNonces, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchId)
+	rawTx, txHash, utxos, includedConfirmedTransactions, err := b.operations.GenerateBatchTransaction(ctx, b.bridgeSmartContract, b.config.Base.ChainId, confirmedTransactions, batchId)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction: %v", err)
+	}
+
+	var includedConfirmedTransactionsNonces []*big.Int = make([]*big.Int, 0, len(includedConfirmedTransactions))
+	for _, tx := range includedConfirmedTransactions {
+		includedConfirmedTransactionsNonces = append(includedConfirmedTransactionsNonces, tx.Nonce)
 	}
 
 	b.logger.Info("Created tx", "txHash", txHash)
@@ -120,14 +125,11 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(includedConfirmedTransactionsNonces))
 	for _, confirmedTx := range confirmedTransactions {
-		for _, includedTx := range includedConfirmedTransactionsNonces {
-			if confirmedTx.Nonce.Cmp(includedTx) == 0 {
-				txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
-					SourceChainId: confirmedTx.SourceChainID,
-					SourceTxHash:  confirmedTx.ObservedTransactionHash,
-				})
-				break
-			}
+		if _, exists := includedConfirmedTransactions[confirmedTx.Nonce.Uint64()]; exists {
+			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
+				SourceChainId: confirmedTx.SourceChainID,
+				SourceTxHash:  confirmedTx.ObservedTransactionHash,
+			})
 		}
 	}
 
