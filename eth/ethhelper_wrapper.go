@@ -40,7 +40,13 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 		return e.ethTxHelper, nil
 	}
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(opts...)
+	finalOpts := append(
+		append(
+			make([]ethtxhelper.TxRelayerOption, 0, len(opts)+1),
+			ethtxhelper.WithNodeUrl(e.nodeUrl),
+		), opts...)
+
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(finalOpts...)
 	if err != nil {
 		return nil, err
 	}
