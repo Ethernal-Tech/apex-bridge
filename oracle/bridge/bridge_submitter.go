@@ -10,24 +10,22 @@ import (
 )
 
 type BridgeSubmitterImpl struct {
-	bridgeSC  eth.IOracleBridgeSmartContract
-	logger    hclog.Logger
-	ctx       context.Context
-	cancelCtx context.CancelFunc
+	ctx      context.Context
+	bridgeSC eth.IOracleBridgeSmartContract
+	logger   hclog.Logger
 }
 
 var _ core.BridgeSubmitter = (*BridgeSubmitterImpl)(nil)
 
 func NewBridgeSubmitter(
+	ctx context.Context,
 	bridgeSC eth.IOracleBridgeSmartContract,
 	logger hclog.Logger,
 ) *BridgeSubmitterImpl {
-	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &BridgeSubmitterImpl{
-		bridgeSC:  bridgeSC,
-		logger:    logger,
-		ctx:       ctx,
-		cancelCtx: cancelCtx,
+		ctx:      ctx,
+		bridgeSC: bridgeSC,
+		logger:   logger,
 	}
 }
 
@@ -54,10 +52,4 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainId string, blocks []*i
 	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainId, contractBlocks)
 
 	return err
-}
-
-func (bs *BridgeSubmitterImpl) Dispose() error {
-	bs.cancelCtx()
-
-	return nil
 }

@@ -27,6 +27,7 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
+	ctx             context.Context
 	shouldRunApi    bool
 	db              core.Database
 	oracle          oracleCore.Oracle
@@ -39,6 +40,7 @@ type ValidatorComponentsImpl struct {
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
 
 func NewValidatorComponents(
+	ctx context.Context,
 	appConfig *core.AppConfig,
 	shouldRunApi bool,
 	logger hclog.Logger,
@@ -67,19 +69,19 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	oracle, err := oracle.NewOracle(oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
+	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
-	batcherManager, err := batcher_manager.NewBatcherManager(batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
+	batcherManager, err := batcher_manager.NewBatcherManager(ctx, batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
 
 	relayerBridgeSmartContract := eth.NewBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
 
-	relayerImitator, err := NewRelayerImitator(appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db, logger.Named("relayer_imitator"))
+	relayerImitator, err := NewRelayerImitator(ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db, logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
@@ -94,13 +96,14 @@ func NewValidatorComponents(
 
 		apiControllers := []core.ApiController{bridgingRequestStateController}
 
-		apiObj, err = api.NewApi(appConfig.ApiConfig, apiControllers, logger.Named("api"))
+		apiObj, err = api.NewApi(ctx, appConfig.ApiConfig, apiControllers, logger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
 		}
 	}
 
 	return &ValidatorComponentsImpl{
+		ctx:             ctx,
 		shouldRunApi:    shouldRunApi,
 		db:              db,
 		oracle:          oracle,
@@ -119,10 +122,7 @@ func (v *ValidatorComponentsImpl) Start() error {
 		return fmt.Errorf("failed to start oracle. error: %v", err)
 	}
 
-	err = v.batcherManager.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start batchers. error: %v", err)
-	}
+	v.batcherManager.Start()
 
 	go v.relayerImitator.Start()
 
@@ -135,23 +135,34 @@ func (v *ValidatorComponentsImpl) Start() error {
 	return nil
 }
 
-func (v *ValidatorComponentsImpl) Stop() error {
-	v.logger.Debug("Stopping ValidatorComponents")
+func (v *ValidatorComponentsImpl) Dispose() error {
+	errs := make([]error, 0)
 
-	errb := v.batcherManager.Stop()
-	erro := v.oracle.Stop()
-	errri := v.relayerImitator.Stop()
-
-	var errapi error
-	if v.shouldRunApi {
-		errapi = v.api.Stop()
+	err := v.oracle.Dispose()
+	if err != nil {
+		v.logger.Error("error while disposing oracle", "err", err)
+		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
 	}
 
-	errdb := v.db.Close()
+	if v.shouldRunApi {
+		err = v.api.Dispose()
+		if err != nil {
+			v.logger.Error("error while disposing api", "err", err)
+			errs = append(errs, fmt.Errorf("error while disposing api. err: %w", err))
+		}
+	}
 
-	v.logger.Debug("Stopped ValidatorComponents")
+	err = v.db.Close()
+	if err != nil {
+		v.logger.Error("Failed to close validatorcomponents db", "err", err)
+		errs = append(errs, fmt.Errorf("failed to close validatorcomponents db. err: %w", err))
+	}
 
-	return errors.Join(errb, erro, errri, errapi, errdb)
+	if len(errs) > 0 {
+		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
+	}
+
+	return nil
 }
 
 func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {

@@ -1,6 +1,7 @@
 package batcher_manager
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path"
@@ -119,7 +120,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 			},
 		}
 
-		_, err := NewBatcherManager(invalidConfig, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		_, err := NewBatcherManager(context.Background(), invalidConfig, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.Error(t, err)
 	})
 }

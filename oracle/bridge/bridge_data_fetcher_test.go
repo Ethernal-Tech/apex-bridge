@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -12,24 +13,15 @@ import (
 func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("NewBridgeDataFetcher", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
-	})
-
-	t.Run("Dispose", func(t *testing.T) {
-		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
-
-		require.NotNil(t, bridgeDataFetcher)
-		err := bridgeDataFetcher.Dispose()
-		require.NoError(t, err)
 	})
 
 	t.Run("FetchExpectedTx nil", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, nil)
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -41,7 +33,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx err", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, fmt.Errorf("test err"))
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -54,7 +46,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx parse tx fail", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(&eth.LastBatchRawTx{}, nil)
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -67,7 +59,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchLatestBlockPoint nil", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetLastObservedBlock").Return(nil, nil)
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -79,7 +71,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchLatestBlockPoint err", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetLastObservedBlock").Return(nil, fmt.Errorf("test err"))
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -92,7 +84,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchLatestBlockPoint valid", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{}, nil)
-		bridgeDataFetcher := NewBridgeDataFetcher(bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 

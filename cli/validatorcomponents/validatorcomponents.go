@@ -1,6 +1,7 @@
 package clivalidatorcomponents
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"path"
@@ -53,7 +54,10 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(config, initParamsData.runApi, logger)
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	defer cancelCtx()
+
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, initParamsData.runApi, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
@@ -61,13 +65,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	err = validatorComponents.Start()
+	defer validatorComponents.Dispose()
 	if err != nil {
 		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)
 		return
 	}
-
-	defer validatorComponents.Stop()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

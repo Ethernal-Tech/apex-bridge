@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -20,6 +21,7 @@ const (
 )
 
 type CardanoTxsProcessorImpl struct {
+	ctx                         context.Context
 	appConfig                   *core.AppConfig
 	db                          core.CardanoTxsProcessorDb
 	txProcessors                []core.CardanoTxProcessor
@@ -28,13 +30,13 @@ type CardanoTxsProcessorImpl struct {
 	indexerDbs                  map[string]indexer.Database
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
-	closeCh                     chan bool
 	tickTime                    time.Duration
 }
 
 var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
 
 func NewCardanoTxsProcessor(
+	ctx context.Context,
 	appConfig *core.AppConfig,
 	db core.CardanoTxsProcessorDb,
 	txProcessors []core.CardanoTxProcessor,
@@ -46,6 +48,7 @@ func NewCardanoTxsProcessor(
 ) *CardanoTxsProcessorImpl {
 
 	return &CardanoTxsProcessorImpl{
+		ctx:                         ctx,
 		appConfig:                   appConfig,
 		db:                          db,
 		txProcessors:                txProcessors,
@@ -54,7 +57,6 @@ func NewCardanoTxsProcessor(
 		indexerDbs:                  indexerDbs,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		logger:                      logger,
-		closeCh:                     make(chan bool, 1),
 		tickTime:                    TickTimeMs,
 	}
 }
@@ -109,20 +111,14 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainId string, txs [
 	return nil
 }
 
-func (bp *CardanoTxsProcessorImpl) Start() error {
+func (bp *CardanoTxsProcessorImpl) Start() {
 	bp.logger.Debug("Starting CardanoTxsProcessor")
 
 	for {
 		if !bp.checkShouldGenerateClaims() {
-			return nil
+			return
 		}
 	}
-}
-
-func (bp *CardanoTxsProcessorImpl) Stop() error {
-	bp.logger.Debug("Stopping CardanoTxsProcessor")
-	close(bp.closeCh)
-	return nil
 }
 
 func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
@@ -140,7 +136,7 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
 
 	for _, key := range keys {
 		select {
-		case <-bp.closeCh:
+		case <-bp.ctx.Done():
 			return false
 		case <-ticker.C:
 		}

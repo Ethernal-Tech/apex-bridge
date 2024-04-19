@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,7 @@ func newValidProcessor(
 	failedTxProcessors := []core.CardanoTxFailedProcessor{failedTxProcessor}
 
 	cardanoTxsProcessor := NewCardanoTxsProcessor(
+		context.Background(),
 		appConfig, oracleDb,
 		txProcessors, failedTxProcessors,
 		bridgeSubmitter, ccoDbs,
@@ -74,12 +76,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		t.Cleanup(dbCleanup)
 		oracleDb, primeDb, vectorDb := createDbs()
 
-		proc := NewCardanoTxsProcessor(nil, nil, nil, nil, nil, nil, nil, nil)
+		proc := NewCardanoTxsProcessor(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 
 		indexerDbs := map[string]indexer.Database{"prime": primeDb, "vector": vectorDb}
 
 		proc = NewCardanoTxsProcessor(
+			context.Background(),
 			appConfig,
 			oracleDb,
 			[]core.CardanoTxProcessor{},

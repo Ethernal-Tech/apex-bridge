@@ -1,6 +1,7 @@
 package oracle
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path"
@@ -26,11 +27,11 @@ const (
 )
 
 var (
-	errBlockSyncerFatal              = errors.New("block syncer fatal error")
-	errConfirmedBlocksSubmitterFatal = errors.New("confirmed blocks submitter fatal error")
+	errBlockSyncerFatal = errors.New("block syncer fatal error")
 )
 
 type OracleImpl struct {
+	ctx                      context.Context
 	appConfig                *core.AppConfig
 	cardanoTxsProcessor      core.CardanoTxsProcessor
 	indexerDbs               map[string]indexer.Database
@@ -43,12 +44,16 @@ type OracleImpl struct {
 	logger                   hclog.Logger
 
 	errorCh chan error
-	closeCh chan bool
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
 
-func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.BridgingRequestStateUpdater, logger hclog.Logger) (*OracleImpl, error) {
+func NewOracle(
+	ctx context.Context,
+	appConfig *core.AppConfig,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	logger hclog.Logger,
+) (*OracleImpl, error) {
 	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
 		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
 	}
@@ -70,10 +75,10 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
 
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(bridgeSC, logger.Named("bridge_data_fetcher"))
-	bridgeSubmitter := bridge.NewBridgeSubmitter(bridgeSCWithWallet, logger.Named("bridge_submitter"))
+	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, bridgeSC, logger.Named("bridge_data_fetcher"))
+	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, bridgeSCWithWallet, logger.Named("bridge_submitter"))
 
-	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
+	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
 	txProcessors := []core.CardanoTxProcessor{
 		tx_processors.NewBatchExecutedProcessor(),
@@ -97,7 +102,7 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 		indexerDbs[cardanoChainConfig.ChainId] = indexerDb
 	}
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
@@ -105,7 +110,7 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		indexerDb := indexerDbs[cardanoChainConfig.ChainId]
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, db, indexerDb, cardanoChainConfig.ChainId, logger)
+			ctx, bridgeSubmitter, appConfig, db, indexerDb, cardanoChainConfig.ChainId, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}
@@ -113,7 +118,7 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger)
+			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}
@@ -122,6 +127,7 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 	}
 
 	return &OracleImpl{
+		ctx:                      ctx,
 		appConfig:                appConfig,
 		cardanoTxsProcessor:      cardanoTxsProcessor,
 		cardanoChainObservers:    cardanoChainObservers,
@@ -132,7 +138,6 @@ func NewOracle(appConfig *core.AppConfig, bridgingRequestStateUpdater common.Bri
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
 		db:                       db,
 		logger:                   logger,
-		closeCh:                  make(chan bool, 1),
 	}, nil
 }
 
@@ -161,41 +166,35 @@ func (o *OracleImpl) Start() error {
 	return nil
 }
 
-func (o *OracleImpl) Stop() error {
-	o.logger.Debug("Stopping Oracle")
-
-	for _, co := range o.cardanoChainObservers {
-		err := co.Stop()
-		if err != nil {
-			o.logger.Error("Failed to stop cardano chain observer", "chain", co.GetConfig().ChainId, "err", err)
-		}
-	}
-
-	for _, cbs := range o.confirmedBlockSubmitters {
-		err := cbs.Dispose()
-		if err != nil {
-			o.logger.Error("Failed to stop block submitter cardano", "err", err)
-			return err
-		}
-	}
-
+func (o *OracleImpl) Dispose() error {
+	errs := make([]error, 0)
 	for _, indexerDb := range o.indexerDbs {
 		err := indexerDb.Close()
 		if err != nil {
 			o.logger.Error("Failed to close indexer db", "err", err)
+			errs = append(errs, fmt.Errorf("failed to close indexer db. err %w", err))
 		}
 	}
 
-	o.cardanoTxsProcessor.Stop()
-	o.expectedTxsFetcher.Stop()
-	o.bridgeSubmitter.Dispose()
-	o.bridgeDataFetcher.Dispose()
-	o.db.Close()
+	for _, cco := range o.cardanoChainObservers {
+		err := cco.Dispose()
+		if err != nil {
+			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().ChainId, "err", err)
+			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err %w", cco.GetConfig().ChainId, err))
+		}
+	}
+
+	err := o.db.Close()
+	if err != nil {
+		o.logger.Error("Failed to close oracle db", "err", err)
+		errs = append(errs, fmt.Errorf("failed to close oracle db. err %w", err))
+	}
 
 	close(o.errorCh)
-	close(o.closeCh)
 
-	o.logger.Debug("Stopped Oracle")
+	if len(errs) > 0 {
+		return fmt.Errorf("errors while disposing oracle. errors: %w", errors.Join(errs...))
+	}
 
 	return nil
 }
@@ -214,7 +213,7 @@ func (o *OracleImpl) errorHandler() {
 	defer close(agg)
 
 	for _, co := range o.cardanoChainObservers {
-		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
+		go func(errChan <-chan error, origin string) {
 		outsideloop:
 			for {
 				select {
@@ -229,43 +228,19 @@ func (o *OracleImpl) errorHandler() {
 							break outsideloop
 						}
 					}
-				case <-closeChan:
+				case <-o.ctx.Done():
 					break outsideloop
 				}
 			}
 			o.logger.Debug("Exiting error handler", "origin", origin)
-		}(co.ErrorCh(), o.closeCh, co.GetConfig().ChainId)
-	}
-
-	for _, cbs := range o.confirmedBlockSubmitters {
-		go func(errChan <-chan error, closeChan <-chan bool, origin string) {
-		outsideloop:
-			for {
-				select {
-				case err := <-errChan:
-					if err != nil {
-						o.logger.Error("chain confirmed block submitter error", "origin", origin, "err", err)
-						if strings.Contains(err.Error(), errConfirmedBlocksSubmitterFatal.Error()) {
-							agg <- ErrorOrigin{
-								err:    err,
-								origin: origin,
-							}
-							break outsideloop
-						}
-					}
-				case <-closeChan:
-					break outsideloop
-				}
-			}
-			o.logger.Debug("Exiting error handler", "origin", origin)
-		}(cbs.ErrorCh(), o.closeCh, cbs.GetChainId())
+		}(co.ErrorCh(), co.GetConfig().ChainId)
 	}
 
 	select {
 	case errorOrigin := <-agg:
 		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
 		o.errorCh <- errorOrigin.err
-	case <-o.closeCh:
+	case <-o.ctx.Done():
 	}
 	o.logger.Debug("Exiting oracle error handler")
 }

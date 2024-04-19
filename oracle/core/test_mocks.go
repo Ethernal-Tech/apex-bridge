@@ -23,15 +23,7 @@ func (m *CardanoTxsProcessorMock) NewUnprocessedTxs(originChainId string, txs []
 }
 
 // Start implements CardanoTxsProcessor.
-func (m *CardanoTxsProcessorMock) Start() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-// Stop implements CardanoTxsProcessor.
-func (m *CardanoTxsProcessorMock) Stop() error {
-	args := m.Called()
-	return args.Error(0)
+func (m *CardanoTxsProcessorMock) Start() {
 }
 
 var _ CardanoTxsProcessor = (*CardanoTxsProcessorMock)(nil)
@@ -72,15 +64,7 @@ type ExpectedTxsFetcherMock struct {
 }
 
 // Start implements ExpectedTxsFetcher.
-func (m *ExpectedTxsFetcherMock) Start() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-// Stop implements ExpectedTxsFetcher.
-func (m *ExpectedTxsFetcherMock) Stop() error {
-	args := m.Called()
-	return args.Error(0)
+func (m *ExpectedTxsFetcherMock) Start() {
 }
 
 var _ ExpectedTxsFetcher = (*ExpectedTxsFetcherMock)(nil)
