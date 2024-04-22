@@ -42,8 +42,6 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
 
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
-
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
 		outputs := GenerateUTXOOutputs(utxoCount, 1000000)
@@ -67,8 +65,6 @@ func TestCardanoChainOperations(t *testing.T) {
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
-
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount, 1000000)
@@ -95,8 +91,6 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
 
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
-
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
 		txCost := CalculateTxCost(outputs)
@@ -120,8 +114,6 @@ func TestCardanoChainOperations(t *testing.T) {
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
-
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 10000000) // 4000Ada
@@ -149,8 +141,6 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
 
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
-
 		inputs := GenerateUTXOInputs(400, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
 		txCost := CalculateTxCost(outputs)
@@ -175,8 +165,6 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
 
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
-
 		inputs := GenerateUTXORandomInputs(100, 1000000, 10000000)
 		outputs := GenerateUTXORandomOutputs(200, 1000000, 10000000)
 		txCost := CalculateTxCost(outputs)
@@ -200,8 +188,6 @@ func TestCardanoChainOperations(t *testing.T) {
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
-
-		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
 		outputs := GenerateUTXOOutputs(403, 1000000) // 403Ada
@@ -245,8 +231,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	cco, err := NewCardanoChainOperations(configRaw)
 	require.NoError(t, err)
-
-	cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 	testError := errors.New("test err")
 
