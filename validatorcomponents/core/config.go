@@ -30,6 +30,8 @@ type ApiConfig struct {
 	AllowedHeaders []string `json:"allowedHeaders"`
 	AllowedOrigins []string `json:"allowedOrigins"`
 	AllowedMethods []string `json:"allowedMethods"`
+	ApiKeyHeader   string   `json:"apiKeyHeader"`
+	ApiKeys        []string `json:"apiKeys"`
 }
 
 type AppConfig struct {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -33,7 +34,13 @@ func NewApi(ctx context.Context, apiConfig core.ApiConfig, controllers []core.Ap
 		endpoints := controller.GetEndpoints()
 		for _, endpoint := range endpoints {
 			endpointPath := fmt.Sprintf("/%v/%v/%v", apiConfig.PathPrefix, controllerPathPrefix, endpoint.Path)
-			router.HandleFunc(endpointPath, endpoint.Handler).Methods(endpoint.Method)
+
+			endpointHandler := endpoint.Handler
+			if endpoint.ApiKeyAuth {
+				endpointHandler = withApiKeyAuth(apiConfig, endpointHandler)
+			}
+
+			router.HandleFunc(endpointPath, endpointHandler).Methods(endpoint.Method)
 		}
 	}
 
@@ -70,4 +77,29 @@ func (api *ApiImpl) Dispose() error {
 	}
 
 	return nil
+}
+
+func withApiKeyAuth(apiConfig core.ApiConfig, handler core.ApiEndpointHandler) core.ApiEndpointHandler {
+	return func(w http.ResponseWriter, r *http.Request) {
+		apiKeyHeaderValue := r.Header.Get(apiConfig.ApiKeyHeader)
+		if apiKeyHeaderValue == "" {
+			utils.WriteUnauthorizedResponse(w)
+			return
+		}
+
+		authorized := false
+		for _, apiKey := range apiConfig.ApiKeys {
+			if apiKey == apiKeyHeaderValue {
+				authorized = true
+				break
+			}
+		}
+
+		if !authorized {
+			utils.WriteUnauthorizedResponse(w)
+			return
+		}
+
+		handler(w, r)
+	}
 }
