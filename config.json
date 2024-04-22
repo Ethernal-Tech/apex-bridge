@@ -50,10 +50,14 @@
         "maxBridgingClaimsToGroup": 10
     },
     "appSettings": {
-        "dbsPath": "./db/",
-        "logsPath": "./logs/",
-        "logLevel": 2
-    },
+        "logger": {
+            "logFilePath": "./logs/validator-components.log",
+            "logLevel": 2,
+            "jsonLogFormat": false,
+            "appendFile": true
+        },
+        "dbsPath": "./db/"
+    },    
     "relayerImitatorPullTime": 1000,
     "batcherPullTime": 2500,
     "api": {

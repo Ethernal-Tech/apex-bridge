@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,14 +27,14 @@ func TestCardanoChainObserver(t *testing.T) {
 	}()
 
 	settings := core.AppSettings{
-		DbsPath:  testDir,
-		LogsPath: testDir,
-		LogLevel: 2,
+		DbsPath: testDir,
+		Logger: logger.LoggerConfig{
+			LogFilePath: testDir,
+		},
 	}
 
 	foldersCleanup := func() {
-		common.RemoveDirOrFilePathIfExists(settings.DbsPath)
-		common.RemoveDirOrFilePathIfExists(settings.LogsPath)
+		os.RemoveAll(testDir)
 	}
 
 	chainConfig := &core.CardanoChainConfig{

@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 )
 
@@ -36,9 +37,8 @@ type BridgeConfig struct {
 }
 
 type AppSettings struct {
-	DbsPath  string `json:"dbsPath"`
-	LogsPath string `json:"logsPath"`
-	LogLevel int32  `json:"logLevel"`
+	Logger  logger.LoggerConfig `json:"logger"`
+	DbsPath string              `json:"dbsPath"`
 }
 
 type BridgingSettings struct {

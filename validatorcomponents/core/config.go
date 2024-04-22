@@ -4,8 +4,6 @@ import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/hashicorp/go-hclog"
 )
 
 type CardanoChainConfig struct {
@@ -91,13 +89,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			SecretsManager:       appConfig.Bridge.SecretsManager,
 		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   appConfig.Settings.LogsPath + "batcher",
-			LogLevel:      hclog.Level(appConfig.Settings.LogLevel),
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
-		Chains: batcherChains,
+		Chains:        batcherChains,
 	}
 
 	return oracleConfig, batcherConfig
