@@ -1,9 +1,8 @@
 package core
 
 import (
-	"encoding/json"
-
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -20,6 +19,7 @@ type CardanoChainConfig struct {
 	KeysDirPath              string   `json:"keysDirPath"`
 	BlockfrostUrl            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
+	SocketPath               string   `json:"socketPath"`
 	AtLeastValidators        float64  `json:"atLeastValidators"`
 	PotentialFee             uint64   `json:"potentialFee"`
 }
@@ -45,8 +45,8 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {
-	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
-	batcherChains := make(map[string]batcherCore.ChainConfig)
+	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
+	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
 
 	for chainId, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[chainId] = &oracleCore.CardanoChainConfig{
@@ -60,24 +60,21 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
 		}
 
-		chainSpecificJsonRaw, _ := json.Marshal(batcherCore.CardanoChainConfig{
-			TestNetMagic:      uint(ccConfig.NetworkMagic),
+		chainSpecificJsonRaw, _ := (cardanotx.CardanoChainConfig{
+			TestNetMagic:      ccConfig.NetworkMagic,
 			BlockfrostUrl:     ccConfig.BlockfrostUrl,
 			BlockfrostAPIKey:  ccConfig.BlockfrostAPIKey,
 			AtLeastValidators: ccConfig.AtLeastValidators,
+			SocketPath:        ccConfig.SocketPath,
 			PotentialFee:      ccConfig.PotentialFee,
-		})
+			KeysDirPath:       ccConfig.KeysDirPath,
+		}).Serialize()
 
-		batcherChains[chainId] = batcherCore.ChainConfig{
-			Base: batcherCore.BaseConfig{
-				ChainId:     chainId,
-				KeysDirPath: ccConfig.KeysDirPath,
-			},
-			ChainSpecific: batcherCore.ChainSpecific{
-				ChainType: "Cardano",
-				Config:    chainSpecificJsonRaw,
-			},
-		}
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainId:       chainId,
+			ChainType:     "Cardano",
+			ChainSpecific: chainSpecificJsonRaw,
+		})
 	}
 
 	oracleConfig := &oracleCore.AppConfig{

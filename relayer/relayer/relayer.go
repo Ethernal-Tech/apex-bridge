@@ -2,13 +2,11 @@ package relayer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/hashicorp/go-hclog"
@@ -55,20 +53,19 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 }
 
 func (r *RelayerImpl) execute(ctx context.Context) error {
-	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Base.ChainId)
+	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Chain.ChainId)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve confirmed batch: %v", err)
 	}
 
 	r.logger.Info("Signed batch retrieved from contract")
 
-	lastSubmittedBatchId, err := r.db.GetLastSubmittedBatchId(r.config.Base.ChainId)
+	lastSubmittedBatchId, err := r.db.GetLastSubmittedBatchId(r.config.Chain.ChainId)
 	if err != nil {
 		return fmt.Errorf("failed to get last submitted batch id from db: %v", err)
 	}
 
-	receivedBatchId := new(big.Int)
-	receivedBatchId, ok := receivedBatchId.SetString(confirmedBatch.Id, 10)
+	receivedBatchId, ok := new(big.Int).SetString(confirmedBatch.Id, 0)
 	if !ok {
 		return fmt.Errorf("failed to convert confirmed batch id to big int")
 	}
@@ -78,7 +75,8 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 			r.logger.Info("Waiting on new signed batch")
 			return nil
 		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
-			return fmt.Errorf("last submitted batch id greater than received: last submitted %v > received %v", lastSubmittedBatchId.String(), receivedBatchId.String())
+			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
+				lastSubmittedBatchId, receivedBatchId)
 		}
 	}
 
@@ -88,7 +86,7 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 
 	r.logger.Info("Transaction successfully submitted")
 
-	if err := r.db.AddLastSubmittedBatchId(r.config.Base.ChainId, receivedBatchId); err != nil {
+	if err := r.db.AddLastSubmittedBatchId(r.config.Chain.ChainId, receivedBatchId); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)
 	}
 
@@ -96,26 +94,12 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainSpecific) (core.ChainOperations, error) {
-	var operations core.ChainOperations
-
+func GetChainSpecificOperations(config core.ChainConfig) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case "cardano":
-		var cardanoChainConfig core.CardanoChainConfig
-		if err := json.Unmarshal(config.Config, &cardanoChainConfig); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal Cardano configuration: %v", err)
-		}
-
-		txProvider, err := cardanotx.GetTxProvider(cardanoChainConfig.BlockfrostUrl, cardanoChainConfig.BlockfrostAPIKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tx provider: %w", err)
-		}
-
-		operations = NewCardanoChainOperations(txProvider, cardanoChainConfig)
+		return NewCardanoChainOperations(config.ChainSpecific)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}
-
-	return operations, nil
 }

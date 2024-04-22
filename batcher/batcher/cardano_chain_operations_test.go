@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -19,22 +20,35 @@ import (
 )
 
 func TestCardanoChainOperations(t *testing.T) {
-	config := core.CardanoChainConfig{
-		TestNetMagic: 42,
-	}
-	txProviderMock := &cardano.TxProviderTestMock{
-		ReturnDefaultParameters: true,
-	}
-	wallet := cardano.CardanoWallet{}
+	testDir, err := os.MkdirTemp("", "bat-chain-ops")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	_, err = cardano.GenerateWallet(testDir, false, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
+		"testnetMagic": 2,
+		"atLeastValidators": 0.6666666666666666,
+		"potentialFee": 300000,
+		"keysDirPath": "%s"
+		}`, testDir)))
 
 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
 		outputs := GenerateUTXOOutputs(utxoCount, 1000000)
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -51,13 +65,16 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount, 1000000)
 		outputs := GenerateUTXOOutputs(utxoCount*2, 1000000)
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -75,12 +92,15 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -98,12 +118,15 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputs(30, 1000000)
 		outputs := GenerateUTXOOutputs(400, 10000000) // 4000Ada
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -123,12 +146,15 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputs(400, 1000000)
 		outputs := GenerateUTXOOutputs(400, 1000000)
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -146,12 +172,15 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXORandomInputs(100, 1000000, 10000000)
 		outputs := GenerateUTXORandomOutputs(200, 1000000, 10000000)
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -169,12 +198,15 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
-		cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+		cco, err := NewCardanoChainOperations(configRaw)
+		require.NoError(t, err)
+
+		cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
 
 		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
 		outputs := GenerateUTXOOutputs(403, 1000000) // 403Ada
 		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, config.TestNetMagic)
+		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
@@ -195,48 +227,27 @@ func TestCardanoChainOperations(t *testing.T) {
 }
 
 func TestGenerateBatchTransaction(t *testing.T) {
-	config := core.CardanoChainConfig{
-		TestNetMagic:      42,
-		AtLeastValidators: 1,
-	}
-	txProviderMock := &cardano.TxProviderTestMock{
-		ReturnDefaultParameters: true,
-	}
-
-	multisigVkeyString := "68fc463c29900b00122423c7e6a39469987786314e07a5e7f5eae76a5fe671bf"
-	multisigVkeyBytes, err := hex.DecodeString(multisigVkeyString)
-	require.NoError(t, err)
-	multisigSkeyString := "1825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0"
-	multisigSkeyBytes, err := hex.DecodeString(multisigSkeyString)
-	require.NoError(t, err)
-	multisigKeyHash := "eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205"
-	multisigStakeVkeyString := "0a809d270f7017c54a63a85fff145733861e671cf423c30428afd0cd7c759ad6"
-	multisigStakeVkeyBytes, err := hex.DecodeString(multisigStakeVkeyString)
-	require.NoError(t, err)
-	multisigStakeSkeyString := "016586a09a19122dddc92aa512fb6ff0f0c3dddfc561dea5e18438e4269d3e00"
-	multisigStakeSkeyBytes, err := hex.DecodeString(multisigStakeSkeyString)
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
 
-	multisigFeeVkeyString := "63e95162d952d2fbc5240457750e1c13bfb4a5e3d9a96bf048b90bfe08b13de6"
-	multisigFeeVkeyBytes, err := hex.DecodeString(multisigFeeVkeyString)
-	require.NoError(t, err)
-	multisigFeeSkeyString := "4cd84bf321e70ab223fbdbfe5eba249a5249bd9becbeb82109d45e56c9c610a9"
-	multisigFeeSkeyBytes, err := hex.DecodeString(multisigFeeSkeyString)
-	require.NoError(t, err)
-	multisigFeeKeyHash := "b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56"
-	multisigFeeStakeVkeyString := "549b55365bbcdcff3cc8f7c824ba920f28b99e3ca379b0db4cbb895ceefd2765"
-	multisigFeeStakeVkeyBytes, err := hex.DecodeString(multisigFeeStakeVkeyString)
-	require.NoError(t, err)
-	multisigFeeStakeSkeyString := "6da69a3342177847927465c1b03569d8b46af9d274cbc11e35322ce0a86d449a"
-	multisigFeeStakeSkeyBytes, err := hex.DecodeString(multisigFeeStakeSkeyString)
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	wallet, err := cardano.GenerateWallet(testDir, false, false)
 	require.NoError(t, err)
 
-	wallet := cardano.CardanoWallet{
-		MultiSig:    cardanowallet.NewStakeWallet(multisigVkeyBytes, multisigSkeyBytes, multisigKeyHash, multisigStakeVkeyBytes, multisigStakeSkeyBytes),
-		MultiSigFee: cardanowallet.NewStakeWallet(multisigFeeVkeyBytes, multisigFeeSkeyBytes, multisigFeeKeyHash, multisigFeeStakeVkeyBytes, multisigFeeStakeSkeyBytes),
-	}
+	configRaw := json.RawMessage([]byte(fmt.Sprintf(
+		"{ \"testnetMagic\": 42, \"atLeastValidators\": 1, \"keysDirPath\": \"%s\" }",
+		testDir,
+	)))
 
-	cco := NewCardanoChainOperations(config, wallet, txProviderMock)
+	cco, err := NewCardanoChainOperations(configRaw)
+	require.NoError(t, err)
+
+	cco.TxProvider.(*cardano.TxProviderTestMock).ReturnDefaultParameters = true
+
 	testError := errors.New("test err")
 
 	var confirmedTransactions []eth.ConfirmedTransaction = make([]contractbinding.IBridgeContractStructsConfirmedTransaction, 1)
@@ -517,7 +528,7 @@ func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []car
 	return
 }
 
-func GenerateTxInfos(t *testing.T, testnetMagic uint) *cardano.TxInputInfos {
+func GenerateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 	dummyKeyHashes := []string{
 		"eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205",
 		"ad8e0ab92e1febfcaf44889d68c3ae78b59dc9c5fa9e05a272214c13",
@@ -532,13 +543,13 @@ func GenerateTxInfos(t *testing.T, testnetMagic uint) *cardano.TxInputInfos {
 	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(dummyKeyHashes[3:], 3)
 	require.NoError(t, err)
 
-	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(testnetMagic)
+	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(uint(testnetMagic))
 	require.NoError(t, err)
-	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(testnetMagic)
+	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(testnetMagic))
 	require.NoError(t, err)
 
 	txInfos := &cardano.TxInputInfos{
-		TestNetMagic: testnetMagic,
+		TestNetMagic: uint(testnetMagic),
 		MultiSig: &cardano.TxInputInfo{
 			PolicyScript: multisigPolicyScript,
 			Address:      multisigAddress,

@@ -12,3 +12,8 @@ type BridgingRequestStateUpdater interface {
 	FailedToExecuteOnDestination(destinationChainId string, batchId uint64) error
 	ExecutedOnDestination(destinationChainId string, batchId uint64, destinationTxHash string) error
 }
+
+// ChainSpecificConfig defines the interface for chain-specific configurations
+type ChainSpecificConfig interface {
+	GetChainType() string
+}

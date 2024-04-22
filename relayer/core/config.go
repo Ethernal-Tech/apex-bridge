@@ -13,28 +13,21 @@ type BridgeConfig struct {
 
 type RelayerConfiguration struct {
 	Bridge        BridgeConfig        `json:"bridge"`
-	Base          BaseConfig          `json:"base"`
+	Chain         ChainConfig         `json:"chain"`
 	PullTimeMilis uint64              `json:"pullTime"`
 	Logger        logger.LoggerConfig `json:"logger"`
 }
 
-type BaseConfig struct {
-	ChainId string `json:"chainId"`
-	DbsPath string `json:"dbsPath"`
-}
-
-type ChainSpecific struct {
-	ChainType string          `json:"chainType"`
-	Config    json.RawMessage `json:"config"`
-}
 type ChainConfig struct {
-	Base          BaseConfig    `json:"baseConfig"`
-	ChainSpecific ChainSpecific `json:"chainSpecific"`
+	ChainId       string          `json:"id"`
+	ChainType     string          `json:"type"`
+	DbsPath       string          `json:"dbsPath"`
+	ChainSpecific json.RawMessage `json:"config"`
 }
 
 type RelayerManagerConfiguration struct {
-	Bridge        BridgeConfig           `json:"bridge"`
-	Chains        map[string]ChainConfig `json:"chains"`
-	PullTimeMilis uint64                 `json:"pullTime"`
-	Logger        logger.LoggerConfig    `json:"logger"`
+	Bridge        BridgeConfig        `json:"bridge"`
+	Chains        []ChainConfig       `json:"chains"`
+	PullTimeMilis uint64              `json:"pullTime"`
+	Logger        logger.LoggerConfig `json:"logger"`
 }

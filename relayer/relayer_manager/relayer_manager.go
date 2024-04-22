@@ -27,13 +27,13 @@ func NewRelayerManager(
 ) (*RelayerManagerImpl, error) {
 	relayers := make([]core.Relayer, 0, len(config.Chains))
 
-	for chain, chainConfig := range config.Chains {
-		operations, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+	for _, chainConfig := range config.Chains {
+		operations, err := relayer.GetChainSpecificOperations(chainConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
+		db, err := database_access.NewDatabase(chainConfig.DbsPath + chainConfig.ChainId + ".db")
 		if err != nil {
 			return nil, err
 		}
@@ -41,11 +41,11 @@ func NewRelayerManager(
 		relayers = append(relayers, relayer.NewRelayer(
 			&core.RelayerConfiguration{
 				Bridge:        config.Bridge,
-				Base:          chainConfig.Base,
+				Chain:         chainConfig,
 				PullTimeMilis: config.PullTimeMilis,
 			},
 			eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress),
-			logger.Named(strings.ToUpper(chain)),
+			logger.Named(strings.ToUpper(chainConfig.ChainId)),
 			operations,
 			db,
 		))

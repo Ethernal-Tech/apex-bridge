@@ -32,24 +32,16 @@ func TestRelayerManagerConfig(t *testing.T) {
 	rawMessage := json.RawMessage(jsonData)
 
 	expectedConfig := &core.RelayerManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			"prime": {
-				Base: core.BaseConfig{
-					ChainId: "prime",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
+		Chains: []core.ChainConfig{
+			{
+				ChainId:       "prime",
+				ChainType:     "Cardano",
+				ChainSpecific: rawMessage,
 			},
-			"vector": {
-				Base: core.BaseConfig{
-					ChainId: "vector",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
+			{
+				ChainId:       "vector",
+				ChainType:     "CardaNo",
+				ChainSpecific: rawMessage,
 			},
 		},
 		Bridge: core.BridgeConfig{
@@ -78,12 +70,10 @@ func TestRelayerManagerConfig(t *testing.T) {
 	assert.NotEmpty(t, loadedConfig.Chains)
 
 	for _, chainConfig := range loadedConfig.Chains {
-		assert.Equal(t, chainConfig.Base, chainConfig.Base)
-
-		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig)
 		require.NoError(t, err)
 
-		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig)
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedOp, loadedOp)
@@ -97,15 +87,11 @@ func TestRelayerManagerConfig(t *testing.T) {
 func TestRelayerManagerCreation(t *testing.T) {
 	t.Run("create manager fail - invalid operations", func(t *testing.T) {
 		config := &core.RelayerManagerConfiguration{
-			Chains: map[string]core.ChainConfig{
-				"prime": {
-					Base: core.BaseConfig{
-						ChainId: "prime",
-					},
-					ChainSpecific: core.ChainSpecific{
-						ChainType: "Cardano",
-						Config:    json.RawMessage(""),
-					},
+			Chains: []core.ChainConfig{
+				{
+					ChainId:       "prime",
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage(""),
 				},
 			},
 		}

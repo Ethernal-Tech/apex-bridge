@@ -2,6 +2,8 @@ package relayer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -12,17 +14,25 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	config     core.CardanoChainConfig
 	txProvider cardanowallet.ITxSubmitter
 }
 
 func NewCardanoChainOperations(
-	txProvider cardanowallet.ITxSubmitter, config core.CardanoChainConfig,
-) *CardanoChainOperations {
+	jsonConfig json.RawMessage,
+) (*CardanoChainOperations, error) {
+	config, err := cardanotx.NewCardanoChainConfig(jsonConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	txProvider, err := config.CreateTxProvider()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tx provider: %w", err)
+	}
+
 	return &CardanoChainOperations{
 		txProvider: txProvider,
-		config:     config,
-	}
+	}, nil
 }
 
 // SendTx implements core.ChainOperations.

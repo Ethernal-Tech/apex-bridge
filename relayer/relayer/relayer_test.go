@@ -19,7 +19,7 @@ import (
 func TestRelayerExecute(t *testing.T) {
 	relayerConfig := &core.RelayerConfiguration{
 		Bridge: core.BridgeConfig{},
-		Base: core.BaseConfig{
+		Chain: core.ChainConfig{
 			ChainId: "prime",
 		},
 		PullTimeMilis: 1000,
@@ -155,9 +155,9 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 		}`)
 
 	t.Run("invalid chain type", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Invalid",
-			Config:    json.RawMessage(""),
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "Invalid",
+			ChainSpecific: json.RawMessage(""),
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
@@ -167,9 +167,9 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("invalid cardano json config", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Cardano",
-			Config:    json.RawMessage(""),
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "Cardano",
+			ChainSpecific: json.RawMessage(""),
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
@@ -179,9 +179,9 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("valid cardano config", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Cardano",
-			Config:    json.RawMessage(jsonData),
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "Cardano",
+			ChainSpecific: json.RawMessage(jsonData),
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
@@ -190,9 +190,9 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "CaRdAnO",
-			Config:    json.RawMessage(jsonData),
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "CaRdAnO",
+			ChainSpecific: json.RawMessage(jsonData),
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
