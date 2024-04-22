@@ -30,8 +30,8 @@ func (*BridgingRequestStateControllerImpl) GetPathPrefix() string {
 
 func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*core.ApiEndpoint {
 	return []*core.ApiEndpoint{
-		{Path: "Get", Method: http.MethodGet, Handler: c.get},
-		{Path: "GetAllForUser", Method: http.MethodGet, Handler: c.getAllForUser},
+		{Path: "Get", Method: http.MethodGet, Handler: c.get, ApiKeyAuth: true},
+		{Path: "GetAllForUser", Method: http.MethodGet, Handler: c.getAllForUser, ApiKeyAuth: true},
 	}
 }
 
@@ -43,13 +43,13 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	chainIdArr, exists := queryValues["chainId"]
 	if !exists || len(chainIdArr) == 0 {
-		utils.WriteErrorResponse(w, 400, "chainId missing from query")
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		c.logger.Debug("chainId missing from query", "url", r.URL)
 		return
 	}
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		utils.WriteErrorResponse(w, 400, "txHash missing from query")
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "txHash missing from query")
 		c.logger.Debug("txHash missing from query", "url", r.URL)
 		return
 	}
@@ -59,13 +59,13 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	state, err := c.bridgingRequestStateManager.Get(chainId, txHash)
 	if err != nil {
-		utils.WriteErrorResponse(w, 400, err.Error())
+		utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		c.logger.Debug(err.Error(), "url", r.URL)
 		return
 	}
 
 	if state == nil {
-		utils.WriteErrorResponse(w, 404, "Not found")
+		utils.WriteErrorResponse(w, http.StatusNotFound, "Not found")
 		c.logger.Debug("Not found", "url", r.URL)
 		return
 	}
@@ -82,13 +82,13 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 
 	chainIdArr, exists := queryValues["chainId"]
 	if !exists || len(chainIdArr) == 0 {
-		utils.WriteErrorResponse(w, 400, "chainId missing from query")
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		c.logger.Debug("chainId missing from query", "url", r.URL)
 		return
 	}
 	userAddrArr, exists := queryValues["userAddr"]
 	if !exists || len(userAddrArr) == 0 {
-		utils.WriteErrorResponse(w, 400, "userAddr missing from query")
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "userAddr missing from query")
 		c.logger.Debug("userAddr missing from query", "url", r.URL)
 		return
 	}
@@ -98,7 +98,7 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 
 	states, err := c.bridgingRequestStateManager.GetAllForUser(chainId, userAddr)
 	if err != nil {
-		utils.WriteErrorResponse(w, 400, err.Error())
+		utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		c.logger.Debug(err.Error(), "url", r.URL)
 		return
 	}
