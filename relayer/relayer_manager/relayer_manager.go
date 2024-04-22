@@ -30,6 +30,7 @@ func NewRelayerManager(
 
 	for chainId, chainConfig := range config.Chains {
 		chainConfig.ChainId = chainId
+		config.Chains[chainId] = chainConfig // update just to be sure that chainID is populated everywhere
 
 		operations, err := relayer.GetChainSpecificOperations(chainConfig)
 		if err != nil {
