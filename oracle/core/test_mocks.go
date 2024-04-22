@@ -18,7 +18,7 @@ func (m *CardanoTxsProcessorMock) NewUnprocessedTxs(originChainId string, txs []
 		return m.NewUnprocessedTxsFn(originChainId, txs)
 	}
 
-	args := m.Called()
+	args := m.Called(originChainId, txs)
 	return args.Error(0)
 }
 
@@ -33,7 +33,7 @@ type BridgeDataFetcherMock struct {
 }
 
 func (m *BridgeDataFetcherMock) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
-	args := m.Called()
+	args := m.Called(chainId)
 	if args.Get(0) != nil {
 		return args.Get(0).(*indexer.BlockPoint), args.Error(1)
 	}
@@ -43,7 +43,7 @@ func (m *BridgeDataFetcherMock) FetchLatestBlockPoint(chainId string) (*indexer.
 
 // FetchExpectedTxs implements BridgeDataFetcher.
 func (m *BridgeDataFetcherMock) FetchExpectedTx(chainId string) (*BridgeExpectedCardanoTx, error) {
-	args := m.Called()
+	args := m.Called(chainId)
 	if args.Get(0) != nil {
 		return args.Get(0).(*BridgeExpectedCardanoTx), args.Error(1)
 	}
@@ -74,12 +74,12 @@ type CardanoTxsProcessorDbMock struct {
 }
 
 func (m *CardanoTxsProcessorDbMock) AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error {
-	args := m.Called()
+	args := m.Called(expectedTxs)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(chainId string, threshold int) ([]*BridgeExpectedCardanoTx, error) {
-	args := m.Called()
+	args := m.Called(chainId, threshold)
 	if args.Get(0) != nil {
 		return args.Get(0).([]*BridgeExpectedCardanoTx), args.Error(1)
 	}
@@ -87,27 +87,27 @@ func (m *CardanoTxsProcessorDbMock) GetExpectedTxs(chainId string, threshold int
 }
 
 func (m *CardanoTxsProcessorDbMock) ClearExpectedTxs(chainId string) error {
-	args := m.Called()
+	args := m.Called(chainId)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error {
-	args := m.Called()
+	args := m.Called(expectedTxs)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error {
-	args := m.Called()
+	args := m.Called(expectedTxs)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error {
-	args := m.Called()
+	args := m.Called(unprocessedTxs)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(chainId string, threshold int) ([]*CardanoTx, error) {
-	args := m.Called()
+	args := m.Called(chainId, threshold)
 	if args.Get(0) != nil {
 		return args.Get(0).([]*CardanoTx), args.Error(1)
 	}
@@ -115,17 +115,17 @@ func (m *CardanoTxsProcessorDbMock) GetUnprocessedTxs(chainId string, threshold 
 }
 
 func (m *CardanoTxsProcessorDbMock) ClearUnprocessedTxs(chainId string) error {
-	args := m.Called()
+	args := m.Called(chainId)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error {
-	args := m.Called()
+	args := m.Called(processedTxs)
 	return args.Error(0)
 }
 
 func (m *CardanoTxsProcessorDbMock) GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error) {
-	args := m.Called()
+	args := m.Called(chainId, txHash)
 	if args.Get(0) != nil {
 		return args.Get(0).(*ProcessedCardanoTx), args.Error(1)
 	}
@@ -146,7 +146,7 @@ func (m *BridgeSubmitterMock) SubmitClaims(claims *BridgeClaims) error {
 		m.OnSubmitClaims(claims)
 	}
 
-	args := m.Called()
+	args := m.Called(claims)
 	return args.Error(0)
 }
 
@@ -156,7 +156,7 @@ func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainId string, blocks []*in
 		m.OnSubmitConfirmedBlocks(chainId, blocks)
 	}
 
-	args := m.Called()
+	args := m.Called(chainId, blocks)
 	return args.Error(0)
 }
 
@@ -185,7 +185,7 @@ func (m *CardanoTxProcessorMock) GetType() TxProcessorType {
 
 // IsTxRelevant implements CardanoTxProcessor.
 func (m *CardanoTxProcessorMock) IsTxRelevant(tx *CardanoTx) (bool, error) {
-	args := m.Called()
+	args := m.Called(tx)
 	return args.Bool(0), args.Error(1)
 }
 
@@ -195,7 +195,7 @@ func (m *CardanoTxProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *C
 		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, BridgingRequestClaim{})
 	}
 
-	args := m.Called()
+	args := m.Called(claims, tx, appConfig)
 	return args.Error(0)
 }
 
@@ -218,7 +218,7 @@ func (m *CardanoTxFailedProcessorMock) GetType() TxProcessorType {
 
 // IsTxRelevant implements CardanoTxFailedProcessor.
 func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx) (bool, error) {
-	args := m.Called()
+	args := m.Called(tx)
 	return args.Bool(0), args.Error(1)
 }
 
@@ -228,7 +228,7 @@ func (m *CardanoTxFailedProcessorMock) ValidateAndAddClaim(claims *BridgeClaims,
 		claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{BatchNonceID: big.NewInt(1)})
 	}
 
-	args := m.Called()
+	args := m.Called(claims, tx, appConfig)
 	return args.Error(0)
 }
 

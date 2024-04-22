@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,6 +49,9 @@ func TestCardanoChainObserver(t *testing.T) {
 		},
 	}
 
+	txsProcessorMock := &core.CardanoTxsProcessorMock{}
+	txsProcessorMock.On("NewUnprocessedTxs", mock.Anything, mock.Anything).Return(error(nil))
+
 	initDb := func(t *testing.T) indexer.Database {
 		t.Helper()
 
@@ -63,14 +67,14 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("ClearUnprocessedTxs").Return(nil)
-		db.On("ClearExpectedTxs").Return(nil)
+		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -82,14 +86,14 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("ClearUnprocessedTxs").Return(nil)
-		db.On("ClearExpectedTxs").Return(nil)
+		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -102,17 +106,17 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("ClearUnprocessedTxs").Return(nil)
-		db.On("ClearExpectedTxs").Return(nil)
+		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDb := initDb(t)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -123,27 +127,24 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		txsProcessor := &core.CardanoTxsProcessorMock{}
-		txsProcessor.On("NewUnprocessedTxs").Return()
-
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("ClearUnprocessedTxs").Return(nil)
-		db.On("ClearExpectedTxs").Return(nil)
+		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDb := initDb(t)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
 
-		txsProcessor.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
+		txsProcessorMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
 			t.Helper()
 			close(doneCh)
 			return nil
