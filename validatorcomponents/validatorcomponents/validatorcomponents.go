@@ -7,7 +7,6 @@ import (
 	"path"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
@@ -45,10 +44,6 @@ func NewValidatorComponents(
 	shouldRunApi bool,
 	logger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
-		return nil, fmt.Errorf("failed to create directory for validator components database: %w", err)
-	}
-
 	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)

@@ -54,10 +54,6 @@ func NewOracle(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
-	if err := common.CreateDirectoryIfNotExists(appConfig.Settings.DbsPath, 0770); err != nil {
-		return nil, fmt.Errorf("failed to create directory for oracle database: %w", err)
-	}
-
 	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
