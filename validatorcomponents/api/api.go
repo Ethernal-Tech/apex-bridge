@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -90,7 +89,7 @@ func withApiKeyAuth(apiConfig core.ApiConfig, handler core.ApiEndpointHandler) c
 
 		authorized := false
 		for _, apiKey := range apiConfig.ApiKeys {
-			if strings.EqualFold(apiKey, apiKeyHeaderValue) {
+			if apiKey == apiKeyHeaderValue {
 				authorized = true
 				break
 			}
