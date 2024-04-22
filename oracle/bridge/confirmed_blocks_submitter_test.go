@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -78,7 +79,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("execute 3", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.On("SubmitConfirmedBlocks").Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		db := &core.CardanoTxsProcessorDbMock{}
 		indexerDb := &indexer.DatabaseMock{}
@@ -97,7 +98,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("execute 4", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.On("SubmitConfirmedBlocks").Return(nil)
+		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything).Return(nil)
 
 		db := &core.CardanoTxsProcessorDbMock{}
 		indexerDb := &indexer.DatabaseMock{}

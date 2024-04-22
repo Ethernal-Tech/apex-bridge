@@ -7,6 +7,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,10 +27,10 @@ func TestExpectedTxsFetcher(t *testing.T) {
 
 	t.Run("fetchData nil", func(t *testing.T) {
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchExpectedTx").Return(nil, nil)
+		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(nil, nil)
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("GetExpectedTxs").Return(nil, nil)
-		db.On("AddExpectedTxs").Return(nil)
+		db.On("GetExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
+		db.On("AddExpectedTxs", mock.Anything).Return(nil)
 
 		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
 		require.NotNil(t, expectedTxsFetcher)
@@ -40,10 +41,10 @@ func TestExpectedTxsFetcher(t *testing.T) {
 
 	t.Run("fetchData err", func(t *testing.T) {
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchExpectedTx").Return(&core.BridgeExpectedCardanoTx{}, nil)
+		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(&core.BridgeExpectedCardanoTx{}, nil)
 		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("GetExpectedTxs").Return(nil, nil)
-		db.On("AddExpectedTxs").Return(fmt.Errorf("test err"))
+		db.On("GetExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
+		db.On("AddExpectedTxs", mock.Anything).Return(fmt.Errorf("test err"))
 
 		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
 		require.NotNil(t, expectedTxsFetcher)
