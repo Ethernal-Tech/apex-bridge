@@ -14,17 +14,18 @@ import (
 )
 
 type RelayerImitatorImpl struct {
+	ctx                         context.Context
 	config                      *core.AppConfig
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	bridgeSmartContract         eth.IBridgeSmartContract
 	db                          relayerCore.Database
 	logger                      hclog.Logger
-	cancelCtx                   context.CancelFunc
 }
 
 var _ core.RelayerImitator = (*RelayerImitatorImpl)(nil)
 
 func NewRelayerImitator(
+	ctx context.Context,
 	config *core.AppConfig,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgeSmartContract eth.IBridgeSmartContract,
@@ -32,6 +33,7 @@ func NewRelayerImitator(
 	logger hclog.Logger,
 ) (*RelayerImitatorImpl, error) {
 	return &RelayerImitatorImpl{
+		ctx:                         ctx,
 		config:                      config,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		bridgeSmartContract:         bridgeSmartContract,
@@ -41,9 +43,7 @@ func NewRelayerImitator(
 }
 
 // Start implements core.RelayerImitator.
-func (ri *RelayerImitatorImpl) Start() error {
-	ctx, cancelCtx := context.WithCancel(context.Background())
-	ri.cancelCtx = cancelCtx
+func (ri *RelayerImitatorImpl) Start() {
 
 	ri.logger.Debug("Relayer imitator started")
 
@@ -52,13 +52,13 @@ func (ri *RelayerImitatorImpl) Start() error {
 
 	for {
 		select {
-		case <-ctx.Done():
-			return nil
+		case <-ri.ctx.Done():
+			return
 		case <-ticker.C:
 		}
 
 		for chainId := range ri.config.CardanoChains {
-			if err := ri.execute(ctx, chainId); err != nil {
+			if err := ri.execute(ri.ctx, chainId); err != nil {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
@@ -103,14 +103,6 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) erro
 	if err := ri.db.AddLastSubmittedBatchId(chainId, receivedBatchId); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)
 	}
-
-	return nil
-}
-
-// Stop implements core.RelayerImitator.
-func (ri *RelayerImitatorImpl) Stop() error {
-	ri.cancelCtx()
-	ri.logger.Debug("Relayer imitator stopped")
 
 	return nil
 }

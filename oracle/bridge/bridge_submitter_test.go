@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -16,10 +17,8 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSC := eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("SubmitClaims").Return(nil)
 
-		bridgeSubmitter := NewBridgeSubmitter(&bridgeSC, hclog.NewNullLogger())
+		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
-
-		defer bridgeSubmitter.Dispose()
 
 		err := bridgeSubmitter.SubmitClaims(&core.BridgeClaims{
 			ContractClaims: core.ContractClaims{
@@ -49,21 +48,11 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSC := eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("SubmitLastObservedBlocks").Return(nil)
 
-		bridgeSubmitter := NewBridgeSubmitter(&bridgeSC, hclog.NewNullLogger())
+		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
-
-		defer bridgeSubmitter.Dispose()
 
 		err := bridgeSubmitter.SubmitConfirmedBlocks("prime", []*indexer.CardanoBlock{})
 
-		require.NoError(t, err)
-	})
-
-	t.Run("dispose", func(t *testing.T) {
-		bridgeSubmitter := NewBridgeSubmitter(nil, hclog.NewNullLogger())
-		require.NotNil(t, bridgeSubmitter)
-
-		err := bridgeSubmitter.Dispose()
 		require.NoError(t, err)
 	})
 }

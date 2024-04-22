@@ -27,7 +27,7 @@ type ApiController interface {
 
 type Api interface {
 	Start() error
-	Stop() error
+	Dispose() error
 }
 
 type BridgingRequestStateManager interface {
@@ -38,12 +38,11 @@ type BridgingRequestStateManager interface {
 }
 
 type RelayerImitator interface {
-	Start() error
-	Stop() error
+	Start()
 }
 
 type ValidatorComponents interface {
 	Start() error
-	Stop() error
+	Dispose() error
 	ErrorCh() <-chan error
 }

@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -15,34 +14,32 @@ const (
 )
 
 type ExpectedTxsFetcherImpl struct {
+	ctx               context.Context
 	bridgeDataFetcher core.BridgeDataFetcher
 	appConfig         *core.AppConfig
 	db                core.BridgeExpectedCardanoTxsDb
-	ctx               context.Context
-	cancelCtx         context.CancelFunc
 	logger            hclog.Logger
 }
 
 var _ core.ExpectedTxsFetcher = (*ExpectedTxsFetcherImpl)(nil)
 
 func NewExpectedTxsFetcher(
+	ctx context.Context,
 	bridgeDataFetcher core.BridgeDataFetcher,
 	appConfig *core.AppConfig,
 	db core.BridgeExpectedCardanoTxsDb,
 	logger hclog.Logger,
 ) *ExpectedTxsFetcherImpl {
-	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &ExpectedTxsFetcherImpl{
+		ctx:               ctx,
 		bridgeDataFetcher: bridgeDataFetcher,
 		appConfig:         appConfig,
 		db:                db,
-		ctx:               ctx,
-		cancelCtx:         cancelCtx,
 		logger:            logger,
 	}
 }
 
-func (f *ExpectedTxsFetcherImpl) Start() error {
+func (f *ExpectedTxsFetcherImpl) Start() {
 	f.logger.Debug("Starting ExpectedTxsFetcher")
 
 	timerTime := TickTimeMs * time.Millisecond
@@ -51,18 +48,12 @@ func (f *ExpectedTxsFetcherImpl) Start() error {
 
 	for {
 		select {
+		case <-f.ctx.Done():
+			return
 		case <-ticker.C:
 			f.fetchData()
-		case <-f.ctx.Done():
-			return nil
 		}
 	}
-}
-
-func (f *ExpectedTxsFetcherImpl) Stop() error {
-	f.logger.Debug("Stopping ExpectedTxsFetcher")
-	f.cancelCtx()
-	return nil
 }
 
 func (f *ExpectedTxsFetcherImpl) fetchData() error {
@@ -94,11 +85,9 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 	if len(expectedTxs) > 0 {
 		err := f.db.AddExpectedTxs(expectedTxs)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to add expected txs. error: %v\n", err)
-			f.logger.Error("Failed to add expected txs", "err", err)
+			f.logger.Error("failed to add expected txs", "err", err)
+			return fmt.Errorf("failed to add expected txs. err: %w", err)
 		}
-
-		return fmt.Errorf("failed to add expected txs. err: %v", err)
 	}
 
 	return nil

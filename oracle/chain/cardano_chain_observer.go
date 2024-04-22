@@ -2,7 +2,9 @@ package chain
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -12,6 +14,7 @@ import (
 )
 
 type CardanoChainObserverImpl struct {
+	ctx       context.Context
 	indexerDb indexer.Database
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
@@ -21,6 +24,7 @@ type CardanoChainObserverImpl struct {
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
+	ctx context.Context,
 	config *core.CardanoChainConfig,
 	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb,
 	indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
@@ -64,6 +68,7 @@ func NewCardanoChainObserver(
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
+		ctx:       ctx,
 		indexerDb: indexerDb,
 		syncer:    syncer,
 		logger:    logger,
@@ -75,18 +80,20 @@ func (co *CardanoChainObserverImpl) Start() error {
 	err := co.syncer.Sync()
 	if err != nil {
 		co.logger.Error("Start syncing failed", "err", err)
+		return fmt.Errorf("start syncing failed. err: %w", err)
 	}
 
-	return err
+	return nil
 }
 
-func (co *CardanoChainObserverImpl) Stop() error {
+func (co *CardanoChainObserverImpl) Dispose() error {
 	err := co.syncer.Close()
 	if err != nil {
 		co.logger.Error("Syncer close failed", "err", err)
+		return fmt.Errorf("syncer close failed. err: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (co *CardanoChainObserverImpl) GetConfig() *core.CardanoChainConfig {

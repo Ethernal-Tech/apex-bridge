@@ -17,24 +17,22 @@ const (
 )
 
 type BridgeDataFetcherImpl struct {
-	bridgeSC  eth.IOracleBridgeSmartContract
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	logger    hclog.Logger
+	ctx      context.Context
+	bridgeSC eth.IOracleBridgeSmartContract
+	logger   hclog.Logger
 }
 
 var _ core.BridgeDataFetcher = (*BridgeDataFetcherImpl)(nil)
 
 func NewBridgeDataFetcher(
+	ctx context.Context,
 	bridgeSC eth.IOracleBridgeSmartContract,
 	logger hclog.Logger,
 ) *BridgeDataFetcherImpl {
-	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &BridgeDataFetcherImpl{
-		bridgeSC:  bridgeSC,
-		ctx:       ctx,
-		cancelCtx: cancelCtx,
-		logger:    logger,
+		ctx:      ctx,
+		bridgeSC: bridgeSC,
+		logger:   logger,
 	}
 }
 
@@ -100,10 +98,4 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeEx
 
 	df.logger.Info("Failed to FetchExpectedTx from Bridge SC", "retries", MaxRetries)
 	return nil, fmt.Errorf("failed to FetchExpectedTx from Bridge SC")
-}
-
-func (df *BridgeDataFetcherImpl) Dispose() error {
-	df.cancelCtx()
-
-	return nil
 }

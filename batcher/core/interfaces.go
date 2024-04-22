@@ -8,8 +8,7 @@ import (
 )
 
 type BatcherManager interface {
-	Start() error
-	Stop() error
+	Start()
 }
 
 type Batcher interface {

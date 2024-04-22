@@ -13,14 +13,19 @@ import (
 )
 
 type BatchManagerImpl struct {
+	ctx             context.Context
 	config          *core.BatcherManagerConfiguration
 	cardanoBatchers []core.Batcher
-	cancelCtx       context.CancelFunc
 }
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
 
-func NewBatcherManager(config *core.BatcherManagerConfiguration, bridgingRequestStateUpdater common.BridgingRequestStateUpdater, logger hclog.Logger) (*BatchManagerImpl, error) {
+func NewBatcherManager(
+	ctx context.Context,
+	config *core.BatcherManagerConfiguration,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	logger hclog.Logger,
+) (*BatchManagerImpl, error) {
 	var batchers = make([]core.Batcher, len(config.Chains))
 
 	for chain, chainConfig := range config.Chains {
@@ -48,24 +53,14 @@ func NewBatcherManager(config *core.BatcherManagerConfiguration, bridgingRequest
 	}
 
 	return &BatchManagerImpl{
+		ctx:             ctx,
 		config:          config,
 		cardanoBatchers: batchers,
 	}, nil
 }
 
-func (bm *BatchManagerImpl) Start() error {
-	ctx, cancelCtx := context.WithCancel(context.Background())
-	bm.cancelCtx = cancelCtx
-
+func (bm *BatchManagerImpl) Start() {
 	for _, b := range bm.cardanoBatchers {
-		go b.Start(ctx)
+		go b.Start(bm.ctx)
 	}
-
-	return nil
-}
-
-func (bm *BatchManagerImpl) Stop() error {
-	bm.cancelCtx()
-
-	return nil
 }

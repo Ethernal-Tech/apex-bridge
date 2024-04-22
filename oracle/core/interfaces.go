@@ -33,21 +33,20 @@ type Database interface {
 
 type Oracle interface {
 	Start() error
-	Stop() error
+	Dispose() error
 	ErrorCh() <-chan error
 }
 
 type CardanoChainObserver interface {
 	Start() error
-	Stop() error
+	Dispose() error
 	GetConfig() *CardanoChainConfig
 	ErrorCh() <-chan error
 }
 
 type CardanoTxsProcessor interface {
 	NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error
-	Start() error
-	Stop() error
+	Start()
 }
 
 type CardanoTxProcessor interface {
@@ -63,25 +62,20 @@ type CardanoTxFailedProcessor interface {
 }
 
 type ExpectedTxsFetcher interface {
-	Start() error
-	Stop() error
+	Start()
 }
 
 type BridgeDataFetcher interface {
 	FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error)
 	FetchExpectedTx(chainId string) (*BridgeExpectedCardanoTx, error)
-	Dispose() error
 }
 
 type BridgeSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
 	SubmitConfirmedBlocks(chainId string, blocks []*indexer.CardanoBlock) error
-	Dispose() error
 }
 
 type ConfirmedBlocksSubmitter interface {
 	StartSubmit()
-	Dispose() error
 	GetChainId() string
-	ErrorCh() <-chan error
 }

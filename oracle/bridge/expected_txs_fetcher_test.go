@@ -1,9 +1,9 @@
 package bridge
 
 import (
+	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/hashicorp/go-hclog"
@@ -19,25 +19,9 @@ func TestExpectedTxsFetcher(t *testing.T) {
 
 	t.Run("NewBridgeDataFetcher", func(t *testing.T) {
 		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		expectedTxsFetcher := NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, &core.CardanoTxsProcessorDbMock{}, hclog.NewNullLogger())
+		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, &core.CardanoTxsProcessorDbMock{}, hclog.NewNullLogger())
 
 		require.NotNil(t, expectedTxsFetcher)
-	})
-
-	t.Run("Stop", func(t *testing.T) {
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchExpectedTx").Return(nil, nil)
-		db := &core.CardanoTxsProcessorDbMock{}
-		db.On("GetExpectedTxs").Return(nil, nil)
-		db.On("AddExpectedTxs").Return(nil)
-
-		expectedTxsFetcher := NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
-		require.NotNil(t, expectedTxsFetcher)
-
-		go expectedTxsFetcher.Start()
-		time.Sleep(100 * time.Millisecond)
-		err := expectedTxsFetcher.Stop()
-		require.NoError(t, err)
 	})
 
 	t.Run("fetchData nil", func(t *testing.T) {
@@ -47,7 +31,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		db.On("GetExpectedTxs").Return(nil, nil)
 		db.On("AddExpectedTxs").Return(nil)
 
-		expectedTxsFetcher := NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
+		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
 		require.NotNil(t, expectedTxsFetcher)
 
 		err := expectedTxsFetcher.fetchData()
@@ -61,7 +45,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		db.On("GetExpectedTxs").Return(nil, nil)
 		db.On("AddExpectedTxs").Return(fmt.Errorf("test err"))
 
-		expectedTxsFetcher := NewExpectedTxsFetcher(bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
+		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
 		require.NotNil(t, expectedTxsFetcher)
 
 		err := expectedTxsFetcher.fetchData()

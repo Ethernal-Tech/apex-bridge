@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"context"
 	"os"
 	"path"
 	"testing"
@@ -69,7 +70,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -88,7 +89,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -108,14 +109,14 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, &core.CardanoTxsProcessorMock{}, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		err = chainObserver.Start()
-		require.NoError(t, err)
-
-		err = chainObserver.Stop()
 		require.NoError(t, err)
 	})
 
@@ -133,7 +134,10 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessor, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -147,8 +151,6 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
-
-		defer chainObserver.Stop()
 
 		timer := time.NewTimer(60 * time.Second)
 		defer timer.Stop()
