@@ -3,9 +3,8 @@
         "NodeUrl": "https://polygon-mumbai-pokt.nodies.app",
         "scAddress": "0x816402271eE6D9078Fc8Cb537aDBDD58219485BA"
     },
-    "chains": [
-        {
-            "id": "prime",
+    "chains": {
+        "prime": {
             "type": "Cardano",
             "dbsPath": "./db/prime",
             "config": {
@@ -17,8 +16,7 @@
                 "potentialFee": 300000
             }
         },
-        {
-            "id": "vector",
+        "vector": {
             "type": "Cardano",
             "dbsPath": "./db/vector",
             "config": {
@@ -30,7 +28,7 @@
                 "potentialFee": 300000
             }
         }
-    ],
+    },
     "pullTime": 1000,
     "logger": {
         "logFilePath": "./logs/relayer_logs.log",

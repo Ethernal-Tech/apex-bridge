@@ -27,7 +27,9 @@ func NewRelayerManager(
 ) (*RelayerManagerImpl, error) {
 	relayers := make([]core.Relayer, 0, len(config.Chains))
 
-	for _, chainConfig := range config.Chains {
+	for chainId, chainConfig := range config.Chains {
+		chainConfig.ChainId = chainId
+
 		operations, err := relayer.GetChainSpecificOperations(chainConfig)
 		if err != nil {
 			return nil, err

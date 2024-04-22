@@ -32,14 +32,12 @@ func TestRelayerManagerConfig(t *testing.T) {
 	rawMessage := json.RawMessage(jsonData)
 
 	expectedConfig := &core.RelayerManagerConfiguration{
-		Chains: []core.ChainConfig{
-			{
-				ChainId:       "prime",
+		Chains: map[string]core.ChainConfig{
+			"prime": {
 				ChainType:     "Cardano",
 				ChainSpecific: rawMessage,
 			},
-			{
-				ChainId:       "vector",
+			"vector": {
 				ChainType:     "CardaNo",
 				ChainSpecific: rawMessage,
 			},
@@ -87,9 +85,8 @@ func TestRelayerManagerConfig(t *testing.T) {
 func TestRelayerManagerCreation(t *testing.T) {
 	t.Run("create manager fail - invalid operations", func(t *testing.T) {
 		config := &core.RelayerManagerConfiguration{
-			Chains: []core.ChainConfig{
-				{
-					ChainId:       "prime",
+			Chains: map[string]core.ChainConfig{
+				"prime": {
 					ChainType:     "Cardano",
 					ChainSpecific: json.RawMessage(""),
 				},
