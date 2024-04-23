@@ -104,7 +104,7 @@ func UnmarshalMetadata[
 		return nil, err
 	}
 
-	var metadataMap map[int]T
+	var metadataMap map[int]*T
 
 	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
@@ -113,6 +113,5 @@ func UnmarshalMetadata[
 		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %w", metadata, err)
 	}
 
-	metadata := metadataMap[MetadataMapKey]
-	return &metadata, nil
+	return metadataMap[MetadataMapKey], nil
 }
