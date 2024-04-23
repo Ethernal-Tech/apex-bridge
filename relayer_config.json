@@ -5,35 +5,27 @@
     },
     "chains": {
         "prime": {
-            "baseConfig": {
-                "chainId": "prime",
-                "dbsPath": "./db/"
-            },
-            "chainSpecific": {
-                "chainType": "Cardano",
-                "config": {
-                    "testnetMagic": 2,
-                    "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-                    "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-                    "atLeastValidators": 0.6666666666666666,
-                    "potentialFee": 300000
-                }
+            "type": "Cardano",
+            "dbsPath": "./db/prime",
+            "config": {
+                "testnetMagic": 2,
+                "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+                "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+                "socketPath": "",
+                "atLeastValidators": 0.6666666666666666,
+                "potentialFee": 300000
             }
         },
         "vector": {
-            "baseConfig": {
-                "chainId": "vector",
-                "dbsPath": "./db/"
-            },
-            "chainSpecific": {
-                "chainType": "Cardano",
-                "config": {
-                    "testnetMagic": 2,
-                    "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
-                    "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
-                    "atLeastValidators": 0.6666666666666666,
-                    "potentialFee": 300000
-                }
+            "type": "Cardano",
+            "dbsPath": "./db/vector",
+            "config": {
+                "testnetMagic": 2,
+                "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
+                "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+                "socketPath": "",
+                "atLeastValidators": 0.6666666666666666,
+                "potentialFee": 300000
             }
         }
     },

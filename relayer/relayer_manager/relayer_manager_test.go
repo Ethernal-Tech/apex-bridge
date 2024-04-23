@@ -24,6 +24,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 	}()
 
 	jsonData := []byte(`{
+		"blockFrostUrl": "http://hello.com",
 		"testnetMagic": 2,
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
@@ -34,22 +35,12 @@ func TestRelayerManagerConfig(t *testing.T) {
 	expectedConfig := &core.RelayerManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
 			"prime": {
-				Base: core.BaseConfig{
-					ChainId: "prime",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
+				ChainType:     "Cardano",
+				ChainSpecific: rawMessage,
 			},
 			"vector": {
-				Base: core.BaseConfig{
-					ChainId: "vector",
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
+				ChainType:     "CardaNo",
+				ChainSpecific: rawMessage,
 			},
 		},
 		Bridge: core.BridgeConfig{
@@ -78,12 +69,10 @@ func TestRelayerManagerConfig(t *testing.T) {
 	assert.NotEmpty(t, loadedConfig.Chains)
 
 	for _, chainConfig := range loadedConfig.Chains {
-		assert.Equal(t, chainConfig.Base, chainConfig.Base)
-
-		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig)
 		require.NoError(t, err)
 
-		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig)
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedOp, loadedOp)
@@ -99,13 +88,8 @@ func TestRelayerManagerCreation(t *testing.T) {
 		config := &core.RelayerManagerConfiguration{
 			Chains: map[string]core.ChainConfig{
 				"prime": {
-					Base: core.BaseConfig{
-						ChainId: "prime",
-					},
-					ChainSpecific: core.ChainSpecific{
-						ChainType: "Cardano",
-						Config:    json.RawMessage(""),
-					},
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage(""),
 				},
 			},
 		}

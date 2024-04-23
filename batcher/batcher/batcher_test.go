@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path"
@@ -30,9 +31,16 @@ func TestBatcherExecute(t *testing.T) {
 	}()
 
 	config := &core.BatcherConfiguration{
-		Base: core.BaseConfig{
-			ChainId:     "prime",
-			KeysDirPath: testDir,
+		Chain: core.ChainConfig{
+			ChainId:   "prime",
+			ChainType: "Cardano",
+			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+				"socketPath": "./socket",
+				"testnetMagic": 2,
+				"atLeastValidators": 0.6666666666666666,
+				"potentialFee": 300000,
+				"keysDirPath": "%s"
+				}`, testDir))),
 		},
 		Bridge: core.BridgeConfig{
 			SecretsManager: &secrets.SecretsManagerConfig{
@@ -156,12 +164,6 @@ func TestBatcherExecute(t *testing.T) {
 }
 
 func TestBatcherGetChainSpecificOperations(t *testing.T) {
-	jsonData := []byte(`{
-		"testnetMagic": 2,
-		"atLeastValidators": 3,
-		"potentialFee": 300000
-		}`)
-
 	validPath, err := os.MkdirTemp("", "cardano-prime")
 	require.NoError(t, err)
 
@@ -170,65 +172,71 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		os.Remove(validPath)
 	}()
 
-	invalidPath := path.Join(validPath, "something_that_does_not_exist")
-
 	_, err = cardanotx.GenerateWallet(validPath, false, true)
 	require.NoError(t, err)
 
-	t.Run("invalid chain type", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Invalid",
-			Config:    json.RawMessage(""),
-		}
+	chainConfig := core.ChainConfig{
+		ChainId:   "prime",
+		ChainType: "Cardano",
+		ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+			"socketPath": "./socket",
+			"testnetMagic": 2,
+			"atLeastValidators": 0.6666666666666666,
+			"potentialFee": 300000,
+			"keysDirPath": "%s"
+			}`, validPath))),
+	}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, invalidPath)
+	t.Run("invalid chain type", func(t *testing.T) {
+		cfg := chainConfig
+		cfg.ChainType = "invalid"
+
+		chainOp, err := GetChainSpecificOperations(cfg)
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unknown chain type")
 	})
 
 	t.Run("invalid cardano json config", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Cardano",
-			Config:    json.RawMessage(""),
-		}
+		cfg := chainConfig
+		cfg.ChainSpecific = json.RawMessage("")
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, invalidPath)
+		chainOp, err := GetChainSpecificOperations(cfg)
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
 
 	t.Run("invalid keys path", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
+		chainConfig := core.ChainConfig{
+			ChainId:   "prime",
 			ChainType: "Cardano",
-			Config:    json.RawMessage(jsonData),
+			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+				"testnetMagic": 2,
+				"socketPath": "./socket",
+				"atLeastValidators": 0.6666666666666666,
+				"potentialFee": 300000,
+				"keysDirPath": "%s"
+				}`, path.Join(validPath, "a1", "a2", "a3")))),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, invalidPath)
+		chainOp, err := GetChainSpecificOperations(chainConfig)
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "error while loading wallet info")
 	})
 
 	t.Run("valid cardano config and keys path", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "Cardano",
-			Config:    json.RawMessage(jsonData),
-		}
-
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
+		chainOp, err := GetChainSpecificOperations(chainConfig)
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
-		chainSpecificConfig := core.ChainSpecific{
-			ChainType: "CaRdAnO",
-			Config:    json.RawMessage(jsonData),
-		}
+		cfg := chainConfig
+		cfg.ChainType = "CaRDaNo"
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, validPath)
+		chainOp, err := GetChainSpecificOperations(cfg)
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})

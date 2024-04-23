@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -26,21 +27,34 @@ var maxUtxoCount = 410
 var maxTxSize = 16000
 
 type CardanoChainOperations struct {
-	Config        core.CardanoChainConfig
-	TxProvider    cardanowallet.ITxDataRetriever
-	CardanoWallet cardano.CardanoWallet
+	Config     *cardano.CardanoChainConfig
+	Wallet     *cardano.CardanoWallet
+	TxProvider cardanowallet.ITxDataRetriever
 }
 
 func NewCardanoChainOperations(
-	config core.CardanoChainConfig,
-	wallet cardano.CardanoWallet,
-	txProvider cardanowallet.ITxDataRetriever,
-) *CardanoChainOperations {
-	return &CardanoChainOperations{
-		TxProvider:    txProvider,
-		CardanoWallet: wallet,
-		Config:        config,
+	jsonConfig json.RawMessage,
+) (*CardanoChainOperations, error) {
+	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
+	if err != nil {
+		return nil, err
 	}
+
+	txProvider, err := cardanoConfig.CreateTxProvider()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tx provider: %w", err)
+	}
+
+	cardanoWallet, err := cardanoConfig.LoadWallet()
+	if err != nil {
+		return nil, fmt.Errorf("error while loading wallet info: %v", err)
+	}
+
+	return &CardanoChainOperations{
+		Wallet:     cardanoWallet,
+		Config:     cardanoConfig,
+		TxProvider: txProvider,
+	}, nil
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.
@@ -104,7 +118,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 			return nil, "", nil, nil, err
 		}
 
-		if bytes.Equal(cco.CardanoWallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
+		if bytes.Equal(cco.Wallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
 			foundVerificationKey = true
 		}
 
@@ -118,7 +132,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 			return nil, "", nil, nil, err
 		}
 
-		if bytes.Equal(cco.CardanoWallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
+		if bytes.Equal(cco.Wallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
 			foundFeeVerificationKey = true
 		}
 	}
@@ -141,12 +155,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, nil, err
 	}
 
-	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
+	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(uint(cco.Config.TestNetMagic))
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
 
-	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(cco.Config.TestNetMagic)
+	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(cco.Config.TestNetMagic))
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -157,7 +171,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	txInfos := &cardano.TxInputInfos{
-		TestNetMagic: cco.Config.TestNetMagic,
+		TestNetMagic: uint(cco.Config.TestNetMagic),
 		MultiSig: &cardano.TxInputInfo{
 			PolicyScript: multisigPolicyScript,
 			Address:      multisigAddress,
@@ -179,12 +193,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
 
-	witnessMultiSig, err := cardano.CreateTxWitness(txHash, cco.CardanoWallet.MultiSig)
+	witnessMultiSig, err := cardano.CreateTxWitness(txHash, cco.Wallet.MultiSig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	witnessMultiSigFee, err := cardano.CreateTxWitness(txHash, cco.CardanoWallet.MultiSigFee)
+	witnessMultiSigFee, err := cardano.CreateTxWitness(txHash, cco.Wallet.MultiSigFee)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -258,8 +272,10 @@ func (cco *CardanoChainOperations) CreateBatchTx(inputUtxos *contractbinding.IBr
 	txInfos.MultiSig.TxInputUTXOs = cardano.TxInputUTXOs{Inputs: multisigInputs, InputsSum: chosenUTXOsSum.Uint64()}
 
 	// Create Tx
-	rawTx, txHash, err := cardano.CreateTx(cco.Config.TestNetMagic, protocolParams, slotNumber+cardano.TTLSlotNumberInc,
-		metadata, txInfos, outputs)
+	rawTx, txHash, err := cardano.CreateTx(
+		uint(cco.Config.TestNetMagic), protocolParams, slotNumber+cardano.TTLSlotNumberInc,
+		metadata, txInfos, outputs,
+	)
 	if err != nil {
 		return nil, "", nil, err
 	}

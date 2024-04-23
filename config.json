@@ -11,6 +11,7 @@
             "keysDirPath": "./keys/prime",
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+            "socketPath": "",
             "atLeastValidators": 0.6666666666666666,
             "potentialFee": 300000
         },
@@ -25,6 +26,7 @@
             "keysDirPath": "./keys/vector",
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
+            "socketPath": "",
             "atLeastValidators": 0.6666666666666666,
             "potentialFee": 300000
         }
@@ -48,10 +50,14 @@
         "maxBridgingClaimsToGroup": 10
     },
     "appSettings": {
-        "dbsPath": "./db/",
-        "logsPath": "./logs/",
-        "logLevel": 2
-    },
+        "logger": {
+            "logFilePath": "./logs/validator-components.log",
+            "logLevel": 2,
+            "jsonLogFormat": false,
+            "appendFile": true
+        },
+        "dbsPath": "./db/"
+    },    
     "relayerImitatorPullTime": 1000,
     "batcherPullTime": 2500,
     "api": {

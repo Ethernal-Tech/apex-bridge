@@ -20,11 +20,6 @@ type ChainOperations interface {
 	SendTx(smartContractData *eth.ConfirmedBatch) error
 }
 
-// ChainSpecificConfig defines the interface for chain-specific configurations
-type ChainSpecificConfig interface {
-	GetChainType() string
-}
-
 type BatchIdDb interface {
 	AddLastSubmittedBatchId(chainId string, batchId *big.Int) error
 	GetLastSubmittedBatchId(chainId string) (*big.Int, error)

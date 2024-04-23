@@ -28,8 +28,8 @@ func NewBatcherManager(
 ) (*BatchManagerImpl, error) {
 	var batchers = make([]core.Batcher, len(config.Chains))
 
-	for chain, chainConfig := range config.Chains {
-		operations, err := batcher.GetChainSpecificOperations(chainConfig.ChainSpecific, chainConfig.Base.KeysDirPath)
+	for _, chainConfig := range config.Chains {
+		operations, err := batcher.GetChainSpecificOperations(chainConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -47,9 +47,10 @@ func NewBatcherManager(
 
 		batchers = append(batchers, batcher.NewBatcher(&core.BatcherConfiguration{
 			Bridge:        config.Bridge,
-			Base:          chainConfig.Base,
+			Chain:         chainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chain)), operations, bridgeSmartContract, bridgingRequestStateUpdater))
+		}, logger.Named(strings.ToUpper(chainConfig.ChainId)),
+			operations, bridgeSmartContract, bridgingRequestStateUpdater))
 	}
 
 	return &BatchManagerImpl{

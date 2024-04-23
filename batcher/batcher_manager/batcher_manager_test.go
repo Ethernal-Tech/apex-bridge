@@ -3,6 +3,7 @@ package batcher_manager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"reflect"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	infraCommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -28,36 +29,31 @@ func TestBatcherManagerOperations(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	jsonData := []byte(`{
+	jsonData := []byte(fmt.Sprintf(`{
+		"socketPath": "./socket",
 		"testnetMagic": 2,
 		"atLeastValidators": 0.6666666666666666,
-		"potentialFee": 300000
-		}`)
-
-	rawMessage := json.RawMessage(jsonData)
+		"potentialFee": 300000,
+		"keysDirPath": "%s"
+		}`, testDir))
 
 	config := &core.BatcherManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			"prime": {
-				Base: core.BaseConfig{
-					ChainId:     "prime",
-					KeysDirPath: testDir,
-				},
-				ChainSpecific: core.ChainSpecific{
-					ChainType: "Cardano",
-					Config:    rawMessage,
-				},
+		Chains: []core.ChainConfig{
+			{
+				ChainId:       "prime",
+				ChainType:     "Cardano",
+				ChainSpecific: json.RawMessage(jsonData),
 			},
 		},
 		Bridge:        core.BridgeConfig{},
 		PullTimeMilis: 2500,
 	}
 
-	for _, chain := range config.Chains {
-		wallet, err := cardano.GenerateWallet(testDir, false, true)
+	for _, chainConfig := range config.Chains {
+		wallet, err := cardanotx.GenerateWallet(testDir, false, true)
 		require.NoError(t, err)
 
-		chainOp, err := batcher.GetChainSpecificOperations(chain.ChainSpecific, testDir)
+		chainOp, err := batcher.GetChainSpecificOperations(chainConfig)
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
@@ -67,18 +63,18 @@ func TestBatcherManagerOperations(t *testing.T) {
 		concreteChainOp, ok := chainOp.(*batcher.CardanoChainOperations)
 		if ok {
 			// check config
-			cardanoChainConfig, err := core.ToCardanoChainConfig(chain.ChainSpecific)
+			cardanoChainConfig, err := cardanotx.NewCardanoChainConfig(chainConfig.ChainSpecific)
 			assert.NoError(t, err)
-			assert.Equal(t, cardanoChainConfig, &concreteChainOp.Config)
+			assert.Equal(t, cardanoChainConfig, concreteChainOp.Config)
 
 			// remove cbor prefix
-			assert.Equal(t, wallet.MultiSig.GetSigningKey(), concreteChainOp.CardanoWallet.MultiSig.GetSigningKey())
-			assert.Equal(t, wallet.MultiSigFee.GetSigningKey(), concreteChainOp.CardanoWallet.MultiSigFee.GetSigningKey())
+			assert.Equal(t, wallet.MultiSig.GetSigningKey(), concreteChainOp.Wallet.MultiSig.GetSigningKey())
+			assert.Equal(t, wallet.MultiSigFee.GetSigningKey(), concreteChainOp.Wallet.MultiSigFee.GetSigningKey())
 
 			// test signatures
-			sigWithString, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", wallet.MultiSig)
+			sigWithString, err := cardanotx.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", wallet.MultiSig)
 			assert.NoError(t, err)
-			sigWithWallet, err := cardano.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", concreteChainOp.CardanoWallet.MultiSig)
+			sigWithWallet, err := cardanotx.CreateTxWitness("b335adf170a3df72dfba3864a1d09eb87d3848c98aac54d58bce1d544d1a63ea", concreteChainOp.Wallet.MultiSig)
 			assert.NoError(t, err)
 			assert.Equal(t, sigWithString, sigWithWallet)
 		}
@@ -94,7 +90,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	_, err = cardano.GenerateWallet(testDir, false, true)
+	_, err = cardanotx.GenerateWallet(testDir, false, true)
 	require.NoError(t, err)
 
 	ecdsaValidatoSecretDirPath := path.Join(testDir, secrets.ConsensusFolderLocal)
@@ -107,15 +103,11 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	t.Run("creation fails - invalid operations", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			Chains: map[string]core.ChainConfig{
-				"prime": {
-					Base: core.BaseConfig{
-						ChainId: "prime",
-					},
-					ChainSpecific: core.ChainSpecific{
-						ChainType: "Cardano",
-						Config:    json.RawMessage(""),
-					},
+			Chains: []core.ChainConfig{
+				{
+					ChainId:       "prime",
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage(""),
 				},
 			},
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -27,13 +28,17 @@ func NewRelayerManager(
 ) (*RelayerManagerImpl, error) {
 	relayers := make([]core.Relayer, 0, len(config.Chains))
 
-	for chain, chainConfig := range config.Chains {
-		operations, err := relayer.GetChainSpecificOperations(chainConfig.ChainSpecific)
+	for chainId, chainConfig := range config.Chains {
+		chainConfig.ChainId = chainId
+		config.Chains[chainId] = chainConfig // update just to be sure that chainID is populated everywhere
+
+		operations, err := relayer.GetChainSpecificOperations(chainConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		db, err := database_access.NewDatabase(chainConfig.Base.DbsPath + chainConfig.Base.ChainId + ".db")
+		db, err := database_access.NewDatabase(
+			path.Join(chainConfig.DbsPath, chainConfig.ChainId+".db"))
 		if err != nil {
 			return nil, err
 		}
@@ -41,11 +46,11 @@ func NewRelayerManager(
 		relayers = append(relayers, relayer.NewRelayer(
 			&core.RelayerConfiguration{
 				Bridge:        config.Bridge,
-				Base:          chainConfig.Base,
+				Chain:         chainConfig,
 				PullTimeMilis: config.PullTimeMilis,
 			},
 			eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress),
-			logger.Named(strings.ToUpper(chain)),
+			logger.Named(strings.ToUpper(chainConfig.ChainId)),
 			operations,
 			db,
 		))
