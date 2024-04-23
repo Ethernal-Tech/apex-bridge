@@ -68,14 +68,14 @@ func (ri *RelayerImitatorImpl) Start() {
 func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) error {
 	confirmedBatch, err := ri.bridgeSmartContract.GetConfirmedBatch(ctx, chainId)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve confirmed batch: %v", err)
+		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
 	}
 
 	ri.logger.Info("Signed batch retrieved from contract")
 
 	lastSubmittedBatchId, err := ri.db.GetLastSubmittedBatchId(chainId)
 	if err != nil {
-		return fmt.Errorf("failed to get last submitted batch id from db: %v", err)
+		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
 	}
 
 	receivedBatchId := new(big.Int)
@@ -89,7 +89,8 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) erro
 			ri.logger.Info("Waiting on new signed batch")
 			return nil
 		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
-			return fmt.Errorf("last submitted batch id greater than received: last submitted %v > received %v", lastSubmittedBatchId.String(), receivedBatchId.String())
+			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
+				lastSubmittedBatchId, receivedBatchId)
 		}
 	}
 
@@ -101,7 +102,7 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) erro
 	ri.logger.Info("Transaction successfully submitted")
 
 	if err := ri.db.AddLastSubmittedBatchId(chainId, receivedBatchId); err != nil {
-		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)
+		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)
 	}
 
 	return nil

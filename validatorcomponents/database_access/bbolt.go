@@ -23,7 +23,7 @@ var _ core.Database = (*BBoltDatabase)(nil)
 func (bd *BBoltDatabase) Init(filePath string) error {
 	db, err := bbolt.Open(filePath, 0660, nil)
 	if err != nil {
-		return fmt.Errorf("could not open db: %v", err)
+		return fmt.Errorf("could not open db: %w", err)
 	}
 
 	bd.db = db
@@ -32,7 +32,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 		for _, bn := range [][]byte{bridgingRequestStatesBucket, submittedBatchIdBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
-				return fmt.Errorf("could not bucket: %s, err: %v", string(bn), err)
+				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
 			}
 		}
 
@@ -53,11 +53,11 @@ func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestStat
 
 		bytes, err := json.Marshal(state)
 		if err != nil {
-			return fmt.Errorf("could not marshal BridgingRequestState: %v", err)
+			return fmt.Errorf("could not marshal BridgingRequestState: %w", err)
 		}
 
 		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDbKey(), bytes); err != nil {
-			return fmt.Errorf("BridgingRequestState write error: %v", err)
+			return fmt.Errorf("BridgingRequestState write error: %w", err)
 		}
 
 		return nil
@@ -73,11 +73,11 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 
 		bytes, err := json.Marshal(state)
 		if err != nil {
-			return fmt.Errorf("could not marshal BridgingRequestState: %v", err)
+			return fmt.Errorf("could not marshal BridgingRequestState: %w", err)
 		}
 
 		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDbKey(), bytes); err != nil {
-			return fmt.Errorf("BridgingRequestState write error: %v", err)
+			return fmt.Errorf("BridgingRequestState write error: %w", err)
 		}
 
 		return nil
@@ -164,11 +164,11 @@ func (bd *BBoltDatabase) AddLastSubmittedBatchId(chainId string, batchId *big.In
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bytes, err := batchId.MarshalText()
 		if err != nil {
-			return fmt.Errorf("could not marshal batch ID: %v", err)
+			return fmt.Errorf("could not marshal batch ID: %w", err)
 		}
 
 		if err := tx.Bucket(submittedBatchIdBucket).Put([]byte(chainId), bytes); err != nil {
-			return fmt.Errorf("last submitted batch ID write error: %v", err)
+			return fmt.Errorf("last submitted batch ID write error: %w", err)
 		}
 
 		return nil
@@ -187,7 +187,7 @@ func (bd *BBoltDatabase) GetLastSubmittedBatchId(chainId string) (*big.Int, erro
 
 		result = new(big.Int)
 		if err := result.UnmarshalText(bytes); err != nil {
-			return fmt.Errorf("could not unmarshal last submitted batch ID: %v", err)
+			return fmt.Errorf("could not unmarshal last submitted batch ID: %w", err)
 		}
 
 		return nil

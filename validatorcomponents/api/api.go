@@ -33,7 +33,7 @@ func NewApi(ctx context.Context, apiConfig core.ApiConfig, controllers []core.Ap
 		controllerPathPrefix := controller.GetPathPrefix()
 		endpoints := controller.GetEndpoints()
 		for _, endpoint := range endpoints {
-			endpointPath := fmt.Sprintf("/%v/%v/%v", apiConfig.PathPrefix, controllerPathPrefix, endpoint.Path)
+			endpointPath := fmt.Sprintf("/%s/%s/%s", apiConfig.PathPrefix, controllerPathPrefix, endpoint.Path)
 
 			endpointHandler := endpoint.Handler
 			if endpoint.ApiKeyAuth {
@@ -56,7 +56,7 @@ func NewApi(ctx context.Context, apiConfig core.ApiConfig, controllers []core.Ap
 
 func (api *ApiImpl) Start() error {
 	api.logger.Debug("Starting api")
-	api.server = &http.Server{Addr: fmt.Sprintf(":%v", api.apiConfig.Port), Handler: api.handler}
+	api.server = &http.Server{Addr: fmt.Sprintf(":%d", api.apiConfig.Port), Handler: api.handler}
 	err := api.server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error while trying to start api server", "err", err)

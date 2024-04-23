@@ -53,7 +53,8 @@ func NewBridgingRequestState(sourceChainId string, sourceTxHash string, inputAdd
 
 func (s *BridgingRequestState) ToInvalidRequest() error {
 	if s.Status != BridgingRequestStatusDiscoveredOnSource {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusInvalidRequest)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusInvalidRequest)
 	}
 
 	s.Status = BridgingRequestStatusInvalidRequest
@@ -63,7 +64,8 @@ func (s *BridgingRequestState) ToInvalidRequest() error {
 
 func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainId string) error {
 	if s.Status != BridgingRequestStatusDiscoveredOnSource {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusSubmittedToBridge)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusSubmittedToBridge)
 	}
 
 	s.Status = BridgingRequestStatusSubmittedToBridge
@@ -74,7 +76,8 @@ func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainId string) er
 
 func (s *BridgingRequestState) ToIncludedInBatch(batchId uint64) error {
 	if s.Status != BridgingRequestStatusSubmittedToBridge {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusIncludedInBatch)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusIncludedInBatch)
 	}
 
 	s.Status = BridgingRequestStatusIncludedInBatch
@@ -85,7 +88,8 @@ func (s *BridgingRequestState) ToIncludedInBatch(batchId uint64) error {
 
 func (s *BridgingRequestState) ToSubmittedToDestination() error {
 	if s.Status != BridgingRequestStatusIncludedInBatch {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusSubmittedToDestination)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusSubmittedToDestination)
 	}
 
 	s.Status = BridgingRequestStatusSubmittedToDestination
@@ -95,7 +99,8 @@ func (s *BridgingRequestState) ToSubmittedToDestination() error {
 
 func (s *BridgingRequestState) ToFailedToExecuteOnDestination() error {
 	if s.Status != BridgingRequestStatusSubmittedToDestination {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusFailedToExecuteOnDestination)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusFailedToExecuteOnDestination)
 	}
 
 	s.Status = BridgingRequestStatusFailedToExecuteOnDestination
@@ -105,7 +110,8 @@ func (s *BridgingRequestState) ToFailedToExecuteOnDestination() error {
 
 func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash string) error {
 	if s.Status != BridgingRequestStatusSubmittedToDestination {
-		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v", s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusExecutedOnDestination)
+		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
+			s.SourceChainId, s.SourceTxHash, s.Status, BridgingRequestStatusExecutedOnDestination)
 	}
 
 	s.Status = BridgingRequestStatusExecutedOnDestination

@@ -176,7 +176,8 @@ func (o *OracleImpl) Dispose() error {
 		err := cco.Dispose()
 		if err != nil {
 			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().ChainId, "err", err)
-			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err %w", cco.GetConfig().ChainId, err))
+			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err: %w",
+				cco.GetConfig().ChainId, err))
 		}
 	}
 

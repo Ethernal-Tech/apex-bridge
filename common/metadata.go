@@ -82,11 +82,11 @@ func MarshalMetadata[
 		return nil, err
 	}
 
-	metadataMap := map[int]T{MetadataMapKey: metadata}
-	result, err := marshalFunc(metadataMap)
-
+	result, err := marshalFunc(map[int]T{
+		MetadataMapKey: metadata,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %v", metadata, err)
+		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %w", metadata, err)
 	}
 
 	return result, nil
@@ -105,14 +105,14 @@ func UnmarshalMetadata[
 	}
 
 	var metadataMap map[int]T
-	err = unmarshalFunc(data, &metadataMap)
 
+	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
 		var metadata interface{}
 		unmarshalFunc(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %v", metadata, err)
-	} else {
-		metadata := metadataMap[MetadataMapKey]
-		return &metadata, nil
+		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %w", metadata, err)
 	}
+
+	metadata := metadataMap[MetadataMapKey]
+	return &metadata, nil
 }

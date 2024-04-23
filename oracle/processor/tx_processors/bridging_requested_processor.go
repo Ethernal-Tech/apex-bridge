@@ -45,14 +45,14 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
+		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 		// TODO: Refund
 		// p.addRefundRequestClaim(claims, tx, metadata)
 	}
@@ -128,7 +128,8 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 	}
 
 	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
-		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v", len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
+		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v",
+			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
 	var receiverAmountSum uint64 = 0
@@ -157,7 +158,8 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 	}
 
 	if receiverAmountSum != multisigUtxo.Amount {
-		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v", receiverAmountSum, multisigUtxo.Amount)
+		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
+			receiverAmountSum, multisigUtxo.Amount)
 	}
 
 	if foundAUtxoValueBelowMinimumValue {

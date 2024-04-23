@@ -61,7 +61,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Check if I should create batch
 	batchId, err := b.bridgeSmartContract.GetNextBatchId(ctx, b.config.Chain.ChainId)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetNextBatchId: %v", err)
+		return fmt.Errorf("failed to query bridge.GetNextBatchId: %w", err)
 	}
 
 	if batchId.Cmp(big.NewInt(0)) == 0 {
@@ -74,7 +74,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainId)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %v", err)
+		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %w", err)
 	}
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
@@ -82,7 +82,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	rawTx, txHash, utxos, includedConfirmedTransactions, err := b.operations.GenerateBatchTransaction(
 		ctx, b.bridgeSmartContract, b.config.Chain.ChainId, confirmedTransactions, batchId)
 	if err != nil {
-		return fmt.Errorf("failed to generate batch transaction: %v", err)
+		return fmt.Errorf("failed to generate batch transaction: %w", err)
 	}
 
 	var includedConfirmedTransactionsNonces []*big.Int = make([]*big.Int, 0, len(includedConfirmedTransactions))
@@ -95,7 +95,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash)
 	if err != nil {
-		return fmt.Errorf("failed to sign batch transaction: %v", err)
+		return fmt.Errorf("failed to sign batch transaction: %w", err)
 	}
 
 	b.logger.Info("Batch successfully signed")
@@ -114,7 +114,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	b.logger.Info("Submitting signed batch to smart contract")
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
-		return fmt.Errorf("failed to submit signed batch: %v", err)
+		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 	b.logger.Info("Batch successfully submitted")
 

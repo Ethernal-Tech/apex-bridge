@@ -1,13 +1,15 @@
 module github.com/Ethernal-Tech/apex-bridge
 
-go 1.20
+go 1.21
+
+toolchain go1.21.8
 
 require (
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240419120715-9ee97b2622c5
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240423080459-73e2119cda08
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/hashicorp/go-hclog v1.6.2
+	github.com/hashicorp/go-hclog v1.6.3
 	go.etcd.io/bbolt v1.3.9
 )
 
@@ -46,7 +48,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/utxorpc/go-codegen v0.4.4 // indirect
+	github.com/utxorpc/go-codegen v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
@@ -71,7 +73,7 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
-	github.com/blinklabs-io/gouroboros v0.75.0 // indirect
+	github.com/blinklabs-io/gouroboros v0.79.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
@@ -100,11 +102,11 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )

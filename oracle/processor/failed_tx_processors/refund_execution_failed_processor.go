@@ -42,11 +42,11 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 
 	metadata, err := common.UnmarshalMetadata[common.RefundExecutedMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v,\n err: %v", tx, err)
+		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
 
 	if err := p.validate(tx, metadata, appConfig); err != nil {
-		return fmt.Errorf("validation failed for tx: %v, err: %v", tx, err)
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
 	// TODO: Refund

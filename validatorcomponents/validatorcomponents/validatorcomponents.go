@@ -114,7 +114,7 @@ func (v *ValidatorComponentsImpl) Start() error {
 
 	err := v.oracle.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start oracle. error: %v", err)
+		return fmt.Errorf("failed to start oracle. error: %w", err)
 	}
 
 	v.batcherManager.Start()
