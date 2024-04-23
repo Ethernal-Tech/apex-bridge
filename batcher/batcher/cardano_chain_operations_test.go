@@ -32,6 +32,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
+		"socketPath": "./socket",
 		"testnetMagic": 2,
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000,
@@ -224,13 +225,19 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	wallet, err := cardano.GenerateWallet(testDir, false, false)
 	require.NoError(t, err)
 
-	configRaw := json.RawMessage([]byte(fmt.Sprintf(
-		"{ \"testnetMagic\": 42, \"atLeastValidators\": 1, \"keysDirPath\": \"%s\" }",
-		testDir,
-	)))
+	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
+		"socketPath": "./socket",
+		"testnetMagic": 42,
+		"atLeastValidators": 0.6666666666666666,
+		"keysDirPath": "%s"
+		}`, testDir)))
 
 	cco, err := NewCardanoChainOperations(configRaw)
 	require.NoError(t, err)
+
+	cco.TxProvider = &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
 
 	testError := errors.New("test err")
 

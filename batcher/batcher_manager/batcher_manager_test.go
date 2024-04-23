@@ -30,6 +30,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 	}()
 
 	jsonData := []byte(fmt.Sprintf(`{
+		"socketPath": "./socket",
 		"testnetMagic": 2,
 		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000,

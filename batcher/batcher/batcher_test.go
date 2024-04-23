@@ -35,6 +35,7 @@ func TestBatcherExecute(t *testing.T) {
 			ChainId:   "prime",
 			ChainType: "Cardano",
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+				"socketPath": "./socket",
 				"testnetMagic": 2,
 				"atLeastValidators": 0.6666666666666666,
 				"potentialFee": 300000,
@@ -178,6 +179,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		ChainId:   "prime",
 		ChainType: "Cardano",
 		ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+			"socketPath": "./socket",
 			"testnetMagic": 2,
 			"atLeastValidators": 0.6666666666666666,
 			"potentialFee": 300000,
@@ -211,6 +213,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 			ChainType: "Cardano",
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 				"testnetMagic": 2,
+				"socketPath": "./socket",
 				"atLeastValidators": 0.6666666666666666,
 				"potentialFee": 300000,
 				"keysDirPath": "%s"

@@ -2,6 +2,7 @@ package cardanotx
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -45,9 +46,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostUrl, config.BlockfrostAPIKey)
 	}
 
-	return &TxProviderTestMock{
-		ReturnDefaultParameters: true,
-	}, nil
+	return nil, errors.New("neither socket path nor Blockfrost URL is provided")
 }
 
 func (config CardanoChainConfig) LoadWallet() (*CardanoWallet, error) {
