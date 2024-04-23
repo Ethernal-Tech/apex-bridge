@@ -47,7 +47,7 @@ func NewCardanoChainOperations(
 
 	cardanoWallet, err := cardanoConfig.LoadWallet()
 	if err != nil {
-		return nil, fmt.Errorf("error while loading wallet info: %v", err)
+		return nil, fmt.Errorf("error while loading wallet info: %w", err)
 	}
 
 	return &CardanoChainOperations{

@@ -55,14 +55,14 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 func (r *RelayerImpl) execute(ctx context.Context) error {
 	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Chain.ChainId)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve confirmed batch: %v", err)
+		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
 	}
 
 	r.logger.Info("Signed batch retrieved from contract")
 
 	lastSubmittedBatchId, err := r.db.GetLastSubmittedBatchId(r.config.Chain.ChainId)
 	if err != nil {
-		return fmt.Errorf("failed to get last submitted batch id from db: %v", err)
+		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
 	}
 
 	receivedBatchId, ok := new(big.Int).SetString(confirmedBatch.Id, 0)
@@ -81,13 +81,13 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 	}
 
 	if err := r.operations.SendTx(confirmedBatch); err != nil {
-		return fmt.Errorf("failed to send confirmed batch: %v", err)
+		return fmt.Errorf("failed to send confirmed batch: %w", err)
 	}
 
 	r.logger.Info("Transaction successfully submitted")
 
 	if err := r.db.AddLastSubmittedBatchId(r.config.Chain.ChainId, receivedBatchId); err != nil {
-		return fmt.Errorf("failed to insert last submitted batch id into db: %v", err)
+		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)
 	}
 
 	return nil

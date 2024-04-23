@@ -30,16 +30,15 @@ func RemoveDirOrFilePathIfExists(dirOrFilePath string) (err error) {
 func LoadJson[TReturn any](path string) (*TReturn, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %v. error: %v", path, err)
+		return nil, fmt.Errorf("failed to open %v. error: %w", path, err)
 	}
 
 	defer f.Close()
 
 	var value TReturn
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&value)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode %v. error: %v", path, err)
+
+	if err = json.NewDecoder(f).Decode(&value); err != nil {
+		return nil, fmt.Errorf("failed to decode %v. error: %w", path, err)
 	}
 
 	return &value, nil
