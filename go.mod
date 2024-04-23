@@ -2,8 +2,6 @@ module github.com/Ethernal-Tech/apex-bridge
 
 go 1.21
 
-toolchain go1.21.8
-
 require (
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240423080459-73e2119cda08
 	github.com/ethereum/go-ethereum v1.13.14
