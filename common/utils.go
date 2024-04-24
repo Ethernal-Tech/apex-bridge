@@ -24,3 +24,7 @@ func DecodeHex(s string) ([]byte, error) {
 
 	return hex.DecodeString(s)
 }
+
+func GetRequiredSignaturesForConsensus(cnt uint64) uint64 {
+	return (cnt*2 + 2) / 3
+}
