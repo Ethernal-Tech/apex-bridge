@@ -59,9 +59,9 @@ func NewOracle(
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(appConfig.Bridge.SecretsManager)
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManagerConfig(appConfig.Bridge.SecretsManager)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle wallet: %w", err)
+		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
 	}
 
 	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)

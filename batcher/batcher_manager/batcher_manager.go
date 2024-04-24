@@ -2,6 +2,7 @@ package batcher_manager
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
@@ -34,9 +35,9 @@ func NewBatcherManager(
 			return nil, err
 		}
 
-		wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(config.Bridge.SecretsManager)
+		wallet, err := ethtxhelper.NewEthTxWalletFromSecretManagerConfig(config.Bridge.SecretsManager)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create blade wallet for batcher: %w", err)
 		}
 
 		bridgeSmartContract, err := eth.NewBridgeSmartContractWithWallet(
