@@ -34,7 +34,6 @@ func TestCardanoChainOperations(t *testing.T) {
 	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
 		"socketPath": "./socket",
 		"testnetMagic": 2,
-		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000,
 		"keysDirPath": "%s"
 		}`, testDir)))
@@ -228,7 +227,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
 		"socketPath": "./socket",
 		"testnetMagic": 42,
-		"atLeastValidators": 0.6666666666666666,
 		"keysDirPath": "%s"
 		}`, testDir)))
 

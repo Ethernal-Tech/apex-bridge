@@ -151,7 +151,6 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 	jsonData := []byte(`{
 		"socketPath": "./socket",
 		"testnetMagic": 2,
-		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
 		}`)
 

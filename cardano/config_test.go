@@ -21,7 +21,6 @@ func TestConfig(t *testing.T) {
 				"testnetMagic": 2,
 				"blockfrostUrl": "pera",
 				"blockfrostApiKey": "zdera",
-				"atLeastValidators": 0.6666666666666666,
 				"potentialFee": 300000
 				}`),
 		))
