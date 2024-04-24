@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -149,8 +150,9 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 		NetworkMagic:   config.NetworkMagic,
 		NodeAddress:    config.NetworkAddress,
 		RestartOnError: true,
-		RestartDelay:   time.Second * 2,
+		RestartDelay:   time.Second * 5,
 		KeepAlive:      true,
+		SyncStartTries: math.MaxInt,
 	}
 
 	return indexerConfig, syncerConfig
