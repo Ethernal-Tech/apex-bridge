@@ -26,7 +26,6 @@ func TestRelayerManagerConfig(t *testing.T) {
 	jsonData := []byte(`{
 		"blockFrostUrl": "http://hello.com",
 		"testnetMagic": 2,
-		"atLeastValidators": 0.6666666666666666,
 		"potentialFee": 300000
 		}`)
 

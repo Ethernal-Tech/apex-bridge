@@ -18,7 +18,6 @@ type CardanoChainConfig struct {
 	BlockfrostUrl            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
 	SocketPath               string   `json:"socketPath"`
-	AtLeastValidators        float64  `json:"atLeastValidators"`
 	PotentialFee             uint64   `json:"potentialFee"`
 }
 
@@ -59,13 +58,12 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		}
 
 		chainSpecificJsonRaw, _ := (cardanotx.CardanoChainConfig{
-			TestNetMagic:      ccConfig.NetworkMagic,
-			BlockfrostUrl:     ccConfig.BlockfrostUrl,
-			BlockfrostAPIKey:  ccConfig.BlockfrostAPIKey,
-			AtLeastValidators: ccConfig.AtLeastValidators,
-			SocketPath:        ccConfig.SocketPath,
-			PotentialFee:      ccConfig.PotentialFee,
-			KeysDirPath:       ccConfig.KeysDirPath,
+			TestNetMagic:     ccConfig.NetworkMagic,
+			BlockfrostUrl:    ccConfig.BlockfrostUrl,
+			BlockfrostAPIKey: ccConfig.BlockfrostAPIKey,
+			SocketPath:       ccConfig.SocketPath,
+			PotentialFee:     ccConfig.PotentialFee,
+			KeysDirPath:      ccConfig.KeysDirPath,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{

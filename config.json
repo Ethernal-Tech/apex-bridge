@@ -12,7 +12,6 @@
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
             "socketPath": "",
-            "atLeastValidators": 0.6666666666666666,
             "potentialFee": 300000
         },
         "vector": {
@@ -27,7 +26,6 @@
             "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
             "blockfrostApiKey": "preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE",
             "socketPath": "",
-            "atLeastValidators": 0.6666666666666666,
             "potentialFee": 300000
         }
     },
@@ -57,7 +55,7 @@
             "appendFile": true
         },
         "dbsPath": "./db/"
-    },    
+    },
     "relayerImitatorPullTime": 1000,
     "batcherPullTime": 2500,
     "api": {
@@ -70,7 +68,12 @@
             "*"
         ],
         "allowedMethods": [
-            "GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"
+            "GET",
+            "HEAD",
+            "POST",
+            "PUT",
+            "OPTIONS",
+            "DELETE"
         ],
         "apiKeyHeader": "x-api-key",
         "apiKeys": [

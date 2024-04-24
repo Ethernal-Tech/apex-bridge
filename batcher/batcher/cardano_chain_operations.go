@@ -12,6 +12,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -145,12 +146,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, "", nil, nil, fmt.Errorf("verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	multisigPolicyScript, err := cardanowallet.NewPolicyScript(multisigKeyHashes, int(cco.Config.AtLeastValidators))
+	multisigPolicyScript, err := cardanowallet.NewPolicyScript(multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigKeyHashes)))))
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
 
-	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(multisigFeeKeyHashes, int(cco.Config.AtLeastValidators))
+	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
 	if err != nil {
 		return nil, "", nil, nil, err
 	}

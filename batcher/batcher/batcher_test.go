@@ -37,7 +37,6 @@ func TestBatcherExecute(t *testing.T) {
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 				"socketPath": "./socket",
 				"testnetMagic": 2,
-				"atLeastValidators": 0.6666666666666666,
 				"potentialFee": 300000,
 				"keysDirPath": "%s"
 				}`, testDir))),
@@ -181,7 +180,6 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 			"socketPath": "./socket",
 			"testnetMagic": 2,
-			"atLeastValidators": 0.6666666666666666,
 			"potentialFee": 300000,
 			"keysDirPath": "%s"
 			}`, validPath))),
@@ -214,7 +212,6 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 				"testnetMagic": 2,
 				"socketPath": "./socket",
-				"atLeastValidators": 0.6666666666666666,
 				"potentialFee": 300000,
 				"keysDirPath": "%s"
 				}`, path.Join(validPath, "a1", "a2", "a3")))),
