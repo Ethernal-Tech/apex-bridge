@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-hclog v1.6.3
+	github.com/sethvargo/go-retry v0.2.4
 	go.etcd.io/bbolt v1.3.9
 )
 

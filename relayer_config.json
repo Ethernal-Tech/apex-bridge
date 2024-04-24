@@ -6,7 +6,7 @@
     "chains": {
         "prime": {
             "type": "Cardano",
-            "dbsPath": "./db/prime",
+            "dbsPath": "./db/relayer",
             "config": {
                 "testnetMagic": 2,
                 "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",
@@ -17,7 +17,7 @@
         },
         "vector": {
             "type": "Cardano",
-            "dbsPath": "./db/vector",
+            "dbsPath": "./db/relayer",
             "config": {
                 "testnetMagic": 2,
                 "blockfrostUrl": "https://cardano-preview.blockfrost.io/api/v0",

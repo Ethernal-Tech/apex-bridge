@@ -75,7 +75,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger(), false)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -94,7 +94,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDb := initDb(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger(), false)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -117,7 +117,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger(), false)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -139,7 +139,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDb, bridgeDataFetcher, hclog.NewNullLogger(), false)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 
@@ -14,11 +15,12 @@ import (
 )
 
 type CardanoChainObserverImpl struct {
-	ctx       context.Context
-	indexerDb indexer.Database
-	syncer    indexer.BlockSyncer
-	logger    hclog.Logger
-	config    *core.CardanoChainConfig
+	ctx                       context.Context
+	indexerDb                 indexer.Database
+	syncer                    indexer.BlockSyncer
+	logger                    hclog.Logger
+	config                    *core.CardanoChainConfig
+	retryForeverOnNewAndStart bool
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
@@ -29,6 +31,7 @@ func NewCardanoChainObserver(
 	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb,
 	indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
 	logger hclog.Logger,
+	retryForeverOnNewAndStart bool,
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
@@ -39,7 +42,7 @@ func NewCardanoChainObserver(
 		}
 	}
 
-	err := updateLastConfirmedBlockFromSc(indexerDb, oracleDb, bridgeDataFetcher, config.ChainId)
+	err := updateLastConfirmedBlockFromSc(ctx, indexerDb, oracleDb, bridgeDataFetcher, config.ChainId, logger, retryForeverOnNewAndStart)
 	if err != nil {
 		return nil, err
 	}
@@ -68,19 +71,31 @@ func NewCardanoChainObserver(
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
-		ctx:       ctx,
-		indexerDb: indexerDb,
-		syncer:    syncer,
-		logger:    logger,
-		config:    config,
+		ctx:                       ctx,
+		indexerDb:                 indexerDb,
+		syncer:                    syncer,
+		logger:                    logger,
+		config:                    config,
+		retryForeverOnNewAndStart: retryForeverOnNewAndStart,
 	}, nil
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
-	err := co.syncer.Sync()
-	if err != nil {
-		co.logger.Error("Start syncing failed", "err", err)
-		return fmt.Errorf("start syncing failed. err: %w", err)
+	if co.retryForeverOnNewAndStart {
+		go common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
+			err = co.syncer.Sync()
+			if err != nil {
+				co.logger.Error("Failed to Start syncer while starting CardanoChainObserver. Retrying...", "chainId", co.config.ChainId, "err", err)
+			}
+
+			return err
+		})
+	} else {
+		err := co.syncer.Sync()
+		if err != nil {
+			co.logger.Error("Start syncing failed", "err", err)
+			return fmt.Errorf("start syncing failed. err: %w", err)
+		}
 	}
 
 	return nil
@@ -155,9 +170,34 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 	return db.OpenTx().AddTxOutputs(nonExistingUtxos).Execute()
 }
 
-func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
-	blockPointSc, err := bridgeDataFetcher.FetchLatestBlockPoint(chainId)
-	if blockPointSc == nil || err != nil {
+func updateLastConfirmedBlockFromSc(
+	ctx context.Context,
+	indexerDb indexer.Database,
+	oracleDb core.CardanoTxsProcessorDb,
+	bridgeDataFetcher core.BridgeDataFetcher,
+	chainId string,
+	logger hclog.Logger,
+	retryForeverOnNewAndStart bool,
+) error {
+	var blockPointSc *indexer.BlockPoint
+	if retryForeverOnNewAndStart {
+		common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
+			blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+			if err != nil {
+				logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...", "chainId", chainId, "err", err)
+			}
+
+			return err
+		})
+	} else {
+		var err error
+		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+		if err != nil {
+			logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver", "chainId", chainId, "err", err)
+		}
+	}
+
+	if blockPointSc == nil {
 		return nil
 	}
 

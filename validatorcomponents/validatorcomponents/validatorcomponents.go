@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
@@ -15,6 +17,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
@@ -23,6 +26,7 @@ import (
 const (
 	MainComponentName            = "validatorcomponents"
 	RelayerImitatorComponentName = "relayerimitator"
+	RetryForeverOnNewAndStart    = true
 )
 
 type ValidatorComponentsImpl struct {
@@ -57,14 +61,16 @@ func NewValidatorComponents(
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = populateUtxosAndAddresses(
-		context.Background(), oracleConfig,
+		ctx, oracleConfig,
 		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress),
+		logger,
+		RetryForeverOnNewAndStart,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
+	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"), RetryForeverOnNewAndStart)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
@@ -112,6 +118,10 @@ func NewValidatorComponents(
 func (v *ValidatorComponentsImpl) Start() error {
 	v.logger.Debug("Starting ValidatorComponents")
 
+	if v.shouldRunApi {
+		go v.api.Start()
+	}
+
 	err := v.oracle.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
@@ -120,10 +130,6 @@ func (v *ValidatorComponentsImpl) Start() error {
 	v.batcherManager.Start()
 
 	go v.relayerImitator.Start()
-
-	if v.shouldRunApi {
-		go v.api.Start()
-	}
 
 	v.logger.Debug("Started ValidatorComponents")
 
@@ -168,10 +174,25 @@ func populateUtxosAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
 	smartContract eth.IBridgeSmartContract,
+	logger hclog.Logger,
+	retryForever bool,
 ) error {
-	allRegisteredChains, err := smartContract.GetAllRegisteredChains(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve registered chains: %w", err)
+	var allRegisteredChains []contractbinding.IBridgeContractStructsChain
+	if retryForever {
+		common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+			allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
+			if err != nil {
+				logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+			}
+
+			return err
+		})
+	} else {
+		var err error
+		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve registered chains: %w", err)
+		}
 	}
 
 	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []eth.UTXO) {
@@ -197,9 +218,22 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", regChain.Id)
 		}
 
-		availableUtxos, err := smartContract.GetAvailableUTXOs(ctx, regChain.Id)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve available utxos for %s: %w", regChain.Id, err)
+		var availableUtxos *contractbinding.IBridgeContractStructsUTXOs
+		if retryForever {
+			common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+				availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
+				if err != nil {
+					logger.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...", "chainId", regChain.Id, "err", err)
+				}
+
+				return err
+			})
+		} else {
+			var err error
+			availableUtxos, err = smartContract.GetAvailableUTXOs(ctx, regChain.Id)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve available utxos for %s: %w", regChain.Id, err)
+			}
 		}
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
