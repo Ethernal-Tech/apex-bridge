@@ -13,7 +13,7 @@ func TestSC(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	bridgeSC := NewBridgeSmartContract("http://localhost:10002", "0x0400000000000000000000000000000000000000")
+	bridgeSC := NewBridgeSmartContract("http://localhost:10002", "0xABEF000000000000000000000000000000000000")
 
 	t.Run("ShouldCreateBatch test", func(t *testing.T) {
 		ret, err := bridgeSC.ShouldCreateBatch(ctx, "destChain")
