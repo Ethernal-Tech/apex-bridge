@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	clicreateaddress "github.com/Ethernal-Tech/apex-bridge/cli/create-address"
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
@@ -33,6 +34,7 @@ func (rc *RootCommand) registerSubCommands() {
 		cliregisterchain.GetRegisterChainCommand(),
 		clivalidatorcomponents.GetValidatorComponentsCommand(),
 		clirelayer.GetRunRelayerCommand(),
+		clicreateaddress.GetCreateAddressCommand(),
 	)
 }
 
