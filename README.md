@@ -49,3 +49,46 @@ $ go run ./cli/cmd/main.go create-address \
         --key 58209a9cefaa636d75dffa3a3a5ab446a191beac92b09ac82da513640e8e35935202
         ...
 ```
+
+# How to generate config files
+All options
+``` shell
+$ go run ./cli/cmd/main.go generate-configs \
+        --output-dir "<Path to config jsons output directory>" \
+        --output-validator-components-file-name "<Validator components config json output file name>.json" \
+        --output-relayer-file-name "<Relayer config json output file name>.json" \
+        --prime-network-address "<Address of prime network>" \
+        --prime-network-magic <Network magic of prime network> \
+        --prime-keys-dir "<Path to cardano keys directory for prime network>" \
+        --prime-blockfrost-url "<Blockfrost URL for prime network>" \
+        --prime-blockfrost-api-key "<Blockfrost API key for prime network>" \
+        --prime-socket-path "<Socket path for prime network>" \
+        --vector-network-address "<Address of vector network>" \
+        --vector-network-magic <Network magic of vector network> \
+        --vector-keys-dir "<Path to cardano keys directory for vector network>" \
+        --vector-blockfrost-url "<Blockfrost URL for vector network>" \
+        --vector-blockfrost-api-key "<Blockfrost API key for vector network>" \
+        --vector-socket-path "<Socket path for vector network>" \
+        --bridge-node-url "<Node URL of bridge chain>" \
+        --bridge-sc-address "<Bridging smart contract address on bridge chain>" \
+        --bridge-secrets-manager-path "<Path to bridge chain secrets>" \
+        --dbs-path "<Path to where databases will be stored>" \
+        --logs-path "<Path to where logs will be stored>" \
+        --api-port <Port at which API should run> \
+        --api-keys "<api key 1>" \
+        --api-keys "<api key 2>"
+```
+
+Minimal example
+``` shell
+$ go run ./cli/cmd/main.go generate-configs \
+        --prime-network-address "localhost:13001" \
+        --prime-network-magic 142 \
+        --prime-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
+        --vector-network-address "localhost:23001" \
+        --vector-network-magic 242 \
+        --vector-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
+        --bridge-node-url "https://polygon-mumbai-pokt.nodies.app" \
+        --bridge-sc-address "0x816402271eE6D9078Fc8Cb537aDBDD58219485BB" \
+        --api-keys "test_api_key_1"
+```

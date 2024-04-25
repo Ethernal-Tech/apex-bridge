@@ -40,34 +40,35 @@ const (
 	dbsPathFlag  = "dbs-path"
 
 	apiPortFlag = "api-port"
+	apiKeysFlag = "api-keys"
 
 	outputDirFlag                         = "output-dir"
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
-	keyFlagDesc                   = "Cardano verification key for validator"
-	primeNetworkAddressFlagDesc   = "Address of prime network"
-	primeNetworkMagicFlagDesc     = "Network magic of prime network"
+	primeNetworkAddressFlagDesc   = "(Mandatory) Address of prime network"
+	primeNetworkMagicFlagDesc     = "(Mandatory) Network magic of prime network"
 	primeKeysDirFlagDesc          = "Path to cardano keys directory for prime network"
-	primeBlockfrostUrlFlagDesc    = "Blockfrost URL for prime network"
+	primeBlockfrostUrlFlagDesc    = "(Mandatory if prime-socket-path not specified) Blockfrost URL for prime network"
 	primeBlockfrostApiKeyFlagDesc = "Blockfrost API key for prime network"
-	primeSocketPathFlagDesc       = "Socket path for prime network"
+	primeSocketPathFlagDesc       = "(Mandatory if prime-blockfrost-url not specified) Socket path for prime network"
 
-	vectorNetworkAddressFlagDesc   = "Address of vector network"
-	vectorNetworkMagicFlagDesc     = "Network magic of vector network"
+	vectorNetworkAddressFlagDesc   = "(Mandatory) Address of vector network"
+	vectorNetworkMagicFlagDesc     = "(Mandatory) Network magic of vector network"
 	vectorKeysDirFlagDesc          = "Path to cardano keys directory for vector network"
-	vectorBlockfrostUrlFlagDesc    = "Blockfrost URL for vector network"
+	vectorBlockfrostUrlFlagDesc    = "(Mandatory if vector-socket-path not specified) Blockfrost URL for vector network"
 	vectorBlockfrostApiKeyFlagDesc = "Blockfrost API key for vector network"
-	vectorSocketPathFlagDesc       = "Socket path for vector network"
+	vectorSocketPathFlagDesc       = "(Mandatory if vector-blockfrost-url not specified) Socket path for vector network"
 
-	bridgeNodeUrlFlagDesc            = "Node URL of bridge chain"
-	bridgeSCAddressFlagDesc          = "Bridging smart contract address on bridge chain"
+	bridgeNodeUrlFlagDesc            = "(Mandatory) Node URL of bridge chain"
+	bridgeSCAddressFlagDesc          = "(Mandatory) Bridging smart contract address on bridge chain"
 	bridgeSecretsManagerPathFlagDesc = "Path to bridge chain secrets"
 
 	logsPathFlagDesc = "Path to where logs will be stored"
 	dbsPathFlagDesc  = "Path to where databases will be stored"
 
 	apiPortFlagDesc = "Port at which API should run"
+	apiKeysFlagDesc = "(Mandatory) List of keys for API access"
 
 	outputDirFlagDesc                         = "Path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "Validator components config json output file name"
@@ -108,6 +109,7 @@ type generateConfigsParams struct {
 	dbsPath  string
 
 	apiPort uint32
+	apiKeys []string
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -140,6 +142,10 @@ func (p *generateConfigsParams) validateFlags() error {
 	}
 	if p.bridgeSCAddress == "" {
 		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
+	}
+
+	if len(p.apiKeys) == 0 {
+		return fmt.Errorf("specify at least one %s", apiKeysFlag)
 	}
 
 	return nil
@@ -277,6 +283,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultOutputRelayerFileName,
 		outputRelayerFileNameFlagDesc,
 	)
+	cmd.Flags().StringArrayVar(
+		&p.apiKeys,
+		apiKeysFlag,
+		nil,
+		apiKeysFlagDesc,
+	)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
@@ -358,13 +370,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				"DELETE",
 			},
 			ApiKeyHeader: "x-api-key",
-			ApiKeys: []string{
-				"BS7x38SeI1G1gPLVzQ6qsHjAgT3Z6RfC0t9txKsDuAH9D9m0p8GeJolowEMWmaUHTKgXU8RoChrixXU5qaxzjAFrGyVVKTuB6Yf7kRIQ6NOPMYRHu6QPeKvmgVvMfkzx",
-				"0G4RG23Zqyxm7HIe5H8kSMY6L2V1SgPqlALUFQXlQx5g20kkf5veNzXtt4ayOv1JsYec7ipfBHaI5GDIw6g6sPLf0vMJjlp3WgkwpOJwPr7A5Mnwq2kWItOX3Lg8huyz",
-				"GBKopaLCXYwB3bgXHgCGUCw9BtlvalWPGZ90KMloolb6Qe7fexwo9aUtk6xD9Mgo3OiaK4JHPtVVDeI6FEpAhIXQMugHKNBkqUrRB4Fdn2ghhZkORE6sfahqmd7f3rGI",
-				"HN7niN1iXDQSFfIPh6hpfd7yKSfWnct8OwQ0YqpShdKLhB3Y3srI5jgFD1Y0h4h3GunrPKiZaOj1vBmbscnbHcf39qqXXWs1RvmHUlh94mpBh5YuyQ777no7gQT1vjeh",
-				"iT6luPlZhdZtd3B5zzpuKa69KzJ3sjfzSso4IpipuzJlyilHqiRpKTLeAW8whGSNeOVobeVVr1k54eq4VvaTDeFroY6bYoDO1PP46Jt77EKaldpgeOFuSKgHJ3aLZejh",
-			},
+			ApiKeys:      p.apiKeys,
 		},
 	}
 
