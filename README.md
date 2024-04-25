@@ -71,7 +71,8 @@ $ go run ./cli/cmd/main.go generate-configs \
         --vector-socket-path "<Socket path for vector network>" \
         --bridge-node-url "<Node URL of bridge chain>" \
         --bridge-sc-address "<Bridging smart contract address on bridge chain>" \
-        --bridge-secrets-manager-path "<Path to bridge chain secrets>" \
+        --bridge-validator-data-dir "<Path to bridge chain data directory when using local secrets manager>" \
+        --bridge-validator-config-path "<Path to to bridge chain secrets manager config file>" \
         --dbs-path "<Path to where databases will be stored>" \
         --logs-path "<Path to where logs will be stored>" \
         --api-port <Port at which API should run> \
@@ -90,5 +91,6 @@ $ go run ./cli/cmd/main.go generate-configs \
         --vector-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
         --bridge-node-url "https://polygon-mumbai-pokt.nodies.app" \
         --bridge-sc-address "0x816402271eE6D9078Fc8Cb537aDBDD58219485BB" \
+        --bridge-validator-data-dir "./blade-dir" \
         --api-keys "test_api_key_1"
 ```

@@ -36,7 +36,7 @@ func NewBatcherManager(
 		}
 
 		secretsManager, err := common.GetSecretsManager(
-			config.Bridge.ValidatorDataDir, config.Bridge.ValidatorConfigDir, true)
+			config.Bridge.ValidatorDataDir, config.Bridge.ValidatorConfigPath, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 		}

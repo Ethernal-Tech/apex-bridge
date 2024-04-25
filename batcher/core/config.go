@@ -8,7 +8,7 @@ type BridgeConfig struct {
 	NodeUrl              string `json:"nodeUrl"`
 	SmartContractAddress string `json:"scAddress"` // TOOD: probably will be more than just one
 	ValidatorDataDir     string `json:"validatorDataDir"`
-	ValidatorConfigDir   string `json:"validatorConfigDir"`
+	ValidatorConfigPath  string `json:"validatorConfigPath"`
 }
 
 type BatcherConfiguration struct {

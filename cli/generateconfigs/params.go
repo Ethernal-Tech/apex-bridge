@@ -30,9 +30,10 @@ const (
 	vectorBlockfrostApiKeyFlag = "vector-blockfrost-api-key"
 	vectorSocketPathFlag       = "vector-socket-path"
 
-	bridgeNodeUrlFlag            = "bridge-node-url"
-	bridgeSCAddressFlag          = "bridge-sc-address"
-	bridgeSecretsManagerPathFlag = "bridge-secrets-manager-path"
+	bridgeNodeUrlFlag          = "bridge-node-url"
+	bridgeSCAddressFlag        = "bridge-sc-address"
+	bridgeValidatorDataDirFlag = "bridge-validator-data-dir"
+	bridgeValidatorConfigFlag  = "bridge-validator-config-path"
 
 	logsPathFlag = "logs-path"
 	dbsPathFlag  = "dbs-path"
@@ -58,9 +59,10 @@ const (
 	vectorBlockfrostApiKeyFlagDesc = "Blockfrost API key for vector network"
 	vectorSocketPathFlagDesc       = "(Mandatory if vector-blockfrost-url not specified) Socket path for vector network"
 
-	bridgeNodeUrlFlagDesc            = "(Mandatory) Node URL of bridge chain"
-	bridgeSCAddressFlagDesc          = "(Mandatory) Bridging smart contract address on bridge chain"
-	bridgeSecretsManagerPathFlagDesc = "Path to bridge chain secrets"
+	bridgeNodeUrlFlagDesc          = "(Mandatory) Node URL of bridge chain"
+	bridgeSCAddressFlagDesc        = "(Mandatory) Bridging smart contract address on bridge chain"
+	bridgeValidatorDataDirFlagDesc = "(Mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorConfigFlagDesc  = "(Mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"
 
 	logsPathFlagDesc = "Path to where logs will be stored"
 	dbsPathFlagDesc  = "Path to where databases will be stored"
@@ -75,7 +77,6 @@ const (
 	defaultNetworkMagic                      = 0
 	defaultPrimeKeysDir                      = "./keys/prime"
 	defaultVectorKeysDir                     = "./keys/vector"
-	defaultBridgeSecretsManagerPath          = "./blade-dir"
 	defaultLogsPath                          = "./logs"
 	defaultDBsPath                           = "./db"
 	defaultApiPort                           = 10000
@@ -99,9 +100,10 @@ type generateConfigsParams struct {
 	vectorBlockfrostApiKey string
 	vectorSocketPath       string
 
-	bridgeNodeUrl            string
-	bridgeSCAddress          string
-	bridgeSecretsManagerPath string
+	bridgeNodeUrl          string
+	bridgeSCAddress        string
+	bridgeValidatorDataDir string
+	bridgeValidatorConfig  string
 
 	logsPath string
 	dbsPath  string
@@ -134,6 +136,9 @@ func (p *generateConfigsParams) validateFlags() error {
 	}
 	if p.bridgeSCAddress == "" {
 		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
+	}
+	if p.bridgeValidatorDataDir == "" && p.bridgeValidatorConfig == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
 	}
 
 	if len(p.apiKeys) == 0 {
@@ -231,10 +236,16 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddressFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.bridgeSecretsManagerPath,
-		bridgeSecretsManagerPathFlag,
-		defaultBridgeSecretsManagerPath,
-		bridgeSecretsManagerPathFlagDesc,
+		&p.bridgeValidatorDataDir,
+		bridgeValidatorDataDirFlag,
+		"",
+		bridgeValidatorDataDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.bridgeValidatorConfig,
+		bridgeValidatorConfigFlag,
+		"",
+		bridgeValidatorConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -284,6 +295,14 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
+	validatorDataDir := p.bridgeValidatorDataDir
+	if validatorDataDir != "" {
+		validatorDataDir = path.Clean(validatorDataDir)
+	}
+	validatorConfig := p.bridgeValidatorConfig
+	if validatorConfig != "" {
+		validatorConfig = path.Clean(validatorConfig)
+	}
 	vcConfig := &vcCore.AppConfig{
 		CardanoChains: map[string]*vcCore.CardanoChainConfig{
 			"prime": {
@@ -318,8 +337,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		Bridge: oCore.BridgeConfig{
 			NodeUrl:              p.bridgeNodeUrl,
 			SmartContractAddress: p.bridgeSCAddress,
-			ValidatorDataDir:     "", // TODO:
-			ValidatorConfigDir:   "", // TODO:
+			ValidatorDataDir:     validatorDataDir,
+			ValidatorConfigPath:  validatorConfig,
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  10,
 				ConfirmedBlocksSubmitTime: 5000,

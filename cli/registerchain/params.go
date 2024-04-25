@@ -51,7 +51,7 @@ const (
 type registerChainParams struct {
 	directory           string
 	validatorDir        string
-	validatorConfigDir  string
+	validatorConfig     string
 	blockfrostUrl       string
 	blockfrostProjectID string
 	socketPath          string
@@ -83,7 +83,7 @@ func (ip *registerChainParams) validateFlags() error {
 		return fmt.Errorf("invalid directory: %s", ip.directory)
 	}
 
-	if ip.validatorDir == "" && ip.validatorConfigDir == "" {
+	if ip.validatorDir == "" && ip.validatorConfig == "" {
 		return fmt.Errorf("no config file or data directory passed in for validator secrets")
 	}
 
@@ -134,7 +134,7 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.validatorConfigDir,
+		&ip.validatorConfig,
 		validatorAccountConfigFlag,
 		"",
 		validatorAccountConfigFlagDesc,
@@ -220,7 +220,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
 	}
 
-	secretsManager, err := common.GetSecretsManager(ip.validatorDir, ip.validatorConfigDir, true)
+	secretsManager, err := common.GetSecretsManager(ip.validatorDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}

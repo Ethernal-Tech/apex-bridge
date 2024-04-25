@@ -32,7 +32,7 @@ type BridgeConfig struct {
 	NodeUrl              string       `json:"nodeUrl"`
 	SmartContractAddress string       `json:"scAddress"`
 	ValidatorDataDir     string       `json:"validatorDataDir"`
-	ValidatorConfigDir   string       `json:"validatorConfigDir"`
+	ValidatorConfigPath  string       `json:"validatorConfigPath"`
 	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
