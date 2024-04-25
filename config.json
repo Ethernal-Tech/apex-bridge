@@ -54,7 +54,7 @@
             "jsonLogFormat": false,
             "appendFile": true
         },
-        "dbsPath": "./db/"
+        "dbsPath": "./db/validatorcomponents"
     },
     "relayerImitatorPullTime": 1000,
     "batcherPullTime": 2500,

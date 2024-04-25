@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 
@@ -39,9 +41,9 @@ func NewCardanoChainObserver(
 		}
 	}
 
-	err := updateLastConfirmedBlockFromSc(indexerDb, oracleDb, bridgeDataFetcher, config.ChainId)
+	err := updateLastConfirmedBlockFromSc(ctx, indexerDb, oracleDb, bridgeDataFetcher, config.ChainId, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to updateLastConfirmedBlockFromSc. err: %w", err)
 	}
 
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
@@ -77,11 +79,14 @@ func NewCardanoChainObserver(
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
-	err := co.syncer.Sync()
-	if err != nil {
-		co.logger.Error("Start syncing failed", "err", err)
-		return fmt.Errorf("start syncing failed. err: %w", err)
-	}
+	go common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
+		err = co.syncer.Sync()
+		if err != nil {
+			co.logger.Error("Failed to Start syncer while starting CardanoChainObserver. Retrying...", "chainId", co.config.ChainId, "err", err)
+		}
+
+		return err
+	})
 
 	return nil
 }
@@ -134,8 +139,9 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 		NetworkMagic:   config.NetworkMagic,
 		NodeAddress:    config.NetworkAddress,
 		RestartOnError: true,
-		RestartDelay:   time.Second * 2,
+		RestartDelay:   time.Second * 5,
 		KeepAlive:      true,
+		SyncStartTries: math.MaxInt,
 	}
 
 	return indexerConfig, syncerConfig
@@ -155,9 +161,29 @@ func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
 	return db.OpenTx().AddTxOutputs(nonExistingUtxos).Execute()
 }
 
-func updateLastConfirmedBlockFromSc(indexerDb indexer.Database, oracleDb core.CardanoTxsProcessorDb, bridgeDataFetcher core.BridgeDataFetcher, chainId string) error {
-	blockPointSc, err := bridgeDataFetcher.FetchLatestBlockPoint(chainId)
-	if blockPointSc == nil || err != nil {
+func updateLastConfirmedBlockFromSc(
+	ctx context.Context,
+	indexerDb indexer.Database,
+	oracleDb core.CardanoTxsProcessorDb,
+	bridgeDataFetcher core.BridgeDataFetcher,
+	chainId string,
+	logger hclog.Logger,
+) error {
+	var blockPointSc *indexer.BlockPoint
+	err := common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
+		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
+		if err != nil {
+			logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...", "chainId", chainId, "err", err)
+		}
+
+		return err
+	})
+
+	if err != nil {
+		return fmt.Errorf("error while RetryForever of FetchLatestBlockPoint. err: %w", err)
+	}
+
+	if blockPointSc == nil {
 		return nil
 	}
 

@@ -12,8 +12,8 @@ cloud.google.com/go/secretmanager v1.12.0/go.mod h1:Y1Gne3Ag+fZ2TDTiJc8ZJCMFbi7k
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240423080459-73e2119cda08 h1:l3dsfmJSdKu5UUiDTQBrhF1bKuAIlcNUmu9dUzoS9vQ=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240423080459-73e2119cda08/go.mod h1:zHnyzYjsEeFpRq22oDo2Q7PnplVyLDMzczUxss657lM=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240424170857-fad2fb55fad0 h1:DbMYSHNWg4EjrstDnZDvyDgUQfxNj6RKQOhRD4dNOKE=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240424170857-fad2fb55fad0/go.mod h1:zHnyzYjsEeFpRq22oDo2Q7PnplVyLDMzczUxss657lM=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/VictoriaMetrics/fastcache v1.12.1 h1:i0mICQuojGDL3KblA7wUNlY5lOK6a4bwt3uRKnkZU40=
@@ -302,6 +302,8 @@ github.com/ryanuber/columnize v2.1.2+incompatible h1:C89EOx/XBWwIXl8wm8OPJBd7kPF
 github.com/ryanuber/columnize v2.1.2+incompatible/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
 github.com/ryanuber/go-glob v1.0.0 h1:iQh3xXAumdQ+4Ufa5b25cRpC5TYKlno6hsv6Cb3pkBk=
 github.com/ryanuber/go-glob v1.0.0/go.mod h1:807d1WSdnB0XRJzKNil9Om6lcp/3a0v4qIHxIXzX/Yc=
+github.com/sethvargo/go-retry v0.2.4 h1:T+jHEQy/zKJf5s95UkguisicE0zuF9y7+/vgz08Ocec=
+github.com/sethvargo/go-retry v0.2.4/go.mod h1:1afjQuvh7s4gflMObvjLPaWgluLLyhA1wmVZ6KLpICw=
 github.com/shirou/gopsutil v3.21.11+incompatible h1:+1+c1VGhc88SSonWP6foOcLhvnKlUeu/erjjvaPEYiI=
 github.com/shirou/gopsutil v3.21.11+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/spf13/cobra v1.8.0 h1:7aJaZx1B85qltLMc546zn58BxxfZdR/W22ej9CFoEf0=

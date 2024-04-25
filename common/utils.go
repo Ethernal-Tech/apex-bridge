@@ -1,11 +1,15 @@
 package common
 
 import (
+	"context"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/sethvargo/go-retry"
 )
 
 func IsValidURL(input string) bool {
@@ -27,4 +31,30 @@ func DecodeHex(s string) ([]byte, error) {
 
 func GetRequiredSignaturesForConsensus(cnt uint64) uint64 {
 	return (cnt*2 + 2) / 3
+}
+
+// the context is cancelled or expired.
+func RetryForever(ctx context.Context, interval time.Duration, fn func(context.Context) error) error {
+	err := retry.Do(ctx, retry.NewConstant(interval), func(context.Context) error {
+		// Execute function and end retries if no error or context done
+		err := fn(ctx)
+		if IsContextDoneErr(err) {
+			return err
+		}
+
+		if err == nil {
+			return nil
+		}
+
+		// Retry on all other errors
+		return retry.RetryableError(err)
+	})
+
+	return err
+}
+
+// IsContextDoneErr returns true if the error is due to the context being cancelled
+// or expired. This is useful for determining if a function should retry.
+func IsContextDoneErr(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

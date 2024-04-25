@@ -143,15 +143,15 @@ func (o *OracleImpl) Start() error {
 	go o.cardanoTxsProcessor.Start()
 	go o.expectedTxsFetcher.Start()
 
+	for _, cbs := range o.confirmedBlockSubmitters {
+		cbs.StartSubmit()
+	}
+
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
 		if err != nil {
 			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().ChainId, err)
 		}
-	}
-
-	for _, cbs := range o.confirmedBlockSubmitters {
-		cbs.StartSubmit()
 	}
 
 	o.errorCh = make(chan error, 1)

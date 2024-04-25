@@ -9,28 +9,32 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_populateUtxosAndAddresses(t *testing.T) {
-	config := &oracleCore.AppConfig{
-		CardanoChains: map[string]*oracleCore.CardanoChainConfig{
-			"vector": {
-				NetworkAddress: "http://vector.com",
+	getConfig := func() *oracleCore.AppConfig {
+		return &oracleCore.AppConfig{
+			CardanoChains: map[string]*oracleCore.CardanoChainConfig{
+				"vector": {
+					NetworkAddress: "http://vector.com",
+				},
+				"prime": {
+					NetworkAddress: "http://prime.com",
+				},
+				"dummy": {
+					NetworkAddress: "http://dummy.com",
+				},
 			},
-			"prime": {
-				NetworkAddress: "http://prime.com",
-			},
-			"dummy": {
-				NetworkAddress: "http://dummy.com",
-			},
-		},
+		}
 	}
+
 	t.Run("chain not in config", func(t *testing.T) {
 		scMock := &eth.BridgeSmartContractMock{}
-		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return([]eth.Chain{
+		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
 				Id: "vector",
 			},
@@ -38,34 +42,50 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				Id: "non_existing",
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(&eth.UTXOs{
 			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
 			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
 		}, error(nil))
 
-		err := populateUtxosAndAddresses(context.Background(), config, scMock)
+		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "no config for registered chain")
 	})
 
-	t.Run("failed to retrieve available utxos", func(t *testing.T) {
+	t.Run("failed to retrieve available utxos once", func(t *testing.T) {
 		scMock := &eth.BridgeSmartContractMock{}
-		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return([]eth.Chain{
+		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
 				Id: "vector",
 			},
 		}, error(nil))
 		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(nil, errors.New("er"))
+		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(&eth.UTXOs{
+			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+		}, nil)
 
-		err := populateUtxosAndAddresses(context.Background(), config, scMock)
-		require.ErrorContains(t, err, "retrieve available utxos")
+		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
+		require.NoError(t, err)
 	})
 
-	t.Run("failed to retrieve available utxos", func(t *testing.T) {
+	t.Run("failed to retrieve registered chains once", func(t *testing.T) {
 		scMock := &eth.BridgeSmartContractMock{}
 		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return(nil, errors.New("er"))
+		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return([]eth.Chain{
+			{
+				Id: "vector",
+			},
+			{
+				Id: "prime",
+			},
+		}, nil)
+		scMock.On("GetAvailableUTXOs", mock.Anything, mock.Anything).Return(&eth.UTXOs{
+			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+		}, nil)
 
-		err := populateUtxosAndAddresses(context.Background(), config, scMock)
-		require.ErrorContains(t, err, "failed to retrieve registered chains")
+		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
+		require.NoError(t, err)
 	})
 
 	t.Run("happy path", func(t *testing.T) {
@@ -115,7 +135,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		}
 
 		scMock := &eth.BridgeSmartContractMock{}
-		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return([]eth.Chain{
+		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
 				Id:              "vector",
 				AddressMultisig: multisigVector,
@@ -127,16 +147,17 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				AddressFeePayer: feePayerPrime,
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(&eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[0:1],
 			FeePayerOwnedUTXOs: utxos[1:3],
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "prime").Once().Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, "prime").Return(&eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[3:6],
 			FeePayerOwnedUTXOs: utxos[6:7],
 		}, error(nil))
 
-		err := populateUtxosAndAddresses(context.Background(), config, scMock)
+		config := getConfig()
+		err := populateUtxosAndAddresses(context.Background(), config, scMock, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		require.Len(t, config.CardanoChains, 2)
