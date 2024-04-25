@@ -16,12 +16,11 @@ import (
 )
 
 type CardanoChainObserverImpl struct {
-	ctx                       context.Context
-	indexerDb                 indexer.Database
-	syncer                    indexer.BlockSyncer
-	logger                    hclog.Logger
-	config                    *core.CardanoChainConfig
-	retryForeverOnNewAndStart bool
+	ctx       context.Context
+	indexerDb indexer.Database
+	syncer    indexer.BlockSyncer
+	logger    hclog.Logger
+	config    *core.CardanoChainConfig
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
@@ -32,7 +31,6 @@ func NewCardanoChainObserver(
 	txsProcessor core.CardanoTxsProcessor, oracleDb core.CardanoTxsProcessorDb,
 	indexerDb indexer.Database, bridgeDataFetcher core.BridgeDataFetcher,
 	logger hclog.Logger,
-	retryForeverOnNewAndStart bool,
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
@@ -43,9 +41,9 @@ func NewCardanoChainObserver(
 		}
 	}
 
-	err := updateLastConfirmedBlockFromSc(ctx, indexerDb, oracleDb, bridgeDataFetcher, config.ChainId, logger, retryForeverOnNewAndStart)
+	err := updateLastConfirmedBlockFromSc(ctx, indexerDb, oracleDb, bridgeDataFetcher, config.ChainId, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to updateLastConfirmedBlockFromSc. err: %w", err)
 	}
 
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
@@ -72,32 +70,23 @@ func NewCardanoChainObserver(
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
-		ctx:                       ctx,
-		indexerDb:                 indexerDb,
-		syncer:                    syncer,
-		logger:                    logger,
-		config:                    config,
-		retryForeverOnNewAndStart: retryForeverOnNewAndStart,
+		ctx:       ctx,
+		indexerDb: indexerDb,
+		syncer:    syncer,
+		logger:    logger,
+		config:    config,
 	}, nil
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
-	if co.retryForeverOnNewAndStart {
-		go common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
-			err = co.syncer.Sync()
-			if err != nil {
-				co.logger.Error("Failed to Start syncer while starting CardanoChainObserver. Retrying...", "chainId", co.config.ChainId, "err", err)
-			}
-
-			return err
-		})
-	} else {
-		err := co.syncer.Sync()
+	go common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
+		err = co.syncer.Sync()
 		if err != nil {
-			co.logger.Error("Start syncing failed", "err", err)
-			return fmt.Errorf("start syncing failed. err: %w", err)
+			co.logger.Error("Failed to Start syncer while starting CardanoChainObserver. Retrying...", "chainId", co.config.ChainId, "err", err)
 		}
-	}
+
+		return err
+	})
 
 	return nil
 }
@@ -179,24 +168,19 @@ func updateLastConfirmedBlockFromSc(
 	bridgeDataFetcher core.BridgeDataFetcher,
 	chainId string,
 	logger hclog.Logger,
-	retryForeverOnNewAndStart bool,
 ) error {
 	var blockPointSc *indexer.BlockPoint
-	if retryForeverOnNewAndStart {
-		common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
-			blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
-			if err != nil {
-				logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...", "chainId", chainId, "err", err)
-			}
-
-			return err
-		})
-	} else {
-		var err error
+	err := common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
 		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
 		if err != nil {
-			logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver", "chainId", chainId, "err", err)
+			logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...", "chainId", chainId, "err", err)
 		}
+
+		return err
+	})
+
+	if err != nil {
+		return fmt.Errorf("error while RetryForever of FetchLatestBlockPoint. err: %w", err)
 	}
 
 	if blockPointSc == nil {

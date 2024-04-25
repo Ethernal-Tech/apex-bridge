@@ -34,21 +34,27 @@ func GetRequiredSignaturesForConsensus(cnt uint64) uint64 {
 }
 
 // the context is cancelled or expired.
-func RetryForever(ctx context.Context, interval time.Duration, fn func(context.Context) error) {
-	_ = retry.Do(ctx, retry.NewConstant(interval), func(context.Context) error {
+func RetryForever(ctx context.Context, interval time.Duration, fn func(context.Context) error) error {
+	err := retry.Do(ctx, retry.NewConstant(interval), func(context.Context) error {
 		// Execute function and end retries if no error or context done
 		err := fn(ctx)
-		if err == nil || IsContextDone(err) {
+		if IsContextDoneErr(err) {
+			return err
+		}
+
+		if err == nil {
 			return nil
 		}
 
 		// Retry on all other errors
 		return retry.RetryableError(err)
 	})
+
+	return err
 }
 
-// IsContextDone returns true if the error is due to the context being cancelled
+// IsContextDoneErr returns true if the error is due to the context being cancelled
 // or expired. This is useful for determining if a function should retry.
-func IsContextDone(err error) bool {
+func IsContextDoneErr(err error) bool {
 	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

@@ -53,7 +53,6 @@ func NewOracle(
 	appConfig *core.AppConfig,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
-	retryForeverOnNewAndStart bool,
 ) (*OracleImpl, error) {
 	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
@@ -115,7 +114,7 @@ func NewOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger, retryForeverOnNewAndStart)
+			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainId, err)
 		}

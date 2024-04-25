@@ -26,7 +26,6 @@ import (
 const (
 	MainComponentName            = "validatorcomponents"
 	RelayerImitatorComponentName = "relayerimitator"
-	RetryForeverOnNewAndStart    = true
 )
 
 type ValidatorComponentsImpl struct {
@@ -64,13 +63,12 @@ func NewValidatorComponents(
 		ctx, oracleConfig,
 		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress),
 		logger,
-		RetryForeverOnNewAndStart,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"), RetryForeverOnNewAndStart)
+	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
@@ -175,24 +173,20 @@ func populateUtxosAndAddresses(
 	config *oracleCore.AppConfig,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
-	retryForever bool,
 ) error {
 	var allRegisteredChains []contractbinding.IBridgeContractStructsChain
-	if retryForever {
-		common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
-			if err != nil {
-				logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
-			}
 
-			return err
-		})
-	} else {
-		var err error
-		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctx)
+	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
 		if err != nil {
-			return fmt.Errorf("failed to retrieve registered chains: %w", err)
+			logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
 		}
+
+		return err
+	})
+
+	if err != nil {
+		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
 
 	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []eth.UTXO) {
@@ -219,21 +213,17 @@ func populateUtxosAndAddresses(
 		}
 
 		var availableUtxos *contractbinding.IBridgeContractStructsUTXOs
-		if retryForever {
-			common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-				availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
-				if err != nil {
-					logger.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...", "chainId", regChain.Id, "err", err)
-				}
-
-				return err
-			})
-		} else {
-			var err error
-			availableUtxos, err = smartContract.GetAvailableUTXOs(ctx, regChain.Id)
+		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
 			if err != nil {
-				return fmt.Errorf("failed to retrieve available utxos for %s: %w", regChain.Id, err)
+				logger.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...", "chainId", regChain.Id, "err", err)
 			}
+
+			return err
+		})
+
+		if err != nil {
+			return fmt.Errorf("error while RetryForever of GetAvailableUTXOs. err: %w", err)
 		}
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
