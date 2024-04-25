@@ -3,7 +3,6 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"path"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -47,14 +46,14 @@ const (
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
 	primeNetworkAddressFlagDesc   = "(Mandatory) Address of prime network"
-	primeNetworkMagicFlagDesc     = "(Mandatory) Network magic of prime network"
+	primeNetworkMagicFlagDesc     = "Network magic of prime network (default 0)"
 	primeKeysDirFlagDesc          = "Path to cardano keys directory for prime network"
 	primeBlockfrostUrlFlagDesc    = "(Mandatory if prime-socket-path not specified) Blockfrost URL for prime network"
 	primeBlockfrostApiKeyFlagDesc = "Blockfrost API key for prime network"
 	primeSocketPathFlagDesc       = "(Mandatory if prime-blockfrost-url not specified) Socket path for prime network"
 
 	vectorNetworkAddressFlagDesc   = "(Mandatory) Address of vector network"
-	vectorNetworkMagicFlagDesc     = "(Mandatory) Network magic of vector network"
+	vectorNetworkMagicFlagDesc     = "Network magic of vector network (default 0)"
 	vectorKeysDirFlagDesc          = "Path to cardano keys directory for vector network"
 	vectorBlockfrostUrlFlagDesc    = "(Mandatory if vector-socket-path not specified) Blockfrost URL for vector network"
 	vectorBlockfrostApiKeyFlagDesc = "Blockfrost API key for vector network"
@@ -74,7 +73,7 @@ const (
 	outputValidatorComponentsFileNameFlagDesc = "Validator components config json output file name"
 	outputRelayerFileNameFlagDesc             = "Relayer config json output file name"
 
-	defaultNetworkMagic                      = math.MaxUint32
+	defaultNetworkMagic                      = 0
 	defaultPrimeKeysDir                      = "./keys/prime"
 	defaultVectorKeysDir                     = "./keys/vector"
 	defaultBridgeSecretsManagerPath          = "./blade-dir"
@@ -120,18 +119,12 @@ func (p *generateConfigsParams) validateFlags() error {
 	if p.primeNetworkAddress == "" || !common.IsValidURL(p.primeNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
-	if p.primeNetworkMagic == defaultNetworkMagic {
-		return fmt.Errorf("missing %s", primeNetworkMagicFlag)
-	}
 	if p.primeBlockfrostUrl == "" && p.primeSocketPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", primeBlockfrostUrlFlag, primeSocketPathFlag)
 	}
 
 	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
-	}
-	if p.vectorNetworkMagic == defaultNetworkMagic {
-		return fmt.Errorf("missing %s", vectorNetworkMagicFlag)
 	}
 	if p.vectorBlockfrostUrl == "" && p.vectorSocketPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", vectorBlockfrostUrlFlag, vectorSocketPathFlag)
