@@ -20,10 +20,6 @@ func GetSecretsManager(
 			return nil, fmt.Errorf("invalid secrets configuration: %w", err)
 		}
 
-		if !secretsInfra.SupportedServiceManager(secretsConfig.Type) {
-			return nil, errors.New("unsupported secrets manager")
-		}
-
 		return secretsInfraHelper.CreateSecretsManager(secretsConfig)
 	}
 
@@ -42,8 +38,8 @@ func GetSecretsManager(
 func GetSecretsManagerFromConfig(
 	config *secretsInfra.SecretsManagerConfig,
 ) (secretsInfra.SecretsManager, error) {
-	if config == nil || !secretsInfra.SupportedServiceManager(config.Type) {
-		return nil, errors.New("unsupported secrets manager")
+	if config == nil {
+		config = &secretsInfra.SecretsManagerConfig{} // dummy, will raise unsupported error
 	}
 
 	return secretsInfraHelper.CreateSecretsManager(config)

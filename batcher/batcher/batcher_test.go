@@ -15,7 +15,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -42,10 +41,7 @@ func TestBatcherExecute(t *testing.T) {
 				}`, testDir))),
 		},
 		Bridge: core.BridgeConfig{
-			SecretsManager: &secrets.SecretsManagerConfig{
-				Type: secrets.Local,
-				Path: "dummy",
-			},
+			ValidatorDataDir: path.Join(testDir, "some"),
 		},
 		PullTimeMilis: 2500,
 	}

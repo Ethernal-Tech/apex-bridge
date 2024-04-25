@@ -11,7 +11,6 @@ import (
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
@@ -319,10 +318,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		Bridge: oCore.BridgeConfig{
 			NodeUrl:              p.bridgeNodeUrl,
 			SmartContractAddress: p.bridgeSCAddress,
-			SecretsManager: &secrets.SecretsManagerConfig{
-				Type: secrets.Local,
-				Path: path.Clean(p.bridgeSecretsManagerPath),
-			},
+			ValidatorDataDir:     "", // TODO:
+			ValidatorConfigDir:   "", // TODO:
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  10,
 				ConfirmedBlocksSubmitTime: 5000,

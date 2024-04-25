@@ -222,7 +222,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 
 	secretsManager, err := common.GetSecretsManager(ip.validatorDir, ip.validatorConfigDir, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load blade wallet: %w", err)
+		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
 
 	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)

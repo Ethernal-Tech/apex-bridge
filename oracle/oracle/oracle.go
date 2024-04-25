@@ -59,7 +59,13 @@ func NewOracle(
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManagerConfig(appConfig.Bridge.SecretsManager)
+	secretsManager, err := common.GetSecretsManager(
+		appConfig.Bridge.ValidatorDataDir, appConfig.Bridge.ValidatorConfigDir, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
 	}

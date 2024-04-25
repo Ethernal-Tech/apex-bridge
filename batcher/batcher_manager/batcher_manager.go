@@ -35,7 +35,13 @@ func NewBatcherManager(
 			return nil, err
 		}
 
-		wallet, err := ethtxhelper.NewEthTxWalletFromSecretManagerConfig(config.Bridge.SecretsManager)
+		secretsManager, err := common.GetSecretsManager(
+			config.Bridge.ValidatorDataDir, config.Bridge.ValidatorConfigDir, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+		}
+
+		wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create blade wallet for batcher: %w", err)
 		}
