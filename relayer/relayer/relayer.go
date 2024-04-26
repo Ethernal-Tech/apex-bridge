@@ -22,8 +22,10 @@ type RelayerImpl struct {
 
 var _ core.Relayer = (*RelayerImpl)(nil)
 
-func NewRelayer(config *core.RelayerConfiguration,
-	bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger, operations core.ChainOperations, db core.Database) *RelayerImpl {
+func NewRelayer(
+	config *core.RelayerConfiguration, bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger,
+	operations core.ChainOperations, db core.Database,
+) *RelayerImpl {
 	return &RelayerImpl{
 		config:              config,
 		logger:              logger,
@@ -53,30 +55,31 @@ func (r *RelayerImpl) Start(ctx context.Context) {
 }
 
 func (r *RelayerImpl) execute(ctx context.Context) error {
-	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Chain.ChainId)
+	confirmedBatch, err := r.bridgeSmartContract.GetConfirmedBatch(ctx, r.config.Chain.ChainID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
 	}
 
 	r.logger.Info("Signed batch retrieved from contract")
 
-	lastSubmittedBatchId, err := r.db.GetLastSubmittedBatchId(r.config.Chain.ChainId)
+	lastSubmittedBatchID, err := r.db.GetLastSubmittedBatchID(r.config.Chain.ChainID)
 	if err != nil {
 		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
 	}
 
-	receivedBatchId, ok := new(big.Int).SetString(confirmedBatch.Id, 0)
+	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 0)
 	if !ok {
 		return fmt.Errorf("failed to convert confirmed batch id to big int")
 	}
 
-	if lastSubmittedBatchId != nil {
-		if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
+	if lastSubmittedBatchID != nil {
+		if lastSubmittedBatchID.Cmp(receivedBatchID) == 0 {
 			r.logger.Info("Waiting on new signed batch")
+
 			return nil
-		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
+		} else if lastSubmittedBatchID.Cmp(receivedBatchID) == 1 {
 			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
-				lastSubmittedBatchId, receivedBatchId)
+				lastSubmittedBatchID, receivedBatchID)
 		}
 	}
 
@@ -86,7 +89,7 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 
 	r.logger.Info("Transaction successfully submitted")
 
-	if err := r.db.AddLastSubmittedBatchId(r.config.Chain.ChainId, receivedBatchId); err != nil {
+	if err := r.db.AddLastSubmittedBatchID(r.config.Chain.ChainID, receivedBatchID); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)
 	}
 

@@ -1,4 +1,4 @@
-package tx_processors
+package txprocessors
 
 import (
 	"math/big"
@@ -11,7 +11,6 @@ import (
 )
 
 func TestBatchExecutedProcessor(t *testing.T) {
-
 	proc := NewBatchExecutedProcessor()
 
 	appConfig := core.AppConfig{
@@ -36,13 +35,15 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		},
 	})
 
-	t.Run("IsTxRelevant", func(t *testing.T) {
+	t.Run("batch executed processor - IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.CardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
 
+		irrelevantTxType := common.BridgingTxTypeBridgingRequest
+
 		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
-			BridgingTxType: common.BridgingTxTypeBridgingRequest,
+			BridgingTxType: irrelevantTxType,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, irrelevantMetadata)
@@ -66,6 +67,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				Metadata: relevantMetadata,
 			},
 		})
+
 		require.NoError(t, err)
 		require.True(t, relevant)
 	})
@@ -102,7 +104,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 				Inputs:   txInputs,
@@ -112,27 +114,29 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, "", claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Nil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
+		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 0)
 	})
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
-		const batchNonceId = uint64(1)
+		const batchNonceID = uint64(1)
 		relevantFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceId:   batchNonceId,
+			BatchNonceID:   batchNonceID,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
+
 		const txHash = "test_hash"
+
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 1},
 			{Address: "addr2", Amount: 2},
 		}
 
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: relevantFullMetadata,
@@ -150,22 +154,24 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
-		batchNonceId := uint64(1)
+		batchNonceID := uint64(1)
 		relevantFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceId:   batchNonceId,
+			BatchNonceID:   batchNonceID,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
+
 		const txHash = "test_hash"
+
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 1},
 			{Address: "addr2", Amount: 2},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: relevantFullMetadata,
@@ -177,7 +183,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Equal(t, new(big.Int).SetUint64(batchNonceId), claims.BatchExecutedClaims[0].BatchNonceID)
+		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutedClaims[0].BatchNonceID)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, len(txOutputs))
 		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[0].Amount))
@@ -185,7 +191,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {
-		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+		cardanoChains := make(map[string]*core.CardanoChainConfig)
 		cardanoChains["prime"] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
@@ -199,16 +205,21 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Settings:         core.AppSettings{},
 			BridgingSettings: core.BridgingSettings{},
 		}
+
 		config.FillOut()
+
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr3",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr3",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 
@@ -228,7 +239,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("validate method origin chain not registered", func(t *testing.T) {
-		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+		cardanoChains := make(map[string]*core.CardanoChainConfig)
 
 		config := &core.AppConfig{
 			CardanoChains:    cardanoChains,
@@ -236,16 +247,21 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Settings:         core.AppSettings{},
 			BridgingSettings: core.BridgingSettings{},
 		}
+
 		config.FillOut()
+
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr3",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr3",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 
@@ -255,7 +271,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	})
 
 	t.Run("validate method pass", func(t *testing.T) {
-		var cardanoChains map[string]*core.CardanoChainConfig = make(map[string]*core.CardanoChainConfig)
+		cardanoChains := make(map[string]*core.CardanoChainConfig)
 		cardanoChains["prime"] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
@@ -269,21 +285,27 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Settings:         core.AppSettings{},
 			BridgingSettings: core.BridgingSettings{},
 		}
+
 		config.FillOut()
+
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr1",
+					IsUsed:  true,
+				},
+			},
+			{
+				Output: indexer.TxOutput{
+					Address: "addr2",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
-			OriginChainId: "prime",
+			OriginChainID: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr1",
-						IsUsed:  true,
-					},
-				}), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr2",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 

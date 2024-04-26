@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type BBoltDatabase struct {
 
 var (
 	bridgingRequestStatesBucket = []byte("BridgingRequestStates")
-	submittedBatchIdBucket      = []byte("SubmittedBatchId")
+	submittedBatchIDBucket      = []byte("SubmittedBatchId")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -29,7 +29,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{bridgingRequestStatesBucket, submittedBatchIdBucket} {
+		for _, bn := range [][]byte{bridgingRequestStatesBucket, submittedBatchIDBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -47,7 +47,7 @@ func (bd *BBoltDatabase) Close() error {
 // AddBridgingRequestState implements core.Database.
 func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestState) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
-		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDbKey())) > 0 {
+		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDBKey())) > 0 {
 			return fmt.Errorf("trying to add a BridgingRequestState that already exists")
 		}
 
@@ -56,7 +56,7 @@ func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestStat
 			return fmt.Errorf("could not marshal BridgingRequestState: %w", err)
 		}
 
-		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDbKey(), bytes); err != nil {
+		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDBKey(), bytes); err != nil {
 			return fmt.Errorf("BridgingRequestState write error: %w", err)
 		}
 
@@ -67,7 +67,7 @@ func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestStat
 // UpdateBridgingRequestState implements core.Database.
 func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestState) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
-		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDbKey())) == 0 {
+		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDBKey())) == 0 {
 			return fmt.Errorf("trying to update a BridgingRequestState that does not exist")
 		}
 
@@ -76,7 +76,7 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 			return fmt.Errorf("could not marshal BridgingRequestState: %w", err)
 		}
 
-		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDbKey(), bytes); err != nil {
+		if err = tx.Bucket(bridgingRequestStatesBucket).Put(state.ToDBKey(), bytes); err != nil {
 			return fmt.Errorf("BridgingRequestState write error: %w", err)
 		}
 
@@ -85,9 +85,14 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 }
 
 // GetBridgingRequestState implements core.Database.
-func (bd *BBoltDatabase) GetBridgingRequestState(sourceChainId string, sourceTxHash string) (result *core.BridgingRequestState, err error) {
+func (bd *BBoltDatabase) GetBridgingRequestState(
+	sourceChainID string, sourceTxHash string,
+) (
+	result *core.BridgingRequestState, err error,
+) {
 	err = bd.db.View(func(tx *bbolt.Tx) error {
-		if data := tx.Bucket(bridgingRequestStatesBucket).Get(core.ToBridgingRequestStateDbKey(sourceChainId, sourceTxHash)); len(data) > 0 {
+		data := tx.Bucket(bridgingRequestStatesBucket).Get(core.ToBridgingRequestStateDBKey(sourceChainID, sourceTxHash))
+		if len(data) > 0 {
 			return json.Unmarshal(data, &result)
 		}
 
@@ -97,8 +102,12 @@ func (bd *BBoltDatabase) GetBridgingRequestState(sourceChainId string, sourceTxH
 	return result, err
 }
 
-// GetBridgingRequestStatesByBatchId implements core.Database.
-func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(destinationChainId string, batchId uint64) ([]*core.BridgingRequestState, error) {
+// GetBridgingRequestStatesByBatchID implements core.Database.
+func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchID(
+	destinationChainID string, batchID uint64,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	var result []*core.BridgingRequestState
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -111,7 +120,7 @@ func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(destinationChainId st
 				return err
 			}
 
-			if state.BatchId == batchId && state.DestinationChainId == destinationChainId {
+			if state.BatchID == batchID && state.DestinationChainID == destinationChainID {
 				result = append(result, state)
 			}
 		}
@@ -126,7 +135,11 @@ func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(destinationChainId st
 }
 
 // GetUserBridgingRequestStates implements core.Database.
-func (bd *BBoltDatabase) GetUserBridgingRequestStates(sourceChainId string, userAddr string) ([]*core.BridgingRequestState, error) {
+func (bd *BBoltDatabase) GetUserBridgingRequestStates(
+	sourceChainID string, userAddr string,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	var result []*core.BridgingRequestState
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -139,11 +152,11 @@ func (bd *BBoltDatabase) GetUserBridgingRequestStates(sourceChainId string, user
 				return err
 			}
 
-			if state.SourceChainId == sourceChainId {
-
+			if state.SourceChainID == sourceChainID {
 				for _, inputAddr := range state.InputAddrs {
 					if userAddr == inputAddr {
 						result = append(result, state)
+
 						break
 					}
 				}
@@ -159,15 +172,15 @@ func (bd *BBoltDatabase) GetUserBridgingRequestStates(sourceChainId string, user
 	return result, nil
 }
 
-// AddLastSubmittedBatchId implements core.Database.
-func (bd *BBoltDatabase) AddLastSubmittedBatchId(chainId string, batchId *big.Int) error {
+// AddLastSubmittedBatchID implements core.Database.
+func (bd *BBoltDatabase) AddLastSubmittedBatchID(chainID string, batchID *big.Int) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
-		bytes, err := batchId.MarshalText()
+		bytes, err := batchID.MarshalText()
 		if err != nil {
 			return fmt.Errorf("could not marshal batch ID: %w", err)
 		}
 
-		if err := tx.Bucket(submittedBatchIdBucket).Put([]byte(chainId), bytes); err != nil {
+		if err := tx.Bucket(submittedBatchIDBucket).Put([]byte(chainID), bytes); err != nil {
 			return fmt.Errorf("last submitted batch ID write error: %w", err)
 		}
 
@@ -175,12 +188,12 @@ func (bd *BBoltDatabase) AddLastSubmittedBatchId(chainId string, batchId *big.In
 	})
 }
 
-// GetLastSubmittedBatchId implements core.Database.
-func (bd *BBoltDatabase) GetLastSubmittedBatchId(chainId string) (*big.Int, error) {
+// GetLastSubmittedBatchID implements core.Database.
+func (bd *BBoltDatabase) GetLastSubmittedBatchID(chainID string) (*big.Int, error) {
 	var result *big.Int
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
-		bytes := tx.Bucket(submittedBatchIdBucket).Get([]byte(chainId))
+		bytes := tx.Bucket(submittedBatchIDBucket).Get([]byte(chainID))
 		if bytes == nil {
 			return nil
 		}

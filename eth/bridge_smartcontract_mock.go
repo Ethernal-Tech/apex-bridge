@@ -21,7 +21,9 @@ func (m *BridgeSmartContractMock) GetConfirmedBatch(
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).(*ConfirmedBatch), args.Error(1)
+	arg0, _ := args.Get(0).(*ConfirmedBatch)
+
+	return arg0, args.Error(1)
 }
 
 func (m *BridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
@@ -30,7 +32,9 @@ func (m *BridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedB
 
 func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
 	args := m.Called(ctx, destinationChain)
-	return args.Get(0).(bool), args.Error(1)
+	arg0, _ := args.Get(0).(bool)
+
+	return arg0, args.Error(1)
 }
 
 func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error) {
@@ -40,53 +44,77 @@ func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destina
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).(*UTXOs), args.Error(1)
+	arg0, _ := args.Get(0).(*UTXOs)
+
+	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error) {
+func (m *BridgeSmartContractMock) GetConfirmedTransactions(
+	ctx context.Context, destinationChain string,
+) (
+	[]ConfirmedTransaction, error,
+) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).([]ConfirmedTransaction), args.Error(1)
+	arg0, _ := args.Get(0).([]ConfirmedTransaction)
+
+	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error) {
+func (m *BridgeSmartContractMock) GetLastObservedBlock(
+	ctx context.Context, destinationChain string,
+) (
+	*CardanoBlock, error,
+) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).(*CardanoBlock), args.Error(1)
+	arg0, _ := args.Get(0).(*CardanoBlock)
+
+	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error) {
+func (m *BridgeSmartContractMock) GetValidatorsCardanoData(
+	ctx context.Context, destinationChain string,
+) (
+	[]ValidatorCardanoData, error,
+) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).([]ValidatorCardanoData), args.Error(1)
+	arg0, _ := args.Get(0).([]ValidatorCardanoData)
+
+	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetNextBatchId(ctx context.Context, destinationChain string) (*big.Int, error) {
+func (m *BridgeSmartContractMock) GetNextBatchID(ctx context.Context, destinationChain string) (*big.Int, error) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).(*big.Int), args.Error(1)
+	arg0, _ := args.Get(0).(*big.Int)
+
+	return arg0, args.Error(1)
 }
 
 func (m *BridgeSmartContractMock) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
 	args := m.Called(ctx)
 	if args.Get(0) != nil {
-		return args.Get(0).([]Chain), args.Error(1)
+		arg0, _ := args.Get(0).([]Chain)
+
+		return arg0, args.Error(1)
 	}
 
 	return nil, args.Error(1)

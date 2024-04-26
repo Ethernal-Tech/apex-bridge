@@ -13,21 +13,21 @@ import (
 )
 
 type EthHelperWrapper struct {
-	nodeUrl     string
+	nodeURL     string
 	wallet      ethtxhelper.IEthTxWallet
 	ethTxHelper ethtxhelper.IEthTxHelper
 	lock        sync.Mutex
 }
 
-func NewEthHelperWrapper(nodeUrl string) *EthHelperWrapper {
+func NewEthHelperWrapper(nodeURL string) *EthHelperWrapper {
 	return &EthHelperWrapper{
-		nodeUrl: nodeUrl,
+		nodeURL: nodeURL,
 	}
 }
 
-func NewEthHelperWrapperWithWallet(nodeUrl string, wallet *ethtxhelper.EthTxWallet) (*EthHelperWrapper, error) {
+func NewEthHelperWrapperWithWallet(nodeURL string, wallet *ethtxhelper.EthTxWallet) (*EthHelperWrapper, error) {
 	return &EthHelperWrapper{
-		nodeUrl: nodeUrl,
+		nodeURL: nodeURL,
 		wallet:  wallet,
 	}, nil
 }
@@ -43,7 +43,7 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 	finalOpts := append(
 		append(
 			make([]ethtxhelper.TxRelayerOption, 0, len(opts)+1),
-			ethtxhelper.WithNodeUrl(e.nodeUrl),
+			ethtxhelper.WithNodeURL(e.nodeURL),
 		), opts...)
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(finalOpts...)
@@ -57,12 +57,15 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 }
 
 func (e *EthHelperWrapper) ProcessError(err error) error {
+	var netErr net.Error
+
+	//nolint:godox
 	// TODO: verify if these errors are the only ones we need to handle
 	if errors.Is(err, net.ErrClosed) || errors.Is(err, context.DeadlineExceeded) {
 		e.lock.Lock()
 		e.ethTxHelper = nil
 		e.lock.Unlock()
-	} else if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+	} else if ok := errors.As(err, &netErr); ok && netErr.Timeout() {
 		e.lock.Lock()
 		e.ethTxHelper = nil
 		e.lock.Unlock()
@@ -83,6 +86,7 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		return "", e.ProcessError(err)
 	}
 
+	//nolint:godox
 	// TODO: enable logs bsc.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
@@ -93,6 +97,8 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return receipt.BlockHash.String(), fmt.Errorf("receipts status not successful: %v", receipt.Status)
 	}
+
+	//nolint:godox,lll
 	// TODO: enable logs  bsc.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
 
 	return receipt.BlockHash.String(), nil

@@ -1,4 +1,4 @@
-package tx_processors
+package txprocessors
 
 import (
 	"fmt"
@@ -32,7 +32,9 @@ func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error
 	return false, err
 }
 
-func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig) error {
+func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
+	claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig,
+) error {
 	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
@@ -56,8 +58,10 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 	return nil
 }
 
-func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata) {
-	var utxos []core.UTXO
+func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(
+	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata,
+) {
+	utxos := make([]core.UTXO, 0, len(tx.Outputs))
 	for _, utxo := range tx.Outputs {
 		utxos = append(utxos, core.UTXO{
 			TxHash:  tx.Hash,
@@ -68,8 +72,8 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClai
 
 	claim := core.BatchExecutedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainID:                 tx.OriginChainId,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId),
+		ChainID:                 tx.OriginChainID,
+		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
 		OutputUTXOs: core.UTXOs{
 			MultisigOwnedUTXOs: utxos,
 		},
@@ -78,7 +82,9 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClai
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
 }
 
-func (*BatchExecutedProcessorImpl) validate(tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+func (*BatchExecutedProcessorImpl) validate(
+	tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig,
+) error {
 	// after BridgingTxType and inputs are validated, no further validation needed
 	return utils.ValidateTxInputs(tx, appConfig)
 }

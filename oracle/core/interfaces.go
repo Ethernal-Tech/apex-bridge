@@ -4,29 +4,29 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
-type BridgeExpectedCardanoTxsDb interface {
+type BridgeExpectedCardanoTxsDB interface {
 	AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error
-	GetExpectedTxs(chainId string, threshold int) ([]*BridgeExpectedCardanoTx, error)
-	ClearExpectedTxs(chainId string) error
+	GetExpectedTxs(chainID string, threshold int) ([]*BridgeExpectedCardanoTx, error)
+	ClearExpectedTxs(chainID string) error
 	MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error
 	MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error
 }
 
-type CardanoTxsDb interface {
+type CardanoTxsDB interface {
 	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
-	GetUnprocessedTxs(chainId string, threshold int) ([]*CardanoTx, error)
-	ClearUnprocessedTxs(chainId string) error
+	GetUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error)
+	ClearUnprocessedTxs(chainID string) error
 	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error
-	GetProcessedTx(chainId string, txHash string) (*ProcessedCardanoTx, error)
+	GetProcessedTx(chainID string, txHash string) (*ProcessedCardanoTx, error)
 }
 
-type CardanoTxsProcessorDb interface {
-	CardanoTxsDb
-	BridgeExpectedCardanoTxsDb
+type CardanoTxsProcessorDB interface {
+	CardanoTxsDB
+	BridgeExpectedCardanoTxsDB
 }
 
 type Database interface {
-	CardanoTxsProcessorDb
+	CardanoTxsProcessorDB
 	Init(filePath string) error
 	Close() error
 }
@@ -45,7 +45,7 @@ type CardanoChainObserver interface {
 }
 
 type CardanoTxsProcessor interface {
-	NewUnprocessedTxs(originChainId string, txs []*indexer.Tx) error
+	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
 	Start()
 }
 
@@ -66,16 +66,16 @@ type ExpectedTxsFetcher interface {
 }
 
 type BridgeDataFetcher interface {
-	FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error)
-	FetchExpectedTx(chainId string) (*BridgeExpectedCardanoTx, error)
+	FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error)
+	FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error)
 }
 
 type BridgeSubmitter interface {
 	SubmitClaims(claims *BridgeClaims) error
-	SubmitConfirmedBlocks(chainId string, blocks []*indexer.CardanoBlock) error
+	SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error
 }
 
 type ConfirmedBlocksSubmitter interface {
 	StartSubmit()
-	GetChainId() string
+	GetChainID() string
 }

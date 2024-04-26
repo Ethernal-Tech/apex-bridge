@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"os"
@@ -67,8 +67,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		err = db.AddUnprocessedTxs([]*core.CardanoTx{
-			{OriginChainId: "prime"},
-			{OriginChainId: "vector"},
+			{OriginChainID: "prime"},
+			{OriginChainID: "vector"},
 		})
 		require.NoError(t, err)
 	})
@@ -81,8 +81,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
-			{OriginChainId: "prime"},
-			{OriginChainId: "vector"},
+			{OriginChainID: "prime"},
+			{OriginChainID: "vector"},
 		}
 
 		err = db.AddUnprocessedTxs(expectedTxs)
@@ -109,8 +109,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
-			{OriginChainId: "prime"},
-			{OriginChainId: "vector"},
+			{OriginChainID: "prime"},
+			{OriginChainID: "vector"},
 		}
 
 		err = db.AddUnprocessedTxs(expectedTxs)
@@ -139,8 +139,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
-			{OriginChainId: "prime"},
-			{OriginChainId: "vector"},
+			{OriginChainID: "prime"},
+			{OriginChainID: "vector"},
 		}
 
 		err = db.AddUnprocessedTxs(expectedTxs)
@@ -187,8 +187,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
-			{OriginChainId: "prime"},
-			{OriginChainId: "vector"},
+			{OriginChainID: "prime"},
+			{OriginChainID: "vector"},
 		}
 
 		err = db.AddUnprocessedTxs(expectedTxs)
@@ -219,12 +219,12 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, tx)
 
-		tx, err = db.GetProcessedTx(expectedProcessedTxs[0].OriginChainId, expectedProcessedTxs[0].Hash)
+		tx, err = db.GetProcessedTx(expectedProcessedTxs[0].OriginChainID, expectedProcessedTxs[0].Hash)
 		require.NoError(t, err)
 		require.NotNil(t, tx)
 		require.Equal(t, expectedProcessedTxs[0], tx)
 
-		tx, err = db.GetProcessedTx(expectedProcessedTxs[1].OriginChainId, expectedProcessedTxs[1].Hash)
+		tx, err = db.GetProcessedTx(expectedProcessedTxs[1].OriginChainID, expectedProcessedTxs[1].Hash)
 		require.NoError(t, err)
 		require.NotNil(t, tx)
 		require.Equal(t, expectedProcessedTxs[1], tx)
@@ -244,8 +244,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		err = db.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainID: "prime"},
+			{ChainID: "vector"},
 		})
 		require.NoError(t, err)
 	})
@@ -253,25 +253,30 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetExpectedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
+		const (
+			primeChainID  = "prime"
+			vectorChainID = "vector"
+		)
+
 		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainID: primeChainID},
+			{ChainID: vectorChainID},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs("prime", 0)
+		txs, err := db.GetExpectedTxs(primeChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
 		require.Equal(t, expectedTxs[0], txs[0])
 
-		txs, err = db.GetExpectedTxs("vector", 1)
+		txs, err = db.GetExpectedTxs(vectorChainID, 1)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
@@ -286,8 +291,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainID: "prime"},
+			{ChainID: "vector"},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
@@ -316,8 +321,8 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainID: "prime"},
+			{ChainID: "vector"},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
@@ -356,9 +361,14 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
+		const (
+			primeChainID  = "prime"
+			vectorChainID = "vector"
+		)
+
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainID: primeChainID},
+			{ChainID: vectorChainID},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
@@ -367,25 +377,25 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.MarkExpectedTxsAsInvalid([]*core.BridgeExpectedCardanoTx{})
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs("prime", 0)
+		txs, err := db.GetExpectedTxs(primeChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsInvalid(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs("vector", 0)
+		txs, err = db.GetExpectedTxs(vectorChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsInvalid(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs("prime", 0)
+		txs, err = db.GetExpectedTxs(primeChainID, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 
-		txs, err = db.GetExpectedTxs("vector", 0)
+		txs, err = db.GetExpectedTxs(vectorChainID, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})

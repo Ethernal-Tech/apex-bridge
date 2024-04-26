@@ -1,4 +1,4 @@
-package failed_tx_processors
+package failedtxprocessors
 
 import (
 	"fmt"
@@ -31,7 +31,9 @@ func (*BatchExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedCa
 	return false, err
 }
 
-func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) error {
+func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(
+	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig,
+) error {
 	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
@@ -55,15 +57,19 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Bri
 	return nil
 }
 
-func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata) {
+func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
+	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata,
+) {
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, core.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainID:                 tx.ChainId,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId),
+		ChainID:                 tx.ChainID,
+		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
 	})
 }
 
-func (*BatchExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+func (*BatchExecutionFailedProcessorImpl) validate(
+	tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig,
+) error {
 	// no validation needed
 	return nil
 }

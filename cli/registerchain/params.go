@@ -22,28 +22,28 @@ const (
 	keysDirectoryFlag           = "keys-dir"
 	bridgeValidatorDataDirFlag  = "bridge-validator-data-dir"
 	bridgeValidatorConfigFlag   = "bridge-validator-config"
-	blockfrostUrlFlag           = "block-frost"
-	blockfrostProjectApiKeyFlag = "block-frost-api-key"
+	blockfrostURLFlag           = "block-frost"
+	blockfrostProjectAPIKeyFlag = "block-frost-api-key"
 	socketPathFlag              = "socket-path"
 	networkMagicFlag            = "network-magic"
 	multisigAddrFlag            = "addr"
 	multisigFeeAddrFlag         = "addr-fee"
-	bridgeUrlFlag               = "bridge-url"
+	bridgeURLFlag               = "bridge-url"
 	bridgeSCAddrFlag            = "bridge-addr"
 	chainIDFlag                 = "chain"
 	initialTokenSupplyFlag      = "token-supply"
 
 	keysDirectoryFlagDesc           = "cardano wallet directory"
-	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager"
-	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"
+	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
+	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc                 = "chain ID (prime, vector, etc)"
-	blockfrostUrlFlagDesc           = "block-frost url"
-	blockfrostProjectApiKeyFlagDesc = "blockfrost API key for prime network"
+	blockfrostURLFlagDesc           = "block-frost url"
+	blockfrostProjectAPIKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
 	socketPathFlagDesc              = "socket path for cardano node"
 	networkMagicFlagDesc            = "network magic of a chain (default 0 and it means Mainnet)"
 	multisigAddrFlagDesc            = "multisig address"
 	multisigFeeAddrFlagDesc         = "fee payer address"
-	bridgeUrlFlagDesc               = "bridge node url"
+	bridgeURLFlagDesc               = "bridge node url"
 	bridgeSCAddrFlagDesc            = "bridge smart contract address"
 	initialTokenSupplyFlagDesc      = "initial token supply for the chain"
 )
@@ -52,13 +52,13 @@ type registerChainParams struct {
 	keysDirectory           string
 	bridgeValidatorDataDir  string
 	bridgeValidatorConfig   string
-	blockfrostUrl           string
-	blockfrostProjectApiKey string
+	blockfrostURL           string
+	blockfrostProjectAPIKey string
 	socketPath              string
 	networkMagic            uint
 	multisigAddr            string
 	multisigFeeAddr         string
-	bridgeUrl               string
+	bridgeURL               string
 	bridgeSCAddr            string
 	chainID                 string
 	initialTokenSupply      string
@@ -67,16 +67,16 @@ type registerChainParams struct {
 }
 
 func (ip *registerChainParams) validateFlags() error {
-	if !common.IsValidURL(ip.bridgeUrl) {
-		return fmt.Errorf("invalid bridge node url: %s", ip.bridgeUrl)
+	if !common.IsValidURL(ip.bridgeURL) {
+		return fmt.Errorf("invalid bridge node url: %s", ip.bridgeURL)
 	}
 
-	if ip.blockfrostUrl == "" && ip.socketPath == "" {
+	if ip.blockfrostURL == "" && ip.socketPath == "" {
 		return errors.New("neither a block frost nor a socket path is specified")
 	}
 
-	if ip.blockfrostUrl != "" && !common.IsValidURL(ip.blockfrostUrl) {
-		return fmt.Errorf("invalid block-frost url: %s", ip.blockfrostUrl)
+	if ip.blockfrostURL != "" && !common.IsValidURL(ip.blockfrostURL) {
+		return fmt.Errorf("invalid block-frost url: %s", ip.blockfrostURL)
 	}
 
 	if ip.keysDirectory == "" {
@@ -104,7 +104,7 @@ func (ip *registerChainParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeUrl(ip.bridgeUrl))
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.bridgeURL))
 	if err != nil {
 		return fmt.Errorf("failed to connect to the bridge node: %w", err)
 	}
@@ -155,17 +155,17 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.blockfrostUrl,
-		blockfrostUrlFlag,
+		&ip.blockfrostURL,
+		blockfrostURLFlag,
 		"",
-		blockfrostUrlFlagDesc,
+		blockfrostURLFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
-		&ip.blockfrostProjectApiKey,
-		blockfrostProjectApiKeyFlag,
+		&ip.blockfrostProjectAPIKey,
+		blockfrostProjectAPIKeyFlag,
 		"",
-		blockfrostProjectApiKeyFlagDesc,
+		blockfrostProjectAPIKeyFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -190,10 +190,10 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.bridgeUrl,
-		bridgeUrlFlag,
+		&ip.bridgeURL,
+		bridgeURLFlag,
 		"",
-		bridgeUrlFlagDesc,
+		bridgeURLFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -211,7 +211,7 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(blockfrostUrlFlag, socketPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(blockfrostURLFlag, socketPathFlag)
 }
 
 func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
@@ -308,5 +308,5 @@ func (ip *registerChainParams) getCardanoProvider() (cardanowallet.IUTxORetrieve
 		return cardanowallet.NewTxProviderCli(ip.networkMagic, ip.socketPath)
 	}
 
-	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostUrl, ip.blockfrostProjectApiKey)
+	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostURL, ip.blockfrostProjectAPIKey)
 }

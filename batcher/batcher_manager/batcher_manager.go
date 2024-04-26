@@ -1,4 +1,4 @@
-package batcher_manager
+package batchermanager
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func NewBatcherManager(
 		}
 
 		bridgeSmartContract, err := eth.NewBridgeSmartContractWithWallet(
-			config.Bridge.NodeUrl, config.Bridge.SmartContractAddress, wallet)
+			config.Bridge.NodeURL, config.Bridge.SmartContractAddress, wallet)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +56,7 @@ func NewBatcherManager(
 			Bridge:        config.Bridge,
 			Chain:         chainConfig,
 			PullTimeMilis: config.PullTimeMilis,
-		}, logger.Named(strings.ToUpper(chainConfig.ChainId)),
+		}, logger.Named(strings.ToUpper(chainConfig.ChainID)),
 			operations, bridgeSmartContract, bridgingRequestStateUpdater))
 	}
 

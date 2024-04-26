@@ -13,10 +13,10 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
+	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/processor"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
+	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
+	txprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
@@ -54,7 +54,7 @@ func NewOracle(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
-	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
+	db, err := databaseaccess.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
@@ -70,9 +70,10 @@ func NewOracle(
 		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
 	}
 
-	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
+	bridgeSC := eth.NewOracleBridgeSmartContract(appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress)
 	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
-		appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress, wallet)
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress, wallet)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
@@ -80,49 +81,54 @@ func NewOracle(
 	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, bridgeSC, logger.Named("bridge_data_fetcher"))
 	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, bridgeSCWithWallet, logger.Named("bridge_submitter"))
 
-	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
+	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
+		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
 	txProcessors := []core.CardanoTxProcessor{
-		tx_processors.NewBatchExecutedProcessor(),
-		tx_processors.NewBridgingRequestedProcessor(),
+		txprocessors.NewBatchExecutedProcessor(),
+		txprocessors.NewBridgingRequestedProcessor(),
 		// tx_processors.NewRefundExecutedProcessor(),
 	}
 
 	failedTxProcessors := []core.CardanoTxFailedProcessor{
-		failed_tx_processors.NewBatchExecutionFailedProcessor(),
+		failedtxprocessors.NewBatchExecutionFailedProcessor(),
 		// failed_tx_processors.NewRefundExecutionFailedProcessor(),
 	}
 
 	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
+
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
-		indexerDb, err := indexerDb.NewDatabaseInit("",
-			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainId+".db"))
+		indexerDB, err := indexerDb.NewDatabaseInit("",
+			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
 		if err != nil {
-			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainId, err)
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
-		indexerDbs[cardanoChainConfig.ChainId] = indexerDb
+		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
+	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(
+		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
+		indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
-		indexerDb := indexerDbs[cardanoChainConfig.ChainId]
+		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
+
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, db, indexerDb, cardanoChainConfig.ChainId, logger)
+			ctx, bridgeSubmitter, appConfig, db, indexerDB, cardanoChainConfig.ChainID, logger)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainId, err)
+			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDb, bridgeDataFetcher, logger)
+			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB, bridgeDataFetcher, logger)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainId, err)
+			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
 		cardanoChainObservers = append(cardanoChainObservers, cco)
@@ -156,7 +162,7 @@ func (o *OracleImpl) Start() error {
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
 		if err != nil {
-			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().ChainId, err)
+			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().ChainID, err)
 		}
 	}
 
@@ -170,8 +176,9 @@ func (o *OracleImpl) Start() error {
 
 func (o *OracleImpl) Dispose() error {
 	errs := make([]error, 0)
-	for _, indexerDb := range o.indexerDbs {
-		err := indexerDb.Close()
+
+	for _, indexerDB := range o.indexerDbs {
+		err := indexerDB.Close()
 		if err != nil {
 			o.logger.Error("Failed to close indexer db", "err", err)
 			errs = append(errs, fmt.Errorf("failed to close indexer db. err %w", err))
@@ -181,9 +188,9 @@ func (o *OracleImpl) Dispose() error {
 	for _, cco := range o.cardanoChainObservers {
 		err := cco.Dispose()
 		if err != nil {
-			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().ChainId, "err", err)
+			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().ChainID, "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err: %w",
-				cco.GetConfig().ChainId, err))
+				cco.GetConfig().ChainID, err))
 		}
 	}
 
@@ -228,6 +235,7 @@ func (o *OracleImpl) errorHandler() {
 								err:    err,
 								origin: origin,
 							}
+
 							break outsideloop
 						}
 					}
@@ -236,7 +244,7 @@ func (o *OracleImpl) errorHandler() {
 				}
 			}
 			o.logger.Debug("Exiting error handler", "origin", origin)
-		}(co.ErrorCh(), co.GetConfig().ChainId)
+		}(co.ErrorCh(), co.GetConfig().ChainID)
 	}
 
 	select {

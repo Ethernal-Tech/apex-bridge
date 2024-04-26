@@ -1,4 +1,4 @@
-package relayer_manager
+package relayermanager
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
+	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/hashicorp/go-hclog"
 )
@@ -28,17 +28,17 @@ func NewRelayerManager(
 ) (*RelayerManagerImpl, error) {
 	relayers := make([]core.Relayer, 0, len(config.Chains))
 
-	for chainId, chainConfig := range config.Chains {
-		chainConfig.ChainId = chainId
-		config.Chains[chainId] = chainConfig // update just to be sure that chainID is populated everywhere
+	for chainID, chainConfig := range config.Chains {
+		chainConfig.ChainID = chainID
+		config.Chains[chainID] = chainConfig // update just to be sure that chainID is populated everywhere
 
 		operations, err := relayer.GetChainSpecificOperations(chainConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		db, err := database_access.NewDatabase(
-			path.Join(chainConfig.DbsPath, chainConfig.ChainId+".db"))
+		db, err := databaseaccess.NewDatabase(
+			path.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
 		if err != nil {
 			return nil, err
 		}
@@ -49,8 +49,8 @@ func NewRelayerManager(
 				Chain:         chainConfig,
 				PullTimeMilis: config.PullTimeMilis,
 			},
-			eth.NewBridgeSmartContract(config.Bridge.NodeUrl, config.Bridge.SmartContractAddress),
-			logger.Named(strings.ToUpper(chainConfig.ChainId)),
+			eth.NewBridgeSmartContract(config.Bridge.NodeURL, config.Bridge.SmartContractAddress),
+			logger.Named(strings.ToUpper(chainConfig.ChainID)),
 			operations,
 			db,
 		))

@@ -13,11 +13,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
+	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
+	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
@@ -30,12 +30,12 @@ const (
 
 type ValidatorComponentsImpl struct {
 	ctx             context.Context
-	shouldRunApi    bool
+	shouldRunAPI    bool
 	db              core.Database
 	oracle          oracleCore.Oracle
 	batcherManager  batcherCore.BatcherManager
 	relayerImitator core.RelayerImitator
-	api             core.Api
+	api             core.API
 	logger          hclog.Logger
 }
 
@@ -44,10 +44,10 @@ var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
 func NewValidatorComponents(
 	ctx context.Context,
 	appConfig *core.AppConfig,
-	shouldRunApi bool,
+	shouldRunAPI bool,
 	logger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
-	db, err := database_access.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
+	db, err := databaseaccess.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
 	}
@@ -61,7 +61,7 @@ func NewValidatorComponents(
 
 	err = populateUtxosAndAddresses(
 		ctx, oracleConfig,
-		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeUrl, oracleConfig.Bridge.SmartContractAddress),
+		eth.NewBridgeSmartContract(oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress),
 		logger,
 	)
 	if err != nil {
@@ -73,29 +73,34 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
-	batcherManager, err := batcher_manager.NewBatcherManager(ctx, batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
+	batcherManager, err := batchermanager.NewBatcherManager(
+		ctx, batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
 
-	relayerBridgeSmartContract := eth.NewBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
+	relayerBridgeSmartContract := eth.NewBridgeSmartContract(
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress)
 
-	relayerImitator, err := NewRelayerImitator(ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db, logger.Named("relayer_imitator"))
+	relayerImitator, err := NewRelayerImitator(
+		ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db,
+		logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
 
-	var apiObj *api.ApiImpl
+	var apiObj *api.APIImpl
 
-	if shouldRunApi {
-		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
+	if shouldRunAPI {
+		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(
+			bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
 		}
 
-		apiControllers := []core.ApiController{bridgingRequestStateController}
+		apiControllers := []core.APIController{bridgingRequestStateController}
 
-		apiObj, err = api.NewApi(ctx, appConfig.ApiConfig, apiControllers, logger.Named("api"))
+		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
 		}
@@ -103,7 +108,7 @@ func NewValidatorComponents(
 
 	return &ValidatorComponentsImpl{
 		ctx:             ctx,
-		shouldRunApi:    shouldRunApi,
+		shouldRunAPI:    shouldRunAPI,
 		db:              db,
 		oracle:          oracle,
 		batcherManager:  batcherManager,
@@ -116,7 +121,7 @@ func NewValidatorComponents(
 func (v *ValidatorComponentsImpl) Start() error {
 	v.logger.Debug("Starting ValidatorComponents")
 
-	if v.shouldRunApi {
+	if v.shouldRunAPI {
 		go v.api.Start()
 	}
 
@@ -143,7 +148,7 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
 	}
 
-	if v.shouldRunApi {
+	if v.shouldRunAPI {
 		err = v.api.Dispose()
 		if err != nil {
 			v.logger.Error("error while disposing api", "err", err)
@@ -213,10 +218,13 @@ func populateUtxosAndAddresses(
 		}
 
 		var availableUtxos *contractbinding.IBridgeContractStructsUTXOs
+
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
 			if err != nil {
-				logger.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...", "chainId", regChain.Id, "err", err)
+				logger.Error(
+					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
+					"chainId", regChain.Id, "err", err)
 			}
 
 			return err
@@ -235,8 +243,8 @@ func populateUtxosAndAddresses(
 			len(availableUtxos.MultisigOwnedUTXOs)+len(availableUtxos.FeePayerOwnedUTXOs))
 
 		// InitialUtxos wont be needed, initially they should be included with GetAvailableUTXOs
-		//addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
-		//addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
+		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
+		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, availableUtxos.MultisigOwnedUTXOs)
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
 

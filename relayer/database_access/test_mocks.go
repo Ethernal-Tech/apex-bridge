@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"math/big"
@@ -8,31 +8,33 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type DbMock struct {
+type DBMock struct {
 	mock.Mock
 }
 
-var _ core.Database = (*DbMock)(nil)
+var _ core.Database = (*DBMock)(nil)
 
-func (d *DbMock) AddLastSubmittedBatchId(chainId string, batchId *big.Int) error {
-	return d.Called(chainId, batchId).Error(0)
+func (d *DBMock) AddLastSubmittedBatchID(chainID string, batchID *big.Int) error {
+	return d.Called(chainID, batchID).Error(0)
 }
 
-func (d *DbMock) Close() error {
+func (d *DBMock) Close() error {
 	return nil
 }
 
-func (d *DbMock) GetLastSubmittedBatchId(chainId string) (*big.Int, error) {
-	args := d.Called(chainId)
+func (d *DBMock) GetLastSubmittedBatchID(chainID string) (*big.Int, error) {
+	args := d.Called(chainID)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).(*big.Int), args.Error(1)
+	arg0, _ := args.Get(0).(*big.Int)
+
+	return arg0, args.Error(1)
 }
 
-func (d *DbMock) Init(filePath string) error {
+func (d *DBMock) Init(filePath string) error {
 	return nil
 }
 

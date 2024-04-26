@@ -102,8 +102,8 @@ func CreateMetaData(v *big.Int) ([]byte, error) {
 }
 
 func CreateBatchMetaData(v *big.Int) ([]byte, error) {
-	return common.MarshalMetadata(common.MetadataEncodingTypeJson, common.BatchExecutedMetadata{
+	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
-		BatchNonceId:   v.Uint64(),
+		BatchNonceID:   v.Uint64(),
 	})
 }

@@ -31,17 +31,17 @@ type OracleBridgeSmartContractImpl struct {
 
 var _ IOracleBridgeSmartContract = (*OracleBridgeSmartContractImpl)(nil)
 
-func NewOracleBridgeSmartContract(nodeUrl, smartContractAddress string) *OracleBridgeSmartContractImpl {
+func NewOracleBridgeSmartContract(nodeURL, smartContractAddress string) *OracleBridgeSmartContractImpl {
 	return &OracleBridgeSmartContractImpl{
 		smartContractAddress: smartContractAddress,
-		ethHelper:            NewEthHelperWrapper(nodeUrl),
+		ethHelper:            NewEthHelperWrapper(nodeURL),
 	}
 }
 
 func NewOracleBridgeSmartContractWithWallet(
-	nodeUrl, smartContractAddress string, wallet *ethtxhelper.EthTxWallet,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet,
 ) (*OracleBridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeUrl, wallet)
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,11 @@ func NewOracleBridgeSmartContractWithWallet(
 	}, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error) {
+func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
+	ctx context.Context, sourceChain string,
+) (
+	*CardanoBlock, error,
+) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -75,7 +79,11 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(ctx context.Conte
 	return &result, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error) {
+func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
+	ctx context.Context, chainID string,
+) (
+	*LastBatchRawTx, error,
+) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -120,7 +128,9 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(ctx context.Context, clai
 	return bsc.ethHelper.ProcessError(err)
 }
 
-func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
+func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
+	ctx context.Context, chainID string, blocks []CardanoBlock,
+) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return err

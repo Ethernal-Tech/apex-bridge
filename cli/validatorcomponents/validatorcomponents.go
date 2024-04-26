@@ -39,30 +39,40 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	config, err := common.LoadConfig[vcCore.AppConfig](initParamsData.config, "")
 	if err != nil {
 		outputter.SetError(err)
+
 		return
 	}
 
 	logger, err := loggerInfra.NewLogger(config.Settings.Logger)
 	if err != nil {
 		outputter.SetError(err)
+
 		return
 	}
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, initParamsData.runApi, logger)
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, initParamsData.runAPI, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
+
 		return
 	}
 
 	err = validatorComponents.Start()
-	defer validatorComponents.Dispose()
+	defer func() {
+		err := validatorComponents.Dispose()
+		if err != nil {
+			logger.Error("error while validator components dispose", "err", err)
+		}
+	}()
+
 	if err != nil {
 		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)
+
 		return
 	}
 

@@ -7,23 +7,21 @@ import (
 )
 
 func TestBridgingRequestState(t *testing.T) {
+	const (
+		chainID = "prime"
+		txHash  = "0xtest"
+	)
 
 	t.Run("NewBridgingRequestState", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		require.NotNil(t, state)
-		require.Equal(t, chainId, state.SourceChainId)
+		require.Equal(t, chainID, state.SourceChainID)
 		require.Equal(t, txHash, state.SourceTxHash)
 		require.Equal(t, BridgingRequestStatusDiscoveredOnSource, state.Status)
 	})
 
 	t.Run("state changes from BridgingRequestStatusDiscoveredOnSource", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		require.NotNil(t, state)
 
 		err := state.ToIncludedInBatch(1)
@@ -46,18 +44,15 @@ func TestBridgingRequestState(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, BridgingRequestStatusInvalidRequest, state.Status)
 
-		state = NewBridgingRequestState(chainId, txHash, nil)
+		state = NewBridgingRequestState(chainID, txHash, nil)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		require.Equal(t, "test", state.DestinationChainId)
+		require.Equal(t, "test", state.DestinationChainID)
 		require.Equal(t, BridgingRequestStatusSubmittedToBridge, state.Status)
 	})
 
 	t.Run("state changes from BridgingRequestStatusInvalidRequest", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToInvalidRequest()
 		require.NoError(t, err)
 
@@ -87,10 +82,7 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusSubmittedToBridge", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 
@@ -120,10 +112,7 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusIncludedInBatch", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 		err = state.ToIncludedInBatch(1)
@@ -155,10 +144,7 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusSubmittedToDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 		err = state.ToIncludedInBatch(1)
@@ -186,7 +172,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, BridgingRequestStatusFailedToExecuteOnDestination, state.Status)
 
-		state = NewBridgingRequestState(chainId, txHash, nil)
+		state = NewBridgingRequestState(chainID, txHash, nil)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 		err = state.ToIncludedInBatch(1)
@@ -200,10 +186,7 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusFailedToExecuteOnDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 		err = state.ToIncludedInBatch(1)
@@ -239,10 +222,7 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusExecutedOnDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
-		state := NewBridgingRequestState(chainId, txHash, nil)
+		state := NewBridgingRequestState(chainID, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
 		err = state.ToIncludedInBatch(1)

@@ -33,14 +33,16 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(claims *core.BridgeClaims) error {
 	err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims)
 	if err != nil {
 		bs.logger.Error("Failed to submit claims", "err", err)
+
 		return err
 	}
 
 	bs.logger.Info("Claims submitted successfully")
+
 	return nil
 }
 
-func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainId string, blocks []*indexer.CardanoBlock) error {
+func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error {
 	contractBlocks := make([]eth.CardanoBlock, 0, len(blocks))
 	for _, bl := range blocks {
 		contractBlocks = append(contractBlocks, eth.CardanoBlock{
@@ -49,7 +51,7 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainId string, blocks []*i
 		})
 	}
 
-	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainId, contractBlocks)
+	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, contractBlocks)
 
 	return err
 }

@@ -7,12 +7,14 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 )
 
-func WriteErrorResponse(w http.ResponseWriter, status int, err string) {
+func WriteErrorResponse(w http.ResponseWriter, status int, err string) error {
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.ErrorResponse{Err: err})
+
+	return json.NewEncoder(w).Encode(response.ErrorResponse{Err: err})
 }
 
-func WriteUnauthorizedResponse(w http.ResponseWriter) {
+func WriteUnauthorizedResponse(w http.ResponseWriter) error {
 	w.WriteHeader(http.StatusUnauthorized)
-	json.NewEncoder(w).Encode(response.ErrorResponse{Err: "Unauthorized"})
+
+	return json.NewEncoder(w).Encode(response.ErrorResponse{Err: "Unauthorized"})
 }

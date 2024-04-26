@@ -16,7 +16,10 @@ type Batcher interface {
 }
 
 type ChainOperations interface {
-	GenerateBatchTransaction(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error)
+	GenerateBatchTransaction(
+		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
+		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID *big.Int,
+	) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error)
 	SignBatchTransaction(txHash string) ([]byte, []byte, error)
 }
 

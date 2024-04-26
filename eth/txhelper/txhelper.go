@@ -38,7 +38,7 @@ type IEthTxHelper interface {
 
 type EthTxHelperImpl struct {
 	client           *ethclient.Client
-	nodeUrl          string
+	nodeURL          string
 	writer           io.Writer
 	numRetries       int
 	receiptWaitTime  time.Duration
@@ -58,7 +58,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	}
 
 	if t.client == nil {
-		client, err := ethclient.Dial(t.nodeUrl)
+		client, err := ethclient.Dial(t.nodeURL)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +186,9 @@ func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet IEthTxWallet, txOpts
 	return sendTxHandler(txOptsRes)
 }
 
-func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts) error {
+func (t EthTxHelperImpl) PopulateTxOpts(
+	ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts,
+) error {
 	txOpts.Context = ctx
 	txOpts.From = from
 
@@ -240,9 +242,9 @@ func WithClient(client *ethclient.Client) TxRelayerOption {
 	}
 }
 
-func WithNodeUrl(nodeUrl string) TxRelayerOption {
+func WithNodeURL(nodeURL string) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
-		t.nodeUrl = nodeUrl
+		t.nodeURL = nodeURL
 	}
 }
 

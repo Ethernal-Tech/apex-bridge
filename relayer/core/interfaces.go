@@ -20,12 +20,12 @@ type ChainOperations interface {
 	SendTx(smartContractData *eth.ConfirmedBatch) error
 }
 
-type BatchIdDb interface {
-	AddLastSubmittedBatchId(chainId string, batchId *big.Int) error
-	GetLastSubmittedBatchId(chainId string) (*big.Int, error)
+type BatchIDDB interface {
+	AddLastSubmittedBatchID(chainID string, batchID *big.Int) error
+	GetLastSubmittedBatchID(chainID string) (*big.Int, error)
 }
 type Database interface {
-	BatchIdDb
+	BatchIDDB
 	Init(filePath string) error
 	Close() error
 }

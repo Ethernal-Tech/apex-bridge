@@ -5,8 +5,8 @@ import (
 )
 
 type BridgeConfig struct {
-	NodeUrl              string `json:"nodeUrl"`
-	SmartContractAddress string `json:"scAddress"` // TOOD: probably will be more than just one
+	NodeURL              string `json:"nodeUrl"`
+	SmartContractAddress string `json:"scAddress"`
 	ValidatorDataDir     string `json:"validatorDataDir"`
 	ValidatorConfigPath  string `json:"validatorConfigPath"`
 }
@@ -18,7 +18,7 @@ type BatcherConfiguration struct {
 }
 
 type ChainConfig struct {
-	ChainId       string          `json:"id"`
+	ChainID       string          `json:"id"`
 	ChainType     string          `json:"type"`
 	ChainSpecific json.RawMessage `json:"config"`
 }

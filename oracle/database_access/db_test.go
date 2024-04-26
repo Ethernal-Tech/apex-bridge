@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ func TestDatabase(t *testing.T) {
 	const filePath = "temp_test.db"
 
 	dbCleanup := func() {
-		common.RemoveDirOrFilePathIfExists(filePath)
+		common.RemoveDirOrFilePathIfExists(filePath) //nolint:errcheck
 	}
 
 	t.Cleanup(dbCleanup)

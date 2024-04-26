@@ -1,4 +1,4 @@
-package batcher_manager
+package batchermanager
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 	config := &core.BatcherManagerConfiguration{
 		Chains: []core.ChainConfig{
 			{
-				ChainId:       "prime",
+				ChainID:       "prime",
 				ChainType:     "Cardano",
 				ChainSpecific: json.RawMessage(jsonData),
 			},
@@ -104,7 +104,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
 			Chains: []core.ChainConfig{
 				{
-					ChainId:       "prime",
+					ChainID:       "prime",
 					ChainType:     "Cardano",
 					ChainSpecific: json.RawMessage(""),
 				},

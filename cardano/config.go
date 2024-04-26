@@ -11,7 +11,7 @@ import (
 
 type CardanoChainConfig struct {
 	TestNetMagic     uint32 `json:"testnetMagic"`
-	BlockfrostUrl    string `json:"blockfrostUrl,omitempty"`
+	BlockfrostURL    string `json:"blockfrostUrl,omitempty"`
 	BlockfrostAPIKey string `json:"blockfrostApiKey,omitempty"`
 	SocketPath       string `json:"socketPath,omitempty"`
 	PotentialFee     uint64 `json:"potentialFee"`
@@ -41,8 +41,8 @@ func (config CardanoChainConfig) Serialize() ([]byte, error) {
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
 	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(uint(config.TestNetMagic), config.SocketPath)
-	} else if config.BlockfrostUrl != "" {
-		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostUrl, config.BlockfrostAPIKey)
+	} else if config.BlockfrostURL != "" {
+		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostURL, config.BlockfrostAPIKey)
 	}
 
 	return nil, errors.New("neither socket path nor Blockfrost URL is provided")

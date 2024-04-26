@@ -1,4 +1,4 @@
-package failed_tx_processors
+package failedtxprocessors
 
 import (
 	"fmt"
@@ -30,7 +30,9 @@ func (*RefundExecutionFailedProcessorImpl) IsTxRelevant(tx *core.BridgeExpectedC
 	return false, err
 }
 
-func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig) error {
+func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(
+	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *core.AppConfig,
+) error {
 	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
@@ -49,13 +51,16 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
+	//nolint:godox
 	// TODO: Refund
 	p.addRefundRequestClaim(claims, tx, metadata)
 
 	return nil
 }
 
-func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.RefundExecutedMetadata) {
+func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(
+	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.RefundExecutedMetadata,
+) {
 	/*
 		// implement logic for creating a claim for tx
 		claim := core.RefundRequestClaim{}
@@ -64,7 +69,9 @@ func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(claims *core.Br
 	*/
 }
 
-func (*RefundExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *common.RefundExecutedMetadata, appConfig *core.AppConfig) error {
+func (*RefundExecutionFailedProcessorImpl) validate(
+	tx *core.BridgeExpectedCardanoTx, metadata *common.RefundExecutedMetadata, appConfig *core.AppConfig,
+) error {
 	// implement validating the tx for this specific claim if it is needed
 	// once we figure out the structure of metadata and how the refund is applied
 	return nil
