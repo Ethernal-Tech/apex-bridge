@@ -54,28 +54,28 @@ $ go run ./cli/cmd/main.go create-address \
 All options
 ``` shell
 $ go run ./cli/cmd/main.go generate-configs \
-        --output-dir "<Path to config jsons output directory>" \
-        --output-validator-components-file-name "<Validator components config json output file name>.json" \
-        --output-relayer-file-name "<Relayer config json output file name>.json" \
-        --prime-network-address "<Address of prime network>" \
-        --prime-network-magic <Network magic of prime network> \
-        --prime-keys-dir "<Path to cardano keys directory for prime network>" \
-        --prime-blockfrost-url "<Blockfrost URL for prime network>" \
-        --prime-blockfrost-api-key "<Blockfrost API key for prime network>" \
-        --prime-socket-path "<Socket path for prime network>" \
-        --vector-network-address "<Address of vector network>" \
-        --vector-network-magic <Network magic of vector network> \
-        --vector-keys-dir "<Path to cardano keys directory for vector network>" \
-        --vector-blockfrost-url "<Blockfrost URL for vector network>" \
-        --vector-blockfrost-api-key "<Blockfrost API key for vector network>" \
-        --vector-socket-path "<Socket path for vector network>" \
-        --bridge-node-url "<Node URL of bridge chain>" \
-        --bridge-sc-address "<Bridging smart contract address on bridge chain>" \
-        --bridge-validator-data-dir "<Path to bridge chain data directory when using local secrets manager>" \
-        --bridge-validator-config-path "<Path to to bridge chain secrets manager config file>" \
-        --dbs-path "<Path to where databases will be stored>" \
-        --logs-path "<Path to where logs will be stored>" \
-        --api-port <Port at which API should run> \
+        --output-dir "<path to config jsons output directory>" \
+        --output-validator-components-file-name "<validator components config json output file name>.json" \
+        --output-relayer-file-name "<relayer config json output file name>.json" \
+        --prime-network-address "<address of prime network>" \
+        --prime-network-magic <network magic of prime network> \
+        --prime-keys-dir "<path to cardano keys directory for prime network>" \
+        --prime-blockfrost-url "<blockfrost URL for prime network>" \
+        --prime-blockfrost-api-key "<blockfrost API key for prime network>" \
+        --prime-socket-path "<socket path for prime network>" \
+        --vector-network-address "<address of vector network>" \
+        --vector-network-magic <network magic of vector network> \
+        --vector-keys-dir "<path to cardano keys directory for vector network>" \
+        --vector-blockfrost-url "<blockfrost URL for vector network>" \
+        --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
+        --vector-socket-path "<socket path for vector network>" \
+        --bridge-node-url "<node URL of bridge chain>" \
+        --bridge-sc-address "<bridging smart contract address on bridge chain>" \
+        --bridge-validator-data-dir "<path to bridge chain data directory when using local secrets manager>" \
+        --bridge-validator-config-path "<path to to bridge chain secrets manager config file>" \
+        --dbs-path "<path to where databases will be stored>" \
+        --logs-path "<path to where logs will be stored>" \
+        --api-port <port at which API should run> \
         --api-keys "<api key 1>" \
         --api-keys "<api key 2>"
 ```
