@@ -114,7 +114,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, "", claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Nil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
+		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 0)
 	})
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
