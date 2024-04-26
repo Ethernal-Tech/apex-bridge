@@ -240,7 +240,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 1", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, fmt.Errorf("test err"))
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -251,7 +251,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 2", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -261,7 +261,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 3", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{{}}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{{}}, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -276,7 +276,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToIncludedInBatch(1))
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
@@ -292,7 +292,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToIncludedInBatch(1))
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
@@ -303,7 +303,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 1", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, fmt.Errorf("test err"))
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -314,7 +314,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 2", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -324,7 +324,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 3", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{{}}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{{}}, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -340,7 +340,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
@@ -357,7 +357,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
@@ -368,7 +368,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 1", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, fmt.Errorf("test err"))
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -379,7 +379,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 2", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return(nil, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return(nil, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -389,7 +389,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 3", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{{}}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{{}}, nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -405,7 +405,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(fmt.Errorf("test err"))
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
@@ -422,7 +422,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
+		db.On("GetBridgingRequestStatesByBatchID").Return([]*core.BridgingRequestState{state}, nil)
 		db.On("UpdateBridgingRequestState").Return(nil)
 
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())

@@ -94,7 +94,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NotNil(t, state)
 	})
 
-	t.Run("GetBridgingRequestStatesByBatchId", func(t *testing.T) {
+	t.Run("GetBridgingRequestStatesByBatchID", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}
@@ -187,7 +187,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, core.BridgingRequestStatusInvalidRequest, state.Status)
 	})
 
-	t.Run("AddLastSubmittedBatchId", func(t *testing.T) {
+	t.Run("AddLastSubmittedBatchID", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}
@@ -200,7 +200,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("GetLastSubmittedBatchId", func(t *testing.T) {
+	t.Run("GetLastSubmittedBatchID", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}

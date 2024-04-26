@@ -61,7 +61,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Check if I should create batch
 	batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetNextBatchId: %w", err)
+		return fmt.Errorf("failed to query bridge.GetNextBatchID: %w", err)
 	}
 
 	if batchID.Cmp(big.NewInt(0)) == 0 {

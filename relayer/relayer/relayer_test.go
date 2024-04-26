@@ -58,7 +58,7 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(nil, testError)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(nil, testError)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -75,7 +75,7 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -92,7 +92,7 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -109,7 +109,7 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -125,7 +125,7 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(testError)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
@@ -141,9 +141,9 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(nil)
-		dbMock.On("AddLastSubmittedBatchId", "prime", mock.Anything).Return(testError)
+		dbMock.On("AddLastSubmittedBatchID", "prime", mock.Anything).Return(testError)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -158,9 +158,9 @@ func TestRelayerExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
 
 		dbMock := &databaseaccess.DBMock{}
-		dbMock.On("GetLastSubmittedBatchId", "prime").Return(lastConfirmedBatchID, nil)
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(lastConfirmedBatchID, nil)
 		operationsMock.On("SendTx", confirmedBatchRet).Return(nil)
-		dbMock.On("AddLastSubmittedBatchId", "prime", mock.Anything).Return(nil)
+		dbMock.On("AddLastSubmittedBatchID", "prime", mock.Anything).Return(nil)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		require.NoError(t, r.execute(ctx))

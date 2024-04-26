@@ -52,7 +52,7 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(nil, fmt.Errorf("test err"))
+		db.On("GetLastSubmittedBatchID", chainID).Return(nil, fmt.Errorf("test err"))
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -70,7 +70,7 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: ""}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(nil, nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -88,7 +88,7 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(big.NewInt(1), nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -105,7 +105,7 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(big.NewInt(2), nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(2), nil)
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -124,8 +124,8 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(nil, nil)
-		db.On("AddLastSubmittedBatchId", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
+		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
+		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -144,8 +144,8 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(big.NewInt(1), nil)
-		db.On("AddLastSubmittedBatchId", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
+		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
+		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -164,8 +164,8 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(nil, nil)
-		db.On("AddLastSubmittedBatchId", chainID, big.NewInt(2)).Return(nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
+		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
@@ -183,8 +183,8 @@ func TestRelayerImitator(t *testing.T) {
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchId", chainID).Return(big.NewInt(1), nil)
-		db.On("AddLastSubmittedBatchId", chainID, big.NewInt(2)).Return(nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
+		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 

@@ -53,7 +53,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("AddLastSubmittedBatchId", func(t *testing.T) {
+	t.Run("AddLastSubmittedBatchID", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}
@@ -66,7 +66,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("GetLastSubmittedBatchId", func(t *testing.T) {
+	t.Run("GetLastSubmittedBatchID", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		expectedOutput := big.NewInt(1)
