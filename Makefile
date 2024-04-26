@@ -4,13 +4,13 @@ lint: check-lint
 
 .PHONY: build
 build: check-go check-git
-	$(eval COMMIT_HASH = $(shell git rev-parse HEAD))
+#	$(eval COMMIT_HASH = $(shell git rev-parse HEAD))
+#		-X 'github.com/Ethernal-Tech/apex-bridge/versioning.Commit=$(COMMIT_HASH)'\
 #   $(eval VERSION = $(shell git describe --tags --abbrev=0 ${COMMIT_HASH}))
 #       -X 'github.com/Ethernal-Tech/apex-bridge/versioning.Version=$(VERSION)'
 	$(eval BRANCH = $(shell git rev-parse --abbrev-ref HEAD | tr -d '\040\011\012\015\n'))
 	$(eval TIME = $(shell date))
 	go build -o apex-bridge -ldflags="\
-		-X 'github.com/Ethernal-Tech/apex-bridge/versioning.Commit=$(COMMIT_HASH)'\
 		-X 'github.com/Ethernal-Tech/apex-bridge/versioning.Branch=$(BRANCH)'\
 		-X 'github.com/Ethernal-Tech/apex-bridge/versioning.BuildTime=$(TIME)'" \
 	main.go

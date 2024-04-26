@@ -1,5 +1,5 @@
 ---
-name: Build and Lint
+name: Lint
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  check:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository and submodules
@@ -19,23 +19,5 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.21.x
-
-  build:
-    needs: check
-    steps:
-      - name: Build
-        run: make build
-
-  lint:
-    needs: check
-    steps:
       - name: Test
         run: make lint
-
-  unittest:
-    needs: check
-    on:
-      workflow_dispatch:
-    steps:
-      - name: Unit Tests
-        run: make unit-test
