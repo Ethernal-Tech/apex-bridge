@@ -19,49 +19,49 @@ import (
 )
 
 const (
-	directoryFlag              = "dir"
-	validatorAccountDirFlag    = "validator-dir"
-	validatorAccountConfigFlag = "validator-config"
-	blockfrostUrlFlag          = "block-frost"
-	blockfrostProjectIDFlag    = "block-frost-id"
-	socketPathFlag             = "socket-path"
-	testnetMagicFlag           = "testnet"
-	multisigAddrFlag           = "addr"
-	multisigFeeAddrFlag        = "addr-fee"
-	bridgeUrlFlag              = "bridge-url"
-	bridgeSCAddrFlag           = "bridge-addr"
-	chainIDFlag                = "chain"
-	initialTokenSupplyFlag     = "token-supply"
+	keysDirectoryFlag           = "keys-dir"
+	bridgeValidatorDataDirFlag  = "bridge-validator-data-dir"
+	bridgeValidatorConfigFlag   = "bridge-validator-config"
+	blockfrostUrlFlag           = "block-frost"
+	blockfrostProjectApiKeyFlag = "block-frost-api-key"
+	socketPathFlag              = "socket-path"
+	networkMagicFlag            = "network-magic"
+	multisigAddrFlag            = "addr"
+	multisigFeeAddrFlag         = "addr-fee"
+	bridgeUrlFlag               = "bridge-url"
+	bridgeSCAddrFlag            = "bridge-addr"
+	chainIDFlag                 = "chain"
+	initialTokenSupplyFlag      = "token-supply"
 
-	directoryFlagDesc              = "cardano wallet directory"
-	validatorAccountDirFlagDesc    = "the directory for the Blade data if the local FS is used"
-	validatorAccountConfigFlagDesc = "the path to the SecretsManager config file, if omitted, the local FS secrets manager is used"
-	chainIDFlagDesc                = "chain ID (prime, vector, etc)"
-	blockfrostUrlFlagDesc          = "block-frost url"
-	blockfrostProjectIDFlagDesc    = "block-frost project id"
-	socketPathFlagDesc             = "socket path for cardano node"
-	testnetMagicFlagDesc           = "testnet magic number. leave 0 for mainnet"
-	multisigAddrFlagDesc           = "multisig address"
-	multisigFeeAddrFlagDesc        = "fee payer address"
-	bridgeUrlFlagDesc              = "bridge node url"
-	bridgeSCAddrFlagDesc           = "bridge smart contract address"
-	initialTokenSupplyFlagDesc     = "initial token supply for the chain"
+	keysDirectoryFlagDesc           = "cardano wallet directory"
+	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"
+	chainIDFlagDesc                 = "chain ID (prime, vector, etc)"
+	blockfrostUrlFlagDesc           = "block-frost url"
+	blockfrostProjectApiKeyFlagDesc = "blockfrost API key for prime network"
+	socketPathFlagDesc              = "socket path for cardano node"
+	networkMagicFlagDesc            = "network magic of a chain (default 0 and it means Mainnet)"
+	multisigAddrFlagDesc            = "multisig address"
+	multisigFeeAddrFlagDesc         = "fee payer address"
+	bridgeUrlFlagDesc               = "bridge node url"
+	bridgeSCAddrFlagDesc            = "bridge smart contract address"
+	initialTokenSupplyFlagDesc      = "initial token supply for the chain"
 )
 
 type registerChainParams struct {
-	directory           string
-	validatorDir        string
-	validatorConfig     string
-	blockfrostUrl       string
-	blockfrostProjectID string
-	socketPath          string
-	testnetMagic        uint
-	multisigAddr        string
-	multisigFeeAddr     string
-	bridgeUrl           string
-	bridgeSCAddr        string
-	chainID             string
-	initialTokenSupply  string
+	keysDirectory           string
+	bridgeValidatorDataDir  string
+	bridgeValidatorConfig   string
+	blockfrostUrl           string
+	blockfrostProjectApiKey string
+	socketPath              string
+	networkMagic            uint
+	multisigAddr            string
+	multisigFeeAddr         string
+	bridgeUrl               string
+	bridgeSCAddr            string
+	chainID                 string
+	initialTokenSupply      string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
 }
@@ -79,12 +79,12 @@ func (ip *registerChainParams) validateFlags() error {
 		return fmt.Errorf("invalid block-frost url: %s", ip.blockfrostUrl)
 	}
 
-	if ip.directory == "" {
-		return fmt.Errorf("invalid directory: %s", ip.directory)
+	if ip.keysDirectory == "" {
+		return fmt.Errorf("invalid directory for Cardano keys: %s", ip.keysDirectory)
 	}
 
-	if ip.validatorDir == "" && ip.validatorConfig == "" {
-		return fmt.Errorf("no config file or data directory passed in for validator secrets")
+	if ip.bridgeValidatorDataDir == "" && ip.bridgeValidatorConfig == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
 	}
 
 	if ip.multisigAddr == "" {
@@ -101,7 +101,7 @@ func (ip *registerChainParams) validateFlags() error {
 	}
 
 	if ip.chainID == "" {
-		return errors.New("--chain flag not specified")
+		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeUrl(ip.bridgeUrl))
@@ -120,24 +120,24 @@ func (ip *registerChainParams) validateFlags() error {
 
 func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&ip.directory,
-		directoryFlag,
+		&ip.keysDirectory,
+		keysDirectoryFlag,
 		"",
-		directoryFlagDesc,
+		keysDirectoryFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
-		&ip.validatorDir,
-		validatorAccountDirFlag,
+		&ip.bridgeValidatorDataDir,
+		bridgeValidatorDataDirFlag,
 		"",
-		validatorAccountDirFlagDesc,
+		bridgeValidatorDataDirFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
-		&ip.validatorConfig,
-		validatorAccountConfigFlag,
+		&ip.bridgeValidatorConfig,
+		bridgeValidatorConfigFlag,
 		"",
-		validatorAccountConfigFlagDesc,
+		bridgeValidatorConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -162,10 +162,10 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.blockfrostProjectID,
-		blockfrostProjectIDFlag,
+		&ip.blockfrostProjectApiKey,
+		blockfrostProjectApiKeyFlag,
 		"",
-		blockfrostProjectIDFlagDesc,
+		blockfrostProjectApiKeyFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -176,10 +176,10 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().UintVar(
-		&ip.testnetMagic,
-		testnetMagicFlag,
+		&ip.networkMagic,
+		networkMagicFlag,
 		0,
-		testnetMagicFlagDesc,
+		networkMagicFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -210,17 +210,17 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(validatorAccountDirFlag, validatorAccountConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(blockfrostUrlFlag, socketPathFlag)
 }
 
 func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
-	walletCardano, err := cardanotx.LoadWallet(path.Join(path.Clean(ip.directory), ip.chainID), false)
+	walletCardano, err := cardanotx.LoadWallet(path.Join(path.Clean(ip.keysDirectory), ip.chainID), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
 	}
 
-	secretsManager, err := common.GetSecretsManager(ip.validatorDir, ip.validatorConfig, true)
+	secretsManager, err := common.GetSecretsManager(ip.bridgeValidatorDataDir, ip.bridgeValidatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
@@ -305,8 +305,8 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 
 func (ip *registerChainParams) getCardanoProvider() (cardanowallet.IUTxORetriever, error) {
 	if ip.socketPath != "" {
-		return cardanowallet.NewTxProviderCli(ip.testnetMagic, ip.socketPath)
+		return cardanowallet.NewTxProviderCli(ip.networkMagic, ip.socketPath)
 	}
 
-	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostUrl, ip.blockfrostProjectID)
+	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostUrl, ip.blockfrostProjectApiKey)
 }

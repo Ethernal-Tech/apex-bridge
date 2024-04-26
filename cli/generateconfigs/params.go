@@ -33,7 +33,7 @@ const (
 	bridgeNodeUrlFlag          = "bridge-node-url"
 	bridgeSCAddressFlag        = "bridge-sc-address"
 	bridgeValidatorDataDirFlag = "bridge-validator-data-dir"
-	bridgeValidatorConfigFlag  = "bridge-validator-config-path"
+	bridgeValidatorConfigFlag  = "bridge-validator-config"
 
 	logsPathFlag = "logs-path"
 	dbsPathFlag  = "dbs-path"
@@ -292,6 +292,10 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		nil,
 		apiKeysFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostApiKeyFlag, primeSocketPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostUrlFlag, vectorSocketPathFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {

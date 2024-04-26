@@ -25,8 +25,8 @@ $ blade secrets init --insecure --data-dir ./blade-secrets
 ```shell
 $ go run ./cli/cmd/main.go register-chain \
         --chain prime \
-        --dir /home/bbs/cardano \
-        --validator-dir /home/bbs/blade \
+        --keys-dir /home/bbs/cardano \
+        --bridge-validator-data-dir /home/bbs/blade \
         --addr addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh \
         --addr-fee addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u \
         --token-supply 20000000 \
@@ -35,8 +35,8 @@ $ go run ./cli/cmd/main.go register-chain \
         --bridge-url https://polygon-mumbai.blockpi.network/v1/rpc/public \
         --bridge-addr 0x8F371EeFe210ad18a2Ce45d51B48E56aBa1a58A9        
 ```
-- instead of `--validator-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
-- instead of `--block-frost` cardano cli can be used with these two flags: `--socket-path socket_path` and `--testnet some_number`
+- instead of `--bridge-validator-data-dir` it is possible to set blade configuration file with `--bridge-validator-config /path/config.json`.
+- instead of `--block-frost` cardano cli can be used with these two flags: `--socket-path socket_path` and `--network-magic some_number`
 
 Block frost/socket path to local Cardano node is used only for retrieving utxos for `addr` and `addr-fee`
 
