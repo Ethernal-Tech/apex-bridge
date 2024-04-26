@@ -144,10 +144,15 @@ func TestCardanoChainObserver(t *testing.T) {
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
+		closed := false
 
 		txsProcessorMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
 			t.Helper()
-			close(doneCh)
+			if !closed {
+				close(doneCh)
+				closed = true
+			}
+
 			return nil
 		}
 
