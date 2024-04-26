@@ -84,7 +84,8 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Bridge: batcherCore.BridgeConfig{
 			NodeUrl:              appConfig.Bridge.NodeUrl,
 			SmartContractAddress: appConfig.Bridge.SmartContractAddress,
-			SecretsManager:       appConfig.Bridge.SecretsManager,
+			ValidatorDataDir:     appConfig.Bridge.ValidatorDataDir,
+			ValidatorConfigPath:  appConfig.Bridge.ValidatorConfigPath,
 		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,

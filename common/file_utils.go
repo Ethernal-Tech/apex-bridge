@@ -72,3 +72,23 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 
 	return config, nil
 }
+
+func SaveJson[TObj any](path string, obj TObj, pretty bool) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create %v. error: %w", path, err)
+	}
+
+	defer f.Close()
+
+	encoder := json.NewEncoder(f)
+	if pretty {
+		encoder.SetIndent("", "    ")
+	}
+
+	if err = encoder.Encode(&obj); err != nil {
+		return fmt.Errorf("failed to encode %v. error: %w", path, err)
+	}
+
+	return nil
+}
