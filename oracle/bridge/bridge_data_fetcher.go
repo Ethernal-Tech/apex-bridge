@@ -36,9 +36,9 @@ func NewBridgeDataFetcher(
 	}
 }
 
-func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer.BlockPoint, error) {
+func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
-		block, err := df.bridgeSC.GetLastObservedBlock(df.ctx, chainId)
+		block, err := df.bridgeSC.GetLastObservedBlock(df.ctx, chainID)
 		if err == nil {
 			var blockPoint *indexer.BlockPoint
 
@@ -59,12 +59,13 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainId string) (*indexer
 	}
 
 	df.logger.Info("Failed to FetchLatestBlockPoint from Bridge SC", "retries", MaxRetries)
+
 	return nil, fmt.Errorf("failed to FetchLatestBlockPoint from Bridge SC")
 }
 
-func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeExpectedCardanoTx, error) {
+func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeExpectedCardanoTx, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
-		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainId)
+		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainID)
 		if err == nil {
 			if lastBatchRawTx == nil {
 				return nil, nil
@@ -73,19 +74,21 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeEx
 			rawTx, err := hex.DecodeString(lastBatchRawTx.RawTx)
 			if err != nil {
 				df.logger.Error("Failed to decode rawTx string", "rawTx", lastBatchRawTx.RawTx, "err", err)
+
 				return nil, fmt.Errorf("failed to decode rawTx string. rawTx: %v. err: %w", lastBatchRawTx.RawTx, err)
 			}
 
 			tx, err := indexer.ParseTxInfo(rawTx)
 			if err != nil {
 				df.logger.Error("Failed to ParseTxInfo", "rawTx", lastBatchRawTx.RawTx, "err", err)
+
 				return nil, fmt.Errorf("failed to ParseTxInfo. err: %w", err)
 			}
 
 			expectedTx := &core.BridgeExpectedCardanoTx{
-				ChainId:  chainId,
+				ChainID:  chainID,
 				Hash:     tx.Hash,
-				Ttl:      tx.TTL,
+				TTL:      tx.TTL,
 				Metadata: tx.MetaData,
 			}
 
@@ -98,5 +101,6 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainId string) (*core.BridgeEx
 	}
 
 	df.logger.Info("Failed to FetchExpectedTx from Bridge SC", "retries", MaxRetries)
+
 	return nil, fmt.Errorf("failed to FetchExpectedTx from Bridge SC")
 }

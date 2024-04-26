@@ -2,11 +2,11 @@ package core
 
 import "net/http"
 
-type ApiEndpointHandler = func(w http.ResponseWriter, r *http.Request)
+type APIEndpointHandler = func(w http.ResponseWriter, r *http.Request)
 
-type ApiEndpoint struct {
+type APIEndpoint struct {
 	Path       string
 	Method     string
-	Handler    ApiEndpointHandler
-	ApiKeyAuth bool
+	Handler    APIEndpointHandler
+	APIKeyAuth bool
 }

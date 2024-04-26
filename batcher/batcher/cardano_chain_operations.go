@@ -64,15 +64,18 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceId *big.Int) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error) {
-
+	batchNonceID *big.Int) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error,
+) {
 	var outputs []cardanowallet.TxOutput
-	var txCost *big.Int = big.NewInt(0)
-	var includedConfirmedTransactions map[uint64]eth.ConfirmedTransaction = make(
+
+	txCost := big.NewInt(0)
+
+	includedConfirmedTransactions := make(
 		map[uint64]contractbinding.IBridgeContractStructsConfirmedTransaction)
 
 	for _, transaction := range confirmedTransactions {
 		includedConfirmedTransactions[transaction.Nonce.Uint64()] = transaction
+
 		for _, receiver := range transaction.Receivers {
 			outputs = append(outputs, cardanowallet.TxOutput{
 				Addr:   receiver.DestinationAddress,
@@ -83,7 +86,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		}
 	}
 
-	metadata, err := cardano.CreateBatchMetaData(batchNonceId)
+	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -104,11 +107,11 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	var (
-		multisigKeyHashes       []string = make([]string, len(validatorsData))
-		multisigFeeKeyHashes    []string = make([]string, len(validatorsData))
+		multisigKeyHashes       = make([]string, len(validatorsData))
+		multisigFeeKeyHashes    = make([]string, len(validatorsData))
 		validatorKeyBytes       []byte
-		foundVerificationKey    bool = false
-		foundFeeVerificationKey bool = false
+		foundVerificationKey    = false
+		foundFeeVerificationKey = false
 	)
 
 	for i, validator := range validatorsData {
@@ -201,7 +204,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-
 	witnessMultiSig, err := cardano.CreateTxWitness(txHash, cco.Wallet.MultiSig)
 	if err != nil {
 		return nil, nil, err
@@ -225,7 +227,6 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 	outputs []cardanowallet.TxOutput, slotNumber uint64,
 ) (
 	[]byte, string, *eth.UTXOs, error) {
-
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	multisigFeeInputs := make([]cardanowallet.TxInput, len(inputUtxos.FeePayerOwnedUTXOs))
 	multisigFeeInputsSum := big.NewInt(0)
@@ -238,6 +239,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 
 		multisigFeeInputsSum.Add(multisigFeeInputsSum, utxo.Amount)
 	}
+
 	txInfos.MultiSigFee.TxInputUTXOs = cardano.TxInputUTXOs{
 		Inputs:    multisigFeeInputs,
 		InputsSum: multisigFeeInputsSum.Uint64(),
@@ -265,12 +267,14 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 			chosenUTXOs[minChosenUTXOIdx] = utxo
 
 			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
+
 			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
 			utxoCount--
 		}
 
 		if chosenUTXOsSum.Cmp(txCostWithMinChange) >= 0 || chosenUTXOsSum.Cmp(txCost) == 0 {
 			isUtxosOk = true
+
 			break
 		}
 	}
@@ -312,7 +316,6 @@ func GetInputUtxos(
 ) (
 	*contractbinding.IBridgeContractStructsUTXOs, error,
 ) {
-
 	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
 	if err != nil {
 		return nil, err
@@ -338,5 +341,6 @@ func FindMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
 			idx = i + 1
 		}
 	}
+
 	return min, idx
 }

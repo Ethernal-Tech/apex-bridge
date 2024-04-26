@@ -1,4 +1,4 @@
-package tx_processors
+package txprocessors
 
 import (
 	"fmt"
@@ -33,7 +33,9 @@ func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, e
 	return false, err
 }
 
-func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig) error {
+func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
+	claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig,
+) error {
 	relevant, err := p.IsTxRelevant(tx)
 	if err != nil {
 		return err
@@ -73,8 +75,9 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	}
 
 	var outputUtxo core.UTXO
+
 	for _, utxo := range tx.Outputs {
-		if utxo.Address == appConfig.CardanoChains[tx.OriginChainId].BridgingAddresses.BridgingAddress {
+		if utxo.Address == appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses.BridgingAddress {
 			outputUtxo = core.UTXO{
 				TxHash:  tx.Hash,
 				TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
@@ -82,10 +85,11 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 			}
 		}
 	}
+
 	claim := core.BridgingRequestClaim{
 		ObservedTransactionHash: tx.Hash,
-		SourceChainID:           tx.OriginChainId,
-		DestinationChainID:      metadata.DestinationChainId,
+		SourceChainID:           tx.OriginChainID,
+		DestinationChainID:      metadata.DestinationChainID,
 		OutputUTXO:              outputUtxo,
 		Receivers:               receivers,
 	}
@@ -94,7 +98,9 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 }
 
 /*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata) {
+func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
+	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
+) {
 
 		var outputUtxos []core.Utxo
 		for _, output := range tx.Outputs {
@@ -119,15 +125,17 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(claims *core.Bridge
 }
 */
 
-func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig) error {
+func (*BridgingRequestedProcessorImpl) validate(
+	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
+) error {
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
 	if err != nil {
 		return err
 	}
 
-	destinationChainConfig := appConfig.CardanoChains[metadata.DestinationChainId]
+	destinationChainConfig := appConfig.CardanoChains[metadata.DestinationChainID]
 	if destinationChainConfig == nil {
-		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainId)
+		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
 	}
 
 	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
@@ -139,6 +147,7 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 		receiverAmountSum uint64 = 0
 		feeSum            uint64 = 0
 	)
+
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 	foundTheFeeReceiverAddr := false
@@ -146,12 +155,14 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 	for _, receiver := range metadata.Transactions {
 		if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
 			foundAUtxoValueBelowMinimumValue = true
+
 			break
 		}
 
 		_, err := wallet.GetAddressInfo(receiver.Address)
 		if err != nil {
 			foundAnInvalidReceiverAddr = true
+
 			break
 		}
 

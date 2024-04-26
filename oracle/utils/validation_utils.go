@@ -11,9 +11,10 @@ import (
 func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 	foundBridgingAddress := false
 	foundFeeAddress := false
-	chainConfig := appConfig.CardanoChains[tx.OriginChainId]
+
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
-		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainId)
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
 	for _, utxo := range tx.Tx.Inputs {
@@ -21,11 +22,13 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 		case chainConfig.BridgingAddresses.BridgingAddress:
 			{
 				foundBridgingAddress = true
+
 				break
 			}
 		case chainConfig.BridgingAddresses.FeeAddress:
 			{
 				foundFeeAddress = true
+
 				break
 			}
 		default:
@@ -50,9 +53,10 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 // Returns found multisig output utxo
 func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) (*indexer.TxOutput, error) {
 	var multisigUtxoOutput *indexer.TxOutput = nil
-	chainConfig := appConfig.CardanoChains[tx.OriginChainId]
+
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
-		return nil, fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainId)
+		return nil, fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
 	for _, utxo := range tx.Tx.Outputs {

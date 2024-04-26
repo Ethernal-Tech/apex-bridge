@@ -1,4 +1,4 @@
-package relayer_manager
+package relayermanager
 
 import (
 	"encoding/json"
@@ -43,7 +43,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 			},
 		},
 		Bridge: core.BridgeConfig{
-			NodeUrl:              "dummyNode", // will be our node,
+			NodeURL:              "dummyNode", // will be our node,
 			SmartContractAddress: "0x3786783",
 		},
 		PullTimeMilis: 1000,

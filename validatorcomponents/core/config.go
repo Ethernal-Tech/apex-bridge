@@ -15,20 +15,20 @@ type CardanoChainConfig struct {
 	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
 	KeysDirPath              string   `json:"keysDirPath"`
-	BlockfrostUrl            string   `json:"blockfrostUrl"`
+	BlockfrostURL            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
 	SocketPath               string   `json:"socketPath"`
 	PotentialFee             uint64   `json:"potentialFee"`
 }
 
-type ApiConfig struct {
+type APIConfig struct {
 	Port           uint32   `json:"port"`
 	PathPrefix     string   `json:"pathPrefix"`
 	AllowedHeaders []string `json:"allowedHeaders"`
 	AllowedOrigins []string `json:"allowedOrigins"`
 	AllowedMethods []string `json:"allowedMethods"`
-	ApiKeyHeader   string   `json:"apiKeyHeader"`
-	ApiKeys        []string `json:"apiKeys"`
+	APIKeyHeader   string   `json:"apiKeyHeader"`
+	APIKeys        []string `json:"apiKeys"`
 }
 
 type AppConfig struct {
@@ -38,16 +38,16 @@ type AppConfig struct {
 	Settings                     oracleCore.AppSettings         `json:"appSettings"`
 	RelayerImitatorPullTimeMilis uint64                         `json:"relayerImitatorPullTime"`
 	BatcherPullTimeMilis         uint64                         `json:"batcherPullTime"`
-	ApiConfig                    ApiConfig                      `json:"api"`
+	APIConfig                    APIConfig                      `json:"api"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
 	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
 
-	for chainId, ccConfig := range appConfig.CardanoChains {
-		oracleCardanoChains[chainId] = &oracleCore.CardanoChainConfig{
-			ChainId:                  chainId,
+	for chainID, ccConfig := range appConfig.CardanoChains {
+		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
+			ChainID:                  chainID,
 			NetworkAddress:           ccConfig.NetworkAddress,
 			NetworkMagic:             ccConfig.NetworkMagic,
 			StartBlockHash:           ccConfig.StartBlockHash,
@@ -57,9 +57,9 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
 		}
 
-		chainSpecificJsonRaw, _ := (cardanotx.CardanoChainConfig{
+		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
 			TestNetMagic:     ccConfig.NetworkMagic,
-			BlockfrostUrl:    ccConfig.BlockfrostUrl,
+			BlockfrostURL:    ccConfig.BlockfrostURL,
 			BlockfrostAPIKey: ccConfig.BlockfrostAPIKey,
 			SocketPath:       ccConfig.SocketPath,
 			PotentialFee:     ccConfig.PotentialFee,
@@ -67,9 +67,9 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
-			ChainId:       chainId,
+			ChainID:       chainID,
 			ChainType:     "Cardano",
-			ChainSpecific: chainSpecificJsonRaw,
+			ChainSpecific: chainSpecificJSONRaw,
 		})
 	}
 
@@ -82,7 +82,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
 		Bridge: batcherCore.BridgeConfig{
-			NodeUrl:              appConfig.Bridge.NodeUrl,
+			NodeURL:              appConfig.Bridge.NodeURL,
 			SmartContractAddress: appConfig.Bridge.SmartContractAddress,
 			ValidatorDataDir:     appConfig.Bridge.ValidatorDataDir,
 			ValidatorConfigPath:  appConfig.Bridge.ValidatorConfigPath,

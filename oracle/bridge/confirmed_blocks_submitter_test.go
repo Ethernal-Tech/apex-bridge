@@ -13,7 +13,7 @@ import (
 )
 
 func TestConfirmedBlocksSubmitter(t *testing.T) {
-	chainId := "prime"
+	chainID := "prime"
 	appConfig := &core.AppConfig{
 		Bridge: core.BridgeConfig{
 			SubmitConfig: core.SubmitConfig{
@@ -25,11 +25,11 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("NewConfirmedBlocksSubmitter 1", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), fmt.Errorf("test err"))
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), fmt.Errorf("test err"))
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 		require.Nil(t, bs)
@@ -37,24 +37,24 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("NewConfirmedBlocksSubmitter 2", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, bs)
 	})
 
 	t.Run("execute 1", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDb.On("GetConfirmedBlocksFrom", bs.latestConfirmedSlot, appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold).Return(([]*indexer.CardanoBlock)(nil), fmt.Errorf("test err"))
+		indexerDB.On("GetConfirmedBlocksFrom", bs.latestConfirmedSlot, appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold).Return(([]*indexer.CardanoBlock)(nil), fmt.Errorf("test err"))
 
 		err := bs.execute()
 		require.Error(t, err)
@@ -63,13 +63,13 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("execute 2", func(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDb.On(
+		indexerDB.On(
 			"GetConfirmedBlocksFrom", bs.latestConfirmedSlot, appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold).Return(
 			[]*indexer.CardanoBlock{}, nil)
 
@@ -81,13 +81,13 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDb.On(
+		indexerDB.On(
 			"GetConfirmedBlocksFrom", bs.latestConfirmedSlot, appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold).Return(
 			[]*indexer.CardanoBlock{{}}, nil)
 
@@ -100,13 +100,13 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything).Return(nil)
 
-		db := &core.CardanoTxsProcessorDbMock{}
-		indexerDb := &indexer.DatabaseMock{}
-		indexerDb.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
+		db := &core.CardanoTxsProcessorDBMock{}
+		indexerDB := &indexer.DatabaseMock{}
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDb, chainId, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDb.On(
+		indexerDB.On(
 			"GetConfirmedBlocksFrom", bs.latestConfirmedSlot, appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold).Return(
 			[]*indexer.CardanoBlock{{}}, nil)
 

@@ -7,7 +7,6 @@ import (
 )
 
 func TestMetadata(t *testing.T) {
-
 	t.Run("Json Marshal BaseMetadata unsupported encoding", func(t *testing.T) {
 		result, err := MarshalMetadata[BaseMetadata]("invalid", BaseMetadata{BridgingTxType: "test"})
 
@@ -17,7 +16,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Unmarshal BaseMetadata  unsupported encoding", func(t *testing.T) {
-		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJson, BaseMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJSON, BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -28,18 +27,18 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Marshal BaseMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJson, BaseMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJSON, BaseMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Json Unmarshal BaseMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJson, BaseMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BaseMetadata](MetadataEncodingTypeJSON, BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		metadata, err := UnmarshalMetadata[BaseMetadata](MetadataEncodingTypeJson, result)
+		metadata, err := UnmarshalMetadata[BaseMetadata](MetadataEncodingTypeJSON, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 	})
@@ -62,18 +61,18 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Marshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJson, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Json Unmarshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJson, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJson, result)
+		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 	})
@@ -96,21 +95,21 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Marshal BatchExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJson, BatchExecutedMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJSON, BatchExecutedMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Json Unmarshal BatchExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJson, BatchExecutedMetadata{BatchNonceId: 245})
+		result, err := MarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJSON, BatchExecutedMetadata{BatchNonceID: 245})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		metadata, err := UnmarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJson, result)
+		metadata, err := UnmarshalMetadata[BatchExecutedMetadata](MetadataEncodingTypeJSON, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
-		require.Equal(t, uint64(245), metadata.BatchNonceId)
+		require.Equal(t, uint64(245), metadata.BatchNonceID)
 	})
 
 	t.Run("Cbor Marshal BatchExecutedMetadata", func(t *testing.T) {
@@ -132,18 +131,18 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Marshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJson, RefundExecutedMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJSON, RefundExecutedMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Json Unmarshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJson, RefundExecutedMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJSON, RefundExecutedMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
-		metadata, err := UnmarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJson, result)
+		metadata, err := UnmarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJSON, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 	})

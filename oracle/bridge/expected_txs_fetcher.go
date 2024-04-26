@@ -17,7 +17,7 @@ type ExpectedTxsFetcherImpl struct {
 	ctx               context.Context
 	bridgeDataFetcher core.BridgeDataFetcher
 	appConfig         *core.AppConfig
-	db                core.BridgeExpectedCardanoTxsDb
+	db                core.BridgeExpectedCardanoTxsDB
 	logger            hclog.Logger
 }
 
@@ -27,7 +27,7 @@ func NewExpectedTxsFetcher(
 	ctx context.Context,
 	bridgeDataFetcher core.BridgeDataFetcher,
 	appConfig *core.AppConfig,
-	db core.BridgeExpectedCardanoTxsDb,
+	db core.BridgeExpectedCardanoTxsDB,
 	logger hclog.Logger,
 ) *ExpectedTxsFetcherImpl {
 	return &ExpectedTxsFetcherImpl{
@@ -61,10 +61,10 @@ func (f *ExpectedTxsFetcherImpl) Start() {
 func (f *ExpectedTxsFetcherImpl) fetchData() error {
 	var expectedTxs []*core.BridgeExpectedCardanoTx
 
-	for chainId := range f.appConfig.CardanoChains {
-		existingExpectedTxs, err := f.db.GetExpectedTxs(chainId, 0)
+	for chainID := range f.appConfig.CardanoChains {
+		existingExpectedTxs, err := f.db.GetExpectedTxs(chainID, 0)
 		if err != nil {
-			f.logger.Error("Failed to GetExpectedTxs from db", "chainId", chainId, "err", err)
+			f.logger.Error("Failed to GetExpectedTxs from db", "chainId", chainID, "err", err)
 
 			continue
 		}
@@ -74,9 +74,9 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 			continue
 		}
 
-		expectedTx, err := f.bridgeDataFetcher.FetchExpectedTx(chainId)
+		expectedTx, err := f.bridgeDataFetcher.FetchExpectedTx(chainID)
 		if err != nil {
-			f.logger.Error("Failed to fetch expected tx from bridge", "chainId", chainId, "err", err)
+			f.logger.Error("Failed to fetch expected tx from bridge", "chainId", chainID, "err", err)
 
 			continue
 		}
@@ -90,6 +90,7 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 		err := f.db.AddExpectedTxs(expectedTxs)
 		if err != nil {
 			f.logger.Error("failed to add expected txs", "err", err)
+
 			return fmt.Errorf("failed to add expected txs. err: %w", err)
 		}
 	}

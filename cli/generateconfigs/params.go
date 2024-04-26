@@ -19,18 +19,18 @@ const (
 	primeNetworkAddressFlag   = "prime-network-address"
 	primeNetworkMagicFlag     = "prime-network-magic"
 	primeKeysDirFlag          = "prime-keys-dir"
-	primeBlockfrostUrlFlag    = "prime-blockfrost-url"
-	primeBlockfrostApiKeyFlag = "prime-blockfrost-api-key"
+	primeBlockfrostURLFlag    = "prime-blockfrost-url"
+	primeBlockfrostAPIKeyFlag = "prime-blockfrost-api-key"
 	primeSocketPathFlag       = "prime-socket-path"
 
 	vectorNetworkAddressFlag   = "vector-network-address"
 	vectorNetworkMagicFlag     = "vector-network-magic"
 	vectorKeysDirFlag          = "vector-keys-dir"
-	vectorBlockfrostUrlFlag    = "vector-blockfrost-url"
-	vectorBlockfrostApiKeyFlag = "vector-blockfrost-api-key"
+	vectorBlockfrostURLFlag    = "vector-blockfrost-url"
+	vectorBlockfrostAPIKeyFlag = "vector-blockfrost-api-key"
 	vectorSocketPathFlag       = "vector-socket-path"
 
-	bridgeNodeUrlFlag          = "bridge-node-url"
+	bridgeNodeURLFlag          = "bridge-node-url"
 	bridgeSCAddressFlag        = "bridge-sc-address"
 	bridgeValidatorDataDirFlag = "bridge-validator-data-dir"
 	bridgeValidatorConfigFlag  = "bridge-validator-config"
@@ -48,21 +48,21 @@ const (
 	primeNetworkAddressFlagDesc   = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc     = "network magic of prime network (default 0)"
 	primeKeysDirFlagDesc          = "path to cardano keys directory for prime network"
-	primeBlockfrostUrlFlagDesc    = "(mandatory if prime-socket-path not specified) blockfrost URL for prime network"
-	primeBlockfrostApiKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
+	primeBlockfrostURLFlagDesc    = "(mandatory if prime-socket-path not specified) blockfrost URL for prime network"
+	primeBlockfrostAPIKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
 	primeSocketPathFlagDesc       = "(mandatory if prime-blockfrost-url not specified) socket path for prime network"
 
 	vectorNetworkAddressFlagDesc   = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc     = "network magic of vector network (default 0)"
 	vectorKeysDirFlagDesc          = "path to cardano keys directory for vector network"
-	vectorBlockfrostUrlFlagDesc    = "(mandatory if vector-socket-path not specified) blockfrost URL for vector network"
-	vectorBlockfrostApiKeyFlagDesc = "blockfrost API key for vector network" //nolint:gosec
+	vectorBlockfrostURLFlagDesc    = "(mandatory if vector-socket-path not specified) blockfrost URL for vector network"
+	vectorBlockfrostAPIKeyFlagDesc = "blockfrost API key for vector network" //nolint:gosec
 	vectorSocketPathFlagDesc       = "(mandatory if vector-blockfrost-url not specified) socket path for vector network"
 
-	bridgeNodeUrlFlagDesc          = "(mandatory) node URL of bridge chain"
+	bridgeNodeURLFlagDesc          = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
 	bridgeValidatorDataDirFlagDesc = "(mandatory if bridge-validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
-	bridgeValidatorConfigFlagDesc  = "(mandatory if bridge-validator-data not specified) path to to bridge chain secrets manager config file"
+	bridgeValidatorConfigFlagDesc  = "(mandatory if bridge-validator-data not specified) path to to bridge chain secrets manager config file"                    //nolint:lll
 
 	logsPathFlagDesc = "path to where logs will be stored"
 	dbsPathFlagDesc  = "path to where databases will be stored"
@@ -79,7 +79,7 @@ const (
 	defaultVectorKeysDir                     = "./keys/vector"
 	defaultLogsPath                          = "./logs"
 	defaultDBsPath                           = "./db"
-	defaultApiPort                           = 10000
+	defaultAPIPort                           = 10000
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
@@ -89,18 +89,18 @@ type generateConfigsParams struct {
 	primeNetworkAddress   string
 	primeNetworkMagic     uint32
 	primeKeysDir          string
-	primeBlockfrostUrl    string
-	primeBlockfrostApiKey string
+	primeBlockfrostURL    string
+	primeBlockfrostAPIKey string
 	primeSocketPath       string
 
 	vectorNetworkAddress   string
 	vectorNetworkMagic     uint32
 	vectorKeysDir          string
-	vectorBlockfrostUrl    string
-	vectorBlockfrostApiKey string
+	vectorBlockfrostURL    string
+	vectorBlockfrostAPIKey string
 	vectorSocketPath       string
 
-	bridgeNodeUrl          string
+	bridgeNodeURL          string
 	bridgeSCAddress        string
 	bridgeValidatorDataDir string
 	bridgeValidatorConfig  string
@@ -121,20 +121,20 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
-	if p.primeBlockfrostUrl == "" && p.primeSocketPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", primeBlockfrostUrlFlag, primeSocketPathFlag)
+	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", primeBlockfrostURLFlag, primeSocketPathFlag)
 	}
 
 	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
 	}
 
-	if p.vectorBlockfrostUrl == "" && p.vectorSocketPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", vectorBlockfrostUrlFlag, vectorSocketPathFlag)
+	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", vectorBlockfrostURLFlag, vectorSocketPathFlag)
 	}
 
-	if p.bridgeNodeUrl == "" || !common.IsValidURL(p.bridgeNodeUrl) {
-		return fmt.Errorf("invalid %s: %s", bridgeNodeUrlFlag, p.bridgeNodeUrl)
+	if p.bridgeNodeURL == "" || !common.IsValidURL(p.bridgeNodeURL) {
+		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
 
 	if p.bridgeSCAddress == "" {
@@ -172,16 +172,16 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeKeysDirFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.primeBlockfrostUrl,
-		primeBlockfrostUrlFlag,
+		&p.primeBlockfrostURL,
+		primeBlockfrostURLFlag,
 		"",
-		primeBlockfrostUrlFlagDesc,
+		primeBlockfrostURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.primeBlockfrostApiKey,
-		primeBlockfrostApiKeyFlag,
+		&p.primeBlockfrostAPIKey,
+		primeBlockfrostAPIKeyFlag,
 		"",
-		primeBlockfrostApiKeyFlagDesc,
+		primeBlockfrostAPIKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.primeSocketPath,
@@ -209,16 +209,16 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorKeysDirFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.vectorBlockfrostUrl,
-		vectorBlockfrostUrlFlag,
+		&p.vectorBlockfrostURL,
+		vectorBlockfrostURLFlag,
 		"",
-		vectorBlockfrostUrlFlagDesc,
+		vectorBlockfrostURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.vectorBlockfrostApiKey,
-		vectorBlockfrostApiKeyFlag,
+		&p.vectorBlockfrostAPIKey,
+		vectorBlockfrostAPIKeyFlag,
 		"",
-		vectorBlockfrostApiKeyFlagDesc,
+		vectorBlockfrostAPIKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.vectorSocketPath,
@@ -228,10 +228,10 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.bridgeNodeUrl,
-		bridgeNodeUrlFlag,
+		&p.bridgeNodeURL,
+		bridgeNodeURLFlag,
 		"",
-		bridgeNodeUrlFlagDesc,
+		bridgeNodeURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.bridgeSCAddress,
@@ -268,7 +268,7 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint32Var(
 		&p.apiPort,
 		apiPortFlag,
-		defaultApiPort,
+		defaultAPIPort,
 		apiPortFlagDesc,
 	)
 
@@ -298,8 +298,8 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostApiKeyFlag, primeSocketPathFlag)
-	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostUrlFlag, vectorSocketPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
@@ -307,10 +307,12 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	if validatorDataDir != "" {
 		validatorDataDir = path.Clean(validatorDataDir)
 	}
+
 	validatorConfig := p.bridgeValidatorConfig
 	if validatorConfig != "" {
 		validatorConfig = path.Clean(validatorConfig)
 	}
+
 	vcConfig := &vcCore.AppConfig{
 		CardanoChains: map[string]*vcCore.CardanoChainConfig{
 			"prime": {
@@ -322,8 +324,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.primeKeysDir),
-				BlockfrostUrl:            p.primeBlockfrostUrl,
-				BlockfrostAPIKey:         p.primeBlockfrostApiKey,
+				BlockfrostURL:            p.primeBlockfrostURL,
+				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
 			},
@@ -336,14 +338,14 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.vectorKeysDir),
-				BlockfrostUrl:            p.vectorBlockfrostUrl,
-				BlockfrostAPIKey:         p.vectorBlockfrostApiKey,
+				BlockfrostURL:            p.vectorBlockfrostURL,
+				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
-			NodeUrl:              p.bridgeNodeUrl,
+			NodeURL:              p.bridgeNodeURL,
 			SmartContractAddress: p.bridgeSCAddress,
 			ValidatorDataDir:     validatorDataDir,
 			ValidatorConfigPath:  validatorConfig,
@@ -369,7 +371,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		RelayerImitatorPullTimeMilis: 1000,
 		BatcherPullTimeMilis:         2500,
-		ApiConfig: vcCore.ApiConfig{
+		APIConfig: vcCore.APIConfig{
 			Port:       p.apiPort,
 			PathPrefix: "api",
 			AllowedHeaders: []string{
@@ -386,42 +388,42 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				"OPTIONS",
 				"DELETE",
 			},
-			ApiKeyHeader: "x-api-key",
-			ApiKeys:      p.apiKeys,
+			APIKeyHeader: "x-api-key",
+			APIKeys:      p.apiKeys,
 		},
 	}
 
-	primeChainSpecificJsonRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
+	primeChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
 		TestNetMagic:     p.primeNetworkMagic,
-		BlockfrostUrl:    p.primeBlockfrostUrl,
-		BlockfrostAPIKey: p.primeBlockfrostApiKey,
+		BlockfrostURL:    p.primeBlockfrostURL,
+		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
 		SocketPath:       p.primeSocketPath,
 		PotentialFee:     300000,
 	})
 
-	vectorChainSpecificJsonRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
+	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
 		TestNetMagic:     p.vectorNetworkMagic,
-		BlockfrostUrl:    p.vectorBlockfrostUrl,
-		BlockfrostAPIKey: p.vectorBlockfrostApiKey,
+		BlockfrostURL:    p.vectorBlockfrostURL,
+		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
 		SocketPath:       p.vectorSocketPath,
 		PotentialFee:     300000,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
-			NodeUrl:              p.bridgeNodeUrl,
+			NodeURL:              p.bridgeNodeURL,
 			SmartContractAddress: p.bridgeSCAddress,
 		},
 		Chains: map[string]rCore.ChainConfig{
 			"prime": {
 				ChainType:     "Cardano",
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
-				ChainSpecific: primeChainSpecificJsonRaw,
+				ChainSpecific: primeChainSpecificJSONRaw,
 			},
 			"vector": {
 				ChainType:     "Cardano",
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
-				ChainSpecific: vectorChainSpecificJsonRaw,
+				ChainSpecific: vectorChainSpecificJSONRaw,
 			},
 		},
 		PullTimeMilis: 1000,
@@ -439,12 +441,12 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfigPath := path.Join(outputDirPath, p.outputValidatorComponentsFileName)
-	if err := common.SaveJson(vcConfigPath, vcConfig, true); err != nil {
+	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to create validator components config json: %w", err)
 	}
 
 	rConfigPath := path.Join(outputDirPath, p.outputRelayerFileName)
-	if err := common.SaveJson(rConfigPath, rConfig, true); err != nil {
+	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to create relayer config json: %w", err)
 	}
 

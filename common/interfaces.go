@@ -3,14 +3,14 @@ package common
 import "github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 
 type BridgingRequestStateUpdater interface {
-	New(sourceChainId string, tx *indexer.Tx) error
-	NewMultiple(sourceChainId string, txs []*indexer.Tx) error
+	New(sourceChainID string, tx *indexer.Tx) error
+	NewMultiple(sourceChainID string, txs []*indexer.Tx) error
 	Invalid(key BridgingRequestStateKey) error
-	SubmittedToBridge(key BridgingRequestStateKey, destinationChainId string) error
-	IncludedInBatch(destinationChainId string, batchId uint64, txs []BridgingRequestStateKey) error
-	SubmittedToDestination(destinationChainId string, batchId uint64) error
-	FailedToExecuteOnDestination(destinationChainId string, batchId uint64) error
-	ExecutedOnDestination(destinationChainId string, batchId uint64, destinationTxHash string) error
+	SubmittedToBridge(key BridgingRequestStateKey, destinationChainID string) error
+	IncludedInBatch(destinationChainID string, batchID uint64, txs []BridgingRequestStateKey) error
+	SubmittedToDestination(destinationChainID string, batchID uint64) error
+	FailedToExecuteOnDestination(destinationChainID string, batchID uint64) error
+	ExecutedOnDestination(destinationChainID string, batchID uint64, destinationTxHash string) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

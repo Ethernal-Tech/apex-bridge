@@ -1,4 +1,4 @@
-package failed_tx_processors
+package failedtxprocessors
 
 import (
 	"math/big"
@@ -10,7 +10,6 @@ import (
 )
 
 func TestBatchExecutionFailedProcessor(t *testing.T) {
-
 	proc := NewBatchExecutionFailedProcessor()
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
@@ -83,15 +82,16 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
-		batchNonceId := uint64(1)
+		batchNonceID := uint64(1)
 		relevantFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceId:   batchNonceId,
+			BatchNonceID:   batchNonceID,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
+
 		const txHash = "test_hash"
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantFullMetadata,
@@ -101,6 +101,6 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
-		require.Equal(t, new(big.Int).SetUint64(batchNonceId), claims.BatchExecutionFailedClaims[0].BatchNonceID)
+		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutionFailedClaims[0].BatchNonceID)
 	})
 }

@@ -37,7 +37,8 @@ func NewCardanoChainOperations(
 
 // SendTx implements core.ChainOperations.
 func (cco *CardanoChainOperations) SendTx(smartContractData *eth.ConfirmedBatch) error {
-	witnesses := make([][]byte, len(smartContractData.MultisigSignatures)+len(smartContractData.FeePayerMultisigSignatures))
+	witnesses := make(
+		[][]byte, len(smartContractData.MultisigSignatures)+len(smartContractData.FeePayerMultisigSignatures))
 	copy(witnesses, smartContractData.MultisigSignatures)
 	copy(witnesses[len(smartContractData.MultisigSignatures):], smartContractData.FeePayerMultisigSignatures)
 

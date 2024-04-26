@@ -52,6 +52,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -76,6 +77,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -100,6 +102,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -124,6 +127,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -152,6 +156,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -176,6 +181,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -200,6 +206,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 		protocolParams, err := GenerateProtocolParams()
 		require.NoError(t, err)
+
 		slotNumber := uint64(12345)
 
 		txRaw, _, utxos, err := cco.CreateBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
@@ -241,7 +248,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	testError := errors.New("test err")
 
-	var confirmedTransactions []eth.ConfirmedTransaction = make([]contractbinding.IBridgeContractStructsConfirmedTransaction, 1)
+	confirmedTransactions := make([]contractbinding.IBridgeContractStructsConfirmedTransaction, 1)
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       big.NewInt(1),
 		BlockHeight: big.NewInt(1),
@@ -250,7 +257,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			Amount:             big.NewInt(int64(minUtxoAmount)),
 		}},
 	}
-	batchNonceId := big.NewInt(1)
+	batchNonceID := big.NewInt(1)
 	destinationChain := "vector"
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -260,7 +267,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -275,7 +282,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -284,14 +291,14 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 
-		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet := make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
 			VerifyingKey:    "",
 			VerifyingKeyFee: "",
 		}
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -300,14 +307,14 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 
-		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet := make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: "",
 		}
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -316,7 +323,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 
-		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet := make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
@@ -324,7 +331,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -333,7 +340,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 
-		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet := make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
@@ -341,7 +348,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil)
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(nil, testError)
 
-		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		_, _, _, _, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -350,7 +357,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, destinationChain).Return(&getLastObservedBlockRet, nil)
 
-		var getValidatorsCardanoDataRet []eth.ValidatorCardanoData = make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
+		getValidatorsCardanoDataRet := make([]contractbinding.IBridgeContractStructsValidatorCardanoData, 1)
 		getValidatorsCardanoDataRet[0] = eth.ValidatorCardanoData{
 			VerifyingKey:    hex.EncodeToString(wallet.MultiSig.GetVerificationKey()),
 			VerifyingKeyFee: hex.EncodeToString(wallet.MultiSigFee.GetVerificationKey()),
@@ -373,7 +380,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 		bridgeSmartContractMock.On("GetAvailableUTXOs", ctx, destinationChain).Return(getAvailableUTXOsRet, nil)
 
-		rawTx, txHash, utxos, includedConfirmedTransactionNonces, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceId)
+		rawTx, txHash, utxos, includedConfirmedTransactionNonces, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.NotNil(t, rawTx)
 		require.NotEqual(t, "", txHash)
@@ -395,6 +402,7 @@ func CalculateTxCost(outputs []cardanowallet.TxOutput) *big.Int {
 	for _, o := range outputs {
 		txCost.Add(txCost, big.NewInt(int64(o.Amount)))
 	}
+
 	return txCost
 }
 
@@ -403,6 +411,7 @@ func CalculateUTXOSum(inputs []eth.UTXO) *big.Int {
 	for _, i := range inputs {
 		txCost.Add(txCost, i.Amount)
 	}
+
 	return txCost
 }
 
@@ -450,10 +459,12 @@ func GenerateUTXORandomInputs(count int, min uint64, max uint64) (inputs *contra
 		if randomAmount < min {
 			randomAmount += min
 		}
+
 		inputs.MultisigOwnedUTXOs[i] = contractbinding.IBridgeContractStructsUTXO{
 			Nonce: uint64(i), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(i)), Amount: big.NewInt(int64(randomAmount)),
 		}
 	}
+
 	inputs.MultisigOwnedUTXOs[count] = contractbinding.IBridgeContractStructsUTXO{
 		Nonce: uint64(count + 5), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(count + 5)), Amount: big.NewInt(int64(1000000000000)),
 	}
@@ -506,6 +517,7 @@ func GenerateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOu
 			Amount: amount,
 		}
 	}
+
 	return
 }
 
@@ -517,11 +529,13 @@ func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []car
 		if randomAmount < min {
 			randomAmount += min
 		}
+
 		outputs[i] = cardanowallet.TxOutput{
 			Addr:   "addr_test1vq7vsmgan2adwapu6r3xs5049s6dsf8hlgex68mwgxzraks4c0dpp",
 			Amount: randomAmount,
 		}
 	}
+
 	return
 }
 
@@ -563,7 +577,7 @@ func GenerateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 }
 
 func GenerateProtocolParams() ([]byte, error) {
-	resultJson := map[string]interface{}{
+	resultJSON := map[string]interface{}{
 		"collateralPercentage": 150,
 		"costModels":           nil,
 		"decentralization":     nil,
@@ -603,5 +617,5 @@ func GenerateProtocolParams() ([]byte, error) {
 		"utxoCostPerByte":     4310,
 	}
 
-	return json.Marshal(resultJson)
+	return json.Marshal(resultJSON)
 }

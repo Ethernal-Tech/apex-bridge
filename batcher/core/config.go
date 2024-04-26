@@ -5,7 +5,7 @@ import (
 )
 
 type BridgeConfig struct {
-	NodeUrl              string `json:"nodeUrl"`
+	NodeURL              string `json:"nodeUrl"`
 	SmartContractAddress string `json:"scAddress"` // nolintlint TODO: probably will be more than just one
 	ValidatorDataDir     string `json:"validatorDataDir"`
 	ValidatorConfigPath  string `json:"validatorConfigPath"`
@@ -18,7 +18,7 @@ type BatcherConfiguration struct {
 }
 
 type ChainConfig struct {
-	ChainId       string          `json:"id"`
+	ChainID       string          `json:"id"`
 	ChainType     string          `json:"type"`
 	ChainSpecific json.RawMessage `json:"config"`
 }

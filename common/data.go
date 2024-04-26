@@ -1,6 +1,6 @@
 package common
 
 type BridgingRequestStateKey struct {
-	SourceChainId string
+	SourceChainID string
 	SourceTxHash  string
 }

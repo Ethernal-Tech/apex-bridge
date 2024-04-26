@@ -27,7 +27,7 @@ func RemoveDirOrFilePathIfExists(dirOrFilePath string) (err error) {
 	return err
 }
 
-func LoadJson[TReturn any](path string) (*TReturn, error) {
+func LoadJSON[TReturn any](path string) (*TReturn, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %v. error: %w", path, err)
@@ -65,7 +65,7 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 		}
 	}
 
-	config, err = LoadJson[TReturn](configPath)
+	config, err = LoadJSON[TReturn](configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 	return config, nil
 }
 
-func SaveJson[TObj any](path string, obj TObj, pretty bool) error {
+func SaveJSON[TObj any](path string, obj TObj, pretty bool) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("failed to create %v. error: %w", path, err)

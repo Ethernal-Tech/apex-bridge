@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"math/big"
@@ -60,9 +60,9 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		err = db.AddLastSubmittedBatchId("prime", big.NewInt(0))
+		err = db.AddLastSubmittedBatchID("prime", big.NewInt(0))
 		require.NoError(t, err)
-		err = db.AddLastSubmittedBatchId("prime", big.NewInt(123))
+		err = db.AddLastSubmittedBatchID("prime", big.NewInt(123))
 		require.NoError(t, err)
 	})
 
@@ -75,14 +75,14 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		res, err := db.GetLastSubmittedBatchId("prime")
+		res, err := db.GetLastSubmittedBatchID("prime")
 		require.NoError(t, err)
 		require.Nil(t, res)
 
-		err = db.AddLastSubmittedBatchId("prime", expectedOutput)
+		err = db.AddLastSubmittedBatchID("prime", expectedOutput)
 		require.NoError(t, err)
 
-		res, err = db.GetLastSubmittedBatchId("prime")
+		res, err = db.GetLastSubmittedBatchID("prime")
 		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 0, res.Cmp(expectedOutput))

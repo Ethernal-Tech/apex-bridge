@@ -1,4 +1,4 @@
-package failed_tx_processors
+package failedtxprocessors
 
 import (
 	"fmt"
@@ -62,12 +62,14 @@ func (*BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 ) {
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, core.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainID:                 tx.ChainId,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceId),
+		ChainID:                 tx.ChainID,
+		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
 	})
 }
 
-func (*BatchExecutionFailedProcessorImpl) validate(tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig) error {
+func (*BatchExecutionFailedProcessorImpl) validate(
+	tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig,
+) error {
 	// no validation needed
 	return nil
 }

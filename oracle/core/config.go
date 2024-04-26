@@ -11,7 +11,7 @@ type BridgingAddresses struct {
 }
 
 type CardanoChainConfig struct {
-	ChainId                  string
+	ChainID                  string
 	NetworkAddress           string                   `json:"networkAddress"`
 	NetworkMagic             uint32                   `json:"networkMagic"`
 	StartBlockHash           string                   `json:"startBlockHash"`
@@ -29,7 +29,7 @@ type SubmitConfig struct {
 }
 
 type BridgeConfig struct {
-	NodeUrl              string       `json:"nodeUrl"`
+	NodeURL              string       `json:"nodeUrl"`
 	SmartContractAddress string       `json:"scAddress"`
 	ValidatorDataDir     string       `json:"validatorDataDir"`
 	ValidatorConfigPath  string       `json:"validatorConfigPath"`
@@ -56,7 +56,7 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) FillOut() {
-	for chainId, cardanoChainConfig := range appConfig.CardanoChains {
-		cardanoChainConfig.ChainId = chainId
+	for chainID, cardanoChainConfig := range appConfig.CardanoChains {
+		cardanoChainConfig.ChainID = chainID
 	}
 }

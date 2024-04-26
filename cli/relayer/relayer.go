@@ -7,7 +7,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer_manager"
+	relayermanager "github.com/Ethernal-Tech/apex-bridge/relayer/relayer_manager"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/spf13/cobra"
 )
@@ -40,19 +40,22 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	config, err := common.LoadConfig[relayerCore.RelayerManagerConfiguration](initParamsData.config, "relayer")
 	if err != nil {
 		outputter.SetError(err)
+
 		return
 	}
 
 	logger, err := logger.NewLogger(config.Logger)
 	if err != nil {
 		outputter.SetError(err)
+
 		return
 	}
 
-	relayerManager, err := relayer_manager.NewRelayerManager(config, logger)
+	relayerManager, err := relayermanager.NewRelayerManager(config, logger)
 	if err != nil {
 		logger.Error("relayer manager creation failed", "err", err)
 		outputter.SetError(err)
+
 		return
 	}
 
@@ -60,6 +63,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	if err != nil {
 		logger.Error("relayer manager start failed", "err", err)
 		outputter.SetError(err)
+
 		return
 	}
 

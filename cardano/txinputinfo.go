@@ -13,7 +13,11 @@ type TxInputInfos struct {
 	MultiSigFee  *TxInputInfo
 }
 
-func NewTxInputInfos(keyHashesMultiSig []string, keyHashesMultiSigFee []string, testNetMagic uint) (*TxInputInfos, error) {
+func NewTxInputInfos(
+	keyHashesMultiSig []string, keyHashesMultiSigFee []string, testNetMagic uint,
+) (
+	*TxInputInfos, error,
+) {
 	result := [2]*TxInputInfo{}
 
 	for i, keyHashes := range [][]string{keyHashesMultiSig, keyHashesMultiSigFee} {
@@ -73,6 +77,7 @@ func (txinfo *TxInputInfo) Calculate(utxos []cardanowallet.Utxo, desired uint64)
 	// Loop through utxos to find first input with enough tokens
 	// If we don't have this UTXO we need to use more of them
 	var amountSum = uint64(0)
+
 	chosenUTXOs := make([]cardanowallet.TxInput, 0, len(utxos))
 
 	for _, utxo := range utxos {

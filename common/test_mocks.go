@@ -13,22 +13,24 @@ type BridgingRequestStateUpdaterMock struct {
 var _ BridgingRequestStateUpdater = (*BridgingRequestStateUpdaterMock)(nil)
 
 // New implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) New(sourceChainId string, tx *indexer.Tx) error {
+func (m *BridgingRequestStateUpdaterMock) New(sourceChainID string, tx *indexer.Tx) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // NewMultiple implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) NewMultiple(sourceChainId string, txs []*indexer.Tx) error {
+func (m *BridgingRequestStateUpdaterMock) NewMultiple(sourceChainID string, txs []*indexer.Tx) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
@@ -39,57 +41,69 @@ func (m *BridgingRequestStateUpdaterMock) Invalid(key BridgingRequestStateKey) e
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // SubmittedToBridge implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) SubmittedToBridge(
-	key BridgingRequestStateKey, destinationChainId string,
+	key BridgingRequestStateKey, destinationChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // IncludedInBatch implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) IncludedInBatch(destinationChainId string, batchId uint64, txs []BridgingRequestStateKey) error {
+func (m *BridgingRequestStateUpdaterMock) IncludedInBatch(
+	destinationChainID string, batchID uint64, txs []BridgingRequestStateKey,
+) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // SubmittedToDestination implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) SubmittedToDestination(destinationChainId string, batchId uint64) error {
+func (m *BridgingRequestStateUpdaterMock) SubmittedToDestination(destinationChainID string, batchID uint64) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // FailedToExecuteOnDestination implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(destinationChainId string, batchId uint64) error {
+func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(
+	destinationChainID string, batchID uint64,
+) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 // ExecutedOnDestination implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(destinationChainId string, batchId uint64, destinationTxHash string) error {
+func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
+	destinationChainID string, batchID uint64, destinationTxHash string,
+) error {
 	if m.ReturnNil {
 		return nil
 	}
 
 	args := m.Called()
+
 	return args.Error(0)
 }

@@ -13,21 +13,21 @@ import (
 )
 
 type EthHelperWrapper struct {
-	nodeUrl     string
+	nodeURL     string
 	wallet      ethtxhelper.IEthTxWallet
 	ethTxHelper ethtxhelper.IEthTxHelper
 	lock        sync.Mutex
 }
 
-func NewEthHelperWrapper(nodeUrl string) *EthHelperWrapper {
+func NewEthHelperWrapper(nodeURL string) *EthHelperWrapper {
 	return &EthHelperWrapper{
-		nodeUrl: nodeUrl,
+		nodeURL: nodeURL,
 	}
 }
 
-func NewEthHelperWrapperWithWallet(nodeUrl string, wallet *ethtxhelper.EthTxWallet) (*EthHelperWrapper, error) {
+func NewEthHelperWrapperWithWallet(nodeURL string, wallet *ethtxhelper.EthTxWallet) (*EthHelperWrapper, error) {
 	return &EthHelperWrapper{
-		nodeUrl: nodeUrl,
+		nodeURL: nodeURL,
 		wallet:  wallet,
 	}, nil
 }
@@ -43,7 +43,7 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 	finalOpts := append(
 		append(
 			make([]ethtxhelper.TxRelayerOption, 0, len(opts)+1),
-			ethtxhelper.WithNodeUrl(e.nodeUrl),
+			ethtxhelper.WithNodeURL(e.nodeURL),
 		), opts...)
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(finalOpts...)

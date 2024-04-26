@@ -24,13 +24,17 @@ func (m *TxProviderTestMock) SubmitTx(ctx context.Context, txSigned []byte) erro
 func (m *TxProviderTestMock) GetTxByHash(ctx context.Context, hash string) (map[string]interface{}, error) {
 	args := m.Called(ctx, hash)
 
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	arg0, _ := args.Get(0).(map[string]interface{})
+
+	return arg0, args.Error(1)
 }
 
 func (m *TxProviderTestMock) GetSlot(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
 
-	return args.Get(0).(uint64), args.Error(1)
+	arg0, _ := args.Get(0).(uint64)
+
+	return arg0, args.Error(1)
 }
 
 func (m *TxProviderTestMock) GetProtocolParameters(ctx context.Context) ([]byte, error) {
@@ -43,13 +47,17 @@ func (m *TxProviderTestMock) GetProtocolParameters(ctx context.Context) ([]byte,
 
 	args := m.Called(ctx)
 
-	return args.Get(0).([]byte), args.Error(1)
+	arg0, _ := args.Get(0).([]byte)
+
+	return arg0, args.Error(1)
 }
 
 func (m *TxProviderTestMock) GetUtxos(ctx context.Context, addr string) ([]cardanowallet.Utxo, error) {
 	args := m.Called(ctx, addr)
 
-	return args.Get(0).([]cardanowallet.Utxo), args.Error(1)
+	arg0, _ := args.Get(0).([]cardanowallet.Utxo)
+
+	return arg0, args.Error(1)
 }
 
 func (m *TxProviderTestMock) Dispose() {

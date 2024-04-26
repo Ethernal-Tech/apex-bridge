@@ -44,7 +44,6 @@ func NewRelayerImitator(
 
 // Start implements core.RelayerImitator.
 func (ri *RelayerImitatorImpl) Start() {
-
 	ri.logger.Debug("Relayer imitator started")
 
 	ticker := time.NewTicker(time.Millisecond * time.Duration(ri.config.RelayerImitatorPullTimeMilis))
@@ -57,53 +56,53 @@ func (ri *RelayerImitatorImpl) Start() {
 		case <-ticker.C:
 		}
 
-		for chainId := range ri.config.CardanoChains {
-			if err := ri.execute(ri.ctx, chainId); err != nil {
+		for chainID := range ri.config.CardanoChains {
+			if err := ri.execute(ri.ctx, chainID); err != nil {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
 	}
 }
 
-func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) error {
-	confirmedBatch, err := ri.bridgeSmartContract.GetConfirmedBatch(ctx, chainId)
+func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) error {
+	confirmedBatch, err := ri.bridgeSmartContract.GetConfirmedBatch(ctx, chainID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
 	}
 
 	ri.logger.Info("Signed batch retrieved from contract")
 
-	lastSubmittedBatchId, err := ri.db.GetLastSubmittedBatchId(chainId)
+	lastSubmittedBatchID, err := ri.db.GetLastSubmittedBatchID(chainID)
 	if err != nil {
 		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
 	}
 
-	receivedBatchId := new(big.Int)
-	receivedBatchId, ok := receivedBatchId.SetString(confirmedBatch.Id, 10)
+	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 10)
 	if !ok {
 		return fmt.Errorf("failed to convert confirmed batch id to big int")
 	}
 
-	if lastSubmittedBatchId != nil {
-		if lastSubmittedBatchId.Cmp(receivedBatchId) == 0 {
+	if lastSubmittedBatchID != nil {
+		if lastSubmittedBatchID.Cmp(receivedBatchID) == 0 {
 			ri.logger.Info("Waiting on new signed batch")
+
 			return nil
-		} else if lastSubmittedBatchId.Cmp(receivedBatchId) == 1 {
+		} else if lastSubmittedBatchID.Cmp(receivedBatchID) == 1 {
 			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
-				lastSubmittedBatchId, receivedBatchId)
+				lastSubmittedBatchID, receivedBatchID)
 		}
 	}
 
-	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainId, receivedBatchId.Uint64())
+	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())
 	if err != nil {
 		ri.logger.Error(
 			"error while updating bridging request states to SubmittedToDestination",
-			"destinationChainId", chainId, "batchId", receivedBatchId.Uint64())
+			"destinationChainId", chainID, "batchId", receivedBatchID.Uint64())
 	}
 
 	ri.logger.Info("Transaction successfully submitted")
 
-	if err := ri.db.AddLastSubmittedBatchId(chainId, receivedBatchId); err != nil {
+	if err := ri.db.AddLastSubmittedBatchID(chainID, receivedBatchID); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)
 	}
 

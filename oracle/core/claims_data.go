@@ -6,7 +6,7 @@ import (
 )
 
 type BridgeClaimsBlockInfo struct {
-	ChainId            string
+	ChainID            string
 	Slot               uint64
 	Hash               string
 	BlockFullyObserved bool
@@ -27,15 +27,15 @@ type BridgeClaims struct {
 }
 
 func (bi *BridgeClaimsBlockInfo) EqualWithUnprocessed(tx *CardanoTx) bool {
-	return bi.ChainId == tx.OriginChainId && bi.Slot == tx.BlockSlot && bi.Hash == tx.BlockHash
+	return bi.ChainID == tx.OriginChainID && bi.Slot == tx.BlockSlot && bi.Hash == tx.BlockHash
 }
 
 func (bi *BridgeClaimsBlockInfo) EqualWithProcessed(tx *ProcessedCardanoTx) bool {
-	return bi.ChainId == tx.OriginChainId && bi.Slot == tx.BlockSlot && bi.Hash == tx.BlockHash
+	return bi.ChainID == tx.OriginChainID && bi.Slot == tx.BlockSlot && bi.Hash == tx.BlockHash
 }
 
 func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedCardanoTx, block *indexer.CardanoBlock) bool {
-	return bi.ChainId == tx.ChainId && bi.Slot == block.Slot && bi.Hash == block.Hash
+	return bi.ChainID == tx.ChainID && bi.Slot == block.Slot && bi.Hash == block.Hash
 }
 
 func (bc *BridgeClaims) Count() int {

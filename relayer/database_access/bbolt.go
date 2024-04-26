@@ -1,4 +1,4 @@
-package database_access
+package databaseaccess
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	submittedBatchIdBucket = []byte("submittedBatchId")
+	submittedBatchIDBucket = []byte("submittedBatchId")
 )
 
 type BBoltDatabase struct {
@@ -27,7 +27,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{submittedBatchIdBucket} {
+		for _, bn := range [][]byte{submittedBatchIDBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -42,14 +42,14 @@ func (bd *BBoltDatabase) Close() error {
 	return bd.db.Close()
 }
 
-func (bd *BBoltDatabase) AddLastSubmittedBatchId(chainId string, batchId *big.Int) error {
+func (bd *BBoltDatabase) AddLastSubmittedBatchID(chainID string, batchID *big.Int) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
-		bytes, err := batchId.MarshalText()
+		bytes, err := batchID.MarshalText()
 		if err != nil {
 			return fmt.Errorf("could not marshal batch ID: %w", err)
 		}
 
-		if err := tx.Bucket(submittedBatchIdBucket).Put([]byte(chainId), bytes); err != nil {
+		if err := tx.Bucket(submittedBatchIDBucket).Put([]byte(chainID), bytes); err != nil {
 			return fmt.Errorf("last submitted batch ID write error: %w", err)
 		}
 
@@ -57,11 +57,11 @@ func (bd *BBoltDatabase) AddLastSubmittedBatchId(chainId string, batchId *big.In
 	})
 }
 
-func (bd *BBoltDatabase) GetLastSubmittedBatchId(chainId string) (*big.Int, error) {
+func (bd *BBoltDatabase) GetLastSubmittedBatchID(chainID string) (*big.Int, error) {
 	var result *big.Int
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
-		bytes := tx.Bucket(submittedBatchIdBucket).Get([]byte(chainId))
+		bytes := tx.Bucket(submittedBatchIDBucket).Get([]byte(chainID))
 		if bytes == nil {
 			return nil
 		}

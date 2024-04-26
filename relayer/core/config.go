@@ -7,7 +7,7 @@ import (
 )
 
 type BridgeConfig struct {
-	NodeUrl              string `json:"NodeUrl"`
+	NodeURL              string `json:"NodeUrl"`
 	SmartContractAddress string `json:"scAddress"` // nolintlint TODO: probably will be more than just one
 }
 
@@ -19,7 +19,7 @@ type RelayerConfiguration struct {
 }
 
 type ChainConfig struct {
-	ChainId       string          `json:"id,omitempty"`
+	ChainID       string          `json:"id,omitempty"`
 	ChainType     string          `json:"type"`
 	DbsPath       string          `json:"dbsPath"`
 	ChainSpecific json.RawMessage `json:"config"`

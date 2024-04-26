@@ -15,7 +15,7 @@ const (
 	BridgingTxTypeBatchExecution  BridgingTxType = "batchExecution"
 	BridgingTxTypeRefundExecution BridgingTxType = "refundExecution"
 
-	MetadataEncodingTypeJson MetadataEncodingType = "json"
+	MetadataEncodingTypeJSON MetadataEncodingType = "json"
 	MetadataEncodingTypeCbor MetadataEncodingType = "cbor"
 
 	MetadataMapKey = 1
@@ -32,14 +32,14 @@ type BridgingRequestMetadataTransaction struct {
 
 type BridgingRequestMetadata struct {
 	BridgingTxType     BridgingTxType                       `cbor:"type"`
-	DestinationChainId string                               `cbor:"destinationChainId"`
+	DestinationChainID string                               `cbor:"destinationChainId"`
 	SenderAddr         string                               `cbor:"senderAddr"`
 	Transactions       []BridgingRequestMetadataTransaction `cbor:"transactions"`
 }
 
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
-	BatchNonceId   uint64         `cbor:"batchNonceId" json:"batchNonceId"`
+	BatchNonceID   uint64         `cbor:"batchNonceId" json:"batchNonceId"`
 }
 
 type RefundExecutedMetadata struct {
@@ -49,7 +49,7 @@ type RefundExecutedMetadata struct {
 type marshalFunc = func(v any) ([]byte, error)
 
 func getMarshalFunc(encodingType MetadataEncodingType) (marshalFunc, error) {
-	if encodingType == MetadataEncodingTypeJson {
+	if encodingType == MetadataEncodingTypeJSON {
 		return json.Marshal, nil
 	} else if encodingType == MetadataEncodingTypeCbor {
 		return cbor.Marshal, nil
@@ -61,7 +61,7 @@ func getMarshalFunc(encodingType MetadataEncodingType) (marshalFunc, error) {
 type unmarshalFunc = func(data []byte, v interface{}) error
 
 func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) {
-	if encodingType == MetadataEncodingTypeJson {
+	if encodingType == MetadataEncodingTypeJSON {
 		return json.Unmarshal, nil
 	} else if encodingType == MetadataEncodingTypeCbor {
 		return cbor.Unmarshal, nil
@@ -109,6 +109,7 @@ func UnmarshalMetadata[
 	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
 		var metadata interface{}
+
 		errInner := unmarshalFunc(data, &metadata)
 		if errInner != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata, err: %w", err)

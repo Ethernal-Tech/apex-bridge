@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	mumbaiNodeUrl    = "https://polygon-mumbai.blockpi.network/v1/rpc/public"
+	mumbaiNodeURL    = "https://polygon-mumbai.blockpi.network/v1/rpc/public"
 	dummyMumbaiAccPk = "61deed8dda92a396e8e9dbcbb5a058bee274de1adc57b2067975691dacdd55c7"
 )
 
@@ -33,7 +33,7 @@ func TestTxHelper(t *testing.T) {
 	wallet, err := NewEthTxWallet(dummyMumbaiAccPk)
 	require.NoError(t, err)
 
-	txHelper, err := NewEThTxHelper(WithNodeUrl(mumbaiNodeUrl), WithGasFeeMultiplier(1.3))
+	txHelper, err := NewEThTxHelper(WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)

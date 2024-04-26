@@ -5,27 +5,27 @@ import (
 	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 )
 
-type BridgingRequestStateDb interface {
+type BridgingRequestStateDB interface {
 	AddBridgingRequestState(state *BridgingRequestState) error
 	UpdateBridgingRequestState(state *BridgingRequestState) error
-	GetBridgingRequestState(sourceChainId string, sourceTxHash string) (*BridgingRequestState, error)
-	GetBridgingRequestStatesByBatchId(destinationChainId string, batchId uint64) ([]*BridgingRequestState, error)
-	GetUserBridgingRequestStates(sourceChainId string, userAddr string) ([]*BridgingRequestState, error)
+	GetBridgingRequestState(sourceChainID string, sourceTxHash string) (*BridgingRequestState, error)
+	GetBridgingRequestStatesByBatchID(destinationChainID string, batchID uint64) ([]*BridgingRequestState, error)
+	GetUserBridgingRequestStates(sourceChainID string, userAddr string) ([]*BridgingRequestState, error)
 }
 
 type Database interface {
-	BridgingRequestStateDb
+	BridgingRequestStateDB
 	relayerCore.Database
 	Init(filePath string) error
 	Close() error
 }
 
-type ApiController interface {
+type APIController interface {
 	GetPathPrefix() string
-	GetEndpoints() []*ApiEndpoint
+	GetEndpoints() []*APIEndpoint
 }
 
-type Api interface {
+type API interface {
 	Start()
 	Dispose() error
 }
@@ -33,8 +33,8 @@ type Api interface {
 type BridgingRequestStateManager interface {
 	common.BridgingRequestStateUpdater
 
-	Get(sourceChainId string, sourceTxHash string) (*BridgingRequestState, error)
-	GetAllForUser(sourceChainId string, userAddr string) ([]*BridgingRequestState, error)
+	Get(sourceChainID string, sourceTxHash string) (*BridgingRequestState, error)
+	GetAllForUser(sourceChainID string, userAddr string) ([]*BridgingRequestState, error)
 }
 
 type RelayerImitator interface {
