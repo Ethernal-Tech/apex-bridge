@@ -6,7 +6,7 @@ import (
 
 type BridgeConfig struct {
 	NodeURL              string `json:"nodeUrl"`
-	SmartContractAddress string `json:"scAddress"` // nolintlint TODO: probably will be more than just one
+	SmartContractAddress string `json:"scAddress"`
 	ValidatorDataDir     string `json:"validatorDataDir"`
 	ValidatorConfigPath  string `json:"validatorConfigPath"`
 }
