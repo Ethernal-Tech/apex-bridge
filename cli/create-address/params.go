@@ -15,7 +15,7 @@ const (
 	testnetMagicFlag      = "testnet"
 	addrPrefixReplaceFlag = "prefix"
 
-	keyFlagDesc               = "Cardano verification key for validator"
+	keyFlagDesc               = "cardano verification key for validator"
 	testnetMagicFlagDesc      = "testnet magic number. leave 0 for mainnet"
 	addrPrefixReplaceFlagDesc = "prefix replacement for a address"
 )
