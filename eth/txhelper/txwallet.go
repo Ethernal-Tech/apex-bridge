@@ -76,7 +76,9 @@ func (w EthTxWallet) SignTx(chainID *big.Int, tx *types.Transaction) (*types.Tra
 }
 
 func TxOpts2LegacyTx(to string, data []byte, txOpts *bind.TransactOpts) *types.Transaction {
-	return types.NewTransaction(txOpts.Nonce.Uint64(), common.HexToAddress(to), txOpts.Value, txOpts.GasLimit, txOpts.GasPrice, data)
+	return types.NewTransaction(
+		txOpts.Nonce.Uint64(), common.HexToAddress(to), txOpts.Value,
+		txOpts.GasLimit, txOpts.GasPrice, data)
 }
 
 func TxOpts2DynamicFeeTx(to string, chainID *big.Int, data []byte, txOpts *bind.TransactOpts) *types.Transaction {

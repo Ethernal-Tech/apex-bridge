@@ -8,9 +8,12 @@ import (
 
 func TestBridgingRequestState(t *testing.T) {
 
+	const (
+		chainId = "prime"
+		txHash  = "0xtest"
+	)
+
 	t.Run("NewBridgingRequestState", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
 
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		require.NotNil(t, state)
@@ -20,9 +23,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusDiscoveredOnSource", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		require.NotNil(t, state)
 
@@ -54,9 +54,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusInvalidRequest", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToInvalidRequest()
 		require.NoError(t, err)
@@ -87,9 +84,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusSubmittedToBridge", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
@@ -120,9 +114,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusIncludedInBatch", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
@@ -155,9 +146,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusSubmittedToDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
@@ -200,9 +188,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusFailedToExecuteOnDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
@@ -239,9 +224,6 @@ func TestBridgingRequestState(t *testing.T) {
 	})
 
 	t.Run("state changes from BridgingRequestStatusExecutedOnDestination", func(t *testing.T) {
-		chainId := "prime"
-		txHash := "0xtest"
-
 		state := NewBridgingRequestState(chainId, txHash, nil)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)

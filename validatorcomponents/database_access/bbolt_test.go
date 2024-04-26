@@ -54,6 +54,11 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	const (
+		primeChainId = "chainId"
+		testTxHash   = "0xtest"
+	)
+
 	t.Run("AddBridgingRequestState", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -61,7 +66,7 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		state := core.NewBridgingRequestState("prime", "0xtest", nil)
+		state := core.NewBridgingRequestState(primeChainId, testTxHash, nil)
 		err = db.AddBridgingRequestState(state)
 		require.NoError(t, err)
 
@@ -77,17 +82,14 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		chainId := "prime"
-		txHash := "0xtest"
-
-		err = db.AddBridgingRequestState(core.NewBridgingRequestState(chainId, txHash, nil))
+		err = db.AddBridgingRequestState(core.NewBridgingRequestState(primeChainId, testTxHash, nil))
 		require.NoError(t, err)
 
 		state, err := db.GetBridgingRequestState("vect", "0xtest2")
 		require.NoError(t, err)
 		require.Nil(t, state)
 
-		state, err = db.GetBridgingRequestState(chainId, txHash)
+		state, err = db.GetBridgingRequestState(primeChainId, testTxHash)
 		require.NoError(t, err)
 		require.NotNil(t, state)
 	})
@@ -99,14 +101,14 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		sourceChainId := "prime"
-		sourceTxHash := "0xtest"
+		sourceChainId := primeChainId
+		sourceTxHash := testTxHash
 		destinationChainId := "vector"
 		batchId := uint64(1)
 
 		stateToAdd := core.NewBridgingRequestState(sourceChainId, sourceTxHash, nil)
-		stateToAdd.ToSubmittedToBridge(destinationChainId)
-		stateToAdd.ToIncludedInBatch(batchId)
+		require.NoError(t, stateToAdd.ToSubmittedToBridge(destinationChainId))
+		require.NoError(t, stateToAdd.ToIncludedInBatch(batchId))
 
 		err = db.AddBridgingRequestState(stateToAdd)
 		require.NoError(t, err)
@@ -132,15 +134,15 @@ func TestBoltDatabase(t *testing.T) {
 
 		userAddr := "0xuser"
 		userAddrs := []string{userAddr}
-		sourceChainId := "prime"
-		sourceTxHash := "0xtest"
+		sourceChainId := primeChainId
+		sourceTxHash := testTxHash
 
 		stateToAdd := core.NewBridgingRequestState(sourceChainId, sourceTxHash, userAddrs)
 
 		err = db.AddBridgingRequestState(stateToAdd)
 		require.NoError(t, err)
 
-		states, err := db.GetUserBridgingRequestStates(sourceChainId, "0xtest")
+		states, err := db.GetUserBridgingRequestStates(sourceChainId, testTxHash)
 		require.NoError(t, err)
 		require.Nil(t, states)
 
@@ -159,8 +161,8 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		sourceChainId := "prime"
-		sourceTxHash := "0xtest"
+		sourceChainId := primeChainId
+		sourceTxHash := testTxHash
 
 		err = db.UpdateBridgingRequestState(core.NewBridgingRequestState(sourceChainId, sourceTxHash, nil))
 		require.Error(t, err)
@@ -175,7 +177,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, state)
 
-		state.ToInvalidRequest()
+		require.NoError(t, state.ToInvalidRequest())
 		err = db.UpdateBridgingRequestState(state)
 		require.NoError(t, err)
 
@@ -192,10 +194,9 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		chainId := "prime"
 		batchId := big.NewInt(1)
 
-		err = db.AddLastSubmittedBatchId(chainId, batchId)
+		err = db.AddLastSubmittedBatchId(primeChainId, batchId)
 		require.NoError(t, err)
 	})
 
@@ -206,17 +207,16 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		chainId := "prime"
 		batchIdToInsert := big.NewInt(1)
 
-		batchId, err := db.GetLastSubmittedBatchId(chainId)
+		batchId, err := db.GetLastSubmittedBatchId(primeChainId)
 		require.NoError(t, err)
 		require.Nil(t, batchId)
 
-		err = db.AddLastSubmittedBatchId(chainId, batchIdToInsert)
+		err = db.AddLastSubmittedBatchId(primeChainId, batchIdToInsert)
 		require.NoError(t, err)
 
-		batchId, err = db.GetLastSubmittedBatchId(chainId)
+		batchId, err = db.GetLastSubmittedBatchId(primeChainId)
 		require.NoError(t, err)
 		require.NotNil(t, batchId)
 		require.Equal(t, batchIdToInsert, batchId)

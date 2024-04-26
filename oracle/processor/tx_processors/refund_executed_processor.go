@@ -49,6 +49,7 @@ func (p *RefundExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeCla
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
+	//nolint:godox
 	// TODO: Refund
 	p.addRefundExecutedClaim(claims, tx, metadata)
 

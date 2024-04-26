@@ -59,7 +59,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	err = validatorComponents.Start()
-	defer validatorComponents.Dispose()
+	defer func() {
+		err := validatorComponents.Dispose()
+		if err != nil {
+			logger.Error("error while validator components dispose", "err", err)
+		}
+	}()
+
 	if err != nil {
 		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)

@@ -49,6 +49,7 @@ func (p *RefundExecutionFailedProcessorImpl) ValidateAndAddClaim(claims *core.Br
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
+	//nolint:godox
 	// TODO: Refund
 	p.addRefundRequestClaim(claims, tx, metadata)
 

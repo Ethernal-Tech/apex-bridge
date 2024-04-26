@@ -79,14 +79,18 @@ func NewCardanoChainObserver(
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
-	go common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
-		err = co.syncer.Sync()
-		if err != nil {
-			co.logger.Error("Failed to Start syncer while starting CardanoChainObserver. Retrying...", "chainId", co.config.ChainId, "err", err)
-		}
+	go func() {
+		_ = common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
+			err = co.syncer.Sync()
+			if err != nil {
+				co.logger.Error(
+					"Failed to Start syncer while starting CardanoChainObserver. Retrying...",
+					"chainId", co.config.ChainId, "err", err)
+			}
 
-		return err
-	})
+			return err
+		})
+	}()
 
 	return nil
 }
@@ -173,7 +177,9 @@ func updateLastConfirmedBlockFromSc(
 	err := common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
 		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainId)
 		if err != nil {
-			logger.Error("Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...", "chainId", chainId, "err", err)
+			logger.Error(
+				"Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...",
+				"chainId", chainId, "err", err)
 		}
 
 		return err

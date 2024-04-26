@@ -52,7 +52,11 @@ func NewOracleBridgeSmartContractWithWallet(
 	}, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error) {
+func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
+	ctx context.Context, sourceChain string,
+) (
+	*CardanoBlock, error,
+) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -75,7 +79,11 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(ctx context.Conte
 	return &result, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error) {
+func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
+	ctx context.Context, chainID string,
+) (
+	*LastBatchRawTx, error,
+) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -120,7 +128,9 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(ctx context.Context, clai
 	return bsc.ethHelper.ProcessError(err)
 }
 
-func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error {
+func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
+	ctx context.Context, chainID string, blocks []CardanoBlock,
+) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return err

@@ -49,19 +49,19 @@ const (
 	primeNetworkMagicFlagDesc     = "network magic of prime network (default 0)"
 	primeKeysDirFlagDesc          = "path to cardano keys directory for prime network"
 	primeBlockfrostUrlFlagDesc    = "(mandatory if prime-socket-path not specified) blockfrost URL for prime network"
-	primeBlockfrostApiKeyFlagDesc = "blockfrost API key for prime network"
+	primeBlockfrostApiKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
 	primeSocketPathFlagDesc       = "(mandatory if prime-blockfrost-url not specified) socket path for prime network"
 
 	vectorNetworkAddressFlagDesc   = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc     = "network magic of vector network (default 0)"
 	vectorKeysDirFlagDesc          = "path to cardano keys directory for vector network"
 	vectorBlockfrostUrlFlagDesc    = "(mandatory if vector-socket-path not specified) blockfrost URL for vector network"
-	vectorBlockfrostApiKeyFlagDesc = "blockfrost API key for vector network"
+	vectorBlockfrostApiKeyFlagDesc = "blockfrost API key for vector network" //nolint:gosec
 	vectorSocketPathFlagDesc       = "(mandatory if vector-blockfrost-url not specified) socket path for vector network"
 
 	bridgeNodeUrlFlagDesc          = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
-	bridgeValidatorDataDirFlagDesc = "(mandatory if bridge-validator-config not specified) path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorDataDirFlagDesc = "(mandatory if bridge-validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
 	bridgeValidatorConfigFlagDesc  = "(mandatory if bridge-validator-data not specified) path to to bridge chain secrets manager config file"
 
 	logsPathFlagDesc = "path to where logs will be stored"
@@ -120,6 +120,7 @@ func (p *generateConfigsParams) validateFlags() error {
 	if p.primeNetworkAddress == "" || !common.IsValidURL(p.primeNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
+
 	if p.primeBlockfrostUrl == "" && p.primeSocketPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", primeBlockfrostUrlFlag, primeSocketPathFlag)
 	}
@@ -127,6 +128,7 @@ func (p *generateConfigsParams) validateFlags() error {
 	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
 	}
+
 	if p.vectorBlockfrostUrl == "" && p.vectorSocketPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", vectorBlockfrostUrlFlag, vectorSocketPathFlag)
 	}
@@ -134,9 +136,11 @@ func (p *generateConfigsParams) validateFlags() error {
 	if p.bridgeNodeUrl == "" || !common.IsValidURL(p.bridgeNodeUrl) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeUrlFlag, p.bridgeNodeUrl)
 	}
+
 	if p.bridgeSCAddress == "" {
 		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
 	}
+
 	if p.bridgeValidatorDataDir == "" && p.bridgeValidatorConfig == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
 	}

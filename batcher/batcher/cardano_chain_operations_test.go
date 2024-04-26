@@ -141,8 +141,10 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw)
 		require.NoError(t, err)
 
-		inputs := GenerateUTXOInputs(400, 1000000)
-		outputs := GenerateUTXOOutputs(400, 1000000)
+		count := 400
+		amount := 1000000
+		inputs := GenerateUTXOInputs(count, int64(amount))
+		outputs := GenerateUTXOOutputs(count, uint64(amount))
 		txCost := CalculateTxCost(outputs)
 		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
 
@@ -250,6 +252,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	}
 	batchNonceId := big.NewInt(1)
 	destinationChain := "vector"
+
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
@@ -412,16 +415,19 @@ func GenerateUTXOInputs(count int, amount int64) (inputs *contractbinding.IBridg
 			{Nonce: 1001, TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(1001), Amount: big.NewInt(10000000)},
 		},
 	}
+
 	for i := 0; i < count; i++ {
 		inputs.MultisigOwnedUTXOs[i] = contractbinding.IBridgeContractStructsUTXO{
 			Nonce: uint64(i), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(i)), Amount: big.NewInt(amount),
 		}
 	}
+
 	for i := 0; i < 5; i++ {
 		inputs.MultisigOwnedUTXOs[count+i] = contractbinding.IBridgeContractStructsUTXO{
 			Nonce: uint64(count + i), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(count + i)), Amount: big.NewInt(int64(1000000000 * (i + 1))),
 		}
 	}
+
 	inputs.MultisigOwnedUTXOs[count+5] = contractbinding.IBridgeContractStructsUTXO{
 		Nonce: uint64(count + 5), TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(int64(count + 5)), Amount: big.NewInt(int64(1000000000000)),
 	}
@@ -438,6 +444,7 @@ func GenerateUTXORandomInputs(count int, min uint64, max uint64) (inputs *contra
 			{Nonce: 1001, TxHash: "d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5", TxIndex: big.NewInt(1001), Amount: big.NewInt(10000000)},
 		},
 	}
+
 	for i := 0; i < count; i++ {
 		randomAmount := rand.Uint64() % max
 		if randomAmount < min {
@@ -504,6 +511,7 @@ func GenerateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOu
 
 func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []cardanowallet.TxOutput) {
 	outputs = make([]cardanowallet.TxOutput, count)
+
 	for i := 0; i < count; i++ {
 		randomAmount := rand.Uint64() % max
 		if randomAmount < min {
@@ -518,6 +526,8 @@ func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []car
 }
 
 func GenerateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
+	t.Helper()
+
 	dummyKeyHashes := []string{
 		"eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205",
 		"ad8e0ab92e1febfcaf44889d68c3ae78b59dc9c5fa9e05a272214c13",

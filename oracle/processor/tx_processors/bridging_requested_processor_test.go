@@ -12,13 +12,15 @@ import (
 
 func TestBridgingRequestedProcessor(t *testing.T) {
 
-	const utxoMinValue = 1000000
-	const minFeeForBridging = 10000010
-	const primeBridgingAddr = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-	const primeBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-	const vectorBridgingAddr = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
-	const vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
-	const validTestAddress = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+	const (
+		utxoMinValue          = 1000000
+		minFeeForBridging     = 10000010
+		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		vectorBridgingAddr    = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
+		vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
+		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+	)
 
 	proc := NewBridgingRequestedProcessor()
 	appConfig := &core.AppConfig{
@@ -44,7 +46,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	}
 	appConfig.FillOut()
 
-	t.Run("IsTxRelevant", func(t *testing.T) {
+	t.Run("bridging requested processor - IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.CardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
@@ -423,8 +425,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
-		const destinationChainId = "vector"
-		const txHash = "test_hash"
+		const (
+			destinationChainId = "vector"
+			txHash             = "test_hash"
+		)
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging},
 			{Address: validTestAddress, Amount: utxoMinValue},

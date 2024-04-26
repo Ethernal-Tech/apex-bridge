@@ -52,16 +52,19 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(claims *core.Bridge
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+		//nolint:godox
 		// TODO: Refund
 		// p.addRefundRequestClaim(claims, tx, metadata)
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
 	return nil
 }
 
-func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig) {
-	var receivers []core.BridgingRequestReceiver
+func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
+	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
+) {
+	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiver.Address,
@@ -132,11 +135,14 @@ func (*BridgingRequestedProcessorImpl) validate(tx *core.CardanoTx, metadata *co
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	var receiverAmountSum uint64 = 0
-	var feeSum uint64 = 0
+	var (
+		receiverAmountSum uint64 = 0
+		feeSum            uint64 = 0
+	)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 	foundTheFeeReceiverAddr := false
+
 	for _, receiver := range metadata.Transactions {
 		if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
 			foundAUtxoValueBelowMinimumValue = true

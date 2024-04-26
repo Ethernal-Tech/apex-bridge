@@ -167,7 +167,11 @@ func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, desti
 }
 
 // GetLastObservedBlock implements IBridgeSmartContract.
-func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error) {
+func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(
+	ctx context.Context, destinationChain string,
+) (
+	*CardanoBlock, error,
+) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err

@@ -24,8 +24,9 @@ func TestRelayerImitator(t *testing.T) {
 		require.NotNil(t, ri)
 	})
 
+	const chainId = "prime"
+
 	t.Run("execute 1", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -43,7 +44,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 2", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -62,7 +62,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 3", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -81,7 +80,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 4", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -99,7 +97,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 5", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -118,7 +115,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 6", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -139,7 +135,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 7", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -160,7 +155,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 8", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -180,7 +174,6 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 9", func(t *testing.T) {
-		chainId := "prime"
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}

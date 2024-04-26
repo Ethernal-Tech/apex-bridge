@@ -43,7 +43,9 @@ func (m *BridgingRequestStateUpdaterMock) Invalid(key BridgingRequestStateKey) e
 }
 
 // SubmittedToBridge implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) SubmittedToBridge(key BridgingRequestStateKey, destinationChainId string) error {
+func (m *BridgingRequestStateUpdaterMock) SubmittedToBridge(
+	key BridgingRequestStateKey, destinationChainId string,
+) error {
 	if m.ReturnNil {
 		return nil
 	}

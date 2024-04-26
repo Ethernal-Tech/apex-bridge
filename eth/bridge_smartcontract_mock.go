@@ -43,7 +43,11 @@ func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destina
 	return args.Get(0).(*UTXOs), args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error) {
+func (m *BridgeSmartContractMock) GetConfirmedTransactions(
+	ctx context.Context, destinationChain string,
+) (
+	[]ConfirmedTransaction, error,
+) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {

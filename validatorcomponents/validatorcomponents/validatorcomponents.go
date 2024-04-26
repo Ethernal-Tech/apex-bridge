@@ -73,14 +73,18 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
-	batcherManager, err := batcher_manager.NewBatcherManager(ctx, batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
+	batcherManager, err := batcher_manager.NewBatcherManager(
+		ctx, batcherConfig, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
 
-	relayerBridgeSmartContract := eth.NewBridgeSmartContract(appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
+	relayerBridgeSmartContract := eth.NewBridgeSmartContract(
+		appConfig.Bridge.NodeUrl, appConfig.Bridge.SmartContractAddress)
 
-	relayerImitator, err := NewRelayerImitator(ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db, logger.Named("relayer_imitator"))
+	relayerImitator, err := NewRelayerImitator(
+		ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db,
+		logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
@@ -88,7 +92,8 @@ func NewValidatorComponents(
 	var apiObj *api.ApiImpl
 
 	if shouldRunApi {
-		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
+		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(
+			bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
 		}
@@ -216,7 +221,9 @@ func populateUtxosAndAddresses(
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
 			if err != nil {
-				logger.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...", "chainId", regChain.Id, "err", err)
+				logger.Error(
+					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
+					"chainId", regChain.Id, "err", err)
 			}
 
 			return err
@@ -235,8 +242,8 @@ func populateUtxosAndAddresses(
 			len(availableUtxos.MultisigOwnedUTXOs)+len(availableUtxos.FeePayerOwnedUTXOs))
 
 		// InitialUtxos wont be needed, initially they should be included with GetAvailableUTXOs
-		//addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
-		//addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
+		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
+		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, availableUtxos.MultisigOwnedUTXOs)
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
 

@@ -16,7 +16,11 @@ func (m *BridgingRequestStateDbMock) AddBridgingRequestState(state *core.Bridgin
 }
 
 // GetBridgingRequestState implements core.BridgingRequestStateDb.
-func (m *BridgingRequestStateDbMock) GetBridgingRequestState(sourceChainId string, sourceTxHash string) (*core.BridgingRequestState, error) {
+func (m *BridgingRequestStateDbMock) GetBridgingRequestState(
+	sourceChainId string, sourceTxHash string,
+) (
+	*core.BridgingRequestState, error,
+) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -26,17 +30,26 @@ func (m *BridgingRequestStateDbMock) GetBridgingRequestState(sourceChainId strin
 }
 
 // GetBridgingRequestStatesByBatchId implements core.BridgingRequestStateDb.
-func (m *BridgingRequestStateDbMock) GetBridgingRequestStatesByBatchId(destinationChainId string, batchId uint64) ([]*core.BridgingRequestState, error) {
+func (m *BridgingRequestStateDbMock) GetBridgingRequestStatesByBatchId(
+	destinationChainId string, batchId uint64,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).([]*core.BridgingRequestState), args.Error(1)
+	arg0 := args.Get(0).([]*core.BridgingRequestState)
+	return arg0, args.Error(1)
 }
 
 // GetUserBridgingRequestStates implements core.BridgingRequestStateDb.
-func (m *BridgingRequestStateDbMock) GetUserBridgingRequestStates(sourceChainId string, userAddr string) ([]*core.BridgingRequestState, error) {
+func (m *BridgingRequestStateDbMock) GetUserBridgingRequestStates(
+	sourceChainId string, userAddr string,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

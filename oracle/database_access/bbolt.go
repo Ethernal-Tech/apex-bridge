@@ -95,6 +95,7 @@ func (bd *BBoltDatabase) GetUnprocessedTxs(chainId string, threshold int) ([]*co
 func (bd *BBoltDatabase) ClearUnprocessedTxs(chainId string) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
+
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			var unprocessedTx *core.CardanoTx
 
@@ -205,6 +206,7 @@ func (bd *BBoltDatabase) GetExpectedTxs(chainId string, threshold int) ([]*core.
 func (bd *BBoltDatabase) ClearExpectedTxs(chainId string) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(expectedTxsBucket).Cursor()
+
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			var expectedTx *core.BridgeExpectedCardanoDbTx
 

@@ -26,7 +26,7 @@ type ApiController interface {
 }
 
 type Api interface {
-	Start() error
+	Start()
 	Dispose() error
 }
 

@@ -109,8 +109,12 @@ func UnmarshalMetadata[
 	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
 		var metadata interface{}
-		unmarshalFunc(data, &metadata)
-		return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %w", metadata, err)
+		errInner := unmarshalFunc(data, &metadata)
+		if errInner != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata, err: %w", err)
+		} else {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %v, err: %w", metadata, err)
+		}
 	}
 
 	return metadataMap[MetadataMapKey], nil

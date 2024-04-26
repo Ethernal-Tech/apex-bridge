@@ -211,7 +211,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("IncludedInBatch 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestState").Return(state, nil)
@@ -226,7 +226,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("IncludedInBatch 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestState").Return(state, nil)
@@ -272,8 +272,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
@@ -288,8 +288,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
@@ -335,9 +335,9 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
-		state.ToSubmittedToDestination()
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
+		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
@@ -352,9 +352,9 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
-		state.ToSubmittedToDestination()
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
+		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
@@ -400,9 +400,9 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
-		state.ToSubmittedToDestination()
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
+		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)
@@ -417,9 +417,9 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState("", "", nil)
-		state.ToSubmittedToBridge("vector")
-		state.ToIncludedInBatch(1)
-		state.ToSubmittedToDestination()
+		require.NoError(t, state.ToSubmittedToBridge("vector"))
+		require.NoError(t, state.ToIncludedInBatch(1))
+		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &database_access.BridgingRequestStateDbMock{}
 		db.On("GetBridgingRequestStatesByBatchId").Return([]*core.BridgingRequestState{state}, nil)

@@ -36,6 +36,7 @@ func NewConfirmedBlocksSubmitter(
 	if err != nil {
 		return nil, err
 	}
+
 	if latestBlockPoint == nil {
 		latestBlockPoint = &indexer.BlockPoint{}
 	}
@@ -62,7 +63,10 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 			case <-bs.ctx.Done():
 				return
 			case <-ticker.C:
-				bs.execute()
+				err := bs.execute()
+				if err != nil {
+					bs.logger.Error("error while executing", "err", err)
+				}
 			}
 		}
 	}()

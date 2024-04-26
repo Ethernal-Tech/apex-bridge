@@ -57,7 +57,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(claims *core.BridgeClai
 }
 
 func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata) {
-	var utxos []core.UTXO
+	utxos := make([]core.UTXO, 0, len(tx.Outputs))
 	for _, utxo := range tx.Outputs {
 		utxos = append(utxos, core.UTXO{
 			TxHash:  tx.Hash,

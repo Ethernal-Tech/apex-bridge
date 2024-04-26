@@ -96,7 +96,9 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainId string) erro
 
 	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainId, receivedBatchId.Uint64())
 	if err != nil {
-		ri.logger.Error("error while updating bridging request states to SubmittedToDestination", "destinationChainId", chainId, "batchId", receivedBatchId.Uint64())
+		ri.logger.Error(
+			"error while updating bridging request states to SubmittedToDestination",
+			"destinationChainId", chainId, "batchId", receivedBatchId.Uint64())
 	}
 
 	ri.logger.Info("Transaction successfully submitted")

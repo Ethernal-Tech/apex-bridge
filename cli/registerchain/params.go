@@ -34,11 +34,11 @@ const (
 	initialTokenSupplyFlag      = "token-supply"
 
 	keysDirectoryFlagDesc           = "cardano wallet directory"
-	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
 	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"
 	chainIDFlagDesc                 = "chain ID (prime, vector, etc)"
 	blockfrostUrlFlagDesc           = "block-frost url"
-	blockfrostProjectApiKeyFlagDesc = "blockfrost API key for prime network"
+	blockfrostProjectApiKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
 	socketPathFlagDesc              = "socket path for cardano node"
 	networkMagicFlagDesc            = "network magic of a chain (default 0 and it means Mainnet)"
 	multisigAddrFlagDesc            = "multisig address"

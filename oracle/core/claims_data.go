@@ -41,9 +41,7 @@ func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedCardanoTx, 
 func (bc *BridgeClaims) Count() int {
 	return len(bc.BridgingRequestClaims) +
 		len(bc.BatchExecutedClaims) +
-		len(bc.BatchExecutionFailedClaims) /* +
-		len(bc.RefundRequest) +
-		len(bc.RefundExecuted)*/
+		len(bc.BatchExecutionFailedClaims) /* + len(bc.RefundRequest) + len(bc.RefundExecuted)*/
 }
 
 func (bc *BridgeClaims) Any() bool {

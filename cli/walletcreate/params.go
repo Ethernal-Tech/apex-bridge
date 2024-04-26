@@ -21,7 +21,7 @@ const (
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
 	generateStakeKeyFlagDesc = "stake wallet"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
-	showPrivateKeyFlagDesc   = "show private key in output" //nolint:gosec
+	showPrivateKeyFlagDesc   = "show private key in output"
 )
 
 type initParams struct {

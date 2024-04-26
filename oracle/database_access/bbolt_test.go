@@ -253,25 +253,30 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetExpectedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
+		const (
+			primeChainId  = "prime"
+			vectorChainId = "vector"
+		)
+
 		db := &BBoltDatabase{}
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainId: primeChainId},
+			{ChainId: vectorChainId},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs("prime", 0)
+		txs, err := db.GetExpectedTxs(primeChainId, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
 		require.Equal(t, expectedTxs[0], txs[0])
 
-		txs, err = db.GetExpectedTxs("vector", 1)
+		txs, err = db.GetExpectedTxs(vectorChainId, 1)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 		require.Len(t, txs, 1)
@@ -356,9 +361,12 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
+		const primeChainId = "prime"
+		const vectorChainId = "vector"
+
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
-			{ChainId: "prime"},
-			{ChainId: "vector"},
+			{ChainId: primeChainId},
+			{ChainId: vectorChainId},
 		}
 
 		err = db.AddExpectedTxs(expectedTxs)
@@ -367,25 +375,25 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.MarkExpectedTxsAsInvalid([]*core.BridgeExpectedCardanoTx{})
 		require.NoError(t, err)
 
-		txs, err := db.GetExpectedTxs("prime", 0)
+		txs, err := db.GetExpectedTxs(primeChainId, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsInvalid(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs("vector", 0)
+		txs, err = db.GetExpectedTxs(vectorChainId, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
 		err = db.MarkExpectedTxsAsInvalid(txs)
 		require.NoError(t, err)
 
-		txs, err = db.GetExpectedTxs("prime", 0)
+		txs, err = db.GetExpectedTxs(primeChainId, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 
-		txs, err = db.GetExpectedTxs("vector", 0)
+		txs, err = db.GetExpectedTxs(vectorChainId, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})

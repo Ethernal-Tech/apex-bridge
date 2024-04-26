@@ -42,8 +42,7 @@ func NewExpectedTxsFetcher(
 func (f *ExpectedTxsFetcherImpl) Start() {
 	f.logger.Debug("Starting ExpectedTxsFetcher")
 
-	timerTime := TickTimeMs * time.Millisecond
-	ticker := time.NewTicker(timerTime)
+	ticker := time.NewTicker(TickTimeMs * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -51,7 +50,10 @@ func (f *ExpectedTxsFetcherImpl) Start() {
 		case <-f.ctx.Done():
 			return
 		case <-ticker.C:
-			f.fetchData()
+			err := f.fetchData()
+			if err != nil {
+				f.logger.Error("error while fetching data", "err", err)
+			}
 		}
 	}
 }
@@ -63,6 +65,7 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 		existingExpectedTxs, err := f.db.GetExpectedTxs(chainId, 0)
 		if err != nil {
 			f.logger.Error("Failed to GetExpectedTxs from db", "chainId", chainId, "err", err)
+
 			continue
 		}
 
@@ -74,6 +77,7 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 		expectedTx, err := f.bridgeDataFetcher.FetchExpectedTx(chainId)
 		if err != nil {
 			f.logger.Error("Failed to fetch expected tx from bridge", "chainId", chainId, "err", err)
+
 			continue
 		}
 

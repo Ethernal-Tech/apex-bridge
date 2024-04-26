@@ -36,13 +36,15 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		},
 	})
 
-	t.Run("IsTxRelevant", func(t *testing.T) {
+	t.Run("batch executed processor - IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.CardanoTx{})
 		require.Error(t, err)
 		require.False(t, relevant)
 
+		irrelevantTxType := common.BridgingTxTypeBridgingRequest
+
 		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
-			BridgingTxType: common.BridgingTxTypeBridgingRequest,
+			BridgingTxType: irrelevantTxType,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, irrelevantMetadata)
@@ -66,6 +68,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 				Metadata: relevantMetadata,
 			},
 		})
+
 		require.NoError(t, err)
 		require.True(t, relevant)
 	})
@@ -125,6 +128,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
+
 		const txHash = "test_hash"
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 1},
@@ -200,15 +204,18 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			BridgingSettings: core.BridgingSettings{},
 		}
 		config.FillOut()
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr3",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr3",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 
@@ -237,15 +244,18 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			BridgingSettings: core.BridgingSettings{},
 		}
 		config.FillOut()
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr3",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr3",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 
@@ -270,20 +280,24 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			BridgingSettings: core.BridgingSettings{},
 		}
 		config.FillOut()
+		inputs := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Address: "addr1",
+					IsUsed:  true,
+				},
+			},
+			{
+				Output: indexer.TxOutput{
+					Address: "addr2",
+					IsUsed:  true,
+				},
+			},
+		}
 		tx := core.CardanoTx{
 			OriginChainId: "prime",
 			Tx: indexer.Tx{
-				Inputs: append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr1",
-						IsUsed:  true,
-					},
-				}), &indexer.TxInputOutput{
-					Output: indexer.TxOutput{
-						Address: "addr2",
-						IsUsed:  true,
-					},
-				}),
+				Inputs: inputs,
 			},
 		}
 

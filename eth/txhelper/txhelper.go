@@ -186,7 +186,9 @@ func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet IEthTxWallet, txOpts
 	return sendTxHandler(txOptsRes)
 }
 
-func (t EthTxHelperImpl) PopulateTxOpts(ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts) error {
+func (t EthTxHelperImpl) PopulateTxOpts(
+	ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts,
+) error {
 	txOpts.Context = ctx
 	txOpts.From = from
 

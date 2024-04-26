@@ -87,7 +87,8 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 // GetBridgingRequestState implements core.Database.
 func (bd *BBoltDatabase) GetBridgingRequestState(sourceChainId string, sourceTxHash string) (result *core.BridgingRequestState, err error) {
 	err = bd.db.View(func(tx *bbolt.Tx) error {
-		if data := tx.Bucket(bridgingRequestStatesBucket).Get(core.ToBridgingRequestStateDbKey(sourceChainId, sourceTxHash)); len(data) > 0 {
+		data := tx.Bucket(bridgingRequestStatesBucket).Get(core.ToBridgingRequestStateDbKey(sourceChainId, sourceTxHash))
+		if len(data) > 0 {
 			return json.Unmarshal(data, &result)
 		}
 
@@ -98,7 +99,11 @@ func (bd *BBoltDatabase) GetBridgingRequestState(sourceChainId string, sourceTxH
 }
 
 // GetBridgingRequestStatesByBatchId implements core.Database.
-func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(destinationChainId string, batchId uint64) ([]*core.BridgingRequestState, error) {
+func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(
+	destinationChainId string, batchId uint64,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	var result []*core.BridgingRequestState
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -126,7 +131,11 @@ func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchId(destinationChainId st
 }
 
 // GetUserBridgingRequestStates implements core.Database.
-func (bd *BBoltDatabase) GetUserBridgingRequestStates(sourceChainId string, userAddr string) ([]*core.BridgingRequestState, error) {
+func (bd *BBoltDatabase) GetUserBridgingRequestStates(
+	sourceChainId string, userAddr string,
+) (
+	[]*core.BridgingRequestState, error,
+) {
 	var result []*core.BridgingRequestState
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {

@@ -17,12 +17,21 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *core.AppConfig) error {
 	}
 
 	for _, utxo := range tx.Tx.Inputs {
-		if utxo.Output.Address == chainConfig.BridgingAddresses.BridgingAddress {
-			foundBridgingAddress = true
-		} else if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
-			foundFeeAddress = true
-		} else {
-			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
+		switch utxo.Output.Address {
+		case chainConfig.BridgingAddresses.BridgingAddress:
+			{
+				foundBridgingAddress = true
+				break
+			}
+		case chainConfig.BridgingAddresses.FeeAddress:
+			{
+				foundFeeAddress = true
+				break
+			}
+		default:
+			{
+				return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
+			}
 		}
 	}
 

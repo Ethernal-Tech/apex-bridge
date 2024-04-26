@@ -148,6 +148,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		txsProcessorMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
 			t.Helper()
+
 			if !closed {
 				close(doneCh)
 				closed = true

@@ -17,7 +17,11 @@ type BridgingRequestStateControllerImpl struct {
 
 var _ core.ApiController = (*BridgingRequestStateControllerImpl)(nil)
 
-func NewBridgingRequestStateController(bridgingRequestStateManager core.BridgingRequestStateManager, logger hclog.Logger) (*BridgingRequestStateControllerImpl, error) {
+func NewBridgingRequestStateController(
+	bridgingRequestStateManager core.BridgingRequestStateManager, logger hclog.Logger,
+) (
+	*BridgingRequestStateControllerImpl, error,
+) {
 	return &BridgingRequestStateControllerImpl{
 		bridgingRequestStateManager: bridgingRequestStateManager,
 		logger:                      logger,
@@ -43,14 +47,20 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	chainIdArr, exists := queryValues["chainId"]
 	if !exists || len(chainIdArr) == 0 {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		c.logger.Debug("chainId missing from query", "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "txHash missing from query")
 		c.logger.Debug("txHash missing from query", "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "txHash missing from query")
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 
@@ -59,19 +69,28 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	state, err := c.bridgingRequestStateManager.Get(chainId, txHash)
 	if err != nil {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		c.logger.Debug(err.Error(), "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 
 	if state == nil {
-		utils.WriteErrorResponse(w, http.StatusNotFound, "Not found")
 		c.logger.Debug("Not found", "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusNotFound, "Not found")
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 
 	c.logger.Debug("get success", "url", r.URL)
-	json.NewEncoder(w).Encode(response.NewBridgingRequestStateResponse(state))
+	err = json.NewEncoder(w).Encode(response.NewBridgingRequestStateResponse(state))
+	if err != nil {
+		c.logger.Error("error while writing response", "err", err)
+	}
 }
 
 func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter, r *http.Request) {
@@ -82,14 +101,20 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 
 	chainIdArr, exists := queryValues["chainId"]
 	if !exists || len(chainIdArr) == 0 {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		c.logger.Debug("chainId missing from query", "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 	userAddrArr, exists := queryValues["userAddr"]
 	if !exists || len(userAddrArr) == 0 {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "userAddr missing from query")
 		c.logger.Debug("userAddr missing from query", "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "userAddr missing from query")
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 
@@ -98,8 +123,11 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 
 	states, err := c.bridgingRequestStateManager.GetAllForUser(chainId, userAddr)
 	if err != nil {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		c.logger.Debug(err.Error(), "url", r.URL)
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		if rerr != nil {
+			c.logger.Error("error while WriteErrorResponse", "err", rerr)
+		}
 		return
 	}
 
@@ -109,5 +137,8 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 	}
 
 	c.logger.Debug("getAllForUser success", "url", r.URL)
-	json.NewEncoder(w).Encode(statesResponse)
+	err = json.NewEncoder(w).Encode(statesResponse)
+	if err != nil {
+		c.logger.Error("error while writing response", "err", err)
+	}
 }

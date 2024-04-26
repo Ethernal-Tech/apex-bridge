@@ -68,6 +68,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		b.logger.Info("Waiting on a new batch")
 		return nil
 	}
+
 	b.logger.Info("Starting batch creation process")
 
 	b.logger.Info("Query smart contract for confirmed transactions")
@@ -76,6 +77,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %w", err)
 	}
+
 	b.logger.Info("Successfully queried smart contract for confirmed transactions")
 
 	// Generate batch transaction
@@ -85,7 +87,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to generate batch transaction: %w", err)
 	}
 
-	var includedConfirmedTransactionsNonces []*big.Int = make([]*big.Int, 0, len(includedConfirmedTransactions))
+	includedConfirmedTransactionsNonces := make([]*big.Int, 0, len(includedConfirmedTransactions))
 	for _, tx := range includedConfirmedTransactions {
 		includedConfirmedTransactionsNonces = append(includedConfirmedTransactionsNonces, tx.Nonce)
 	}
@@ -116,6 +118,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
+
 	b.logger.Info("Batch successfully submitted")
 
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(includedConfirmedTransactionsNonces))
@@ -128,9 +131,12 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		}
 	}
 
-	err = b.bridgingRequestStateUpdater.IncludedInBatch(signedBatch.DestinationChainId, signedBatch.Id.Uint64(), txsInBatch)
+	err = b.bridgingRequestStateUpdater.IncludedInBatch(
+		signedBatch.DestinationChainId, signedBatch.Id.Uint64(), txsInBatch)
 	if err != nil {
-		b.logger.Error("error while updating bridging request states to IncludedInBatch", "destinationChainId", signedBatch.DestinationChainId, "batchId", signedBatch.Id.Uint64())
+		b.logger.Error(
+			"error while updating bridging request states to IncludedInBatch",
+			"destinationChainId", signedBatch.DestinationChainId, "batchId", signedBatch.Id.Uint64())
 	}
 
 	return nil
