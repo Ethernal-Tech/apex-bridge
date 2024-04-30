@@ -19,13 +19,11 @@ var _ core.APIController = (*BridgingRequestStateControllerImpl)(nil)
 
 func NewBridgingRequestStateController(
 	bridgingRequestStateManager core.BridgingRequestStateManager, logger hclog.Logger,
-) (
-	*BridgingRequestStateControllerImpl, error,
-) {
+) *BridgingRequestStateControllerImpl {
 	return &BridgingRequestStateControllerImpl{
 		bridgingRequestStateManager: bridgingRequestStateManager,
 		logger:                      logger,
-	}, nil
+	}
 }
 
 func (*BridgingRequestStateControllerImpl) GetPathPrefix() string {

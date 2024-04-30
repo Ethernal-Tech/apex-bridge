@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
@@ -68,7 +69,19 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
+	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
+
+	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
+		indexerDB, err := indexerDb.NewDatabaseInit("",
+			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
+		}
+
+		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
+	}
+
+	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
@@ -92,13 +105,17 @@ func NewValidatorComponents(
 	var apiObj *api.APIImpl
 
 	if shouldRunAPI {
-		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(
+		bridgingRequestStateController := controllers.NewBridgingRequestStateController(
 			bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
-		}
 
-		apiControllers := []core.APIController{bridgingRequestStateController}
+		cardanoIndexerController := controllers.NewCardanoIndexerController(
+			indexerDbs, logger.Named("cardano_indexer_controller"),
+		)
+
+		apiControllers := []core.APIController{
+			bridgingRequestStateController,
+			cardanoIndexerController,
+		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
 		if err != nil {

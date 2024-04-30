@@ -3,7 +3,7 @@ module github.com/Ethernal-Tech/apex-bridge
 go 1.21
 
 require (
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240424170857-fad2fb55fad0
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240429120440-bec2346890f2
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1

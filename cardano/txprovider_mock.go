@@ -29,10 +29,10 @@ func (m *TxProviderTestMock) GetTxByHash(ctx context.Context, hash string) (map[
 	return arg0, args.Error(1)
 }
 
-func (m *TxProviderTestMock) GetSlot(ctx context.Context) (uint64, error) {
+func (m *TxProviderTestMock) GetTip(ctx context.Context) (cardanowallet.QueryTipData, error) {
 	args := m.Called(ctx)
 
-	arg0, _ := args.Get(0).(uint64)
+	arg0, _ := args.Get(0).(cardanowallet.QueryTipData)
 
 	return arg0, args.Error(1)
 }
