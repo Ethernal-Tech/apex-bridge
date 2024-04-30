@@ -27,7 +27,7 @@ func NewBatcherManager(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
-	var batchers = make([]core.Batcher, len(config.Chains))
+	var batchers = make([]core.Batcher, 0, len(config.Chains))
 
 	for _, chainConfig := range config.Chains {
 		operations, err := batcher.GetChainSpecificOperations(chainConfig)
