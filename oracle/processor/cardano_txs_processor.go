@@ -126,8 +126,6 @@ func (bp *CardanoTxsProcessorImpl) Start() {
 }
 
 func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
-	bp.logger.Debug("Checking if should generate claims")
-
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
 	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
 	for k := range bp.appConfig.CardanoChains {
