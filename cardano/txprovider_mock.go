@@ -13,6 +13,15 @@ type TxProviderTestMock struct {
 	ReturnDefaultParameters bool
 }
 
+// GetTip implements wallet.ITxProvider.
+func (m *TxProviderTestMock) GetTip(ctx context.Context) (cardanowallet.QueryTipData, error) {
+	args := m.Called(ctx)
+
+	arg0, _ := args.Get(0).(cardanowallet.QueryTipData)
+
+	return arg0, args.Error(1)
+}
+
 var _ cardanowallet.ITxProvider = (*TxProviderTestMock)(nil)
 
 func (m *TxProviderTestMock) SubmitTx(ctx context.Context, txSigned []byte) error {

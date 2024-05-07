@@ -85,6 +85,20 @@ func TestRelayerExecute(t *testing.T) {
 
 	confirmedBatchRet.ID = "0"
 
+	t.Run("execute test db returns nil", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &databaseaccess.CardanoChainOperationsMock{}
+
+		bridgeSmartContractMock.On("GetConfirmedBatch", ctx, "prime").Return(confirmedBatchRet, nil)
+
+		dbMock := &databaseaccess.DBMock{}
+		dbMock.On("GetLastSubmittedBatchID", "prime").Return(nil, nil)
+
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		err := r.execute(ctx)
+		require.NoError(t, err)
+	})
+
 	t.Run("execute test last submitted id greater than received id", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &databaseaccess.CardanoChainOperationsMock{}
