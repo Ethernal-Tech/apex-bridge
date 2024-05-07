@@ -15,6 +15,7 @@ type CardanoChainConfig struct {
 	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
 	KeysDirPath              string   `json:"keysDirPath"`
+	OgmiosURL                string   `json:"ogmiosUrl"`
 	BlockfrostURL            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
 	SocketPath               string   `json:"socketPath"`
