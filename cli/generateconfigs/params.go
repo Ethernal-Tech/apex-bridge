@@ -19,6 +19,7 @@ const (
 	primeNetworkAddressFlag   = "prime-network-address"
 	primeNetworkMagicFlag     = "prime-network-magic"
 	primeKeysDirFlag          = "prime-keys-dir"
+	primeOgmiosURLFlag        = "prime-ogmios-url"
 	primeBlockfrostURLFlag    = "prime-blockfrost-url"
 	primeBlockfrostAPIKeyFlag = "prime-blockfrost-api-key"
 	primeSocketPathFlag       = "prime-socket-path"
@@ -26,6 +27,7 @@ const (
 	vectorNetworkAddressFlag   = "vector-network-address"
 	vectorNetworkMagicFlag     = "vector-network-magic"
 	vectorKeysDirFlag          = "vector-keys-dir"
+	vectorOgmiosURLFlag        = "vector-ogmios-url"
 	vectorBlockfrostURLFlag    = "vector-blockfrost-url"
 	vectorBlockfrostAPIKeyFlag = "vector-blockfrost-api-key"
 	vectorSocketPathFlag       = "vector-socket-path"
@@ -48,21 +50,23 @@ const (
 	primeNetworkAddressFlagDesc   = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc     = "network magic of prime network (default 0)"
 	primeKeysDirFlagDesc          = "path to cardano keys directory for prime network"
-	primeBlockfrostURLFlagDesc    = "(mandatory if prime-socket-path not specified) blockfrost URL for prime network"
+	primeOgmiosURLFlagDesc        = "ogmios URL for prime network"
+	primeBlockfrostURLFlagDesc    = "blockfrost URL for prime network"
 	primeBlockfrostAPIKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
-	primeSocketPathFlagDesc       = "(mandatory if prime-blockfrost-url not specified) socket path for prime network"
+	primeSocketPathFlagDesc       = "socket path for prime network"
 
 	vectorNetworkAddressFlagDesc   = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc     = "network magic of vector network (default 0)"
 	vectorKeysDirFlagDesc          = "path to cardano keys directory for vector network"
-	vectorBlockfrostURLFlagDesc    = "(mandatory if vector-socket-path not specified) blockfrost URL for vector network"
+	vectorOgmiosURLFlagDesc        = "ogmios URL for vector network"
+	vectorBlockfrostURLFlagDesc    = "blockfrost URL for vector network"
 	vectorBlockfrostAPIKeyFlagDesc = "blockfrost API key for vector network" //nolint:gosec
-	vectorSocketPathFlagDesc       = "(mandatory if vector-blockfrost-url not specified) socket path for vector network"
+	vectorSocketPathFlagDesc       = "socket path for vector network"
 
 	bridgeNodeURLFlagDesc          = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
-	bridgeValidatorDataDirFlagDesc = "(mandatory if bridge-validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
-	bridgeValidatorConfigFlagDesc  = "(mandatory if bridge-validator-data not specified) path to to bridge chain secrets manager config file"                    //nolint:lll
+	bridgeValidatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
 
 	logsPathFlagDesc = "path to where logs will be stored"
 	dbsPathFlagDesc  = "path to where databases will be stored"
@@ -89,6 +93,7 @@ type generateConfigsParams struct {
 	primeNetworkAddress   string
 	primeNetworkMagic     uint32
 	primeKeysDir          string
+	primeOgmiosURL        string
 	primeBlockfrostURL    string
 	primeBlockfrostAPIKey string
 	primeSocketPath       string
@@ -96,6 +101,7 @@ type generateConfigsParams struct {
 	vectorNetworkAddress   string
 	vectorNetworkMagic     uint32
 	vectorKeysDir          string
+	vectorOgmiosURL        string
 	vectorBlockfrostURL    string
 	vectorBlockfrostAPIKey string
 	vectorSocketPath       string
@@ -121,16 +127,34 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
-	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", primeBlockfrostURLFlag, primeSocketPathFlag)
+	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" && p.primeOgmiosURL == "" {
+		return fmt.Errorf("specify at least one of: %s, %s, %s",
+			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
+	}
+
+	if p.primeBlockfrostURL != "" && !common.IsValidURL(p.primeBlockfrostURL) {
+		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
+	}
+
+	if p.primeOgmiosURL != "" && !common.IsValidURL(p.primeOgmiosURL) {
+		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
 
 	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
 	}
 
-	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", vectorBlockfrostURLFlag, vectorSocketPathFlag)
+	if p.vectorBlockfrostURL != "" && !common.IsValidURL(p.vectorBlockfrostURL) {
+		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
+	}
+
+	if p.vectorOgmiosURL != "" && !common.IsValidURL(p.vectorOgmiosURL) {
+		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
+	}
+
+	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
+		return fmt.Errorf("specify at least one of: %s, %s, %s",
+			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 	}
 
 	if p.bridgeNodeURL == "" || !common.IsValidURL(p.bridgeNodeURL) {
@@ -172,6 +196,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeKeysDirFlagDesc,
 	)
 	cmd.Flags().StringVar(
+		&p.primeOgmiosURL,
+		primeOgmiosURLFlag,
+		"",
+		primeOgmiosURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&p.primeBlockfrostURL,
 		primeBlockfrostURLFlag,
 		"",
@@ -207,6 +237,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorKeysDirFlag,
 		defaultVectorKeysDir,
 		vectorKeysDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorOgmiosURL,
+		vectorOgmiosURLFlag,
+		"",
+		vectorOgmiosURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.vectorBlockfrostURL,
@@ -298,8 +334,8 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag)
-	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag)
+	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
@@ -324,6 +360,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.primeKeysDir),
+				OgmiosURL:                p.primeOgmiosURL,
 				BlockfrostURL:            p.primeBlockfrostURL,
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
@@ -338,6 +375,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.vectorKeysDir),
+				OgmiosURL:                p.vectorOgmiosURL,
 				BlockfrostURL:            p.vectorBlockfrostURL,
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
@@ -395,6 +433,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 
 	primeChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
 		TestNetMagic:     p.primeNetworkMagic,
+		OgmiosURL:        p.primeOgmiosURL,
 		BlockfrostURL:    p.primeBlockfrostURL,
 		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
 		SocketPath:       p.primeSocketPath,
@@ -403,6 +442,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 
 	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
 		TestNetMagic:     p.vectorNetworkMagic,
+		OgmiosURL:        p.vectorOgmiosURL,
 		BlockfrostURL:    p.vectorBlockfrostURL,
 		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
 		SocketPath:       p.vectorSocketPath,

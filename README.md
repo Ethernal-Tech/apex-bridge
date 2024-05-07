@@ -30,15 +30,18 @@ $ go run ./cli/cmd/main.go register-chain \
         --addr addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh \
         --addr-fee addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u \
         --token-supply 20000000 \
-        --block-frost https://cardano-preview.blockfrost.io/api/v0 \
-        --block-frost-id preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE \
+        --blockfrost https://cardano-preview.blockfrost.io/api/v0 \
+        --blockfrost-api-key preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE \
         --bridge-url https://polygon-mumbai.blockpi.network/v1/rpc/public \
         --bridge-addr 0x8F371EeFe210ad18a2Ce45d51B48E56aBa1a58A9        
 ```
 - instead of `--bridge-validator-data-dir` it is possible to set blade configuration file with `--bridge-validator-config /path/config.json`.
-- instead of `--block-frost` cardano cli can be used with these two flags: `--socket-path socket_path` and `--network-magic some_number`
+- there is possibility to use one of these tx providers:
+- blockfrost with `--blockfrost URL` and `--blockfrost-api-key API_KEY` flags
+- ogmios with `--ogmios URL` flag
+- cardano cli with  `--socket-path SOCKET_PATH` and `--network-magic NUMBER` flags
 
-Block frost/socket path to local Cardano node is used only for retrieving utxos for `addr` and `addr-fee`
+Block frost/ogmios/socket path to local Cardano node is used only for retrieving utxos for `addr` and `addr-fee`
 
 # How to create multisig address
 ```shell
@@ -60,6 +63,7 @@ $ go run ./cli/cmd/main.go generate-configs \
         --prime-network-address "<address of prime network>" \
         --prime-network-magic <network magic of prime network> \
         --prime-keys-dir "<path to cardano keys directory for prime network>" \
+        --prime-ogmios-url "<ogmios URL for prime network>" \
         --prime-blockfrost-url "<blockfrost URL for prime network>" \
         --prime-blockfrost-api-key "<blockfrost API key for prime network>" \
         --prime-socket-path "<socket path for prime network>" \
@@ -67,6 +71,7 @@ $ go run ./cli/cmd/main.go generate-configs \
         --vector-network-magic <network magic of vector network> \
         --vector-keys-dir "<path to cardano keys directory for vector network>" \
         --vector-blockfrost-url "<blockfrost URL for vector network>" \
+        --vector-ogmios-url "<ogmios URL for vector network>" \
         --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
         --vector-socket-path "<socket path for vector network>" \
         --bridge-node-url "<node URL of bridge chain>" \

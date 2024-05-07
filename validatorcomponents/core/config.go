@@ -15,6 +15,7 @@ type CardanoChainConfig struct {
 	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
 	KeysDirPath              string   `json:"keysDirPath"`
+	OgmiosURL                string   `json:"ogmiosUrl"`
 	BlockfrostURL            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
 	SocketPath               string   `json:"socketPath"`
@@ -59,6 +60,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 
 		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
 			TestNetMagic:     ccConfig.NetworkMagic,
+			OgmiosURL:        ccConfig.OgmiosURL,
 			BlockfrostURL:    ccConfig.BlockfrostURL,
 			BlockfrostAPIKey: ccConfig.BlockfrostAPIKey,
 			SocketPath:       ccConfig.SocketPath,
