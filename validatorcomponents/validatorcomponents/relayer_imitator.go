@@ -91,6 +91,12 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
 				lastSubmittedBatchID, receivedBatchID)
 		}
+	} else {
+		if receivedBatchID.Cmp(big.NewInt(0)) == 0 {
+			ri.logger.Info("Waiting on new signed batch")
+
+			return nil
+		}
 	}
 
 	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())
