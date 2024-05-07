@@ -81,6 +81,12 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
 				lastSubmittedBatchID, receivedBatchID)
 		}
+	} else {
+		if receivedBatchID.Cmp(big.NewInt(0)) == 0 {
+			r.logger.Info("Waiting on new signed batch")
+
+			return nil
+		}
 	}
 
 	if err := r.operations.SendTx(confirmedBatch); err != nil {
