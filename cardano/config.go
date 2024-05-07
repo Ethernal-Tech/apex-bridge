@@ -48,7 +48,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostURL, config.BlockfrostAPIKey)
 	}
 
-	return nil, errors.New("neither socket path nor Blockfrost URL is provided")
+	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }
 
 func (config CardanoChainConfig) LoadWallet() (*CardanoWallet, error) {

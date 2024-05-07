@@ -23,8 +23,8 @@ const (
 	bridgeValidatorDataDirFlag  = "bridge-validator-data-dir"
 	bridgeValidatorConfigFlag   = "bridge-validator-config"
 	ogmiosURLFlag               = "ogmios"
-	blockfrostURLFlag           = "block-frost"
-	blockfrostProjectAPIKeyFlag = "block-frost-api-key"
+	blockfrostURLFlag           = "blockfrost"
+	blockfrostProjectAPIKeyFlag = "blockfrost-api-key"
 	socketPathFlag              = "socket-path"
 	networkMagicFlag            = "network-magic"
 	multisigAddrFlag            = "addr"
@@ -39,7 +39,7 @@ const (
 	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc                 = "chain ID (prime, vector, etc)"
 	ogmiosURLFlagDesc               = "ogmios url"
-	blockfrostURLFlagDesc           = "block-frost url"
+	blockfrostURLFlagDesc           = "blockfrost url"
 	blockfrostProjectAPIKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
 	socketPathFlagDesc              = "socket path for cardano node"
 	networkMagicFlagDesc            = "network magic of a chain (default 0 and it means Mainnet)"
@@ -75,11 +75,11 @@ func (ip *registerChainParams) validateFlags() error {
 	}
 
 	if ip.blockfrostURL == "" && ip.socketPath == "" && ip.ogmiosURL == "" {
-		return errors.New("neither a block frost nor a ogmios nor a socket path is specified")
+		return errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 	}
 
 	if ip.blockfrostURL != "" && !common.IsValidURL(ip.blockfrostURL) {
-		return fmt.Errorf("invalid block-frost url: %s", ip.blockfrostURL)
+		return fmt.Errorf("invalid blockfrost url: %s", ip.blockfrostURL)
 	}
 
 	if ip.ogmiosURL != "" && !common.IsValidURL(ip.ogmiosURL) {
