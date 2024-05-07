@@ -65,8 +65,8 @@ const (
 
 	bridgeNodeURLFlagDesc          = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
-	bridgeValidatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager" //nolint:lll
-	bridgeValidatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"                  //nolint:lll
+	bridgeValidatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
+	bridgeValidatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
 
 	logsPathFlagDesc = "path to where logs will be stored"
 	dbsPathFlagDesc  = "path to where databases will be stored"
