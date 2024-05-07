@@ -2,13 +2,13 @@ package validatorcomponents
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -65,52 +65,23 @@ func (ri *RelayerImitatorImpl) Start() {
 }
 
 func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) error {
-	confirmedBatch, err := ri.bridgeSmartContract.GetConfirmedBatch(ctx, chainID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
-	}
+	return relayer.RelayerExecute(
+		ctx,
+		chainID,
+		ri.bridgeSmartContract,
+		ri.db,
+		func(confirmedBatch *eth.ConfirmedBatch) error {
+			receivedBatchID, _ := new(big.Int).SetString(confirmedBatch.ID, 10)
 
-	ri.logger.Info("Signed batch retrieved from contract")
-
-	lastSubmittedBatchID, err := ri.db.GetLastSubmittedBatchID(chainID)
-	if err != nil {
-		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
-	}
-
-	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 10)
-	if !ok {
-		return fmt.Errorf("failed to convert confirmed batch id to big int")
-	}
-
-	if lastSubmittedBatchID != nil {
-		if lastSubmittedBatchID.Cmp(receivedBatchID) == 0 {
-			ri.logger.Info("Waiting on new signed batch")
+			err := ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())
+			if err != nil {
+				ri.logger.Error(
+					"error while updating bridging request states to SubmittedToDestination",
+					"destinationChainId", chainID, "batchId", receivedBatchID.Uint64())
+			}
 
 			return nil
-		} else if lastSubmittedBatchID.Cmp(receivedBatchID) == 1 {
-			return fmt.Errorf("last submitted batch id greater than received: last submitted %s > received %s",
-				lastSubmittedBatchID, receivedBatchID)
-		}
-	} else {
-		if receivedBatchID.Cmp(big.NewInt(0)) == 0 {
-			ri.logger.Info("Waiting on new signed batch")
-
-			return nil
-		}
-	}
-
-	err = ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())
-	if err != nil {
-		ri.logger.Error(
-			"error while updating bridging request states to SubmittedToDestination",
-			"destinationChainId", chainID, "batchId", receivedBatchID.Uint64())
-	}
-
-	ri.logger.Info("Transaction successfully submitted")
-
-	if err := ri.db.AddLastSubmittedBatchID(chainID, receivedBatchID); err != nil {
-		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)
-	}
-
-	return nil
+		},
+		ri.logger,
+	)
 }
