@@ -384,6 +384,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		Bridge: oCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
+			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
 			ValidatorDataDir:     validatorDataDir,
 			ValidatorConfigPath:  validatorConfig,
@@ -452,6 +453,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
+			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
 		},
 		Chains: map[string]rCore.ChainConfig{

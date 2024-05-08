@@ -31,17 +31,19 @@ type OracleBridgeSmartContractImpl struct {
 
 var _ IOracleBridgeSmartContract = (*OracleBridgeSmartContractImpl)(nil)
 
-func NewOracleBridgeSmartContract(nodeURL, smartContractAddress string) *OracleBridgeSmartContractImpl {
+func NewOracleBridgeSmartContract(
+	nodeURL, smartContractAddress string, isDynamic bool,
+) *OracleBridgeSmartContractImpl {
 	return &OracleBridgeSmartContractImpl{
 		smartContractAddress: smartContractAddress,
-		ethHelper:            NewEthHelperWrapper(nodeURL),
+		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic),
 	}
 }
 
 func NewOracleBridgeSmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
 ) (*OracleBridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet)
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic)
 	if err != nil {
 		return nil, err
 	}

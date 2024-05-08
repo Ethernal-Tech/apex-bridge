@@ -49,7 +49,8 @@ func NewRelayerManager(
 				Chain:         chainConfig,
 				PullTimeMilis: config.PullTimeMilis,
 			},
-			eth.NewBridgeSmartContract(config.Bridge.NodeURL, config.Bridge.SmartContractAddress),
+			eth.NewBridgeSmartContract(
+				config.Bridge.NodeURL, config.Bridge.SmartContractAddress, config.Bridge.DynamicTx),
 			logger.Named(strings.ToUpper(chainConfig.ChainID)),
 			operations,
 			db,

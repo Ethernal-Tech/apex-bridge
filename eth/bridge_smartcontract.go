@@ -33,17 +33,17 @@ type BridgeSmartContractImpl struct {
 
 var _ IBridgeSmartContract = (*BridgeSmartContractImpl)(nil)
 
-func NewBridgeSmartContract(nodeURL, smartContractAddress string) *BridgeSmartContractImpl {
+func NewBridgeSmartContract(nodeURL, smartContractAddress string, isDynamic bool) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
 		smartContractAddress: smartContractAddress,
-		ethHelper:            NewEthHelperWrapper(nodeURL),
+		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic),
 	}
 }
 
 func NewBridgeSmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
 ) (*BridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet)
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic)
 	if err != nil {
 		return nil, err
 	}
