@@ -3,6 +3,7 @@ package txprocessors
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -69,7 +70,7 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, core.BridgingRequestReceiver{
-			DestinationAddress: receiver.Address,
+			DestinationAddress: strings.Join(receiver.Address, ""),
 			Amount:             new(big.Int).SetUint64(receiver.Amount),
 		})
 	}
@@ -159,14 +160,19 @@ func (*BridgingRequestedProcessorImpl) validate(
 			break
 		}
 
-		_, err := wallet.GetAddressInfo(receiver.Address)
+		receiverAddr := strings.Join(receiver.Address, "")
+		//nolint:godox
+		// TODO: probably we should replace this with prefix for the specific chain
+		// BridgingRequestedProcessorImpl must know for which chain it operates
+
+		_, err := wallet.GetAddressInfo(receiverAddr)
 		if err != nil {
 			foundAnInvalidReceiverAddr = true
 
 			break
 		}
 
-		if receiver.Address == destinationChainConfig.BridgingAddresses.FeeAddress {
+		if receiverAddr == destinationChainConfig.BridgingAddresses.FeeAddress {
 			foundTheFeeReceiverAddr = true
 			feeSum += receiver.Amount
 		}

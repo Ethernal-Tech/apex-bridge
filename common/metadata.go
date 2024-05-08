@@ -11,9 +11,9 @@ type BridgingTxType string
 type MetadataEncodingType string
 
 const (
-	BridgingTxTypeBridgingRequest BridgingTxType = "bridgingRequest"
-	BridgingTxTypeBatchExecution  BridgingTxType = "batchExecution"
-	BridgingTxTypeRefundExecution BridgingTxType = "refundExecution"
+	BridgingTxTypeBridgingRequest BridgingTxType = "bridge"
+	BridgingTxTypeBatchExecution  BridgingTxType = "batch"
+	BridgingTxTypeRefundExecution BridgingTxType = "refund"
 
 	MetadataEncodingTypeJSON MetadataEncodingType = "json"
 	MetadataEncodingTypeCbor MetadataEncodingType = "cbor"
@@ -22,28 +22,28 @@ const (
 )
 
 type BaseMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
+	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
 type BridgingRequestMetadataTransaction struct {
-	Address string `cbor:"address" json:"address"`
-	Amount  uint64 `cbor:"amount" json:"amount"`
+	Address []string `cbor:"a" json:"a"`
+	Amount  uint64   `cbor:"m" json:"m"`
 }
 
 type BridgingRequestMetadata struct {
-	BridgingTxType     BridgingTxType                       `cbor:"type"`
-	DestinationChainID string                               `cbor:"destinationChainId"`
-	SenderAddr         string                               `cbor:"senderAddr"`
-	Transactions       []BridgingRequestMetadataTransaction `cbor:"transactions"`
+	BridgingTxType     BridgingTxType                       `cbor:"t" json:"t"`
+	DestinationChainID string                               `cbor:"d" json:"d"`
+	SenderAddr         []string                             `cbor:"s" json:"s"`
+	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
 }
 
 type BatchExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
-	BatchNonceID   uint64         `cbor:"batchNonceId" json:"batchNonceId"`
+	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
+	BatchNonceID   uint64         `cbor:"n" json:"n"`
 }
 
 type RefundExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"type" json:"type"`
+	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
 type marshalFunc = func(v any) ([]byte, error)
