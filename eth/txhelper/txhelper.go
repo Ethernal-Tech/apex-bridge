@@ -160,32 +160,6 @@ func (t EthTxHelperImpl) SendTx(
 		return nil, err
 	}
 
-	// first call sendTx with noSend (that will return tx but not send it on the node)
-	if txOptsRes.GasLimit == 0 {
-		txOptsRes.NoSend = true
-
-		tx, err := sendTxHandler(txOptsRes)
-		if err != nil {
-			return nil, err
-		}
-
-		// estimate gas
-		gas, err := t.client.EstimateGas(ctx, ethereum.CallMsg{
-			From:     wallet.GetAddress(),
-			To:       tx.To(),
-			Gas:      tx.Gas(),
-			GasPrice: tx.GasPrice(),
-			Data:     tx.Data(),
-			Value:    tx.Value(),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		txOptsRes.GasLimit = gas
-		txOptsRes.NoSend = false
-	}
-
 	return sendTxHandler(txOptsRes)
 }
 
