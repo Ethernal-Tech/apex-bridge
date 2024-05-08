@@ -319,10 +319,10 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 
 func (ip *registerChainParams) getCardanoProvider() (cardanowallet.IUTxORetriever, error) {
 	if ip.ogmiosURL != "" {
-		return cardanowallet.NewOgmiosProvider(ip.ogmiosURL), nil
+		return cardanowallet.NewTxProviderOgmios(ip.ogmiosURL), nil
 	} else if ip.socketPath != "" {
 		return cardanowallet.NewTxProviderCli(ip.networkMagic, ip.socketPath)
 	}
 
-	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostURL, ip.blockfrostProjectAPIKey)
+	return cardanowallet.NewTxProviderBlockFrost(ip.blockfrostURL, ip.blockfrostProjectAPIKey), nil
 }
