@@ -6,6 +6,7 @@ import (
 
 type BridgeConfig struct {
 	NodeURL              string `json:"nodeUrl"`
+	DynamicTx            bool   `json:"dynamicTx"`
 	SmartContractAddress string `json:"scAddress"`
 	ValidatorDataDir     string `json:"validatorDataDir"`
 	ValidatorConfigPath  string `json:"validatorConfigPath"`

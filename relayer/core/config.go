@@ -8,6 +8,7 @@ import (
 
 type BridgeConfig struct {
 	NodeURL              string `json:"NodeUrl"`
+	DynamicTx            bool   `json:"dynamicTx"`
 	SmartContractAddress string `json:"scAddress"`
 }
 

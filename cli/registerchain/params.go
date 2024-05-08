@@ -287,7 +287,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		context.Background(),
 		walletEth,
 		bind.TransactOpts{},
-		true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
 				ip.chainID,

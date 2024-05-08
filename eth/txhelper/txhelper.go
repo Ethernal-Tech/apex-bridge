@@ -28,12 +28,12 @@ const (
 type IEthTxHelper interface {
 	GetClient() bind.ContractBackend
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
-	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
+	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64,
 		abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context,
-		wallet IEthTxWallet, txOpts bind.TransactOpts, isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error)
-	PopulateTxOpts(ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts) error
+		wallet IEthTxWallet, txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
+	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
 
 type EthTxHelperImpl struct {
@@ -43,6 +43,7 @@ type EthTxHelperImpl struct {
 	numRetries       int
 	receiptWaitTime  time.Duration
 	gasFeeMultiplier float64
+	isDynamic        bool
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -81,8 +82,9 @@ func (t EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool
 	return t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
 }
 
-func (t EthTxHelperImpl) Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64, isDynamic bool,
-	abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error) {
+func (t EthTxHelperImpl) Deploy(
+	ctx context.Context, nonce *big.Int, gasLimit uint64, abiData abi.ABI, bytecode []byte, wallet IEthTxWallet,
+) (string, string, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
 	if err != nil {
@@ -98,7 +100,7 @@ func (t EthTxHelperImpl) Deploy(ctx context.Context, nonce *big.Int, gasLimit ui
 	auth.Nonce = nonce
 	auth.GasLimit = gasLimit
 
-	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), isDynamic, auth); err != nil {
+	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), auth); err != nil {
 		return "", "", err
 	}
 
@@ -132,8 +134,9 @@ func (t EthTxHelperImpl) WaitForReceipt(ctx context.Context, hash string, skipNo
 	return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", hash)
 }
 
-func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
-	isDynamic bool, sendTxHandler SendTxFunc) (*types.Transaction, error) {
+func (t EthTxHelperImpl) SendTx(
+	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, sendTxHandler SendTxFunc,
+) (*types.Transaction, error) {
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
 	if err != nil {
@@ -153,41 +156,15 @@ func (t EthTxHelperImpl) SendTx(ctx context.Context, wallet IEthTxWallet, txOpts
 	txOptsRes.Nonce = txOptsParam.Nonce
 	txOptsRes.Value = txOptsParam.Value
 
-	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), isDynamic, txOptsRes); err != nil {
+	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
 		return nil, err
-	}
-
-	// first call sendTx with noSend (that will return tx but not send it on the node)
-	if txOptsRes.GasLimit == 0 {
-		txOptsRes.NoSend = true
-
-		tx, err := sendTxHandler(txOptsRes)
-		if err != nil {
-			return nil, err
-		}
-
-		// estimate gas
-		gas, err := t.client.EstimateGas(ctx, ethereum.CallMsg{
-			From:     wallet.GetAddress(),
-			To:       tx.To(),
-			Gas:      tx.Gas(),
-			GasPrice: tx.GasPrice(),
-			Data:     tx.Data(),
-			Value:    tx.Value(),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		txOptsRes.GasLimit = gas
-		txOptsRes.NoSend = false
 	}
 
 	return sendTxHandler(txOptsRes)
 }
 
 func (t EthTxHelperImpl) PopulateTxOpts(
-	ctx context.Context, from common.Address, isDynamic bool, txOpts *bind.TransactOpts,
+	ctx context.Context, from common.Address, txOpts *bind.TransactOpts,
 ) error {
 	txOpts.Context = ctx
 	txOpts.From = from
@@ -203,7 +180,7 @@ func (t EthTxHelperImpl) PopulateTxOpts(
 	}
 
 	// Gas price
-	if !isDynamic {
+	if !t.isDynamic {
 		if txOpts.GasPrice == nil {
 			gasPrice, err := t.client.SuggestGasPrice(ctx)
 			if err != nil {
@@ -235,6 +212,12 @@ func (t EthTxHelperImpl) PopulateTxOpts(
 }
 
 type TxRelayerOption func(*EthTxHelperImpl)
+
+func WithDynamicTx(value bool) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.isDynamic = value
+	}
+}
 
 func WithClient(client *ethclient.Client) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {

@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	mumbaiNodeURL    = "https://polygon-mumbai.blockpi.network/v1/rpc/public"
+	mumbaiNodeURL    = "http://localhost:12001"
 	dummyMumbaiAccPk = "61deed8dda92a396e8e9dbcbb5a058bee274de1adc57b2067975691dacdd55c7"
 )
 
@@ -33,7 +33,12 @@ func TestTxHelper(t *testing.T) {
 	wallet, err := NewEthTxWallet(dummyMumbaiAccPk)
 	require.NoError(t, err)
 
-	txHelper, err := NewEThTxHelper(WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3))
+	txHelper, err := NewEThTxHelper(
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3))
+	require.NoError(t, err)
+
+	txHelperDynamic, err := NewEThTxHelper(
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3), WithDynamicTx(true))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -47,7 +52,7 @@ func TestTxHelper(t *testing.T) {
 		require.NoError(t, err)
 
 		addr, hash, err := txHelper.Deploy(ctx, new(big.Int).SetUint64(nonce),
-			uint64(300000), false, *abiData, scBytecode, wallet)
+			uint64(300000), *abiData, scBytecode, wallet)
 		require.NoError(t, err)
 		require.NotEqual(t, common.Address{}, addr)
 
@@ -73,9 +78,10 @@ func TestTxHelper(t *testing.T) {
 		require.False(t, new(big.Int).SetUint64(valueToSet).Cmp(res) == 0)
 
 		// first call is just for creating tx
-		tx, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{}, true, func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.SetValue(txOpts, new(big.Int).SetUint64(valueToSet))
-		})
+		tx, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
+			func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+				return contract.SetValue(txOpts, new(big.Int).SetUint64(valueToSet))
+			})
 		require.NoError(t, err)
 
 		receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
@@ -112,7 +118,7 @@ func TestTxHelper(t *testing.T) {
 			GasLimit: 21000, // default value for transfer
 		}
 
-		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddress(), false, &txOpts)
+		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddress(), &txOpts)
 		require.NoError(t, err)
 
 		tx := TxOpts2LegacyTx(ethAddr, []byte{}, &txOpts)
@@ -156,7 +162,7 @@ func TestTxHelper(t *testing.T) {
 			GasLimit: 21000, // default value for transfer
 		}
 
-		err = txHelper.PopulateTxOpts(ctx, wallet.GetAddress(), true, &txOpts)
+		err = txHelperDynamic.PopulateTxOpts(ctx, wallet.GetAddress(), &txOpts)
 		require.NoError(t, err)
 
 		tx := TxOpts2DynamicFeeTx(ethAddr, chainID, []byte{}, &txOpts)
