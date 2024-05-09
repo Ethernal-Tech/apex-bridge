@@ -180,7 +180,7 @@ func populateUtxosAndAddresses(
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
-	var allRegisteredChains []contractbinding.IBridgeContractStructsChain
+	var allRegisteredChains []contractbinding.IBridgeStructsChain
 
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
@@ -218,7 +218,7 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", regChain.Id)
 		}
 
-		var availableUtxos *contractbinding.IBridgeContractStructsUTXOs
+		var availableUtxos *contractbinding.IBridgeStructsUTXOs
 
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)

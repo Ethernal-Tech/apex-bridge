@@ -71,7 +71,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	txCost := big.NewInt(0)
 
 	includedConfirmedTransactions := make(
-		map[uint64]contractbinding.IBridgeContractStructsConfirmedTransaction)
+		map[uint64]contractbinding.IBridgeStructsConfirmedTransaction)
 
 	for _, transaction := range confirmedTransactions {
 		includedConfirmedTransactions[transaction.Nonce.Uint64()] = transaction
@@ -222,7 +222,7 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
  * if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach txCost
  */
 func (cco *CardanoChainOperations) CreateBatchTx(
-	inputUtxos *contractbinding.IBridgeContractStructsUTXOs, txCost *big.Int,
+	inputUtxos *contractbinding.IBridgeStructsUTXOs, txCost *big.Int,
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos,
 	outputs []cardanowallet.TxOutput, slotNumber uint64,
 ) (
@@ -251,7 +251,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 	txCostWithMinChange := new(big.Int).SetUint64(0)
 	txCostWithMinChange.Add(txCost, big.NewInt(int64(minUtxoAmount)))
 
-	chosenUTXOs := make([]contractbinding.IBridgeContractStructsUTXO, 0)
+	chosenUTXOs := make([]contractbinding.IBridgeStructsUTXO, 0)
 	chosenUTXOsSum := big.NewInt(0)
 	isUtxosOk := false
 
@@ -314,7 +314,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 func GetInputUtxos(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int,
 ) (
-	*contractbinding.IBridgeContractStructsUTXOs, error,
+	*contractbinding.IBridgeStructsUTXOs, error,
 ) {
 	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
 	if err != nil {

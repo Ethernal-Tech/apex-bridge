@@ -6,11 +6,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
-type SignedBatch = contractbinding.IBridgeContractStructsSignedBatch
-type ConfirmedTransaction = contractbinding.IBridgeContractStructsConfirmedTransaction
-type UTXOs = contractbinding.IBridgeContractStructsUTXOs
-type UTXO = contractbinding.IBridgeContractStructsUTXO
-type ValidatorCardanoData = contractbinding.IBridgeContractStructsValidatorCardanoData
+type SignedBatch = contractbinding.IBridgeStructsSignedBatch
+type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
+type UTXOs = contractbinding.IBridgeStructsUTXOs
+type UTXO = contractbinding.IBridgeStructsUTXO
+type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
 
 type ConfirmedBatch struct {
 	ID                         string
@@ -20,7 +20,7 @@ type ConfirmedBatch struct {
 }
 
 func NewConfirmedBatch(
-	contractConfirmedBatch contractbinding.IBridgeContractStructsConfirmedBatch,
+	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
 ) (
 	*ConfirmedBatch, error,
 ) {

@@ -43,8 +43,8 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 			},
 		}, error(nil))
 		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(&eth.UTXOs{
-			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
-			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+			MultisigOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 		}, error(nil))
 
 		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
@@ -60,8 +60,8 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		}, error(nil))
 		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(nil, errors.New("er"))
 		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(&eth.UTXOs{
-			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
-			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+			MultisigOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 		}, nil)
 
 		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
@@ -80,8 +80,8 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 			},
 		}, nil)
 		scMock.On("GetAvailableUTXOs", mock.Anything, mock.Anything).Return(&eth.UTXOs{
-			MultisigOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
-			FeePayerOwnedUTXOs: []contractbinding.IBridgeContractStructsUTXO{},
+			MultisigOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
+			FeePayerOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 		}, nil)
 
 		err := populateUtxosAndAddresses(context.Background(), getConfig(), scMock, hclog.NewNullLogger())
@@ -96,7 +96,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 			feePayerVector = "addr_3"
 		)
 
-		utxos := []contractbinding.IBridgeContractStructsUTXO{
+		utxos := []contractbinding.IBridgeStructsUTXO{
 			{
 				TxHash:  "0x001",
 				TxIndex: new(big.Int).SetUint64(2),

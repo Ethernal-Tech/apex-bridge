@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type Chain = contractbinding.IBridgeContractStructsChain
+type Chain = contractbinding.IBridgeStructsChain
 
 type IBridgeSmartContract interface {
 	GetConfirmedBatch(

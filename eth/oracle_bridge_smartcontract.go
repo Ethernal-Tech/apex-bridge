@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type CardanoBlock = contractbinding.IBridgeContractStructsCardanoBlock
-type Claims = contractbinding.IBridgeContractStructsValidatorClaims
+type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
+type Claims = contractbinding.IBridgeStructsValidatorClaims
 
 type LastBatchRawTx struct {
 	RawTx string

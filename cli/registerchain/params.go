@@ -266,10 +266,10 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		return nil, fmt.Errorf("failed to retrieve utxos for fee payer address: %w", err)
 	}
 
-	convertUtxos := func(utxos []cardanowallet.Utxo) []contractbinding.IBridgeContractStructsUTXO {
-		result := make([]contractbinding.IBridgeContractStructsUTXO, len(utxos))
+	convertUtxos := func(utxos []cardanowallet.Utxo) []contractbinding.IBridgeStructsUTXO {
+		result := make([]contractbinding.IBridgeStructsUTXO, len(utxos))
 		for i, x := range utxos {
-			result[i] = contractbinding.IBridgeContractStructsUTXO{
+			result[i] = contractbinding.IBridgeStructsUTXO{
 				TxHash:  x.Hash,
 				TxIndex: new(big.Int).SetUint64(uint64(x.Index)),
 				Amount:  new(big.Int).SetUint64(x.Amount),
@@ -291,12 +291,12 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
 				ip.chainID,
-				contractbinding.IBridgeContractStructsUTXOs{
+				contractbinding.IBridgeStructsUTXOs{
 					MultisigOwnedUTXOs: multisigUtxos,
 					FeePayerOwnedUTXOs: feePayerUtxos,
 				},
 				ip.multisigAddr, ip.multisigFeeAddr,
-				contractbinding.IBridgeContractStructsValidatorCardanoData{
+				contractbinding.IBridgeStructsValidatorCardanoData{
 					VerifyingKey:    hex.EncodeToString(walletCardano.MultiSig.GetVerificationKey()),
 					VerifyingKeyFee: hex.EncodeToString(walletCardano.MultiSigFee.GetVerificationKey()),
 				},
