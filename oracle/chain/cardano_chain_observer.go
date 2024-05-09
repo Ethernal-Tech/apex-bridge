@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -122,6 +123,10 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 		startBlockHash, _ = hex.DecodeString(config.StartBlockHash)
 	}
 
+	networkAddress := config.NetworkAddress
+	networkAddress = strings.TrimPrefix(networkAddress, "http://")
+	networkAddress = strings.TrimPrefix(networkAddress, "https://")
+
 	addressesOfInterest := []string{
 		config.BridgingAddresses.BridgingAddress,
 		config.BridgingAddresses.FeeAddress,
@@ -142,7 +147,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 	}
 	syncerConfig := &indexer.BlockSyncerConfig{
 		NetworkMagic:   config.NetworkMagic,
-		NodeAddress:    config.NetworkAddress,
+		NodeAddress:    networkAddress,
 		RestartOnError: true,
 		RestartDelay:   time.Second * 5,
 		KeepAlive:      true,

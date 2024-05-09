@@ -104,7 +104,7 @@ func UnmarshalMetadata[
 		return nil, err
 	}
 
-	var metadataMap map[int]*T
+	var metadataMap map[int]map[int]*T
 
 	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
@@ -118,5 +118,11 @@ func UnmarshalMetadata[
 		}
 	}
 
-	return metadataMap[MetadataMapKey], nil
+	for _, mapVal := range metadataMap {
+		if metadata, exists := mapVal[MetadataMapKey]; exists {
+			return metadata, nil
+		}
+	}
+
+	return nil, nil
 }
