@@ -19,8 +19,6 @@ import (
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 
 const (
-	defaultGasPrice         = 1879048192 // 0x70000000
-	DefaultGasLimit         = 5242880    // 0x500000
 	defaultNumRetries       = 1000
 	defaultGasFeeMultiplier = 1.6
 )
@@ -44,6 +42,7 @@ type EthTxHelperImpl struct {
 	receiptWaitTime  time.Duration
 	gasFeeMultiplier float64
 	isDynamic        bool
+	zeroGasPrice     bool
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -53,6 +52,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		receiptWaitTime:  50 * time.Millisecond,
 		numRetries:       defaultNumRetries,
 		gasFeeMultiplier: defaultGasFeeMultiplier,
+		zeroGasPrice:     true,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -182,12 +182,16 @@ func (t EthTxHelperImpl) PopulateTxOpts(
 	// Gas price
 	if !t.isDynamic {
 		if txOpts.GasPrice == nil {
-			gasPrice, err := t.client.SuggestGasPrice(ctx)
-			if err != nil {
-				return err
-			}
+			if t.zeroGasPrice {
+				txOpts.GasPrice = big.NewInt(0)
+			} else {
+				gasPrice, err := t.client.SuggestGasPrice(ctx)
+				if err != nil {
+					return err
+				}
 
-			txOpts.GasPrice = new(big.Int).SetUint64(uint64(float64(gasPrice.Uint64()) * t.gasFeeMultiplier))
+				txOpts.GasPrice = new(big.Int).SetUint64(uint64(float64(gasPrice.Uint64()) * t.gasFeeMultiplier))
+			}
 		}
 	} else if txOpts.GasFeeCap == nil || txOpts.GasTipCap == nil {
 		gasTipCap, err := t.client.SuggestGasTipCap(ctx)
@@ -255,5 +259,11 @@ func WithNumRetries(numRetries int) TxRelayerOption {
 func WithGasFeeMultiplier(gasFeeMultiplier float64) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.gasFeeMultiplier = gasFeeMultiplier
+	}
+}
+
+func WithZeroGasPrice(zeroGasPrice bool) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.zeroGasPrice = zeroGasPrice
 	}
 }
