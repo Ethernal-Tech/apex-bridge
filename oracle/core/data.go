@@ -43,7 +43,7 @@ type BridgeExpectedCardanoDBTx struct {
 	IsInvalid   bool `json:"is_invalid"`
 }
 
-type ContractCardanoBlock = contractbinding.IBridgeContractStructsCardanoBlock
+type ContractCardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{

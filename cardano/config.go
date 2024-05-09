@@ -40,6 +40,7 @@ func (config CardanoChainConfig) Serialize() ([]byte, error) {
 }
 
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
+	//nolint:gocritic
 	if config.OgmiosURL != "" {
 		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
 	} else if config.SocketPath != "" {

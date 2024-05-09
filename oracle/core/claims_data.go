@@ -12,15 +12,15 @@ type BridgeClaimsBlockInfo struct {
 	BlockFullyObserved bool
 }
 
-type ContractClaims = contractbinding.IBridgeContractStructsValidatorClaims
-type BridgingRequestClaim = contractbinding.IBridgeContractStructsBridgingRequestClaim
-type BatchExecutedClaim = contractbinding.IBridgeContractStructsBatchExecutedClaim
-type BatchExecutionFailedClaim = contractbinding.IBridgeContractStructsBatchExecutionFailedClaim
-type RefundRequestClaim = contractbinding.IBridgeContractStructsRefundRequestClaim
-type RefundExecutedClaim = contractbinding.IBridgeContractStructsRefundExecutedClaim
-type UTXO = contractbinding.IBridgeContractStructsUTXO
-type UTXOs = contractbinding.IBridgeContractStructsUTXOs
-type BridgingRequestReceiver = contractbinding.IBridgeContractStructsReceiver
+type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
+type BridgingRequestClaim = contractbinding.IBridgeStructsBridgingRequestClaim
+type BatchExecutedClaim = contractbinding.IBridgeStructsBatchExecutedClaim
+type BatchExecutionFailedClaim = contractbinding.IBridgeStructsBatchExecutionFailedClaim
+type RefundRequestClaim = contractbinding.IBridgeStructsRefundRequestClaim
+type RefundExecutedClaim = contractbinding.IBridgeStructsRefundExecutedClaim
+type UTXO = contractbinding.IBridgeStructsUTXO
+type UTXOs = contractbinding.IBridgeStructsUTXOs
+type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiver
 
 type BridgeClaims struct {
 	ContractClaims
