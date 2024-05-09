@@ -78,6 +78,10 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeEx
 				return nil, fmt.Errorf("failed to decode rawTx string. rawTx: %v. err: %w", lastBatchRawTx.RawTx, err)
 			}
 
+			if len(rawTx) == 0 {
+				return nil, nil
+			}
+
 			tx, err := indexer.ParseTxInfo(rawTx)
 			if err != nil {
 				df.logger.Error("Failed to ParseTxInfo", "rawTx", lastBatchRawTx.RawTx, "err", err)
