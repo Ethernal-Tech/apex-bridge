@@ -59,3 +59,17 @@ func RetryForever(ctx context.Context, interval time.Duration, fn func(context.C
 func IsContextDoneErr(err error) bool {
 	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
+
+// SplitString splits large string into slice of substrings
+func SplitString(s string, mxlen int) (res []string) {
+	for i := 0; i < len(s); i += mxlen {
+		end := i + mxlen
+		if end > len(s) {
+			end = len(s)
+		}
+
+		res = append(res, s[i:end])
+	}
+
+	return res
+}

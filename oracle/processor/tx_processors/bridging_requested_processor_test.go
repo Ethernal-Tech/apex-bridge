@@ -2,6 +2,7 @@ package txprocessors
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -119,11 +120,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -147,11 +149,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -179,7 +182,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -205,7 +208,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		multipleUtxosToBridgingAddrMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -231,12 +234,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: vectorBridgingFeeAddr, Amount: 2},
-				{Address: vectorBridgingFeeAddr, Amount: 2},
-				{Address: vectorBridgingFeeAddr, Amount: 2},
-				{Address: vectorBridgingFeeAddr, Amount: 2},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -261,9 +264,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: validTestAddress, Amount: utxoMinValue},
+				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -288,10 +291,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: validTestAddress, Amount: utxoMinValue},
-				{Address: vectorBridgingFeeAddr, Amount: 2},
+				{Address: []string{validTestAddress}, Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -316,10 +319,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
-				{Address: "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661", Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{
+					"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661",
+				}, Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -344,10 +349,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
-				{Address: validTestAddress, Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -372,10 +377,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: vectorBridgingFeeAddr, Amount: utxoMinValue},
-				{Address: validTestAddress, Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -400,9 +405,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging - 1},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging - 1},
 			},
 		})
 		require.NoError(t, err)
@@ -430,14 +435,17 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		)
 
 		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: vectorBridgingFeeAddr, Amount: minFeeForBridging},
-			{Address: validTestAddress, Amount: utxoMinValue},
+			{Address: []string{
+				vectorBridgingFeeAddr[:5],
+				vectorBridgingFeeAddr[5:],
+			}, Amount: minFeeForBridging},
+			{Address: []string{validTestAddress}, Amount: utxoMinValue},
 		}
 
 		validMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: destinationChainID,
-			SenderAddr:         "addr1",
+			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
 		})
 		require.NoError(t, err)
@@ -461,7 +469,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
 		require.Equal(t, destinationChainID, claims.BridgingRequestClaims[0].DestinationChainID)
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
-		require.Equal(t, receivers[0].Address, claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 
 		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
