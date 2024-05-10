@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -24,7 +25,7 @@ const (
 )
 
 type IEthTxHelper interface {
-	GetClient() bind.ContractBackend
+	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
 	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64,
 		abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error)
@@ -43,6 +44,7 @@ type EthTxHelperImpl struct {
 	gasFeeMultiplier float64
 	isDynamic        bool
 	zeroGasPrice     bool
+	mutex            sync.Mutex
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -70,11 +72,11 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	return t, nil
 }
 
-func (t EthTxHelperImpl) GetClient() bind.ContractBackend {
+func (t *EthTxHelperImpl) GetClient() *ethclient.Client {
 	return t.client
 }
 
-func (t EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
+func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
 	if pending {
 		return t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
 	}
@@ -82,9 +84,12 @@ func (t EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool
 	return t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
 }
 
-func (t EthTxHelperImpl) Deploy(
+func (t *EthTxHelperImpl) Deploy(
 	ctx context.Context, nonce *big.Int, gasLimit uint64, abiData abi.ABI, bytecode []byte, wallet IEthTxWallet,
 ) (string, string, error) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
 	if err != nil {
@@ -113,7 +118,9 @@ func (t EthTxHelperImpl) Deploy(
 	return contractAddress.String(), tx.Hash().String(), nil
 }
 
-func (t EthTxHelperImpl) WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error) {
+func (t *EthTxHelperImpl) WaitForReceipt(
+	ctx context.Context, hash string, skipNotFound bool,
+) (*types.Receipt, error) {
 	for count := 0; count < t.numRetries; count++ {
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
@@ -134,9 +141,12 @@ func (t EthTxHelperImpl) WaitForReceipt(ctx context.Context, hash string, skipNo
 	return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", hash)
 }
 
-func (t EthTxHelperImpl) SendTx(
+func (t *EthTxHelperImpl) SendTx(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, sendTxHandler SendTxFunc,
 ) (*types.Transaction, error) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	// chainID retrieval
 	chainID, err := t.client.ChainID(ctx)
 	if err != nil {
@@ -163,7 +173,7 @@ func (t EthTxHelperImpl) SendTx(
 	return sendTxHandler(txOptsRes)
 }
 
-func (t EthTxHelperImpl) PopulateTxOpts(
+func (t *EthTxHelperImpl) PopulateTxOpts(
 	ctx context.Context, from common.Address, txOpts *bind.TransactOpts,
 ) error {
 	txOpts.Context = ctx
