@@ -16,7 +16,7 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	txProvider cardanowallet.ITxSubmitter
+	txProvider cardanowallet.ITxProvider
 	logger     hclog.Logger
 }
 
@@ -41,7 +41,9 @@ func NewCardanoChainOperations(
 }
 
 // SendTx implements core.ChainOperations.
-func (cco *CardanoChainOperations) SendTx(smartContractData *eth.ConfirmedBatch) error {
+func (cco *CardanoChainOperations) SendTx(
+	ctx context.Context, smartContractData *eth.ConfirmedBatch,
+) error {
 	cco.logger.Info("confirmed batch - sending tx")
 
 	witnesses := make(
@@ -52,6 +54,12 @@ func (cco *CardanoChainOperations) SendTx(smartContractData *eth.ConfirmedBatch)
 	txSigned, err := cardanotx.AssembleTxWitnesses(smartContractData.RawTransaction, witnesses)
 	if err != nil {
 		return err
+	}
+
+	tip, err := cco.txProvider.GetTip(context.Background())
+	if err == nil {
+		cco.logger.Info("confirmed batch - sending tx current tip",
+			"block", tip.Block, "slot", tip.Slot, "hash", tip.Hash)
 	}
 
 	info, err := indexer.ParseTxInfo(txSigned)

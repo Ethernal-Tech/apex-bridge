@@ -70,7 +70,7 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 		chainID,
 		ri.bridgeSmartContract,
 		ri.db,
-		func(confirmedBatch *eth.ConfirmedBatch) error {
+		func(ctx context.Context, confirmedBatch *eth.ConfirmedBatch) error {
 			receivedBatchID, _ := new(big.Int).SetString(confirmedBatch.ID, 10)
 
 			err := ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())

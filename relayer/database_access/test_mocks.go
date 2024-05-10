@@ -1,6 +1,7 @@
 package databaseaccess
 
 import (
+	"context"
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -44,8 +45,10 @@ type CardanoChainOperationsMock struct {
 
 var _ core.ChainOperations = (*CardanoChainOperationsMock)(nil)
 
-func (m *CardanoChainOperationsMock) SendTx(smartContractData *eth.ConfirmedBatch) error {
-	args := m.Called(smartContractData)
+func (m *CardanoChainOperationsMock) SendTx(
+	ctx context.Context, smartContractData *eth.ConfirmedBatch,
+) error {
+	args := m.Called(ctx, smartContractData)
 
 	return args.Error(0)
 }

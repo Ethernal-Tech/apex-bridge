@@ -17,7 +17,7 @@ type Relayer interface {
 }
 
 type ChainOperations interface {
-	SendTx(smartContractData *eth.ConfirmedBatch) error
+	SendTx(ctx context.Context, smartContractData *eth.ConfirmedBatch) error
 }
 
 type BatchIDDB interface {

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type SendTxFunc = func(confirmedBatch *eth.ConfirmedBatch) error
+type SendTxFunc = func(ctx context.Context, confirmedBatch *eth.ConfirmedBatch) error
 
 func RelayerExecute(
 	ctx context.Context,
@@ -57,7 +57,7 @@ func RelayerExecute(
 		}
 	}
 
-	if err := sendTx(confirmedBatch); err != nil {
+	if err := sendTx(ctx, confirmedBatch); err != nil {
 		return fmt.Errorf("failed to send confirmed batch: %w", err)
 	}
 
