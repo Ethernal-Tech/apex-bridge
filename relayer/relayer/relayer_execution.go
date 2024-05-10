@@ -25,12 +25,15 @@ func RelayerExecute(
 		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
 	}
 
-	logger.Info("Signed batch retrieved from contract")
+	logger.Info("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chain", chainID)
 
 	lastSubmittedBatchID, err := db.GetLastSubmittedBatchID(chainID)
 	if err != nil {
 		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
 	}
+
+	logger.Info("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chain", chainID,
+		"lastSubmittedBatchID", lastSubmittedBatchID)
 
 	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 0)
 	if !ok {

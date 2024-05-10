@@ -20,6 +20,7 @@ type BatcherImpl struct {
 	operations                  core.ChainOperations
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
+	lastBatchID                 *big.Int
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -35,6 +36,7 @@ func NewBatcher(
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
+		lastBatchID:                 big.NewInt(0),
 	}
 }
 
@@ -70,7 +72,13 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return nil
 	}
 
-	b.logger.Info("Starting batch creation process")
+	if batchID.Cmp(b.lastBatchID) <= 0 {
+		b.logger.Info("retrieved batch id not good", "old", b.lastBatchID, "new", batchID)
+
+		return nil
+	}
+
+	b.logger.Info("Starting batch creation process", "batchID", batchID)
 
 	b.logger.Info("Query smart contract for confirmed transactions")
 	// Get confirmed transactions from smart contract
@@ -79,7 +87,8 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %w", err)
 	}
 
-	b.logger.Info("Successfully queried smart contract for confirmed transactions")
+	b.logger.Info("Successfully queried smart contract for confirmed transactions",
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Generate batch transaction
 	rawTx, txHash, utxos, includedConfirmedTransactions, err := b.operations.GenerateBatchTransaction(
@@ -93,7 +102,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		includedConfirmedTransactionsNonces = append(includedConfirmedTransactionsNonces, tx.Nonce)
 	}
 
-	b.logger.Info("Created tx", "txHash", txHash)
+	b.logger.Info("Created tx", "txHash", txHash, "batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(txHash)
@@ -101,7 +110,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to sign batch transaction: %w", err)
 	}
 
-	b.logger.Info("Batch successfully signed")
+	b.logger.Info("Batch successfully signed", "batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Submit batch to smart contract
 	signedBatch := eth.SignedBatch{
@@ -114,14 +123,16 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		UsedUTXOs:                 *utxos,
 	}
 
-	b.logger.Info("Submitting signed batch to smart contract")
+	b.logger.Info("Submitting signed batch to smart contract",
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	b.logger.Info("Batch successfully submitted")
+	b.logger.Info("Batch successfully submitted",
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, len(includedConfirmedTransactionsNonces))
 
@@ -141,6 +152,8 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 			"error while updating bridging request states to IncludedInBatch",
 			"destinationChainId", signedBatch.DestinationChainId, "batchId", signedBatch.Id.Uint64())
 	}
+
+	b.lastBatchID = batchID // update last batch id
 
 	return nil
 }

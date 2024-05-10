@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	defaultGasLimit             = 5_242_880
 	keysDirectoryFlag           = "keys-dir"
 	bridgeValidatorDataDirFlag  = "bridge-validator-data-dir"
 	bridgeValidatorConfigFlag   = "bridge-validator-config"
@@ -286,7 +287,9 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 	tx, err := ip.ethTxHelper.SendTx(
 		context.Background(),
 		walletEth,
-		bind.TransactOpts{},
+		bind.TransactOpts{
+			GasLimit: defaultGasLimit,
+		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,

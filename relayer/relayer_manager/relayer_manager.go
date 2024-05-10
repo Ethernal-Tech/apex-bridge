@@ -32,7 +32,7 @@ func NewRelayerManager(
 		chainConfig.ChainID = chainID
 		config.Chains[chainID] = chainConfig // update just to be sure that chainID is populated everywhere
 
-		operations, err := relayer.GetChainSpecificOperations(chainConfig)
+		operations, err := relayer.GetChainSpecificOperations(chainConfig, logger)
 		if err != nil {
 			return nil, err
 		}

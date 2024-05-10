@@ -194,7 +194,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			ChainSpecific: json.RawMessage(""),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unknown chain type")
@@ -206,7 +206,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			ChainSpecific: json.RawMessage(""),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
@@ -218,7 +218,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			ChainSpecific: json.RawMessage(jsonData),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, hclog.NewNullLogger())
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})
@@ -229,7 +229,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			ChainSpecific: json.RawMessage(jsonData),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig)
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, hclog.NewNullLogger())
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})

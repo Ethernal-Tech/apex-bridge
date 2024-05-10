@@ -68,10 +68,10 @@ func TestRelayerManagerConfig(t *testing.T) {
 	assert.NotEmpty(t, loadedConfig.Chains)
 
 	for _, chainConfig := range loadedConfig.Chains {
-		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig)
+		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig)
+		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedOp, loadedOp)

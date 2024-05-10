@@ -20,6 +20,7 @@ import (
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 
 const (
+	defaultGasLimit         = uint64(5242880) // 0x500000
 	defaultNumRetries       = 1000
 	defaultGasFeeMultiplier = 1.6
 )
@@ -44,6 +45,7 @@ type EthTxHelperImpl struct {
 	gasFeeMultiplier float64
 	isDynamic        bool
 	zeroGasPrice     bool
+	defaultGasLimit  uint64
 	mutex            sync.Mutex
 }
 
@@ -55,6 +57,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		numRetries:       defaultNumRetries,
 		gasFeeMultiplier: defaultGasFeeMultiplier,
 		zeroGasPrice:     true,
+		defaultGasLimit:  defaultGasLimit,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -189,6 +192,10 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 		txOpts.Nonce = new(big.Int).SetUint64(nonce)
 	}
 
+	if txOpts.GasLimit == 0 {
+		txOpts.GasLimit = t.defaultGasLimit
+	}
+
 	// Gas price
 	if !t.isDynamic {
 		if txOpts.GasPrice == nil {
@@ -275,5 +282,11 @@ func WithGasFeeMultiplier(gasFeeMultiplier float64) TxRelayerOption {
 func WithZeroGasPrice(zeroGasPrice bool) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.zeroGasPrice = zeroGasPrice
+	}
+}
+
+func WithDefaultGasLimit(gasLimit uint64) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.defaultGasLimit = gasLimit
 	}
 }

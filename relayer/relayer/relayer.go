@@ -65,11 +65,11 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainConfig) (core.ChainOperations, error) {
+func GetChainSpecificOperations(config core.ChainConfig, logger hclog.Logger) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case "cardano":
-		return NewCardanoChainOperations(config.ChainSpecific)
+		return NewCardanoChainOperations(config.ChainSpecific, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}
