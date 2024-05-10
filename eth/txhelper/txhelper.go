@@ -25,7 +25,7 @@ const (
 )
 
 type IEthTxHelper interface {
-	GetClient() bind.ContractBackend
+	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
 	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64,
 		abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error)
@@ -72,7 +72,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	return t, nil
 }
 
-func (t *EthTxHelperImpl) GetClient() bind.ContractBackend {
+func (t *EthTxHelperImpl) GetClient() *ethclient.Client {
 	return t.client
 }
 

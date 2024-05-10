@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -103,8 +102,7 @@ func TestTxHelper(t *testing.T) {
 			ethValue = uint64(2001)
 		)
 
-		client, ok := txHelper.GetClient().(*ethclient.Client)
-		require.True(t, ok)
+		client := txHelper.GetClient()
 
 		chainID, err := client.ChainID(ctx)
 		require.NoError(t, err)
@@ -147,8 +145,7 @@ func TestTxHelper(t *testing.T) {
 			ethValue = uint64(2001)
 		)
 
-		client, ok := txHelper.GetClient().(*ethclient.Client)
-		require.True(t, ok)
+		client := txHelper.GetClient()
 
 		chainID, err := client.ChainID(ctx)
 		require.NoError(t, err)
