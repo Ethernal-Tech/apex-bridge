@@ -17,6 +17,7 @@ type CardanoTxsDB interface {
 	GetUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error)
 	ClearUnprocessedTxs(chainID string) error
 	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error
+	AddProcessedTxs(processedTxs []*ProcessedCardanoTx) error
 	GetProcessedTx(chainID string, txHash string) (*ProcessedCardanoTx, error)
 }
 

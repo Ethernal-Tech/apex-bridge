@@ -108,6 +108,13 @@ func (m *CardanoTxsProcessorDBMock) MarkExpectedTxsAsProcessed(expectedTxs []*Br
 	return args.Error(0)
 }
 
+// AddProcessedTxs implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) AddProcessedTxs(processedTxs []*ProcessedCardanoTx) error {
+	args := m.Called(processedTxs)
+
+	return args.Error(0)
+}
+
 func (m *CardanoTxsProcessorDBMock) MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error {
 	args := m.Called(expectedTxs)
 

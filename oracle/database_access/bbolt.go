@@ -135,6 +135,23 @@ func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proc
 	})
 }
 
+func (bd *BBoltDatabase) AddProcessedTxs(processedTxs []*core.ProcessedCardanoTx) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		for _, processedTx := range processedTxs {
+			bytes, err := json.Marshal(processedTx)
+			if err != nil {
+				return fmt.Errorf("could not marshal processed tx: %w", err)
+			}
+
+			if err = tx.Bucket(processedTxsBucket).Put(processedTx.Key(), bytes); err != nil {
+				return fmt.Errorf("processed tx write error: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
 func (bd *BBoltDatabase) GetProcessedTx(chainID string, txHash string) (result *core.ProcessedCardanoTx, err error) {
 	err = bd.db.View(func(tx *bbolt.Tx) error {
 		if data := tx.Bucket(processedTxsBucket).Get([]byte(core.ToCardanoTxKey(chainID, txHash))); len(data) > 0 {

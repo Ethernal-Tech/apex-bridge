@@ -66,6 +66,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 	var (
 		bridgingRequests []*indexer.Tx
 		relevantTxs      []*core.CardanoTx
+		processedTxs     []*core.ProcessedCardanoTx
 	)
 
 	for _, tx := range txs {
@@ -73,6 +74,8 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 			OriginChainID: originChainID,
 			Tx:            *tx,
 		}
+
+		processed := true
 
 		for _, txProcessor := range bp.txProcessors {
 			relevant, err := txProcessor.IsTxRelevant(cardanoTx)
@@ -85,6 +88,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 
 			if relevant {
 				relevantTxs = append(relevantTxs, cardanoTx)
+				processed = false
 
 				if txProcessor.GetType() == core.TxProcessorTypeBridgingRequest {
 					bridgingRequests = append(bridgingRequests, tx)
@@ -92,6 +96,22 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 
 				break
 			}
+		}
+
+		if processed {
+			processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
+		}
+	}
+
+	if len(processedTxs) > 0 {
+		bp.logger.Debug("Adding already processed txs to db", "txs", processedTxs)
+
+		err := bp.db.AddProcessedTxs(processedTxs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to add already processed txs. error: %v\n", err)
+			bp.logger.Error("Failed to add already processed txs", "err", err)
+
+			return err
 		}
 	}
 
