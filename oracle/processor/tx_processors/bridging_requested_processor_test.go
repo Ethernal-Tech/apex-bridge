@@ -51,7 +51,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, relevant)
 
-		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, relevant)
 
-		relevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		relevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
 		require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
-		relevantButNotFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
 		require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
 			SenderAddr:         []string{"addr1"},
@@ -151,7 +151,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -179,7 +179,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
-		bridgingAddrNotFoundInUtxosMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -205,7 +205,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
-		multipleUtxosToBridgingAddrMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		multipleUtxosToBridgingAddrMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -231,7 +231,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
-		feeAddrNotInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -261,7 +261,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fee addr not in receivers in metadata", func(t *testing.T) {
-		feeAddrNotInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -288,7 +288,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
-		utxoValueBelowMinInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -316,7 +316,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -346,7 +346,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -374,7 +374,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
-		invalidAddrInReceiversMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -402,7 +402,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
-		feeInReceiversLessThanMinMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		feeInReceiversLessThanMinMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
@@ -442,7 +442,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: []string{validTestAddress}, Amount: utxoMinValue},
 		}
 
-		validMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
