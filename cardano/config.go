@@ -17,6 +17,7 @@ type CardanoChainConfig struct {
 	SocketPath       string `json:"socketPath,omitempty"`
 	PotentialFee     uint64 `json:"potentialFee"`
 	KeysDirPath      string `json:"keysDirPath,omitempty"`
+	TTLSlotNumberInc uint64 `json:"ttlSlotNumberIncrement"`
 }
 
 var _ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)

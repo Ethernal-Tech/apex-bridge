@@ -192,7 +192,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainType = "invalid"
 
-		chainOp, err := GetChainSpecificOperations(cfg)
+		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unknown chain type")
@@ -202,7 +202,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainSpecific = json.RawMessage("")
 
-		chainOp, err := GetChainSpecificOperations(cfg)
+		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
@@ -220,14 +220,14 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				}`, path.Join(validPath, "a1", "a2", "a3")))),
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainConfig)
+		chainOp, err := GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "error while loading wallet info")
 	})
 
 	t.Run("valid cardano config and keys path", func(t *testing.T) {
-		chainOp, err := GetChainSpecificOperations(chainConfig)
+		chainOp, err := GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})
@@ -236,7 +236,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainType = "CaRDaNo"
 
-		chainOp, err := GetChainSpecificOperations(cfg)
+		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})

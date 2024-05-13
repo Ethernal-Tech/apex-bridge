@@ -358,6 +358,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
+				TTLSlotNumberInc:         1000 + 20*10, // ConfirmationBlockCount * BlockTimeSeconds
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.primeKeysDir),
 				OgmiosURL:                p.primeOgmiosURL,
@@ -373,6 +374,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
+				TTLSlotNumberInc:         1000 + 20*10, // ConfirmationBlockCount * BlockTimeSeconds
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.vectorKeysDir),
 				OgmiosURL:                p.vectorOgmiosURL,

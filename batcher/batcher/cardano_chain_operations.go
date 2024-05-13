@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 )
 
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
@@ -31,10 +32,12 @@ type CardanoChainOperations struct {
 	Config     *cardano.CardanoChainConfig
 	Wallet     *cardano.CardanoWallet
 	TxProvider cardanowallet.ITxDataRetriever
+	logger     hclog.Logger
 }
 
 func NewCardanoChainOperations(
 	jsonConfig json.RawMessage,
+	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
 	if err != nil {
@@ -55,6 +58,7 @@ func NewCardanoChainOperations(
 		Wallet:     cardanoWallet,
 		Config:     cardanoConfig,
 		TxProvider: txProvider,
+		logger:     logger,
 	}, nil
 }
 
@@ -64,8 +68,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceID *big.Int) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error,
-) {
+	batchNonceID *big.Int,
+) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error) {
 	var outputs []cardanowallet.TxOutput
 
 	txCost := big.NewInt(0)
@@ -225,8 +229,10 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 	inputUtxos *contractbinding.IBridgeStructsUTXOs, txCost *big.Int,
 	metadata []byte, protocolParams []byte, txInfos *cardano.TxInputInfos,
 	outputs []cardanowallet.TxOutput, slotNumber uint64,
-) (
-	[]byte, string, *eth.UTXOs, error) {
+) ([]byte, string, *eth.UTXOs, error) {
+	cco.logger.Info("creating batch tx",
+		"slot", slotNumber, "ttl", cco.Config.TTLSlotNumberInc, "magic", cco.Config.TestNetMagic)
+
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	multisigFeeInputs := make([]cardanowallet.TxInput, len(inputUtxos.FeePayerOwnedUTXOs))
 	multisigFeeInputsSum := big.NewInt(0)
@@ -297,7 +303,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 
 	// Create Tx
 	rawTx, txHash, err := cardano.CreateTx(
-		uint(cco.Config.TestNetMagic), protocolParams, slotNumber+cardano.TTLSlotNumberInc,
+		uint(cco.Config.TestNetMagic), protocolParams, slotNumber+cco.Config.TTLSlotNumberInc,
 		metadata, txInfos, outputs,
 	)
 	if err != nil {
@@ -313,9 +319,7 @@ func (cco *CardanoChainOperations) CreateBatchTx(
 
 func GetInputUtxos(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, destinationChain string, txCost *big.Int,
-) (
-	*contractbinding.IBridgeStructsUTXOs, error,
-) {
+) (*contractbinding.IBridgeStructsUTXOs, error) {
 	inputUtxos, err := bridgeSmartContract.GetAvailableUTXOs(ctx, destinationChain)
 	if err != nil {
 		return nil, err

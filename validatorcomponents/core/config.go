@@ -12,6 +12,7 @@ type CardanoChainConfig struct {
 	StartBlockHash           string   `json:"startBlockHash"`
 	StartSlot                uint64   `json:"startSlot"`
 	StartBlockNumber         uint64   `json:"startBlockNumber"`
+	TTLSlotNumberInc         uint64   `json:"ttlSlotNumberIncrement"`
 	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
 	KeysDirPath              string   `json:"keysDirPath"`
@@ -66,6 +67,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			SocketPath:       ccConfig.SocketPath,
 			PotentialFee:     ccConfig.PotentialFee,
 			KeysDirPath:      ccConfig.KeysDirPath,
+			TTLSlotNumberInc: ccConfig.TTLSlotNumberInc,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{

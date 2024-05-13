@@ -20,7 +20,7 @@ import (
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 
 const (
-	defaultGasLimit         = uint64(5242880) // 0x500000
+	defaultGasLimit         = uint64(5_242_880) // 0x500000
 	defaultNumRetries       = 1000
 	defaultGasFeeMultiplier = 1.6
 )

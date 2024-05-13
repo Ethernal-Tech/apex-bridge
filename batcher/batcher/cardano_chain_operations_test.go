@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +40,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		}`, testDir)))
 
 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
@@ -64,7 +65,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
@@ -90,7 +91,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
@@ -115,7 +116,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
@@ -142,7 +143,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		count := 400
@@ -169,7 +170,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := GenerateUTXORandomInputs(100, 1000000, 10000000)
@@ -194,7 +195,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw)
+		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
@@ -239,7 +240,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		"keysDirPath": "%s"
 		}`, testDir)))
 
-	cco, err := NewCardanoChainOperations(configRaw)
+	cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.TxProvider = &cardano.TxProviderTestMock{

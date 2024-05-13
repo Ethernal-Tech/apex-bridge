@@ -10,8 +10,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 )
 
-const TTLSlotNumberInc = 200
-
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
 func CreateTx(testNetMagic uint,
 	protocolParams []byte,

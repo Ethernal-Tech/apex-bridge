@@ -30,7 +30,7 @@ func NewBatcherManager(
 	var batchers = make([]core.Batcher, 0, len(config.Chains))
 
 	for _, chainConfig := range config.Chains {
-		operations, err := batcher.GetChainSpecificOperations(chainConfig)
+		operations, err := batcher.GetChainSpecificOperations(chainConfig, logger)
 		if err != nil {
 			return nil, err
 		}

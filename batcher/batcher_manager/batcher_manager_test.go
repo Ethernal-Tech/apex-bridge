@@ -52,7 +52,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 		wallet, err := cardanotx.GenerateWallet(testDir, false, true)
 		require.NoError(t, err)
 
-		chainOp, err := batcher.GetChainSpecificOperations(chainConfig)
+		chainOp, err := batcher.GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
