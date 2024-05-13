@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// const submitBatchGasLimit = 10_000_000
+const submitBatchGasLimit = 10_000_000
 
 type Chain = contractbinding.IBridgeStructsChain
 
@@ -110,7 +110,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		// opts.GasLimit = submitBatchGasLimit
+		opts.GasLimit = submitBatchGasLimit
 		return contract.SubmitSignedBatch(opts, newSignedBatch)
 	})
 
