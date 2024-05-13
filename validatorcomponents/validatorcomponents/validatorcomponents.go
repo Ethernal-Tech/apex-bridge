@@ -62,7 +62,8 @@ func NewValidatorComponents(
 	err = populateUtxosAndAddresses(
 		ctx, oracleConfig,
 		eth.NewBridgeSmartContract(
-			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress, oracleConfig.Bridge.DynamicTx, logger),
+			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
+			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
 		logger,
 	)
 	if err != nil {
@@ -81,7 +82,8 @@ func NewValidatorComponents(
 	}
 
 	relayerBridgeSmartContract := eth.NewBridgeSmartContract(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress, appConfig.Bridge.DynamicTx, logger)
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
 
 	relayerImitator, err := NewRelayerImitator(
 		ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db,

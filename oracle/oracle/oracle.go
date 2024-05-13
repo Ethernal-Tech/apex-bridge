@@ -71,10 +71,11 @@ func NewOracle(
 	}
 
 	bridgeSC := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress, appConfig.Bridge.DynamicTx, logger)
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
 	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
 		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		wallet, appConfig.Bridge.DynamicTx, logger)
+		wallet, appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
