@@ -75,7 +75,8 @@ func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) er
 }
 
 func (s *BridgingRequestState) ToIncludedInBatch(batchID uint64) error {
-	if s.Status != BridgingRequestStatusSubmittedToBridge {
+	if s.Status != BridgingRequestStatusSubmittedToBridge &&
+		s.Status != BridgingRequestStatusFailedToExecuteOnDestination {
 		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
 			s.SourceChainID, s.SourceTxHash, s.Status, BridgingRequestStatusIncludedInBatch)
 	}
