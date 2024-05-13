@@ -154,14 +154,11 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
 
 	sort.Strings(keys)
 
-	ticker := time.NewTicker(bp.tickTime * time.Millisecond)
-	defer ticker.Stop()
-
 	for _, key := range keys {
 		select {
 		case <-bp.ctx.Done():
 			return false
-		case <-ticker.C:
+		case <-time.After(bp.tickTime * time.Millisecond):
 		}
 
 		bp.processAllForChain(bp.appConfig.CardanoChains[key].ChainID)

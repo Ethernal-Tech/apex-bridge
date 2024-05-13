@@ -46,14 +46,13 @@ func NewRelayerImitator(
 func (ri *RelayerImitatorImpl) Start() {
 	ri.logger.Debug("Relayer imitator started")
 
-	ticker := time.NewTicker(time.Millisecond * time.Duration(ri.config.RelayerImitatorPullTimeMilis))
-	defer ticker.Stop()
+	waitTime := time.Millisecond * time.Duration(ri.config.RelayerImitatorPullTimeMilis)
 
 	for {
 		select {
 		case <-ri.ctx.Done():
 			return
-		case <-ticker.C:
+		case <-time.After(waitTime):
 		}
 
 		for chainID := range ri.config.CardanoChains {

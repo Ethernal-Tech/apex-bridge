@@ -37,14 +37,13 @@ func NewRelayer(
 func (r *RelayerImpl) Start(ctx context.Context) {
 	r.logger.Debug("Relayer started")
 
-	ticker := time.NewTicker(time.Millisecond * time.Duration(r.config.PullTimeMilis))
-	defer ticker.Stop()
+	waitTime := time.Millisecond * time.Duration(r.config.PullTimeMilis)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-time.After(waitTime):
 		}
 
 		if err := r.execute(ctx); err != nil {
