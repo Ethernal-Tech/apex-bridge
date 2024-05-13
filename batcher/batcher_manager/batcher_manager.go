@@ -47,7 +47,7 @@ func NewBatcherManager(
 		}
 
 		bridgeSmartContract, err := eth.NewBridgeSmartContractWithWallet(
-			config.Bridge.NodeURL, config.Bridge.SmartContractAddress, wallet, config.Bridge.DynamicTx)
+			config.Bridge.NodeURL, config.Bridge.SmartContractAddress, wallet, config.Bridge.DynamicTx, logger)
 		if err != nil {
 			return nil, err
 		}

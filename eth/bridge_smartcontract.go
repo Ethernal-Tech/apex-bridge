@@ -9,9 +9,10 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/hashicorp/go-hclog"
 )
 
-const submitBatchGasLimit = 10_000_000
+// const submitBatchGasLimit = 10_000_000
 
 type Chain = contractbinding.IBridgeStructsChain
 
@@ -35,17 +36,19 @@ type BridgeSmartContractImpl struct {
 
 var _ IBridgeSmartContract = (*BridgeSmartContractImpl)(nil)
 
-func NewBridgeSmartContract(nodeURL, smartContractAddress string, isDynamic bool) *BridgeSmartContractImpl {
+func NewBridgeSmartContract(
+	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
+) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
 		smartContractAddress: smartContractAddress,
-		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic),
+		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
 	}
 }
 
 func NewBridgeSmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
 ) (*BridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic)
+	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +110,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		opts.GasLimit = submitBatchGasLimit
+		// opts.GasLimit = submitBatchGasLimit
 		return contract.SubmitSignedBatch(opts, newSignedBatch)
 	})
 

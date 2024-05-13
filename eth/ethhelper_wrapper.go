@@ -10,6 +10,7 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/hashicorp/go-hclog"
 )
 
 type EthHelperWrapper struct {
@@ -17,23 +18,28 @@ type EthHelperWrapper struct {
 	wallet      ethtxhelper.IEthTxWallet
 	ethTxHelper ethtxhelper.IEthTxHelper
 	isDynamic   bool
+	logger      hclog.Logger
 	lock        sync.Mutex
 }
 
-func NewEthHelperWrapper(nodeURL string, isDynamic bool) *EthHelperWrapper {
+func NewEthHelperWrapper(
+	nodeURL string, isDynamic bool, logger hclog.Logger,
+) *EthHelperWrapper {
 	return &EthHelperWrapper{
 		nodeURL:   nodeURL,
 		isDynamic: isDynamic,
+		logger:    logger,
 	}
 }
 
 func NewEthHelperWrapperWithWallet(
-	nodeURL string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
+	nodeURL string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
 ) (*EthHelperWrapper, error) {
 	return &EthHelperWrapper{
 		nodeURL:   nodeURL,
 		wallet:    wallet,
 		isDynamic: isDynamic,
+		logger:    logger,
 	}, nil
 }
 
@@ -92,20 +98,19 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		return "", e.ProcessError(err)
 	}
 
-	//nolint:godox
-	// TODO: enable logs bsc.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
+	e.logger.Info("tx has been sent", "tx hash", tx.Hash().String())
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
 		return "", e.ProcessError(err)
 	}
 
+	e.logger.Info("tx has been included in block", "tx hash", tx.Hash().String(),
+		"status", receipt.Status, "block", receipt.BlockNumber, "block hash", receipt.BlockHash.String())
+
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return receipt.BlockHash.String(), fmt.Errorf("receipts status not successful: %v", receipt.Status)
 	}
-
-	//nolint:godox,lll
-	// TODO: enable logs  bsc.logger.Info("tx has been executed", "block", receipt.BlockHash.String(), "tx hash", receipt.TxHash.String())
 
 	return receipt.BlockHash.String(), nil
 }
