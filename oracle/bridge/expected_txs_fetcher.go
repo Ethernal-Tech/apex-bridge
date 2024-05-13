@@ -42,14 +42,11 @@ func NewExpectedTxsFetcher(
 func (f *ExpectedTxsFetcherImpl) Start() {
 	f.logger.Debug("Starting ExpectedTxsFetcher")
 
-	ticker := time.NewTicker(TickTimeMs * time.Millisecond)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-f.ctx.Done():
 			return
-		case <-ticker.C:
+		case <-time.After(TickTimeMs * time.Millisecond):
 			err := f.fetchData()
 			if err != nil {
 				f.logger.Error("error while fetching data", "err", err)

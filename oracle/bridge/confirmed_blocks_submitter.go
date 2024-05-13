@@ -54,15 +54,14 @@ func NewConfirmedBlocksSubmitter(
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
-	go func() {
-		ticker := time.NewTicker(time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime))
-		defer ticker.Stop()
+	waitTime := time.Millisecond * time.Duration(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksSubmitTime)
 
+	go func() {
 		for {
 			select {
 			case <-bs.ctx.Done():
 				return
-			case <-ticker.C:
+			case <-time.After(waitTime):
 				err := bs.execute()
 				if err != nil {
 					bs.logger.Error("error while executing", "err", err)
