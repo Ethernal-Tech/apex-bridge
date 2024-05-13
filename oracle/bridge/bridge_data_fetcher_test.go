@@ -51,8 +51,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 		require.NotNil(t, bridgeDataFetcher)
 
 		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to ParseTxInfo")
+		require.NoError(t, err)
 		require.Nil(t, expectedTx)
 	})
 

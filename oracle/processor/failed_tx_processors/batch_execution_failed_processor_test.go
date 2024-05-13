@@ -17,7 +17,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, relevant)
 
-		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
 
@@ -30,7 +30,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, relevant)
 
-		relevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		relevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
 		require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid but metadata not full", func(t *testing.T) {
-		relevantButNotFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
 		})
 		require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
 		batchNonceID := uint64(1)
-		relevantFullMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
+		relevantFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
 			BridgingTxType: common.BridgingTxTypeBatchExecution,
 			BatchNonceID:   batchNonceID,
 		})

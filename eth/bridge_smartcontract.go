@@ -108,6 +108,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = submitBatchGasLimit
+
 		return contract.SubmitSignedBatch(opts, newSignedBatch)
 	})
 

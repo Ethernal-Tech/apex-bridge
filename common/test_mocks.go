@@ -1,9 +1,31 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
+
+func SimulateRealMetadata[
+	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+](
+	encodingType MetadataEncodingType, metadata T,
+) (
+	[]byte, error,
+) {
+	marshalFunc, err := getMarshalFunc(encodingType)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := marshalFunc(map[int]map[int]T{1: {MetadataMapKey: metadata}})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %w", metadata, err)
+	}
+
+	return result, nil
+}
 
 type BridgingRequestStateUpdaterMock struct {
 	mock.Mock

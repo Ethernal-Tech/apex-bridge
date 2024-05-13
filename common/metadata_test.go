@@ -1,10 +1,8 @@
 package common
 
 import (
-	"encoding/json"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +34,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Unmarshal BaseMetadata", func(t *testing.T) {
-		result, err := json.Marshal(map[int]map[int]BaseMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -53,7 +51,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Cbor Unmarshal BaseMetadata", func(t *testing.T) {
-		result, err := cbor.Marshal(map[int]map[int]BaseMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -70,7 +68,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Unmarshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := json.Marshal(map[int]map[int]BridgingRequestMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -87,7 +85,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Cbor Unmarshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := cbor.Marshal(map[int]map[int]BridgingRequestMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -104,7 +102,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Unmarshal BatchExecutedMetadata", func(t *testing.T) {
-		result, err := json.Marshal(map[int]map[int]BatchExecutedMetadata{1: {1: {BatchNonceID: 245}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BatchExecutedMetadata{BatchNonceID: 245})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -122,7 +120,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Cbor Unmarshal BatchExecutedMetadata", func(t *testing.T) {
-		result, err := cbor.Marshal(map[int]map[int]BatchExecutedMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BatchExecutedMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -140,7 +138,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Unmarshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := json.Marshal(map[int]map[int]RefundExecutedMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, RefundExecutedMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -157,7 +155,7 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Cbor Unmarshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := cbor.Marshal(map[int]map[int]RefundExecutedMetadata{1: {1: {BridgingTxType: "test"}}})
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, RefundExecutedMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
