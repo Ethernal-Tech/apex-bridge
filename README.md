@@ -82,6 +82,7 @@ $ go run ./cli/cmd/main.go generate-configs \
         --bridge-validator-config-path "<path to to bridge chain secrets manager config file>" \
         --dbs-path "<path to where databases will be stored>" \
         --logs-path "<path to where logs will be stored>" \
+        --ttl-slot-inc <ttl slot increment> \
         --api-port <port at which API should run> \
         --api-keys "<api key 1>" \
         --api-keys "<api key 2>"

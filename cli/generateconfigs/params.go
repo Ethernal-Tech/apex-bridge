@@ -43,6 +43,8 @@ const (
 	apiPortFlag = "api-port"
 	apiKeysFlag = "api-keys"
 
+	ttlSlotIncFlag = "ttl-slot-inc"
+
 	outputDirFlag                         = "output-dir"
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
@@ -74,6 +76,8 @@ const (
 	apiPortFlagDesc = "port at which API should run"
 	apiKeysFlagDesc = "(mandatory) list of keys for API access"
 
+	ttlSlotIncFlagDesc = "TTL slot increment"
+
 	outputDirFlagDesc                         = "path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
 	outputRelayerFileNameFlagDesc             = "relayer config json output file name"
@@ -87,6 +91,7 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
+	defaultTTLSlotNumberInc                  = 1000 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
 )
 
 type generateConfigsParams struct {
@@ -116,6 +121,8 @@ type generateConfigsParams struct {
 
 	apiPort uint32
 	apiKeys []string
+
+	ttlSlotInc uint64
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -308,6 +315,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		apiPortFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.ttlSlotInc,
+		ttlSlotIncFlag,
+		defaultTTLSlotNumberInc,
+		ttlSlotIncFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.outputDir,
 		outputDirFlag,
@@ -358,7 +372,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
-				TTLSlotNumberInc:         1000 + 20*10, // ConfirmationBlockCount * BlockTimeSeconds
+				TTLSlotNumberInc:         p.ttlSlotInc,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.primeKeysDir),
 				OgmiosURL:                p.primeOgmiosURL,
@@ -374,7 +388,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
-				TTLSlotNumberInc:         1000 + 20*10, // ConfirmationBlockCount * BlockTimeSeconds
+				TTLSlotNumberInc:         p.ttlSlotInc,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.vectorKeysDir),
 				OgmiosURL:                p.vectorOgmiosURL,
