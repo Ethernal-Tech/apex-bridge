@@ -17,6 +17,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -267,6 +268,24 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
+	})
+
+	t.Run("getFirstAndLastTxNonceID one item", func(t *testing.T) {
+		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
+			{Nonce: big.NewInt(5)},
+		})
+
+		assert.Equal(t, big.NewInt(5), f)
+		assert.Equal(t, big.NewInt(5), l)
+	})
+
+	t.Run("getFirstAndLastTxNonceID multiple items", func(t *testing.T) {
+		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
+			{Nonce: big.NewInt(5)}, {Nonce: big.NewInt(7)}, {Nonce: big.NewInt(2)}, {Nonce: big.NewInt(9)}, {Nonce: big.NewInt(5)},
+		})
+
+		assert.Equal(t, big.NewInt(2), f)
+		assert.Equal(t, big.NewInt(9), l)
 	})
 }
 
