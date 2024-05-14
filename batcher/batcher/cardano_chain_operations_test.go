@@ -45,18 +45,17 @@ func TestCardanoChainOperations(t *testing.T) {
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
-		outputs := GenerateUTXOOutputs(utxoCount, 1000000)
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		outputs := CalculateTxCost(generateUTXOOutputs(utxoCount, 1000000))
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.Len(t, result.Utxos.MultisigOwnedUTXOs, utxoCount)
@@ -70,18 +69,17 @@ func TestCardanoChainOperations(t *testing.T) {
 
 		utxoCount := 10 // 10x 1Ada
 		inputs := GenerateUTXOInputs(utxoCount, 1000000)
-		outputs := GenerateUTXOOutputs(utxoCount*2, 1000000)
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		outputs := CalculateTxCost(generateUTXOOutputs(utxoCount*2, 1000000))
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.Len(t, result.Utxos.FeePayerOwnedUTXOs, len(inputs.FeePayerOwnedUTXOs))
@@ -96,18 +94,17 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
-		outputs := GenerateUTXOOutputs(400, 1000000)
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		outputs := CalculateTxCost(generateUTXOOutputs(400, 1000000))
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
@@ -122,18 +119,17 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		inputs := GenerateUTXOInputs(30, 1000000)
-		outputs := GenerateUTXOOutputs(400, 10000000) // 4000Ada
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		outputs := CalculateTxCost(generateUTXOOutputs(400, 10000000)) // 4000Ada
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
@@ -151,18 +147,17 @@ func TestCardanoChainOperations(t *testing.T) {
 		count := 400
 		amount := 1000000
 		inputs := GenerateUTXOInputs(count, int64(amount))
-		outputs := GenerateUTXOOutputs(count, uint64(amount))
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		outputs := CalculateTxCost(generateUTXOOutputs(count, uint64(amount)))
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
@@ -175,44 +170,42 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		inputs := GenerateUTXORandomInputs(100, 1000000, 10000000)
-		outputs := GenerateUTXORandomOutputs(200, 1000000, 10000000)
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		inputs := generateUTXORandomInputs(100, 1000000, 10000000)
+		outputs := CalculateTxCost(generateUTXORandomOutputs(200, 1000000, 10000000))
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxRaw), 16000)
 		require.LessOrEqual(t, len(result.Utxos.MultisigOwnedUTXOs), 101)
 
 		utxoSum := CalculateUTXOSum(result.Utxos.MultisigOwnedUTXOs)
-		require.Equal(t, utxoSum.Cmp(txCost), 1)
+		require.Equal(t, utxoSum.Cmp(outputs.Sum), 1)
 	})
 
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		inputs := GenerateUTXOInputsOrdered()        // 50, 40, 30, 101, 102, 103, 104, 105
-		outputs := GenerateUTXOOutputs(403, 1000000) // 403Ada
-		txCost := CalculateTxCost(outputs)
-		txInfos := GenerateTxInfos(t, cco.Config.TestNetMagic)
+		inputs := generateUTXOInputsOrdered()                         // 50, 40, 30, 101, 102, 103, 104, 105
+		outputs := CalculateTxCost(generateUTXOOutputs(403, 1000000)) // 403Ada
+		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
 		require.NoError(t, err)
-		protocolParams, err := GenerateProtocolParams()
+		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
 
 		slotNumber := uint64(12345)
 
-		result, err := cco.createBatchTx(inputs, txCost, metadata, protocolParams, txInfos, outputs, slotNumber)
+		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
 		require.NoError(t, err)
 		require.Less(t, len(result.TxHash), 16000)
 		require.Len(t, result.Utxos.MultisigOwnedUTXOs, 5)
@@ -398,13 +391,16 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 }
 
-func CalculateTxCost(outputs []cardanowallet.TxOutput) *big.Int {
+func CalculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
 	txCost := big.NewInt(0)
 	for _, o := range outputs {
 		txCost.Add(txCost, big.NewInt(int64(o.Amount)))
 	}
 
-	return txCost
+	return cardano.TxOutputs{
+		Outputs: outputs,
+		Sum:     txCost,
+	}
 }
 
 func CalculateUTXOSum(inputs []eth.UTXO) *big.Int {
@@ -445,7 +441,7 @@ func GenerateUTXOInputs(count int, amount int64) (inputs eth.UTXOs) {
 	return
 }
 
-func GenerateUTXORandomInputs(count int, min uint64, max uint64) (inputs eth.UTXOs) {
+func generateUTXORandomInputs(count int, min uint64, max uint64) (inputs eth.UTXOs) {
 	// Count x [min-max] Ada, 1000000Ada
 	inputs = eth.UTXOs{
 		MultisigOwnedUTXOs: make([]eth.UTXO, count+1),
@@ -473,7 +469,7 @@ func GenerateUTXORandomInputs(count int, min uint64, max uint64) (inputs eth.UTX
 	return
 }
 
-func GenerateUTXOInputsOrdered() (inputs eth.UTXOs) {
+func generateUTXOInputsOrdered() (inputs eth.UTXOs) {
 	// Count x Input Ada, 1000Ada, 2000Ada, 3000Ada, 4000Ada, 5000Ada
 	inputs = eth.UTXOs{
 		MultisigOwnedUTXOs: make([]eth.UTXO, 8),
@@ -510,7 +506,7 @@ func GenerateUTXOInputsOrdered() (inputs eth.UTXOs) {
 	return
 }
 
-func GenerateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOutput) {
+func generateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOutput) {
 	outputs = make([]cardanowallet.TxOutput, count)
 	for i := 0; i < count; i++ {
 		outputs[i] = cardanowallet.TxOutput{
@@ -522,7 +518,7 @@ func GenerateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOu
 	return
 }
 
-func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []cardanowallet.TxOutput) {
+func generateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []cardanowallet.TxOutput) {
 	outputs = make([]cardanowallet.TxOutput, count)
 
 	for i := 0; i < count; i++ {
@@ -540,7 +536,7 @@ func GenerateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []car
 	return
 }
 
-func GenerateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
+func generateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 	t.Helper()
 
 	dummyKeyHashes := []string{
@@ -577,7 +573,7 @@ func GenerateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 	return txInfos
 }
 
-func GenerateProtocolParams() ([]byte, error) {
+func generateProtocolParams() ([]byte, error) {
 	resultJSON := map[string]interface{}{
 		"collateralPercentage": 150,
 		"costModels":           nil,

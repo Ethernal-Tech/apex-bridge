@@ -165,7 +165,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	outputs, txCost := getOutputs(confirmedTransactions)
+	txOutput := getOutputs(confirmedTransactions)
 
 	txInfos := &cardano.TxInputInfos{
 		TestNetMagic: uint(cco.Config.TestNetMagic),
@@ -180,7 +180,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	return cco.createBatchTx(
-		txUtxos, txCost, metadata, protocolParams, txInfos, outputs, lastObservedBlock.BlockSlot)
+		txUtxos, metadata, protocolParams, txInfos, txOutput, lastObservedBlock.BlockSlot)
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -203,10 +203,10 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
  * if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach txCost
  */
 func (cco *CardanoChainOperations) createBatchTx(
-	inputUtxos eth.UTXOs, txCost *big.Int,
+	inputUtxos eth.UTXOs,
 	metadata []byte, protocolParams []byte,
 	txInfos *cardano.TxInputInfos,
-	outputs []cardanowallet.TxOutput, slotNumber uint64,
+	txOutputs cardano.TxOutputs, slotNumber uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	cco.logger.Info("creating batch tx",
 		"slot", slotNumber, "ttl", cco.Config.TTLSlotNumberInc, "magic", cco.Config.TestNetMagic)
@@ -214,7 +214,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 	feeTxInputs := convertUTXOsToTxInputs(inputUtxos.FeePayerOwnedUTXOs)
 
 	multisigChosenUtxos, err := getNeededUtxos(
-		inputUtxos.MultisigOwnedUTXOs, txCost, len(feeTxInputs.Inputs)+len(outputs))
+		inputUtxos.MultisigOwnedUTXOs, txOutputs.Sum, len(feeTxInputs.Inputs)+len(txOutputs.Outputs))
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
 		uint(cco.Config.TestNetMagic), protocolParams, slotNumber+cco.Config.TTLSlotNumberInc,
-		metadata, txInfos, outputs,
+		metadata, txInfos, txOutputs.Outputs,
 	)
 	if err != nil {
 		return nil, err
@@ -336,19 +336,19 @@ func findMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
 	return min, idx
 }
 
-func getOutputs(txs []eth.ConfirmedTransaction) (outputs []cardanowallet.TxOutput, txCost *big.Int) {
-	txCost = big.NewInt(0)
+func getOutputs(txs []eth.ConfirmedTransaction) (result cardano.TxOutputs) {
+	result.Sum = big.NewInt(0)
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
-			outputs = append(outputs, cardanowallet.TxOutput{
+			result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
 				Addr:   receiver.DestinationAddress,
 				Amount: receiver.Amount.Uint64(),
 			})
 
-			txCost.Add(txCost, receiver.Amount)
+			result.Sum.Add(result.Sum, receiver.Amount)
 		}
 	}
 
-	return outputs, txCost
+	return result
 }

@@ -3,6 +3,7 @@ package cardanotx
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -60,6 +61,11 @@ func (txinfos *TxInputInfos) CalculateWithRetriever(
 	}
 
 	return txinfos.MultiSigFee.CalculateWithRetriever(ctx, retriever, desiredFee)
+}
+
+type TxOutputs struct {
+	Outputs []cardanowallet.TxOutput
+	Sum     *big.Int
 }
 
 type TxInputInfo struct {
