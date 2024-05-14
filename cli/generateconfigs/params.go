@@ -91,7 +91,7 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
-	defaultTTLSlotNumberInc                  = 1000 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultTTLSlotNumberInc                  = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
 )
 
 type generateConfigsParams struct {
@@ -405,8 +405,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			ValidatorDataDir:     validatorDataDir,
 			ValidatorConfigPath:  validatorConfig,
 			SubmitConfig: oCore.SubmitConfig{
-				ConfirmedBlocksThreshold:  10,
-				ConfirmedBlocksSubmitTime: 5000,
+				ConfirmedBlocksThreshold:  20,
+				ConfirmedBlocksSubmitTime: 3000,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{

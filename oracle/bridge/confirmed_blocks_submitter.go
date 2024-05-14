@@ -107,6 +107,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 	}
 
 	bs.latestConfirmedSlot = blocks[blockCounter-1].Slot
+	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestConfirmedSlot", bs.latestConfirmedSlot)
 
 	return nil
 }

@@ -98,6 +98,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	c.logger.Debug("get success", "url", r.URL)
 
 	w.Header().Set("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(response.NewBridgingRequestStateResponse(state))
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
@@ -157,6 +158,7 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 	c.logger.Debug("getAllForUser success", "url", r.URL)
 
 	w.Header().Set("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(statesResponse)
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
