@@ -219,9 +219,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 		return nil, err
 	}
 
-	multisigTxInputs := convertUTXOsToTxInputs(multisigChosenUtxos)
-
-	txInfos.MultiSig.TxInputs = multisigTxInputs
+	txInfos.MultiSig.TxInputs = convertUTXOsToTxInputs(multisigChosenUtxos)
 	txInfos.MultiSigFee.TxInputs = feeTxInputs
 
 	// Create Tx
