@@ -91,7 +91,7 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
-	defaultTTLSlotNumberInc                  = 1000 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultTTLSlotNumberInc                  = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
 )
 
 type generateConfigsParams struct {
