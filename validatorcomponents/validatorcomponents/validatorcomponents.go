@@ -220,7 +220,7 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", regChain.Id)
 		}
 
-		var availableUtxos *contractbinding.IBridgeStructsUTXOs
+		var availableUtxos eth.UTXOs
 
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)

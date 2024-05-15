@@ -7,6 +7,12 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 )
 
+type GeneratedBatchTxData struct {
+	TxRaw  []byte
+	TxHash string
+	Utxos  eth.UTXOs
+}
+
 type BatcherManager interface {
 	Start()
 }
@@ -19,7 +25,7 @@ type ChainOperations interface {
 	GenerateBatchTransaction(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
 		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID *big.Int,
-	) ([]byte, string, *eth.UTXOs, map[uint64]eth.ConfirmedTransaction, error)
+	) (*GeneratedBatchTxData, error)
 	SignBatchTransaction(txHash string) ([]byte, []byte, error)
 }
 

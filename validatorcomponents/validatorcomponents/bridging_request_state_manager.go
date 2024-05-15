@@ -35,12 +35,17 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, tx *indexer.
 		inputAddrs = append(inputAddrs, input.Output.Address)
 	}
 
-	err := m.db.AddBridgingRequestState(core.NewBridgingRequestState(sourceChainID, tx.Hash, inputAddrs))
+	state := core.NewBridgingRequestState(sourceChainID, tx.Hash, inputAddrs)
+
+	err := m.db.AddBridgingRequestState(state)
 	if err != nil {
 		m.logger.Error("failed to add new BridgingRequestState", "err", err)
 
 		return fmt.Errorf("failed to add new BridgingRequestState. err: %w", err)
 	}
+
+	m.logger.Debug("New BridgingRequestState", "sourceChainID", state.SourceChainID,
+		"sourceTxHash", state.SourceTxHash, "Status", state.Status)
 
 	return nil
 }
@@ -106,6 +111,8 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 			continue
 		}
 
+		oldStatus := state.Status
+
 		err = state.ToIncludedInBatch(batchID)
 		if err != nil {
 			m.logger.Error(
@@ -129,6 +136,9 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 				fmt.Errorf("failed to save updated BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w",
 					key.SourceChainID, key.SourceTxHash, err))
 		}
+
+		m.logger.Debug("Updated BridgingRequestState", "sourceChainID", state.SourceChainID,
+			"sourceTxHash", state.SourceTxHash, "Old Status", oldStatus, "New Status", state.Status)
 	}
 
 	if len(errs) > 0 {
@@ -225,6 +235,8 @@ func (m *BridgingRequestStateManagerImpl) updateStateByKey(
 			key.SourceChainID, key.SourceTxHash)
 	}
 
+	oldStatus := state.Status
+
 	err = updateState(state)
 	if err != nil {
 		m.logger.Error(
@@ -245,6 +257,9 @@ func (m *BridgingRequestStateManagerImpl) updateStateByKey(
 			key.SourceChainID, key.SourceTxHash, err)
 	}
 
+	m.logger.Debug("Updated BridgingRequestState", "sourceChainID", state.SourceChainID,
+		"sourceTxHash", state.SourceTxHash, "Old Status", oldStatus, "New Status", state.Status)
+
 	return nil
 }
 
@@ -264,6 +279,8 @@ func (m *BridgingRequestStateManagerImpl) updateStatesByBatchID(
 	errs := make([]error, 0)
 
 	for _, state := range states {
+		oldStatus := state.Status
+
 		err := updateState(state)
 		if err != nil {
 			m.logger.Error(
@@ -287,6 +304,10 @@ func (m *BridgingRequestStateManagerImpl) updateStatesByBatchID(
 				fmt.Errorf("failed to save updated BridgingRequestState. sourceChainId: %v, sourceTxHash: %v, err: %w",
 					state.SourceChainID, state.SourceTxHash, err))
 		}
+
+		m.logger.Debug("Updated BridgingRequestState", "sourceChainID", state.SourceChainID,
+			"sourceTxHash", state.SourceTxHash, "BatchID", state.BatchID,
+			"Old Status", oldStatus, "New Status", state.Status)
 	}
 
 	if len(errs) > 0 {

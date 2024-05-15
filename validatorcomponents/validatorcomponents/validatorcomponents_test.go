@@ -147,11 +147,11 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				AddressFeePayer: feePayerPrime,
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[0:1],
 			FeePayerOwnedUTXOs: utxos[1:3],
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "prime").Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, "prime").Return(eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[3:6],
 			FeePayerOwnedUTXOs: utxos[6:7],
 		}, error(nil))

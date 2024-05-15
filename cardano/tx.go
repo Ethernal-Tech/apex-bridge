@@ -43,8 +43,8 @@ func CreateTx(testNetMagic uint,
 
 	builder.SetFee(fee)
 
-	builder.UpdateOutputAmount(-2, txInputInfos.MultiSig.InputsSum-outputsSum)
-	builder.UpdateOutputAmount(-1, txInputInfos.MultiSigFee.InputsSum-fee)
+	builder.UpdateOutputAmount(-2, txInputInfos.MultiSig.Sum-outputsSum)
+	builder.UpdateOutputAmount(-1, txInputInfos.MultiSigFee.Sum-fee)
 
 	return builder.Build()
 }

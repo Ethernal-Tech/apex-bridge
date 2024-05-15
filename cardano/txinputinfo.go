@@ -3,6 +3,7 @@ package cardanotx
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -62,13 +63,13 @@ func (txinfos *TxInputInfos) CalculateWithRetriever(
 	return txinfos.MultiSigFee.CalculateWithRetriever(ctx, retriever, desiredFee)
 }
 
-type TxInputUTXOs struct {
-	Inputs    []cardanowallet.TxInput
-	InputsSum uint64
+type TxOutputs struct {
+	Outputs []cardanowallet.TxOutput
+	Sum     *big.Int
 }
 
 type TxInputInfo struct {
-	TxInputUTXOs
+	cardanowallet.TxInputs
 	PolicyScript *cardanowallet.PolicyScript
 	Address      string
 }
@@ -88,7 +89,7 @@ func (txinfo *TxInputInfo) Calculate(utxos []cardanowallet.Utxo, desired uint64)
 					Index: utxo.Index,
 				},
 			}
-			txinfo.InputsSum = utxo.Amount
+			txinfo.Sum = utxo.Amount
 
 			return nil
 		}
@@ -101,7 +102,7 @@ func (txinfo *TxInputInfo) Calculate(utxos []cardanowallet.Utxo, desired uint64)
 
 		if amountSum >= desired {
 			txinfo.Inputs = chosenUTXOs
-			txinfo.InputsSum = amountSum
+			txinfo.Sum = amountSum
 
 			return nil
 		}

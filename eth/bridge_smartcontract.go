@@ -22,7 +22,7 @@ type IBridgeSmartContract interface {
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
-	GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error)
+	GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error)
 	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
 	GetNextBatchID(ctx context.Context, destinationChain string) (*big.Int, error)
@@ -105,8 +105,9 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		RawTransaction:            signedBatch.RawTransaction,
 		MultisigSignature:         signedBatch.MultisigSignature,
 		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
-		IncludedTransactions:      []*big.Int{},
-		UsedUTXOs:                 UTXOs{},
+		FirstTxNonceId:            signedBatch.FirstTxNonceId,
+		LastTxNonceId:             signedBatch.LastTxNonceId,
+		UsedUTXOs:                 signedBatch.UsedUTXOs,
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -158,27 +159,27 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 	}, destinationChain)
 }
 
-func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (*UTXOs, error) {
+func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return UTXOs{}, err
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return UTXOs{}, bsc.ethHelper.ProcessError(err)
 	}
 
 	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
 		Context: ctx,
 	}, destinationChain)
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return UTXOs{}, bsc.ethHelper.ProcessError(err)
 	}
 
-	return &availableUtxos, nil
+	return availableUtxos, nil
 }
 
 // GetLastObservedBlock implements IBridgeSmartContract.
