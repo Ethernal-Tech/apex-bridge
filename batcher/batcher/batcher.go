@@ -137,6 +137,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
+
 	err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID.Uint64(), brStateKeys)
 	if err != nil {
 		b.logger.Error(
