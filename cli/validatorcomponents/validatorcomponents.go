@@ -62,19 +62,19 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	err = validatorComponents.Start()
-	defer func() {
-		err := validatorComponents.Dispose()
-		if err != nil {
-			logger.Error("error while validator components dispose", "err", err)
-		}
-	}()
-
 	if err != nil {
 		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)
 
 		return
 	}
+
+	defer func() {
+		err := validatorComponents.Dispose()
+		if err != nil {
+			logger.Error("error while validator components dispose", "err", err)
+		}
+	}()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

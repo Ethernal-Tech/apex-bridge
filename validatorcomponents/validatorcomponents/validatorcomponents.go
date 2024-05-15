@@ -124,16 +124,16 @@ func NewValidatorComponents(
 func (v *ValidatorComponentsImpl) Start() error {
 	v.logger.Debug("Starting ValidatorComponents")
 
-	if v.shouldRunAPI {
-		go v.api.Start()
-	}
-
 	err := v.oracle.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
 	}
 
 	v.batcherManager.Start()
+
+	if v.shouldRunAPI {
+		go v.api.Start()
+	}
 
 	go v.relayerImitator.Start()
 
@@ -143,6 +143,8 @@ func (v *ValidatorComponentsImpl) Start() error {
 }
 
 func (v *ValidatorComponentsImpl) Dispose() error {
+	v.logger.Info("Disposing ValidatorComponents")
+
 	errs := make([]error, 0)
 
 	err := v.oracle.Dispose()
@@ -168,6 +170,8 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
 	}
+
+	v.logger.Info("ValidatorComponents disposed")
 
 	return nil
 }
