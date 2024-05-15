@@ -57,7 +57,11 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer
 			df.logger.Error("Failed to GetLastObservedBlock from Bridge SC", "err", err)
 		}
 
-		time.Sleep(time.Millisecond * 500)
+		select {
+		case <-df.ctx.Done():
+			return nil, df.ctx.Err()
+		case <-time.After(time.Millisecond * 500):
+		}
 	}
 
 	df.logger.Error("Failed to FetchLatestBlockPoint from Bridge SC", "for chainID", chainID, "retries", MaxRetries)
@@ -105,7 +109,11 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeEx
 			df.logger.Error("Failed to GetExpectedTx from Bridge SC", "err", err)
 		}
 
-		time.Sleep(time.Millisecond * 500)
+		select {
+		case <-df.ctx.Done():
+			return nil, df.ctx.Err()
+		case <-time.After(time.Millisecond * 500):
+		}
 	}
 
 	df.logger.Error("Failed to FetchExpectedTx from Bridge SC", "for chainID", chainID, "retries", MaxRetries)
