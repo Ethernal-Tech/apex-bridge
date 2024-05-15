@@ -136,37 +136,17 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	b.logger.Info("Batch successfully submitted",
 		"batchID", batchID, "txs", len(confirmedTransactions))
 
-	b.saveIncludedConfirmedTransactionsNoError(
-		b.config.Chain.ChainID, confirmedTransactions, batchID, firstTxNonceID, lastTxNonceID,
-	)
+	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
+	err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID.Uint64(), brStateKeys)
+	if err != nil {
+		b.logger.Error(
+			"error while updating bridging request states to IncludedInBatch",
+			"chain", b.config.Chain.ChainID, "batchId", batchID)
+	}
 
 	b.lastBatchID = batchID // update last batch id
 
 	return nil
-}
-
-func (b *BatcherImpl) saveIncludedConfirmedTransactionsNoError(
-	chainID string,
-	txs []eth.ConfirmedTransaction, batchID *big.Int,
-	firstTxNonceID *big.Int, lastTxNonceID *big.Int,
-) {
-	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID.Uint64()-firstTxNonceID.Uint64()+1)
-
-	for _, confirmedTx := range txs {
-		if confirmedTx.Nonce.Cmp(firstTxNonceID) >= 0 && confirmedTx.Nonce.Cmp(lastTxNonceID) <= 0 {
-			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
-				SourceChainID: confirmedTx.SourceChainID,
-				SourceTxHash:  confirmedTx.ObservedTransactionHash,
-			})
-		}
-	}
-
-	err := b.bridgingRequestStateUpdater.IncludedInBatch(chainID, batchID.Uint64(), txsInBatch)
-	if err != nil {
-		b.logger.Error(
-			"error while updating bridging request states to IncludedInBatch",
-			"chain", chainID, "batchId", batchID)
-	}
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
@@ -194,4 +174,21 @@ func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (*big.Int
 	}
 
 	return first, last
+}
+
+func getBridgingRequestStateKeys(
+	txs []eth.ConfirmedTransaction, firstTxNonceID, lastTxNonceID *big.Int,
+) []common.BridgingRequestStateKey {
+	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID.Uint64()-firstTxNonceID.Uint64()+1)
+
+	for _, confirmedTx := range txs {
+		if confirmedTx.Nonce.Cmp(firstTxNonceID) >= 0 && confirmedTx.Nonce.Cmp(lastTxNonceID) <= 0 {
+			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
+				SourceChainID: confirmedTx.SourceChainID,
+				SourceTxHash:  confirmedTx.ObservedTransactionHash,
+			})
+		}
+	}
+
+	return txsInBatch
 }

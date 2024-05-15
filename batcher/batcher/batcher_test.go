@@ -287,6 +287,47 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		assert.Equal(t, big.NewInt(2), f)
 		assert.Equal(t, big.NewInt(9), l)
 	})
+
+	t.Run("getBridgingRequestStateKeys", func(t *testing.T) {
+		res := getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
+			{
+				ObservedTransactionHash: "1",
+				SourceChainID:           "prime",
+				Nonce:                   big.NewInt(4),
+			},
+			{
+				ObservedTransactionHash: "2",
+				SourceChainID:           "vector",
+				Nonce:                   big.NewInt(2),
+			},
+			{
+				ObservedTransactionHash: "3",
+				SourceChainID:           "prime",
+				Nonce:                   big.NewInt(6),
+			},
+			{
+				ObservedTransactionHash: "4",
+				SourceChainID:           "vector",
+				Nonce:                   big.NewInt(3),
+			},
+			{
+				ObservedTransactionHash: "5",
+				SourceChainID:           "prime",
+				Nonce:                   big.NewInt(5),
+			},
+			{
+				ObservedTransactionHash: "6",
+				SourceChainID:           "vector",
+				Nonce:                   big.NewInt(2),
+			},
+		}, big.NewInt(3), big.NewInt(5))
+
+		require.Equal(t, []common.BridgingRequestStateKey{
+			{SourceChainID: "prime", SourceTxHash: "1"},
+			{SourceChainID: "vector", SourceTxHash: "4"},
+			{SourceChainID: "prime", SourceTxHash: "5"},
+		}, res)
+	})
 }
 
 type cardanoChainOperationsMock struct {
