@@ -182,12 +182,16 @@ func populateUtxosAndAddresses(
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
+	l := logger.Named("populateUtxosAndAddresses")
+
+	l.Debug("trying to populate utxos and addresses")
+
 	var allRegisteredChains []contractbinding.IBridgeStructsChain
 
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
 		if err != nil {
-			logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+			l.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
 		}
 
 		return err
@@ -196,6 +200,8 @@ func populateUtxosAndAddresses(
 	if err != nil {
 		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
+
+	l.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
 	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []eth.UTXO) {
 		for _, x := range utxos {
@@ -225,7 +231,7 @@ func populateUtxosAndAddresses(
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
 			if err != nil {
-				logger.Error(
+				l.Error(
 					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
 					"chainId", regChain.Id, "err", err)
 			}
@@ -236,6 +242,8 @@ func populateUtxosAndAddresses(
 		if err != nil {
 			return fmt.Errorf("error while RetryForever of GetAvailableUTXOs. err: %w", err)
 		}
+
+		l.Debug("done GetAvailableUTXOs", "chainID", regChain.Id, "availableUtxos", availableUtxos)
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
@@ -252,6 +260,8 @@ func populateUtxosAndAddresses(
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
 
 		resultChains[regChain.Id] = chainConfig
+
+		l.Debug("updated chainConfig", "chainConfig", chainConfig)
 	}
 
 	config.CardanoChains = resultChains

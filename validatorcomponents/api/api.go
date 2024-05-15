@@ -48,6 +48,8 @@ func NewAPI(
 			}
 
 			router.HandleFunc(endpointPath, endpointHandler).Methods(endpoint.Method)
+
+			logger.Debug("Registered api endpoint", "endpoint", endpointPath, "method", endpoint.Method)
 		}
 	}
 

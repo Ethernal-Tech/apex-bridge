@@ -22,17 +22,15 @@ func RelayerExecute(
 ) error {
 	confirmedBatch, err := bridgeSmartContract.GetConfirmedBatch(ctx, chainID)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve confirmed batch: %w", err)
+		return fmt.Errorf("failed to retrieve confirmed batch for chainID: %s. err: %w", chainID, err)
 	}
-
-	logger.Info("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chain", chainID)
 
 	lastSubmittedBatchID, err := db.GetLastSubmittedBatchID(chainID)
 	if err != nil {
-		return fmt.Errorf("failed to get last submitted batch id from db: %w", err)
+		return fmt.Errorf("failed to get last submitted batch id from db for chainID: %s. err: %w", chainID, err)
 	}
 
-	logger.Info("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chain", chainID,
+	logger.Debug("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chainID", chainID,
 		"lastSubmittedBatchID", lastSubmittedBatchID)
 
 	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 0)
@@ -51,17 +49,17 @@ func RelayerExecute(
 		}
 	} else {
 		if receivedBatchID.Cmp(big.NewInt(0)) == 0 {
-			logger.Info("Waiting on new signed batch")
+			logger.Info("Waiting on new signed batch", "chainID", chainID)
 
 			return nil
 		}
 	}
 
 	if err := sendTx(ctx, confirmedBatch); err != nil {
-		return fmt.Errorf("failed to send confirmed batch: %w", err)
+		return fmt.Errorf("failed to send confirmed batch for chainID: %s. err: %w", chainID, err)
 	}
 
-	logger.Info("Transaction successfully submitted")
+	logger.Info("Transaction successfully submitted", "chainID", chainID, "batchID", confirmedBatch.ID)
 
 	if err := db.AddLastSubmittedBatchID(chainID, receivedBatchID); err != nil {
 		return fmt.Errorf("failed to insert last submitted batch id into db: %w", err)

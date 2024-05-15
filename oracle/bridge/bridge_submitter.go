@@ -32,12 +32,12 @@ func NewBridgeSubmitter(
 func (bs *BridgeSubmitterImpl) SubmitClaims(claims *core.BridgeClaims) error {
 	err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims)
 	if err != nil {
-		bs.logger.Error("Failed to submit claims", "err", err)
+		bs.logger.Error("Failed to submit claims", "claims", claims, "err", err)
 
 		return err
 	}
 
-	bs.logger.Info("Claims submitted successfully")
+	bs.logger.Info("Claims submitted successfully", "claims", claims)
 
 	return nil
 }
@@ -52,6 +52,13 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, blocks []*i
 	}
 
 	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, contractBlocks)
+	if err != nil {
+		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", chainID, "blocks", blocks, "err", err)
 
-	return err
+		return err
+	}
+
+	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "blocks", blocks)
+
+	return nil
 }
