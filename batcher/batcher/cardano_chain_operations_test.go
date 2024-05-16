@@ -420,6 +420,10 @@ func Test_getOutputs(t *testing.T) {
 					DestinationAddress: "0x3",
 					Amount:             big.NewInt(900),
 				},
+				{
+					DestinationAddress: "0x11",
+					Amount:             big.NewInt(0),
+				},
 			},
 		},
 		{
