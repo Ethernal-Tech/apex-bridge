@@ -30,12 +30,7 @@ func NewBridgingRequestStateManager(
 
 // New implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, tx *indexer.Tx) error {
-	inputAddrs := make([]string, 0, len(tx.Inputs))
-	for _, input := range tx.Inputs {
-		inputAddrs = append(inputAddrs, input.Output.Address)
-	}
-
-	state := core.NewBridgingRequestState(sourceChainID, tx.Hash, inputAddrs)
+	state := core.NewBridgingRequestState(sourceChainID, tx.Hash)
 
 	err := m.db.AddBridgingRequestState(state)
 	if err != nil {
@@ -195,22 +190,30 @@ func (m *BridgingRequestStateManagerImpl) Get(
 }
 
 // GetAllForUser implements core.BridgingRequestStateManager.
-func (m *BridgingRequestStateManagerImpl) GetAllForUser(
-	sourceChainID string, userAddr string,
+func (m *BridgingRequestStateManagerImpl) GetMultiple(
+	sourceChainID string, sourceTxHashes []string,
 ) (
 	[]*core.BridgingRequestState, error,
 ) {
-	states, err := m.db.GetUserBridgingRequestStates(sourceChainID, userAddr)
-	if err != nil {
-		m.logger.Error(
-			"failed to get all BridgingRequestStates for user",
-			"sourceChainId", sourceChainID, "userAddr", userAddr, "err", err)
+	result := make([]*core.BridgingRequestState, 0, len(sourceTxHashes))
+	errs := make([]error, 0)
 
-		return nil, fmt.Errorf("failed to get all BridgingRequestStates for user. sourceChainId: %v, userAddr: %v, err: %w",
-			sourceChainID, userAddr, err)
+	for _, sourceTxHash := range sourceTxHashes {
+		state, err := m.db.GetBridgingRequestState(sourceChainID, sourceTxHash)
+		if err != nil {
+			errs = append(errs, err)
+		} else if state != nil {
+			result = append(result, state)
+		}
 	}
 
-	return states, nil
+	if len(errs) > 0 {
+		m.logger.Error("failed to get some BridgingRequestStates", "errors", errors.Join(errs...))
+
+		return nil, fmt.Errorf("failed to get some BridgingRequestStates. errors: %w", errors.Join(errs...))
+	}
+
+	return result, nil
 }
 
 func (m *BridgingRequestStateManagerImpl) updateStateByKey(
