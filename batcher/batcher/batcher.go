@@ -137,10 +137,10 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
-		"batchID", batchID, "txs", len(confirmedTransactions))
-
 	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
+
+	b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
+		"batchID", batchID, "txs cnt", len(confirmedTransactions), "txs", brStateKeys)
 
 	err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID.Uint64(), brStateKeys)
 	if err != nil {

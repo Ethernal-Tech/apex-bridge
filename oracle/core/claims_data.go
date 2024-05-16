@@ -113,6 +113,23 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 	sb.WriteString(c.ChainID)
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(c.BatchNonceID.String())
+	sb.WriteString("\nMultisigOwnedUTXOs = [")
+
+	for _, utxo := range c.OutputUTXOs.MultisigOwnedUTXOs {
+		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
+			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	}
+
+	sb.WriteString("]")
+
+	sb.WriteString("\nFeePayerOwnedUTXOs = [")
+
+	for _, utxo := range c.OutputUTXOs.FeePayerOwnedUTXOs {
+		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
+			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	}
+
+	sb.WriteString("]")
 
 	return sb.String()
 }
