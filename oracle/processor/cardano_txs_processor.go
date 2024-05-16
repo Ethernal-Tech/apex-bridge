@@ -61,7 +61,7 @@ func NewCardanoTxsProcessor(
 }
 
 func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
-	bp.logger.Debug("NewUnprocessedTxs", "txs", txs)
+	bp.logger.Info("NewUnprocessedTxs", "txs", txs)
 
 	var (
 		bridgingRequests []*indexer.Tx
@@ -507,6 +507,8 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		return
 	}
 
+	bp.logger.Debug("Processing", "for chainID", chainID, "blockInfo", blockInfo)
+
 	bridgeClaims := &core.BridgeClaims{}
 
 	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
@@ -523,9 +525,13 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	blockInfo.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
 		len(processedRelevantExpiredTxs)+len(invalidRelevantExpiredTxs) == len(relevantExpiredTxs)
 
+	bp.logger.Debug("Checked all", "for chainID", chainID,
+		"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
+		"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs, "BlockFullyObserved", blockInfo.BlockFullyObserved)
+
 	// if expected/expired tx is invalid, we should mark them regardless of if submit failed or not
 	if len(invalidRelevantExpiredTxs) > 0 {
-		bp.logger.Debug("Marking expected txs as invalid", "txs", invalidRelevantExpiredTxs)
+		bp.logger.Info("Marking expected txs as invalid", "txs", invalidRelevantExpiredTxs)
 
 		err := bp.db.MarkExpectedTxsAsInvalid(invalidRelevantExpiredTxs)
 		if err != nil {
@@ -534,7 +540,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		}
 	}
 
-	bp.logger.Debug("Submitting bridge claims", "claims", bridgeClaims)
+	bp.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
 	err = bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
 	if err != nil {
@@ -551,7 +557,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 
 	// we should only change this in db if submit succeeded
 	if len(processedExpectedTxs) > 0 {
-		bp.logger.Debug("Marking expected txs as processed", "txs", processedExpectedTxs)
+		bp.logger.Info("Marking expected txs as processed", "txs", processedExpectedTxs)
 
 		err := bp.db.MarkExpectedTxsAsProcessed(processedExpectedTxs)
 		if err != nil {
@@ -562,7 +568,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 
 	// we should only change this in db if submit succeeded
 	if len(processedTxs) > 0 {
-		bp.logger.Debug("Marking txs as processed", "txs", processedTxs)
+		bp.logger.Info("Marking txs as processed", "txs", processedTxs)
 
 		err := bp.db.MarkUnprocessedTxsAsProcessed(processedTxs)
 		if err != nil {

@@ -3,7 +3,6 @@ package batcher
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -63,54 +62,59 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Check if I should create batch
 	batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetNextBatchID: %w", err)
+		return fmt.Errorf("failed to query bridge.GetNextBatchID for chainID: %s. err: %w", b.config.Chain.ChainID, err)
 	}
 
 	if batchID.Cmp(big.NewInt(0)) == 0 {
-		b.logger.Info("Waiting on a new batch")
+		b.logger.Info("Waiting on a new batch", "chainID", b.config.Chain.ChainID)
 
 		return nil
 	}
 
 	if batchID.Cmp(b.lastBatchID) <= 0 {
-		b.logger.Info("retrieved batch id not good", "old", b.lastBatchID, "new", batchID)
+		b.logger.Info("retrieved batch id not good", "chainID", b.config.Chain.ChainID,
+			"old", b.lastBatchID, "new", batchID)
 
 		return nil
 	}
 
-	b.logger.Info("Starting batch creation process", "batchID", batchID)
+	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchID)
 
-	b.logger.Info("Query smart contract for confirmed transactions")
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions: %w", err)
+		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
+			b.config.Chain.ChainID, err)
 	}
 
 	if len(confirmedTransactions) == 0 {
-		return errors.New("batch should not be created for zero number of confirmed transactions")
+		return fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
+			b.config.Chain.ChainID)
 	}
 
-	b.logger.Info("Successfully queried smart contract for confirmed transactions",
-		"batchID", batchID, "txs", len(confirmedTransactions))
+	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
+		"chainID", b.config.Chain.ChainID, "batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
 		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	if err != nil {
-		return fmt.Errorf("failed to generate batch transaction: %w", err)
+		return fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
+			b.config.Chain.ChainID, err)
 	}
 
-	b.logger.Info("Created tx", "txHash", generatedBatchData.TxHash,
+	b.logger.Info("Created batch tx", "chainID", b.config.Chain.ChainID, "txHash", generatedBatchData.TxHash,
 		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
 	if err != nil {
-		return fmt.Errorf("failed to sign batch transaction: %w", err)
+		return fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
+			b.config.Chain.ChainID, err)
 	}
 
-	b.logger.Info("Batch successfully signed", "batchID", batchID, "txs", len(confirmedTransactions))
+	b.logger.Info("Batch successfully signed", "chainID", b.config.Chain.ChainID,
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	firstTxNonceID, lastTxNonceID := getFirstAndLastTxNonceID(confirmedTransactions)
 	// Submit batch to smart contract
@@ -125,15 +129,15 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		UsedUTXOs:                 generatedBatchData.Utxos,
 	}
 
-	b.logger.Info("Submitting signed batch to smart contract",
-		"batchID", batchID, "txs", len(confirmedTransactions))
+	b.logger.Debug("Submitting signed batch to smart contract", "chainID", b.config.Chain.ChainID,
+		"signedBatch", eth.BatchToString(signedBatch))
 
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	b.logger.Info("Batch successfully submitted",
+	b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
 		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)

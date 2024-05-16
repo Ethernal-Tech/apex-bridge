@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initParamsData = &initParams{}
+var vcParams = &validatorComponentsParams{}
 
 func GetValidatorComponentsCommand() *cobra.Command {
 	secretsInitCmd := &cobra.Command{
@@ -23,20 +23,20 @@ func GetValidatorComponentsCommand() *cobra.Command {
 		Run:     runCommand,
 	}
 
-	initParamsData.setFlags(secretsInitCmd)
+	vcParams.setFlags(secretsInitCmd)
 
 	return secretsInitCmd
 }
 
 func runPreRun(_ *cobra.Command, _ []string) error {
-	return initParamsData.validateFlags()
+	return vcParams.validateFlags()
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	config, err := common.LoadConfig[vcCore.AppConfig](initParamsData.config, "")
+	config, err := common.LoadConfig[vcCore.AppConfig](vcParams.config, "")
 	if err != nil {
 		outputter.SetError(err)
 
@@ -53,7 +53,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, initParamsData.runAPI, logger)
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, vcParams.runAPI, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
@@ -62,19 +62,19 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	err = validatorComponents.Start()
-	defer func() {
-		err := validatorComponents.Dispose()
-		if err != nil {
-			logger.Error("error while validator components dispose", "err", err)
-		}
-	}()
-
 	if err != nil {
 		logger.Error("validator components start failed", "err", err)
 		outputter.SetError(err)
 
 		return
 	}
+
+	defer func() {
+		err := validatorComponents.Dispose()
+		if err != nil {
+			logger.Error("error while validator components dispose", "err", err)
+		}
+	}()
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

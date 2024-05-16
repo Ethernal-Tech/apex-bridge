@@ -71,12 +71,16 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 			continue
 		}
 
+		f.logger.Debug("Fetching expected txs", "chainID", chainID)
+
 		expectedTx, err := f.bridgeDataFetcher.FetchExpectedTx(chainID)
 		if err != nil {
 			f.logger.Error("Failed to fetch expected tx from bridge", "chainId", chainID, "err", err)
 
 			continue
 		}
+
+		f.logger.Debug("Got expected tx", "chainID", chainID, "expectedTx", expectedTx)
 
 		if expectedTx != nil {
 			expectedTxs = append(expectedTxs, expectedTx)
@@ -91,6 +95,8 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 			return fmt.Errorf("failed to add expected txs. err: %w", err)
 		}
 	}
+
+	f.logger.Debug("Added expected txs to db", "expectedTxs", expectedTxs)
 
 	return nil
 }

@@ -88,14 +88,14 @@ func NewOracle(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
 	txProcessors := []core.CardanoTxProcessor{
-		txprocessors.NewBatchExecutedProcessor(),
-		txprocessors.NewBridgingRequestedProcessor(),
-		// tx_processors.NewRefundExecutedProcessor(),
+		txprocessors.NewBatchExecutedProcessor(logger),
+		txprocessors.NewBridgingRequestedProcessor(logger),
+		// tx_processors.NewRefundExecutedProcessor(logger),
 	}
 
 	failedTxProcessors := []core.CardanoTxFailedProcessor{
-		failedtxprocessors.NewBatchExecutionFailedProcessor(),
-		// failed_tx_processors.NewRefundExecutionFailedProcessor(),
+		failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
+		// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 	}
 
 	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
@@ -129,7 +129,8 @@ func NewOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB, bridgeDataFetcher, logger)
+			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB, bridgeDataFetcher,
+			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}

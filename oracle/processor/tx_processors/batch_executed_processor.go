@@ -7,23 +7,31 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
+	"github.com/hashicorp/go-hclog"
 )
 
 var _ core.CardanoTxProcessor = (*BatchExecutedProcessorImpl)(nil)
 
 type BatchExecutedProcessorImpl struct {
+	logger hclog.Logger
 }
 
-func NewBatchExecutedProcessor() *BatchExecutedProcessorImpl {
-	return &BatchExecutedProcessorImpl{}
+func NewBatchExecutedProcessor(logger hclog.Logger) *BatchExecutedProcessorImpl {
+	return &BatchExecutedProcessorImpl{
+		logger: logger.Named("batch_executed_processor"),
+	}
 }
 
 func (*BatchExecutedProcessorImpl) GetType() core.TxProcessorType {
 	return core.TxProcessorTypeBatchExecuted
 }
 
-func (*BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
+func (p *BatchExecutedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
+	p.logger.Debug("Checking if tx is relevant", "tx", tx)
+
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+
+	p.logger.Debug("Unmarshaled metadata", "txHash", tx.Hash, "metadata", metadata, "err", err)
 
 	if err == nil && metadata != nil {
 		return metadata.BridgingTxType == common.BridgingTxTypeBatchExecution, err
@@ -44,10 +52,14 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
+	p.logger.Debug("tx is relevant", "txHash", tx.Hash)
+
 	metadata, err := common.UnmarshalMetadata[common.BatchExecutedMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
+
+	p.logger.Debug("Validating", "txHash", tx.Hash, "metadata", metadata)
 
 	if err := p.validate(tx, metadata, appConfig); err != nil {
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
@@ -58,7 +70,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 	return nil
 }
 
-func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(
+func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata,
 ) {
 	utxos := make([]core.UTXO, 0, len(tx.Outputs))
@@ -80,6 +92,9 @@ func (*BatchExecutedProcessorImpl) addBatchExecutedClaim(
 	}
 
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
+
+	p.logger.Info("Added BatchExecutedClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.BatchExecutedClaimString(claim))
 }
 
 func (*BatchExecutedProcessorImpl) validate(

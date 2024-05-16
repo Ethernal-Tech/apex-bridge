@@ -7,11 +7,12 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatchExecutedProcessor(t *testing.T) {
-	proc := NewBatchExecutedProcessor()
+	proc := NewBatchExecutedProcessor(hclog.NewNullLogger())
 
 	appConfig := core.AppConfig{
 		CardanoChains: map[string]*core.CardanoChainConfig{"prime": {

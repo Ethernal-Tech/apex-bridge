@@ -50,15 +50,21 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer
 				}
 			}
 
+			df.logger.Debug("FetchLatestBlockPoint", "for chainID", chainID, "blockPoint", blockPoint)
+
 			return blockPoint, nil
 		} else {
 			df.logger.Error("Failed to GetLastObservedBlock from Bridge SC", "err", err)
 		}
 
-		time.Sleep(time.Millisecond * 500)
+		select {
+		case <-df.ctx.Done():
+			return nil, df.ctx.Err()
+		case <-time.After(time.Millisecond * 500):
+		}
 	}
 
-	df.logger.Info("Failed to FetchLatestBlockPoint from Bridge SC", "retries", MaxRetries)
+	df.logger.Error("Failed to FetchLatestBlockPoint from Bridge SC", "for chainID", chainID, "retries", MaxRetries)
 
 	return nil, fmt.Errorf("failed to FetchLatestBlockPoint from Bridge SC")
 }
@@ -96,15 +102,21 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeEx
 				Metadata: tx.MetaData,
 			}
 
+			df.logger.Debug("FetchExpectedTx", "for chainID", chainID, "expectedTx", expectedTx)
+
 			return expectedTx, nil
 		} else {
 			df.logger.Error("Failed to GetExpectedTx from Bridge SC", "err", err)
 		}
 
-		time.Sleep(time.Millisecond * 500)
+		select {
+		case <-df.ctx.Done():
+			return nil, df.ctx.Err()
+		case <-time.After(time.Millisecond * 500):
+		}
 	}
 
-	df.logger.Info("Failed to FetchExpectedTx from Bridge SC", "retries", MaxRetries)
+	df.logger.Error("Failed to FetchExpectedTx from Bridge SC", "for chainID", chainID, "retries", MaxRetries)
 
 	return nil, fmt.Errorf("failed to FetchExpectedTx from Bridge SC")
 }

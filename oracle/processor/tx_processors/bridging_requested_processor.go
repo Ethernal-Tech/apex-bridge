@@ -9,23 +9,31 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 )
 
 var _ core.CardanoTxProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
+	logger hclog.Logger
 }
 
-func NewBridgingRequestedProcessor() *BridgingRequestedProcessorImpl {
-	return &BridgingRequestedProcessorImpl{}
+func NewBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
+	return &BridgingRequestedProcessorImpl{
+		logger: logger.Named("bridging_requested_processor"),
+	}
 }
 
 func (*BridgingRequestedProcessorImpl) GetType() core.TxProcessorType {
 	return core.TxProcessorTypeBridgingRequest
 }
 
-func (*BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
+func (p *BridgingRequestedProcessorImpl) IsTxRelevant(tx *core.CardanoTx) (bool, error) {
+	p.logger.Debug("Checking if tx is relevant", "tx", tx)
+
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+
+	p.logger.Debug("Unmarshaled metadata", "txHash", tx.Hash, "metadata", metadata, "err", err)
 
 	if err == nil && metadata != nil {
 		return metadata.BridgingTxType == common.BridgingTxTypeBridgingRequest, err
@@ -46,10 +54,14 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
+	p.logger.Debug("tx is relevant", "txHash", tx.Hash)
+
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
+
+	p.logger.Debug("Validating", "txHash", tx.Hash, "metadata", metadata)
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
@@ -64,7 +76,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	return nil
 }
 
-func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
+func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) {
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
@@ -96,6 +108,9 @@ func (*BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
+
+	p.logger.Info("Added BridgingRequestClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.BridgingRequestClaimString(claim))
 }
 
 /*
@@ -123,6 +138,8 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 
 		claims.RefundRequest = append(claims.RefundRequest, claim)
 
+		p.logger.Info("Added RefundRequestClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
 }
 */
 

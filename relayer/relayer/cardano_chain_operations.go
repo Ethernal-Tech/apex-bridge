@@ -44,7 +44,7 @@ func NewCardanoChainOperations(
 func (cco *CardanoChainOperations) SendTx(
 	ctx context.Context, smartContractData *eth.ConfirmedBatch,
 ) error {
-	cco.logger.Info("confirmed batch - sending tx")
+	cco.logger.Debug("confirmed batch - sending tx")
 
 	witnesses := make(
 		[][]byte, len(smartContractData.MultisigSignatures)+len(smartContractData.FeePayerMultisigSignatures))

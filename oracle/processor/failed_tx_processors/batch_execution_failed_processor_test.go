@@ -6,11 +6,12 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatchExecutionFailedProcessor(t *testing.T) {
-	proc := NewBatchExecutionFailedProcessor()
+	proc := NewBatchExecutionFailedProcessor(hclog.NewNullLogger())
 
 	t.Run("IsTxRelevant", func(t *testing.T) {
 		relevant, err := proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{})

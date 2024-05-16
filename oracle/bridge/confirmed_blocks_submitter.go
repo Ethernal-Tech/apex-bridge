@@ -77,6 +77,8 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		from++
 	}
 
+	bs.logger.Debug("Executing ConfirmedBlocksSubmitterImpl", "chainID", bs.chainID, "from slot", from)
+
 	blocks, err := bs.indexerDB.GetConfirmedBlocksFrom(
 		from,
 		bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
@@ -88,6 +90,8 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 
 	var blockCounter = 0
 
+	bs.logger.Debug("Checking if blocks processed", "chainID", bs.chainID, "blocks", blocks)
+
 	for _, block := range blocks {
 		if !bs.checkIfBlockIsProcessed(block) {
 			break
@@ -97,10 +101,16 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 	}
 
 	if blockCounter == 0 {
+		bs.logger.Debug("No new processed blocks", "chainID", bs.chainID)
+
 		return nil
 	}
 
-	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, blocks[:blockCounter]); err != nil {
+	blocksToSubmit := blocks[:blockCounter]
+
+	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
+
+	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, blocksToSubmit); err != nil {
 		bs.logger.Error("error submitting confirmed blocks", "err", err)
 
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)

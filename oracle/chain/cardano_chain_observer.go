@@ -36,10 +36,14 @@ func NewCardanoChainObserver(
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
 	if len(config.InitialUtxos) > 0 {
+		logger.Debug("trying to insert utxos", "utxos", config.InitialUtxos)
+
 		err := initUtxos(indexerDB, config.InitialUtxos)
 		if err != nil {
 			return nil, err
 		}
+
+		logger.Info("inserted utxos", "utxos", config.InitialUtxos)
 	}
 
 	err := updateLastConfirmedBlockFromSc(ctx, indexerDB, oracleDB, bridgeDataFetcher, config.ChainID, logger)
@@ -182,10 +186,14 @@ func updateLastConfirmedBlockFromSc(
 ) error {
 	var blockPointSc *indexer.BlockPoint
 
+	l := logger.Named("updateLastConfirmedBlockFromSc")
+
+	l.Debug("trying to update last confirmed block")
+
 	err := common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
 		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainID)
 		if err != nil {
-			logger.Error(
+			l.Error(
 				"Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...",
 				"chainId", chainID, "err", err)
 		}
@@ -197,6 +205,8 @@ func updateLastConfirmedBlockFromSc(
 		return fmt.Errorf("error while RetryForever of FetchLatestBlockPoint. err: %w", err)
 	}
 
+	l.Debug("done FetchLatestBlockPoint", "blockPointSc", blockPointSc)
+
 	if blockPointSc == nil {
 		return nil
 	}
@@ -206,13 +216,21 @@ func updateLastConfirmedBlockFromSc(
 		return err
 	}
 
+	l.Debug("done GetLatestBlockPoint", "blockPointDB", blockPointDB)
+
 	if blockPointDB != nil {
 		if blockPointDB.BlockSlot > blockPointSc.BlockSlot {
+			l.Debug("slot from db higher than from sc",
+				"blockPointDB.BlockSlot", blockPointDB.BlockSlot, "blockPointSc.BlockSlot", blockPointSc.BlockSlot)
+
 			return nil
 		}
 
 		if bytes.Equal(blockPointDB.BlockHash, blockPointSc.BlockHash) &&
 			blockPointDB.BlockSlot == blockPointSc.BlockSlot {
+			l.Debug("slot from db same as from sc",
+				"blockPointDB.BlockSlot", blockPointDB.BlockSlot, "blockPointSc.BlockSlot", blockPointSc.BlockSlot)
+
 			return nil
 		}
 	}
@@ -224,6 +242,8 @@ func updateLastConfirmedBlockFromSc(
 	if err := oracleDB.ClearExpectedTxs(chainID); err != nil {
 		return err
 	}
+
+	l.Info("updating last confirmed block", "to blockPoint", blockPointSc)
 
 	return indexerDB.OpenTx().SetLatestBlockPoint(blockPointSc).Execute()
 }

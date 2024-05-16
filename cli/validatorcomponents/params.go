@@ -10,16 +10,16 @@ const (
 	runAPIFlagDesc = "specifies whether the api should be run"
 )
 
-type initParams struct {
+type validatorComponentsParams struct {
 	config string
 	runAPI bool
 }
 
-func (ip *initParams) validateFlags() error {
+func (ip *validatorComponentsParams) validateFlags() error {
 	return nil
 }
 
-func (ip *initParams) setFlags(cmd *cobra.Command) {
+func (ip *validatorComponentsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.config,
 		configFlag,
