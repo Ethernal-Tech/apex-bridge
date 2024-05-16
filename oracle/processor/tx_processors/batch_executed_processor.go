@@ -65,21 +65,33 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addBatchExecutedClaim(claims, tx, metadata)
+	p.addBatchExecutedClaim(appConfig, claims, tx, metadata)
 
 	return nil
 }
 
 func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BatchExecutedMetadata,
+	appConfig *core.AppConfig, claims *core.BridgeClaims,
+	tx *core.CardanoTx, metadata *common.BatchExecutedMetadata,
 ) {
-	utxos := make([]core.UTXO, 0, len(tx.Outputs))
-	for _, utxo := range tx.Outputs {
-		utxos = append(utxos, core.UTXO{
-			TxHash:  tx.Hash,
-			TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
-			Amount:  new(big.Int).SetUint64(utxo.Amount),
-		})
+	bridgingAddrUtxos := make([]core.UTXO, 0)
+	feeAddrUtxos := make([]core.UTXO, 0)
+	addrs := appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses
+
+	for idx, utxo := range tx.Outputs {
+		if utxo.Address == addrs.BridgingAddress {
+			bridgingAddrUtxos = append(bridgingAddrUtxos, core.UTXO{
+				TxHash:  tx.Hash,
+				TxIndex: new(big.Int).SetUint64(uint64(idx)),
+				Amount:  new(big.Int).SetUint64(utxo.Amount),
+			})
+		} else if utxo.Address == addrs.FeeAddress {
+			feeAddrUtxos = append(feeAddrUtxos, core.UTXO{
+				TxHash:  tx.Hash,
+				TxIndex: new(big.Int).SetUint64(uint64(idx)),
+				Amount:  new(big.Int).SetUint64(utxo.Amount),
+			})
+		}
 	}
 
 	claim := core.BatchExecutedClaim{
@@ -87,7 +99,8 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 		ChainID:                 tx.OriginChainID,
 		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
 		OutputUTXOs: core.UTXOs{
-			MultisigOwnedUTXOs: utxos,
+			MultisigOwnedUTXOs: bridgingAddrUtxos,
+			FeePayerOwnedUTXOs: feeAddrUtxos,
 		},
 	}
 

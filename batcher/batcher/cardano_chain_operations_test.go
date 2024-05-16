@@ -17,6 +17,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,8 +45,8 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
-		inputs := GenerateUTXOInputs(utxoCount*2, 1000000)
-		outputs := CalculateTxCost(generateUTXOOutputs(utxoCount, 1000000))
+		inputs := generateUTXOInputs(utxoCount*2, 1000000)
+		outputs := calculateTxCost(generateUTXOOutputs(utxoCount, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -68,8 +69,8 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
-		inputs := GenerateUTXOInputs(utxoCount, 1000000)
-		outputs := CalculateTxCost(generateUTXOOutputs(utxoCount*2, 1000000))
+		inputs := generateUTXOInputs(utxoCount, 1000000)
+		outputs := calculateTxCost(generateUTXOOutputs(utxoCount*2, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -93,8 +94,8 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		inputs := GenerateUTXOInputs(30, 1000000)
-		outputs := CalculateTxCost(generateUTXOOutputs(400, 1000000))
+		inputs := generateUTXOInputs(30, 1000000)
+		outputs := calculateTxCost(generateUTXOOutputs(400, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -118,8 +119,8 @@ func TestCardanoChainOperations(t *testing.T) {
 		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		inputs := GenerateUTXOInputs(30, 1000000)
-		outputs := CalculateTxCost(generateUTXOOutputs(400, 10000000)) // 4000Ada
+		inputs := generateUTXOInputs(30, 1000000)
+		outputs := calculateTxCost(generateUTXOOutputs(400, 10000000)) // 4000Ada
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -146,8 +147,8 @@ func TestCardanoChainOperations(t *testing.T) {
 
 		count := 400
 		amount := 1000000
-		inputs := GenerateUTXOInputs(count, int64(amount))
-		outputs := CalculateTxCost(generateUTXOOutputs(count, uint64(amount)))
+		inputs := generateUTXOInputs(count, int64(amount))
+		outputs := calculateTxCost(generateUTXOOutputs(count, uint64(amount)))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -171,7 +172,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		inputs := generateUTXORandomInputs(100, 1000000, 10000000)
-		outputs := CalculateTxCost(generateUTXORandomOutputs(200, 1000000, 10000000))
+		outputs := calculateTxCost(generateUTXORandomOutputs(200, 1000000, 10000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -186,7 +187,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.Less(t, len(result.TxRaw), 16000)
 		require.LessOrEqual(t, len(result.Utxos.MultisigOwnedUTXOs), 101)
 
-		utxoSum := CalculateUTXOSum(result.Utxos.MultisigOwnedUTXOs)
+		utxoSum := calculateUTXOSum(result.Utxos.MultisigOwnedUTXOs)
 		require.Equal(t, utxoSum.Cmp(outputs.Sum), 1)
 	})
 
@@ -195,7 +196,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		inputs := generateUTXOInputsOrdered()                         // 50, 40, 30, 101, 102, 103, 104, 105
-		outputs := CalculateTxCost(generateUTXOOutputs(403, 1000000)) // 403Ada
+		outputs := calculateTxCost(generateUTXOOutputs(403, 1000000)) // 403Ada
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
 		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
@@ -391,7 +392,94 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 }
 
-func CalculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
+func Test_getOutputs(t *testing.T) {
+	txs := []eth.ConfirmedTransaction{
+		{
+			Receivers: []contractbinding.IBridgeStructsReceiver{
+				{
+					DestinationAddress: "0x1",
+					Amount:             big.NewInt(100),
+				},
+				{
+					DestinationAddress: "0x2",
+					Amount:             big.NewInt(200),
+				},
+				{
+					DestinationAddress: "0x3",
+					Amount:             big.NewInt(400),
+				},
+			},
+		},
+		{
+			Receivers: []contractbinding.IBridgeStructsReceiver{
+				{
+					DestinationAddress: "0x4",
+					Amount:             big.NewInt(50),
+				},
+				{
+					DestinationAddress: "0x3",
+					Amount:             big.NewInt(900),
+				},
+				{
+					DestinationAddress: "0x11",
+					Amount:             big.NewInt(0),
+				},
+			},
+		},
+		{
+			Receivers: []contractbinding.IBridgeStructsReceiver{
+				{
+					DestinationAddress: "0x5",
+					Amount:             big.NewInt(3000),
+				},
+			},
+		},
+		{
+			Receivers: []contractbinding.IBridgeStructsReceiver{
+				{
+					DestinationAddress: "0x1",
+					Amount:             big.NewInt(2000),
+				},
+				{
+					DestinationAddress: "0x4",
+					Amount:             big.NewInt(170),
+				},
+				{
+					DestinationAddress: "0x3",
+					Amount:             big.NewInt(10),
+				},
+			},
+		},
+	}
+
+	res := getOutputs(txs)
+
+	assert.Equal(t, big.NewInt(6830), res.Sum)
+	assert.Equal(t, []cardanowallet.TxOutput{
+		{
+			Addr:   "0x1",
+			Amount: 2100,
+		},
+		{
+			Addr:   "0x2",
+			Amount: 200,
+		},
+		{
+			Addr:   "0x3",
+			Amount: 1310,
+		},
+		{
+			Addr:   "0x4",
+			Amount: 220,
+		},
+		{
+			Addr:   "0x5",
+			Amount: 3000,
+		},
+	}, res.Outputs)
+}
+
+func calculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
 	txCost := big.NewInt(0)
 	for _, o := range outputs {
 		txCost.Add(txCost, big.NewInt(int64(o.Amount)))
@@ -403,7 +491,7 @@ func CalculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
 	}
 }
 
-func CalculateUTXOSum(inputs []eth.UTXO) *big.Int {
+func calculateUTXOSum(inputs []eth.UTXO) *big.Int {
 	txCost := big.NewInt(0)
 	for _, i := range inputs {
 		txCost.Add(txCost, i.Amount)
@@ -412,7 +500,7 @@ func CalculateUTXOSum(inputs []eth.UTXO) *big.Int {
 	return txCost
 }
 
-func GenerateUTXOInputs(count int, amount int64) (inputs eth.UTXOs) {
+func generateUTXOInputs(count int, amount int64) (inputs eth.UTXOs) {
 	// Count x Input Ada, 1000Ada, 2000Ada, 3000Ada, 4000Ada, 5000Ada
 	inputs = eth.UTXOs{
 		MultisigOwnedUTXOs: make([]eth.UTXO, count+6),

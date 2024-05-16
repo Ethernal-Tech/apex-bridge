@@ -16,8 +16,11 @@ func CreateTx(testNetMagic uint,
 	timeToLive uint64,
 	metadataBytes []byte,
 	txInputInfos *TxInputInfos,
-	outputs []cardanowallet.TxOutput) ([]byte, string, error) {
+	outputs []cardanowallet.TxOutput,
+) ([]byte, string, error) {
 	outputsSum := cardanowallet.GetOutputsSum(outputs)
+	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
+	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
 
 	builder, err := cardanowallet.NewTxBuilder()
 	if err != nil {
@@ -26,15 +29,30 @@ func CreateTx(testNetMagic uint,
 
 	defer builder.Dispose()
 
-	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive)
-	builder.SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic)
-	builder.AddOutputs(outputs...).AddOutputs(cardanowallet.TxOutput{
-		Addr: txInputInfos.MultiSig.Address,
-	}).AddOutputs(cardanowallet.TxOutput{
-		Addr: txInputInfos.MultiSigFee.Address,
-	})
-	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...)
-	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
+	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
+		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
+
+	// add multisigFee output
+	if feeIndex == -1 {
+		feeIndex = len(outputs)
+
+		builder.AddOutputs(cardanowallet.TxOutput{
+			Addr: txInputInfos.MultiSigFee.Address,
+		})
+	}
+
+	// add multisig output
+	if multiSigIndex == -1 {
+		builder.AddOutputs(cardanowallet.TxOutput{
+			Addr:   txInputInfos.MultiSig.Address,
+			Amount: txInputInfos.MultiSig.Sum - outputsSum, // multisigAmount is 0 in this case
+		})
+	} else {
+		builder.UpdateOutputAmount(multiSigIndex, txInputInfos.MultiSig.Sum-outputsSum+multisigAmount)
+	}
+
+	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
+		AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
@@ -43,8 +61,8 @@ func CreateTx(testNetMagic uint,
 
 	builder.SetFee(fee)
 
-	builder.UpdateOutputAmount(-2, txInputInfos.MultiSig.Sum-outputsSum)
-	builder.UpdateOutputAmount(-1, txInputInfos.MultiSigFee.Sum-fee)
+	// update multisigFee amount
+	builder.UpdateOutputAmount(feeIndex, txInputInfos.MultiSigFee.Sum-fee+feeAmount)
 
 	return builder.Build()
 }
@@ -104,4 +122,14 @@ func CreateBatchMetaData(v *big.Int) ([]byte, error) {
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
 		BatchNonceID:   v.Uint64(),
 	})
+}
+
+func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uint64) {
+	for i, x := range outputs {
+		if x.Addr == addr {
+			return i, x.Amount
+		}
+	}
+
+	return -1, 0
 }

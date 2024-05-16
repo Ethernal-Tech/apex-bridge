@@ -336,19 +336,41 @@ func findMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
 	return min, idx
 }
 
-func getOutputs(txs []eth.ConfirmedTransaction) (result cardano.TxOutputs) {
-	result.Sum = big.NewInt(0)
+func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
+	receiversMap := map[string]*big.Int{}
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
-			result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
-				Addr:   receiver.DestinationAddress,
-				Amount: receiver.Amount.Uint64(),
-			})
-
-			result.Sum.Add(result.Sum, receiver.Amount)
+			if value, exists := receiversMap[receiver.DestinationAddress]; exists {
+				value.Add(value, receiver.Amount)
+			} else {
+				receiversMap[receiver.DestinationAddress] = new(big.Int).Set(receiver.Amount)
+			}
 		}
 	}
+
+	result := cardano.TxOutputs{
+		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
+		Sum:     big.NewInt(0),
+	}
+
+	for addr, amount := range receiversMap {
+		if amount.Cmp(big.NewInt(0)) <= 0 {
+			// this should be logged once
+			continue
+		}
+
+		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
+			Addr:   addr,
+			Amount: amount.Uint64(),
+		})
+		result.Sum.Add(result.Sum, amount)
+	}
+
+	// sort outputs because all batchers should have same order of outputs
+	sort.Slice(result.Outputs, func(i, j int) bool {
+		return result.Outputs[i].Addr < result.Outputs[j].Addr
+	})
 
 	return result
 }

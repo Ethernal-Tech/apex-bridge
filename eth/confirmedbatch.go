@@ -80,10 +80,25 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString(b.FirstTxNonceId.String())
 	sb.WriteString("\nlast tx nonce id = ")
 	sb.WriteString(b.LastTxNonceId.String())
+
 	sb.WriteString("\nmultisig owned used utxos cnt = ")
 	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
+	sb.WriteString("\nmultisig owned used utxos = [")
+
+	for _, utxo := range b.UsedUTXOs.MultisigOwnedUTXOs {
+		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
+			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	}
+	sb.WriteString("]")
 	sb.WriteString("\nfeepayer owned used utxos cnt = ")
 	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.FeePayerOwnedUTXOs)))
+	sb.WriteString("\nfeepayer owned used utxos = [")
+
+	for _, utxo := range b.UsedUTXOs.FeePayerOwnedUTXOs {
+		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
+			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	}
+	sb.WriteString("]")
 
 	return sb.String()
 }
@@ -95,6 +110,28 @@ func (b ConfirmedBatch) String() string {
 	sb.WriteString(b.ID)
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
+
+	sb.WriteString("\nmultisig signatures = [")
+	for i, sig := range b.MultisigSignatures {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(hex.EncodeToString(sig))
+	}
+
+	sb.WriteString("]")
+
+	sb.WriteString("\nfee payer multisig signatures = [")
+	for i, sig := range b.FeePayerMultisigSignatures {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(hex.EncodeToString(sig))
+	}
+
+	sb.WriteString("]")
 
 	return sb.String()
 }
