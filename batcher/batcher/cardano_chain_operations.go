@@ -355,6 +355,11 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 	}
 
 	for addr, amount := range receiversMap {
+		if amount.Cmp(big.NewInt(0)) <= 0 {
+			// this should be logged once
+			continue
+		}
+
 		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
 			Addr:   addr,
 			Amount: amount.Uint64(),
