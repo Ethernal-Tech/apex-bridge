@@ -89,11 +89,11 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	var outputUtxo core.UTXO
 
-	for _, utxo := range tx.Outputs {
+	for idx, utxo := range tx.Outputs {
 		if utxo.Address == appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses.BridgingAddress {
 			outputUtxo = core.UTXO{
 				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
+				TxIndex: new(big.Int).SetUint64(uint64(idx)),
 				Amount:  new(big.Int).SetUint64(utxo.Amount),
 			}
 		}

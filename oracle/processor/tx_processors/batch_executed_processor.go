@@ -78,17 +78,17 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 	feeAddrUtxos := make([]core.UTXO, 0)
 	addrs := appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses
 
-	for _, utxo := range tx.Outputs {
+	for idx, utxo := range tx.Outputs {
 		if utxo.Address == addrs.BridgingAddress {
 			bridgingAddrUtxos = append(bridgingAddrUtxos, core.UTXO{
 				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
+				TxIndex: new(big.Int).SetUint64(uint64(idx)),
 				Amount:  new(big.Int).SetUint64(utxo.Amount),
 			})
 		} else if utxo.Address == addrs.FeeAddress {
 			feeAddrUtxos = append(feeAddrUtxos, core.UTXO{
 				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(tx.Indx)),
+				TxIndex: new(big.Int).SetUint64(uint64(idx)),
 				Amount:  new(big.Int).SetUint64(utxo.Amount),
 			})
 		}
