@@ -29,9 +29,8 @@ func CreateTx(testNetMagic uint,
 
 	defer builder.Dispose()
 
-	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive)
-	builder.SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic)
-	builder.AddOutputs(outputs...)
+	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
+		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
 
 	// add multisigFee output
 	if feeIndex == -1 {
@@ -52,8 +51,8 @@ func CreateTx(testNetMagic uint,
 		builder.UpdateOutputAmount(multiSigIndex, txInputInfos.MultiSig.Sum-outputsSum+multisigAmount)
 	}
 
-	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...)
-	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
+	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
+		AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
