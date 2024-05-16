@@ -30,7 +30,7 @@ func RelayerExecute(
 		return fmt.Errorf("failed to get last submitted batch id from db for chainID: %s. err: %w", chainID, err)
 	}
 
-	logger.Debug("Signed batch retrieved from contract", "batch", confirmedBatch.ID, "chainID", chainID,
+	logger.Debug("Signed batch retrieved from contract", "batchID", confirmedBatch.ID, "chainID", chainID,
 		"lastSubmittedBatchID", lastSubmittedBatchID)
 
 	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 0)
@@ -54,6 +54,8 @@ func RelayerExecute(
 			return nil
 		}
 	}
+
+	logger.Info("Submitting batch tx", "chainID", chainID, "confirmedBatch", confirmedBatch)
 
 	if err := sendTx(ctx, confirmedBatch); err != nil {
 		return fmt.Errorf("failed to send confirmed batch for chainID: %s. err: %w", chainID, err)

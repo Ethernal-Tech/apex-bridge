@@ -80,7 +80,8 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, claim)
 
-	p.logger.Info("Added BatchExecutionFailedClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+	p.logger.Info("Added BatchExecutionFailedClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.BatchExecutionFailedClaimString(claim))
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(

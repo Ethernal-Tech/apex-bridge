@@ -79,7 +79,8 @@ func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(
 
 		claims.RefundRequest = append(claims.RefundRequest, claim)
 
-		p.logger.Info("Added RefundRequestClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+		p.logger.Info("Added RefundRequestClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
 	*/
 }
 

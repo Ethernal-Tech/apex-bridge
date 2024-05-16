@@ -93,7 +93,8 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
 
-	p.logger.Info("Added BatchExecutedClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+	p.logger.Info("Added BatchExecutedClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.BatchExecutedClaimString(claim))
 }
 
 func (*BatchExecutedProcessorImpl) validate(

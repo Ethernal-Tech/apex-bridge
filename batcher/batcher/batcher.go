@@ -130,7 +130,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.logger.Debug("Submitting signed batch to smart contract", "chainID", b.config.Chain.ChainID,
-		"signedBatch", signedBatch)
+		"signedBatch", eth.BatchToString(signedBatch))
 
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {

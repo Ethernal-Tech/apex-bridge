@@ -79,7 +79,8 @@ func (*RefundExecutedProcessorImpl) addRefundExecutedClaim(
 
 		claims.RefundExecuted = append(claims.RefundExecuted, claim)
 
-		p.logger.Info("Added RefundExecutedClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+		p.logger.Info("Added RefundExecutedClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundExecutedClaimString(claim))
 	*/
 }
 

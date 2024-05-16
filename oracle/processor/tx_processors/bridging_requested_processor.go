@@ -109,7 +109,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
-	p.logger.Info("Added BridgingRequestClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+	p.logger.Info("Added BridgingRequestClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.BridgingRequestClaimString(claim))
 }
 
 /*
@@ -137,7 +138,8 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 
 		claims.RefundRequest = append(claims.RefundRequest, claim)
 
-		p.logger.Info("Added RefundRequestClaim", "txHash", tx.Hash, "metadata", metadata, "claim", claim)
+		p.logger.Info("Added RefundRequestClaim",
+		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
 }
 */
 

@@ -2,6 +2,8 @@ package eth
 
 import (
 	"encoding/hex"
+	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
@@ -59,4 +61,40 @@ func NewConfirmedBatch(
 		MultisigSignatures:         multisigSignatures,
 		FeePayerMultisigSignatures: feePayerMultisigSignatures,
 	}, nil
+}
+
+func BatchToString(b SignedBatch) string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(b.Id.String())
+	sb.WriteString("\ndestination chain id = ")
+	sb.WriteString(b.DestinationChainId)
+	sb.WriteString("\nraw tx = ")
+	sb.WriteString(b.RawTransaction)
+	sb.WriteString("\nmultisig signature = ")
+	sb.WriteString(b.MultisigSignature)
+	sb.WriteString("\nfee payer multisig signature = ")
+	sb.WriteString(b.FeePayerMultisigSignature)
+	sb.WriteString("\nfirst tx nonce id = ")
+	sb.WriteString(b.FirstTxNonceId.String())
+	sb.WriteString("\nlast tx nonce id = ")
+	sb.WriteString(b.LastTxNonceId.String())
+	sb.WriteString("\nmultisig owned used utxos cnt = ")
+	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
+	sb.WriteString("\nfeepayer owned used utxos cnt = ")
+	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.FeePayerOwnedUTXOs)))
+
+	return sb.String()
+}
+
+func (b ConfirmedBatch) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(b.ID)
+	sb.WriteString("\nraw tx = ")
+	sb.WriteString(hex.EncodeToString(b.RawTransaction))
+
+	return sb.String()
 }
