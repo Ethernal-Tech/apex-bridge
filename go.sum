@@ -12,8 +12,8 @@ cloud.google.com/go/secretmanager v1.12.0/go.mod h1:Y1Gne3Ag+fZ2TDTiJc8ZJCMFbi7k
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240516145459-f469e73299e7 h1:90pfrxvXyR/DqFpoMco6PApVXP/xoq3h5h4a9TnUpNo=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240516145459-f469e73299e7/go.mod h1:fu6FAOJ2BTQSmsU33kZTMDvtNc/PjBtPCEcV7gcdGxs=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240517125628-a791b4214a79 h1:ViOMHoGhVnK5bDd/x68Hxr3fw7R6VRyzK9wImxVhm2E=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240517125628-a791b4214a79/go.mod h1:fu6FAOJ2BTQSmsU33kZTMDvtNc/PjBtPCEcV7gcdGxs=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/VictoriaMetrics/fastcache v1.12.1 h1:i0mICQuojGDL3KblA7wUNlY5lOK6a4bwt3uRKnkZU40=
