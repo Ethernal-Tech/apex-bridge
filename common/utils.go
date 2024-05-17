@@ -82,7 +82,7 @@ func MulPercentage(value *big.Int, percentage uint64) *big.Int {
 	return res.Div(res, big.NewInt(100))
 }
 
-// SafeSubtract subtract safely two uint64 value and return default value if we have overflow
+// SafeSubtract subtracts safely two uint64 value and return default value if we have overflow
 func SafeSubtract(a, b, def uint64) uint64 {
 	if a >= b {
 		return a - b
