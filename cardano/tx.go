@@ -45,7 +45,6 @@ func CreateTx(testNetMagic uint,
 	// add multisig output if change is not zero
 	if changeAmount > 0 {
 		if multiSigIndex == -1 {
-
 			builder.AddOutputs(cardanowallet.TxOutput{
 				Addr:   txInputInfos.MultiSig.Address,
 				Amount: changeAmount,

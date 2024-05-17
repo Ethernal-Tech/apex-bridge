@@ -89,6 +89,7 @@ func BatchToString(b SignedBatch) string {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
 			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
 	}
+
 	sb.WriteString("]")
 	sb.WriteString("\nfeepayer owned used utxos cnt = ")
 	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.FeePayerOwnedUTXOs)))
@@ -98,6 +99,7 @@ func BatchToString(b SignedBatch) string {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
 			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
 	}
+
 	sb.WriteString("]")
 
 	return sb.String()
@@ -110,8 +112,8 @@ func (b ConfirmedBatch) String() string {
 	sb.WriteString(b.ID)
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
-
 	sb.WriteString("\nmultisig signatures = [")
+
 	for i, sig := range b.MultisigSignatures {
 		if i > 0 {
 			sb.WriteString(", ")
@@ -121,8 +123,8 @@ func (b ConfirmedBatch) String() string {
 	}
 
 	sb.WriteString("]")
-
 	sb.WriteString("\nfee payer multisig signatures = [")
+
 	for i, sig := range b.FeePayerMultisigSignatures {
 		if i > 0 {
 			sb.WriteString(", ")
