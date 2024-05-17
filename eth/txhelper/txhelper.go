@@ -22,7 +22,7 @@ type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 const (
 	defaultGasLimit         = uint64(5_242_880) // 0x500000
 	defaultNumRetries       = 1000
-	defaultGasFeeMultiplier = 1.6
+	defaultGasFeeMultiplier = 170 // 170%
 )
 
 type IEthTxHelper interface {
@@ -42,7 +42,7 @@ type EthTxHelperImpl struct {
 	writer           io.Writer
 	numRetries       int
 	receiptWaitTime  time.Duration
-	gasFeeMultiplier float64
+	gasFeeMultiplier uint64
 	isDynamic        bool
 	zeroGasPrice     bool
 	defaultGasLimit  uint64
@@ -207,7 +207,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 					return err
 				}
 
-				txOpts.GasPrice = new(big.Int).SetUint64(uint64(float64(gasPrice.Uint64()) * t.gasFeeMultiplier))
+				txOpts.GasPrice = mulPercentage(gasPrice, t.gasFeeMultiplier)
 			}
 		}
 	} else if txOpts.GasFeeCap == nil || txOpts.GasTipCap == nil {
@@ -216,7 +216,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 			return err
 		}
 
-		txOpts.GasTipCap = new(big.Int).SetUint64(uint64(float64(gasTipCap.Uint64()) * t.gasFeeMultiplier))
+		txOpts.GasTipCap = mulPercentage(gasTipCap, t.gasFeeMultiplier)
 
 		hs, err := t.client.FeeHistory(ctx, 1, nil, nil)
 		if err != nil {
@@ -226,7 +226,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 		gasFeeCap := hs.BaseFee[len(hs.BaseFee)-1]
 		gasFeeCap = gasFeeCap.Add(gasFeeCap, gasTipCap)
 
-		txOpts.GasFeeCap = new(big.Int).SetUint64(uint64(float64(gasFeeCap.Uint64()) * t.gasFeeMultiplier))
+		txOpts.GasFeeCap = mulPercentage(gasFeeCap, t.gasFeeMultiplier)
 	}
 
 	return nil
@@ -273,7 +273,7 @@ func WithNumRetries(numRetries int) TxRelayerOption {
 	}
 }
 
-func WithGasFeeMultiplier(gasFeeMultiplier float64) TxRelayerOption {
+func WithGasFeeMultiplier(gasFeeMultiplier uint64) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.gasFeeMultiplier = gasFeeMultiplier
 	}
@@ -289,4 +289,10 @@ func WithDefaultGasLimit(gasLimit uint64) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.defaultGasLimit = gasLimit
 	}
+}
+
+func mulPercentage(value *big.Int, percentage uint64) *big.Int {
+	res := new(big.Int).Mul(value, new(big.Int).SetUint64(percentage))
+
+	return res.Div(res, big.NewInt(100))
 }
