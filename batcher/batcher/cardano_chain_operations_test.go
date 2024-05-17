@@ -624,7 +624,7 @@ func generateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []car
 	return
 }
 
-func generateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
+func generateTxInfos(t *testing.T, testnetMagic uint32) cardano.TxInputInfos {
 	t.Helper()
 
 	dummyKeyHashes := []string{
@@ -646,8 +646,7 @@ func generateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(testnetMagic))
 	require.NoError(t, err)
 
-	txInfos := &cardano.TxInputInfos{
-		TestNetMagic: uint(testnetMagic),
+	return cardano.TxInputInfos{
 		MultiSig: &cardano.TxInputInfo{
 			PolicyScript: multisigPolicyScript,
 			Address:      multisigAddress,
@@ -657,8 +656,6 @@ func generateTxInfos(t *testing.T, testnetMagic uint32) *cardano.TxInputInfos {
 			Address:      multisigFeeAddress,
 		},
 	}
-
-	return txInfos
 }
 
 func generateProtocolParams() ([]byte, error) {

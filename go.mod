@@ -3,7 +3,7 @@ module github.com/Ethernal-Tech/apex-bridge
 go 1.21
 
 require (
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240517125628-a791b4214a79
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240517134201-b5de104c54db
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
@@ -79,7 +79,7 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
-	github.com/blinklabs-io/gouroboros v0.79.0 // indirect
+	github.com/blinklabs-io/gouroboros v0.79.0
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect

@@ -15,13 +15,13 @@ func CreateTx(testNetMagic uint,
 	protocolParams []byte,
 	timeToLive uint64,
 	metadataBytes []byte,
-	txInputInfos *TxInputInfos,
+	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
-	changeAmount := txInputInfos.MultiSig.Sum - outputsAmount + multisigAmount
+	changeAmount := common.SafeSubtract(txInputInfos.MultiSig.Sum+multisigAmount, outputsAmount, 0)
 
 	builder, err := cardanowallet.NewTxBuilder()
 	if err != nil {
@@ -67,7 +67,7 @@ func CreateTx(testNetMagic uint,
 
 	builder.SetFee(fee)
 
-	feeAmountFinal := txInputInfos.MultiSigFee.Sum - fee + feeAmount
+	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum+feeAmount, fee, 0)
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeAmountFinal > 0 {
