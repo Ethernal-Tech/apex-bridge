@@ -19,7 +19,6 @@ const (
 type BridgingRequestState struct {
 	SourceChainID      string
 	SourceTxHash       string
-	InputAddrs         []string
 	DestinationChainID string
 	BatchID            uint64
 	Status             BridgingRequestStatus
@@ -42,11 +41,10 @@ func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash string) []by
 	return []byte(ToBridgingRequestStateStrKey(sourceChainID, sourceTxHash))
 }
 
-func NewBridgingRequestState(sourceChainID string, sourceTxHash string, inputAddrs []string) *BridgingRequestState {
+func NewBridgingRequestState(sourceChainID string, sourceTxHash string) *BridgingRequestState {
 	return &BridgingRequestState{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
-		InputAddrs:    inputAddrs,
 		Status:        BridgingRequestStatusDiscoveredOnSource,
 	}
 }

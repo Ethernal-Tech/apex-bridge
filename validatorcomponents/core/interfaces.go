@@ -10,7 +10,6 @@ type BridgingRequestStateDB interface {
 	UpdateBridgingRequestState(state *BridgingRequestState) error
 	GetBridgingRequestState(sourceChainID string, sourceTxHash string) (*BridgingRequestState, error)
 	GetBridgingRequestStatesByBatchID(destinationChainID string, batchID uint64) ([]*BridgingRequestState, error)
-	GetUserBridgingRequestStates(sourceChainID string, userAddr string) ([]*BridgingRequestState, error)
 }
 
 type Database interface {
@@ -34,7 +33,7 @@ type BridgingRequestStateManager interface {
 	common.BridgingRequestStateUpdater
 
 	Get(sourceChainID string, sourceTxHash string) (*BridgingRequestState, error)
-	GetAllForUser(sourceChainID string, userAddr string) ([]*BridgingRequestState, error)
+	GetMultiple(sourceChainID string, sourceTxHashes []string) ([]*BridgingRequestState, error)
 }
 
 type RelayerImitator interface {

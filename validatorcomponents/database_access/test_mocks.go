@@ -48,22 +48,6 @@ func (m *BridgingRequestStateDBMock) GetBridgingRequestStatesByBatchID(
 	return arg0, args.Error(1)
 }
 
-// GetUserBridgingRequestStates implements core.BridgingRequestStateDb.
-func (m *BridgingRequestStateDBMock) GetUserBridgingRequestStates(
-	sourceChainID string, userAddr string,
-) (
-	[]*core.BridgingRequestState, error,
-) {
-	args := m.Called()
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	arg0, _ := args.Get(0).([]*core.BridgingRequestState)
-
-	return arg0, args.Error(1)
-}
-
 // UpdateBridgingRequestState implements core.BridgingRequestStateDb.
 func (m *BridgingRequestStateDBMock) UpdateBridgingRequestState(state *core.BridgingRequestState) error {
 	args := m.Called()

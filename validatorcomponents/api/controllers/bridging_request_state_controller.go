@@ -35,7 +35,7 @@ func (*BridgingRequestStateControllerImpl) GetPathPrefix() string {
 func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*core.APIEndpoint {
 	return []*core.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.get, APIKeyAuth: true},
-		{Path: "GetAllForUser", Method: http.MethodGet, Handler: c.getAllForUser, APIKeyAuth: true},
+		{Path: "GetMultiple", Method: http.MethodGet, Handler: c.getMultiple, APIKeyAuth: true},
 	}
 }
 
@@ -105,8 +105,8 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	}
 }
 
-func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("getAllForUser called", "url", r.URL)
+func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, r *http.Request) {
+	c.logger.Debug("getMultiple called", "url", r.URL)
 
 	queryValues := r.URL.Query()
 	c.logger.Debug("query values", queryValues, "url", r.URL)
@@ -123,22 +123,10 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 		return
 	}
 
-	userAddrArr, exists := queryValues["userAddr"]
-	if !exists || len(userAddrArr) == 0 {
-		c.logger.Debug("userAddr missing from query", "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "userAddr missing from query")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
-
-		return
-	}
-
 	chainID := chainIDArr[0]
-	userAddr := userAddrArr[0]
+	txHashes := queryValues["txHash"]
 
-	states, err := c.bridgingRequestStateManager.GetAllForUser(chainID, userAddr)
+	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
 	if err != nil {
 		c.logger.Debug(err.Error(), "url", r.URL)
 
@@ -150,12 +138,12 @@ func (c *BridgingRequestStateControllerImpl) getAllForUser(w http.ResponseWriter
 		return
 	}
 
-	statesResponse := make([]*response.BridgingRequestStateResponse, 0, len(states))
+	statesResponse := make(map[string]*response.BridgingRequestStateResponse, len(states))
 	for _, state := range states {
-		statesResponse = append(statesResponse, response.NewBridgingRequestStateResponse(state))
+		statesResponse[state.SourceTxHash] = response.NewBridgingRequestStateResponse(state)
 	}
 
-	c.logger.Debug("getAllForUser success", "url", r.URL)
+	c.logger.Debug("getMultiple success", "url", r.URL)
 
 	w.Header().Set("Content-Type", "application/json")
 
