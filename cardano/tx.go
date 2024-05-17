@@ -1,13 +1,10 @@
 package cardanotx
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/fxamacker/cbor/v2"
 )
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
@@ -15,12 +12,13 @@ func CreateTx(testNetMagic uint,
 	protocolParams []byte,
 	timeToLive uint64,
 	metadataBytes []byte,
-	txInputInfos *TxInputInfos,
+	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
-	outputsSum := cardanowallet.GetOutputsSum(outputs)
+	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
+	changeAmount := common.SafeSubtract(txInputInfos.MultiSig.Sum+multisigAmount, outputsAmount, 0)
 
 	builder, err := cardanowallet.NewTxBuilder()
 	if err != nil {
@@ -41,14 +39,23 @@ func CreateTx(testNetMagic uint,
 		})
 	}
 
-	// add multisig output
-	if multiSigIndex == -1 {
-		builder.AddOutputs(cardanowallet.TxOutput{
-			Addr:   txInputInfos.MultiSig.Address,
-			Amount: txInputInfos.MultiSig.Sum - outputsSum, // multisigAmount is 0 in this case
-		})
-	} else {
-		builder.UpdateOutputAmount(multiSigIndex, txInputInfos.MultiSig.Sum-outputsSum+multisigAmount)
+	// add multisig output if change is not zero
+	if changeAmount > 0 {
+		if multiSigIndex == -1 {
+			builder.AddOutputs(cardanowallet.TxOutput{
+				Addr:   txInputInfos.MultiSig.Address,
+				Amount: changeAmount,
+			})
+		} else {
+			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
+		}
+	} else if multiSigIndex >= 0 {
+		// we need to decrement feeIndex if it was after multisig in outputs
+		if feeIndex > multiSigIndex {
+			feeIndex--
+		}
+
+		builder.RemoveOutput(multiSigIndex)
 	}
 
 	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
@@ -61,8 +68,14 @@ func CreateTx(testNetMagic uint,
 
 	builder.SetFee(fee)
 
-	// update multisigFee amount
-	builder.UpdateOutputAmount(feeIndex, txInputInfos.MultiSigFee.Sum-fee+feeAmount)
+	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum+feeAmount, fee, 0)
+
+	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
+	if feeAmountFinal > 0 {
+		builder.UpdateOutputAmount(feeIndex, feeAmountFinal)
+	} else {
+		builder.RemoveOutput(feeIndex)
+	}
 
 	return builder.Build()
 }
@@ -75,46 +88,6 @@ func CreateTxWitness(txHash string, key cardanowallet.ISigner) ([]byte, error) {
 // AssembleTxWitnesses assembles all witnesses in final cbor of signed tx
 func AssembleTxWitnesses(txRaw []byte, witnesses [][]byte) ([]byte, error) {
 	return cardanowallet.AssembleTxWitnesses(txRaw, witnesses)
-}
-
-type SigningKey struct {
-	private []byte
-	public  []byte
-}
-
-func NewSigningKey(s string) SigningKey {
-	private := decodeCbor(s)
-
-	return SigningKey{
-		private: private,
-		public:  cardanowallet.GetVerificationKeyFromSigningKey(private),
-	}
-}
-
-func (sk SigningKey) GetSigningKey() []byte {
-	return sk.private
-}
-
-func (sk SigningKey) GetVerificationKey() []byte {
-	return sk.public
-}
-
-func decodeCbor(s string) (r []byte) {
-	b, _ := hex.DecodeString(s)
-	_ = cbor.Unmarshal(b, &r)
-
-	return r
-}
-
-func CreateMetaData(v *big.Int) ([]byte, error) {
-	metadata := map[string]interface{}{
-		"0": map[string]interface{}{
-			"type":  "multi",
-			"value": v.String(),
-		},
-	}
-
-	return json.Marshal(metadata)
 }
 
 func CreateBatchMetaData(v *big.Int) ([]byte, error) {

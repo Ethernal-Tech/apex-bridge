@@ -75,8 +75,18 @@ func SplitString(s string, mxlen int) (res []string) {
 	return res
 }
 
+// MulPercentage multuple value with percentage and divide with 100
 func MulPercentage(value *big.Int, percentage uint64) *big.Int {
 	res := new(big.Int).Mul(value, new(big.Int).SetUint64(percentage))
 
 	return res.Div(res, big.NewInt(100))
+}
+
+// SafeSubtract subtracts safely two uint64 value and return default value if we have overflow
+func SafeSubtract(a, b, def uint64) uint64 {
+	if a >= b {
+		return a - b
+	}
+
+	return def
 }

@@ -167,8 +167,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 	txOutput := getOutputs(confirmedTransactions)
 
-	txInfos := &cardano.TxInputInfos{
-		TestNetMagic: uint(cco.Config.TestNetMagic),
+	txInfos := cardano.TxInputInfos{
 		MultiSig: &cardano.TxInputInfo{
 			PolicyScript: multisigPolicyScript,
 			Address:      multisigAddress,
@@ -205,7 +204,7 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 func (cco *CardanoChainOperations) createBatchTx(
 	inputUtxos eth.UTXOs,
 	metadata []byte, protocolParams []byte,
-	txInfos *cardano.TxInputInfos,
+	txInfos cardano.TxInputInfos,
 	txOutputs cardano.TxOutputs, slotNumber uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	cco.logger.Info("creating batch tx",

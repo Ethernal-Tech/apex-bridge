@@ -9,16 +9,13 @@ import (
 )
 
 type TxInputInfos struct {
-	TestNetMagic uint
-	MultiSig     *TxInputInfo
-	MultiSigFee  *TxInputInfo
+	MultiSig    *TxInputInfo
+	MultiSigFee *TxInputInfo
 }
 
 func NewTxInputInfos(
 	keyHashesMultiSig []string, keyHashesMultiSigFee []string, testNetMagic uint,
-) (
-	*TxInputInfos, error,
-) {
+) (*TxInputInfos, error) {
 	result := [2]*TxInputInfo{}
 
 	for i, keyHashes := range [][]string{keyHashesMultiSig, keyHashesMultiSigFee} {
@@ -39,9 +36,8 @@ func NewTxInputInfos(
 	}
 
 	return &TxInputInfos{
-		TestNetMagic: testNetMagic,
-		MultiSig:     result[0],
-		MultiSigFee:  result[1],
+		MultiSig:    result[0],
+		MultiSigFee: result[1],
 	}, nil
 }
 
