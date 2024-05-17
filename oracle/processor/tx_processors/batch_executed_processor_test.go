@@ -168,8 +168,8 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		const txHash = "test_hash"
 
 		txOutputs := []*indexer.TxOutput{
-			{Address: "addr1", Amount: 1},
-			{Address: "addr2", Amount: 2},
+			{Address: "addr_bridging", Amount: 1},
+			{Address: "addr_fee", Amount: 2},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			OriginChainID: "prime",
@@ -186,9 +186,11 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
 		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutedClaims[0].BatchNonceID)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
-		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, len(txOutputs))
+		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 1)
 		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[0].Amount))
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[1].Amount, new(big.Int).SetUint64(txOutputs[1].Amount))
+		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs)
+		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs, 1)
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[1].Amount))
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {
