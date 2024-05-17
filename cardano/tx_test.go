@@ -149,4 +149,233 @@ func TestCreateTx(t *testing.T) {
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
+
+	t.Run("multisig in outputs, fee not in outputs with change for multisig", func(t *testing.T) {
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   multiSigAddr,
+				Amount: 131,
+			},
+			{
+				Addr:   outputAddr,
+				Amount: wallet.MinUTxODefaultValue,
+			},
+		}
+
+		rawTx, hash, err := CreateTx(
+			uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, hash)
+
+		info, err := indexer.ParseTxFull(rawTx)
+		require.NoError(t, err)
+
+		require.Len(t, info.Outputs, 3)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), wallet.MinUTxODefaultValue*2)
+		assert.True(t, isInOutputs(info.Outputs, feeAddr))
+	})
+
+	t.Run("multisig in outputs, fee not in outputs without change for multisig", func(t *testing.T) {
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue,
+		}
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   multiSigAddr,
+				Amount: 131,
+			},
+			{
+				Addr:   outputAddr,
+				Amount: wallet.MinUTxODefaultValue,
+			},
+		}
+
+		rawTx, hash, err := CreateTx(
+			uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, hash)
+
+		info, err := indexer.ParseTxFull(rawTx)
+		require.NoError(t, err)
+
+		require.Len(t, info.Outputs, 2)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
+		assert.True(t, isInOutputs(info.Outputs, feeAddr))
+	})
+
+	t.Run("multisig not in outputs, fee in outputs with change for multisig", func(t *testing.T) {
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   feeAddr,
+				Amount: 131,
+			},
+			{
+				Addr:   outputAddr,
+				Amount: wallet.MinUTxODefaultValue,
+			},
+		}
+
+		rawTx, hash, err := CreateTx(
+			uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, hash)
+
+		info, err := indexer.ParseTxFull(rawTx)
+		require.NoError(t, err)
+
+		require.Len(t, info.Outputs, 3)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), wallet.MinUTxODefaultValue*2-131)
+		assert.True(t, isInOutputs(info.Outputs, feeAddr))
+	})
+
+	t.Run("multisig not in outputs, fee in outputs without change for multisig", func(t *testing.T) {
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue + 131,
+		}
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue * 3,
+		}
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   feeAddr,
+				Amount: 131,
+			},
+			{
+				Addr:   outputAddr,
+				Amount: wallet.MinUTxODefaultValue,
+			},
+		}
+
+		rawTx, hash, err := CreateTx(
+			uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, hash)
+
+		info, err := indexer.ParseTxFull(rawTx)
+		require.NoError(t, err)
+
+		require.Len(t, info.Outputs, 2)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
+		assert.True(t, isInOutputs(info.Outputs, feeAddr))
+	})
+
+	t.Run("multisig in outputs, fee in outputs without change for fee", func(t *testing.T) {
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+				},
+			},
+			Sum: wallet.MinUTxODefaultValue + 131,
+		}
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
+			Inputs: []wallet.TxInput{
+				{
+					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+					Index: 1,
+				},
+			},
+			Sum: 195377 - 131,
+		}
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   multiSigAddr,
+				Amount: 150,
+			},
+			{
+				Addr:   feeAddr,
+				Amount: 131,
+			},
+			{
+				Addr:   outputAddr,
+				Amount: wallet.MinUTxODefaultValue,
+			},
+		}
+
+		rawTx, hash, err := CreateTx(
+			uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, hash)
+
+		info, err := indexer.ParseTxFull(rawTx)
+		require.NoError(t, err)
+
+		require.Len(t, info.Outputs, 1)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
+		assert.False(t, isInOutputs(info.Outputs, feeAddr))
+	})
 }

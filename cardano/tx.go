@@ -53,6 +53,11 @@ func CreateTx(testNetMagic uint,
 			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
 		}
 	} else if multiSigIndex >= 0 {
+		// we need to decrement feeIndex if it was after multisig in outputs
+		if feeIndex > multiSigIndex {
+			feeIndex--
+		}
+
 		builder.RemoveOutput(multiSigIndex)
 	}
 
