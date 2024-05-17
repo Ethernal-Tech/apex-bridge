@@ -18,9 +18,10 @@ func CreateTx(testNetMagic uint,
 	txInputInfos *TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
-	outputsSum := cardanowallet.GetOutputsSum(outputs)
+	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
+	changeAmount := txInputInfos.MultiSig.Sum - outputsAmount + multisigAmount
 
 	builder, err := cardanowallet.NewTxBuilder()
 	if err != nil {
@@ -41,14 +42,19 @@ func CreateTx(testNetMagic uint,
 		})
 	}
 
-	// add multisig output
-	if multiSigIndex == -1 {
-		builder.AddOutputs(cardanowallet.TxOutput{
-			Addr:   txInputInfos.MultiSig.Address,
-			Amount: txInputInfos.MultiSig.Sum - outputsSum, // multisigAmount is 0 in this case
-		})
-	} else {
-		builder.UpdateOutputAmount(multiSigIndex, txInputInfos.MultiSig.Sum-outputsSum+multisigAmount)
+	// add multisig output if change is not zero
+	if changeAmount > 0 {
+		if multiSigIndex == -1 {
+
+			builder.AddOutputs(cardanowallet.TxOutput{
+				Addr:   txInputInfos.MultiSig.Address,
+				Amount: changeAmount,
+			})
+		} else {
+			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
+		}
+	} else if multiSigIndex >= 0 {
+		builder.RemoveOutput(multiSigIndex)
 	}
 
 	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
@@ -61,8 +67,14 @@ func CreateTx(testNetMagic uint,
 
 	builder.SetFee(fee)
 
-	// update multisigFee amount
-	builder.UpdateOutputAmount(feeIndex, txInputInfos.MultiSigFee.Sum-fee+feeAmount)
+	feeAmountFinal := txInputInfos.MultiSigFee.Sum - fee + feeAmount
+
+	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
+	if feeAmountFinal > 0 {
+		builder.UpdateOutputAmount(feeIndex, feeAmountFinal)
+	} else {
+		builder.RemoveOutput(feeIndex)
+	}
 
 	return builder.Build()
 }
