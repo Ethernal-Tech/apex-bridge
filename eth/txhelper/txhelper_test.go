@@ -33,11 +33,11 @@ func TestTxHelper(t *testing.T) {
 	require.NoError(t, err)
 
 	txHelper, err := NewEThTxHelper(
-		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3))
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150))
 	require.NoError(t, err)
 
 	txHelperDynamic, err := NewEThTxHelper(
-		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(1.3), WithDynamicTx(true))
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150), WithDynamicTx(true))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
