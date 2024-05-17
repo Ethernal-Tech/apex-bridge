@@ -18,32 +18,37 @@ type EthHelperWrapper struct {
 	wallet      ethtxhelper.IEthTxWallet
 	ethTxHelper ethtxhelper.IEthTxHelper
 	isDynamic   bool
-	logger      hclog.Logger
+	opts        []ethtxhelper.TxRelayerOption
 	lock        sync.Mutex
+	logger      hclog.Logger
 }
 
 func NewEthHelperWrapper(
 	nodeURL string, isDynamic bool, logger hclog.Logger,
+	opts ...ethtxhelper.TxRelayerOption,
 ) *EthHelperWrapper {
 	return &EthHelperWrapper{
 		nodeURL:   nodeURL,
 		isDynamic: isDynamic,
+		opts:      append([]ethtxhelper.TxRelayerOption(nil), opts...),
 		logger:    logger,
 	}
 }
 
 func NewEthHelperWrapperWithWallet(
 	nodeURL string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
+	opts ...ethtxhelper.TxRelayerOption,
 ) (*EthHelperWrapper, error) {
 	return &EthHelperWrapper{
 		nodeURL:   nodeURL,
 		wallet:    wallet,
 		isDynamic: isDynamic,
+		opts:      append([]ethtxhelper.TxRelayerOption(nil), opts...),
 		logger:    logger,
 	}, nil
 }
 
-func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (ethtxhelper.IEthTxHelper, error) {
+func (e *EthHelperWrapper) GetEthHelper() (ethtxhelper.IEthTxHelper, error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
@@ -53,10 +58,10 @@ func (e *EthHelperWrapper) GetEthHelper(opts ...ethtxhelper.TxRelayerOption) (et
 
 	finalOpts := append(
 		append(
-			make([]ethtxhelper.TxRelayerOption, 0, len(opts)+2),
+			make([]ethtxhelper.TxRelayerOption, 0, len(e.opts)+2),
 			ethtxhelper.WithNodeURL(e.nodeURL),
 			ethtxhelper.WithDynamicTx(e.isDynamic),
-		), opts...)
+		), e.opts...)
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(finalOpts...)
 	if err != nil {

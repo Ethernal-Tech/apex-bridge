@@ -413,7 +413,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			MinFeeForBridging:              1000010,
 			UtxoMinValue:                   1000000,
 			MaxReceiversPerBridgingRequest: 5,
-			MaxBridgingClaimsToGroup:       10,
+			MaxBridgingClaimsToGroup:       5,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{

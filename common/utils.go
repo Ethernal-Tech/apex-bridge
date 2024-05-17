@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"net/url"
 	"strings"
 	"time"
@@ -72,4 +73,10 @@ func SplitString(s string, mxlen int) (res []string) {
 	}
 
 	return res
+}
+
+func MulPercentage(value *big.Int, percentage uint64) *big.Int {
+	res := new(big.Int).Mul(value, new(big.Int).SetUint64(percentage))
+
+	return res.Div(res, big.NewInt(100))
 }
