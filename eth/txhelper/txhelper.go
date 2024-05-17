@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	apexCommon "github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,11 +29,11 @@ const (
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
-	Deploy(ctx context.Context, nonce *big.Int, gasLimit uint64,
-		abiData abi.ABI, bytecode []byte, wallet IEthTxWallet) (string, string, error)
+	Deploy(ctx context.Context, wallet IEthTxWallet,
+		txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte) (string, string, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
-	SendTx(ctx context.Context,
-		wallet IEthTxWallet, txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
+	SendTx(ctx context.Context, wallet IEthTxWallet,
+		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
 	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
 
@@ -46,6 +47,7 @@ type EthTxHelperImpl struct {
 	isDynamic        bool
 	zeroGasPrice     bool
 	defaultGasLimit  uint64
+	chainID          *big.Int
 	mutex            sync.Mutex
 }
 
@@ -88,32 +90,36 @@ func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending boo
 }
 
 func (t *EthTxHelperImpl) Deploy(
-	ctx context.Context, nonce *big.Int, gasLimit uint64, abiData abi.ABI, bytecode []byte, wallet IEthTxWallet,
+	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte,
 ) (string, string, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	// chainID retrieval
-	chainID, err := t.client.ChainID(ctx)
-	if err != nil {
-		return "", "", err
+	chainID := t.chainID
+	if chainID == nil {
+		// chainID retrieval
+		retChainID, err := t.client.ChainID(ctx)
+		if err != nil {
+			return "", "", err
+		}
+
+		chainID = retChainID
 	}
 
 	// Create contract deployment transaction
-	auth, err := wallet.GetTransactOpts(chainID)
+	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
 		return "", "", err
 	}
 
-	auth.Nonce = nonce
-	auth.GasLimit = gasLimit
+	copyTxOpts(txOptsRes, &txOptsParam)
 
-	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), auth); err != nil {
+	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
 		return "", "", err
 	}
 
 	// Deploy the contract
-	contractAddress, tx, _, err := bind.DeployContract(auth, abiData, bytecode, t.client)
+	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client)
 	if err != nil {
 		return "", "", err
 	}
@@ -150,10 +156,15 @@ func (t *EthTxHelperImpl) SendTx(
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	// chainID retrieval
-	chainID, err := t.client.ChainID(ctx)
-	if err != nil {
-		return nil, err
+	chainID := t.chainID
+	if chainID == nil {
+		// chainID retrieval
+		retChainID, err := t.client.ChainID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		chainID = retChainID
 	}
 
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
@@ -161,13 +172,7 @@ func (t *EthTxHelperImpl) SendTx(
 		return nil, err
 	}
 
-	txOptsRes.NoSend = txOptsParam.NoSend
-	txOptsRes.GasPrice = txOptsParam.GasPrice
-	txOptsRes.GasFeeCap = txOptsParam.GasFeeCap
-	txOptsRes.GasTipCap = txOptsParam.GasTipCap
-	txOptsRes.GasLimit = txOptsParam.GasLimit
-	txOptsRes.Nonce = txOptsParam.Nonce
-	txOptsRes.Value = txOptsParam.Value
+	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
 		return nil, err
@@ -207,7 +212,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 					return err
 				}
 
-				txOpts.GasPrice = mulPercentage(gasPrice, t.gasFeeMultiplier)
+				txOpts.GasPrice = apexCommon.MulPercentage(gasPrice, t.gasFeeMultiplier)
 			}
 		}
 	} else if txOpts.GasFeeCap == nil || txOpts.GasTipCap == nil {
@@ -216,7 +221,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 			return err
 		}
 
-		txOpts.GasTipCap = mulPercentage(gasTipCap, t.gasFeeMultiplier)
+		txOpts.GasTipCap = apexCommon.MulPercentage(gasTipCap, t.gasFeeMultiplier)
 
 		hs, err := t.client.FeeHistory(ctx, 1, nil, nil)
 		if err != nil {
@@ -226,7 +231,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 		gasFeeCap := hs.BaseFee[len(hs.BaseFee)-1]
 		gasFeeCap = gasFeeCap.Add(gasFeeCap, gasTipCap)
 
-		txOpts.GasFeeCap = mulPercentage(gasFeeCap, t.gasFeeMultiplier)
+		txOpts.GasFeeCap = apexCommon.MulPercentage(gasFeeCap, t.gasFeeMultiplier)
 	}
 
 	return nil
@@ -291,8 +296,18 @@ func WithDefaultGasLimit(gasLimit uint64) TxRelayerOption {
 	}
 }
 
-func mulPercentage(value *big.Int, percentage uint64) *big.Int {
-	res := new(big.Int).Mul(value, new(big.Int).SetUint64(percentage))
+func WithChainID(chainID *big.Int) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.chainID = chainID
+	}
+}
 
-	return res.Div(res, big.NewInt(100))
+func copyTxOpts(dst, src *bind.TransactOpts) {
+	dst.NoSend = src.NoSend
+	dst.GasPrice = src.GasPrice
+	dst.GasFeeCap = src.GasFeeCap
+	dst.GasTipCap = src.GasTipCap
+	dst.GasLimit = src.GasLimit
+	dst.Nonce = src.Nonce
+	dst.Value = src.Value
 }

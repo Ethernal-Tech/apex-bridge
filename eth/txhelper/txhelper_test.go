@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	mumbaiNodeURL    = "http://localhost:12001"
+	mumbaiNodeURL    = "http://localhost:10002"
 	dummyMumbaiAccPk = "61deed8dda92a396e8e9dbcbb5a058bee274de1adc57b2067975691dacdd55c7"
 )
 
@@ -33,11 +33,13 @@ func TestTxHelper(t *testing.T) {
 	require.NoError(t, err)
 
 	txHelper, err := NewEThTxHelper(
-		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150))
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150),
+		WithZeroGasPrice(false), WithDefaultGasLimit(0))
 	require.NoError(t, err)
 
 	txHelperDynamic, err := NewEThTxHelper(
-		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150), WithDynamicTx(true))
+		WithNodeURL(mumbaiNodeURL), WithGasFeeMultiplier(150), WithDynamicTx(true),
+		WithZeroGasPrice(false), WithDefaultGasLimit(0))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -47,11 +49,7 @@ func TestTxHelper(t *testing.T) {
 		abiData, err := contractbinding.TestContractMetaData.GetAbi()
 		require.NoError(t, err)
 
-		nonce, err := txHelper.GetNonce(ctx, wallet.GetAddress().String(), false)
-		require.NoError(t, err)
-
-		addr, hash, err := txHelper.Deploy(ctx, new(big.Int).SetUint64(nonce),
-			uint64(300000), *abiData, scBytecode, wallet)
+		addr, hash, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *abiData, scBytecode)
 		require.NoError(t, err)
 		require.NotEqual(t, common.Address{}, addr)
 
