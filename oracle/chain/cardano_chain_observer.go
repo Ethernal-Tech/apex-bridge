@@ -144,7 +144,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 			BlockHash:   startBlockHash,
 			BlockNumber: config.StartBlockNumber - 1,
 		},
-		AddressCheck:           indexer.AddressCheckOutputs,
+		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
 		AddressesOfInterest:    addressesOfInterest,
 		SoftDeleteUtxo:         true,
