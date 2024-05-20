@@ -78,7 +78,7 @@ const (
 	apiKeysFlagDesc = "(mandatory) list of keys for API access"
 
 	ttlSlotIncFlagDesc            = "TTL slot increment"
-	slotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc"
+	slotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
 	outputDirFlagDesc                         = "path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"

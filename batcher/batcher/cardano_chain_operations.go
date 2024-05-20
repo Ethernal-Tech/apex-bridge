@@ -26,6 +26,8 @@ const (
 	minUtxoAmount = uint64(1000000)
 	maxUtxoCount  = 410
 	maxTxSize     = 16000
+
+	noBatchPeriodPercent = 0.125
 )
 
 type CardanoChainOperations struct {
@@ -80,12 +82,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
+	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain, noBatchPeriodPercent)
 	if err != nil {
 		return nil, err
 	}
 
-	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain)
+	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +247,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 }
 
 func (cco *CardanoChainOperations) getSlotNumber(
-	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chain string,
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chain string, noBatchPeriodPercent float64,
 ) (uint64, error) {
 	if cco.Config.SlotRoundingThreshold == 0 {
 		lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, chain)
@@ -261,10 +263,31 @@ func (cco *CardanoChainOperations) getSlotNumber(
 		return 0, err
 	}
 
-	threshold := cco.Config.SlotRoundingThreshold
-	newSlot := ((data.Slot + threshold - 1) / threshold) * threshold
+	newSlot, err := getSlotNumberWithRoundingThreshold(
+		data.Slot, cco.Config.SlotRoundingThreshold, noBatchPeriodPercent)
+	if err != nil {
+		return 0, err
+	}
 
 	cco.logger.Debug("calculate slotNumber with rounding", "slot", data.Slot, "newSlot", newSlot)
+
+	return newSlot, nil
+}
+
+func getSlotNumberWithRoundingThreshold(
+	slotNumber, threshold uint64, noBatchPeriodPercent float64,
+) (uint64, error) {
+	if slotNumber == 0 {
+		return 0, errors.New("slot number is zero")
+	}
+
+	newSlot := ((slotNumber + threshold - 1) / threshold) * threshold
+	diff := slotNumber - (newSlot - threshold)
+
+	if diff <= uint64(float64(threshold)*noBatchPeriodPercent) ||
+		diff >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
+		return 0, fmt.Errorf("no batch period is active: slot = %d, rounded slot = %d", slotNumber, newSlot)
+	}
 
 	return newSlot, nil
 }

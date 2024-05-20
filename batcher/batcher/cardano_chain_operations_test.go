@@ -479,6 +479,50 @@ func Test_getOutputs(t *testing.T) {
 	}, res.Outputs)
 }
 
+func Test_getSlotNumberWithRoundingThreshold(t *testing.T) {
+	_, err := getSlotNumberWithRoundingThreshold(66, 60, 0.125)
+	assert.ErrorContains(t, err, "no batch period is active")
+
+	_, err = getSlotNumberWithRoundingThreshold(12, 60, 0.2)
+	assert.ErrorContains(t, err, "no batch period is active")
+
+	_, err = getSlotNumberWithRoundingThreshold(115, 60, 0.125)
+	assert.ErrorContains(t, err, "no batch period is active")
+
+	_, err = getSlotNumberWithRoundingThreshold(224, 80, 0.2)
+	assert.ErrorContains(t, err, "no batch period is active")
+
+	_, err = getSlotNumberWithRoundingThreshold(336, 80, 0.2)
+	assert.ErrorContains(t, err, "no batch period is active")
+
+	_, err = getSlotNumberWithRoundingThreshold(0, 60, 0.125)
+	assert.ErrorContains(t, err, "slot number is zero")
+
+	val, err := getSlotNumberWithRoundingThreshold(75, 60, 0.125)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(120), val)
+
+	val, err = getSlotNumberWithRoundingThreshold(105, 60, 0.125)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(120), val)
+
+	val, err = getSlotNumberWithRoundingThreshold(40, 60, 0.125)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(60), val)
+
+	val, err = getSlotNumberWithRoundingThreshold(270, 80, 0.125)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(320), val)
+
+	val, err = getSlotNumberWithRoundingThreshold(223, 80, 0.2)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(240), val)
+
+	val, err = getSlotNumberWithRoundingThreshold(337, 80, 0.2)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(400), val)
+}
+
 func calculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
 	txCost := big.NewInt(0)
 	for _, o := range outputs {
