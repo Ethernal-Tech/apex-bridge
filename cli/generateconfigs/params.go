@@ -43,7 +43,8 @@ const (
 	apiPortFlag = "api-port"
 	apiKeysFlag = "api-keys"
 
-	ttlSlotIncFlag = "ttl-slot-inc"
+	ttlSlotIncFlag            = "ttl-slot-inc"
+	slotRoundingThresholdFlag = "slot-rounding-threshold"
 
 	outputDirFlag                         = "output-dir"
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
@@ -76,7 +77,8 @@ const (
 	apiPortFlagDesc = "port at which API should run"
 	apiKeysFlagDesc = "(mandatory) list of keys for API access"
 
-	ttlSlotIncFlagDesc = "TTL slot increment"
+	ttlSlotIncFlagDesc            = "TTL slot increment"
+	slotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc"
 
 	outputDirFlagDesc                         = "path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
@@ -123,7 +125,8 @@ type generateConfigsParams struct {
 	apiPort uint32
 	apiKeys []string
 
-	ttlSlotInc uint64
+	ttlSlotInc            uint64
+	slotRoundingThreshold uint64
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -323,6 +326,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		ttlSlotIncFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&p.slotRoundingThreshold,
+		slotRoundingThresholdFlag,
+		defaultSlotRoundingThreshold,
+		slotRoundingThresholdFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.outputDir,
 		outputDirFlag,
@@ -381,7 +391,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
-				SlotRoundingThreshold:    defaultSlotRoundingThreshold,
+				SlotRoundingThreshold:    p.slotRoundingThreshold,
 			},
 			"vector": {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -398,7 +408,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
-				SlotRoundingThreshold:    defaultSlotRoundingThreshold,
+				SlotRoundingThreshold:    p.slotRoundingThreshold,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
