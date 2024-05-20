@@ -92,6 +92,7 @@ const (
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
 	defaultTTLSlotNumberInc                  = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultSlotRoundingThreshold             = 60
 )
 
 type generateConfigsParams struct {
@@ -380,6 +381,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
+				SlotRoundingThreshold:    defaultSlotRoundingThreshold,
 			},
 			"vector": {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -396,6 +398,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
+				SlotRoundingThreshold:    defaultSlotRoundingThreshold,
 			},
 		},
 		Bridge: oCore.BridgeConfig{

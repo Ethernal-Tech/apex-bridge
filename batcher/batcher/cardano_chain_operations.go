@@ -80,12 +80,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, destinationChain)
+	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
 	if err != nil {
 		return nil, err
 	}
 
-	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
+	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	return cco.createBatchTx(
-		txUtxos, metadata, protocolParams, txInfos, txOutput, lastObservedBlock.BlockSlot)
+		txUtxos, metadata, protocolParams, txInfos, txOutput, slotNumber)
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -242,6 +242,31 @@ func (cco *CardanoChainOperations) createBatchTx(
 			FeePayerOwnedUTXOs: inputUtxos.FeePayerOwnedUTXOs,
 		},
 	}, err
+}
+
+func (cco *CardanoChainOperations) getSlotNumber(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chain string,
+) (uint64, error) {
+	if cco.Config.SlotRoundingThreshold == 0 {
+		lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, chain)
+		if err != nil {
+			return 0, err
+		}
+
+		return lastObservedBlock.BlockSlot, nil
+	}
+
+	data, err := cco.TxProvider.GetTip(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	threshold := cco.Config.SlotRoundingThreshold
+	newSlot := ((data.Slot + threshold - 1) / threshold) * threshold
+
+	cco.logger.Debug("calculate slotNumber with rounding", "slot", data.Slot, "newSlot", newSlot)
+
+	return newSlot, nil
 }
 
 func getInputUtxos(
