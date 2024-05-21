@@ -293,17 +293,20 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
-				ip.chainID,
+				contractbinding.IBridgeStructsChain{
+					Id:              ip.chainID,
+					AddressMultisig: ip.multisigAddr,
+					AddressFeePayer: ip.multisigFeeAddr,
+				},
 				contractbinding.IBridgeStructsUTXOs{
 					MultisigOwnedUTXOs: multisigUtxos,
 					FeePayerOwnedUTXOs: feePayerUtxos,
 				},
-				ip.multisigAddr, ip.multisigFeeAddr,
+				initialTokenSupply,
 				contractbinding.IBridgeStructsValidatorCardanoData{
 					VerifyingKey:    hex.EncodeToString(walletCardano.MultiSig.GetVerificationKey()),
 					VerifyingKeyFee: hex.EncodeToString(walletCardano.MultiSigFee.GetVerificationKey()),
-				},
-				initialTokenSupply)
+				})
 		})
 	if err != nil {
 		return nil, err
