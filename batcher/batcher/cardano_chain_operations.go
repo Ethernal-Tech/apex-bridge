@@ -18,7 +18,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.ChainOperations = (*CardanoChainOperations)(nil)
+var (
+	errNonActiveBatchPeriod = errors.New("non active batch period")
+
+	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+)
 
 // nolintlint TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 // Get real tx size from protocolParams/config
@@ -26,6 +30,8 @@ const (
 	minUtxoAmount = uint64(1000000)
 	maxUtxoCount  = 410
 	maxTxSize     = 16000
+
+	noBatchPeriodPercent = 0.125
 )
 
 type CardanoChainOperations struct {
@@ -80,7 +86,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, destinationChain)
+	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain, noBatchPeriodPercent)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +185,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	return cco.createBatchTx(
-		txUtxos, metadata, protocolParams, txInfos, txOutput, lastObservedBlock.BlockSlot)
+		txUtxos, metadata, protocolParams, txInfos, txOutput, slotNumber)
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -242,6 +248,52 @@ func (cco *CardanoChainOperations) createBatchTx(
 			FeePayerOwnedUTXOs: inputUtxos.FeePayerOwnedUTXOs,
 		},
 	}, err
+}
+
+func (cco *CardanoChainOperations) getSlotNumber(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chain string, noBatchPeriodPercent float64,
+) (uint64, error) {
+	if cco.Config.SlotRoundingThreshold == 0 {
+		lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, chain)
+		if err != nil {
+			return 0, err
+		}
+
+		return lastObservedBlock.BlockSlot, nil
+	}
+
+	data, err := cco.TxProvider.GetTip(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	newSlot, err := getSlotNumberWithRoundingThreshold(
+		data.Slot, cco.Config.SlotRoundingThreshold, noBatchPeriodPercent)
+	if err != nil {
+		return 0, err
+	}
+
+	cco.logger.Debug("calculate slotNumber with rounding", "slot", data.Slot, "newSlot", newSlot)
+
+	return newSlot, nil
+}
+
+func getSlotNumberWithRoundingThreshold(
+	slotNumber, threshold uint64, noBatchPeriodPercent float64,
+) (uint64, error) {
+	if slotNumber == 0 {
+		return 0, errors.New("slot number is zero")
+	}
+
+	newSlot := ((slotNumber + threshold - 1) / threshold) * threshold
+	diffFromPrevious := slotNumber - (newSlot - threshold)
+
+	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
+		diffFromPrevious >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
+		return 0, fmt.Errorf("%w: (slot, rounded) = (%d, %d)", errNonActiveBatchPeriod, slotNumber, newSlot)
+	}
+
+	return newSlot, nil
 }
 
 func getInputUtxos(

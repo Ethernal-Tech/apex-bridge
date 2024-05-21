@@ -10,14 +10,15 @@ import (
 )
 
 type CardanoChainConfig struct {
-	TestNetMagic     uint32 `json:"testnetMagic"`
-	OgmiosURL        string `json:"ogmiosUrl,omitempty"`
-	BlockfrostURL    string `json:"blockfrostUrl,omitempty"`
-	BlockfrostAPIKey string `json:"blockfrostApiKey,omitempty"`
-	SocketPath       string `json:"socketPath,omitempty"`
-	PotentialFee     uint64 `json:"potentialFee"`
-	KeysDirPath      string `json:"keysDirPath,omitempty"`
-	TTLSlotNumberInc uint64 `json:"ttlSlotNumberIncrement"`
+	TestNetMagic          uint32 `json:"testnetMagic"`
+	OgmiosURL             string `json:"ogmiosUrl,omitempty"`
+	BlockfrostURL         string `json:"blockfrostUrl,omitempty"`
+	BlockfrostAPIKey      string `json:"blockfrostApiKey,omitempty"`
+	SocketPath            string `json:"socketPath,omitempty"`
+	PotentialFee          uint64 `json:"potentialFee"`
+	KeysDirPath           string `json:"keysDirPath,omitempty"`
+	TTLSlotNumberInc      uint64 `json:"ttlSlotNumberIncrement"`
+	SlotRoundingThreshold uint64 `json:"slotRoundingThreshold"`
 }
 
 var _ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)

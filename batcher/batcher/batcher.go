@@ -3,6 +3,7 @@ package batcher
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -53,7 +54,11 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 		}
 
 		if err := b.execute(ctx); err != nil {
-			b.logger.Error("execute failed", "err", err)
+			if errors.Is(err, errNonActiveBatchPeriod) {
+				b.logger.Info("execution skipped", "reason", err)
+			} else {
+				b.logger.Error("execution failed", "err", err)
+			}
 		}
 	}
 }
