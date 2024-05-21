@@ -18,7 +18,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.ChainOperations = (*CardanoChainOperations)(nil)
+var (
+	errNonActiveBatchPeriod = errors.New("non active batch period")
+
+	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+)
 
 // nolintlint TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 // Get real tx size from protocolParams/config
@@ -282,11 +286,11 @@ func getSlotNumberWithRoundingThreshold(
 	}
 
 	newSlot := ((slotNumber + threshold - 1) / threshold) * threshold
-	diff := slotNumber - (newSlot - threshold)
+	diffFromPrevious := slotNumber - (newSlot - threshold)
 
-	if diff <= uint64(float64(threshold)*noBatchPeriodPercent) ||
-		diff >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
-		return 0, fmt.Errorf("no batch period is active: slot = %d, rounded slot = %d", slotNumber, newSlot)
+	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
+		diffFromPrevious >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
+		return 0, fmt.Errorf("%w: (slot, rounded) = (%d, %d)", errNonActiveBatchPeriod, slotNumber, newSlot)
 	}
 
 	return newSlot, nil

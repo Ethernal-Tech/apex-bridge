@@ -481,19 +481,19 @@ func Test_getOutputs(t *testing.T) {
 
 func Test_getSlotNumberWithRoundingThreshold(t *testing.T) {
 	_, err := getSlotNumberWithRoundingThreshold(66, 60, 0.125)
-	assert.ErrorContains(t, err, "no batch period is active")
+	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getSlotNumberWithRoundingThreshold(12, 60, 0.2)
-	assert.ErrorContains(t, err, "no batch period is active")
+	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getSlotNumberWithRoundingThreshold(115, 60, 0.125)
-	assert.ErrorContains(t, err, "no batch period is active")
+	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getSlotNumberWithRoundingThreshold(224, 80, 0.2)
-	assert.ErrorContains(t, err, "no batch period is active")
+	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getSlotNumberWithRoundingThreshold(336, 80, 0.2)
-	assert.ErrorContains(t, err, "no batch period is active")
+	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
 
 	_, err = getSlotNumberWithRoundingThreshold(0, 60, 0.125)
 	assert.ErrorContains(t, err, "slot number is zero")

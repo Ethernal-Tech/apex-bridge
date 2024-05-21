@@ -83,7 +83,7 @@ $ go run ./cli/cmd/main.go generate-configs \
         --dbs-path "<path to where databases will be stored>" \
         --logs-path "<path to where logs will be stored>" \
         --ttl-slot-inc <ttl slot increment> \
-        --slot-rounding-threshold <zero_means_take_values_from_sc_otherwise_slot_rounding_threshold_value> \
+        --slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --api-port <port at which API should run> \
         --api-keys "<api key 1>" \
         --api-keys "<api key 2>"
