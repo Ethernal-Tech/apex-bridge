@@ -167,6 +167,180 @@ func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
 	return true
 }
 
+// first process for a specific chainID, to give every chainID the chance
+// and then, if max claims not reached, rest of the chains can be processed too
+func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
+	startChainID string,
+) {
+	var (
+		allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
+		allProcessedExpectedTxs      []*core.BridgeExpectedCardanoTx
+		allProcessedTxs              []*core.ProcessedCardanoTx
+		allUnprocessedTxs            []*core.CardanoTx
+	)
+
+	bridgeClaims := &core.BridgeClaims{}
+
+	invalidRelevantExpiredTxs, processedExpectedTxs,
+		processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID)
+
+	allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+	allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+	allProcessedTxs = append(allProcessedTxs, processedTxs...)
+	allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+
+	// ensure always same order of iterating through bp.appConfig.CardanoChains
+	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
+	for k := range bp.appConfig.CardanoChains {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+			break
+		}
+
+		chainID := bp.appConfig.CardanoChains[key].ChainID
+		if chainID != startChainID {
+			invalidRelevantExpiredTxs, processedExpectedTxs,
+				processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID)
+
+			allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+			allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+			allProcessedTxs = append(allProcessedTxs, processedTxs...)
+			allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+		}
+	}
+
+	// if expected/expired tx is invalid, we should mark them regardless of if submit failed or not
+	if len(allInvalidRelevantExpiredTxs) > 0 {
+		bp.logger.Info("Marking expected txs as invalid", "txs", allInvalidRelevantExpiredTxs)
+
+		err := bp.db.MarkExpectedTxsAsInvalid(allInvalidRelevantExpiredTxs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to mark expected txs as invalid. error: %v\n", err)
+			bp.logger.Error("Failed to mark expected txs as invalid", "err", err)
+		}
+	}
+
+	if bridgeClaims.Count() > 0 {
+		bp.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
+
+		err := bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
+			bp.logger.Error("Failed to submit claims", "err", err)
+
+			return
+		}
+	}
+
+	err := bp.notifyBridgingRequestStateUpdater(bridgeClaims, allUnprocessedTxs, allProcessedTxs)
+	if err != nil {
+		bp.logger.Error("Error while updating bridging request states", "err", err)
+	}
+
+	// we should only change this in db if submit succeeded
+	if len(allProcessedExpectedTxs) > 0 {
+		bp.logger.Info("Marking expected txs as processed", "txs", allProcessedExpectedTxs)
+
+		err := bp.db.MarkExpectedTxsAsProcessed(allProcessedExpectedTxs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to mark expected txs as processed. error: %v\n", err)
+			bp.logger.Error("Failed to mark expected txs as processed", "err", err)
+		}
+	}
+
+	// we should only change this in db if submit succeeded
+	if len(allProcessedTxs) > 0 {
+		bp.logger.Info("Marking txs as processed", "txs", allProcessedTxs)
+
+		err := bp.db.MarkUnprocessedTxsAsProcessed(allProcessedTxs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to mark txs as processed. error: %v\n", err)
+			bp.logger.Error("Failed to mark txs as processed", "err", err)
+		}
+	}
+}
+
+func (bp *CardanoTxsProcessorImpl) processAllForChain(
+	bridgeClaims *core.BridgeClaims,
+	chainID string,
+) (
+	allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx,
+	allProcessedExpectedTxs []*core.BridgeExpectedCardanoTx,
+	allProcessedTxs []*core.ProcessedCardanoTx,
+	unprocessedTxs []*core.CardanoTx,
+) {
+	expectedTxs, err := bp.db.GetExpectedTxs(chainID, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
+		bp.logger.Error("Failed to get expected txs", "err", err)
+
+		return
+	}
+
+	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
+		bp.logger.Error("Failed to get unprocessed txs", "err", err)
+
+		return
+	}
+
+	ccoDB := bp.indexerDbs[chainID]
+	if ccoDB == nil {
+		fmt.Fprintf(os.Stderr, "Failed to get cardano chain observer db for: %v\n", chainID)
+		bp.logger.Error("Failed to get cardano chain observer db", "chainId", chainID)
+	}
+
+	blockInfo := bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
+	if blockInfo == nil {
+		return
+	}
+
+	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
+	for _, expectedTx := range expectedTxs {
+		expectedTxsMap[expectedTx.ToCardanoTxKey()] = expectedTx
+	}
+
+	for {
+		bp.logger.Debug("Processing", "for chainID", chainID, "blockInfo", blockInfo)
+
+		relevantUnprocessedTxs, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(
+			blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap)
+
+		relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(
+			blockInfo, bridgeClaims, ccoDB, expectedTxsMap)
+
+		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
+
+		blockInfo.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
+			len(processedRelevantExpiredTxs)+len(invalidRelevantExpiredTxs) == len(relevantExpiredTxs)
+
+		bp.logger.Debug("Checked all", "for chainID", chainID,
+			"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
+			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs, "BlockFullyObserved", blockInfo.BlockFullyObserved)
+
+		allProcessedTxs = append(allProcessedTxs, processedTxs...)
+		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+
+		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+			break
+		}
+
+		blockInfo = bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
+		if blockInfo == nil {
+			break
+		}
+	}
+
+	return allInvalidRelevantExpiredTxs, allProcessedExpectedTxs, allProcessedTxs, unprocessedTxs
+}
+
 func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
 	chainID string,
 	ccoDB indexer.Database,
@@ -484,178 +658,4 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	}
 
 	return nil
-}
-
-// first process for a specific chainID, to give every chainID the chance
-// and then, if max claims not reached, rest of the chains can be processed too
-func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
-	startChainID string,
-) {
-	var (
-		allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
-		allProcessedExpectedTxs      []*core.BridgeExpectedCardanoTx
-		allProcessedTxs              []*core.ProcessedCardanoTx
-		allUnprocessedTxs            []*core.CardanoTx
-	)
-
-	bridgeClaims := &core.BridgeClaims{}
-
-	invalidRelevantExpiredTxs, processedExpectedTxs,
-		processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID)
-
-	allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-	allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-	allProcessedTxs = append(allProcessedTxs, processedTxs...)
-	allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
-
-	// ensure always same order of iterating through bp.appConfig.CardanoChains
-	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
-	for k := range bp.appConfig.CardanoChains {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-			break
-		}
-
-		chainID := bp.appConfig.CardanoChains[key].ChainID
-		if chainID != startChainID {
-			invalidRelevantExpiredTxs, processedExpectedTxs,
-				processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID)
-
-			allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-			allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-			allProcessedTxs = append(allProcessedTxs, processedTxs...)
-			allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
-		}
-	}
-
-	// if expected/expired tx is invalid, we should mark them regardless of if submit failed or not
-	if len(allInvalidRelevantExpiredTxs) > 0 {
-		bp.logger.Info("Marking expected txs as invalid", "txs", allInvalidRelevantExpiredTxs)
-
-		err := bp.db.MarkExpectedTxsAsInvalid(allInvalidRelevantExpiredTxs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to mark expected txs as invalid. error: %v\n", err)
-			bp.logger.Error("Failed to mark expected txs as invalid", "err", err)
-		}
-	}
-
-	if bridgeClaims.Count() > 0 {
-		bp.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
-
-		err := bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
-			bp.logger.Error("Failed to submit claims", "err", err)
-
-			return
-		}
-	}
-
-	err := bp.notifyBridgingRequestStateUpdater(bridgeClaims, allUnprocessedTxs, allProcessedTxs)
-	if err != nil {
-		bp.logger.Error("Error while updating bridging request states", "err", err)
-	}
-
-	// we should only change this in db if submit succeeded
-	if len(allProcessedExpectedTxs) > 0 {
-		bp.logger.Info("Marking expected txs as processed", "txs", allProcessedExpectedTxs)
-
-		err := bp.db.MarkExpectedTxsAsProcessed(allProcessedExpectedTxs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to mark expected txs as processed. error: %v\n", err)
-			bp.logger.Error("Failed to mark expected txs as processed", "err", err)
-		}
-	}
-
-	// we should only change this in db if submit succeeded
-	if len(allProcessedTxs) > 0 {
-		bp.logger.Info("Marking txs as processed", "txs", allProcessedTxs)
-
-		err := bp.db.MarkUnprocessedTxsAsProcessed(allProcessedTxs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to mark txs as processed. error: %v\n", err)
-			bp.logger.Error("Failed to mark txs as processed", "err", err)
-		}
-	}
-}
-
-func (bp *CardanoTxsProcessorImpl) processAllForChain(
-	bridgeClaims *core.BridgeClaims,
-	chainID string,
-) (
-	allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx,
-	allProcessedExpectedTxs []*core.BridgeExpectedCardanoTx,
-	allProcessedTxs []*core.ProcessedCardanoTx,
-	unprocessedTxs []*core.CardanoTx,
-) {
-	expectedTxs, err := bp.db.GetExpectedTxs(chainID, 0)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
-		bp.logger.Error("Failed to get expected txs", "err", err)
-
-		return
-	}
-
-	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, 0)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
-		bp.logger.Error("Failed to get unprocessed txs", "err", err)
-
-		return
-	}
-
-	ccoDB := bp.indexerDbs[chainID]
-	if ccoDB == nil {
-		fmt.Fprintf(os.Stderr, "Failed to get cardano chain observer db for: %v\n", chainID)
-		bp.logger.Error("Failed to get cardano chain observer db", "chainId", chainID)
-	}
-
-	blockInfo := bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
-	if blockInfo == nil {
-		return
-	}
-
-	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
-	for _, expectedTx := range expectedTxs {
-		expectedTxsMap[expectedTx.ToCardanoTxKey()] = expectedTx
-	}
-
-	for {
-		bp.logger.Debug("Processing", "for chainID", chainID, "blockInfo", blockInfo)
-
-		relevantUnprocessedTxs, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(
-			blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap)
-
-		relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(
-			blockInfo, bridgeClaims, ccoDB, expectedTxsMap)
-
-		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
-
-		blockInfo.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
-			len(processedRelevantExpiredTxs)+len(invalidRelevantExpiredTxs) == len(relevantExpiredTxs)
-
-		bp.logger.Debug("Checked all", "for chainID", chainID,
-			"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
-			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs, "BlockFullyObserved", blockInfo.BlockFullyObserved)
-
-		allProcessedTxs = append(allProcessedTxs, processedTxs...)
-		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-			break
-		}
-
-		blockInfo = bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
-		if blockInfo == nil {
-			break
-		}
-	}
-
-	return allInvalidRelevantExpiredTxs, allProcessedExpectedTxs, allProcessedTxs, unprocessedTxs
 }
