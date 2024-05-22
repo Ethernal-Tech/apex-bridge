@@ -424,7 +424,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{}
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
 		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -472,7 +472,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{}
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
 		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -722,9 +722,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 2)
+		require.Len(t, submittedClaims, 1)
 		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
-		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 4", func(t *testing.T) {
@@ -803,9 +803,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 2)
+		require.Len(t, submittedClaims, 1)
 		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
-		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 1", func(t *testing.T) {
@@ -881,9 +881,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 2)
+		require.Len(t, submittedClaims, 1)
 		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
-		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 2", func(t *testing.T) {
@@ -969,10 +969,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 2)
+		require.Len(t, submittedClaims, 1)
 
 		require.Len(t, submittedClaims[0].BridgingRequestClaims, 2)
-		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 2)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 2)
 	})
 
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 3", func(t *testing.T) {
@@ -1062,11 +1062,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 4)
+		require.Len(t, submittedClaims, 1)
 
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
-		require.Len(t, submittedClaims[1].BatchExecutionFailedClaims, 1)
-		require.Len(t, submittedClaims[2].BridgingRequestClaims, 1)
-		require.Len(t, submittedClaims[3].BatchExecutionFailedClaims, 1)
+		require.Len(t, submittedClaims[0].BridgingRequestClaims, 2)
+		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 2)
 	})
 }
