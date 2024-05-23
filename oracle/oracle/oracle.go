@@ -18,7 +18,6 @@ import (
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
 	txprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -51,6 +50,7 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewOracle(
 	ctx context.Context,
 	appConfig *core.AppConfig,
+	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
@@ -96,18 +96,6 @@ func NewOracle(
 	failedTxProcessors := []core.CardanoTxFailedProcessor{
 		failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
 		// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
-	}
-
-	indexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
-
-	for _, cardanoChainConfig := range appConfig.CardanoChains {
-		indexerDB, err := indexerDb.NewDatabaseInit("",
-			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
-		}
-
-		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(

@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
@@ -70,7 +71,19 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, bridgingRequestStateManager, logger.Named("oracle"))
+	indexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
+
+	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
+		indexerDB, err := indexerDb.NewDatabaseInit("",
+			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
+		}
+
+		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
+	}
+
+	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}

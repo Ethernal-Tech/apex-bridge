@@ -9,10 +9,9 @@ import (
 )
 
 type BridgeClaimsBlockInfo struct {
-	ChainID            string
-	Slot               uint64
-	Hash               string
-	BlockFullyObserved bool
+	ChainID string
+	Slot    uint64
+	Hash    string
 }
 
 type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
