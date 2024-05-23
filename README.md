@@ -7,10 +7,17 @@ $ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get github.com/Et
 ```
 
 # How to generate go binding for smart contract
+First build smart contracts in blade
+```
+./build-sc.sh 
+```
+then in apex-bridge execute this
 ```shell
-$ npm install
-$ solcjs --base-path "." --include-path "node_modules" -p --abi contracts/Bridge.sol -o ./contractbuild --optimize
-abigen --abi ./contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main --type BridgeContract --out ./contractbuild/BridgeContract.go --pkg contractbinding
+BASEPATH=/home/bbs/Documents/development/ethernal/blade/apex-bridge-smartcontracts/
+solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
+       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
+abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
+       --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
 ```
 
 # How to generate cardano keys for batcher
