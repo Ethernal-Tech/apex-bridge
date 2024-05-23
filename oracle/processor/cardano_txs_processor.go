@@ -296,6 +296,9 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		bp.logger.Error("Failed to get cardano chain observer db", "chainId", chainID)
 	}
 
+	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
+	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
+	// that all claims are filled only from unprocessedTxs and never from expectedTxs
 	blockInfo := bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
 	if blockInfo == nil {
 		return
