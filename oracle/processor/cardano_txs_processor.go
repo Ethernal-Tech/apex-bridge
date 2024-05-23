@@ -309,20 +309,17 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	for {
 		bp.logger.Debug("Processing", "for chainID", chainID, "blockInfo", blockInfo)
 
-		relevantUnprocessedTxs, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(
+		_, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(
 			blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap)
 
-		relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(
+		_, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(
 			blockInfo, bridgeClaims, ccoDB, expectedTxsMap)
 
 		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
 
-		blockInfo.BlockFullyObserved = len(processedTxs) == len(relevantUnprocessedTxs) &&
-			len(processedRelevantExpiredTxs)+len(invalidRelevantExpiredTxs) == len(relevantExpiredTxs)
-
 		bp.logger.Debug("Checked all", "for chainID", chainID,
 			"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
-			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs, "BlockFullyObserved", blockInfo.BlockFullyObserved)
+			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 
 		allProcessedTxs = append(allProcessedTxs, processedTxs...)
 		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
@@ -390,10 +387,9 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
 
 	if found {
 		return &core.BridgeClaimsBlockInfo{
-			ChainID:            chainID,
-			Slot:               minSlot,
-			Hash:               blockHash,
-			BlockFullyObserved: false,
+			ChainID: chainID,
+			Slot:    minSlot,
+			Hash:    blockHash,
 		}
 	}
 
@@ -423,50 +419,52 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 		processedExpectedTxs []*core.BridgeExpectedCardanoTx
 	)
 
+	if len(relevantUnprocessedTxs) == 0 {
+		return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
+	}
+
 	// check unprocessed txs from indexers
-	if len(relevantUnprocessedTxs) > 0 {
-	unprocessedTxsLoop:
-		for _, unprocessedTx := range relevantUnprocessedTxs {
-			var txProcessed = false
-		txProcessorsLoop:
-			for _, txProcessor := range bp.txProcessors {
-				relevant, err := txProcessor.IsTxRelevant(unprocessedTx)
+unprocessedTxsLoop:
+	for _, unprocessedTx := range relevantUnprocessedTxs {
+		var txProcessed = false
+	txProcessorsLoop:
+		for _, txProcessor := range bp.txProcessors {
+			relevant, err := txProcessor.IsTxRelevant(unprocessedTx)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
+				bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
+
+				continue txProcessorsLoop
+			}
+
+			if relevant {
+				err := txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-					bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
+					fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
+					bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
 
 					continue txProcessorsLoop
 				}
 
-				if relevant {
-					err := txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
-						bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+				expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
+				if expectedTx != nil {
+					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+					delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
+				}
 
-						continue txProcessorsLoop
-					}
+				processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
+				txProcessed = true
 
-					expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
-					if expectedTx != nil {
-						processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-						delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
-					}
-
-					processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
-					txProcessed = true
-
-					if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-						break unprocessedTxsLoop
-					} else {
-						break txProcessorsLoop
-					}
+				if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+					break unprocessedTxsLoop
+				} else {
+					break txProcessorsLoop
 				}
 			}
+		}
 
-			if !txProcessed {
-				processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(true))
-			}
+		if !txProcessed {
+			processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(true))
 		}
 	}
 
@@ -519,52 +517,55 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 		processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
 	)
 
-	if bridgeClaims.Count() < bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup && len(relevantExpiredTxs) > 0 {
-	expiredTxsLoop:
-		for _, expiredTx := range relevantExpiredTxs {
-			processedTx, _ := bp.db.GetProcessedTx(expiredTx.ChainID, expiredTx.Hash)
-			if processedTx != nil && !processedTx.IsInvalid {
-				// already sent the success claim
-				processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
+	if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup ||
+		len(relevantExpiredTxs) == 0 {
+		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
+	}
 
-				continue
+expiredTxsLoop:
+	for _, expiredTx := range relevantExpiredTxs {
+		processedTx, _ := bp.db.GetProcessedTx(expiredTx.ChainID, expiredTx.Hash)
+		if processedTx != nil && !processedTx.IsInvalid {
+			// already sent the success claim
+			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
+
+			continue
+		}
+
+		var expiredTxProcessed = false
+	failedTxProcessorsLoop:
+		for _, txProcessor := range bp.failedTxProcessors {
+			relevant, err := txProcessor.IsTxRelevant(expiredTx)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
+				bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
+
+				continue failedTxProcessorsLoop
 			}
 
-			var expiredTxProcessed = false
-		failedTxProcessorsLoop:
-			for _, txProcessor := range bp.failedTxProcessors {
-				relevant, err := txProcessor.IsTxRelevant(expiredTx)
+			if relevant {
+				err := txProcessor.ValidateAndAddClaim(bridgeClaims, expiredTx, bp.appConfig)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
-					bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
+					fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
+					bp.logger.Error("Failed to ValidateAndAddClaim", "expiredTx", expiredTx, "err", err)
 
 					continue failedTxProcessorsLoop
 				}
 
-				if relevant {
-					err := txProcessor.ValidateAndAddClaim(bridgeClaims, expiredTx, bp.appConfig)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
-						bp.logger.Error("Failed to ValidateAndAddClaim", "expiredTx", expiredTx, "err", err)
+				processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
+				expiredTxProcessed = true
 
-						continue failedTxProcessorsLoop
-					}
-
-					processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
-					expiredTxProcessed = true
-
-					if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-						break expiredTxsLoop
-					} else {
-						break failedTxProcessorsLoop
-					}
+				if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+					break expiredTxsLoop
+				} else {
+					break failedTxProcessorsLoop
 				}
 			}
+		}
 
-			if !expiredTxProcessed {
-				// expired, but can not process, so we mark it as invalid
-				invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, expiredTx)
-			}
+		if !expiredTxProcessed {
+			// expired, but can not process, so we mark it as invalid
+			invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, expiredTx)
 		}
 	}
 

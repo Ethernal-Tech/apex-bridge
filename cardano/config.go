@@ -44,9 +44,13 @@ func (config CardanoChainConfig) Serialize() ([]byte, error) {
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
 	if config.OgmiosURL != "" {
 		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
-	} else if config.SocketPath != "" {
+	}
+
+	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(uint(config.TestNetMagic), config.SocketPath)
-	} else if config.BlockfrostURL != "" {
+	}
+
+	if config.BlockfrostURL != "" {
 		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostURL, config.BlockfrostAPIKey), nil
 	}
 
