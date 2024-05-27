@@ -108,13 +108,12 @@ func NewValidatorComponents(
 	var apiObj *api.APIImpl
 
 	if shouldRunAPI {
-		bridgingRequestStateController, err := controllers.NewBridgingRequestStateController(
-			bridgingRequestStateManager, logger.Named("bridging_request_state_controller"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create BridgingRequestStateController: %w", err)
+		apiControllers := []core.APIController{
+			controllers.NewBridgingRequestStateController(
+				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
+			controllers.NewCardanoTxController(
+				oracleConfig, batcherConfig, logger.Named("bridging_request_state_controller")),
 		}
-
-		apiControllers := []core.APIController{bridgingRequestStateController}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
 		if err != nil {

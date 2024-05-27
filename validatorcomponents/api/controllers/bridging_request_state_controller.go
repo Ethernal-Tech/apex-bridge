@@ -19,13 +19,11 @@ var _ core.APIController = (*BridgingRequestStateControllerImpl)(nil)
 
 func NewBridgingRequestStateController(
 	bridgingRequestStateManager core.BridgingRequestStateManager, logger hclog.Logger,
-) (
-	*BridgingRequestStateControllerImpl, error,
-) {
+) *BridgingRequestStateControllerImpl {
 	return &BridgingRequestStateControllerImpl{
 		bridgingRequestStateManager: bridgingRequestStateManager,
 		logger:                      logger,
-	}, nil
+	}
 }
 
 func (*BridgingRequestStateControllerImpl) GetPathPrefix() string {
@@ -43,11 +41,11 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	c.logger.Debug("get called", "url", r.URL)
 
 	queryValues := r.URL.Query()
-	c.logger.Debug("query values", queryValues, "url", r.URL)
+	c.logger.Debug("get request", "query values", queryValues, "url", r.URL)
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.logger.Debug("chainId missing from query", "url", r.URL)
+		c.logger.Debug("get request", "err", "chainId missing from query", "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		if rerr != nil {
@@ -59,7 +57,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		c.logger.Debug("txHash missing from query", "url", r.URL)
+		c.logger.Debug("get request", "err", "txHash missing from query", "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "txHash missing from query")
 		if rerr != nil {
@@ -74,7 +72,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
 	if err != nil {
-		c.logger.Debug(err.Error(), "url", r.URL)
+		c.logger.Debug("get request", "err", err.Error(), "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		if rerr != nil {
@@ -85,7 +83,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	}
 
 	if state == nil {
-		c.logger.Debug("Not found", "url", r.URL)
+		c.logger.Debug("get request - Not found", "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusNotFound, "Not found")
 		if rerr != nil {
@@ -113,7 +111,7 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.logger.Debug("chainId missing from query", "url", r.URL)
+		c.logger.Debug("getMultiple request", "err", "chainId missing from query", "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
 		if rerr != nil {
@@ -128,7 +126,7 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
 	if err != nil {
-		c.logger.Debug(err.Error(), "url", r.URL)
+		c.logger.Debug("getMultiple request", "err", err.Error(), "url", r.URL)
 
 		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 		if rerr != nil {
