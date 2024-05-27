@@ -1,7 +1,6 @@
 package cliwalletcreate
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
@@ -35,11 +34,11 @@ type initParams struct {
 
 func (ip *initParams) validateFlags() error {
 	if ip.directory == "" {
-		return fmt.Errorf("invalid directory: %s", ip.directory)
+		return fmt.Errorf("--%s flag not specified", directoryFlag)
 	}
 
 	if ip.chainID == "" {
-		return errors.New("--chain flag not specified")
+		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 	cligenerateconfigs "github.com/Ethernal-Tech/apex-bridge/cli/generateconfigs"
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
+	clisendtx "github.com/Ethernal-Tech/apex-bridge/cli/sendtx"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
 	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
 	"github.com/spf13/cobra"
@@ -37,6 +38,7 @@ func (rc *RootCommand) registerSubCommands() {
 		clirelayer.GetRunRelayerCommand(),
 		clicreateaddress.GetCreateAddressCommand(),
 		cligenerateconfigs.GetGenerateConfigsCommand(),
+		clisendtx.GetSendTxCommand(),
 	)
 }
 
