@@ -9,7 +9,7 @@ $ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get github.com/Et
 # How to generate go binding for smart contract
 First build smart contracts in blade
 ```
-./build-sc.sh 
+./scripts/build-sc.sh 
 ```
 then in apex-bridge execute this
 ```shell
