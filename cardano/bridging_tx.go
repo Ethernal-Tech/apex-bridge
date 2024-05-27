@@ -26,6 +26,7 @@ const (
 
 type BridgingTxSender struct {
 	TxProviderSrc      cardanowallet.ITxProvider
+	TxUtxoRetrieverDst cardanowallet.IUTxORetriever
 	MultiSigAddrSrc    string
 	FeeAddrDst         string
 	TestNetMagicSrc    uint
@@ -37,18 +38,20 @@ type BridgingTxSender struct {
 
 func NewBridgingTxSender(
 	txProvider cardanowallet.ITxProvider,
+	txUtxoRetriever cardanowallet.IUTxORetriever,
 	testNetMagic uint,
 	multiSigAddr string, feeAddr string,
 	feeAmount uint64, ttlSlotNumberInc uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
-		TxProviderSrc:    txProvider,
-		TestNetMagicSrc:  testNetMagic,
-		MultiSigAddrSrc:  multiSigAddr,
-		FeeAddrDst:       feeAddr,
-		PotentialFee:     potentialFee,
-		TTLSlotNumberInc: ttlSlotNumberInc,
-		FeeAmount:        feeAmount,
+		TxProviderSrc:      txProvider,
+		TxUtxoRetrieverDst: txUtxoRetriever,
+		TestNetMagicSrc:    testNetMagic,
+		MultiSigAddrSrc:    multiSigAddr,
+		FeeAddrDst:         feeAddr,
+		PotentialFee:       potentialFee,
+		TTLSlotNumberInc:   ttlSlotNumberInc,
+		FeeAmount:          feeAmount,
 	}
 }
 
@@ -159,7 +162,7 @@ func (bts *BridgingTxSender) SendTx(
 }
 
 func (bts *BridgingTxSender) WaitForTx(
-	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []cardanowallet.TxOutput,
+	ctx context.Context, receivers []cardanowallet.TxOutput,
 ) error {
 	errs := make([]error, len(receivers))
 	wg := sync.WaitGroup{}
@@ -173,7 +176,7 @@ func (bts *BridgingTxSender) WaitForTx(
 			var prevAmount *big.Int
 
 			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
-				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
+				utxos, err := bts.TxUtxoRetrieverDst.GetUtxos(ctx, recv.Addr)
 				prevAmount = cardanowallet.GetUtxosSum(utxos)
 
 				return err == nil, err
@@ -184,7 +187,7 @@ func (bts *BridgingTxSender) WaitForTx(
 			}
 
 			errs[idx] = cardanowallet.WaitForAmount(
-				ctx, txUtxoRetriever, recv.Addr, func(newAmount *big.Int) bool {
+				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount *big.Int) bool {
 					return newAmount.Cmp(prevAmount) > 0
 				},
 				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)

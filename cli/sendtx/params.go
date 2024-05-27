@@ -218,6 +218,7 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	txSender := cardanotx.NewBridgingTxSender(
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
+		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 		ip.testnetMagicSrc, ip.multisigAddrSrc, ip.multisigFeeAddrDst, ip.feeAmount, ttlSlotNumberInc)
 
 	senderAddr, _, err := cardanowallet.GetWalletAddressCli(ip.wallet, ip.testnetMagicSrc)
@@ -239,9 +240,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(context.Background(),
-			cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-			ip.receiversParsed)
+		err = txSender.WaitForTx(context.Background(), ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}
