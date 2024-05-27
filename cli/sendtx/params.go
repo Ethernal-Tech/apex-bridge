@@ -2,7 +2,6 @@ package clisendtx
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"path"
 	"strconv"
@@ -91,7 +90,9 @@ func (ip *sendTxParams) validateFlags() error {
 	}
 
 	if ip.privateKeyRaw != "" {
-		bytes, err := hex.DecodeString(ip.privateKeyRaw)
+		bytes, err := (cardanowallet.Key{
+			Hex: ip.privateKeyRaw,
+		}).GetKeyBytes()
 		if err != nil || len(bytes) != 32 {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 		}
@@ -214,7 +215,7 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(privateKeyDirFlag, privateKeyFlag)
 }
 
-func (ip *sendTxParams) Execute() (common.ICommandResult, error) {
+func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	txSender := cardanotx.NewBridgingTxSender(
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		ip.testnetMagicSrc, ip.multisigAddrSrc, ip.multisigFeeAddrDst, ip.feeAmount, ttlSlotNumberInc)
@@ -234,10 +235,13 @@ func (ip *sendTxParams) Execute() (common.ICommandResult, error) {
 		return nil, err
 	}
 
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	outputter.WriteOutput()
+
 	if ip.ogmiosURLDst != "" {
 		err = txSender.WaitForTx(context.Background(),
 			cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-			ip.receiversParsed[0])
+			ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}

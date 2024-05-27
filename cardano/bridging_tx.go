@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -158,25 +159,41 @@ func (bts *BridgingTxSender) SendTx(
 }
 
 func (bts *BridgingTxSender) WaitForTx(
-	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receiver cardanowallet.TxOutput,
+	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []cardanowallet.TxOutput,
 ) error {
-	var prevAmount *big.Int
+	errs := make([]error, len(receivers))
+	wg := sync.WaitGroup{}
 
-	err := cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
-		utxos, err := txUtxoRetriever.GetUtxos(ctx, receiver.Addr)
-		prevAmount = cardanowallet.GetUtxosSum(utxos)
+	for i, x := range receivers {
+		wg.Add(1)
 
-		return err == nil, err
-	}, isRecoverableError)
-	if err != nil {
-		return err
+		go func(idx int, recv cardanowallet.TxOutput) {
+			defer wg.Done()
+
+			var prevAmount *big.Int
+
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
+				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
+				prevAmount = cardanowallet.GetUtxosSum(utxos)
+
+				return err == nil, err
+			}, isRecoverableError)
+
+			if errs[idx] != nil {
+				return
+			}
+
+			errs[idx] = cardanowallet.WaitForAmount(
+				ctx, txUtxoRetriever, recv.Addr, func(newAmount *big.Int) bool {
+					return newAmount.Cmp(prevAmount) > 0
+				},
+				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
+		}(i, x)
 	}
 
-	return cardanowallet.WaitForAmount(
-		ctx, txUtxoRetriever, receiver.Addr, func(newAmount *big.Int) bool {
-			return newAmount.Cmp(prevAmount) > 0
-		},
-		retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
 func (bts *BridgingTxSender) createMetadata(
