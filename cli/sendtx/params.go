@@ -125,6 +125,10 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
+		if amount < cardanowallet.MinUTxODefaultValue {
+			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
+		}
+
 		_, err = cardanowallet.NewAddress(vals[0])
 		if err != nil {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
