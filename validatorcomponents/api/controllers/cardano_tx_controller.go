@@ -81,7 +81,7 @@ func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txRaw, txHash, receiverAddrs, amount, err := c.createTx(requestBody)
+	txRaw, txHash, err := c.createTx(requestBody)
 	if err != nil {
 		c.logger.Debug("createBridgingTx request", "err", err.Error(), "url", r.URL)
 
@@ -97,7 +97,7 @@ func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 
 	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(response.NewFullBridgingTxResponse(txRaw, txHash, receiverAddrs, amount))
+	err = json.NewEncoder(w).Encode(response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee))
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
 	}
@@ -213,21 +213,29 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	}
 
 	if !foundTheFeeReceiverAddr {
+		if requestBody.BridgingFee == 0 {
+			requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
+		}
+
 		requestBody.Transactions = append(requestBody.Transactions,
 			request.CreateBridgingTxTransactionRequest{
 				Addr:   destinationChainConfig.BridgingAddresses.FeeAddress,
-				Amount: c.oracleConfig.BridgingSettings.MinFeeForBridging,
+				Amount: requestBody.BridgingFee,
 			},
 		)
-	} else if feeSum < c.oracleConfig.BridgingSettings.MinFeeForBridging {
-		return fmt.Errorf("bridging fee in request body receivers is less than minimum: %v", requestBody)
+	} else {
+		requestBody.BridgingFee = feeSum
+	}
+
+	if requestBody.BridgingFee < c.oracleConfig.BridgingSettings.MinFeeForBridging {
+		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 
 	return nil
 }
 
 func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
-	string, string, []string, uint64, error,
+	string, string, error,
 ) {
 	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
 
@@ -243,17 +251,16 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	cardanoConfig, err := cardanotx.NewCardanoChainConfig(batcherChainConfig.ChainSpecific)
 	if err != nil {
-		return "", "", nil, 0, err
+		return "", "", err
 	}
 
 	txProvider, err := cardanoConfig.CreateTxProvider()
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to create tx provider: %w", err)
+		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
 	amountSum := uint64(0)
 	txs := make([]common.BridgingRequestMetadataTransaction, len(requestBody.Transactions))
-	receiverAddrs := make([]string, len(requestBody.Transactions))
 
 	for i, tx := range requestBody.Transactions {
 		txs[i] = common.BridgingRequestMetadataTransaction{
@@ -261,7 +268,6 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 			Amount:  tx.Amount,
 		}
 
-		receiverAddrs[i] = tx.Addr
 		amountSum += tx.Amount
 	}
 
@@ -272,17 +278,17 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		Transactions:       txs,
 	})
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to marshal metadata: %w", err)
+		return "", "", fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
 	protocolParams, err := txProvider.GetProtocolParameters(context.Background())
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to get protocol parameters: %w", err)
+		return "", "", fmt.Errorf("failed to get protocol parameters: %w", err)
 	}
 
 	qtd, err := txProvider.GetTip(context.Background())
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to get tip: %w", err)
+		return "", "", fmt.Errorf("failed to get tip: %w", err)
 	}
 
 	outputs := []wallet.TxOutput{
@@ -296,14 +302,14 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		context.Background(), txProvider, requestBody.SenderAddr,
 		amountSum+cardanoConfig.PotentialFee, wallet.MinUTxODefaultValue)
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to get utxos: %w", err)
+		return "", "", fmt.Errorf("failed to get utxos: %w", err)
 	}
 
 	outputsSum := wallet.GetOutputsSum(outputs)
 
 	builder, err := wallet.NewTxBuilder()
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to create tx builder: %w", err)
+		return "", "", fmt.Errorf("failed to create tx builder: %w", err)
 	}
 
 	defer builder.Dispose()
@@ -319,13 +325,13 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to calculate fee: %w", err)
+		return "", "", fmt.Errorf("failed to calculate fee: %w", err)
 	}
 
 	change := inputs.Sum - outputsSum - fee
 	// handle overflow or insufficient amount
 	if change > inputs.Sum || (change > 0 && change < wallet.MinUTxODefaultValue) {
-		return "", "", nil, 0, fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
+		return "", "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
 			inputs.Sum, outputsSum+fee)
 	}
 
@@ -339,12 +345,12 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	txRawBytes, txHash, err := builder.Build()
 	if err != nil {
-		return "", "", nil, 0, fmt.Errorf("failed to build tx: %w", err)
+		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}
 
 	txRaw := hex.EncodeToString(txRawBytes)
 
-	return txRaw, txHash, receiverAddrs, amountSum, nil
+	return txRaw, txHash, nil
 }
 
 func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxRequest) (

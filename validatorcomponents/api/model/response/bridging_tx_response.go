@@ -1,20 +1,18 @@
 package response
 
 type BridgingTxResponse struct {
-	TxRaw         string   `json:"txRaw"`
-	TxHash        string   `json:"txHash"`
-	ReceiverAddrs []string `json:"receiverAddrs"`
-	Amount        uint64   `json:"amount"`
+	TxRaw       string `json:"txRaw"`
+	TxHash      string `json:"txHash"`
+	BridgingFee uint64 `json:"bridgingFee"`
 }
 
 func NewFullBridgingTxResponse(
-	txRaw string, txHash string, receiverAddrs []string, amount uint64,
+	txRaw string, txHash string, bridgingFee uint64,
 ) *BridgingTxResponse {
 	return &BridgingTxResponse{
-		TxRaw:         txRaw,
-		TxHash:        txHash,
-		ReceiverAddrs: receiverAddrs,
-		Amount:        amount,
+		TxRaw:       txRaw,
+		TxHash:      txHash,
+		BridgingFee: bridgingFee,
 	}
 }
 

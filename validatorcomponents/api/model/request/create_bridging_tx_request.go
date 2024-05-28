@@ -10,4 +10,5 @@ type CreateBridgingTxRequest struct {
 	SourceChainID      string                               `json:"sourceChainId"`
 	DestinationChainID string                               `json:"destinationChainId"`
 	Transactions       []CreateBridgingTxTransactionRequest `json:"transactions"`
+	BridgingFee        uint64                               `json:"bridgingFee"`
 }
