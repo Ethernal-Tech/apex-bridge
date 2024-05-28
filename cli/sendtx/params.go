@@ -2,6 +2,7 @@ package clisendtx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -112,7 +113,7 @@ func (ip *sendTxParams) validateFlags() error {
 		ip.wallet = wallet
 	}
 
-	receivers := make([]cardanowallet.TxOutput, len(ip.receivers))
+	receivers := make([]cardanowallet.TxOutput, 0, len(ip.receivers))
 
 	for i, x := range ip.receivers {
 		vals := strings.Split(x, ":")
@@ -134,11 +135,20 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
-		receivers[i] = cardanowallet.TxOutput{
+		receivers = append(receivers, cardanowallet.TxOutput{
 			Addr:   vals[0],
 			Amount: amount,
-		}
+		})
 	}
+
+	if cardanotx.IsAddressInOutputs(receivers, ip.multisigFeeAddrDst) {
+		return errors.New("fee address can not be in receivers list")
+	}
+
+	receivers = append(receivers, cardanowallet.TxOutput{
+		Addr:   ip.multisigFeeAddrDst,
+		Amount: ip.feeAmount,
+	})
 
 	ip.receiversParsed = receivers
 
@@ -223,7 +233,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 	txSender := cardanotx.NewBridgingTxSender(
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-		ip.testnetMagicSrc, ip.multisigAddrSrc, ip.multisigFeeAddrDst, ip.feeAmount, ttlSlotNumberInc)
+		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc)
 
 	senderAddr, _, err := cardanowallet.GetWalletAddressCli(ip.wallet, ip.testnetMagicSrc)
 	if err != nil {

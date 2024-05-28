@@ -28,11 +28,9 @@ type BridgingTxSender struct {
 	TxProviderSrc      cardanowallet.ITxProvider
 	TxUtxoRetrieverDst cardanowallet.IUTxORetriever
 	MultiSigAddrSrc    string
-	FeeAddrDst         string
 	TestNetMagicSrc    uint
 	PotentialFee       uint64
 	TTLSlotNumberInc   uint64
-	FeeAmount          uint64
 	ProtocolParameters []byte
 }
 
@@ -40,18 +38,16 @@ func NewBridgingTxSender(
 	txProvider cardanowallet.ITxProvider,
 	txUtxoRetriever cardanowallet.IUTxORetriever,
 	testNetMagic uint,
-	multiSigAddr string, feeAddr string,
-	feeAmount uint64, ttlSlotNumberInc uint64,
+	multiSigAddr string,
+	ttlSlotNumberInc uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
 		TxProviderSrc:      txProvider,
 		TxUtxoRetrieverDst: txUtxoRetriever,
 		TestNetMagicSrc:    testNetMagic,
 		MultiSigAddrSrc:    multiSigAddr,
-		FeeAddrDst:         feeAddr,
 		PotentialFee:       potentialFee,
 		TTLSlotNumberInc:   ttlSlotNumberInc,
-		FeeAmount:          feeAmount,
 	}
 }
 
@@ -74,18 +70,6 @@ func (bts *BridgingTxSender) CreateTx(
 			return nil, "", err
 		}
 	}
-
-	// add fee in receivers
-	for _, x := range receivers {
-		if x.Addr == bts.FeeAddrDst {
-			return nil, "", errors.New("fee address can not be in receivers")
-		}
-	}
-
-	receivers = append(receivers, cardanowallet.TxOutput{
-		Addr:   bts.FeeAddrDst,
-		Amount: bts.FeeAmount,
-	})
 
 	metadata, err := bts.createMetadata(chain, senderAddr, receivers)
 	if err != nil {
@@ -217,6 +201,18 @@ func (bts *BridgingTxSender) createMetadata(
 	}
 
 	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataObj)
+}
+
+func IsAddressInOutputs(
+	receivers []cardanowallet.TxOutput, addr string,
+) bool {
+	for _, x := range receivers {
+		if x.Addr == addr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func isRecoverableError(err error) bool {
