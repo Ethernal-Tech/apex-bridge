@@ -1,5 +1,5 @@
 package response
 
 type ErrorResponse struct {
-	Err string
+	Err string `json:"err"`
 }
