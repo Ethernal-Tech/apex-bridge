@@ -1,12 +1,12 @@
 package cliwalletcreate
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +34,11 @@ type initParams struct {
 
 func (ip *initParams) validateFlags() error {
 	if ip.directory == "" {
-		return fmt.Errorf("invalid directory: %s", ip.directory)
+		return fmt.Errorf("--%s flag not specified", directoryFlag)
 	}
 
 	if ip.chainID == "" {
-		return errors.New("--chain flag not specified")
+		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	return nil
@@ -89,13 +89,23 @@ func (ip *initParams) Execute() (common.ICommandResult, error) {
 		return nil, err
 	}
 
+	keyHash, err := cardanowallet.GetKeyHash(wallet.MultiSig.GetVerificationKey())
+	if err != nil {
+		return nil, err
+	}
+
+	keyHashFee, err := cardanowallet.GetKeyHash(wallet.MultiSigFee.GetVerificationKey())
+	if err != nil {
+		return nil, err
+	}
+
 	return &CmdResult{
 		SigningKey:      wallet.MultiSig.GetSigningKey(),
 		VerifyingKey:    wallet.MultiSig.GetVerificationKey(),
-		KeyHash:         wallet.MultiSig.GetKeyHash(),
+		KeyHash:         keyHash,
 		SigningKeyFee:   wallet.MultiSigFee.GetSigningKey(),
 		VerifyingKeyFee: wallet.MultiSigFee.GetVerificationKey(),
-		KeyHashFee:      wallet.MultiSigFee.GetKeyHash(),
+		KeyHashFee:      keyHashFee,
 		showPrivateKey:  ip.showPrivateKey,
 		chainID:         ip.chainID,
 	}, nil

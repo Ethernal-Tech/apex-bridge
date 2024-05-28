@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const submitClaimsGasLimit = uint64(5_242_880)
+
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
 
@@ -125,6 +127,8 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(ctx context.Context, clai
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		opts.GasLimit = submitClaimsGasLimit
+
 		return contract.SubmitClaims(opts, claims)
 	})
 
