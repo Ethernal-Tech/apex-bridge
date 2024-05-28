@@ -9,7 +9,6 @@ import (
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
@@ -259,91 +258,26 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
-	amountSum := uint64(0)
-	txs := make([]common.BridgingRequestMetadataTransaction, len(requestBody.Transactions))
+	bridgingTxSender := cardanotx.NewBridgingTxSender(
+		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
+		sourceChainConfig.BridgingAddresses.BridgingAddress,
+		cardanoConfig.TTLSlotNumberInc,
+	)
 
-	for i, tx := range requestBody.Transactions {
-		txs[i] = common.BridgingRequestMetadataTransaction{
-			Address: common.SplitString(tx.Addr, 40),
-			Amount:  tx.Amount,
-		}
+	bridgingTxSender.PotentialFee = cardanoConfig.PotentialFee
 
-		amountSum += tx.Amount
+	receivers := make([]wallet.TxOutput, 0, len(requestBody.Transactions))
+	for _, tx := range requestBody.Transactions {
+		receivers = append(receivers, wallet.TxOutput{
+			Addr:   tx.Addr,
+			Amount: tx.Amount,
+		})
 	}
 
-	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BridgingRequestMetadata{
-		BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-		DestinationChainID: requestBody.DestinationChainID,
-		SenderAddr:         common.SplitString(requestBody.SenderAddr, 40),
-		Transactions:       txs,
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("failed to marshal metadata: %w", err)
-	}
-
-	protocolParams, err := txProvider.GetProtocolParameters(context.Background())
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get protocol parameters: %w", err)
-	}
-
-	qtd, err := txProvider.GetTip(context.Background())
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get tip: %w", err)
-	}
-
-	outputs := []wallet.TxOutput{
-		{
-			Addr:   sourceChainConfig.BridgingAddresses.BridgingAddress,
-			Amount: amountSum,
-		},
-	}
-
-	inputs, err := wallet.GetUTXOsForAmount(
-		context.Background(), txProvider, requestBody.SenderAddr,
-		amountSum+cardanoConfig.PotentialFee, wallet.MinUTxODefaultValue)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get utxos: %w", err)
-	}
-
-	outputsSum := wallet.GetOutputsSum(outputs)
-
-	builder, err := wallet.NewTxBuilder()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create tx builder: %w", err)
-	}
-
-	defer builder.Dispose()
-
-	if len(metadata) != 0 {
-		builder.SetMetaData(metadata)
-	}
-
-	builder.SetProtocolParameters(protocolParams).SetTimeToLive(qtd.Slot + cardanoConfig.TTLSlotNumberInc).
-		SetTestNetMagic(uint(sourceChainConfig.NetworkMagic)).
-		AddInputs(inputs.Inputs...).
-		AddOutputs(outputs...).AddOutputs(wallet.TxOutput{Addr: requestBody.SenderAddr})
-
-	fee, err := builder.CalculateFee(0)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to calculate fee: %w", err)
-	}
-
-	change := inputs.Sum - outputsSum - fee
-	// handle overflow or insufficient amount
-	if change > inputs.Sum || (change > 0 && change < wallet.MinUTxODefaultValue) {
-		return "", "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
-			inputs.Sum, outputsSum+fee)
-	}
-
-	if change == 0 {
-		builder.RemoveOutput(-1)
-	} else {
-		builder.UpdateOutputAmount(-1, change)
-	}
-
-	builder.SetFee(fee)
-
-	txRawBytes, txHash, err := builder.Build()
+	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
+		context.Background(), requestBody.DestinationChainID,
+		requestBody.SenderAddr, receivers,
+	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}
@@ -366,18 +300,8 @@ func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxReque
 		return "", fmt.Errorf("failed to decode raw tx: %w", err)
 	}
 
-	verificationKeyBytes := wallet.GetVerificationKeyFromSigningKey(signingKeyBytes)
-
-	keyHash, err := wallet.GetKeyHash(verificationKeyBytes)
-	if err != nil {
-		return "", fmt.Errorf("failed to get key hash: %w", err)
-	}
-
 	senderWallet := wallet.NewWallet(
-		verificationKeyBytes,
-		signingKeyBytes,
-		keyHash,
-	)
+		wallet.GetVerificationKeyFromSigningKey(signingKeyBytes), signingKeyBytes)
 
 	signedTxBytes, err := wallet.SignTx(txRawBytes, requestBody.TxHash, senderWallet)
 	if err != nil {
