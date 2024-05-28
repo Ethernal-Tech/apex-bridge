@@ -10,6 +10,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
@@ -64,9 +65,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 	bp.logger.Info("NewUnprocessedTxs", "txs", txs)
 
 	var (
-		bridgingRequests []*indexer.Tx
-		relevantTxs      []*core.CardanoTx
-		processedTxs     []*core.ProcessedCardanoTx
+		bridgingRequests  []*indexer.Tx
+		relevantTxs       []*core.CardanoTx
+		processedTxs      []*core.ProcessedCardanoTx
+		invalidTxsCounter int
 	)
 
 	for _, tx := range txs {
@@ -82,6 +84,8 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
 				bp.logger.Error("Failed to check if tx is relevant", "err", err)
+
+				invalidTxsCounter++
 
 				continue
 			}
@@ -101,6 +105,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		if processed {
 			processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
 		}
+	}
+
+	if invalidTxsCounter > 0 {
+		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
 	}
 
 	if len(processedTxs) > 0 {
@@ -235,6 +243,8 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 
 			return
 		}
+
+		telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 	}
 
 	err := bp.notifyBridgingRequestStateUpdater(bridgeClaims, allUnprocessedTxs, allProcessedTxs)
@@ -420,6 +430,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 	var (
 		processedTxs         []*core.ProcessedCardanoTx
 		processedExpectedTxs []*core.BridgeExpectedCardanoTx
+		invalidTxsCounter    int
 	)
 
 	if len(relevantUnprocessedTxs) == 0 {
@@ -468,7 +479,12 @@ unprocessedTxsLoop:
 
 		if !txProcessed {
 			processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(true))
+			invalidTxsCounter++
 		}
+	}
+
+	if invalidTxsCounter > 0 {
+		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
 	}
 
 	return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
@@ -518,6 +534,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var (
 		invalidRelevantExpiredTxs   []*core.BridgeExpectedCardanoTx
 		processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
+		invalidTxsCounter           int
 	)
 
 	if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup ||
@@ -569,7 +586,12 @@ expiredTxsLoop:
 		if !expiredTxProcessed {
 			// expired, but can not process, so we mark it as invalid
 			invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, expiredTx)
+			invalidTxsCounter++
 		}
+	}
+
+	if invalidTxsCounter > 0 {
+		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
 	}
 
 	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs

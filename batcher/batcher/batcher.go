@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -57,6 +58,16 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 			if errors.Is(err, errNonActiveBatchPeriod) {
 				b.logger.Info("execution skipped", "reason", err)
 			} else {
+				// update telemetry
+				if b.lastBatchID.BitLen() == 0 {
+					batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
+					if err == nil {
+						telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID.Uint64())
+					}
+				} else {
+					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, b.lastBatchID.Uint64()+1)
+				}
+
 				b.logger.Error("execution failed", "err", err)
 			}
 		}
@@ -155,6 +166,8 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.lastBatchID = batchID // update last batch id
+
+	telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchID.Uint64())
 
 	return nil
 }

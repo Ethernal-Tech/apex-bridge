@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
@@ -50,6 +52,8 @@ const (
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
+	telemetryFlag = "telemetry"
+
 	primeNetworkAddressFlagDesc   = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc     = "network magic of prime network (default 0)"
 	primeKeysDirFlagDesc          = "path to cardano keys directory for prime network"
@@ -83,6 +87,8 @@ const (
 	outputDirFlagDesc                         = "path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
 	outputRelayerFileNameFlagDesc             = "relayer config json output file name"
+
+	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
 	defaultNetworkMagic                      = 0
 	defaultPrimeKeysDir                      = "./keys/prime"
@@ -131,6 +137,8 @@ type generateConfigsParams struct {
 	outputDir                         string
 	outputValidatorComponentsFileName string
 	outputRelayerFileName             string
+
+	telemetry string
 }
 
 func (p *generateConfigsParams) validateFlags() error {
@@ -182,6 +190,14 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if len(p.apiKeys) == 0 {
 		return fmt.Errorf("specify at least one %s", apiKeysFlag)
+	}
+
+	if p.telemetry != "" {
+		parts := strings.Split(p.telemetry, ",")
+		// common.IsValidURL(parts[0]) returns currently false for 0.0.0.0:5001
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" { //
+			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
+		}
 	}
 
 	return nil
@@ -358,6 +374,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		apiKeysFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&p.telemetry,
+		telemetryFlag,
+		"",
+		telemetryFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
@@ -372,6 +395,15 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	validatorConfig := p.bridgeValidatorConfig
 	if validatorConfig != "" {
 		validatorConfig = path.Clean(validatorConfig)
+	}
+
+	telemetryConfig := telemetry.TelemetryConfig{}
+
+	if p.telemetry != "" {
+		parts := strings.Split(p.telemetry, ",")
+
+		telemetryConfig.PrometheusAddr = parts[0]
+		telemetryConfig.DataDogAddr = parts[1]
 	}
 
 	vcConfig := &vcCore.AppConfig{
@@ -459,6 +491,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			APIKeyHeader: "x-api-key",
 			APIKeys:      p.apiKeys,
 		},
+		Telemetry: telemetryConfig,
 	}
 
 	primeChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{

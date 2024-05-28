@@ -95,6 +95,7 @@ $ go run ./cli/cmd/main.go generate-configs \
         --api-keys "<api key 1>" \
         --api-keys "<api key 2>"
 ```
+optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used if telemetry is desired
 
 Minimal example
 ``` shell
@@ -122,7 +123,7 @@ $ go run ./cli/cmd/main.go sendtx \
         --testnet-src 42 \
         --chain-dst vector \
         --addr-multisig-src addr_test1wzk57y7l9q6qxdyrm4a3nlp535w5l8xglg0kvtl8hp9l8rgpj7q2x \
-        --addr-fee-src addr_test1wpfghl7y6t4uvawfn8ajgejwldsj63rjvg0d6pssv0az0kq3w3l4z \
+        --addr-fee-dst addr_test1wpfghl7y6t4uvawfn8ajgejwldsj63rjvg0d6pssv0az0kq3w3l4z \
         --fee 1_100_000 \
         --ogmios-dst http://localhost:1338 
 ```
