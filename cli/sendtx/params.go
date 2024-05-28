@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	privateKeyDirFlag      = "dir"
-	privateKeyFlag         = "pk"
-	ogmiosURLSrcFlag       = "ogmios"
+	privateKeyDirFlag      = "key-dir"
+	privateKeyFlag         = "key"
+	ogmiosURLSrcFlag       = "ogmios-src"
 	receiverFlag           = "receiver"
-	testnetMagicFlag       = "testnet"
-	chainIDFlag            = "chain"
-	multisigAddrFlag       = "addr-multisig"
-	multisigFeeAddrDstFlag = "addr-fee"
+	testnetMagicFlag       = "testnet-src"
+	chainIDFlag            = "chain-dst"
+	multisigAddrSrcFlag    = "addr-multisig-src"
+	multisigFeeAddrDstFlag = "addr-fee-dst"
 	feeAmountFlag          = "fee"
 	ogmiosURLDstFlag       = "ogmios-dst"
 
@@ -31,7 +31,7 @@ const (
 	receiverFlagDesc           = "receiver addr:amount"
 	testnetMagicFlagDesc       = "source testnet magic number. leave 0 for mainnet"
 	chainIDFlagDesc            = "destination chain ID (prime, vector, etc)"
-	multisigAddrFlagDesc       = "source multisig address"
+	multisigAddrSrcFlagDesc    = "source multisig address"
 	multisigFeeAddrDstFlagDesc = "destination fee payer address"
 	feeAmountFlagDesc          = "amount for multisig fee addr"
 	ogmiosURLDstFlagDesc       = "destination chain ogmios url"
@@ -82,7 +82,7 @@ func (ip *sendTxParams) validateFlags() error {
 	}
 
 	if ip.multisigAddrSrc == "" {
-		return fmt.Errorf("--%s not specified", multisigAddrFlag)
+		return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 	}
 
 	if ip.feeAmount < cardanowallet.MinUTxODefaultValue {
@@ -186,9 +186,9 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.multisigAddrSrc,
-		multisigAddrFlag,
+		multisigAddrSrcFlag,
 		"",
-		multisigAddrFlagDesc,
+		multisigAddrSrcFlagDesc,
 	)
 
 	cmd.Flags().StringVar(

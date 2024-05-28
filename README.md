@@ -110,3 +110,20 @@ $ go run ./cli/cmd/main.go generate-configs \
         --bridge-validator-data-dir "./blade-dir" \
         --api-keys "test_api_key_1"
 ```
+
+# How to Send a Bridging Transaction from Prime to Vector (and Vice Versa)
+```shell
+$ go run ./cli/cmd/main.go sendtx \
+        --key 58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0 \
+        --key-dir <wallet-create-directory-> \
+        --ogmios-src http://localhost:1337 \
+        --receiver addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx:1_000_010 \
+        --receiver addr_test1wrvy8aw0trr4a93ujufac0l9jeh43p7a7z74dz8kljx2yxguldndk:2_000_010 \
+        --testnet-src 42 \
+        --chain-dst vector \
+        --addr-multisig-src addr_test1wzk57y7l9q6qxdyrm4a3nlp535w5l8xglg0kvtl8hp9l8rgpj7q2x \
+        --addr-fee-src addr_test1wpfghl7y6t4uvawfn8ajgejwldsj63rjvg0d6pssv0az0kq3w3l4z \
+        --fee 1_100_000 \
+        --ogmios-dst http://localhost:1338 
+```
+`--key` and `--key-dir` flags are mutually exclusive
