@@ -16,6 +16,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,27 +25,15 @@ import (
 )
 
 func TestBatcherExecute(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "cardano-prime")
-	require.NoError(t, err)
-
-	defer func() {
-		os.RemoveAll(testDir)
-		os.Remove(testDir)
-	}()
-
 	config := &core.BatcherConfiguration{
 		Chain: core.ChainConfig{
 			ChainID:   common.ChainIDStrPrime,
 			ChainType: "Cardano",
-			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+			ChainSpecific: json.RawMessage([]byte(`{
 				"socketPath": "./socket",
 				"testnetMagic": 2,
 				"potentialFee": 300000,
-				"keysDirPath": "%s"
-				}`, testDir))),
-		},
-		Bridge: core.BridgeConfig{
-			ValidatorDataDir: path.Join(testDir, "some"),
+				}`)),
 		},
 		PullTimeMilis: 2500,
 	}
@@ -60,7 +50,9 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -73,7 +65,9 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), nil)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -86,7 +80,9 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(nil, testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -117,7 +113,9 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
 			Return((*core.GeneratedBatchTxData)(nil), testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -143,7 +141,9 @@ func TestBatcherExecute(t *testing.T) {
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return(nil, nil, testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -165,7 +165,9 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(testError)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -187,7 +189,9 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(nil)
 
-		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b := NewBatcher(config,
+			operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			hclog.NewNullLogger())
 		err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -203,25 +207,30 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		os.Remove(validPath)
 	}()
 
-	_, err = cardanotx.GenerateWallet(validPath, false, true)
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(validPath, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
 	require.NoError(t, err)
 
 	chainConfig := core.ChainConfig{
 		ChainID:   common.ChainIDStrPrime,
 		ChainType: "Cardano",
-		ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
+		ChainSpecific: json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 2,
-			"potentialFee": 300000,
-			"keysDirPath": "%s"
-			}`, validPath))),
+			"potentialFee": 300000
+			}`)),
 	}
 
 	t.Run("invalid chain type", func(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainType = "invalid"
 
-		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(cfg, secretsMngr, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unknown chain type")
@@ -231,32 +240,30 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainSpecific = json.RawMessage("")
 
-		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(cfg, secretsMngr, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
 
-	t.Run("invalid keys path", func(t *testing.T) {
-		chainConfig := core.ChainConfig{
-			ChainID:   common.ChainIDStrPrime,
-			ChainType: "Cardano",
-			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
-				"testnetMagic": 2,
-				"socketPath": "./socket",
-				"potentialFee": 300000,
-				"keysDirPath": "%s"
-				}`, path.Join(validPath, "a1", "a2", "a3")))),
-		}
+	t.Run("non existing cardano wallet", func(t *testing.T) {
+		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
+		require.NoError(t, err)
 
-		chainOp, err := GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
+		err = secretsMngr.RemoveSecret(fmt.Sprintf("%sprime_key", secrets.CardanoKeyLocalPrefix))
+		require.NoError(t, err)
+
+		chainOp, err := GetChainSpecificOperations(chainConfig, secretsMngr, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "error while loading wallet info")
+		require.ErrorContains(t, err, "failed to load wallet")
+
+		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
+		require.NoError(t, err)
 	})
 
 	t.Run("valid cardano config and keys path", func(t *testing.T) {
-		chainOp, err := GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainConfig, secretsMngr, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})
@@ -265,7 +272,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		cfg := chainConfig
 		cfg.ChainType = "CaRDaNo"
 
-		chainOp, err := GetChainSpecificOperations(cfg, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainConfig, secretsMngr, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainOp)
 	})

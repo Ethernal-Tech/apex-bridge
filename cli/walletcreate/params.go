@@ -2,7 +2,6 @@ package cliwalletcreate
 
 import (
 	"fmt"
-	"path"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -11,13 +10,15 @@ import (
 )
 
 const (
-	directoryFlag        = "dir"
+	validatorDataDirFlag = "validator-data-dir"
+	validatorConfigFlag  = "validator-config"
 	chainIDFlag          = "chain"
 	generateStakeKeyFlag = "stake"
 	forceRegenerateFlag  = "force"
 	showPrivateKeyFlag   = "show-pk"
 
-	directoryFlagDesc        = "wallet directory"
+	validatorDataDirFlagDesc = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
+	validatorConfigFlagDesc  = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
 	generateStakeKeyFlagDesc = "stake wallet"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
@@ -25,7 +26,8 @@ const (
 )
 
 type initParams struct {
-	directory        string
+	validatorDataDir string
+	validatorConfig  string
 	chainID          string
 	generateStakeKey bool
 	forceRegenerate  bool
@@ -33,8 +35,8 @@ type initParams struct {
 }
 
 func (ip *initParams) validateFlags() error {
-	if ip.directory == "" {
-		return fmt.Errorf("--%s flag not specified", directoryFlag)
+	if ip.validatorDataDir == "" && ip.validatorConfig == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
 	}
 
 	if ip.chainID == "" {
@@ -46,10 +48,17 @@ func (ip *initParams) validateFlags() error {
 
 func (ip *initParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&ip.directory,
-		directoryFlag,
+		&ip.validatorDataDir,
+		validatorDataDirFlag,
 		"",
-		directoryFlagDesc,
+		validatorDataDirFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.validatorConfig,
+		validatorConfigFlag,
+		"",
+		validatorConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -79,12 +88,17 @@ func (ip *initParams) setFlags(cmd *cobra.Command) {
 		false,
 		showPrivateKeyFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
 
 func (ip *initParams) Execute() (common.ICommandResult, error) {
-	dir := path.Clean(ip.directory)
+	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
+	if err != nil {
+		return nil, err
+	}
 
-	wallet, err := cardanotx.GenerateWallet(path.Join(dir, ip.chainID), ip.generateStakeKey, ip.forceRegenerate)
+	wallet, err := cardanotx.GenerateWallet(secretsManager, ip.chainID, ip.generateStakeKey, ip.forceRegenerate)
 	if err != nil {
 		return nil, err
 	}

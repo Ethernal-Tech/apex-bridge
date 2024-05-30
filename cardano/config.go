@@ -16,7 +16,6 @@ type CardanoChainConfig struct {
 	BlockfrostAPIKey      string `json:"blockfrostApiKey,omitempty"`
 	SocketPath            string `json:"socketPath,omitempty"`
 	PotentialFee          uint64 `json:"potentialFee"`
-	KeysDirPath           string `json:"keysDirPath,omitempty"`
 	TTLSlotNumberInc      uint64 `json:"ttlSlotNumberIncrement"`
 	SlotRoundingThreshold uint64 `json:"slotRoundingThreshold"`
 }
@@ -55,8 +54,4 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
-}
-
-func (config CardanoChainConfig) LoadWallet() (*CardanoWallet, error) {
-	return LoadWallet(config.KeysDirPath, false)
 }

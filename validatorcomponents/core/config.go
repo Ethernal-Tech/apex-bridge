@@ -17,7 +17,6 @@ type CardanoChainConfig struct {
 	TTLSlotNumberInc         uint64   `json:"ttlSlotNumberIncrement"`
 	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
-	KeysDirPath              string   `json:"keysDirPath"`
 	OgmiosURL                string   `json:"ogmiosUrl"`
 	BlockfrostURL            string   `json:"blockfrostUrl"`
 	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
@@ -37,6 +36,8 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
+	ValidatorDataDir             string                         `json:"validatorDataDir"`
+	ValidatorConfigPath          string                         `json:"validatorConfigPath"`
 	CardanoChains                map[string]*CardanoChainConfig `json:"cardanoChains"`
 	Bridge                       oracleCore.BridgeConfig        `json:"bridge"`
 	BridgingSettings             oracleCore.BridgingSettings    `json:"bridgingSettings"`
@@ -71,7 +72,6 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			BlockfrostAPIKey:      ccConfig.BlockfrostAPIKey,
 			SocketPath:            ccConfig.SocketPath,
 			PotentialFee:          ccConfig.PotentialFee,
-			KeysDirPath:           ccConfig.KeysDirPath,
 			TTLSlotNumberInc:      ccConfig.TTLSlotNumberInc,
 			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
 		}).Serialize()
@@ -84,19 +84,21 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 	}
 
 	oracleConfig := &oracleCore.AppConfig{
-		Bridge:           appConfig.Bridge,
-		Settings:         appConfig.Settings,
-		BridgingSettings: appConfig.BridgingSettings,
-		CardanoChains:    oracleCardanoChains,
+		ValidatorDataDir:    appConfig.ValidatorDataDir,
+		ValidatorConfigPath: appConfig.ValidatorConfigPath,
+		Bridge:              appConfig.Bridge,
+		Settings:            appConfig.Settings,
+		BridgingSettings:    appConfig.BridgingSettings,
+		CardanoChains:       oracleCardanoChains,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
+		ValidatorDataDir:    appConfig.ValidatorDataDir,
+		ValidatorConfigPath: appConfig.ValidatorConfigPath,
 		Bridge: batcherCore.BridgeConfig{
 			NodeURL:              appConfig.Bridge.NodeURL,
 			DynamicTx:            appConfig.Bridge.DynamicTx,
 			SmartContractAddress: appConfig.Bridge.SmartContractAddress,
-			ValidatorDataDir:     appConfig.Bridge.ValidatorDataDir,
-			ValidatorConfigPath:  appConfig.Bridge.ValidatorConfigPath,
 		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,

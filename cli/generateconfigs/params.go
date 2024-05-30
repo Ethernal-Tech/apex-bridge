@@ -22,7 +22,6 @@ const (
 	primeNetworkAddressFlag        = "prime-network-address"
 	primeNetworkMagicFlag          = "prime-network-magic"
 	primeNetworkIDFlag             = "prime-network-id"
-	primeKeysDirFlag               = "prime-keys-dir"
 	primeOgmiosURLFlag             = "prime-ogmios-url"
 	primeBlockfrostURLFlag         = "prime-blockfrost-url"
 	primeBlockfrostAPIKeyFlag      = "prime-blockfrost-api-key"
@@ -33,7 +32,6 @@ const (
 	vectorNetworkAddressFlag        = "vector-network-address"
 	vectorNetworkMagicFlag          = "vector-network-magic"
 	vectorNetworkIDFlag             = "vector-network-id"
-	vectorKeysDirFlag               = "vector-keys-dir"
 	vectorOgmiosURLFlag             = "vector-ogmios-url"
 	vectorBlockfrostURLFlag         = "vector-blockfrost-url"
 	vectorBlockfrostAPIKeyFlag      = "vector-blockfrost-api-key"
@@ -41,10 +39,11 @@ const (
 	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
 	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
 
-	bridgeNodeURLFlag          = "bridge-node-url"
-	bridgeSCAddressFlag        = "bridge-sc-address"
-	bridgeValidatorDataDirFlag = "bridge-validator-data-dir"
-	bridgeValidatorConfigFlag  = "bridge-validator-config"
+	bridgeNodeURLFlag   = "bridge-node-url"
+	bridgeSCAddressFlag = "bridge-sc-address"
+
+	validatorDataDirFlag = "validator-data-dir"
+	validatorConfigFlag  = "validator-config"
 
 	logsPathFlag = "logs-path"
 	dbsPathFlag  = "dbs-path"
@@ -61,7 +60,6 @@ const (
 	primeNetworkAddressFlagDesc        = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc          = "prime network magic (default 0)"
 	primeNetworkIDFlagDesc             = "prime network id"
-	primeKeysDirFlagDesc               = "path to cardano keys directory for prime network"
 	primeOgmiosURLFlagDesc             = "ogmios URL for prime network"
 	primeBlockfrostURLFlagDesc         = "blockfrost URL for prime network"
 	primeBlockfrostAPIKeyFlagDesc      = "blockfrost API key for prime network" //nolint:gosec
@@ -72,7 +70,6 @@ const (
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
 	vectorNetworkIDFlagDesc             = "vector network id"
-	vectorKeysDirFlagDesc               = "path to cardano keys directory for vector network"
 	vectorOgmiosURLFlagDesc             = "ogmios URL for vector network"
 	vectorBlockfrostURLFlagDesc         = "blockfrost URL for vector network"
 	vectorBlockfrostAPIKeyFlagDesc      = "blockfrost API key for vector network" //nolint:gosec
@@ -80,10 +77,11 @@ const (
 	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
-	bridgeNodeURLFlagDesc          = "(mandatory) node URL of bridge chain"
-	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
-	bridgeValidatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
-	bridgeValidatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
+	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
+	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
+
+	validatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
+	validatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
 
 	logsPathFlagDesc = "path to where logs will be stored"
 	dbsPathFlagDesc  = "path to where databases will be stored"
@@ -98,8 +96,6 @@ const (
 	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
 	defaultNetworkMagic                      = 0
-	defaultPrimeKeysDir                      = "./keys/prime"
-	defaultVectorKeysDir                     = "./keys/vector"
 	defaultLogsPath                          = "./logs"
 	defaultDBsPath                           = "./db"
 	defaultAPIPort                           = 10000
@@ -116,7 +112,6 @@ type generateConfigsParams struct {
 	primeNetworkAddress        string
 	primeNetworkMagic          uint32
 	primeNetworkID             uint32
-	primeKeysDir               string
 	primeOgmiosURL             string
 	primeBlockfrostURL         string
 	primeBlockfrostAPIKey      string
@@ -127,7 +122,6 @@ type generateConfigsParams struct {
 	vectorNetworkAddress        string
 	vectorNetworkMagic          uint32
 	vectorNetworkID             uint32
-	vectorKeysDir               string
 	vectorOgmiosURL             string
 	vectorBlockfrostURL         string
 	vectorBlockfrostAPIKey      string
@@ -135,10 +129,11 @@ type generateConfigsParams struct {
 	vectorTTLSlotInc            uint64
 	vectorSlotRoundingThreshold uint64
 
-	bridgeNodeURL          string
-	bridgeSCAddress        string
-	bridgeValidatorDataDir string
-	bridgeValidatorConfig  string
+	bridgeNodeURL   string
+	bridgeSCAddress string
+
+	validatorDataDir string
+	validatorConfig  string
 
 	logsPath string
 	dbsPath  string
@@ -196,8 +191,8 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
 	}
 
-	if p.bridgeValidatorDataDir == "" && p.bridgeValidatorConfig == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
+	if p.validatorDataDir == "" && p.validatorConfig == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
 	}
 
 	if len(p.apiKeys) == 0 {
@@ -233,12 +228,6 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeNetworkIDFlag,
 		uint32(wallet.MainNetNetwork),
 		primeNetworkIDFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeKeysDir,
-		primeKeysDirFlag,
-		defaultPrimeKeysDir,
-		primeKeysDirFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.primeOgmiosURL,
@@ -296,12 +285,6 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorNetworkIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.vectorKeysDir,
-		vectorKeysDirFlag,
-		defaultVectorKeysDir,
-		vectorKeysDirFlagDesc,
-	)
-	cmd.Flags().StringVar(
 		&p.vectorOgmiosURL,
 		vectorOgmiosURLFlag,
 		"",
@@ -350,17 +333,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		bridgeSCAddressFlagDesc,
 	)
+
 	cmd.Flags().StringVar(
-		&p.bridgeValidatorDataDir,
-		bridgeValidatorDataDirFlag,
+		&p.validatorDataDir,
+		validatorDataDirFlag,
 		"",
-		bridgeValidatorDataDirFlagDesc,
+		validatorDataDirFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.bridgeValidatorConfig,
-		bridgeValidatorConfigFlag,
+		&p.validatorConfig,
+		validatorConfigFlag,
 		"",
-		bridgeValidatorConfigFlagDesc,
+		validatorConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -415,18 +399,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		telemetryFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
-	validatorDataDir := p.bridgeValidatorDataDir
+	validatorDataDir := p.validatorDataDir
 	if validatorDataDir != "" {
 		validatorDataDir = path.Clean(validatorDataDir)
 	}
 
-	validatorConfig := p.bridgeValidatorConfig
+	validatorConfig := p.validatorConfig
 	if validatorConfig != "" {
 		validatorConfig = path.Clean(validatorConfig)
 	}
@@ -441,6 +425,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfig := &vcCore.AppConfig{
+		ValidatorDataDir:    validatorDataDir,
+		ValidatorConfigPath: validatorConfig,
 		CardanoChains: map[string]*vcCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
@@ -452,7 +438,6 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
-				KeysDirPath:              path.Clean(p.primeKeysDir),
 				OgmiosURL:                p.primeOgmiosURL,
 				BlockfrostURL:            p.primeBlockfrostURL,
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
@@ -470,7 +455,6 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmationBlockCount:   10,
 				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
-				KeysDirPath:              path.Clean(p.vectorKeysDir),
 				OgmiosURL:                p.vectorOgmiosURL,
 				BlockfrostURL:            p.vectorBlockfrostURL,
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
@@ -483,8 +467,6 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
-			ValidatorDataDir:     validatorDataDir,
-			ValidatorConfigPath:  validatorConfig,
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,

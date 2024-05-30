@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"path"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -19,9 +18,8 @@ import (
 
 const (
 	defaultGasLimit             = 5_242_880
-	keysDirectoryFlag           = "keys-dir"
-	bridgeValidatorDataDirFlag  = "bridge-validator-data-dir"
-	bridgeValidatorConfigFlag   = "bridge-validator-config"
+	validatorDataDirFlag        = "validator-data-dir"
+	validatorConfigFlag         = "validator-config"
 	ogmiosURLFlag               = "ogmios"
 	blockfrostURLFlag           = "blockfrost"
 	blockfrostProjectAPIKeyFlag = "blockfrost-api-key"
@@ -34,9 +32,8 @@ const (
 	chainIDFlag                 = "chain"
 	initialTokenSupplyFlag      = "token-supply"
 
-	keysDirectoryFlagDesc           = "cardano wallet directory"
-	bridgeValidatorDataDirFlagDesc  = "(mandatory if bridge-validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
-	bridgeValidatorConfigFlagDesc   = "(mandatory if bridge-validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
+	validatorDataDirFlagDesc        = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
+	validatorConfigFlagDesc         = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc                 = "chain ID (prime, vector, etc)"
 	ogmiosURLFlagDesc               = "ogmios url"
 	blockfrostURLFlagDesc           = "blockfrost url"
@@ -51,9 +48,8 @@ const (
 )
 
 type registerChainParams struct {
-	keysDirectory           string
-	bridgeValidatorDataDir  string
-	bridgeValidatorConfig   string
+	validatorDataDir        string
+	validatorConfig         string
 	blockfrostURL           string
 	blockfrostProjectAPIKey string
 	ogmiosURL               string
@@ -86,12 +82,8 @@ func (ip *registerChainParams) validateFlags() error {
 		return fmt.Errorf("invalid ogmios url: %s", ip.ogmiosURL)
 	}
 
-	if ip.keysDirectory == "" {
-		return fmt.Errorf("invalid directory for Cardano keys: %s", ip.keysDirectory)
-	}
-
-	if ip.bridgeValidatorDataDir == "" && ip.bridgeValidatorConfig == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
+	if ip.validatorDataDir == "" && ip.validatorConfig == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
 	}
 
 	if ip.multisigAddr == "" {
@@ -127,24 +119,17 @@ func (ip *registerChainParams) validateFlags() error {
 
 func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&ip.keysDirectory,
-		keysDirectoryFlag,
+		&ip.validatorDataDir,
+		validatorDataDirFlag,
 		"",
-		keysDirectoryFlagDesc,
+		validatorDataDirFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
-		&ip.bridgeValidatorDataDir,
-		bridgeValidatorDataDirFlag,
+		&ip.validatorConfig,
+		validatorConfigFlag,
 		"",
-		bridgeValidatorDataDirFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.bridgeValidatorConfig,
-		bridgeValidatorConfigFlag,
-		"",
-		bridgeValidatorConfigFlagDesc,
+		validatorConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -224,19 +209,19 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(bridgeValidatorDataDirFlag, bridgeValidatorConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(blockfrostURLFlag, socketPathFlag, ogmiosURLFlag)
 }
 
 func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
-	walletCardano, err := cardanotx.LoadWallet(path.Join(path.Clean(ip.keysDirectory), ip.chainID), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
-	}
-
-	secretsManager, err := common.GetSecretsManager(ip.bridgeValidatorDataDir, ip.bridgeValidatorConfig, true)
+	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	walletCardano, err := cardanotx.LoadWallet(secretsManager, ip.chainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
 	}
 
 	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)

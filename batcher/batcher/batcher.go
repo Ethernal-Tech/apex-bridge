@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -21,27 +22,29 @@ type lastBatchData struct {
 
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
-	logger                      hclog.Logger
 	operations                  core.ChainOperations
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
+	logger                      hclog.Logger
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
 
 func NewBatcher(
 	config *core.BatcherConfiguration,
+	operations core.ChainOperations,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
-	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract,
-	bridgingRequestStateUpdater common.BridgingRequestStateUpdater) *BatcherImpl {
+) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
-		logger:                      logger,
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
+		logger:                      logger,
 	}
 }
 
@@ -192,11 +195,13 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainConfig, logger hclog.Logger) (core.ChainOperations, error) {
+func GetChainSpecificOperations(
+	config core.ChainConfig, secretsManager secrets.SecretsManager, logger hclog.Logger,
+) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case "cardano":
-		return NewCardanoChainOperations(config.ChainSpecific, logger)
+		return NewCardanoChainOperations(config.ChainSpecific, secretsManager, config.ChainID, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

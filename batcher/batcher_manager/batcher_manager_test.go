@@ -3,7 +3,6 @@ package batchermanager
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path"
 	"reflect"
@@ -15,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	infraCommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,12 +29,11 @@ func TestBatcherManagerOperations(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	jsonData := []byte(fmt.Sprintf(`{
+	jsonData := []byte(`{
 		"socketPath": "./socket",
 		"testnetMagic": 2,
-		"potentialFee": 300000,
-		"keysDirPath": "%s"
-		}`, testDir))
+		"potentialFee": 300000
+		}`)
 
 	config := &core.BatcherManagerConfiguration{
 		Chains: []core.ChainConfig{
@@ -48,11 +47,18 @@ func TestBatcherManagerOperations(t *testing.T) {
 		PullTimeMilis: 2500,
 	}
 
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
 	for _, chainConfig := range config.Chains {
-		wallet, err := cardanotx.GenerateWallet(testDir, false, true)
+		wallet, err := cardanotx.GenerateWallet(secretsMngr, chainConfig.ChainID, true, false)
 		require.NoError(t, err)
 
-		chainOp, err := batcher.GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
+		chainOp, err := batcher.GetChainSpecificOperations(
+			chainConfig, secretsMngr, hclog.NewNullLogger())
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
@@ -89,7 +95,13 @@ func TestBatcherManagerCreation(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	_, err = cardanotx.GenerateWallet(testDir, false, true)
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", true, true)
 	require.NoError(t, err)
 
 	ecdsaValidatoSecretDirPath := path.Join(testDir, secrets.ConsensusFolderLocal)

@@ -60,7 +60,7 @@ func NewOracle(
 	}
 
 	secretsManager, err := common.GetSecretsManager(
-		appConfig.Bridge.ValidatorDataDir, appConfig.Bridge.ValidatorConfigPath, true)
+		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
