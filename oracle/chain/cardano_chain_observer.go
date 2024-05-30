@@ -11,6 +11,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 
 	"github.com/hashicorp/go-hclog"
@@ -53,6 +54,8 @@ func NewCardanoChainObserver(
 
 	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
 		logger.Info("Confirmed Txs", "txs", len(txs))
+
+		telemetry.UpdateOracleTxsReceivedCounter(config.ChainID, len(txs))
 
 		txs, err := indexerDB.GetUnprocessedConfirmedTxs(0)
 		if err != nil {

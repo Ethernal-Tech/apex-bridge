@@ -4,6 +4,7 @@ import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 )
 
 type CardanoChainConfig struct {
@@ -42,6 +43,7 @@ type AppConfig struct {
 	RelayerImitatorPullTimeMilis uint64                         `json:"relayerImitatorPullTime"`
 	BatcherPullTimeMilis         uint64                         `json:"batcherPullTime"`
 	APIConfig                    APIConfig                      `json:"api"`
+	Telemetry                    telemetry.TelemetryConfig      `json:"telemetry"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {

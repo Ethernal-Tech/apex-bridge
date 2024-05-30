@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -37,6 +38,7 @@ type ValidatorComponentsImpl struct {
 	batcherManager  batcherCore.BatcherManager
 	relayerImitator core.RelayerImitator
 	api             core.API
+	telemetry       *telemetry.Telemetry
 	logger          hclog.Logger
 }
 
@@ -48,6 +50,11 @@ func NewValidatorComponents(
 	shouldRunAPI bool,
 	logger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
+	telemetry, err := telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create telemetry. err: %w", err)
+	}
+
 	db, err := databaseaccess.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
@@ -129,6 +136,7 @@ func NewValidatorComponents(
 		batcherManager:  batcherManager,
 		relayerImitator: relayerImitator,
 		api:             apiObj,
+		telemetry:       telemetry,
 		logger:          logger,
 	}, nil
 }
@@ -136,7 +144,12 @@ func NewValidatorComponents(
 func (v *ValidatorComponentsImpl) Start() error {
 	v.logger.Debug("Starting ValidatorComponents")
 
-	err := v.oracle.Start()
+	err := v.telemetry.Start()
+	if err != nil {
+		return err
+	}
+
+	err = v.oracle.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
 	}
@@ -159,24 +172,26 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 
 	errs := make([]error, 0)
 
-	err := v.oracle.Dispose()
-	if err != nil {
+	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
 	}
 
 	if v.shouldRunAPI {
-		err = v.api.Dispose()
-		if err != nil {
+		if err := v.api.Dispose(); err != nil {
 			v.logger.Error("error while disposing api", "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing api. err: %w", err))
 		}
 	}
 
-	err = v.db.Close()
-	if err != nil {
+	if err := v.db.Close(); err != nil {
 		v.logger.Error("Failed to close validatorcomponents db", "err", err)
 		errs = append(errs, fmt.Errorf("failed to close validatorcomponents db. err: %w", err))
+	}
+
+	if err := v.telemetry.Close(context.Background()); err != nil {
+		v.logger.Error("Failed to close telemetry", "err", err)
+		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}
 
 	if len(errs) > 0 {
