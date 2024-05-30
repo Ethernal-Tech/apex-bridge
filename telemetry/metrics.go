@@ -17,8 +17,12 @@ func UpdateOracleClaimsSubmitCounter(cnt int) {
 	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_submit_counter"}, float32(cnt))
 }
 
-func UpdateOracleClaimsInvalidCounter(cnt int) {
-	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_invalid_counter"}, float32(cnt))
+func UpdateOracleClaimsInvalidCounter(chain string, cnt int) {
+	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_invalid_counter", chain}, float32(cnt))
+}
+
+func UpdateOracleClaimsInvalidMetaDataCounter(chain string, cnt int) {
+	metrics.IncrCounter([]string{oracleMetricsPrefix, "claims_invalid_metadata_counter", chain}, float32(cnt))
 }
 
 func UpdateBatcherBatchSubmitSucceeded(chain string, id uint64) {

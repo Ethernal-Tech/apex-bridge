@@ -107,10 +107,6 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		}
 	}
 
-	if invalidTxsCounter > 0 {
-		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
-	}
-
 	if len(processedTxs) > 0 {
 		bp.logger.Debug("Adding already processed txs to db", "txs", processedTxs)
 
@@ -133,6 +129,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 
 			return err
 		}
+	}
+
+	if invalidTxsCounter > 0 {
+		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
 	}
 
 	err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
@@ -484,7 +484,7 @@ unprocessedTxsLoop:
 	}
 
 	if invalidTxsCounter > 0 {
-		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
+		telemetry.UpdateOracleClaimsInvalidCounter(blockInfo.ChainID, invalidTxsCounter) // update telemetry
 	}
 
 	return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
@@ -534,7 +534,6 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var (
 		invalidRelevantExpiredTxs   []*core.BridgeExpectedCardanoTx
 		processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
-		invalidTxsCounter           int
 	)
 
 	if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup ||
@@ -586,12 +585,11 @@ expiredTxsLoop:
 		if !expiredTxProcessed {
 			// expired, but can not process, so we mark it as invalid
 			invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, expiredTx)
-			invalidTxsCounter++
 		}
 	}
 
-	if invalidTxsCounter > 0 {
-		telemetry.UpdateOracleClaimsInvalidCounter(invalidTxsCounter) // update telemetry
+	if len(invalidRelevantExpiredTxs) > 0 {
+		telemetry.UpdateOracleClaimsInvalidCounter(blockInfo.ChainID, len(invalidRelevantExpiredTxs)) // update telemetry
 	}
 
 	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs

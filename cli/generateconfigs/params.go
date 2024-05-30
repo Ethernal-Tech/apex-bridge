@@ -194,7 +194,7 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if p.telemetry != "" {
 		parts := strings.Split(p.telemetry, ",")
-		// common.IsValidURL(parts[0]) returns currently false for 0.0.0.0:5001
+		// common.IsValidURL(parts[0]) currently returns false for 0.0.0.0:5001
 		if len(parts) != 2 || parts[0] == "" || parts[1] == "" { //
 			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
 		}
