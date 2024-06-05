@@ -3,6 +3,7 @@ package core
 import (
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
@@ -203,23 +204,16 @@ var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
 type CardanoTxProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
-	Type           TxProcessorType
+	Type           common.BridgingTxType
 }
 
 // GetType implements CardanoTxProcessor.
-func (m *CardanoTxProcessorMock) GetType() TxProcessorType {
+func (m *CardanoTxProcessorMock) GetType() common.BridgingTxType {
 	if m.Type != "" {
 		return m.Type
 	}
 
 	return "unspecified"
-}
-
-// IsTxRelevant implements CardanoTxProcessor.
-func (m *CardanoTxProcessorMock) IsTxRelevant(tx *CardanoTx) (bool, error) {
-	args := m.Called(tx)
-
-	return args.Bool(0), args.Error(1)
 }
 
 // ValidateAndAddClaim implements CardanoTxProcessor.
@@ -238,23 +232,16 @@ var _ CardanoTxProcessor = (*CardanoTxProcessorMock)(nil)
 type CardanoTxFailedProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
-	Type           TxProcessorType
+	Type           common.BridgingTxType
 }
 
 // GetType implements CardanoTxProcessor.
-func (m *CardanoTxFailedProcessorMock) GetType() TxProcessorType {
+func (m *CardanoTxFailedProcessorMock) GetType() common.BridgingTxType {
 	if m.Type != "" {
 		return m.Type
 	}
 
 	return "unspecified"
-}
-
-// IsTxRelevant implements CardanoTxFailedProcessor.
-func (m *CardanoTxFailedProcessorMock) IsTxRelevant(tx *BridgeExpectedCardanoTx) (bool, error) {
-	args := m.Called(tx)
-
-	return args.Bool(0), args.Error(1)
 }
 
 // ValidateAndAddClaim implements CardanoTxFailedProcessor.

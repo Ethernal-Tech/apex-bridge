@@ -25,8 +25,8 @@ type CardanoTxsProcessorImpl struct {
 	ctx                         context.Context
 	appConfig                   *core.AppConfig
 	db                          core.CardanoTxsProcessorDB
-	txProcessors                []core.CardanoTxProcessor
-	failedTxProcessors          []core.CardanoTxFailedProcessor
+	txProcessors                map[string]core.CardanoTxProcessor
+	failedTxProcessors          map[string]core.CardanoTxFailedProcessor
 	bridgeSubmitter             core.BridgeSubmitter
 	indexerDbs                  map[string]indexer.Database
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
@@ -47,12 +47,22 @@ func NewCardanoTxsProcessor(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) *CardanoTxsProcessorImpl {
+	txProcessorsMap := make(map[string]core.CardanoTxProcessor, len(txProcessors))
+	for _, txProcessor := range txProcessors {
+		txProcessorsMap[string(txProcessor.GetType())] = txProcessor
+	}
+
+	failedTxProcessorsMap := make(map[string]core.CardanoTxFailedProcessor, len(failedTxProcessors))
+	for _, txProcessor := range failedTxProcessors {
+		failedTxProcessorsMap[string(txProcessor.GetType())] = txProcessor
+	}
+
 	return &CardanoTxsProcessorImpl{
 		ctx:                         ctx,
 		appConfig:                   appConfig,
 		db:                          db,
-		txProcessors:                txProcessors,
-		failedTxProcessors:          failedTxProcessors,
+		txProcessors:                txProcessorsMap,
+		failedTxProcessors:          failedTxProcessorsMap,
 		bridgeSubmitter:             bridgeSubmitter,
 		indexerDbs:                  indexerDbs,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
@@ -71,39 +81,40 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		invalidTxsCounter int
 	)
 
+	onIrrelevantTx := func(cardanoTx *core.CardanoTx) {
+		processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
+	}
+
 	for _, tx := range txs {
 		cardanoTx := &core.CardanoTx{
 			OriginChainID: originChainID,
 			Tx:            *tx,
 		}
 
-		processed := true
+		bp.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-		for _, txProcessor := range bp.txProcessors {
-			relevant, err := txProcessor.IsTxRelevant(cardanoTx)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-				bp.logger.Error("Failed to check if tx is relevant", "err", err)
+		txProcessor, relevant, err := bp.getTxProcessor(tx.Hash, tx.Metadata)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
+			bp.logger.Error("Failed to check if tx is relevant", "err", err)
 
-				invalidTxsCounter++
+			onIrrelevantTx(cardanoTx)
 
-				continue
-			}
+			invalidTxsCounter++
 
-			if relevant {
-				relevantTxs = append(relevantTxs, cardanoTx)
-				processed = false
-
-				if txProcessor.GetType() == core.TxProcessorTypeBridgingRequest {
-					bridgingRequests = append(bridgingRequests, tx)
-				}
-
-				break
-			}
+			continue
 		}
 
-		if processed {
-			processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
+		if !relevant {
+			onIrrelevantTx(cardanoTx)
+
+			continue
+		}
+
+		relevantTxs = append(relevantTxs, cardanoTx)
+
+		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+			bridgingRequests = append(bridgingRequests, tx)
 		}
 	}
 
@@ -151,6 +162,36 @@ func (bp *CardanoTxsProcessorImpl) Start() {
 			return
 		}
 	}
+}
+
+func (bp *CardanoTxsProcessorImpl) getTxProcessor(txHash string, metadataBytes []byte) (
+	core.CardanoTxProcessor, bool, error,
+) {
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
+	if err != nil {
+		return nil, false, err
+	}
+
+	bp.logger.Debug("Unmarshaled metadata", "txHash", txHash, "metadata", metadata, "err", err)
+
+	txProcessor, relevant := bp.txProcessors[string(metadata.BridgingTxType)]
+
+	return txProcessor, relevant, nil
+}
+
+func (bp *CardanoTxsProcessorImpl) getFailedTxProcessor(txHash string, metadataBytes []byte) (
+	core.CardanoTxFailedProcessor, bool, error,
+) {
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
+	if err != nil {
+		return nil, false, err
+	}
+
+	bp.logger.Debug("Unmarshaled metadata", "txHash", txHash, "metadata", metadata, "err", err)
+
+	txProcessor, relevant := bp.failedTxProcessors[string(metadata.BridgingTxType)]
+
+	return txProcessor, relevant, nil
 }
 
 func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
@@ -437,49 +478,51 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 		return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
 	}
 
+	onInvalidTx := func(tx *core.CardanoTx) {
+		processedTxs = append(processedTxs, tx.ToProcessedCardanoTx(true))
+		invalidTxsCounter++
+	}
+
 	// check unprocessed txs from indexers
-unprocessedTxsLoop:
 	for _, unprocessedTx := range relevantUnprocessedTxs {
-		var txProcessed = false
-	txProcessorsLoop:
-		for _, txProcessor := range bp.txProcessors {
-			relevant, err := txProcessor.IsTxRelevant(unprocessedTx)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-				bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
+		bp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
 
-				continue txProcessorsLoop
-			}
+		txProcessor, relevant, err := bp.getTxProcessor(unprocessedTx.Hash, unprocessedTx.Metadata)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
+			bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
 
-			if relevant {
-				err := txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
-					bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+			onInvalidTx(unprocessedTx)
 
-					continue txProcessorsLoop
-				}
-
-				expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
-				if expectedTx != nil {
-					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-					delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
-				}
-
-				processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
-				txProcessed = true
-
-				if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-					break unprocessedTxsLoop
-				} else {
-					break txProcessorsLoop
-				}
-			}
+			continue
 		}
 
-		if !txProcessed {
-			processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(true))
-			invalidTxsCounter++
+		if !relevant {
+			onInvalidTx(unprocessedTx)
+
+			continue
+		}
+
+		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
+			bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+
+			onInvalidTx(unprocessedTx)
+
+			continue
+		}
+
+		expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
+		if expectedTx != nil {
+			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+			delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
+		}
+
+		processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
+
+		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+			break
 		}
 	}
 
@@ -541,7 +584,11 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 	}
 
-expiredTxsLoop:
+	onInvalidTx := func(tx *core.BridgeExpectedCardanoTx) {
+		// expired, but can not process, so we mark it as invalid
+		invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, tx)
+	}
+
 	for _, expiredTx := range relevantExpiredTxs {
 		processedTx, _ := bp.db.GetProcessedTx(expiredTx.ChainID, expiredTx.Hash)
 		if processedTx != nil && !processedTx.IsInvalid {
@@ -551,40 +598,38 @@ expiredTxsLoop:
 			continue
 		}
 
-		var expiredTxProcessed = false
-	failedTxProcessorsLoop:
-		for _, txProcessor := range bp.failedTxProcessors {
-			relevant, err := txProcessor.IsTxRelevant(expiredTx)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
-				bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
+		bp.logger.Debug("Checking if expired tx is relevant", "expiredTx", expiredTx)
 
-				continue failedTxProcessorsLoop
-			}
+		txProcessor, relevant, err := bp.getFailedTxProcessor(expiredTx.Hash, expiredTx.Metadata)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
+			bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
 
-			if relevant {
-				err := txProcessor.ValidateAndAddClaim(bridgeClaims, expiredTx, bp.appConfig)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
-					bp.logger.Error("Failed to ValidateAndAddClaim", "expiredTx", expiredTx, "err", err)
+			onInvalidTx(expiredTx)
 
-					continue failedTxProcessorsLoop
-				}
-
-				processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
-				expiredTxProcessed = true
-
-				if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-					break expiredTxsLoop
-				} else {
-					break failedTxProcessorsLoop
-				}
-			}
+			continue
 		}
 
-		if !expiredTxProcessed {
-			// expired, but can not process, so we mark it as invalid
-			invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, expiredTx)
+		if !relevant {
+			onInvalidTx(expiredTx)
+
+			continue
+		}
+
+		err = txProcessor.ValidateAndAddClaim(bridgeClaims, expiredTx, bp.appConfig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
+			bp.logger.Error("Failed to ValidateAndAddClaim", "expiredTx", expiredTx, "err", err)
+
+			onInvalidTx(expiredTx)
+
+			continue
+		}
+
+		processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
+
+		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+			break
 		}
 	}
 
@@ -641,28 +686,14 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 		}
 	}
 
-	var bridgingRequestTxProcessor core.CardanoTxProcessor
-
-	for _, txProcessor := range bp.txProcessors {
-		if txProcessor.GetType() == core.TxProcessorTypeBridgingRequest {
-			bridgingRequestTxProcessor = txProcessor
-
-			break
-		}
-	}
-
-	if bridgingRequestTxProcessor == nil {
-		return fmt.Errorf("failed to find bridging request tx processor")
-	}
-
 	for _, tx := range processedTxs {
 		if tx.IsInvalid {
 			for _, unprocessedTx := range unprocessedTxs {
 				if unprocessedTx.ToCardanoTxKey() == tx.ToCardanoTxKey() {
-					relevant, err := bridgingRequestTxProcessor.IsTxRelevant(unprocessedTx)
+					txProcessor, relevant, err := bp.getTxProcessor(unprocessedTx.Hash, unprocessedTx.Metadata)
 					if err != nil {
 						bp.logger.Error("Failed to check if unprocessedTx is relevant", "unprocessedTx", unprocessedTx, "err", err)
-					} else if relevant {
+					} else if relevant && txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
 						err := bp.bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
 							SourceChainID: tx.OriginChainID,
 							SourceTxHash:  tx.Hash,
