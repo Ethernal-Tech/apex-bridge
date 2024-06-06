@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -51,14 +52,12 @@ type CardanoTxsProcessor interface {
 }
 
 type CardanoTxProcessor interface {
-	GetType() TxProcessorType
-	IsTxRelevant(tx *CardanoTx) (bool, error)
+	GetType() common.BridgingTxType
 	ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error
 }
 
 type CardanoTxFailedProcessor interface {
-	GetType() TxProcessorType
-	IsTxRelevant(tx *BridgeExpectedCardanoTx) (bool, error)
+	GetType() common.BridgingTxType
 	ValidateAndAddClaim(claims *BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *AppConfig) error
 }
 

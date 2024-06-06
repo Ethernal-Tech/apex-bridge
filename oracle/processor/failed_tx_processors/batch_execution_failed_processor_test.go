@@ -13,37 +13,6 @@ import (
 func TestBatchExecutionFailedProcessor(t *testing.T) {
 	proc := NewBatchExecutionFailedProcessor(hclog.NewNullLogger())
 
-	t.Run("IsTxRelevant", func(t *testing.T) {
-		relevant, err := proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{})
-		require.Error(t, err)
-		require.False(t, relevant)
-
-		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
-			BridgingTxType: common.BridgingTxTypeBridgingRequest,
-		})
-
-		require.NoError(t, err)
-		require.NotNil(t, irrelevantMetadata)
-
-		relevant, err = proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{
-			Metadata: irrelevantMetadata,
-		})
-		require.NoError(t, err)
-		require.False(t, relevant)
-
-		relevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
-			BridgingTxType: common.BridgingTxTypeBatchExecution,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, relevantMetadata)
-
-		relevant, err = proc.IsTxRelevant(&core.BridgeExpectedCardanoTx{
-			Metadata: relevantMetadata,
-		})
-		require.NoError(t, err)
-		require.True(t, relevant)
-	})
-
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &core.BridgeClaims{}
 

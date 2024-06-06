@@ -7,14 +7,6 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
-type TxProcessorType string
-
-const (
-	TxProcessorTypeBridgingRequest = "BridgingRequest"
-	TxProcessorTypeBatchExecuted   = "BatchExecuted"
-	TxProcessorTypeRefundExecuted  = "RefundExecuted"
-)
-
 type CardanoTx struct {
 	OriginChainID string `json:"origin_chain_id"`
 

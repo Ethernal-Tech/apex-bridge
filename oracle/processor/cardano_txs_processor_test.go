@@ -24,8 +24,15 @@ func newValidProcessor(
 	ccoDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) *CardanoTxsProcessorImpl {
-	txProcessors := []core.CardanoTxProcessor{txProcessor}
-	failedTxProcessors := []core.CardanoTxFailedProcessor{failedTxProcessor}
+	var txProcessors []core.CardanoTxProcessor
+	if txProcessor != nil {
+		txProcessors = append(txProcessors, txProcessor)
+	}
+
+	var failedTxProcessors []core.CardanoTxFailedProcessor
+	if failedTxProcessor != nil {
+		failedTxProcessors = append(failedTxProcessors, failedTxProcessor)
+	}
 
 	cardanoTxsProcessor := NewCardanoTxsProcessor(
 		context.Background(),
@@ -148,34 +155,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(false, nil)
-
-		proc := newValidProcessor(
-			appConfig, oracleDB,
-			validTxProc, nil, nil,
-			map[string]indexer.Database{"prime": primeDB, "vector": vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-		)
-
-		require.NotNil(t, proc)
-
-		require.NoError(t, proc.NewUnprocessedTxs("prime", []*indexer.Tx{
-			{Hash: "test_hash"},
-		}))
-
-		unprocessedTxs, err := oracleDB.GetUnprocessedTxs("prime", 0)
-		require.NoError(t, err)
-		require.Nil(t, unprocessedTxs)
-	})
-
-	t.Run("NewUnprocessedTxs invalid txs", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		oracleDB, primeDB, vectorDB := createDbs()
-
-		validTxProc := &core.CardanoTxProcessorMock{}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(false, fmt.Errorf("test err"))
+		validTxProc := &core.CardanoTxProcessorMock{Type: "relevant"}
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -200,8 +180,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -217,8 +196,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			txHash        = "test_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash},
+			{Hash: txHash, Metadata: metadata},
 		}))
 
 		unprocessedTxs, err := oracleDB.GetUnprocessedTxs(originChainID, 0)
@@ -233,8 +216,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -255,8 +237,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			txHash        = "test_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash},
+			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
@@ -280,8 +266,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -302,8 +287,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			txHash        = "test_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash},
+			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
@@ -328,8 +317,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -350,8 +338,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			txHash        = "test_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash},
+			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
@@ -376,8 +368,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -399,8 +390,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash, TTL: ttl},
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -424,8 +419,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -447,8 +441,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash, TTL: ttl},
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -472,8 +470,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -500,8 +497,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash, TTL: ttl},
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -524,8 +525,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -552,8 +552,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash, TTL: ttl},
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -580,12 +584,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -615,12 +617,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -656,12 +662,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -691,12 +695,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -732,12 +740,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -767,17 +773,21 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash1, TTL: blockSlot + 2},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID, Hash: txHash1, TTL: blockSlot + 2, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl},
+			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -814,12 +824,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -850,12 +858,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID2, Hash: txHash2, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -892,12 +904,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -928,20 +938,24 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
 		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash2, BlockSlot: blockSlot - 1, BlockHash: blockHash},
+			{Hash: txHash2, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash1, TTL: ttl},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID2, Hash: txHash1, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl},
+			{ChainID: chainID2, Hash: txHash2, TTL: ttl, Metadata: metadata},
 		})
 		require.NoError(t, err)
 
@@ -981,12 +995,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true}
-		validTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true}
-		failedTxProc.On("IsTxRelevant", mock.Anything).Return(true, nil)
+		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		var submittedClaims []*core.BridgeClaims
@@ -1019,20 +1031,24 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockHash  = "test_block_hash"
 		)
 
+		metadata, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
+		require.NoError(t, err)
+
 		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot1 - 1, BlockHash: blockHash},
+			{Hash: txHash1, BlockSlot: blockSlot1 - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
 		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash2, BlockSlot: blockSlot1, BlockHash: blockHash},
+			{Hash: txHash2, BlockSlot: blockSlot1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		err := oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash1, TTL: ttl1},
+		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+			{ChainID: chainID2, Hash: txHash1, TTL: ttl1, Metadata: metadata},
 		})
 		require.NoError(t, err)
 		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl2},
+			{ChainID: chainID2, Hash: txHash2, TTL: ttl2, Metadata: metadata},
 		})
 		require.NoError(t, err)
 

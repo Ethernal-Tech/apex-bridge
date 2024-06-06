@@ -150,7 +150,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
 		AddressesOfInterest:    addressesOfInterest,
-		SoftDeleteUtxo:         true,
+		SoftDeleteUtxo:         false,
 	}
 	syncerConfig := &indexer.BlockSyncerConfig{
 		NetworkMagic:   config.NetworkMagic,
