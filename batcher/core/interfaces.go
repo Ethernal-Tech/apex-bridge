@@ -11,6 +11,7 @@ type GeneratedBatchTxData struct {
 	TxRaw  []byte
 	TxHash string
 	Utxos  eth.UTXOs
+	Slot   uint64
 }
 
 type BatcherManager interface {

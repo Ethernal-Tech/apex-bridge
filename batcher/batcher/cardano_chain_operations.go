@@ -31,7 +31,7 @@ const (
 	maxUtxoCount  = 410
 	maxTxSize     = 16000
 
-	noBatchPeriodPercent = 0.125
+	noBatchPeriodPercent = 0.0625
 )
 
 type CardanoChainOperations struct {
@@ -247,6 +247,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 			MultisigOwnedUTXOs: multisigChosenUtxos,
 			FeePayerOwnedUTXOs: inputUtxos.FeePayerOwnedUTXOs,
 		},
+		Slot: slotNumber,
 	}, err
 }
 
