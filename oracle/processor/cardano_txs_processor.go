@@ -83,6 +83,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 
 	onIrrelevantTx := func(cardanoTx *core.CardanoTx) {
 		processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
+		invalidTxsCounter++
 	}
 
 	for _, tx := range txs {
@@ -93,19 +94,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 
 		bp.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-		txProcessor, relevant, err := bp.getTxProcessor(tx.Metadata)
+		txProcessor, err := bp.getTxProcessor(tx.Metadata)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-			bp.logger.Error("Failed to check if tx is relevant", "tx", tx, "err", err)
+			bp.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
-			onIrrelevantTx(cardanoTx)
-
-			invalidTxsCounter++
-
-			continue
-		}
-
-		if !relevant {
 			onIrrelevantTx(cardanoTx)
 
 			continue
@@ -165,29 +157,35 @@ func (bp *CardanoTxsProcessorImpl) Start() {
 }
 
 func (bp *CardanoTxsProcessorImpl) getTxProcessor(metadataBytes []byte) (
-	core.CardanoTxProcessor, bool, error,
+	core.CardanoTxProcessor, error,
 ) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	txProcessor, relevant := bp.txProcessors[string(metadata.BridgingTxType)]
+	if !relevant {
+		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+	}
 
-	return txProcessor, relevant, nil
+	return txProcessor, nil
 }
 
 func (bp *CardanoTxsProcessorImpl) getFailedTxProcessor(metadataBytes []byte) (
-	core.CardanoTxFailedProcessor, bool, error,
+	core.CardanoTxFailedProcessor, error,
 ) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	txProcessor, relevant := bp.failedTxProcessors[string(metadata.BridgingTxType)]
+	if !relevant {
+		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+	}
 
-	return txProcessor, relevant, nil
+	return txProcessor, nil
 }
 
 func (bp *CardanoTxsProcessorImpl) checkShouldGenerateClaims() bool {
@@ -483,17 +481,10 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		bp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
 
-		txProcessor, relevant, err := bp.getTxProcessor(unprocessedTx.Metadata)
+		txProcessor, err := bp.getTxProcessor(unprocessedTx.Metadata)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to check if tx is relevant. error: %v\n", err)
-			bp.logger.Error("Failed to check if tx is relevant", "tx", unprocessedTx, "err", err)
+			bp.logger.Error("Failed to get tx processor for unprocessed tx", "tx", unprocessedTx, "err", err)
 
-			onInvalidTx(unprocessedTx)
-
-			continue
-		}
-
-		if !relevant {
 			onInvalidTx(unprocessedTx)
 
 			continue
@@ -596,17 +587,10 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 
 		bp.logger.Debug("Checking if expired tx is relevant", "expiredTx", expiredTx)
 
-		txProcessor, relevant, err := bp.getFailedTxProcessor(expiredTx.Metadata)
+		txProcessor, err := bp.getFailedTxProcessor(expiredTx.Metadata)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to check if expired tx is relevant. error: %v\n", err)
-			bp.logger.Error("Failed to check if expired tx is relevant", "expiredTx", expiredTx, "err", err)
+			bp.logger.Error("Failed to get tx processor for expired tx", "tx", expiredTx, "err", err)
 
-			onInvalidTx(expiredTx)
-
-			continue
-		}
-
-		if !relevant {
 			onInvalidTx(expiredTx)
 
 			continue
@@ -686,10 +670,10 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 		if tx.IsInvalid {
 			for _, unprocessedTx := range unprocessedTxs {
 				if unprocessedTx.ToCardanoTxKey() == tx.ToCardanoTxKey() {
-					txProcessor, relevant, err := bp.getTxProcessor(unprocessedTx.Metadata)
+					txProcessor, err := bp.getTxProcessor(unprocessedTx.Metadata)
 					if err != nil {
-						bp.logger.Error("Failed to check if unprocessedTx is relevant", "unprocessedTx", unprocessedTx, "err", err)
-					} else if relevant && txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+						bp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
+					} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
 						err := bp.bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
 							SourceChainID: tx.OriginChainID,
 							SourceTxHash:  tx.Hash,
