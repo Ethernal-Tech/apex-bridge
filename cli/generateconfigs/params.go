@@ -101,8 +101,10 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
-	defaultTTLSlotNumberInc                  = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
-	defaultSlotRoundingThreshold             = 60
+	defaultPrimeTTLSlotNumberInc             = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultPrimeSlotRoundingThreshold        = 60
+	defaultVectorTTLSlotNumberInc            = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultVectorSlotRoundingThreshold       = 60
 )
 
 type generateConfigsParams struct {
@@ -252,13 +254,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.primeTTLSlotInc,
 		primeTTLSlotIncFlag,
-		defaultTTLSlotNumberInc,
+		defaultPrimeTTLSlotNumberInc,
 		primeTTLSlotIncFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.primeSlotRoundingThreshold,
 		primeSlotRoundingThresholdFlag,
-		defaultSlotRoundingThreshold,
+		defaultPrimeSlotRoundingThreshold,
 		primeSlotRoundingThresholdFlagDesc,
 	)
 
@@ -307,13 +309,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.vectorTTLSlotInc,
 		vectorTTLSlotIncFlag,
-		defaultTTLSlotNumberInc,
+		defaultVectorTTLSlotNumberInc,
 		vectorTTLSlotIncFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.vectorSlotRoundingThreshold,
 		vectorSlotRoundingThresholdFlag,
-		defaultSlotRoundingThreshold,
+		defaultVectorSlotRoundingThreshold,
 		vectorSlotRoundingThresholdFlagDesc,
 	)
 
