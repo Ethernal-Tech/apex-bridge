@@ -120,13 +120,13 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
+		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchIDUint)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
-	if b.lastBatch.id == batchIDUint && b.lastBatch.slot == generatedBatchData.Slot {
+	if b.lastBatch.id == batchIDUint && b.lastBatch.slot >= generatedBatchData.Slot {
 		b.logger.Debug("already submitted", "chainID", b.config.Chain.ChainID,
 			"batchID", batchIDUint, "slot", b.lastBatch.slot)
 

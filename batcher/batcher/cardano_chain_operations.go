@@ -74,7 +74,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	destinationChain string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceID *big.Int,
+	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
 	if err != nil {

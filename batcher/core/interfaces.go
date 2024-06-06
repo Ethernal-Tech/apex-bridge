@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 )
@@ -25,7 +24,7 @@ type Batcher interface {
 type ChainOperations interface {
 	GenerateBatchTransaction(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
-		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID *big.Int,
+		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
 	SignBatchTransaction(txHash string) ([]byte, []byte, error)
 }

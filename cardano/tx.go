@@ -1,8 +1,6 @@
 package cardanotx
 
 import (
-	"math/big"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -90,10 +88,10 @@ func AssembleTxWitnesses(txRaw []byte, witnesses [][]byte) ([]byte, error) {
 	return cardanowallet.AssembleTxWitnesses(txRaw, witnesses)
 }
 
-func CreateBatchMetaData(v *big.Int) ([]byte, error) {
+func CreateBatchMetaData(v uint64) ([]byte, error) {
 	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
-		BatchNonceID:   v.Uint64(),
+		BatchNonceID:   v,
 	})
 }
 
