@@ -293,13 +293,15 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 				bp.maxBridgingClaimsToGroup[startChainID] = 1
 			}
 
-			bp.logger.Warn("Reduced maxBridgingClaimsToGroup", "startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+			bp.logger.Warn("Reduced maxBridgingClaimsToGroup",
+				"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
 
 			return
 		}
 
 		bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
-		bp.logger.Info("Reset maxBridgingClaimsToGroup", "startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+		bp.logger.Info("Reset maxBridgingClaimsToGroup",
+			"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
 
 		telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 	}
