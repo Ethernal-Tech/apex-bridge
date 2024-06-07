@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const submitClaimsGasLimit = uint64(5_242_880)
+const submitClaimsGasLimit = uint64(10_000_000)
 
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
