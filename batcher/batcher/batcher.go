@@ -167,16 +167,23 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
+	if b.lastBatch.id != batchIDUint {
+		brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
 
-	b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
-		"batchID", batchIDUint, "txs cnt", len(confirmedTransactions), "txs", brStateKeys)
+		err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchIDUint, brStateKeys)
+		if err != nil {
+			b.logger.Error(
+				"error while updating bridging request states to IncludedInBatch",
+				"chain", b.config.Chain.ChainID, "batchID", batchIDUint)
+		}
 
-	err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchIDUint, brStateKeys)
-	if err != nil {
-		b.logger.Error(
-			"error while updating bridging request states to IncludedInBatch",
-			"chain", b.config.Chain.ChainID, "batchID", batchIDUint)
+		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchIDUint)
+
+		b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
+			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID, "txs", brStateKeys)
+	} else {
+		b.logger.Info("Batch successfully re-submitted", "chainID", b.config.Chain.ChainID,
+			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID)
 	}
 
 	// update last batch data
@@ -184,8 +191,6 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		id:   batchIDUint,
 		slot: generatedBatchData.Slot,
 	}
-
-	telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchIDUint)
 
 	return nil
 }
