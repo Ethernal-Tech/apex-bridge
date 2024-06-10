@@ -114,7 +114,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return((*core.GeneratedBatchTxData)(nil), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
@@ -135,7 +135,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -156,7 +156,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -178,7 +178,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -339,7 +339,7 @@ var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
 // GenerateBatchTransaction implements core.ChainOperations.
 func (c *cardanoChainOperationsMock) GenerateBatchTransaction(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
-	destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID *big.Int,
+	destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	args := c.Called(ctx, bridgeSmartContract, destinationChain, confirmedTransactions, batchNonceID)
 

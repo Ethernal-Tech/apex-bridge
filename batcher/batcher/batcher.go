@@ -16,13 +16,18 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type lastBatchData struct {
+	id   uint64
+	slot uint64
+}
+
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	logger                      hclog.Logger
 	operations                  core.ChainOperations
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
-	lastBatchID                 *big.Int
+	lastBatch                   lastBatchData
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -38,7 +43,7 @@ func NewBatcher(
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
-		lastBatchID:                 big.NewInt(0),
+		lastBatch:                   lastBatchData{},
 	}
 }
 
@@ -59,13 +64,13 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 				b.logger.Info("execution skipped", "reason", err)
 			} else {
 				// update telemetry
-				if b.lastBatchID.BitLen() == 0 {
+				if b.lastBatch.id == 0 {
 					batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 					if err == nil {
 						telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID.Uint64())
 					}
 				} else {
-					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, b.lastBatchID.Uint64()+1)
+					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, b.lastBatch.id+1)
 				}
 
 				b.logger.Error("execution failed", "err", err)
@@ -81,20 +86,22 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to query bridge.GetNextBatchID for chainID: %s. err: %w", b.config.Chain.ChainID, err)
 	}
 
-	if batchID.Cmp(big.NewInt(0)) == 0 {
+	batchIDUint := batchID.Uint64()
+
+	if batchIDUint == 0 {
 		b.logger.Info("Waiting on a new batch", "chainID", b.config.Chain.ChainID)
 
 		return nil
 	}
 
-	if batchID.Cmp(b.lastBatchID) <= 0 {
+	if batchIDUint < b.lastBatch.id {
 		b.logger.Info("retrieved batch id not good", "chainID", b.config.Chain.ChainID,
-			"old", b.lastBatchID, "new", batchID)
+			"old", b.lastBatch.id, "new", batchIDUint)
 
 		return nil
 	}
 
-	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchID)
+	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchIDUint)
 
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
@@ -109,18 +116,25 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"chainID", b.config.Chain.ChainID, "batchID", batchID, "txs", len(confirmedTransactions))
+		"chainID", b.config.Chain.ChainID, "batchID", batchIDUint, "txs", len(confirmedTransactions))
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
+		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchIDUint)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
+	if b.lastBatch.id == batchIDUint && b.lastBatch.slot >= generatedBatchData.Slot {
+		b.logger.Debug("already submitted", "chainID", b.config.Chain.ChainID,
+			"batchID", batchIDUint, "slot", b.lastBatch.slot)
+
+		return nil
+	}
+
 	b.logger.Info("Created batch tx", "chainID", b.config.Chain.ChainID, "txHash", generatedBatchData.TxHash,
-		"batchID", batchID, "txs", len(confirmedTransactions))
+		"batchID", batchIDUint, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
@@ -130,7 +144,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.logger.Info("Batch successfully signed", "chainID", b.config.Chain.ChainID,
-		"batchID", batchID, "txs", len(confirmedTransactions))
+		"batchID", batchIDUint, "txs", len(confirmedTransactions))
 
 	firstTxNonceID, lastTxNonceID := getFirstAndLastTxNonceID(confirmedTransactions)
 	// Submit batch to smart contract
@@ -153,21 +167,30 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
+	if b.lastBatch.id != batchIDUint {
+		brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
 
-	b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
-		"batchID", batchID, "txs cnt", len(confirmedTransactions), "txs", brStateKeys)
+		err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchIDUint, brStateKeys)
+		if err != nil {
+			b.logger.Error(
+				"error while updating bridging request states to IncludedInBatch",
+				"chain", b.config.Chain.ChainID, "batchID", batchIDUint)
+		}
 
-	err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID.Uint64(), brStateKeys)
-	if err != nil {
-		b.logger.Error(
-			"error while updating bridging request states to IncludedInBatch",
-			"chain", b.config.Chain.ChainID, "batchId", batchID)
+		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchIDUint)
+
+		b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
+			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID, "txs", brStateKeys)
+	} else {
+		b.logger.Info("Batch successfully re-submitted", "chainID", b.config.Chain.ChainID,
+			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID)
 	}
 
-	b.lastBatchID = batchID // update last batch id
-
-	telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchID.Uint64())
+	// update last batch data
+	b.lastBatch = lastBatchData{
+		id:   batchIDUint,
+		slot: generatedBatchData.Slot,
+	}
 
 	return nil
 }

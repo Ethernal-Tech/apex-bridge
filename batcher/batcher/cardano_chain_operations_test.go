@@ -49,7 +49,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(utxoCount, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(utxoCount*2, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -98,7 +98,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(400, 1000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(400, 10000000)) // 4000Ada
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -151,7 +151,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(count, uint64(amount)))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXORandomOutputs(200, 1000000, 10000000))
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -199,7 +199,7 @@ func TestCardanoChainOperations(t *testing.T) {
 		outputs := calculateTxCost(generateUTXOOutputs(403, 1000000)) // 403Ada
 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
 
-		metadata, err := cardano.CreateBatchMetaData(big.NewInt(100))
+		metadata, err := cardano.CreateBatchMetaData(100)
 		require.NoError(t, err)
 		protocolParams, err := generateProtocolParams()
 		require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			Amount:             big.NewInt(int64(minUtxoAmount)),
 		}},
 	}
-	batchNonceID := big.NewInt(1)
+	batchNonceID := uint64(1)
 	destinationChain := "vector"
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
