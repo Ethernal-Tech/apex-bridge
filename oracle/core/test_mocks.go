@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
@@ -200,12 +201,12 @@ type BridgeSubmitterMock struct {
 }
 
 // SubmitClaims implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitClaims(claims *BridgeClaims) error {
+func (m *BridgeSubmitterMock) SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) error {
 	if m.OnSubmitClaims != nil {
 		m.OnSubmitClaims(claims)
 	}
 
-	args := m.Called(claims)
+	args := m.Called(claims, submitOpts)
 
 	return args.Error(0)
 }

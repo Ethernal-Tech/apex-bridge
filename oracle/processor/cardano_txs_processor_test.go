@@ -221,7 +221,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -271,7 +271,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -322,7 +322,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -373,7 +373,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -424,7 +424,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -480,7 +480,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -535,7 +535,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -597,7 +597,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -675,7 +675,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -753,7 +753,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -837,7 +837,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -917,7 +917,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,
@@ -1008,7 +1008,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
 		proc := newValidProcessor(
 			appConfig, oracleDB,

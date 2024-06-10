@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -73,7 +74,7 @@ type BridgeDataFetcher interface {
 }
 
 type BridgeSubmitter interface {
-	SubmitClaims(claims *BridgeClaims) error
+	SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) error
 	SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error
 }
 

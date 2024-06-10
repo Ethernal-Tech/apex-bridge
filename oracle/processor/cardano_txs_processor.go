@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 
@@ -17,8 +18,12 @@ import (
 )
 
 const (
-	TickTimeMs         = 2000
-	TTLInsuranceOffset = 2
+	TickTimeMs                  = 2000
+	TTLInsuranceOffset          = 2
+	MinBridgingClaimsToGroup    = 1
+	GasLimitMultiplierDefault   = float32(1)
+	GasLimitMultiplierIncrement = float32(0.5)
+	GasLimitMultiplierMax       = float32(3)
 )
 
 type CardanoTxsProcessorImpl struct {
@@ -34,6 +39,7 @@ type CardanoTxsProcessorImpl struct {
 	tickTime                    time.Duration
 
 	maxBridgingClaimsToGroup map[string]int
+	gasLimitMultiplier       map[string]float32
 }
 
 var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
@@ -64,6 +70,11 @@ func NewCardanoTxsProcessor(
 		maxBridgingClaimsToGroup[chain.ChainID] = appConfig.BridgingSettings.MaxBridgingClaimsToGroup
 	}
 
+	gasLimitMultiplier := make(map[string]float32, len(appConfig.CardanoChains))
+	for _, chain := range appConfig.CardanoChains {
+		gasLimitMultiplier[chain.ChainID] = 1
+	}
+
 	return &CardanoTxsProcessorImpl{
 		ctx:                         ctx,
 		appConfig:                   appConfig,
@@ -77,6 +88,7 @@ func NewCardanoTxsProcessor(
 		tickTime:                    TickTimeMs,
 
 		maxBridgingClaimsToGroup: maxBridgingClaimsToGroup,
+		gasLimitMultiplier:       gasLimitMultiplier,
 	}
 }
 
@@ -296,26 +308,44 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	if bridgeClaims.Count() > 0 {
 		bp.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
-		err := bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
+		err := bp.bridgeSubmitter.SubmitClaims(
+			bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: bp.gasLimitMultiplier[startChainID]})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 			bp.logger.Error("Failed to submit claims", "err", err)
 
-			if bridgeClaims.Count() > 1 {
-				bp.maxBridgingClaimsToGroup[startChainID] = bridgeClaims.Count() - 1
-			} else {
-				bp.maxBridgingClaimsToGroup[startChainID] = 1
+			bp.maxBridgingClaimsToGroup[startChainID] = bridgeClaims.Count() - 1
+			if bp.maxBridgingClaimsToGroup[startChainID] < MinBridgingClaimsToGroup {
+				bp.maxBridgingClaimsToGroup[startChainID] = MinBridgingClaimsToGroup
 			}
 
-			bp.logger.Warn("Reduced maxBridgingClaimsToGroup",
+			bp.logger.Warn("set maxBridgingClaimsToGroup",
 				"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+
+			if bridgeClaims.Count() <= MinBridgingClaimsToGroup &&
+				bp.gasLimitMultiplier[startChainID]+GasLimitMultiplierIncrement <= GasLimitMultiplierMax {
+				bp.gasLimitMultiplier[startChainID] += GasLimitMultiplierIncrement
+
+				bp.logger.Warn("Increased gasLimitMultiplier",
+					"startChainID", startChainID, "newValue", bp.gasLimitMultiplier[startChainID])
+			}
 
 			return
 		}
 
-		bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
-		bp.logger.Info("Reset maxBridgingClaimsToGroup",
-			"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+		if bp.maxBridgingClaimsToGroup[startChainID] != bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+			bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+
+			bp.logger.Info("Reset maxBridgingClaimsToGroup",
+				"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+		}
+
+		if bp.gasLimitMultiplier[startChainID] != GasLimitMultiplierDefault {
+			bp.gasLimitMultiplier[startChainID] = GasLimitMultiplierDefault
+
+			bp.logger.Info("Reset gasLimitMultiplier",
+				"startChainID", startChainID, "newValue", bp.gasLimitMultiplier[startChainID])
+		}
 
 		telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 	}

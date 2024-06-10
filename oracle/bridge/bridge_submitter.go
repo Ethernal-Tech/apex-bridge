@@ -29,8 +29,8 @@ func NewBridgeSubmitter(
 	}
 }
 
-func (bs *BridgeSubmitterImpl) SubmitClaims(claims *core.BridgeClaims) error {
-	err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims)
+func (bs *BridgeSubmitterImpl) SubmitClaims(claims *core.BridgeClaims, submitOpts *eth.SubmitOpts) error {
+	err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims, submitOpts)
 	if err != nil {
 		bs.logger.Error("Failed to submit claims", "claims", claims, "err", err)
 

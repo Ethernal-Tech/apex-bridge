@@ -39,7 +39,7 @@ func TestBridgeSubmitter(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 
 		require.NoError(t, err)
 	})
