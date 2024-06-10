@@ -62,7 +62,41 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 	})
 }
 
-func (bd *BBoltDatabase) GetUnprocessedTxs(chainID string, threshold int) ([]*core.CardanoTx, error) {
+func (bd *BBoltDatabase) GetUnprocessedTxs(
+	chainID string, priority uint, threshold int,
+) ([]*core.CardanoTx, error) {
+	var result []*core.CardanoTx
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(unprocessedTxsBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var cardanoTx *core.CardanoTx
+
+			if err := json.Unmarshal(v, &cardanoTx); err != nil {
+				return err
+			}
+
+			if cardanoTx.OriginChainID == chainID && cardanoTx.Priority == priority {
+				result = append(result, cardanoTx)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BBoltDatabase) GetAllUnprocessedTxs(
+	chainID string, threshold int,
+) ([]*core.CardanoTx, error) {
 	var result []*core.CardanoTx
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {
@@ -190,7 +224,40 @@ func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardan
 	})
 }
 
-func (bd *BBoltDatabase) GetExpectedTxs(chainID string, threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
+func (bd *BBoltDatabase) GetExpectedTxs(
+	chainID string, priority uint, threshold int,
+) ([]*core.BridgeExpectedCardanoTx, error) {
+	var result []*core.BridgeExpectedCardanoTx
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(expectedTxsBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var expectedTx *core.BridgeExpectedCardanoDBTx
+
+			if err := json.Unmarshal(v, &expectedTx); err != nil {
+				return err
+			}
+
+			if expectedTx.ChainID == chainID && expectedTx.Priority == priority &&
+				!expectedTx.IsProcessed && !expectedTx.IsInvalid {
+				result = append(result, &expectedTx.BridgeExpectedCardanoTx)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BBoltDatabase) GetAllExpectedTxs(chainID string, threshold int) ([]*core.BridgeExpectedCardanoTx, error) {
 	var result []*core.BridgeExpectedCardanoTx
 
 	err := bd.db.View(func(tx *bbolt.Tx) error {

@@ -99,6 +99,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		cardanoTx := &core.CardanoTx{
 			OriginChainID: originChainID,
 			Tx:            *tx,
+			Priority:      1,
 		}
 
 		bp.logger.Debug("Checking if tx is relevant", "tx", tx)
@@ -110,6 +111,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 			onIrrelevantTx(cardanoTx)
 
 			continue
+		}
+
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+			cardanoTx.Priority = 0
 		}
 
 		relevantTxs = append(relevantTxs, cardanoTx)
@@ -235,13 +240,19 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 
 	maxClaimsToGroup := bp.maxBridgingClaimsToGroup[startChainID]
 
-	invalidRelevantExpiredTxs, processedExpectedTxs,
-		processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup)
+	for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+		invalidRelevantExpiredTxs, processedExpectedTxs,
+			processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup, priority)
 
-	allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-	allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-	allProcessedTxs = append(allProcessedTxs, processedTxs...)
-	allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+		allProcessedTxs = append(allProcessedTxs, processedTxs...)
+		allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
+			break
+		}
+	}
 
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
 	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
@@ -252,19 +263,22 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
-			break
-		}
 
 		chainID := bp.appConfig.CardanoChains[key].ChainID
 		if chainID != startChainID {
-			invalidRelevantExpiredTxs, processedExpectedTxs,
-				processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID, maxClaimsToGroup)
+			for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+				if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
+					break
+				}
 
-			allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-			allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-			allProcessedTxs = append(allProcessedTxs, processedTxs...)
-			allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+				invalidRelevantExpiredTxs, processedExpectedTxs,
+					processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID, maxClaimsToGroup, priority)
+
+				allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+				allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+				allProcessedTxs = append(allProcessedTxs, processedTxs...)
+				allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+			}
 		}
 	}
 
@@ -338,13 +352,14 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	bridgeClaims *core.BridgeClaims,
 	chainID string,
 	maxClaimsToGroup int,
+	priority uint,
 ) (
 	allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx,
 	allProcessedExpectedTxs []*core.BridgeExpectedCardanoTx,
 	allProcessedTxs []*core.ProcessedCardanoTx,
 	unprocessedTxs []*core.CardanoTx,
 ) {
-	expectedTxs, err := bp.db.GetExpectedTxs(chainID, 0)
+	expectedTxs, err := bp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
 		bp.logger.Error("Failed to get expected txs", "err", err)
@@ -352,7 +367,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		return
 	}
 
-	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, 0)
+	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, priority, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
 		bp.logger.Error("Failed to get unprocessed txs", "err", err)
@@ -369,7 +384,8 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
 	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
 	// that all claims are filled only from unprocessedTxs and never from expectedTxs
-	blockInfo := bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
+	blockInfo := bp.constructBridgeClaimsBlockInfo(
+		chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
 	if blockInfo == nil {
 		return
 	}
@@ -391,7 +407,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
 
 		bp.logger.Debug("Checked all", "for chainID", chainID,
-			"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
+			"processedTxs", processedTxs, "processedExpectedTxs", processedExpectedTxs,
 			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 
 		allProcessedTxs = append(allProcessedTxs, processedTxs...)
@@ -402,7 +418,8 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 			break
 		}
 
-		blockInfo = bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
+		blockInfo = bp.constructBridgeClaimsBlockInfo(
+			chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
 		if blockInfo == nil {
 			break
 		}
@@ -565,7 +582,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var relevantExpiredTxs []*core.BridgeExpectedCardanoTx
 
 	// ensure always same order of iterating through expectedTxsMap
-	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
+	keys := make([]string, 0, len(expectedTxsMap))
 	for k := range expectedTxsMap {
 		keys = append(keys, k)
 	}

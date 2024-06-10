@@ -30,7 +30,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(nil, nil)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("GetExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
+		db.On("GetAllExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
 		db.On("AddExpectedTxs", mock.Anything).Return(nil)
 
 		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
@@ -45,7 +45,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(&core.BridgeExpectedCardanoTx{}, nil)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("GetExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
+		db.On("GetAllExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
 		db.On("AddExpectedTxs", mock.Anything).Return(fmt.Errorf("test err"))
 
 		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
