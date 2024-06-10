@@ -252,7 +252,7 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		if bridgeClaims.Count() >= maxClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 
@@ -398,7 +398,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
 		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
 
-		if bridgeClaims.Count() >= maxClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 
@@ -516,6 +516,11 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 			continue
 		}
 
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution &&
+			!bridgeClaims.CanAddBatchExecutedClaim() {
+			continue
+		}
+
 		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
@@ -534,7 +539,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 
 		processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
 
-		if bridgeClaims.Count() >= maxClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 	}
@@ -593,7 +598,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 		processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
 	)
 
-	if bridgeClaims.Count() >= maxClaimsToGroup ||
+	if !bridgeClaims.CanAddMore(maxClaimsToGroup) ||
 		len(relevantExpiredTxs) == 0 {
 		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 	}
@@ -635,7 +640,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 
 		processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
 
-		if bridgeClaims.Count() >= maxClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 	}
