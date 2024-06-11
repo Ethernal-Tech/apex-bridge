@@ -76,6 +76,8 @@ $ go run ./cli/cmd/main.go generate-configs \
         --prime-blockfrost-url "<blockfrost URL for prime network>" \
         --prime-blockfrost-api-key "<blockfrost API key for prime network>" \
         --prime-socket-path "<socket path for prime network>" \
+        --prime-ttl-slot-inc <ttl slot increment for prime> \
+        --prime-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --vector-network-address "<address of vector network>" \
         --vector-network-magic <network magic of vector network> \
         --vector-keys-dir "<path to cardano keys directory for vector network>" \
@@ -83,14 +85,14 @@ $ go run ./cli/cmd/main.go generate-configs \
         --vector-ogmios-url "<ogmios URL for vector network>" \
         --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
         --vector-socket-path "<socket path for vector network>" \
+        --vector-ttl-slot-inc <ttl slot increment for vector> \
+        --vector-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --bridge-node-url "<node URL of bridge chain>" \
         --bridge-sc-address "<bridging smart contract address on bridge chain>" \
         --bridge-validator-data-dir "<path to bridge chain data directory when using local secrets manager>" \
         --bridge-validator-config-path "<path to to bridge chain secrets manager config file>" \
         --dbs-path "<path to where databases will be stored>" \
         --logs-path "<path to where logs will be stored>" \
-        --ttl-slot-inc <ttl slot increment> \
-        --slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --api-port <port at which API should run> \
         --api-keys "<api key 1>" \
         --api-keys "<api key 2>"

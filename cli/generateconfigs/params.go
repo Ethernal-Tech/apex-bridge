@@ -18,21 +18,25 @@ import (
 )
 
 const (
-	primeNetworkAddressFlag   = "prime-network-address"
-	primeNetworkMagicFlag     = "prime-network-magic"
-	primeKeysDirFlag          = "prime-keys-dir"
-	primeOgmiosURLFlag        = "prime-ogmios-url"
-	primeBlockfrostURLFlag    = "prime-blockfrost-url"
-	primeBlockfrostAPIKeyFlag = "prime-blockfrost-api-key"
-	primeSocketPathFlag       = "prime-socket-path"
+	primeNetworkAddressFlag        = "prime-network-address"
+	primeNetworkMagicFlag          = "prime-network-magic"
+	primeKeysDirFlag               = "prime-keys-dir"
+	primeOgmiosURLFlag             = "prime-ogmios-url"
+	primeBlockfrostURLFlag         = "prime-blockfrost-url"
+	primeBlockfrostAPIKeyFlag      = "prime-blockfrost-api-key"
+	primeSocketPathFlag            = "prime-socket-path"
+	primeTTLSlotIncFlag            = "prime-ttl-slot-inc"
+	primeSlotRoundingThresholdFlag = "prime-slot-rounding-threshold"
 
-	vectorNetworkAddressFlag   = "vector-network-address"
-	vectorNetworkMagicFlag     = "vector-network-magic"
-	vectorKeysDirFlag          = "vector-keys-dir"
-	vectorOgmiosURLFlag        = "vector-ogmios-url"
-	vectorBlockfrostURLFlag    = "vector-blockfrost-url"
-	vectorBlockfrostAPIKeyFlag = "vector-blockfrost-api-key"
-	vectorSocketPathFlag       = "vector-socket-path"
+	vectorNetworkAddressFlag        = "vector-network-address"
+	vectorNetworkMagicFlag          = "vector-network-magic"
+	vectorKeysDirFlag               = "vector-keys-dir"
+	vectorOgmiosURLFlag             = "vector-ogmios-url"
+	vectorBlockfrostURLFlag         = "vector-blockfrost-url"
+	vectorBlockfrostAPIKeyFlag      = "vector-blockfrost-api-key"
+	vectorSocketPathFlag            = "vector-socket-path"
+	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
+	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
 
 	bridgeNodeURLFlag          = "bridge-node-url"
 	bridgeSCAddressFlag        = "bridge-sc-address"
@@ -45,30 +49,31 @@ const (
 	apiPortFlag = "api-port"
 	apiKeysFlag = "api-keys"
 
-	ttlSlotIncFlag            = "ttl-slot-inc"
-	slotRoundingThresholdFlag = "slot-rounding-threshold"
-
 	outputDirFlag                         = "output-dir"
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
 	telemetryFlag = "telemetry"
 
-	primeNetworkAddressFlagDesc   = "(mandatory) address of prime network"
-	primeNetworkMagicFlagDesc     = "network magic of prime network (default 0)"
-	primeKeysDirFlagDesc          = "path to cardano keys directory for prime network"
-	primeOgmiosURLFlagDesc        = "ogmios URL for prime network"
-	primeBlockfrostURLFlagDesc    = "blockfrost URL for prime network"
-	primeBlockfrostAPIKeyFlagDesc = "blockfrost API key for prime network" //nolint:gosec
-	primeSocketPathFlagDesc       = "socket path for prime network"
+	primeNetworkAddressFlagDesc        = "(mandatory) address of prime network"
+	primeNetworkMagicFlagDesc          = "network magic of prime network (default 0)"
+	primeKeysDirFlagDesc               = "path to cardano keys directory for prime network"
+	primeOgmiosURLFlagDesc             = "ogmios URL for prime network"
+	primeBlockfrostURLFlagDesc         = "blockfrost URL for prime network"
+	primeBlockfrostAPIKeyFlagDesc      = "blockfrost API key for prime network" //nolint:gosec
+	primeSocketPathFlagDesc            = "socket path for prime network"
+	primeTTLSlotIncFlagDesc            = "TTL slot increment for prime"
+	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
-	vectorNetworkAddressFlagDesc   = "(mandatory) address of vector network"
-	vectorNetworkMagicFlagDesc     = "network magic of vector network (default 0)"
-	vectorKeysDirFlagDesc          = "path to cardano keys directory for vector network"
-	vectorOgmiosURLFlagDesc        = "ogmios URL for vector network"
-	vectorBlockfrostURLFlagDesc    = "blockfrost URL for vector network"
-	vectorBlockfrostAPIKeyFlagDesc = "blockfrost API key for vector network" //nolint:gosec
-	vectorSocketPathFlagDesc       = "socket path for vector network"
+	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
+	vectorNetworkMagicFlagDesc          = "network magic of vector network (default 0)"
+	vectorKeysDirFlagDesc               = "path to cardano keys directory for vector network"
+	vectorOgmiosURLFlagDesc             = "ogmios URL for vector network"
+	vectorBlockfrostURLFlagDesc         = "blockfrost URL for vector network"
+	vectorBlockfrostAPIKeyFlagDesc      = "blockfrost API key for vector network" //nolint:gosec
+	vectorSocketPathFlagDesc            = "socket path for vector network"
+	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
+	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
 	bridgeNodeURLFlagDesc          = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc        = "(mandatory) bridging smart contract address on bridge chain"
@@ -80,9 +85,6 @@ const (
 
 	apiPortFlagDesc = "port at which API should run"
 	apiKeysFlagDesc = "(mandatory) list of keys for API access"
-
-	ttlSlotIncFlagDesc            = "TTL slot increment"
-	slotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
 	outputDirFlagDesc                         = "path to config jsons output directory"
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
@@ -99,26 +101,32 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
-	defaultTTLSlotNumberInc                  = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
-	defaultSlotRoundingThreshold             = 60
+	defaultPrimeTTLSlotNumberInc             = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultPrimeSlotRoundingThreshold        = 60
+	defaultVectorTTLSlotNumberInc            = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultVectorSlotRoundingThreshold       = 60
 )
 
 type generateConfigsParams struct {
-	primeNetworkAddress   string
-	primeNetworkMagic     uint32
-	primeKeysDir          string
-	primeOgmiosURL        string
-	primeBlockfrostURL    string
-	primeBlockfrostAPIKey string
-	primeSocketPath       string
+	primeNetworkAddress        string
+	primeNetworkMagic          uint32
+	primeKeysDir               string
+	primeOgmiosURL             string
+	primeBlockfrostURL         string
+	primeBlockfrostAPIKey      string
+	primeSocketPath            string
+	primeTTLSlotInc            uint64
+	primeSlotRoundingThreshold uint64
 
-	vectorNetworkAddress   string
-	vectorNetworkMagic     uint32
-	vectorKeysDir          string
-	vectorOgmiosURL        string
-	vectorBlockfrostURL    string
-	vectorBlockfrostAPIKey string
-	vectorSocketPath       string
+	vectorNetworkAddress        string
+	vectorNetworkMagic          uint32
+	vectorKeysDir               string
+	vectorOgmiosURL             string
+	vectorBlockfrostURL         string
+	vectorBlockfrostAPIKey      string
+	vectorSocketPath            string
+	vectorTTLSlotInc            uint64
+	vectorSlotRoundingThreshold uint64
 
 	bridgeNodeURL          string
 	bridgeSCAddress        string
@@ -130,9 +138,6 @@ type generateConfigsParams struct {
 
 	apiPort uint32
 	apiKeys []string
-
-	ttlSlotInc            uint64
-	slotRoundingThreshold uint64
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -246,6 +251,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		primeSocketPathFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.primeTTLSlotInc,
+		primeTTLSlotIncFlag,
+		defaultPrimeTTLSlotNumberInc,
+		primeTTLSlotIncFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.primeSlotRoundingThreshold,
+		primeSlotRoundingThresholdFlag,
+		defaultPrimeSlotRoundingThreshold,
+		primeSlotRoundingThresholdFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.vectorNetworkAddress,
@@ -288,6 +305,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorSocketPathFlag,
 		"",
 		vectorSocketPathFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorTTLSlotInc,
+		vectorTTLSlotIncFlag,
+		defaultVectorTTLSlotNumberInc,
+		vectorTTLSlotIncFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorSlotRoundingThreshold,
+		vectorSlotRoundingThresholdFlag,
+		defaultVectorSlotRoundingThreshold,
+		vectorSlotRoundingThresholdFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -333,20 +362,6 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		apiPortFlag,
 		defaultAPIPort,
 		apiPortFlagDesc,
-	)
-
-	cmd.Flags().Uint64Var(
-		&p.ttlSlotInc,
-		ttlSlotIncFlag,
-		defaultTTLSlotNumberInc,
-		ttlSlotIncFlagDesc,
-	)
-
-	cmd.Flags().Uint64Var(
-		&p.slotRoundingThreshold,
-		slotRoundingThresholdFlag,
-		defaultSlotRoundingThreshold,
-		slotRoundingThresholdFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -415,7 +430,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
-				TTLSlotNumberInc:         p.ttlSlotInc,
+				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.primeKeysDir),
 				OgmiosURL:                p.primeOgmiosURL,
@@ -423,7 +438,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
-				SlotRoundingThreshold:    p.slotRoundingThreshold,
+				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
 			},
 			"vector": {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -432,7 +447,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartSlot:                0,
 				StartBlockNumber:         0,
 				ConfirmationBlockCount:   10,
-				TTLSlotNumberInc:         p.ttlSlotInc,
+				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				KeysDirPath:              path.Clean(p.vectorKeysDir),
 				OgmiosURL:                p.vectorOgmiosURL,
@@ -440,7 +455,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
-				SlotRoundingThreshold:    p.slotRoundingThreshold,
+				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
