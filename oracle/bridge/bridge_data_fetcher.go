@@ -100,6 +100,7 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeEx
 				Hash:     tx.Hash,
 				TTL:      tx.TTL,
 				Metadata: tx.MetaData,
+				Priority: 0,
 			}
 
 			df.logger.Debug("FetchExpectedTx", "for chainID", chainID, "expectedTx", expectedTx)

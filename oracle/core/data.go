@@ -7,8 +7,13 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
+const (
+	LastProcessingPriority = uint(1)
+)
+
 type CardanoTx struct {
 	OriginChainID string `json:"origin_chain_id"`
+	Priority      uint   `json:"priority"`
 
 	indexer.Tx
 }
@@ -18,6 +23,7 @@ type ProcessedCardanoTx struct {
 	BlockHash     string `json:"block_hash"`
 	OriginChainID string `json:"origin_chain_id"`
 	Hash          string `json:"hash"`
+	Priority      uint   `json:"priority"`
 	IsInvalid     bool   `json:"is_invalid"`
 }
 
@@ -26,6 +32,7 @@ type BridgeExpectedCardanoTx struct {
 	Hash     string `json:"hash"`
 	Metadata []byte `json:"metadata"`
 	TTL      uint64 `json:"ttl"`
+	Priority uint   `json:"priority"`
 }
 
 type BridgeExpectedCardanoDBTx struct {
@@ -43,20 +50,21 @@ func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 		BlockHash:     tx.BlockHash,
 		OriginChainID: tx.OriginChainID,
 		Hash:          tx.Hash,
+		Priority:      tx.Priority,
 		IsInvalid:     isInvalid,
 	}
 }
 
-func ToUnprocessedTxKey(blockSlot uint64, originChainID string, txHash string) string {
-	return fmt.Sprintf("%20d_%v_%v", blockSlot, originChainID, txHash)
+func ToUnprocessedTxKey(priority uint, blockSlot uint64, originChainID string, txHash string) string {
+	return fmt.Sprintf("%d_%20d_%v_%v", priority, blockSlot, originChainID, txHash)
 }
 
 func (tx CardanoTx) ToUnprocessedTxKey() string {
-	return ToUnprocessedTxKey(tx.BlockSlot, tx.OriginChainID, tx.Hash)
+	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.OriginChainID, tx.Hash)
 }
 
 func (tx ProcessedCardanoTx) ToUnprocessedTxKey() string {
-	return ToUnprocessedTxKey(tx.BlockSlot, tx.OriginChainID, tx.Hash)
+	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.OriginChainID, tx.Hash)
 }
 
 func ToCardanoTxKey(originChainID string, txHash string) string {
@@ -84,7 +92,7 @@ func (tx BridgeExpectedCardanoTx) ToCardanoTxKey() string {
 }
 
 func (tx BridgeExpectedCardanoTx) ToExpectedTxKey() string {
-	return fmt.Sprintf("%20d_%v_%v", tx.TTL, tx.ChainID, tx.Hash)
+	return fmt.Sprintf("%d_%20d_%v_%v", tx.Priority, tx.TTL, tx.ChainID, tx.Hash)
 }
 
 func (tx BridgeExpectedCardanoTx) Key() []byte {

@@ -59,7 +59,7 @@ func (f *ExpectedTxsFetcherImpl) fetchData() error {
 	var expectedTxs []*core.BridgeExpectedCardanoTx
 
 	for chainID := range f.appConfig.CardanoChains {
-		existingExpectedTxs, err := f.db.GetExpectedTxs(chainID, 0)
+		existingExpectedTxs, err := f.db.GetAllExpectedTxs(chainID, 0)
 		if err != nil {
 			f.logger.Error("Failed to GetExpectedTxs from db", "chainId", chainID, "err", err)
 

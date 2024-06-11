@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
@@ -86,7 +87,22 @@ func (m *CardanoTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpected
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) GetExpectedTxs(chainID string, threshold int) ([]*BridgeExpectedCardanoTx, error) {
+func (m *CardanoTxsProcessorDBMock) GetExpectedTxs(
+	chainID string, priority uint, threshold int,
+) ([]*BridgeExpectedCardanoTx, error) {
+	args := m.Called(chainID, priority, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*BridgeExpectedCardanoTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *CardanoTxsProcessorDBMock) GetAllExpectedTxs(
+	chainID string, threshold int,
+) ([]*BridgeExpectedCardanoTx, error) {
 	args := m.Called(chainID, threshold)
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).([]*BridgeExpectedCardanoTx)
@@ -128,7 +144,21 @@ func (m *CardanoTxsProcessorDBMock) AddUnprocessedTxs(unprocessedTxs []*CardanoT
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error) {
+func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(
+	chainID string, priority uint, threshold int) (
+	[]*CardanoTx, error,
+) {
+	args := m.Called(chainID, priority, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*CardanoTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *CardanoTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error) {
 	args := m.Called(chainID, threshold)
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).([]*CardanoTx)
@@ -171,12 +201,12 @@ type BridgeSubmitterMock struct {
 }
 
 // SubmitClaims implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitClaims(claims *BridgeClaims) error {
+func (m *BridgeSubmitterMock) SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) error {
 	if m.OnSubmitClaims != nil {
 		m.OnSubmitClaims(claims)
 	}
 
-	args := m.Called(claims)
+	args := m.Called(claims, submitOpts)
 
 	return args.Error(0)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 
@@ -17,8 +18,12 @@ import (
 )
 
 const (
-	TickTimeMs         = 2000
-	TTLInsuranceOffset = 2
+	TickTimeMs                  = 2000
+	TTLInsuranceOffset          = 2
+	MinBridgingClaimsToGroup    = 1
+	GasLimitMultiplierDefault   = float32(1)
+	GasLimitMultiplierIncrement = float32(0.5)
+	GasLimitMultiplierMax       = float32(3)
 )
 
 type CardanoTxsProcessorImpl struct {
@@ -32,6 +37,9 @@ type CardanoTxsProcessorImpl struct {
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
 	tickTime                    time.Duration
+
+	maxBridgingClaimsToGroup map[string]int
+	gasLimitMultiplier       map[string]float32
 }
 
 var _ core.CardanoTxsProcessor = (*CardanoTxsProcessorImpl)(nil)
@@ -57,6 +65,16 @@ func NewCardanoTxsProcessor(
 		failedTxProcessorsMap[string(txProcessor.GetType())] = txProcessor
 	}
 
+	maxBridgingClaimsToGroup := make(map[string]int, len(appConfig.CardanoChains))
+	for _, chain := range appConfig.CardanoChains {
+		maxBridgingClaimsToGroup[chain.ChainID] = appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+	}
+
+	gasLimitMultiplier := make(map[string]float32, len(appConfig.CardanoChains))
+	for _, chain := range appConfig.CardanoChains {
+		gasLimitMultiplier[chain.ChainID] = 1
+	}
+
 	return &CardanoTxsProcessorImpl{
 		ctx:                         ctx,
 		appConfig:                   appConfig,
@@ -68,6 +86,9 @@ func NewCardanoTxsProcessor(
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		logger:                      logger,
 		tickTime:                    TickTimeMs,
+
+		maxBridgingClaimsToGroup: maxBridgingClaimsToGroup,
+		gasLimitMultiplier:       gasLimitMultiplier,
 	}
 }
 
@@ -90,6 +111,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		cardanoTx := &core.CardanoTx{
 			OriginChainID: originChainID,
 			Tx:            *tx,
+			Priority:      1,
 		}
 
 		bp.logger.Debug("Checking if tx is relevant", "tx", tx)
@@ -101,6 +123,10 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 			onIrrelevantTx(cardanoTx)
 
 			continue
+		}
+
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+			cardanoTx.Priority = 0
 		}
 
 		relevantTxs = append(relevantTxs, cardanoTx)
@@ -224,13 +250,21 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 
 	bridgeClaims := &core.BridgeClaims{}
 
-	invalidRelevantExpiredTxs, processedExpectedTxs,
-		processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID)
+	maxClaimsToGroup := bp.maxBridgingClaimsToGroup[startChainID]
 
-	allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-	allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-	allProcessedTxs = append(allProcessedTxs, processedTxs...)
-	allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+	for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+		invalidRelevantExpiredTxs, processedExpectedTxs,
+			processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup, priority)
+
+		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+		allProcessedTxs = append(allProcessedTxs, processedTxs...)
+		allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
+			break
+		}
+	}
 
 	// ensure always same order of iterating through bp.appConfig.CardanoChains
 	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
@@ -241,19 +275,22 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-			break
-		}
 
 		chainID := bp.appConfig.CardanoChains[key].ChainID
 		if chainID != startChainID {
-			invalidRelevantExpiredTxs, processedExpectedTxs,
-				processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID)
+			for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+				if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
+					break
+				}
 
-			allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
-			allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
-			allProcessedTxs = append(allProcessedTxs, processedTxs...)
-			allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+				invalidRelevantExpiredTxs, processedExpectedTxs,
+					processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, chainID, maxClaimsToGroup, priority)
+
+				allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
+				allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
+				allProcessedTxs = append(allProcessedTxs, processedTxs...)
+				allUnprocessedTxs = append(allUnprocessedTxs, unprocessedTxs...)
+			}
 		}
 	}
 
@@ -271,13 +308,33 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	if bridgeClaims.Count() > 0 {
 		bp.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
-		err := bp.bridgeSubmitter.SubmitClaims(bridgeClaims)
+		err := bp.bridgeSubmitter.SubmitClaims(
+			bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: bp.gasLimitMultiplier[startChainID]})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to submit claims. error: %v\n", err)
 			bp.logger.Error("Failed to submit claims", "err", err)
 
+			bp.maxBridgingClaimsToGroup[startChainID] = bridgeClaims.Count() - 1
+			if bp.maxBridgingClaimsToGroup[startChainID] < MinBridgingClaimsToGroup {
+				bp.maxBridgingClaimsToGroup[startChainID] = MinBridgingClaimsToGroup
+			}
+
+			bp.logger.Warn("set maxBridgingClaimsToGroup",
+				"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
+
+			if bridgeClaims.Count() <= MinBridgingClaimsToGroup &&
+				bp.gasLimitMultiplier[startChainID]+GasLimitMultiplierIncrement <= GasLimitMultiplierMax {
+				bp.gasLimitMultiplier[startChainID] += GasLimitMultiplierIncrement
+
+				bp.logger.Warn("Increased gasLimitMultiplier",
+					"startChainID", startChainID, "newValue", bp.gasLimitMultiplier[startChainID])
+			}
+
 			return
 		}
+
+		bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+		bp.gasLimitMultiplier[startChainID] = GasLimitMultiplierDefault
 
 		telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 	}
@@ -313,13 +370,15 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	bridgeClaims *core.BridgeClaims,
 	chainID string,
+	maxClaimsToGroup int,
+	priority uint,
 ) (
 	allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx,
 	allProcessedExpectedTxs []*core.BridgeExpectedCardanoTx,
 	allProcessedTxs []*core.ProcessedCardanoTx,
 	unprocessedTxs []*core.CardanoTx,
 ) {
-	expectedTxs, err := bp.db.GetExpectedTxs(chainID, 0)
+	expectedTxs, err := bp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get expected txs. error: %v\n", err)
 		bp.logger.Error("Failed to get expected txs", "err", err)
@@ -327,7 +386,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		return
 	}
 
-	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, 0)
+	unprocessedTxs, err = bp.db.GetUnprocessedTxs(chainID, priority, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get unprocessed txs. error: %v\n", err)
 		bp.logger.Error("Failed to get unprocessed txs", "err", err)
@@ -344,7 +403,8 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
 	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
 	// that all claims are filled only from unprocessedTxs and never from expectedTxs
-	blockInfo := bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
+	blockInfo := bp.constructBridgeClaimsBlockInfo(
+		chainID, ccoDB, unprocessedTxs, expectedTxs, nil)
 	if blockInfo == nil {
 		return
 	}
@@ -358,26 +418,27 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 		bp.logger.Debug("Processing", "for chainID", chainID, "blockInfo", blockInfo)
 
 		_, processedTxs, processedExpectedTxs := bp.checkUnprocessedTxs(
-			blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap)
+			blockInfo, bridgeClaims, unprocessedTxs, expectedTxsMap, maxClaimsToGroup)
 
 		_, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := bp.checkExpectedTxs(
-			blockInfo, bridgeClaims, ccoDB, expectedTxsMap)
+			blockInfo, bridgeClaims, ccoDB, expectedTxsMap, maxClaimsToGroup)
 
 		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
 
 		bp.logger.Debug("Checked all", "for chainID", chainID,
-			"processedTxs", processedTxs, "processedRelevantExpiredTxs", processedRelevantExpiredTxs,
+			"processedTxs", processedTxs, "processedExpectedTxs", processedExpectedTxs,
 			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 
 		allProcessedTxs = append(allProcessedTxs, processedTxs...)
 		allProcessedExpectedTxs = append(allProcessedExpectedTxs, processedExpectedTxs...)
 		allInvalidRelevantExpiredTxs = append(allInvalidRelevantExpiredTxs, invalidRelevantExpiredTxs...)
 
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 
-		blockInfo = bp.constructBridgeClaimsBlockInfo(chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
+		blockInfo = bp.constructBridgeClaimsBlockInfo(
+			chainID, ccoDB, unprocessedTxs, expectedTxs, blockInfo)
 		if blockInfo == nil {
 			break
 		}
@@ -449,6 +510,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 	bridgeClaims *core.BridgeClaims,
 	unprocessedTxs []*core.CardanoTx,
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
+	maxClaimsToGroup int,
 ) (
 	[]*core.CardanoTx,
 	[]*core.ProcessedCardanoTx,
@@ -490,6 +552,11 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 			continue
 		}
 
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution &&
+			!bridgeClaims.CanAddBatchExecutedClaim() {
+			continue
+		}
+
 		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to ValidateAndAddClaim. error: %v\n", err)
@@ -508,7 +575,7 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 
 		processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
 
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 	}
@@ -525,6 +592,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	bridgeClaims *core.BridgeClaims,
 	ccoDB indexer.Database,
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx,
+	maxClaimsToGroup int,
 ) (
 	[]*core.BridgeExpectedCardanoTx,
 	[]*core.BridgeExpectedCardanoTx,
@@ -533,7 +601,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 	var relevantExpiredTxs []*core.BridgeExpectedCardanoTx
 
 	// ensure always same order of iterating through expectedTxsMap
-	keys := make([]string, 0, len(bp.appConfig.CardanoChains))
+	keys := make([]string, 0, len(expectedTxsMap))
 	for k := range expectedTxsMap {
 		keys = append(keys, k)
 	}
@@ -566,7 +634,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 		processedRelevantExpiredTxs []*core.BridgeExpectedCardanoTx
 	)
 
-	if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup ||
+	if !bridgeClaims.CanAddMore(maxClaimsToGroup) ||
 		len(relevantExpiredTxs) == 0 {
 		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 	}
@@ -608,7 +676,7 @@ func (bp *CardanoTxsProcessorImpl) checkExpectedTxs(
 
 		processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
 
-		if bridgeClaims.Count() >= bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
 		}
 	}

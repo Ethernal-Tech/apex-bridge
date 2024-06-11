@@ -318,7 +318,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
 		})
@@ -337,7 +337,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: "prime",
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch: expected 2000000 but got 1000001")
+		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -346,7 +346,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: "vector",
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
 		})
@@ -365,7 +365,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: "prime",
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch: expected 2000000 but got 2000001")
+		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {

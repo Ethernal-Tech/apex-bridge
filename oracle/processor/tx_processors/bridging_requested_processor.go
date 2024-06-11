@@ -176,11 +176,6 @@ func (*BridgingRequestedProcessorImpl) validate(
 		receiverAmountSum += receiver.Amount
 	}
 
-	if receiverAmountSum != multisigUtxo.Amount {
-		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
-			receiverAmountSum, multisigUtxo.Amount)
-	}
-
 	if foundAUtxoValueBelowMinimumValue {
 		return fmt.Errorf("found a utxo value below minimum value in metadata receivers: %v", metadata)
 	}
@@ -195,6 +190,11 @@ func (*BridgingRequestedProcessorImpl) validate(
 
 	if feeSum < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
+	}
+
+	if receiverAmountSum != multisigUtxo.Amount {
+		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
+			receiverAmountSum, multisigUtxo.Amount)
 	}
 
 	return nil

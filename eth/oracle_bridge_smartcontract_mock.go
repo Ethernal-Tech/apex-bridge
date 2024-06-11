@@ -43,7 +43,7 @@ func (m *OracleBridgeSmartContractMock) GetRawTransactionFromLastBatch(
 }
 
 // SubmitClaims implements IOracleBridgeSmartContract.
-func (m *OracleBridgeSmartContractMock) SubmitClaims(ctx context.Context, claims Claims) error {
+func (m *OracleBridgeSmartContractMock) SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) error {
 	args := m.Called()
 
 	return args.Error(0)
