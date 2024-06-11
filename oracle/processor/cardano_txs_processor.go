@@ -333,19 +333,8 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 			return
 		}
 
-		if bp.maxBridgingClaimsToGroup[startChainID] != bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup {
-			bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
-
-			bp.logger.Info("Reset maxBridgingClaimsToGroup",
-				"startChainID", startChainID, "newValue", bp.maxBridgingClaimsToGroup[startChainID])
-		}
-
-		if bp.gasLimitMultiplier[startChainID] != GasLimitMultiplierDefault {
-			bp.gasLimitMultiplier[startChainID] = GasLimitMultiplierDefault
-
-			bp.logger.Info("Reset gasLimitMultiplier",
-				"startChainID", startChainID, "newValue", bp.gasLimitMultiplier[startChainID])
-		}
+		bp.maxBridgingClaimsToGroup[startChainID] = bp.appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+		bp.gasLimitMultiplier[startChainID] = GasLimitMultiplierDefault
 
 		telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 	}
