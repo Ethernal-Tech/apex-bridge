@@ -3,9 +3,9 @@ package validatorcomponents
 import (
 	"context"
 	"errors"
-	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -19,10 +19,10 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 	getConfig := func() *oracleCore.AppConfig {
 		return &oracleCore.AppConfig{
 			CardanoChains: map[string]*oracleCore.CardanoChainConfig{
-				"vector": {
+				common.ChainIDStrVector: {
 					NetworkAddress: "http://vector.com",
 				},
-				"prime": {
+				common.ChainIDStrPrime: {
 					NetworkAddress: "http://prime.com",
 				},
 				"dummy": {
@@ -36,13 +36,13 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		scMock := &eth.BridgeSmartContractMock{}
 		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
-				Id: "vector",
+				Id: common.ToNumChainID(common.ChainIDStrVector),
 			},
 			{
-				Id: "non_existing",
+				Id: 0,
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, common.ChainIDStrVector).Return(&eth.UTXOs{
 			MultisigOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 			FeePayerOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 		}, error(nil))
@@ -55,11 +55,11 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		scMock := &eth.BridgeSmartContractMock{}
 		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
-				Id: "vector",
+				Id: common.ToNumChainID(common.ChainIDStrVector),
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(nil, errors.New("er"))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Once().Return(&eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, common.ChainIDStrVector).Once().Return(nil, errors.New("er"))
+		scMock.On("GetAvailableUTXOs", mock.Anything, common.ChainIDStrVector).Once().Return(&eth.UTXOs{
 			MultisigOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 			FeePayerOwnedUTXOs: []contractbinding.IBridgeStructsUTXO{},
 		}, nil)
@@ -73,10 +73,10 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return(nil, errors.New("er"))
 		scMock.On("GetAllRegisteredChains", mock.Anything).Once().Return([]eth.Chain{
 			{
-				Id: "vector",
+				Id: common.ToNumChainID(common.ChainIDStrVector),
 			},
 			{
-				Id: "prime",
+				Id: common.ToNumChainID(common.ChainIDStrPrime),
 			},
 		}, nil)
 		scMock.On("GetAvailableUTXOs", mock.Anything, mock.Anything).Return(&eth.UTXOs{
@@ -99,59 +99,59 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 		utxos := []contractbinding.IBridgeStructsUTXO{
 			{
 				TxHash:  "0x001",
-				TxIndex: new(big.Int).SetUint64(2),
-				Amount:  new(big.Int).SetUint64(200),
+				TxIndex: 2,
+				Amount:  200,
 			},
 			{
 				TxHash:  "0x002",
-				TxIndex: new(big.Int).SetUint64(0),
-				Amount:  new(big.Int).SetUint64(100),
+				TxIndex: 0,
+				Amount:  100,
 			},
 			{
 				TxHash:  "0x003",
-				TxIndex: new(big.Int).SetUint64(129),
-				Amount:  new(big.Int).SetUint64(10),
+				TxIndex: 129,
+				Amount:  10,
 			},
 			{
 				TxHash:  "0x004",
-				TxIndex: new(big.Int).SetUint64(0),
-				Amount:  new(big.Int).SetUint64(1000),
+				TxIndex: 0,
+				Amount:  1000,
 			},
 			{
 				TxHash:  "0x005",
-				TxIndex: new(big.Int).SetUint64(1),
-				Amount:  new(big.Int).SetUint64(1),
+				TxIndex: 1,
+				Amount:  1,
 			},
 			{
 				TxHash:  "0x006",
-				TxIndex: new(big.Int).SetUint64(2),
-				Amount:  new(big.Int).SetUint64(2),
+				TxIndex: 2,
+				Amount:  2,
 			},
 			{
 				TxHash:  "0x007",
-				TxIndex: new(big.Int).SetUint64(0),
-				Amount:  new(big.Int).SetUint64(100),
+				TxIndex: 0,
+				Amount:  100,
 			},
 		}
 
 		scMock := &eth.BridgeSmartContractMock{}
 		scMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
-				Id:              "vector",
+				Id:              common.ToNumChainID(common.ChainIDStrVector),
 				AddressMultisig: multisigVector,
 				AddressFeePayer: feePayerVector,
 			},
 			{
-				Id:              "prime",
+				Id:              common.ToNumChainID(common.ChainIDStrPrime),
 				AddressMultisig: multisigPrime,
 				AddressFeePayer: feePayerPrime,
 			},
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "vector").Return(eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, common.ChainIDStrVector).Return(eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[0:1],
 			FeePayerOwnedUTXOs: utxos[1:3],
 		}, error(nil))
-		scMock.On("GetAvailableUTXOs", mock.Anything, "prime").Return(eth.UTXOs{
+		scMock.On("GetAvailableUTXOs", mock.Anything, common.ChainIDStrPrime).Return(eth.UTXOs{
 			MultisigOwnedUTXOs: utxos[3:6],
 			FeePayerOwnedUTXOs: utxos[6:7],
 		}, error(nil))
@@ -162,35 +162,35 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 
 		require.Len(t, config.CardanoChains, 2)
 
-		assert.Equal(t, multisigVector, config.CardanoChains["vector"].BridgingAddresses.BridgingAddress)
-		assert.Equal(t, feePayerVector, config.CardanoChains["vector"].BridgingAddresses.FeeAddress)
-		assert.Equal(t, multisigPrime, config.CardanoChains["prime"].BridgingAddresses.BridgingAddress)
-		assert.Equal(t, feePayerPrime, config.CardanoChains["prime"].BridgingAddresses.FeeAddress)
+		assert.Equal(t, multisigVector, config.CardanoChains[common.ChainIDStrVector].BridgingAddresses.BridgingAddress)
+		assert.Equal(t, feePayerVector, config.CardanoChains[common.ChainIDStrVector].BridgingAddresses.FeeAddress)
+		assert.Equal(t, multisigPrime, config.CardanoChains[common.ChainIDStrPrime].BridgingAddresses.BridgingAddress)
+		assert.Equal(t, feePayerPrime, config.CardanoChains[common.ChainIDStrPrime].BridgingAddresses.FeeAddress)
 
-		require.Len(t, config.CardanoChains["vector"].InitialUtxos, 3)
-		require.Len(t, config.CardanoChains["prime"].InitialUtxos, 4)
+		require.Len(t, config.CardanoChains[common.ChainIDStrVector].InitialUtxos, 3)
+		require.Len(t, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos, 4)
 
 		for i, x := range utxos {
 			if i < 3 {
 				if i == 0 {
-					assert.Equal(t, multisigVector, config.CardanoChains["vector"].InitialUtxos[i].Output.Address)
+					assert.Equal(t, multisigVector, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Output.Address)
 				} else {
-					assert.Equal(t, feePayerVector, config.CardanoChains["vector"].InitialUtxos[i].Output.Address)
+					assert.Equal(t, feePayerVector, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Output.Address)
 				}
 
-				assert.Equal(t, x.Amount.Uint64(), config.CardanoChains["vector"].InitialUtxos[i].Output.Amount)
-				assert.Equal(t, x.TxHash, config.CardanoChains["vector"].InitialUtxos[i].Input.Hash)
-				assert.Equal(t, uint32(x.TxIndex.Uint64()), config.CardanoChains["vector"].InitialUtxos[i].Input.Index)
+				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Output.Amount)
+				assert.Equal(t, x.TxHash, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Hash)
+				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Index)
 			} else {
 				if i < 6 {
-					assert.Equal(t, multisigPrime, config.CardanoChains["prime"].InitialUtxos[i-3].Output.Address)
+					assert.Equal(t, multisigPrime, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Output.Address)
 				} else {
-					assert.Equal(t, feePayerPrime, config.CardanoChains["prime"].InitialUtxos[i-3].Output.Address)
+					assert.Equal(t, feePayerPrime, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Output.Address)
 				}
 
-				assert.Equal(t, x.Amount.Uint64(), config.CardanoChains["prime"].InitialUtxos[i-3].Output.Amount)
-				assert.Equal(t, x.TxHash, config.CardanoChains["prime"].InitialUtxos[i-3].Input.Hash)
-				assert.Equal(t, uint32(x.TxIndex.Uint64()), config.CardanoChains["prime"].InitialUtxos[i-3].Input.Index)
+				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Output.Amount)
+				assert.Equal(t, x.TxHash, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Hash)
+				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Index)
 			}
 		}
 	})

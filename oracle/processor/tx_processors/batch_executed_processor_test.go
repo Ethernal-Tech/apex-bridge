@@ -1,7 +1,6 @@
 package txprocessors
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -15,7 +14,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	proc := NewBatchExecutedProcessor(hclog.NewNullLogger())
 
 	appConfig := core.AppConfig{
-		CardanoChains: map[string]*core.CardanoChainConfig{"prime": {
+		CardanoChains: map[string]*core.CardanoChainConfig{common.ChainIDStrPrime: {
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr_bridging",
 				FeeAddress:      "addr_fee",
@@ -68,7 +67,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 		claims := &core.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 				Inputs:   txInputs,
@@ -100,7 +99,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		}
 
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: relevantFullMetadata,
@@ -135,7 +134,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			{Address: "addr_fee", Amount: 2},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: relevantFullMetadata,
@@ -147,18 +146,18 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutedClaims[0].BatchNonceID)
+		require.Equal(t, batchNonceID, claims.BatchExecutedClaims[0].BatchNonceId)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 1)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[0].Amount))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, txOutputs[0].Amount)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs, 1)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs[0].Amount, new(big.Int).SetUint64(txOutputs[1].Amount))
+		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs[0].Amount, txOutputs[1].Amount)
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {
 		cardanoChains := make(map[string]*core.CardanoChainConfig)
-		cardanoChains["prime"] = &core.CardanoChainConfig{
+		cardanoChains[common.ChainIDStrPrime] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
 				FeeAddress:      "addr2",
@@ -183,7 +182,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 		tx := core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Inputs: inputs,
 			},
@@ -225,7 +224,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 		tx := core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Inputs: inputs,
 			},
@@ -238,7 +237,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	t.Run("validate method pass", func(t *testing.T) {
 		cardanoChains := make(map[string]*core.CardanoChainConfig)
-		cardanoChains["prime"] = &core.CardanoChainConfig{
+		cardanoChains[common.ChainIDStrPrime] = &core.CardanoChainConfig{
 			BridgingAddresses: core.BridgingAddresses{
 				BridgingAddress: "addr1",
 				FeeAddress:      "addr2",
@@ -269,7 +268,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 		tx := core.CardanoTx{
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 			Tx: indexer.Tx{
 				Inputs: inputs,
 			},

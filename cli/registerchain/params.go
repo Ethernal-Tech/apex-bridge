@@ -272,8 +272,8 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		for i, x := range utxos {
 			result[i] = contractbinding.IBridgeStructsUTXO{
 				TxHash:  x.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(x.Index)),
-				Amount:  new(big.Int).SetUint64(x.Amount),
+				TxIndex: uint64(x.Index),
+				Amount:  x.Amount,
 			}
 		}
 
@@ -294,7 +294,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
 				contractbinding.IBridgeStructsChain{
-					Id:              ip.chainID,
+					Id:              common.ToNumChainID(ip.chainID),
 					AddressMultisig: ip.multisigAddr,
 					AddressFeePayer: ip.multisigFeeAddr,
 				},

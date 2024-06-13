@@ -696,14 +696,14 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			err := bp.bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
-				SourceChainID: brClaim.SourceChainID,
+				SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
 				SourceTxHash:  brClaim.ObservedTransactionHash,
-			}, brClaim.DestinationChainID)
+			}, common.ToStrChainID(brClaim.DestinationChainId))
 
 			if err != nil {
 				bp.logger.Error(
 					"error while updating a bridging request state to SubmittedToBridge",
-					"sourceChainId", brClaim.SourceChainID, "sourceTxHash", brClaim.ObservedTransactionHash)
+					"sourceChainId", common.ToStrChainID(brClaim.SourceChainId), "sourceTxHash", brClaim.ObservedTransactionHash)
 			}
 		}
 	}
@@ -711,12 +711,12 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
 			err := bp.bridgingRequestStateUpdater.ExecutedOnDestination(
-				beClaim.ChainID, beClaim.BatchNonceID.Uint64(), beClaim.ObservedTransactionHash)
+				common.ToStrChainID(beClaim.ChainId), beClaim.BatchNonceId, beClaim.ObservedTransactionHash)
 
 			if err != nil {
 				bp.logger.Error(
 					"error while updating bridging request states to ExecutedOnDestination",
-					"destinationChainId", beClaim.ChainID, "batchId", beClaim.BatchNonceID.Uint64(),
+					"destinationChainId", common.ToStrChainID(beClaim.ChainId), "batchId", beClaim.BatchNonceId,
 					"destinationTxHash", beClaim.ObservedTransactionHash)
 			}
 		}
@@ -724,12 +724,12 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutionFailedClaims) > 0 {
 		for _, befClaim := range bridgeClaims.BatchExecutionFailedClaims {
-			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(befClaim.ChainID, befClaim.BatchNonceID.Uint64())
+			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(common.ToStrChainID(befClaim.ChainId), befClaim.BatchNonceId)
 
 			if err != nil {
 				bp.logger.Error(
 					"error while updating bridging request states to FailedToExecuteOnDestination",
-					"destinationChainId", befClaim.ChainID, "batchId", befClaim.BatchNonceID.Uint64())
+					"destinationChainId", common.ToStrChainID(befClaim.ChainId), "batchId", befClaim.BatchNonceId)
 			}
 		}
 	}

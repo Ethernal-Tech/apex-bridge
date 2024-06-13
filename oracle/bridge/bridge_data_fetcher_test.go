@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, expectedTx)
 	})
@@ -37,7 +38,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to FetchExpectedTx from Bridge SC")
 		require.Nil(t, expectedTx)
@@ -50,7 +51,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, expectedTx)
 	})
@@ -62,7 +63,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, blockPoint)
 	})
@@ -74,7 +75,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to FetchLatestBlockPoint from Bridge SC")
 		require.Nil(t, blockPoint)
@@ -87,7 +88,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
 	})

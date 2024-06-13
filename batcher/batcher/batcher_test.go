@@ -33,7 +33,7 @@ func TestBatcherExecute(t *testing.T) {
 
 	config := &core.BatcherConfiguration{
 		Chain: core.ChainConfig{
-			ChainID:   "prime",
+			ChainID:   common.ChainIDStrPrime,
 			ChainType: "Cardano",
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 				"socketPath": "./socket",
@@ -52,13 +52,13 @@ func TestBatcherExecute(t *testing.T) {
 	defer cancelCtx()
 
 	testError := errors.New("test err")
-	batchNonceID := big.NewInt(1)
+	batchNonceID := uint64(1)
 
 	t.Run("GetNextBatchID returns err", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(big.NewInt(0), testError)
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
@@ -71,7 +71,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(big.NewInt(0), nil)
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), nil)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
@@ -83,8 +83,8 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(nil, testError)
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(nil, testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
 		err := b.execute(ctx)
@@ -95,14 +95,14 @@ func TestBatcherExecute(t *testing.T) {
 
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
-			Nonce:                   big.NewInt(5),
+			Nonce:                   5,
 			ObservedTransactionHash: "0x66674",
 			BlockHeight:             big.NewInt(10),
-			SourceChainID:           "prime",
+			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []contractbinding.IBridgeStructsReceiver{
 				{
 					DestinationAddress: "0x333",
-					Amount:             big.NewInt(10),
+					Amount:             10,
 				},
 			},
 		},
@@ -112,9 +112,9 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return((*core.GeneratedBatchTxData)(nil), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
@@ -133,9 +133,9 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -154,9 +154,9 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -176,9 +176,9 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
 
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, "prime").Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, "prime").Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, "prime", getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -207,7 +207,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	chainConfig := core.ChainConfig{
-		ChainID:   "prime",
+		ChainID:   common.ChainIDStrPrime,
 		ChainType: "Cardano",
 		ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 			"socketPath": "./socket",
@@ -239,7 +239,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 
 	t.Run("invalid keys path", func(t *testing.T) {
 		chainConfig := core.ChainConfig{
-			ChainID:   "prime",
+			ChainID:   common.ChainIDStrPrime,
 			ChainType: "Cardano",
 			ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 				"testnetMagic": 2,
@@ -272,60 +272,60 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 
 	t.Run("getFirstAndLastTxNonceID one item", func(t *testing.T) {
 		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
-			{Nonce: big.NewInt(5)},
+			{Nonce: 5},
 		})
 
-		assert.Equal(t, big.NewInt(5), f)
-		assert.Equal(t, big.NewInt(5), l)
+		assert.Equal(t, uint64(5), f)
+		assert.Equal(t, uint64(5), l)
 	})
 
 	t.Run("getFirstAndLastTxNonceID multiple items", func(t *testing.T) {
 		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
-			{Nonce: big.NewInt(5)}, {Nonce: big.NewInt(7)}, {Nonce: big.NewInt(2)}, {Nonce: big.NewInt(9)}, {Nonce: big.NewInt(5)},
+			{Nonce: 5}, {Nonce: 7}, {Nonce: 2}, {Nonce: 9}, {Nonce: 5},
 		})
 
-		assert.Equal(t, big.NewInt(2), f)
-		assert.Equal(t, big.NewInt(9), l)
+		assert.Equal(t, uint64(2), f)
+		assert.Equal(t, uint64(9), l)
 	})
 
 	t.Run("getBridgingRequestStateKeys", func(t *testing.T) {
 		res := getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
 			{
 				ObservedTransactionHash: "1",
-				SourceChainID:           "prime",
-				Nonce:                   big.NewInt(4),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				Nonce:                   4,
 			},
 			{
 				ObservedTransactionHash: "2",
-				SourceChainID:           "vector",
-				Nonce:                   big.NewInt(2),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				Nonce:                   2,
 			},
 			{
 				ObservedTransactionHash: "3",
-				SourceChainID:           "prime",
-				Nonce:                   big.NewInt(6),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				Nonce:                   6,
 			},
 			{
 				ObservedTransactionHash: "4",
-				SourceChainID:           "vector",
-				Nonce:                   big.NewInt(3),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				Nonce:                   3,
 			},
 			{
 				ObservedTransactionHash: "5",
-				SourceChainID:           "prime",
-				Nonce:                   big.NewInt(5),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				Nonce:                   5,
 			},
 			{
 				ObservedTransactionHash: "6",
-				SourceChainID:           "vector",
-				Nonce:                   big.NewInt(2),
+				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				Nonce:                   2,
 			},
-		}, big.NewInt(3), big.NewInt(5))
+		}, 3, 5)
 
 		require.Equal(t, []common.BridgingRequestStateKey{
-			{SourceChainID: "prime", SourceTxHash: "1"},
-			{SourceChainID: "vector", SourceTxHash: "4"},
-			{SourceChainID: "prime", SourceTxHash: "5"},
+			{SourceChainID: common.ChainIDStrPrime, SourceTxHash: "1"},
+			{SourceChainID: common.ChainIDStrVector, SourceTxHash: "4"},
+			{SourceChainID: common.ChainIDStrPrime, SourceTxHash: "5"},
 		}, res)
 	})
 }

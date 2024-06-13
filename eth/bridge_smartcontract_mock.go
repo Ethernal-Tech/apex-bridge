@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -97,14 +96,10 @@ func (m *BridgeSmartContractMock) GetValidatorsCardanoData(
 	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetNextBatchID(ctx context.Context, destinationChain string) (*big.Int, error) {
+func (m *BridgeSmartContractMock) GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error) {
 	args := m.Called(ctx, destinationChain)
 
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	arg0, _ := args.Get(0).(*big.Int)
+	arg0, _ := args.Get(0).(uint64)
 
 	return arg0, args.Error(1)
 }

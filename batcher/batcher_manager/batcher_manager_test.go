@@ -39,7 +39,7 @@ func TestBatcherManagerOperations(t *testing.T) {
 	config := &core.BatcherManagerConfiguration{
 		Chains: []core.ChainConfig{
 			{
-				ChainID:       "prime",
+				ChainID:       common.ChainIDStrPrime,
 				ChainType:     "Cardano",
 				ChainSpecific: json.RawMessage(jsonData),
 			},
@@ -104,7 +104,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
 			Chains: []core.ChainConfig{
 				{
-					ChainID:       "prime",
+					ChainID:       common.ChainIDStrPrime,
 					ChainType:     "Cardano",
 					ChainSpecific: json.RawMessage(""),
 				},

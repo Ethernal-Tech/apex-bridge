@@ -1,7 +1,6 @@
 package failedtxprocessors
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -71,6 +70,6 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
 		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
-		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutionFailedClaims[0].BatchNonceID)
+		require.Equal(t, batchNonceID, claims.BatchExecutionFailedClaims[0].BatchNonceId)
 	})
 }

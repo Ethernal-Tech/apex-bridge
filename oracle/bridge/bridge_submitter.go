@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -47,7 +48,7 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, blocks []*i
 	for _, bl := range blocks {
 		contractBlocks = append(contractBlocks, eth.CardanoBlock{
 			BlockHash: bl.Hash,
-			BlockSlot: bl.Slot,
+			BlockSlot: new(big.Int).SetUint64(bl.Slot),
 		})
 	}
 

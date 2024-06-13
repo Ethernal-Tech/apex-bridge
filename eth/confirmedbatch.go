@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
@@ -15,7 +16,7 @@ type UTXO = contractbinding.IBridgeStructsUTXO
 type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
 
 type ConfirmedBatch struct {
-	ID                         string
+	ID                         uint64
 	RawTransaction             []byte
 	MultisigSignatures         [][]byte
 	FeePayerMultisigSignatures [][]byte
@@ -56,7 +57,7 @@ func NewConfirmedBatch(
 	}
 
 	return &ConfirmedBatch{
-		ID:                         contractConfirmedBatch.Id.String(),
+		ID:                         contractConfirmedBatch.Id,
 		RawTransaction:             rawTx,
 		MultisigSignatures:         multisigSignatures,
 		FeePayerMultisigSignatures: feePayerMultisigSignatures,
@@ -67,9 +68,9 @@ func BatchToString(b SignedBatch) string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
-	sb.WriteString(b.Id.String())
+	sb.WriteString(fmt.Sprint(b.Id))
 	sb.WriteString("\ndestination chain id = ")
-	sb.WriteString(b.DestinationChainId)
+	sb.WriteString(common.ToStrChainID(b.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(b.RawTransaction)
 	sb.WriteString("\nmultisig signature = ")
@@ -77,9 +78,9 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString("\nfee payer multisig signature = ")
 	sb.WriteString(b.FeePayerMultisigSignature)
 	sb.WriteString("\nfirst tx nonce id = ")
-	sb.WriteString(b.FirstTxNonceId.String())
+	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
 	sb.WriteString("\nlast tx nonce id = ")
-	sb.WriteString(b.LastTxNonceId.String())
+	sb.WriteString(fmt.Sprint(b.LastTxNonceId))
 
 	sb.WriteString("\nmultisig owned used utxos cnt = ")
 	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
@@ -109,7 +110,7 @@ func (b ConfirmedBatch) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
-	sb.WriteString(b.ID)
+	sb.WriteString(fmt.Sprint(b.ID))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nmultisig signatures = [")

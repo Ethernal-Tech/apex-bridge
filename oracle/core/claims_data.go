@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
@@ -64,7 +65,7 @@ func RefundExecutedClaimString(c RefundExecutedClaim) string {
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(c.ObservedTransactionHash)
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nRefundTxHash = ")
 	sb.WriteString(c.RefundTxHash)
 	sb.WriteString("\nUtxo = ")
@@ -82,7 +83,7 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString("\nPreviousRefundTxHash = ")
 	sb.WriteString(c.PreviousRefundTxHash)
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.Receiver)
 	sb.WriteString("\nUtxo = ")
@@ -93,7 +94,7 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString("\nMultisigSignature = ")
 	sb.WriteString(c.MultisigSignature)
 	sb.WriteString("\nRetryCounter = ")
-	sb.WriteString(c.RetryCounter.String())
+	sb.WriteString(fmt.Sprint(c.RetryCounter))
 
 	return sb.String()
 }
@@ -104,9 +105,9 @@ func BatchExecutionFailedClaimString(c BatchExecutionFailedClaim) string {
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(c.ObservedTransactionHash)
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
-	sb.WriteString(c.BatchNonceID.String())
+	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
 	return sb.String()
 }
@@ -117,9 +118,9 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(c.ObservedTransactionHash)
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
-	sb.WriteString(c.BatchNonceID.String())
+	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 	sb.WriteString("\nMultisigOwnedUTXOs = [")
 
 	for _, utxo := range c.OutputUTXOs.MultisigOwnedUTXOs {
@@ -164,10 +165,12 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	sb.WriteString("\nOutputUTXO = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
 		c.OutputUTXO.Nonce, c.OutputUTXO.TxHash, c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
+	sb.WriteString("\nTotalAmount = ")
+	sb.WriteString(c.TotalAmount.String())
 	sb.WriteString("\nSourceChainID = ")
-	sb.WriteString(c.SourceChainID)
+	sb.WriteString(common.ToStrChainID(c.SourceChainId))
 	sb.WriteString("\nDestinationChainID = ")
-	sb.WriteString(c.DestinationChainID)
+	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
 
 	return sb.String()
 }

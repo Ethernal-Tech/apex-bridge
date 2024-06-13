@@ -33,10 +33,7 @@ func RelayerExecute(
 	logger.Debug("Signed batch retrieved from contract", "batchID", confirmedBatch.ID, "chainID", chainID,
 		"lastSubmittedBatchID", lastSubmittedBatchID)
 
-	receivedBatchID, ok := new(big.Int).SetString(confirmedBatch.ID, 0)
-	if !ok {
-		return fmt.Errorf("failed to convert confirmed batch id to big int")
-	}
+	receivedBatchID := new(big.Int).SetUint64(confirmedBatch.ID)
 
 	if lastSubmittedBatchID != nil {
 		if lastSubmittedBatchID.Cmp(receivedBatchID) == 0 {

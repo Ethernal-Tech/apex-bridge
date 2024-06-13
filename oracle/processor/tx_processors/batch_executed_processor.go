@@ -2,7 +2,6 @@ package txprocessors
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -61,22 +60,22 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 		if utxo.Address == addrs.BridgingAddress {
 			bridgingAddrUtxos = append(bridgingAddrUtxos, core.UTXO{
 				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(idx)),
-				Amount:  new(big.Int).SetUint64(utxo.Amount),
+				TxIndex: uint64(idx),
+				Amount:  utxo.Amount,
 			})
 		} else if utxo.Address == addrs.FeeAddress {
 			feeAddrUtxos = append(feeAddrUtxos, core.UTXO{
 				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(idx)),
-				Amount:  new(big.Int).SetUint64(utxo.Amount),
+				TxIndex: uint64(idx),
+				Amount:  utxo.Amount,
 			})
 		}
 	}
 
 	claim := core.BatchExecutedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainID:                 tx.OriginChainID,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
+		ChainId:                 common.ToNumChainID(tx.OriginChainID),
+		BatchNonceId:            metadata.BatchNonceID,
 		OutputUTXOs: core.UTXOs{
 			MultisigOwnedUTXOs: bridgingAddrUtxos,
 			FeePayerOwnedUTXOs: feeAddrUtxos,

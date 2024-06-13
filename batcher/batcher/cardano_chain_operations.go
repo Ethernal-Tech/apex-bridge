@@ -260,7 +260,7 @@ func (cco *CardanoChainOperations) getSlotNumber(
 			return 0, err
 		}
 
-		return lastObservedBlock.BlockSlot, nil
+		return lastObservedBlock.BlockSlot.Uint64(), nil
 	}
 
 	data, err := cco.TxProvider.GetTip(ctx)
@@ -323,10 +323,10 @@ func convertUTXOsToTxInputs(utxos []eth.UTXO) (result cardanowallet.TxInputs) {
 	for i, utxo := range utxos {
 		result.Inputs[i] = cardanowallet.TxInput{
 			Hash:  utxo.TxHash,
-			Index: uint32(utxo.TxIndex.Uint64()),
+			Index: uint32(utxo.TxIndex),
 		}
 
-		result.Sum += utxo.Amount.Uint64()
+		result.Sum += utxo.Amount
 	}
 
 	return result
@@ -347,14 +347,14 @@ func getNeededUtxos(
 		chosenUTXOs = append(chosenUTXOs, utxo)
 		utxoCount++
 
-		chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
+		chosenUTXOsSum.Add(chosenUTXOsSum, new(big.Int).SetUint64(utxo.Amount))
 
 		if utxoCount > maxUtxoCount {
 			minChosenUTXO, minChosenUTXOIdx := findMinUtxo(chosenUTXOs)
 
 			chosenUTXOs[minChosenUTXOIdx] = utxo
 
-			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
+			chosenUTXOsSum.Sub(chosenUTXOsSum, new(big.Int).SetUint64(minChosenUTXO.Amount))
 
 			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
 			utxoCount--
@@ -379,7 +379,7 @@ func findMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
 	idx := 0
 
 	for i, utxo := range utxos[1:] {
-		if utxo.Amount.Cmp(min.Amount) == -1 {
+		if utxo.Amount < min.Amount {
 			min = utxo
 			idx = i + 1
 		}
@@ -394,9 +394,9 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
 			if value, exists := receiversMap[receiver.DestinationAddress]; exists {
-				value.Add(value, receiver.Amount)
+				value.Add(value, new(big.Int).SetUint64(receiver.Amount))
 			} else {
-				receiversMap[receiver.DestinationAddress] = new(big.Int).Set(receiver.Amount)
+				receiversMap[receiver.DestinationAddress] = new(big.Int).SetUint64(receiver.Amount)
 			}
 		}
 	}

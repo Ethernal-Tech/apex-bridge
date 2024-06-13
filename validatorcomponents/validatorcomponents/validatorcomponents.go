@@ -239,11 +239,11 @@ func populateUtxosAndAddresses(
 			*outputs = append(*outputs, &indexer.TxInputOutput{
 				Input: indexer.TxInput{
 					Hash:  x.TxHash,
-					Index: uint32(x.TxIndex.Uint64()),
+					Index: uint32(x.TxIndex),
 				},
 				Output: indexer.TxOutput{
 					Address: address,
-					Amount:  x.Amount.Uint64(),
+					Amount:  x.Amount,
 				},
 			})
 		}
@@ -252,19 +252,20 @@ func populateUtxosAndAddresses(
 	resultChains := make(map[string]*oracleCore.CardanoChainConfig, len(allRegisteredChains))
 
 	for _, regChain := range allRegisteredChains {
-		chainConfig, exists := config.CardanoChains[regChain.Id]
+		chainID := common.ToStrChainID(regChain.Id)
+		chainConfig, exists := config.CardanoChains[chainID]
 		if !exists {
-			return fmt.Errorf("no config for registered chain: %s", regChain.Id)
+			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
 		var availableUtxos eth.UTXOs
 
 		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, regChain.Id)
+			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, chainID)
 			if err != nil {
 				l.Error(
 					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
-					"chainId", regChain.Id, "err", err)
+					"chainId", chainID, "err", err)
 			}
 
 			return err
@@ -274,7 +275,7 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("error while RetryForever of GetAvailableUTXOs. err: %w", err)
 		}
 
-		l.Debug("done GetAvailableUTXOs", "chainID", regChain.Id, "availableUtxos", availableUtxos)
+		l.Debug("done GetAvailableUTXOs", "chainID", chainID, "availableUtxos", availableUtxos)
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
@@ -290,7 +291,7 @@ func populateUtxosAndAddresses(
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, availableUtxos.MultisigOwnedUTXOs)
 		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
 
-		resultChains[regChain.Id] = chainConfig
+		resultChains[chainID] = chainConfig
 
 		l.Debug("updated chainConfig", "chainConfig", chainConfig)
 	}

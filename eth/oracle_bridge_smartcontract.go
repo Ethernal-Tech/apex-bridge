@@ -80,7 +80,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 
 	result, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
-	}, sourceChain)
+	}, common.ToNumChainID(sourceChain))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
@@ -107,7 +107,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 
 	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
 		Context: ctx,
-	}, chainID)
+	}, common.ToNumChainID(chainID))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
@@ -160,7 +160,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.SubmitLastObservedBlocks(opts, chainID, blocks)
+		return contract.SubmitLastObservedBlocks(opts, common.ToNumChainID(chainID), blocks)
 	})
 
 	return bsc.ethHelper.ProcessError(err)

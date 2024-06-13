@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,9 +61,9 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		err = db.AddLastSubmittedBatchID("prime", big.NewInt(0))
+		err = db.AddLastSubmittedBatchID(common.ChainIDStrPrime, big.NewInt(0))
 		require.NoError(t, err)
-		err = db.AddLastSubmittedBatchID("prime", big.NewInt(123))
+		err = db.AddLastSubmittedBatchID(common.ChainIDStrPrime, big.NewInt(123))
 		require.NoError(t, err)
 	})
 
@@ -75,14 +76,14 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		res, err := db.GetLastSubmittedBatchID("prime")
+		res, err := db.GetLastSubmittedBatchID(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, res)
 
-		err = db.AddLastSubmittedBatchID("prime", expectedOutput)
+		err = db.AddLastSubmittedBatchID(common.ChainIDStrPrime, expectedOutput)
 		require.NoError(t, err)
 
-		res, err = db.GetLastSubmittedBatchID("prime")
+		res, err = db.GetLastSubmittedBatchID(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 0, res.Cmp(expectedOutput))
