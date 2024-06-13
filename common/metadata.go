@@ -14,6 +14,7 @@ const (
 	BridgingTxTypeBridgingRequest BridgingTxType = "bridge"
 	BridgingTxTypeBatchExecution  BridgingTxType = "batch"
 	BridgingTxTypeRefundExecution BridgingTxType = "refund"
+	BridgingTxTypeFund            BridgingTxType = "fund"
 
 	MetadataEncodingTypeJSON MetadataEncodingType = "json"
 	MetadataEncodingTypeCbor MetadataEncodingType = "cbor"
@@ -46,6 +47,10 @@ type RefundExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
+type FundMetadata struct {
+	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
+}
+
 type marshalFunc = func(v any) ([]byte, error)
 
 func getMarshalFunc(encodingType MetadataEncodingType) (marshalFunc, error) {
@@ -71,7 +76,7 @@ func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) 
 }
 
 func MarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata | FundMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
 ) (
@@ -93,7 +98,7 @@ func MarshalMetadata[
 }
 
 func UnmarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata | FundMetadata,
 ](
 	encodingType MetadataEncodingType, data []byte,
 ) (

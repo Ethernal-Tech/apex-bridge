@@ -90,6 +90,7 @@ func NewOracle(
 	txProcessors := []core.CardanoTxProcessor{
 		txprocessors.NewBatchExecutedProcessor(logger),
 		txprocessors.NewBridgingRequestedProcessor(logger),
+		txprocessors.NewFundProcessor(logger),
 		// tx_processors.NewRefundExecutedProcessor(logger),
 	}
 
