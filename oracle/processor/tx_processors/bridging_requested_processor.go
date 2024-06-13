@@ -157,12 +157,10 @@ func (*BridgingRequestedProcessorImpl) validate(
 		}
 
 		receiverAddr := strings.Join(receiver.Address, "")
-		//nolint:godox
-		// TODO: probably we should replace this with prefix for the specific chain
 		// BridgingRequestedProcessorImpl must know for which chain it operates
 
-		_, err := wallet.GetAddressInfo(receiverAddr)
-		if err != nil {
+		_ /*addr*/, err := wallet.NewAddress(receiverAddr)
+		if err != nil /*|| addr.GetNetwork() != destinationChainConfig.NetworkID we don't have NetworkID yet*/ {
 			foundAnInvalidReceiverAddr = true
 
 			break
