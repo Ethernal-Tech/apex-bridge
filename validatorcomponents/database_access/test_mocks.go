@@ -2,6 +2,7 @@ package databaseaccess
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -18,7 +19,7 @@ func (m *BridgingRequestStateDBMock) AddBridgingRequestState(state *core.Bridgin
 
 // GetBridgingRequestState implements core.BridgingRequestStateDb.
 func (m *BridgingRequestStateDBMock) GetBridgingRequestState(
-	sourceChainID string, sourceTxHash string,
+	sourceChainID string, sourceTxHash indexer.Hash,
 ) (
 	*core.BridgingRequestState, error,
 ) {

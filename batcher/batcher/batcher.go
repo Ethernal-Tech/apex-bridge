@@ -2,7 +2,6 @@ package batcher
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -228,7 +227,7 @@ func getBridgingRequestStateKeys(
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID {
 			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
 				SourceChainID: common.ToStrChainID(confirmedTx.SourceChainId),
-				SourceTxHash:  hex.EncodeToString(confirmedTx.ObservedTransactionHash[:]),
+				SourceTxHash:  confirmedTx.ObservedTransactionHash,
 			})
 		}
 	}

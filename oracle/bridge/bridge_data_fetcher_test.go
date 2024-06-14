@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -106,7 +107,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 		blockPoint, err = bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
-		require.Equal(t, bHash[:], blockPoint.BlockHash)
+		require.Equal(t, indexer.Hash(bHash), blockPoint.BlockHash)
 		require.Equal(t, bSlot, blockPoint.BlockSlot)
 	})
 }

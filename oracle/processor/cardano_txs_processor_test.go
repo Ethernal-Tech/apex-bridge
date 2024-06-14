@@ -167,7 +167,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, proc)
 
 		require.NoError(t, proc.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
-			{Hash: "test_hash"},
+			{Hash: indexer.Hash{1}},
 		}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
@@ -193,8 +193,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			originChainID = common.ChainIDStrPrime
-			txHash        = "test_hash"
 		)
+
+		txHash := indexer.Hash{1}
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -234,8 +235,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			originChainID = common.ChainIDStrPrime
-			txHash        = "test_hash"
 		)
+
+		txHash := common.MustHashToBytes32("0x89FF")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -284,8 +286,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			originChainID = common.ChainIDStrPrime
-			txHash        = "test_hash"
 		)
+
+		txHash := common.MustHashToBytes32("0xFFAA")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -306,7 +309,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 1)
-		require.Equal(t, txHash, unprocessedTxs[0].Hash)
+		require.Equal(t, indexer.Hash(txHash), unprocessedTxs[0].Hash)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.Nil(t, processedTx)
@@ -335,8 +338,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			originChainID = common.ChainIDStrPrime
-			txHash        = "test_hash"
 		)
+
+		txHash := common.MustHashToBytes32("0xFFAABB")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -386,9 +390,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID = common.ChainIDStrPrime
-			txHash  = "test_hash"
 			ttl     = 2
 		)
+
+		txHash := common.MustHashToBytes32("0xFFAACC")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -399,7 +404,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: "test_block_hash"}).Execute())
+		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: indexer.Hash{1}}).Execute())
 
 		// go proc.Start()
 		// defer proc.Stop()
@@ -437,9 +442,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID = common.ChainIDStrPrime
-			txHash  = "test_hash"
 			ttl     = 2
 		)
+
+		txHash := common.MustHashToBytes32("CC")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -450,7 +456,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: "test_block_hash"}).Execute())
+		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: indexer.Hash{3}}).Execute())
 
 		// go proc.Start()
 		// defer proc.Stop()
@@ -493,9 +499,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID = common.ChainIDStrPrime
-			txHash  = "test_hash"
 			ttl     = 2
 		)
+
+		txHash := common.MustHashToBytes32("CCAA")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -548,9 +555,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID = common.ChainIDStrPrime
-			txHash  = "test_hash"
 			ttl     = 2
 		)
+
+		txHash := common.MustHashToBytes32("CCFF")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -561,7 +569,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: "test_block_hash"}).Execute())
+		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: 6, Hash: indexer.Hash{3}}).Execute())
 
 		// go proc.Start()
 		// defer proc.Stop()
@@ -610,12 +618,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID   = common.ChainIDStrPrime
-			txHash1   = "test_hash_1"
-			txHash2   = "test_hash_2"
 			ttl       = 2
 			blockSlot = 6
-			blockHash = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("CCAA")
+		txHash2 := common.MustHashToBytes32("CCFF")
+		blockHash := common.MustHashToBytes32("1122")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -688,12 +697,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID   = common.ChainIDStrPrime
-			txHash1   = "test_hash_1"
-			txHash2   = "test_hash_2"
 			ttl       = 2
 			blockSlot = 6
-			blockHash = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("CCAA11")
+		txHash2 := common.MustHashToBytes32("CCFF22")
+		blockHash := common.MustHashToBytes32("112233")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -766,12 +776,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		const (
 			chainID   = common.ChainIDStrPrime
-			txHash1   = "test_hash_1"
-			txHash2   = "test_hash_2"
 			ttl       = 2
 			blockSlot = 6
-			blockHash = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("11CCAA")
+		txHash2 := common.MustHashToBytes32("11CCFF")
+		blockHash := common.MustHashToBytes32("221122")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
@@ -851,12 +862,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		const (
 			chainID1  = common.ChainIDStrPrime
 			chainID2  = common.ChainIDStrVector
-			txHash1   = "test_hash_1"
-			txHash2   = "test_hash_2"
 			ttl       = 2
 			blockSlot = 6
-			blockHash = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("CCAABB")
+		txHash2 := common.MustHashToBytes32("CCFFAA")
+		blockHash := common.MustHashToBytes32("112233")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -931,12 +943,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		const (
 			chainID1  = common.ChainIDStrPrime
 			chainID2  = common.ChainIDStrVector
-			txHash1   = "test_hash_1"
-			txHash2   = "test_hash_2"
 			ttl       = 2
 			blockSlot = 6
-			blockHash = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("CCAABB")
+		txHash2 := common.MustHashToBytes32("CCFFAA")
+		blockHash := common.MustHashToBytes32("112233")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -1022,14 +1035,15 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		const (
 			chainID1   = common.ChainIDStrPrime
 			chainID2   = common.ChainIDStrVector
-			txHash1    = "test_hash_1"
-			txHash2    = "test_hash_2"
 			ttl1       = 2
 			blockSlot1 = 6
 			ttl2       = 10
 			blockSlot2 = 15
-			blockHash  = "test_block_hash"
 		)
+
+		txHash1 := common.MustHashToBytes32("AACCAABB")
+		txHash2 := common.MustHashToBytes32("AACCFFAA")
+		blockHash := common.MustHashToBytes32("AA112233")
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})

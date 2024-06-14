@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"go.etcd.io/bbolt"
 )
 
@@ -86,7 +87,7 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 
 // GetBridgingRequestState implements core.Database.
 func (bd *BBoltDatabase) GetBridgingRequestState(
-	sourceChainID string, sourceTxHash string,
+	sourceChainID string, sourceTxHash indexer.Hash,
 ) (
 	result *core.BridgingRequestState, err error,
 ) {

@@ -2,7 +2,6 @@ package validatorcomponents
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -180,7 +179,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				}
 
 				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Output.Amount)
-				assert.Equal(t, hex.EncodeToString(x.TxHash[:]), config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Hash)
+				assert.Equal(t, x.TxHash[:], config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Hash[:])
 				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Index)
 			} else {
 				if i < 6 {
@@ -190,7 +189,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				}
 
 				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Output.Amount)
-				assert.Equal(t, hex.EncodeToString(x.TxHash[:]), config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Hash)
+				assert.Equal(t, x.TxHash[:], config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Hash[:])
 				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Index)
 			}
 		}

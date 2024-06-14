@@ -1,13 +1,16 @@
 package response
 
-import "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+import (
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+)
 
 type BridgingRequestStateResponse struct {
 	SourceChainID      string                     `json:"sourceChainId"`
-	SourceTxHash       string                     `json:"sourceTxHash"`
+	SourceTxHash       indexer.Hash               `json:"sourceTxHash"`
 	DestinationChainID string                     `json:"destinationChainId"`
 	Status             core.BridgingRequestStatus `json:"status"`
-	DestinationTxHash  string                     `json:"destinationTxHash"`
+	DestinationTxHash  indexer.Hash               `json:"destinationTxHash"`
 }
 
 func NewBridgingRequestStateResponse(state *core.BridgingRequestState) *BridgingRequestStateResponse {

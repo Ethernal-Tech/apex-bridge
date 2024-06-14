@@ -13,7 +13,7 @@ import (
 type BridgeClaimsBlockInfo struct {
 	ChainID string
 	Slot    uint64
-	Hash    string
+	Hash    indexer.Hash
 }
 
 type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
