@@ -88,6 +88,10 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+			BlockSlot: new(big.Int).SetUint64(0),
+			BlockHash: bHash,
+		}, nil).Once()
+		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(bSlot),
 			BlockHash: bHash,
 		}, nil)
@@ -96,6 +100,10 @@ func TestBridgeDataFetcher(t *testing.T) {
 		require.NotNil(t, bridgeDataFetcher)
 
 		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
+		require.NoError(t, err)
+		require.Nil(t, blockPoint)
+
+		blockPoint, err = bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
 		require.Equal(t, bHash[:], blockPoint.BlockHash)
