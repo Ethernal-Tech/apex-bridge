@@ -71,7 +71,7 @@ func RefundExecutedClaimString(c RefundExecutedClaim) string {
 	sb.WriteString(hex.EncodeToString(c.RefundTxHash[:]))
 	sb.WriteString("\nUtxo = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, c.Utxo.TxHash, c.Utxo.TxIndex, c.Utxo.Amount))
+		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 
 	return sb.String()
 }
@@ -89,7 +89,7 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString(c.Receiver)
 	sb.WriteString("\nUtxo = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, c.Utxo.TxHash, c.Utxo.TxIndex, c.Utxo.Amount))
+		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 	sb.WriteString("\nRawTransaction = ")
 	sb.WriteString(hex.EncodeToString(c.RawTransaction))
 	sb.WriteString("\nMultisigSignature = ")
@@ -126,7 +126,7 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 
 	for _, utxo := range c.OutputUTXOs.MultisigOwnedUTXOs {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
 	}
 
 	sb.WriteString("]")
@@ -135,7 +135,7 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 
 	for _, utxo := range c.OutputUTXOs.FeePayerOwnedUTXOs {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
 	}
 
 	sb.WriteString("]")
@@ -165,7 +165,7 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	sb.WriteString("]")
 	sb.WriteString("\nOutputUTXO = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.OutputUTXO.Nonce, c.OutputUTXO.TxHash, c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
+		c.OutputUTXO.Nonce, hex.EncodeToString(c.OutputUTXO.TxHash[:]), c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
 	sb.WriteString("\nTotalAmount = ")
 	sb.WriteString(c.TotalAmount.String())
 	sb.WriteString("\nSourceChainID = ")
