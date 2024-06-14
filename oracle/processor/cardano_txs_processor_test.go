@@ -37,7 +37,7 @@ func newValidProcessor(
 	cardanoTxsProcessor := NewCardanoTxsProcessor(
 		context.Background(),
 		appConfig, oracleDB,
-		txProcessors, failedTxProcessors,
+		txProcessors, &core.CardanoTxProcessorMock{}, failedTxProcessors,
 		bridgeSubmitter, ccoDbs,
 		bridgingRequestStateUpdater,
 		hclog.NewNullLogger(),
@@ -86,7 +86,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		proc := NewCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
+		proc := NewCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 
 		indexerDbs := map[string]indexer.Database{"prime": primeDB, "vector": vectorDB}
@@ -96,6 +96,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			appConfig,
 			oracleDB,
 			[]core.CardanoTxProcessor{},
+			&core.CardanoTxProcessorMock{},
 			[]core.CardanoTxFailedProcessor{},
 			&core.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},

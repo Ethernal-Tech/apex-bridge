@@ -22,35 +22,30 @@ func NewFundProcessor(logger hclog.Logger) *FundProcessorImpl {
 }
 
 func (*FundProcessorImpl) GetType() common.BridgingTxType {
-	return common.BridgingTxTypeFund
+	return ""
 }
 
 func (p *FundProcessorImpl) ValidateAndAddClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.FundMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
-	}
-
-	if metadata.BridgingTxType != p.GetType() {
+	if len(tx.Metadata) != 0 {
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
-	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
+	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash)
 
 	if err := p.validate(tx, appConfig); err != nil {
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addFundClaim(appConfig, claims, tx, metadata)
+	p.addFundClaim(appConfig, claims, tx)
 
 	return nil
 }
 
 func (p *FundProcessorImpl) addFundClaim(
 	appConfig *core.AppConfig, claims *core.BridgeClaims,
-	tx *core.CardanoTx, metadata *common.FundMetadata,
+	tx *core.CardanoTx,
 ) {
 	sum := big.NewInt(0)
 	bridgingAddrUtxos := make([]core.UTXO, 0)
@@ -83,7 +78,7 @@ func (p *FundProcessorImpl) addFundClaim(
 	// claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
 
 	p.logger.Info("Added FundClaim",
-		"txHash", tx.Hash, "metadata", metadata /*, "claim", core.BatchExecutedClaimString(claim)*/)
+		"txHash", tx.Hash /*, "claim", core.BatchExecutedClaimString(claim)*/)
 }
 
 func (*FundProcessorImpl) validate(

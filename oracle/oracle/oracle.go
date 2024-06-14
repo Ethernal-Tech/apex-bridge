@@ -90,9 +90,10 @@ func NewOracle(
 	txProcessors := []core.CardanoTxProcessor{
 		txprocessors.NewBatchExecutedProcessor(logger),
 		txprocessors.NewBridgingRequestedProcessor(logger),
-		txprocessors.NewFundProcessor(logger),
 		// tx_processors.NewRefundExecutedProcessor(logger),
 	}
+
+	noMetadataTxProcessor := txprocessors.NewFundProcessor(logger)
 
 	failedTxProcessors := []core.CardanoTxFailedProcessor{
 		failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
@@ -100,7 +101,7 @@ func NewOracle(
 	}
 
 	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(
-		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
+		ctx, appConfig, db, txProcessors, noMetadataTxProcessor, failedTxProcessors, bridgeSubmitter,
 		indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))

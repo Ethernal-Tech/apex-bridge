@@ -31,6 +31,7 @@ type CardanoTxsProcessorImpl struct {
 	appConfig                   *core.AppConfig
 	db                          core.CardanoTxsProcessorDB
 	txProcessors                map[string]core.CardanoTxProcessor
+	noMetadataTxProcessor       core.CardanoTxProcessor
 	failedTxProcessors          map[string]core.CardanoTxFailedProcessor
 	bridgeSubmitter             core.BridgeSubmitter
 	indexerDbs                  map[string]indexer.Database
@@ -49,6 +50,7 @@ func NewCardanoTxsProcessor(
 	appConfig *core.AppConfig,
 	db core.CardanoTxsProcessorDB,
 	txProcessors []core.CardanoTxProcessor,
+	noMetadataTxProcessor core.CardanoTxProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
@@ -80,6 +82,7 @@ func NewCardanoTxsProcessor(
 		appConfig:                   appConfig,
 		db:                          db,
 		txProcessors:                txProcessorsMap,
+		noMetadataTxProcessor:       noMetadataTxProcessor,
 		failedTxProcessors:          failedTxProcessorsMap,
 		bridgeSubmitter:             bridgeSubmitter,
 		indexerDbs:                  indexerDbs,
@@ -185,6 +188,10 @@ func (bp *CardanoTxsProcessorImpl) Start() {
 func (bp *CardanoTxsProcessorImpl) getTxProcessor(metadataBytes []byte) (
 	core.CardanoTxProcessor, error,
 ) {
+	if len(metadataBytes) == 0 {
+		return bp.noMetadataTxProcessor, nil
+	}
+
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
 	if err != nil {
 		return nil, err

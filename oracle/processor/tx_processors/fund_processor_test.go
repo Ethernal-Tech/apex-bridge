@@ -3,7 +3,6 @@ package txprocessors
 import (
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
@@ -26,23 +25,12 @@ func TestFundProcessor(t *testing.T) {
 
 	appConfig.FillOut()
 
-	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
-		claims := &core.BridgeClaims{}
-
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, &appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to unmarshal metadata")
-	})
-
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
-		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
-			BridgingTxType: common.BridgingTxTypeBridgingRequest,
-		})
-		require.NoError(t, err)
+		irrelevantMetadata := []byte{1}
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &core.BridgeClaims{}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
@@ -52,11 +40,7 @@ func TestFundProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
-		relevantFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.FundMetadata{
-			BridgingTxType: common.BridgingTxTypeFund,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, relevantFullMetadata)
+		relevantFullMetadata := []byte{}
 
 		claims := &core.BridgeClaims{}
 
@@ -67,7 +51,7 @@ func TestFundProcessor(t *testing.T) {
 			{Address: "addr2", Amount: 2},
 		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			OriginChainID: "prime",
 			Tx: indexer.Tx{
 				Hash:     txHash,
@@ -81,11 +65,7 @@ func TestFundProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
-		relevantFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.FundMetadata{
-			BridgingTxType: common.BridgingTxTypeFund,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, relevantFullMetadata)
+		relevantFullMetadata := []byte{}
 
 		claims := &core.BridgeClaims{}
 
@@ -96,7 +76,7 @@ func TestFundProcessor(t *testing.T) {
 			{Address: "addr2", Amount: 2},
 		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			OriginChainID: "prime",
 			Tx: indexer.Tx{
 				Hash:     txHash,
