@@ -58,12 +58,16 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) {
+	totalAmount := big.NewInt(0)
+
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: strings.Join(receiver.Address, ""),
-			Amount:             new(big.Int).SetUint64(receiver.Amount),
+			Amount:             receiver.Amount,
 		})
+
+		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
 	}
 
 	var outputUtxo core.UTXO
@@ -71,19 +75,20 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	for idx, utxo := range tx.Outputs {
 		if utxo.Address == appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses.BridgingAddress {
 			outputUtxo = core.UTXO{
-				TxHash:  tx.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(idx)),
-				Amount:  new(big.Int).SetUint64(utxo.Amount),
+				TxHash:  common.MustHashToBytes32(tx.Hash),
+				TxIndex: uint64(idx),
+				Amount:  utxo.Amount,
 			}
 		}
 	}
 
 	claim := core.BridgingRequestClaim{
-		ObservedTransactionHash: tx.Hash,
-		SourceChainID:           tx.OriginChainID,
-		DestinationChainID:      metadata.DestinationChainID,
+		ObservedTransactionHash: common.MustHashToBytes32(tx.Hash),
+		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
 		OutputUTXO:              outputUtxo,
 		Receivers:               receivers,
+		TotalAmount:             totalAmount,
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)

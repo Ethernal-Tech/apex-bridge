@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 
@@ -67,7 +66,7 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 				if b.lastBatch.id == 0 {
 					batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 					if err == nil {
-						telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID.Uint64())
+						telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID)
 					}
 				} else {
 					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, b.lastBatch.id+1)
@@ -86,22 +85,20 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to query bridge.GetNextBatchID for chainID: %s. err: %w", b.config.Chain.ChainID, err)
 	}
 
-	batchIDUint := batchID.Uint64()
-
-	if batchIDUint == 0 {
+	if batchID == 0 {
 		b.logger.Info("Waiting on a new batch", "chainID", b.config.Chain.ChainID)
 
 		return nil
 	}
 
-	if batchIDUint < b.lastBatch.id {
+	if batchID < b.lastBatch.id {
 		b.logger.Info("retrieved batch id not good", "chainID", b.config.Chain.ChainID,
-			"old", b.lastBatch.id, "new", batchIDUint)
+			"old", b.lastBatch.id, "new", batchID)
 
 		return nil
 	}
 
-	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchIDUint)
+	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchID)
 
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
@@ -116,25 +113,25 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"chainID", b.config.Chain.ChainID, "batchID", batchIDUint, "txs", len(confirmedTransactions))
+		"chainID", b.config.Chain.ChainID, "batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchIDUint)
+		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	if err != nil {
 		return fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
-	if b.lastBatch.id == batchIDUint && b.lastBatch.slot >= generatedBatchData.Slot {
+	if b.lastBatch.id == batchID && b.lastBatch.slot >= generatedBatchData.Slot {
 		b.logger.Debug("already submitted", "chainID", b.config.Chain.ChainID,
-			"batchID", batchIDUint, "slot", b.lastBatch.slot)
+			"batchID", batchID, "slot", b.lastBatch.slot)
 
 		return nil
 	}
 
 	b.logger.Info("Created batch tx", "chainID", b.config.Chain.ChainID, "txHash", generatedBatchData.TxHash,
-		"batchID", batchIDUint, "txs", len(confirmedTransactions))
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
@@ -144,16 +141,16 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	}
 
 	b.logger.Info("Batch successfully signed", "chainID", b.config.Chain.ChainID,
-		"batchID", batchIDUint, "txs", len(confirmedTransactions))
+		"batchID", batchID, "txs", len(confirmedTransactions))
 
 	firstTxNonceID, lastTxNonceID := getFirstAndLastTxNonceID(confirmedTransactions)
 	// Submit batch to smart contract
 	signedBatch := eth.SignedBatch{
 		Id:                        batchID,
-		DestinationChainId:        b.config.Chain.ChainID,
-		RawTransaction:            hex.EncodeToString(generatedBatchData.TxRaw),
-		MultisigSignature:         hex.EncodeToString(multisigSignature),
-		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),
+		DestinationChainId:        common.ToNumChainID(b.config.Chain.ChainID),
+		RawTransaction:            generatedBatchData.TxRaw,
+		MultisigSignature:         multisigSignature,
+		FeePayerMultisigSignature: multisigFeeSignature,
 		FirstTxNonceId:            firstTxNonceID,
 		LastTxNonceId:             lastTxNonceID,
 		UsedUTXOs:                 generatedBatchData.Utxos,
@@ -167,28 +164,28 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 		return fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
-	if b.lastBatch.id != batchIDUint {
+	if b.lastBatch.id != batchID {
 		brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
 
-		err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchIDUint, brStateKeys)
+		err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID, brStateKeys)
 		if err != nil {
 			b.logger.Error(
 				"error while updating bridging request states to IncludedInBatch",
-				"chain", b.config.Chain.ChainID, "batchID", batchIDUint)
+				"chain", b.config.Chain.ChainID, "batchID", batchID)
 		}
 
-		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchIDUint)
+		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchID)
 
 		b.logger.Info("Batch successfully submitted", "chainID", b.config.Chain.ChainID,
-			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID, "txs", brStateKeys)
+			"batchID", batchID, "first", firstTxNonceID, "last", lastTxNonceID, "txs", brStateKeys)
 	} else {
 		b.logger.Info("Batch successfully re-submitted", "chainID", b.config.Chain.ChainID,
-			"batchID", batchIDUint, "first", firstTxNonceID, "last", lastTxNonceID)
+			"batchID", batchID, "first", firstTxNonceID, "last", lastTxNonceID)
 	}
 
 	// update last batch data
 	b.lastBatch = lastBatchData{
-		id:   batchIDUint,
+		id:   batchID,
 		slot: generatedBatchData.Slot,
 	}
 
@@ -206,15 +203,15 @@ func GetChainSpecificOperations(config core.ChainConfig, logger hclog.Logger) (c
 	}
 }
 
-func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (*big.Int, *big.Int) {
+func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (uint64, uint64) {
 	first, last := confirmedTxs[0].Nonce, confirmedTxs[0].Nonce
 
 	for _, x := range confirmedTxs[1:] {
-		if first.Cmp(x.Nonce) > 0 {
+		if x.Nonce < first {
 			first = x.Nonce
 		}
 
-		if last.Cmp(x.Nonce) < 0 {
+		if x.Nonce > last {
 			last = x.Nonce
 		}
 	}
@@ -223,15 +220,15 @@ func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (*big.Int
 }
 
 func getBridgingRequestStateKeys(
-	txs []eth.ConfirmedTransaction, firstTxNonceID, lastTxNonceID *big.Int,
+	txs []eth.ConfirmedTransaction, firstTxNonceID uint64, lastTxNonceID uint64,
 ) []common.BridgingRequestStateKey {
-	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID.Uint64()-firstTxNonceID.Uint64()+1)
+	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID-firstTxNonceID+1)
 
 	for _, confirmedTx := range txs {
-		if confirmedTx.Nonce.Cmp(firstTxNonceID) >= 0 && confirmedTx.Nonce.Cmp(lastTxNonceID) <= 0 {
+		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID {
 			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
-				SourceChainID: confirmedTx.SourceChainID,
-				SourceTxHash:  confirmedTx.ObservedTransactionHash,
+				SourceChainID: common.ToStrChainID(confirmedTx.SourceChainId),
+				SourceTxHash:  hex.EncodeToString(confirmedTx.ObservedTransactionHash[:]),
 			})
 		}
 	}

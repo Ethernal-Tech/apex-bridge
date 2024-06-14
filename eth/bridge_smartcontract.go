@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -25,8 +24,9 @@ type IBridgeSmartContract interface {
 	GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error)
 	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
-	GetNextBatchID(ctx context.Context, destinationChain string) (*big.Int, error)
+	GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error)
 	GetAllRegisteredChains(ctx context.Context) ([]Chain, error)
+	GetBlockNumber(ctx context.Context) (uint64, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -78,7 +78,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 
 	result, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
@@ -134,7 +134,7 @@ func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, desti
 
 	return contract.ShouldCreateBatch(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
@@ -156,7 +156,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 
 	return contract.GetConfirmedTransactions(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error) {
@@ -174,7 +174,7 @@ func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, desti
 
 	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 	if err != nil {
 		return UTXOs{}, bsc.ethHelper.ProcessError(err)
 	}
@@ -202,7 +202,7 @@ func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(
 
 	cardanoBlock, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
@@ -229,25 +229,25 @@ func (bsc *BridgeSmartContractImpl) GetValidatorsCardanoData(
 
 	return contract.GetValidatorsCardanoData(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 }
 
-func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinationChain string) (*big.Int, error) {
+func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return 0, bsc.ethHelper.ProcessError(err)
 	}
 
 	return contract.GetNextBatchId(&bind.CallOpts{
 		Context: ctx,
-	}, destinationChain)
+	}, common.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
@@ -271,4 +271,13 @@ func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) 
 	}
 
 	return result, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetBlockNumber(ctx context.Context) (uint64, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, err
+	}
+
+	return ethTxHelper.GetClient().BlockNumber(ctx)
 }

@@ -1,8 +1,6 @@
 package core
 
 import (
-	"math/big"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -280,7 +278,7 @@ func (m *CardanoTxFailedProcessorMock) ValidateAndAddClaim(
 ) error {
 	if m.ShouldAddClaim {
 		claims.BatchExecutionFailedClaims = append(
-			claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{BatchNonceID: big.NewInt(1)})
+			claims.BatchExecutionFailedClaims, BatchExecutionFailedClaim{BatchNonceId: 1})
 	}
 
 	args := m.Called(claims, tx, appConfig)

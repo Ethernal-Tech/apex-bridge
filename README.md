@@ -3,7 +3,7 @@
 # How to go get private repo
 ```shell
 $ git config url."git@github.com:Ethernal-Tech/cardano-infrastructure.git".insteadOf "https://github.com/Ethernal-Tech/cardano-infrastructure"
-$ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get github.com/Ethernal-Tech/cardano-infrastructure
+$ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get -u github.com/Ethernal-Tech/cardano-infrastructure
 ```
 
 # How to generate go binding for smart contract
@@ -13,7 +13,7 @@ First build smart contracts in blade
 ```
 then in apex-bridge execute this
 ```shell
-BASEPATH=/home/bbs/Documents/development/ethernal/blade/apex-bridge-smartcontracts/
+BASEPATH=/home/bbs/Documents/development/cardano_bridge/\!final/blade-apex-bridge/apex-bridge-smartcontracts/
 solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
        --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
 abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \

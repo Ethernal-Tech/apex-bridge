@@ -3,12 +3,13 @@ package core
 import (
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBridgingRequestState(t *testing.T) {
 	const (
-		chainID = "prime"
+		chainID = common.ChainIDStrPrime
 		txHash  = "0xtest"
 	)
 

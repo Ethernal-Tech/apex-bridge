@@ -2,9 +2,9 @@ package bridge
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -24,17 +24,17 @@ func TestBridgeSubmitter(t *testing.T) {
 			ContractClaims: core.ContractClaims{
 				BridgingRequestClaims: []core.BridgingRequestClaim{
 					{
-						ObservedTransactionHash: "test",
-						SourceChainID:           "vector",
-						DestinationChainID:      "prime",
+						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
+						SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+						DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
 						OutputUTXO:              core.UTXO{},
 						Receivers:               []core.BridgingRequestReceiver{},
 					},
 				},
 				BatchExecutedClaims: []core.BatchExecutedClaim{
 					{
-						ObservedTransactionHash: "test",
-						BatchNonceID:            big.NewInt(1),
+						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
+						BatchNonceId:            1,
 						OutputUTXOs:             core.UTXOs{},
 					},
 				},
@@ -51,7 +51,7 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
-		err := bridgeSubmitter.SubmitConfirmedBlocks("prime", []*indexer.CardanoBlock{})
+		err := bridgeSubmitter.SubmitConfirmedBlocks(common.ChainIDStrPrime, []*indexer.CardanoBlock{})
 
 		require.NoError(t, err)
 	})

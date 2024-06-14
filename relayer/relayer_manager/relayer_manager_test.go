@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
@@ -33,11 +34,11 @@ func TestRelayerManagerConfig(t *testing.T) {
 
 	expectedConfig := &core.RelayerManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
-			"prime": {
+			common.ChainIDStrPrime: {
 				ChainType:     "Cardano",
 				ChainSpecific: rawMessage,
 			},
-			"vector": {
+			common.ChainIDStrVector: {
 				ChainType:     "CardaNo",
 				ChainSpecific: rawMessage,
 			},
@@ -86,7 +87,7 @@ func TestRelayerManagerCreation(t *testing.T) {
 	t.Run("create manager fail - invalid operations", func(t *testing.T) {
 		config := &core.RelayerManagerConfiguration{
 			Chains: map[string]core.ChainConfig{
-				"prime": {
+				common.ChainIDStrPrime: {
 					ChainType:     "Cardano",
 					ChainSpecific: json.RawMessage(""),
 				},

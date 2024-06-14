@@ -423,7 +423,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 
 	vcConfig := &vcCore.AppConfig{
 		CardanoChains: map[string]*vcCore.CardanoChainConfig{
-			"prime": {
+			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
 				NetworkMagic:             p.primeNetworkMagic,
 				StartBlockHash:           "",
@@ -440,7 +440,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
 			},
-			"vector": {
+			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
 				NetworkMagic:             p.vectorNetworkMagic,
 				StartBlockHash:           "",
@@ -534,12 +534,12 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			SmartContractAddress: p.bridgeSCAddress,
 		},
 		Chains: map[string]rCore.ChainConfig{
-			"prime": {
+			common.ChainIDStrPrime: {
 				ChainType:     "Cardano",
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: primeChainSpecificJSONRaw,
 			},
-			"vector": {
+			common.ChainIDStrVector: {
 				ChainType:     "Cardano",
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: vectorChainSpecificJSONRaw,

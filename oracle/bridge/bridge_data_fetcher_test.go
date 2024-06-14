@@ -3,8 +3,10 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -25,7 +27,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, expectedTx)
 	})
@@ -37,7 +39,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to FetchExpectedTx from Bridge SC")
 		require.Nil(t, expectedTx)
@@ -45,13 +47,13 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchExpectedTx parse tx fail", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetRawTransactionFromLastBatch").Return(&eth.LastBatchRawTx{}, nil)
+		bridgeSC.On("GetRawTransactionFromLastBatch").Return([]byte{12, 33}, nil)
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		expectedTx, err := bridgeDataFetcher.FetchExpectedTx("prime")
-		require.NoError(t, err)
+		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
+		require.Error(t, err)
 		require.Nil(t, expectedTx)
 	})
 
@@ -62,7 +64,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.Nil(t, blockPoint)
 	})
@@ -74,21 +76,37 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to FetchLatestBlockPoint from Bridge SC")
 		require.Nil(t, blockPoint)
 	})
 
 	t.Run("FetchLatestBlockPoint valid", func(t *testing.T) {
+		bHash := common.MustHashToBytes32("FFBB")
+		bSlot := uint64(100)
+
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{}, nil)
+		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+			BlockSlot: new(big.Int).SetUint64(0),
+			BlockHash: bHash,
+		}, nil).Once()
+		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+			BlockSlot: new(big.Int).SetUint64(bSlot),
+			BlockHash: bHash,
+		}, nil)
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
-		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint("prime")
+		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
+		require.NoError(t, err)
+		require.Nil(t, blockPoint)
+
+		blockPoint, err = bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
+		require.Equal(t, bHash[:], blockPoint.BlockHash)
+		require.Equal(t, bSlot, blockPoint.BlockSlot)
 	})
 }

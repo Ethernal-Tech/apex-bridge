@@ -2,7 +2,6 @@ package failedtxprocessors
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -52,9 +51,9 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata,
 ) {
 	claim := core.BatchExecutionFailedClaim{
-		ObservedTransactionHash: tx.Hash,
-		ChainID:                 tx.ChainID,
-		BatchNonceID:            new(big.Int).SetUint64(metadata.BatchNonceID),
+		ObservedTransactionHash: common.MustHashToBytes32(tx.Hash),
+		ChainId:                 common.ToNumChainID(tx.ChainID),
+		BatchNonceId:            metadata.BatchNonceID,
 	}
 
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, claim)

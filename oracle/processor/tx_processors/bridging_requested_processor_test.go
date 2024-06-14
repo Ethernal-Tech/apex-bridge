@@ -1,7 +1,7 @@
 package txprocessors
 
 import (
-	"math/big"
+	"encoding/hex"
 	"strings"
 	"testing"
 
@@ -26,13 +26,13 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &core.AppConfig{
 		CardanoChains: map[string]*core.CardanoChainConfig{
-			"prime": {
+			common.ChainIDStrPrime: {
 				BridgingAddresses: core.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
 			},
-			"vector": {
+			common.ChainIDStrVector: {
 				BridgingAddresses: core.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
@@ -110,7 +110,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: destinationChainNonRegisteredMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "destination chain not registered")
@@ -120,7 +120,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
@@ -148,7 +148,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
@@ -165,7 +165,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: bridgingAddrNotFoundInUtxosMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging address on origin not found in utxos")
@@ -174,7 +174,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
 		multipleUtxosToBridgingAddrMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
@@ -191,7 +191,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: multipleUtxosToBridgingAddrMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "found multiple utxos to the bridging address on origin")
@@ -200,7 +200,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
@@ -221,7 +221,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: feeAddrNotInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
@@ -230,7 +230,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim fee addr not in receivers in metadata", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
@@ -248,7 +248,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: feeAddrNotInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "destination chain fee address not found in receiver addrs in metadata")
@@ -257,7 +257,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
@@ -276,7 +276,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: utxoValueBelowMinInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
@@ -285,7 +285,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
@@ -306,7 +306,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: invalidAddrInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
@@ -315,7 +315,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
@@ -334,7 +334,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: invalidAddrInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
@@ -343,7 +343,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
@@ -362,7 +362,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: invalidAddrInReceiversMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
@@ -371,7 +371,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "vector",
+			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging - 1},
@@ -389,18 +389,17 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: feeInReceiversLessThanMinMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
-		const (
-			destinationChainID = "vector"
-			txHash             = "test_hash"
-		)
+		const destinationChainID = common.ChainIDStrVector
 
+		txHashBytes := common.MustHashToBytes32("0x2244FF")
+		txHash := hex.EncodeToString(txHashBytes[:])
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: []string{
 				vectorBridgingFeeAddr[:5],
@@ -428,19 +427,19 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "prime",
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, claims.BridgingRequestClaims[0].DestinationChainID)
+		require.Equal(t, txHash, hex.EncodeToString(claims.BridgingRequestClaims[0].ObservedTransactionHash[:]))
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		require.Equal(t, new(big.Int).SetUint64(receivers[0].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount)
 
 		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
-		require.Equal(t, new(big.Int).SetUint64(txOutputs[0].Amount), claims.BridgingRequestClaims[0].OutputUTXO.Amount)
+		require.Equal(t, txOutputs[0].Amount, claims.BridgingRequestClaims[0].OutputUTXO.Amount)
 	})
 }

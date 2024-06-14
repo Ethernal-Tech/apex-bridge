@@ -31,6 +31,8 @@ const (
 	maxUtxoCount  = 410
 	maxTxSize     = 16000
 
+	// proposerEpochBlockCount = 50
+
 	noBatchPeriodPercent = 0.0625
 )
 
@@ -76,6 +78,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
+	multisigKeyHashes, multisigFeeKeyHashes, _, err := cco.getCardanoData(
+		ctx, bridgeSmartContract, destinationChain)
+	if err != nil {
+		return nil, err
+	}
+
 	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
 	if err != nil {
 		return nil, err
@@ -89,59 +97,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain, noBatchPeriodPercent)
 	if err != nil {
 		return nil, err
-	}
-
-	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		multisigKeyHashes       = make([]string, len(validatorsData))
-		multisigFeeKeyHashes    = make([]string, len(validatorsData))
-		validatorKeyBytes       []byte
-		foundVerificationKey    = false
-		foundFeeVerificationKey = false
-	)
-
-	for i, validator := range validatorsData {
-		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKey)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		if bytes.Equal(cco.Wallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
-			foundVerificationKey = true
-		}
-
-		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKeyFee)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		if bytes.Equal(cco.Wallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
-			foundFeeVerificationKey = true
-		}
-	}
-
-	if !foundVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	if !foundFeeVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
 	multisigPolicyScript, err := cardanowallet.NewPolicyScript(
@@ -260,7 +215,7 @@ func (cco *CardanoChainOperations) getSlotNumber(
 			return 0, err
 		}
 
-		return lastObservedBlock.BlockSlot, nil
+		return lastObservedBlock.BlockSlot.Uint64(), nil
 	}
 
 	data, err := cco.TxProvider.GetTip(ctx)
@@ -277,6 +232,62 @@ func (cco *CardanoChainOperations) getSlotNumber(
 	cco.logger.Debug("calculate slotNumber with rounding", "slot", data.Slot, "newSlot", newSlot)
 
 	return newSlot, nil
+}
+
+func (cco *CardanoChainOperations) getCardanoData(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
+) ([]string, []string, bool, error) {
+	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, chainID)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	var (
+		multisigKeyHashes     = make([]string, len(validatorsData))
+		multisigFeeKeyHashes  = make([]string, len(validatorsData))
+		verificationKeyIdx    = -1
+		feeVerificationKeyIdx = -1
+	)
+
+	for i, validator := range validatorsData {
+		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKey[:])
+		if err != nil {
+			return nil, nil, false, err
+		}
+
+		if bytes.Equal(cco.Wallet.MultiSig.GetVerificationKey(), validator.VerifyingKey[:]) {
+			verificationKeyIdx = i
+		}
+
+		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKeyFee[:])
+		if err != nil {
+			return nil, nil, false, err
+		}
+
+		if bytes.Equal(cco.Wallet.MultiSigFee.GetVerificationKey(), validator.VerifyingKeyFee[:]) {
+			feeVerificationKeyIdx = i
+		}
+	}
+
+	if verificationKeyIdx == -1 {
+		return nil, nil, false, fmt.Errorf(
+			"verifying key of current batcher wasn't found in validators data queried from smart contract")
+	}
+
+	if feeVerificationKeyIdx == -1 {
+		return nil, nil, false, fmt.Errorf(
+			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	}
+
+	// blockNumber, err := bridgeSmartContract.GetBlockNumber(ctx)
+	// if err != nil {
+	// 	return nil, nil, false, err
+	// }
+
+	// isValidator := int(blockNumber/proposerEpochBlockCount)%len(multisigKeyHashes) == verificationKeyIdx
+
+	// return multisigKeyHashes, multisigFeeKeyHashes, isValidator, nil
+	return multisigKeyHashes, multisigFeeKeyHashes, false, nil
 }
 
 func getSlotNumberWithRoundingThreshold(
@@ -322,11 +333,11 @@ func convertUTXOsToTxInputs(utxos []eth.UTXO) (result cardanowallet.TxInputs) {
 
 	for i, utxo := range utxos {
 		result.Inputs[i] = cardanowallet.TxInput{
-			Hash:  utxo.TxHash,
-			Index: uint32(utxo.TxIndex.Uint64()),
+			Hash:  hex.EncodeToString(utxo.TxHash[:]),
+			Index: uint32(utxo.TxIndex),
 		}
 
-		result.Sum += utxo.Amount.Uint64()
+		result.Sum += utxo.Amount
 	}
 
 	return result
@@ -347,14 +358,14 @@ func getNeededUtxos(
 		chosenUTXOs = append(chosenUTXOs, utxo)
 		utxoCount++
 
-		chosenUTXOsSum.Add(chosenUTXOsSum, utxo.Amount)
+		chosenUTXOsSum.Add(chosenUTXOsSum, new(big.Int).SetUint64(utxo.Amount))
 
 		if utxoCount > maxUtxoCount {
 			minChosenUTXO, minChosenUTXOIdx := findMinUtxo(chosenUTXOs)
 
 			chosenUTXOs[minChosenUTXOIdx] = utxo
 
-			chosenUTXOsSum.Sub(chosenUTXOsSum, minChosenUTXO.Amount)
+			chosenUTXOsSum.Sub(chosenUTXOsSum, new(big.Int).SetUint64(minChosenUTXO.Amount))
 
 			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
 			utxoCount--
@@ -379,7 +390,7 @@ func findMinUtxo(utxos []eth.UTXO) (eth.UTXO, int) {
 	idx := 0
 
 	for i, utxo := range utxos[1:] {
-		if utxo.Amount.Cmp(min.Amount) == -1 {
+		if utxo.Amount < min.Amount {
 			min = utxo
 			idx = i + 1
 		}
@@ -394,9 +405,9 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
 			if value, exists := receiversMap[receiver.DestinationAddress]; exists {
-				value.Add(value, receiver.Amount)
+				value.Add(value, new(big.Int).SetUint64(receiver.Amount))
 			} else {
-				receiversMap[receiver.DestinationAddress] = new(big.Int).Set(receiver.Amount)
+				receiversMap[receiver.DestinationAddress] = new(big.Int).SetUint64(receiver.Amount)
 			}
 		}
 	}

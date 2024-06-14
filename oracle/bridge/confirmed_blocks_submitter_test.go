@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestConfirmedBlocksSubmitter(t *testing.T) {
-	chainID := "prime"
+	chainID := common.ChainIDStrPrime
 	appConfig := &core.AppConfig{
 		Bridge: core.BridgeConfig{
 			SubmitConfig: core.SubmitConfig{

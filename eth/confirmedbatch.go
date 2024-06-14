@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
@@ -15,7 +16,7 @@ type UTXO = contractbinding.IBridgeStructsUTXO
 type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
 
 type ConfirmedBatch struct {
-	ID                         string
+	ID                         uint64
 	RawTransaction             []byte
 	MultisigSignatures         [][]byte
 	FeePayerMultisigSignatures [][]byte
@@ -26,40 +27,11 @@ func NewConfirmedBatch(
 ) (
 	*ConfirmedBatch, error,
 ) {
-	// Convert string arrays to byte arrays
-	multisigSignatures := make([][]byte, len(contractConfirmedBatch.MultisigSignatures))
-
-	for i, sig := range contractConfirmedBatch.MultisigSignatures {
-		sigBytes, err := hex.DecodeString(sig)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigSignatures[i] = sigBytes
-	}
-
-	feePayerMultisigSignatures := make([][]byte, len(contractConfirmedBatch.FeePayerMultisigSignatures))
-
-	for i, sig := range contractConfirmedBatch.FeePayerMultisigSignatures {
-		sigBytes, err := hex.DecodeString(sig)
-		if err != nil {
-			return nil, err
-		}
-
-		feePayerMultisigSignatures[i] = sigBytes
-	}
-
-	// Convert rawTransaction from string to byte array
-	rawTx, err := hex.DecodeString(contractConfirmedBatch.RawTransaction)
-	if err != nil {
-		return nil, err
-	}
-
 	return &ConfirmedBatch{
-		ID:                         contractConfirmedBatch.Id.String(),
-		RawTransaction:             rawTx,
-		MultisigSignatures:         multisigSignatures,
-		FeePayerMultisigSignatures: feePayerMultisigSignatures,
+		ID:                         contractConfirmedBatch.Id,
+		RawTransaction:             contractConfirmedBatch.RawTransaction,
+		MultisigSignatures:         contractConfirmedBatch.MultisigSignatures,
+		FeePayerMultisigSignatures: contractConfirmedBatch.FeePayerMultisigSignatures,
 	}, nil
 }
 
@@ -67,19 +39,19 @@ func BatchToString(b SignedBatch) string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
-	sb.WriteString(b.Id.String())
+	sb.WriteString(fmt.Sprint(b.Id))
 	sb.WriteString("\ndestination chain id = ")
-	sb.WriteString(b.DestinationChainId)
+	sb.WriteString(common.ToStrChainID(b.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
-	sb.WriteString(b.RawTransaction)
+	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(b.MultisigSignature)
+	sb.WriteString(hex.EncodeToString(b.MultisigSignature))
 	sb.WriteString("\nfee payer multisig signature = ")
-	sb.WriteString(b.FeePayerMultisigSignature)
+	sb.WriteString(hex.EncodeToString(b.FeePayerMultisigSignature))
 	sb.WriteString("\nfirst tx nonce id = ")
-	sb.WriteString(b.FirstTxNonceId.String())
+	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
 	sb.WriteString("\nlast tx nonce id = ")
-	sb.WriteString(b.LastTxNonceId.String())
+	sb.WriteString(fmt.Sprint(b.LastTxNonceId))
 
 	sb.WriteString("\nmultisig owned used utxos cnt = ")
 	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
@@ -109,7 +81,7 @@ func (b ConfirmedBatch) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
-	sb.WriteString(b.ID)
+	sb.WriteString(fmt.Sprint(b.ID))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nmultisig signatures = [")

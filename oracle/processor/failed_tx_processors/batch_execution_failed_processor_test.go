@@ -1,7 +1,7 @@
 package failedtxprocessors
 
 import (
-	"math/big"
+	"encoding/hex"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -48,7 +48,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
-		require.Equal(t, "", claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
+		require.Equal(t, [32]byte{}, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
@@ -61,8 +61,9 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
+		txHashBytes := common.MustHashToBytes32("0x2244FF")
+		txHash := hex.EncodeToString(txHashBytes[:])
 
-		const txHash = "test_hash"
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantFullMetadata,
 			Hash:     txHash,
@@ -70,7 +71,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
-		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
-		require.Equal(t, new(big.Int).SetUint64(batchNonceID), claims.BatchExecutionFailedClaims[0].BatchNonceID)
+		require.Equal(t, txHash, hex.EncodeToString(claims.BatchExecutionFailedClaims[0].ObservedTransactionHash[:]))
+		require.Equal(t, batchNonceID, claims.BatchExecutionFailedClaims[0].BatchNonceId)
 	})
 }

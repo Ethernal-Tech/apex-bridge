@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/stretchr/testify/require"
 )
@@ -103,7 +104,7 @@ func TestBoltDatabase(t *testing.T) {
 
 		sourceChainID := primeChainID
 		sourceTxHash := testTxHash
-		destinationChainID := "vector"
+		destinationChainID := common.ChainIDStrVector
 		batchID := uint64(1)
 
 		stateToAdd := core.NewBridgingRequestState(sourceChainID, sourceTxHash)

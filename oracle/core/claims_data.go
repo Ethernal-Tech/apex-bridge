@@ -1,9 +1,11 @@
 package core
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
@@ -62,14 +64,14 @@ func RefundExecutedClaimString(c RefundExecutedClaim) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
-	sb.WriteString(c.ObservedTransactionHash)
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nRefundTxHash = ")
-	sb.WriteString(c.RefundTxHash)
+	sb.WriteString(hex.EncodeToString(c.RefundTxHash[:]))
 	sb.WriteString("\nUtxo = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, c.Utxo.TxHash, c.Utxo.TxIndex, c.Utxo.Amount))
+		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 
 	return sb.String()
 }
@@ -78,22 +80,22 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
-	sb.WriteString(c.ObservedTransactionHash)
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nPreviousRefundTxHash = ")
-	sb.WriteString(c.PreviousRefundTxHash)
+	sb.WriteString(hex.EncodeToString(c.PreviousRefundTxHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.Receiver)
 	sb.WriteString("\nUtxo = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, c.Utxo.TxHash, c.Utxo.TxIndex, c.Utxo.Amount))
+		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 	sb.WriteString("\nRawTransaction = ")
-	sb.WriteString(c.RawTransaction)
+	sb.WriteString(hex.EncodeToString(c.RawTransaction))
 	sb.WriteString("\nMultisigSignature = ")
-	sb.WriteString(c.MultisigSignature)
+	sb.WriteString(hex.EncodeToString(c.MultisigSignature))
 	sb.WriteString("\nRetryCounter = ")
-	sb.WriteString(c.RetryCounter.String())
+	sb.WriteString(fmt.Sprint(c.RetryCounter))
 
 	return sb.String()
 }
@@ -102,11 +104,11 @@ func BatchExecutionFailedClaimString(c BatchExecutionFailedClaim) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
-	sb.WriteString(c.ObservedTransactionHash)
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
-	sb.WriteString(c.BatchNonceID.String())
+	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
 	return sb.String()
 }
@@ -115,16 +117,16 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
-	sb.WriteString(c.ObservedTransactionHash)
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(c.ChainID)
+	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
-	sb.WriteString(c.BatchNonceID.String())
+	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 	sb.WriteString("\nMultisigOwnedUTXOs = [")
 
 	for _, utxo := range c.OutputUTXOs.MultisigOwnedUTXOs {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
 	}
 
 	sb.WriteString("]")
@@ -133,7 +135,7 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 
 	for _, utxo := range c.OutputUTXOs.FeePayerOwnedUTXOs {
 		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
 	}
 
 	sb.WriteString("]")
@@ -157,17 +159,19 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	}
 
 	sb.WriteString("ObservedTransactionHash = ")
-	sb.WriteString(c.ObservedTransactionHash)
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nReceivers = [")
 	sb.WriteString(sbReceivers.String())
 	sb.WriteString("]")
 	sb.WriteString("\nOutputUTXO = ")
 	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.OutputUTXO.Nonce, c.OutputUTXO.TxHash, c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
+		c.OutputUTXO.Nonce, hex.EncodeToString(c.OutputUTXO.TxHash[:]), c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
+	sb.WriteString("\nTotalAmount = ")
+	sb.WriteString(c.TotalAmount.String())
 	sb.WriteString("\nSourceChainID = ")
-	sb.WriteString(c.SourceChainID)
+	sb.WriteString(common.ToStrChainID(c.SourceChainId))
 	sb.WriteString("\nDestinationChainID = ")
-	sb.WriteString(c.DestinationChainID)
+	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
 
 	return sb.String()
 }

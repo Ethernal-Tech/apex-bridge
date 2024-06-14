@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
@@ -14,7 +15,7 @@ import (
 func TestExpectedTxsFetcher(t *testing.T) {
 	appConfig := &core.AppConfig{
 		CardanoChains: map[string]*core.CardanoChainConfig{
-			"prime": {},
+			common.ChainIDStrPrime: {},
 		},
 	}
 

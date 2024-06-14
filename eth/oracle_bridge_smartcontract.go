@@ -16,17 +16,13 @@ const submitClaimsGasLimit = uint64(10_000_000)
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
 
-type LastBatchRawTx struct {
-	RawTx string
-}
-
 type SubmitOpts struct {
 	GasLimitMultiplier float32
 }
 
 type IOracleBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error)
-	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) (*LastBatchRawTx, error)
+	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
 	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) error
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
 }
@@ -63,9 +59,7 @@ func NewOracleBridgeSmartContractWithWallet(
 
 func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 	ctx context.Context, sourceChain string,
-) (
-	*CardanoBlock, error,
-) {
+) (*CardanoBlock, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -80,7 +74,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 
 	result, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
-	}, sourceChain)
+	}, common.ToNumChainID(sourceChain))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
@@ -90,9 +84,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 
 func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 	ctx context.Context, chainID string,
-) (
-	*LastBatchRawTx, error,
-) {
+) ([]byte, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, err
@@ -107,14 +99,12 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 
 	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
 		Context: ctx,
-	}, chainID)
+	}, common.ToNumChainID(chainID))
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
-	return &LastBatchRawTx{
-		RawTx: result,
-	}, nil
+	return result, nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
@@ -160,7 +150,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.SubmitLastObservedBlocks(opts, chainID, blocks)
+		return contract.SubmitLastObservedBlocks(opts, common.ToNumChainID(chainID), blocks)
 	})
 
 	return bsc.ethHelper.ProcessError(err)

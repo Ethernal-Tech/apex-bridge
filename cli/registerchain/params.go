@@ -2,7 +2,6 @@ package cliregisterchain
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -271,9 +270,9 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		result := make([]contractbinding.IBridgeStructsUTXO, len(utxos))
 		for i, x := range utxos {
 			result[i] = contractbinding.IBridgeStructsUTXO{
-				TxHash:  x.Hash,
-				TxIndex: new(big.Int).SetUint64(uint64(x.Index)),
-				Amount:  new(big.Int).SetUint64(x.Amount),
+				TxHash:  common.MustHashToBytes32(x.Hash),
+				TxIndex: uint64(x.Index),
+				Amount:  x.Amount,
 			}
 		}
 
@@ -294,7 +293,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
 				contractbinding.IBridgeStructsChain{
-					Id:              ip.chainID,
+					Id:              common.ToNumChainID(ip.chainID),
 					AddressMultisig: ip.multisigAddr,
 					AddressFeePayer: ip.multisigFeeAddr,
 				},
@@ -304,8 +303,8 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 				},
 				initialTokenSupply,
 				contractbinding.IBridgeStructsValidatorCardanoData{
-					VerifyingKey:    hex.EncodeToString(walletCardano.MultiSig.GetVerificationKey()),
-					VerifyingKeyFee: hex.EncodeToString(walletCardano.MultiSigFee.GetVerificationKey()),
+					VerifyingKey:    [32]byte(walletCardano.MultiSig.GetVerificationKey()),
+					VerifyingKeyFee: [32]byte(walletCardano.MultiSigFee.GetVerificationKey()),
 				})
 		})
 	if err != nil {

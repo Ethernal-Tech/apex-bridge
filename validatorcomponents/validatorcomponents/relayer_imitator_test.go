@@ -24,7 +24,7 @@ func TestRelayerImitator(t *testing.T) {
 		require.NotNil(t, ri)
 	})
 
-	const chainID = "prime"
+	const chainID = common.ChainIDStrPrime
 
 	t.Run("execute 1", func(t *testing.T) {
 		ctx := context.Background()
@@ -49,7 +49,7 @@ func TestRelayerImitator(t *testing.T) {
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 1}, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, fmt.Errorf("test err"))
@@ -67,25 +67,7 @@ func TestRelayerImitator(t *testing.T) {
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: ""}, nil)
-
-		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
-
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
-
-		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to convert confirmed batch id to big int")
-	})
-
-	t.Run("execute 4", func(t *testing.T) {
-		ctx := context.Background()
-
-		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-
-		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 1}, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
@@ -96,13 +78,13 @@ func TestRelayerImitator(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("execute 5", func(t *testing.T) {
+	t.Run("execute 4", func(t *testing.T) {
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "1"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 1}, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(2), nil)
@@ -114,6 +96,26 @@ func TestRelayerImitator(t *testing.T) {
 		require.ErrorContains(t, err, "last submitted batch id greater than received")
 	})
 
+	t.Run("execute 5", func(t *testing.T) {
+		ctx := context.Background()
+
+		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
+		brsUpdater.On("SubmittedToDestination").Return(nil)
+
+		bsc := &eth.BridgeSmartContractMock{}
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
+
+		db := &relayerDb.DBMock{}
+		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
+		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
+
+		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+
+		err := ri.execute(ctx, chainID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
+	})
+
 	t.Run("execute 6", func(t *testing.T) {
 		ctx := context.Background()
 
@@ -121,10 +123,10 @@ func TestRelayerImitator(t *testing.T) {
 		brsUpdater.On("SubmittedToDestination").Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
 
 		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
+		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
 		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
@@ -141,27 +143,7 @@ func TestRelayerImitator(t *testing.T) {
 		brsUpdater.On("SubmittedToDestination").Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
-
-		db := &relayerDb.DBMock{}
-		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
-		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
-
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
-
-		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
-	})
-
-	t.Run("execute 8", func(t *testing.T) {
-		ctx := context.Background()
-
-		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination").Return(nil)
-
-		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
@@ -173,14 +155,14 @@ func TestRelayerImitator(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("execute 9", func(t *testing.T) {
+	t.Run("execute 8", func(t *testing.T) {
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
 		brsUpdater.On("SubmittedToDestination").Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
-		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: "2"}, nil)
+		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
