@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -96,7 +97,7 @@ func TestBatcherExecute(t *testing.T) {
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: "0x66674",
+			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []contractbinding.IBridgeStructsReceiver{
@@ -114,7 +115,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
 			Return((*core.GeneratedBatchTxData)(nil), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
@@ -135,7 +136,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -156,7 +157,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -178,7 +179,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID.Uint64()).
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
@@ -289,43 +290,57 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("getBridgingRequestStateKeys", func(t *testing.T) {
+		included := [][32]byte{
+			{1},
+			{4},
+			{5},
+		}
 		res := getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
 			{
-				ObservedTransactionHash: "1",
+				ObservedTransactionHash: included[0],
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 				Nonce:                   4,
 			},
 			{
-				ObservedTransactionHash: "2",
+				ObservedTransactionHash: [32]byte{2},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
 			{
-				ObservedTransactionHash: "3",
+				ObservedTransactionHash: [32]byte{3},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 				Nonce:                   6,
 			},
 			{
-				ObservedTransactionHash: "4",
+				ObservedTransactionHash: included[1],
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   3,
 			},
 			{
-				ObservedTransactionHash: "5",
+				ObservedTransactionHash: included[2],
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 				Nonce:                   5,
 			},
 			{
-				ObservedTransactionHash: "6",
+				ObservedTransactionHash: [32]byte{6},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
 		}, 3, 5)
 
 		require.Equal(t, []common.BridgingRequestStateKey{
-			{SourceChainID: common.ChainIDStrPrime, SourceTxHash: "1"},
-			{SourceChainID: common.ChainIDStrVector, SourceTxHash: "4"},
-			{SourceChainID: common.ChainIDStrPrime, SourceTxHash: "5"},
+			{
+				SourceChainID: common.ChainIDStrPrime,
+				SourceTxHash:  hex.EncodeToString(included[0][:]),
+			},
+			{
+				SourceChainID: common.ChainIDStrVector,
+				SourceTxHash:  hex.EncodeToString(included[1][:]),
+			},
+			{
+				SourceChainID: common.ChainIDStrPrime,
+				SourceTxHash:  hex.EncodeToString(included[2][:]),
+			},
 		}, res)
 	})
 }

@@ -114,3 +114,14 @@ func (m *BridgeSmartContractMock) GetAllRegisteredChains(ctx context.Context) ([
 
 	return nil, args.Error(1)
 }
+
+func (m *BridgeSmartContractMock) GetBlockNumber(ctx context.Context) (uint64, error) {
+	args := m.Called(ctx)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(uint64)
+
+		return arg0, args.Error(1)
+	}
+
+	return 0, args.Error(1)
+}

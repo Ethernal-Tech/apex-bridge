@@ -1,6 +1,7 @@
 package txprocessors
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -76,7 +77,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
-		require.Equal(t, "", claims.BatchExecutedClaims[0].ObservedTransactionHash)
+		require.Equal(t, [32]byte{}, claims.BatchExecutedClaims[0].ObservedTransactionHash)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 0)
 	})
 
@@ -126,8 +127,8 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
-
-		const txHash = "test_hash"
+		txHashBytes := common.MustHashToBytes32("010203")
+		txHash := hex.EncodeToString(txHashBytes[:])
 
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr_bridging", Amount: 1},
@@ -145,7 +146,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
-		require.Equal(t, txHash, claims.BatchExecutedClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash, hex.EncodeToString(claims.BatchExecutedClaims[0].ObservedTransactionHash[:]))
 		require.Equal(t, batchNonceID, claims.BatchExecutedClaims[0].BatchNonceId)
 		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
 		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 1)

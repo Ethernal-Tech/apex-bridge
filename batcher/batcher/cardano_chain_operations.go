@@ -31,6 +31,8 @@ const (
 	maxUtxoCount  = 410
 	maxTxSize     = 16000
 
+	// proposerEpochBlockCount = 50
+
 	noBatchPeriodPercent = 0.0625
 )
 
@@ -76,6 +78,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
+	multisigKeyHashes, multisigFeeKeyHashes, _, err := cco.getCardanoData(
+		ctx, bridgeSmartContract, destinationChain)
+	if err != nil {
+		return nil, err
+	}
+
 	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
 	if err != nil {
 		return nil, err
@@ -89,59 +97,6 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	slotNumber, err := cco.getSlotNumber(ctx, bridgeSmartContract, destinationChain, noBatchPeriodPercent)
 	if err != nil {
 		return nil, err
-	}
-
-	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, destinationChain)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		multisigKeyHashes       = make([]string, len(validatorsData))
-		multisigFeeKeyHashes    = make([]string, len(validatorsData))
-		validatorKeyBytes       []byte
-		foundVerificationKey    = false
-		foundFeeVerificationKey = false
-	)
-
-	for i, validator := range validatorsData {
-		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKey)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		if bytes.Equal(cco.Wallet.MultiSig.GetVerificationKey(), validatorKeyBytes) {
-			foundVerificationKey = true
-		}
-
-		validatorKeyBytes, err = hex.DecodeString(validator.VerifyingKeyFee)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validatorKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		if bytes.Equal(cco.Wallet.MultiSigFee.GetVerificationKey(), validatorKeyBytes) {
-			foundFeeVerificationKey = true
-		}
-	}
-
-	if !foundVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	if !foundFeeVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
 	multisigPolicyScript, err := cardanowallet.NewPolicyScript(
@@ -279,6 +234,62 @@ func (cco *CardanoChainOperations) getSlotNumber(
 	return newSlot, nil
 }
 
+func (cco *CardanoChainOperations) getCardanoData(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
+) ([]string, []string, bool, error) {
+	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, chainID)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	var (
+		multisigKeyHashes     = make([]string, len(validatorsData))
+		multisigFeeKeyHashes  = make([]string, len(validatorsData))
+		verificationKeyIdx    = -1
+		feeVerificationKeyIdx = -1
+	)
+
+	for i, validator := range validatorsData {
+		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKey[:])
+		if err != nil {
+			return nil, nil, false, err
+		}
+
+		if bytes.Equal(cco.Wallet.MultiSig.GetVerificationKey(), validator.VerifyingKey[:]) {
+			verificationKeyIdx = i
+		}
+
+		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKeyFee[:])
+		if err != nil {
+			return nil, nil, false, err
+		}
+
+		if bytes.Equal(cco.Wallet.MultiSigFee.GetVerificationKey(), validator.VerifyingKeyFee[:]) {
+			feeVerificationKeyIdx = i
+		}
+	}
+
+	if verificationKeyIdx == -1 {
+		return nil, nil, false, fmt.Errorf(
+			"verifying key of current batcher wasn't found in validators data queried from smart contract")
+	}
+
+	if feeVerificationKeyIdx == -1 {
+		return nil, nil, false, fmt.Errorf(
+			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	}
+
+	// blockNumber, err := bridgeSmartContract.GetBlockNumber(ctx)
+	// if err != nil {
+	// 	return nil, nil, false, err
+	// }
+
+	// isValidator := int(blockNumber/proposerEpochBlockCount)%len(multisigKeyHashes) == verificationKeyIdx
+
+	// return multisigKeyHashes, multisigFeeKeyHashes, isValidator, nil
+	return multisigKeyHashes, multisigFeeKeyHashes, false, nil
+}
+
 func getSlotNumberWithRoundingThreshold(
 	slotNumber, threshold uint64, noBatchPeriodPercent float64,
 ) (uint64, error) {
@@ -322,7 +333,7 @@ func convertUTXOsToTxInputs(utxos []eth.UTXO) (result cardanowallet.TxInputs) {
 
 	for i, utxo := range utxos {
 		result.Inputs[i] = cardanowallet.TxInput{
-			Hash:  utxo.TxHash,
+			Hash:  hex.EncodeToString(utxo.TxHash[:]),
 			Index: uint32(utxo.TxIndex),
 		}
 

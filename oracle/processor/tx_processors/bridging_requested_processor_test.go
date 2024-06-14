@@ -1,6 +1,7 @@
 package txprocessors
 
 import (
+	"encoding/hex"
 	"strings"
 	"testing"
 
@@ -395,11 +396,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
-		const (
-			destinationChainID = common.ChainIDStrVector
-			txHash             = "test_hash"
-		)
+		const destinationChainID = common.ChainIDStrVector
 
+		txHashBytes := common.MustHashToBytes32("0x2244FF")
+		txHash := hex.EncodeToString(txHashBytes[:])
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: []string{
 				vectorBridgingFeeAddr[:5],
@@ -432,7 +432,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
-		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, txHash, hex.EncodeToString(claims.BridgingRequestClaims[0].ObservedTransactionHash[:]))
 		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[0].Address, ""),

@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -46,13 +47,13 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchExpectedTx parse tx fail", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetRawTransactionFromLastBatch").Return(&eth.LastBatchRawTx{}, nil)
+		bridgeSC.On("GetRawTransactionFromLastBatch").Return([]byte{12, 33}, nil)
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
 		expectedTx, err := bridgeDataFetcher.FetchExpectedTx(common.ChainIDStrPrime)
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.Nil(t, expectedTx)
 	})
 
@@ -82,8 +83,14 @@ func TestBridgeDataFetcher(t *testing.T) {
 	})
 
 	t.Run("FetchLatestBlockPoint valid", func(t *testing.T) {
+		bHash := common.MustHashToBytes32("FFBB")
+		bSlot := uint64(100)
+
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{}, nil)
+		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+			BlockSlot: new(big.Int).SetUint64(bSlot),
+			BlockHash: bHash,
+		}, nil)
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
@@ -91,5 +98,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 		blockPoint, err := bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
+		require.Equal(t, bHash[:], blockPoint.BlockHash)
+		require.Equal(t, bSlot, blockPoint.BlockSlot)
 	})
 }

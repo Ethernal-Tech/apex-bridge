@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/url"
 	"strings"
@@ -89,4 +90,19 @@ func SafeSubtract(a, b, def uint64) uint64 {
 	}
 
 	return def
+}
+
+func MustHashToBytes32(hash string) (res [32]byte) {
+	bytes, err := DecodeHex(hash)
+	if err != nil {
+		panic(err) //nolint:gocritic
+	}
+
+	if len(bytes) > 32 {
+		panic(fmt.Errorf("length of hash is: %d", len(bytes))) //nolint:gocritic
+	}
+
+	copy(res[:], bytes)
+
+	return
 }

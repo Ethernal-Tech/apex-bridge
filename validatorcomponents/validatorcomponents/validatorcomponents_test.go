@@ -2,6 +2,7 @@ package validatorcomponents
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -98,37 +99,37 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 
 		utxos := []contractbinding.IBridgeStructsUTXO{
 			{
-				TxHash:  "0x001",
+				TxHash:  common.MustHashToBytes32("0x01"),
 				TxIndex: 2,
 				Amount:  200,
 			},
 			{
-				TxHash:  "0x002",
+				TxHash:  common.MustHashToBytes32("0x02"),
 				TxIndex: 0,
 				Amount:  100,
 			},
 			{
-				TxHash:  "0x003",
+				TxHash:  common.MustHashToBytes32("0x03"),
 				TxIndex: 129,
 				Amount:  10,
 			},
 			{
-				TxHash:  "0x004",
+				TxHash:  common.MustHashToBytes32("0x04"),
 				TxIndex: 0,
 				Amount:  1000,
 			},
 			{
-				TxHash:  "0x005",
+				TxHash:  common.MustHashToBytes32("0x05"),
 				TxIndex: 1,
 				Amount:  1,
 			},
 			{
-				TxHash:  "0x006",
+				TxHash:  common.MustHashToBytes32("0x06"),
 				TxIndex: 2,
 				Amount:  2,
 			},
 			{
-				TxHash:  "0x007",
+				TxHash:  common.MustHashToBytes32("0x07"),
 				TxIndex: 0,
 				Amount:  100,
 			},
@@ -179,7 +180,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				}
 
 				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Output.Amount)
-				assert.Equal(t, x.TxHash, config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Hash)
+				assert.Equal(t, hex.EncodeToString(x.TxHash[:]), config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Hash)
 				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrVector].InitialUtxos[i].Input.Index)
 			} else {
 				if i < 6 {
@@ -189,7 +190,7 @@ func Test_populateUtxosAndAddresses(t *testing.T) {
 				}
 
 				assert.Equal(t, x.Amount, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Output.Amount)
-				assert.Equal(t, x.TxHash, config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Hash)
+				assert.Equal(t, hex.EncodeToString(x.TxHash[:]), config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Hash)
 				assert.Equal(t, uint32(x.TxIndex), config.CardanoChains[common.ChainIDStrPrime].InitialUtxos[i-3].Input.Index)
 			}
 		}

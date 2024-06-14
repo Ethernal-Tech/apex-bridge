@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -697,7 +698,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			err := bp.bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
 				SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
-				SourceTxHash:  brClaim.ObservedTransactionHash,
+				SourceTxHash:  hex.EncodeToString(brClaim.ObservedTransactionHash[:]),
 			}, common.ToStrChainID(brClaim.DestinationChainId))
 
 			if err != nil {
@@ -711,7 +712,9 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
 			err := bp.bridgingRequestStateUpdater.ExecutedOnDestination(
-				common.ToStrChainID(beClaim.ChainId), beClaim.BatchNonceId, beClaim.ObservedTransactionHash)
+				common.ToStrChainID(beClaim.ChainId),
+				beClaim.BatchNonceId,
+				hex.EncodeToString(beClaim.ObservedTransactionHash[:]))
 
 			if err != nil {
 				bp.logger.Error(
@@ -724,7 +727,9 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutionFailedClaims) > 0 {
 		for _, befClaim := range bridgeClaims.BatchExecutionFailedClaims {
-			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(common.ToStrChainID(befClaim.ChainId), befClaim.BatchNonceId)
+			err := bp.bridgingRequestStateUpdater.FailedToExecuteOnDestination(
+				common.ToStrChainID(befClaim.ChainId),
+				befClaim.BatchNonceId)
 
 			if err != nil {
 				bp.logger.Error(

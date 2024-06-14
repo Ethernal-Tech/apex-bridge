@@ -148,9 +148,9 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	signedBatch := eth.SignedBatch{
 		Id:                        batchID,
 		DestinationChainId:        common.ToNumChainID(b.config.Chain.ChainID),
-		RawTransaction:            hex.EncodeToString(generatedBatchData.TxRaw),
-		MultisigSignature:         hex.EncodeToString(multisigSignature),
-		FeePayerMultisigSignature: hex.EncodeToString(multisigFeeSignature),
+		RawTransaction:            generatedBatchData.TxRaw,
+		MultisigSignature:         multisigSignature,
+		FeePayerMultisigSignature: multisigFeeSignature,
 		FirstTxNonceId:            firstTxNonceID,
 		LastTxNonceId:             lastTxNonceID,
 		UsedUTXOs:                 generatedBatchData.Utxos,
@@ -228,7 +228,7 @@ func getBridgingRequestStateKeys(
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID {
 			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
 				SourceChainID: common.ToStrChainID(confirmedTx.SourceChainId),
-				SourceTxHash:  confirmedTx.ObservedTransactionHash,
+				SourceTxHash:  hex.EncodeToString(confirmedTx.ObservedTransactionHash[:]),
 			})
 		}
 	}

@@ -26,6 +26,7 @@ type IBridgeSmartContract interface {
 	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
 	GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error)
 	GetAllRegisteredChains(ctx context.Context) ([]Chain, error)
+	GetBlockNumber(ctx context.Context) (uint64, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -270,4 +271,13 @@ func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) 
 	}
 
 	return result, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetBlockNumber(ctx context.Context) (uint64, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, err
+	}
+
+	return ethTxHelper.GetClient().BlockNumber(ctx)
 }

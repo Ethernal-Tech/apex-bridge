@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -47,7 +48,7 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, blocks []*i
 	contractBlocks := make([]eth.CardanoBlock, 0, len(blocks))
 	for _, bl := range blocks {
 		contractBlocks = append(contractBlocks, eth.CardanoBlock{
-			BlockHash: bl.Hash,
+			BlockHash: common.MustHashToBytes32(bl.Hash),
 			BlockSlot: new(big.Int).SetUint64(bl.Slot),
 		})
 	}

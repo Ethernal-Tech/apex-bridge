@@ -59,13 +59,13 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 	for idx, utxo := range tx.Outputs {
 		if utxo.Address == addrs.BridgingAddress {
 			bridgingAddrUtxos = append(bridgingAddrUtxos, core.UTXO{
-				TxHash:  tx.Hash,
+				TxHash:  common.MustHashToBytes32(tx.Hash),
 				TxIndex: uint64(idx),
 				Amount:  utxo.Amount,
 			})
 		} else if utxo.Address == addrs.FeeAddress {
 			feeAddrUtxos = append(feeAddrUtxos, core.UTXO{
-				TxHash:  tx.Hash,
+				TxHash:  common.MustHashToBytes32(tx.Hash),
 				TxIndex: uint64(idx),
 				Amount:  utxo.Amount,
 			})
@@ -73,7 +73,7 @@ func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
 	}
 
 	claim := core.BatchExecutedClaim{
-		ObservedTransactionHash: tx.Hash,
+		ObservedTransactionHash: common.MustHashToBytes32(tx.Hash),
 		ChainId:                 common.ToNumChainID(tx.OriginChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 		OutputUTXOs: core.UTXOs{

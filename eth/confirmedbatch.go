@@ -27,40 +27,11 @@ func NewConfirmedBatch(
 ) (
 	*ConfirmedBatch, error,
 ) {
-	// Convert string arrays to byte arrays
-	multisigSignatures := make([][]byte, len(contractConfirmedBatch.MultisigSignatures))
-
-	for i, sig := range contractConfirmedBatch.MultisigSignatures {
-		sigBytes, err := hex.DecodeString(sig)
-		if err != nil {
-			return nil, err
-		}
-
-		multisigSignatures[i] = sigBytes
-	}
-
-	feePayerMultisigSignatures := make([][]byte, len(contractConfirmedBatch.FeePayerMultisigSignatures))
-
-	for i, sig := range contractConfirmedBatch.FeePayerMultisigSignatures {
-		sigBytes, err := hex.DecodeString(sig)
-		if err != nil {
-			return nil, err
-		}
-
-		feePayerMultisigSignatures[i] = sigBytes
-	}
-
-	// Convert rawTransaction from string to byte array
-	rawTx, err := hex.DecodeString(contractConfirmedBatch.RawTransaction)
-	if err != nil {
-		return nil, err
-	}
-
 	return &ConfirmedBatch{
 		ID:                         contractConfirmedBatch.Id,
-		RawTransaction:             rawTx,
-		MultisigSignatures:         multisigSignatures,
-		FeePayerMultisigSignatures: feePayerMultisigSignatures,
+		RawTransaction:             contractConfirmedBatch.RawTransaction,
+		MultisigSignatures:         contractConfirmedBatch.MultisigSignatures,
+		FeePayerMultisigSignatures: contractConfirmedBatch.FeePayerMultisigSignatures,
 	}, nil
 }
 
@@ -72,11 +43,11 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(b.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
-	sb.WriteString(b.RawTransaction)
+	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(b.MultisigSignature)
+	sb.WriteString(hex.EncodeToString(b.MultisigSignature))
 	sb.WriteString("\nfee payer multisig signature = ")
-	sb.WriteString(b.FeePayerMultisigSignature)
+	sb.WriteString(hex.EncodeToString(b.FeePayerMultisigSignature))
 	sb.WriteString("\nfirst tx nonce id = ")
 	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
 	sb.WriteString("\nlast tx nonce id = ")

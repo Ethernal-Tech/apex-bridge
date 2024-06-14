@@ -13,9 +13,7 @@ type OracleBridgeSmartContractMock struct {
 // GetLastObservedBlock implements IOracleBridgeSmartContract.
 func (m *OracleBridgeSmartContractMock) GetLastObservedBlock(
 	ctx context.Context, sourceChain string,
-) (
-	*CardanoBlock, error,
-) {
+) (*CardanoBlock, error) {
 	args := m.Called()
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).(*CardanoBlock)
@@ -29,12 +27,10 @@ func (m *OracleBridgeSmartContractMock) GetLastObservedBlock(
 // GetRawTransactionFromLastBatch implements IOracleBridgeSmartContract.
 func (m *OracleBridgeSmartContractMock) GetRawTransactionFromLastBatch(
 	ctx context.Context, chainID string,
-) (
-	*LastBatchRawTx, error,
-) {
+) ([]byte, error) {
 	args := m.Called()
 	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).(*LastBatchRawTx)
+		arg0, _ := args.Get(0).([]byte)
 
 		return arg0, args.Error(1)
 	}

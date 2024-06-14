@@ -2,7 +2,6 @@ package cliregisterchain
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -271,7 +270,7 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 		result := make([]contractbinding.IBridgeStructsUTXO, len(utxos))
 		for i, x := range utxos {
 			result[i] = contractbinding.IBridgeStructsUTXO{
-				TxHash:  x.Hash,
+				TxHash:  common.MustHashToBytes32(x.Hash),
 				TxIndex: uint64(x.Index),
 				Amount:  x.Amount,
 			}
@@ -304,8 +303,8 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 				},
 				initialTokenSupply,
 				contractbinding.IBridgeStructsValidatorCardanoData{
-					VerifyingKey:    hex.EncodeToString(walletCardano.MultiSig.GetVerificationKey()),
-					VerifyingKeyFee: hex.EncodeToString(walletCardano.MultiSigFee.GetVerificationKey()),
+					VerifyingKey:    [32]byte(walletCardano.MultiSig.GetVerificationKey()),
+					VerifyingKeyFee: [32]byte(walletCardano.MultiSigFee.GetVerificationKey()),
 				})
 		})
 	if err != nil {
