@@ -84,11 +84,11 @@ func (tx ProcessedCardanoTx) ToCardanoTxKey() []byte {
 }
 
 func (tx CardanoTx) Key() []byte {
-	return []byte(tx.ToCardanoTxKey())
+	return tx.ToCardanoTxKey()
 }
 
 func (tx ProcessedCardanoTx) Key() []byte {
-	return []byte(tx.ToCardanoTxKey())
+	return tx.ToCardanoTxKey()
 }
 
 func (tx BridgeExpectedCardanoTx) ToCardanoTxKey() []byte {
