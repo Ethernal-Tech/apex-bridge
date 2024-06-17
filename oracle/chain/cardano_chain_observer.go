@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -144,7 +143,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
 			BlockSlot:   config.StartSlot,
-			BlockHash:   startBlockHash,
+			BlockHash:   indexer.NewHashFromBytes(startBlockHash),
 			BlockNumber: config.StartBlockNumber - 1,
 		},
 		AddressCheck:           indexer.AddressCheckAll,
@@ -229,7 +228,7 @@ func updateLastConfirmedBlockFromSc(
 			return nil
 		}
 
-		if bytes.Equal(blockPointDB.BlockHash, blockPointSc.BlockHash) &&
+		if blockPointDB.BlockHash == blockPointSc.BlockHash &&
 			blockPointDB.BlockSlot == blockPointSc.BlockSlot {
 			l.Debug("slot from db same as from sc",
 				"blockPointDB.BlockSlot", blockPointDB.BlockSlot, "blockPointSc.BlockSlot", blockPointSc.BlockSlot)

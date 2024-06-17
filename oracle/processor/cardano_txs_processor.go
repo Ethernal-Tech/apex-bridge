@@ -1,8 +1,8 @@
 package processor
 
 import (
+	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -253,7 +253,7 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 
 	maxClaimsToGroup := bp.maxBridgingClaimsToGroup[startChainID]
 
-	for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+	for priority := uint8(0); priority <= core.LastProcessingPriority; priority++ {
 		invalidRelevantExpiredTxs, processedExpectedTxs,
 			processedTxs, unprocessedTxs := bp.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup, priority)
 
@@ -279,7 +279,7 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 
 		chainID := bp.appConfig.CardanoChains[key].ChainID
 		if chainID != startChainID {
-			for priority := uint(0); priority <= core.LastProcessingPriority; priority++ {
+			for priority := uint8(0); priority <= core.LastProcessingPriority; priority++ {
 				if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 					break
 				}
@@ -372,7 +372,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 	bridgeClaims *core.BridgeClaims,
 	chainID string,
 	maxClaimsToGroup int,
-	priority uint,
+	priority uint8,
 ) (
 	allInvalidRelevantExpiredTxs []*core.BridgeExpectedCardanoTx,
 	allProcessedExpectedTxs []*core.BridgeExpectedCardanoTx,
@@ -412,7 +412,7 @@ func (bp *CardanoTxsProcessorImpl) processAllForChain(
 
 	expectedTxsMap := make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
 	for _, expectedTx := range expectedTxs {
-		expectedTxsMap[expectedTx.ToCardanoTxKey()] = expectedTx
+		expectedTxsMap[string(expectedTx.ToCardanoTxKey())] = expectedTx
 	}
 
 	for {
@@ -458,7 +458,7 @@ func (bp *CardanoTxsProcessorImpl) constructBridgeClaimsBlockInfo(
 	found := false
 	minSlot := uint64(math.MaxUint64)
 
-	var blockHash string
+	var blockHash indexer.Hash
 
 	if len(unprocessedTxs) > 0 {
 		// unprocessed are ordered by slot, so first in collection is min
@@ -568,10 +568,12 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 			continue
 		}
 
-		expectedTx := expectedTxsMap[unprocessedTx.ToCardanoTxKey()]
-		if expectedTx != nil {
+		key := string(unprocessedTx.ToCardanoTxKey())
+
+		if expectedTx, exists := expectedTxsMap[key]; exists {
 			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-			delete(expectedTxsMap, expectedTx.ToCardanoTxKey())
+
+			delete(expectedTxsMap, key)
 		}
 
 		processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
@@ -698,7 +700,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
 			err := bp.bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
 				SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
-				SourceTxHash:  hex.EncodeToString(brClaim.ObservedTransactionHash[:]),
+				SourceTxHash:  brClaim.ObservedTransactionHash,
 			}, common.ToStrChainID(brClaim.DestinationChainId))
 
 			if err != nil {
@@ -714,7 +716,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 			err := bp.bridgingRequestStateUpdater.ExecutedOnDestination(
 				common.ToStrChainID(beClaim.ChainId),
 				beClaim.BatchNonceId,
-				hex.EncodeToString(beClaim.ObservedTransactionHash[:]))
+				beClaim.ObservedTransactionHash)
 
 			if err != nil {
 				bp.logger.Error(
@@ -742,7 +744,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	for _, tx := range processedTxs {
 		if tx.IsInvalid {
 			for _, unprocessedTx := range unprocessedTxs {
-				if unprocessedTx.ToCardanoTxKey() == tx.ToCardanoTxKey() {
+				if bytes.Equal(unprocessedTx.ToCardanoTxKey(), tx.ToCardanoTxKey()) {
 					txProcessor, err := bp.getTxProcessor(unprocessedTx.Metadata)
 					if err != nil {
 						bp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)

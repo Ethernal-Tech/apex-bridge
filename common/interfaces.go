@@ -10,7 +10,7 @@ type BridgingRequestStateUpdater interface {
 	IncludedInBatch(destinationChainID string, batchID uint64, txs []BridgingRequestStateKey) error
 	SubmittedToDestination(destinationChainID string, batchID uint64) error
 	FailedToExecuteOnDestination(destinationChainID string, batchID uint64) error
-	ExecutedOnDestination(destinationChainID string, batchID uint64, destinationTxHash string) error
+	ExecutedOnDestination(destinationChainID string, batchID uint64, destinationTxHash indexer.Hash) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

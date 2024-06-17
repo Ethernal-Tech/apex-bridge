@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
 type BridgingRequestStatus string
@@ -18,30 +20,30 @@ const (
 
 type BridgingRequestState struct {
 	SourceChainID      string
-	SourceTxHash       string
+	SourceTxHash       indexer.Hash
 	DestinationChainID string
 	BatchID            uint64
 	Status             BridgingRequestStatus
-	DestinationTxHash  string
+	DestinationTxHash  indexer.Hash
 }
 
 func (s *BridgingRequestState) ToStrKey() string {
-	return fmt.Sprintf("%v_%v", s.SourceChainID, s.SourceTxHash)
+	return ToBridgingRequestStateStrKey(s.SourceChainID, s.SourceTxHash)
 }
 
 func (s *BridgingRequestState) ToDBKey() []byte {
-	return []byte(s.ToStrKey())
+	return ToBridgingRequestStateDBKey(s.SourceChainID, s.SourceTxHash)
 }
 
-func ToBridgingRequestStateStrKey(sourceChainID string, sourceTxHash string) string {
-	return fmt.Sprintf("%v_%v", sourceChainID, sourceTxHash)
+func ToBridgingRequestStateStrKey(sourceChainID string, sourceTxHash indexer.Hash) string {
+	return fmt.Sprintf("%v_%s", sourceChainID, sourceTxHash)
 }
 
-func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash string) []byte {
-	return []byte(ToBridgingRequestStateStrKey(sourceChainID, sourceTxHash))
+func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash indexer.Hash) []byte {
+	return append(append([]byte(sourceChainID), '_'), sourceTxHash[:]...)
 }
 
-func NewBridgingRequestState(sourceChainID string, sourceTxHash string) *BridgingRequestState {
+func NewBridgingRequestState(sourceChainID string, sourceTxHash indexer.Hash) *BridgingRequestState {
 	return &BridgingRequestState{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
@@ -109,7 +111,7 @@ func (s *BridgingRequestState) ToFailedToExecuteOnDestination() error {
 	return nil
 }
 
-func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash string) error {
+func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash indexer.Hash) error {
 	if s.Status != BridgingRequestStatusIncludedInBatch &&
 		s.Status != BridgingRequestStatusSubmittedToDestination {
 		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",

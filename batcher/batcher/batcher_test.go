@@ -2,7 +2,6 @@ package batcher
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -331,15 +330,15 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		require.Equal(t, []common.BridgingRequestStateKey{
 			{
 				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  hex.EncodeToString(included[0][:]),
+				SourceTxHash:  included[0],
 			},
 			{
 				SourceChainID: common.ChainIDStrVector,
-				SourceTxHash:  hex.EncodeToString(included[1][:]),
+				SourceTxHash:  included[1],
 			},
 			{
 				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  hex.EncodeToString(included[2][:]),
+				SourceTxHash:  included[2],
 			},
 		}, res)
 	})

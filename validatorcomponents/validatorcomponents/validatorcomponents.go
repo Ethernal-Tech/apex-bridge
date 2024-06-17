@@ -2,7 +2,6 @@ package validatorcomponents
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path"
@@ -239,7 +238,7 @@ func populateUtxosAndAddresses(
 		for _, x := range utxos {
 			*outputs = append(*outputs, &indexer.TxInputOutput{
 				Input: indexer.TxInput{
-					Hash:  hex.EncodeToString(x.TxHash[:]),
+					Hash:  x.TxHash,
 					Index: uint32(x.TxIndex),
 				},
 				Output: indexer.TxOutput{

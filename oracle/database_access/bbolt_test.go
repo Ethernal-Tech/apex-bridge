@@ -7,6 +7,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -244,7 +245,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.MarkUnprocessedTxsAsProcessed(expectedProcessedTxs)
 		require.NoError(t, err)
 
-		tx, err := db.GetProcessedTx("", "")
+		tx, err := db.GetProcessedTx("", indexer.Hash{})
 		require.NoError(t, err)
 		require.Nil(t, tx)
 

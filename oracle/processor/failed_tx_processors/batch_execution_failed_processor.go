@@ -51,7 +51,7 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 	claims *core.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata,
 ) {
 	claim := core.BatchExecutionFailedClaim{
-		ObservedTransactionHash: common.MustHashToBytes32(tx.Hash),
+		ObservedTransactionHash: tx.Hash,
 		ChainId:                 common.ToNumChainID(tx.ChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 	}

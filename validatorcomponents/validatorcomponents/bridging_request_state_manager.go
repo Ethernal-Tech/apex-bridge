@@ -163,7 +163,7 @@ func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
-	destinationChainID string, batchID uint64, destinationTxHash string,
+	destinationChainID string, batchID uint64, destinationTxHash indexer.Hash,
 ) error {
 	return m.updateStatesByBatchID(destinationChainID, batchID, func(state *core.BridgingRequestState) error {
 		return state.ToExecutedOnDestination(destinationTxHash)
@@ -172,7 +172,7 @@ func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
 
 // Get implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Get(
-	sourceChainID string, sourceTxHash string,
+	sourceChainID string, sourceTxHash indexer.Hash,
 ) (
 	*core.BridgingRequestState, error,
 ) {
@@ -191,7 +191,7 @@ func (m *BridgingRequestStateManagerImpl) Get(
 
 // GetAllForUser implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) GetMultiple(
-	sourceChainID string, sourceTxHashes []string,
+	sourceChainID string, sourceTxHashes []indexer.Hash,
 ) (
 	[]*core.BridgingRequestState, error,
 ) {

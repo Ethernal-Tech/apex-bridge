@@ -119,7 +119,7 @@ func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
-	destinationChainID string, batchID uint64, destinationTxHash string,
+	destinationChainID string, batchID uint64, destinationTxHash indexer.Hash,
 ) error {
 	if m.ReturnNil {
 		return nil

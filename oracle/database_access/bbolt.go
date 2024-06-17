@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"go.etcd.io/bbolt"
 )
 
@@ -53,7 +54,7 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 				return fmt.Errorf("could not marshal unprocessed tx: %w", err)
 			}
 
-			if err = tx.Bucket(unprocessedTxsBucket).Put([]byte(unprocessedTx.ToUnprocessedTxKey()), bytes); err != nil {
+			if err = tx.Bucket(unprocessedTxsBucket).Put(unprocessedTx.ToUnprocessedTxKey(), bytes); err != nil {
 				return fmt.Errorf("unprocessed tx write error: %w", err)
 			}
 		}
@@ -63,7 +64,7 @@ func (bd *BBoltDatabase) AddUnprocessedTxs(unprocessedTxs []*core.CardanoTx) err
 }
 
 func (bd *BBoltDatabase) GetUnprocessedTxs(
-	chainID string, priority uint, threshold int,
+	chainID string, priority uint8, threshold int,
 ) ([]*core.CardanoTx, error) {
 	var result []*core.CardanoTx
 
@@ -138,7 +139,7 @@ func (bd *BBoltDatabase) ClearUnprocessedTxs(chainID string) error {
 			}
 
 			if strings.Compare(unprocessedTx.OriginChainID, chainID) == 0 {
-				if err := cursor.Bucket().Delete([]byte(unprocessedTx.ToUnprocessedTxKey())); err != nil {
+				if err := cursor.Bucket().Delete(unprocessedTx.ToUnprocessedTxKey()); err != nil {
 					return err
 				}
 			}
@@ -160,7 +161,7 @@ func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proc
 				return fmt.Errorf("processed tx write error: %w", err)
 			}
 
-			if err := tx.Bucket(unprocessedTxsBucket).Delete([]byte(processedTx.ToUnprocessedTxKey())); err != nil {
+			if err := tx.Bucket(unprocessedTxsBucket).Delete(processedTx.ToUnprocessedTxKey()); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %w", err)
 			}
 		}
@@ -186,9 +187,11 @@ func (bd *BBoltDatabase) AddProcessedTxs(processedTxs []*core.ProcessedCardanoTx
 	})
 }
 
-func (bd *BBoltDatabase) GetProcessedTx(chainID string, txHash string) (result *core.ProcessedCardanoTx, err error) {
+func (bd *BBoltDatabase) GetProcessedTx(
+	chainID string, txHash indexer.Hash,
+) (result *core.ProcessedCardanoTx, err error) {
 	err = bd.db.View(func(tx *bbolt.Tx) error {
-		if data := tx.Bucket(processedTxsBucket).Get([]byte(core.ToCardanoTxKey(chainID, txHash))); len(data) > 0 {
+		if data := tx.Bucket(processedTxsBucket).Get(core.ToCardanoTxKey(chainID, txHash)); len(data) > 0 {
 			return json.Unmarshal(data, &result)
 		}
 
@@ -202,7 +205,9 @@ func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardan
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
-			if data := bucket.Get(expectedTx.Key()); len(data) == 0 {
+			key := expectedTx.Key()
+
+			if data := bucket.Get(key); len(data) == 0 {
 				expectedDBTx := &core.BridgeExpectedCardanoDBTx{
 					BridgeExpectedCardanoTx: *expectedTx,
 					IsProcessed:             false,
@@ -214,7 +219,7 @@ func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardan
 					return fmt.Errorf("could not marshal expected tx: %w", err)
 				}
 
-				if err = bucket.Put(expectedDBTx.Key(), bytes); err != nil {
+				if err = bucket.Put(key, bytes); err != nil {
 					return fmt.Errorf("expected tx write error: %w", err)
 				}
 			}
@@ -225,7 +230,7 @@ func (bd *BBoltDatabase) AddExpectedTxs(expectedTxs []*core.BridgeExpectedCardan
 }
 
 func (bd *BBoltDatabase) GetExpectedTxs(
-	chainID string, priority uint, threshold int,
+	chainID string, priority uint8, threshold int,
 ) ([]*core.BridgeExpectedCardanoTx, error) {
 	var result []*core.BridgeExpectedCardanoTx
 
@@ -313,7 +318,9 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeEx
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
-			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
+			key := expectedTx.Key()
+
+			if data := bucket.Get(key); len(data) > 0 {
 				var dbExpectedTx *core.BridgeExpectedCardanoDBTx
 
 				if err := json.Unmarshal(data, &dbExpectedTx); err != nil {
@@ -327,7 +334,7 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsProcessed(expectedTxs []*core.BridgeEx
 					return fmt.Errorf("could not marshal db expected tx: %w", err)
 				}
 
-				if err := bucket.Put(dbExpectedTx.Key(), bytes); err != nil {
+				if err := bucket.Put(key, bytes); err != nil {
 					return fmt.Errorf("db expected tx write error: %w", err)
 				}
 			}
@@ -341,7 +348,9 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(expectedTxsBucket)
 		for _, expectedTx := range expectedTxs {
-			if data := bucket.Get(expectedTx.Key()); len(data) > 0 {
+			key := expectedTx.Key()
+
+			if data := bucket.Get(key); len(data) > 0 {
 				var dbExpectedTx *core.BridgeExpectedCardanoDBTx
 
 				if err := json.Unmarshal(data, &dbExpectedTx); err != nil {
@@ -355,7 +364,7 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 					return fmt.Errorf("could not marshal db expected tx: %w", err)
 				}
 
-				if err := bucket.Put(dbExpectedTx.Key(), bytes); err != nil {
+				if err := bucket.Put(key, bytes); err != nil {
 					return fmt.Errorf("db expected tx write error: %w", err)
 				}
 			}

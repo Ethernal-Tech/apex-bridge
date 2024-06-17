@@ -1,6 +1,8 @@
 package response
 
-import "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+import (
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+)
 
 type BridgingRequestStateResponse struct {
 	SourceChainID      string                     `json:"sourceChainId"`
@@ -13,9 +15,9 @@ type BridgingRequestStateResponse struct {
 func NewBridgingRequestStateResponse(state *core.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
 		SourceChainID:      state.SourceChainID,
-		SourceTxHash:       state.SourceTxHash,
+		SourceTxHash:       state.SourceTxHash.String(),
 		DestinationChainID: state.DestinationChainID,
-		DestinationTxHash:  state.DestinationTxHash,
+		DestinationTxHash:  state.DestinationTxHash.String(),
 		Status:             state.Status,
 	}
 }

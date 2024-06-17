@@ -45,7 +45,7 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer
 			if block != nil && block.BlockSlot != nil && block.BlockSlot.BitLen() > 0 {
 				blockPoint = &indexer.BlockPoint{
 					BlockSlot: block.BlockSlot.Uint64(),
-					BlockHash: block.BlockHash[:],
+					BlockHash: block.BlockHash,
 				}
 			}
 
@@ -85,7 +85,7 @@ func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeEx
 
 			expectedTx := &core.BridgeExpectedCardanoTx{
 				ChainID:  chainID,
-				Hash:     tx.Hash,
+				Hash:     indexer.NewHashFromHexString(tx.Hash),
 				TTL:      tx.TTL,
 				Metadata: tx.MetaData,
 				Priority: 0,

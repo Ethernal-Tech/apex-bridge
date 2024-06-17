@@ -1,7 +1,6 @@
 package failedtxprocessors
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -61,8 +60,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
-		txHashBytes := common.MustHashToBytes32("0x2244FF")
-		txHash := hex.EncodeToString(txHashBytes[:])
+		txHash := common.MustHashToBytes32("0x2244FF")
 
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantFullMetadata,
@@ -71,7 +69,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
-		require.Equal(t, txHash, hex.EncodeToString(claims.BatchExecutionFailedClaims[0].ObservedTransactionHash[:]))
+		require.Equal(t, txHash, claims.BatchExecutionFailedClaims[0].ObservedTransactionHash)
 		require.Equal(t, batchNonceID, claims.BatchExecutionFailedClaims[0].BatchNonceId)
 	})
 }

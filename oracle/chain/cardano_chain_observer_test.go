@@ -170,7 +170,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		select {
 		case <-timer.C:
-			t.Fail()
+			t.Fatal("timeout")
 		case <-doneCh:
 		}
 	})
