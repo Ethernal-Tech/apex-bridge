@@ -7,10 +7,12 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	TxRaw  []byte
-	TxHash string
-	Utxos  eth.UTXOs
-	Slot   uint64
+	TxRaw        []byte
+	TxHash       string
+	Proposal     eth.BatchProposerData
+	ValidatorIdx int
+	ProposerIdx  int
+	BlockNumber  uint64
 }
 
 type BatcherManager interface {

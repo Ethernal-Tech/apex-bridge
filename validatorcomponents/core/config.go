@@ -51,17 +51,6 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
 
 	for chainID, ccConfig := range appConfig.CardanoChains {
-		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
-			ChainID:                  chainID,
-			NetworkAddress:           ccConfig.NetworkAddress,
-			NetworkMagic:             ccConfig.NetworkMagic,
-			StartBlockHash:           ccConfig.StartBlockHash,
-			StartSlot:                ccConfig.StartSlot,
-			StartBlockNumber:         ccConfig.StartBlockNumber,
-			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
-			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
-		}
-
 		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
 			TestNetMagic:          ccConfig.NetworkMagic,
 			OgmiosURL:             ccConfig.OgmiosURL,
@@ -79,6 +68,18 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			ChainType:     "Cardano",
 			ChainSpecific: chainSpecificJSONRaw,
 		})
+
+		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
+			ChainID:                  chainID,
+			NetworkAddress:           ccConfig.NetworkAddress,
+			NetworkMagic:             ccConfig.NetworkMagic,
+			StartBlockHash:           ccConfig.StartBlockHash,
+			StartSlot:                ccConfig.StartSlot,
+			StartBlockNumber:         ccConfig.StartBlockNumber,
+			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
+			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
+			ChainSpecific:            chainSpecificJSONRaw,
+		}
 	}
 
 	oracleConfig := &oracleCore.AppConfig{

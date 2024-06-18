@@ -11,9 +11,9 @@ import (
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
-type UTXOs = contractbinding.IBridgeStructsUTXOs
-type UTXO = contractbinding.IBridgeStructsUTXO
+type BatchProposerData = contractbinding.IBridgeStructsBatchProposerData
 type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
+type UTXO = contractbinding.IBridgeStructsUTXO
 
 type ConfirmedBatch struct {
 	ID                         uint64
@@ -53,26 +53,39 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString("\nlast tx nonce id = ")
 	sb.WriteString(fmt.Sprint(b.LastTxNonceId))
 
-	sb.WriteString("\nmultisig owned used utxos cnt = ")
-	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
-	sb.WriteString("\nmultisig owned used utxos = [")
+	sb.WriteString("\nslot = ")
+	sb.WriteString(fmt.Sprint(b.ProposerData.Slot))
+	sb.WriteString("\nmultisig utxos cnt = ")
+	sb.WriteString(fmt.Sprint(len(b.ProposerData.MultisigUTXOs)))
+	sb.WriteString("\nmultisig utxos = ")
 
-	for _, utxo := range b.UsedUTXOs.MultisigOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	for i, utxo := range b.ProposerData.MultisigUTXOs {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteRune('{')
+		sb.WriteString(hex.EncodeToString(utxo.TxHash[:]))
+		sb.WriteRune(',')
+		sb.WriteString(fmt.Sprint(utxo.TxIndex))
+		sb.WriteRune('}')
 	}
 
-	sb.WriteString("]")
-	sb.WriteString("\nfeepayer owned used utxos cnt = ")
-	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.FeePayerOwnedUTXOs)))
-	sb.WriteString("\nfeepayer owned used utxos = [")
+	sb.WriteString("\nfeepayer utxos cnt = ")
+	sb.WriteString(fmt.Sprint(len(b.ProposerData.FeePayerUTXOs)))
+	sb.WriteString("\nfeepayer utxos = ")
 
-	for _, utxo := range b.UsedUTXOs.FeePayerOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
+	for i, utxo := range b.ProposerData.FeePayerUTXOs {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteRune('{')
+		sb.WriteString(hex.EncodeToString(utxo.TxHash[:]))
+		sb.WriteRune(',')
+		sb.WriteString(fmt.Sprint(utxo.TxIndex))
+		sb.WriteRune('}')
 	}
-
-	sb.WriteString("]")
 
 	return sb.String()
 }

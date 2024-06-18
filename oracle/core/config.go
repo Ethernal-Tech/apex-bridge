@@ -1,6 +1,8 @@
 package core
 
 import (
+	"encoding/json"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
@@ -21,6 +23,7 @@ type CardanoChainConfig struct {
 	BridgingAddresses        BridgingAddresses        `json:"bridgingAddresses"`
 	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
 	InitialUtxos             []*indexer.TxInputOutput `json:"initialUtxos"`
+	ChainSpecific            json.RawMessage          `json:"config"`
 }
 
 type SubmitConfig struct {

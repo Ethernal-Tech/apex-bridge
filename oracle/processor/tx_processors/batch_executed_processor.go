@@ -43,49 +43,16 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addBatchExecutedClaim(appConfig, claims, tx, metadata)
-
-	return nil
-}
-
-func (p *BatchExecutedProcessorImpl) addBatchExecutedClaim(
-	appConfig *core.AppConfig, claims *core.BridgeClaims,
-	tx *core.CardanoTx, metadata *common.BatchExecutedMetadata,
-) {
-	bridgingAddrUtxos := make([]core.UTXO, 0)
-	feeAddrUtxos := make([]core.UTXO, 0)
-	addrs := appConfig.CardanoChains[tx.OriginChainID].BridgingAddresses
-
-	for idx, utxo := range tx.Outputs {
-		if utxo.Address == addrs.BridgingAddress {
-			bridgingAddrUtxos = append(bridgingAddrUtxos, core.UTXO{
-				TxHash:  tx.Hash,
-				TxIndex: uint64(idx),
-				Amount:  utxo.Amount,
-			})
-		} else if utxo.Address == addrs.FeeAddress {
-			feeAddrUtxos = append(feeAddrUtxos, core.UTXO{
-				TxHash:  tx.Hash,
-				TxIndex: uint64(idx),
-				Amount:  utxo.Amount,
-			})
-		}
-	}
-
-	claim := core.BatchExecutedClaim{
+	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, core.BatchExecutedClaim{
 		ObservedTransactionHash: tx.Hash,
 		ChainId:                 common.ToNumChainID(tx.OriginChainID),
 		BatchNonceId:            metadata.BatchNonceID,
-		OutputUTXOs: core.UTXOs{
-			MultisigOwnedUTXOs: bridgingAddrUtxos,
-			FeePayerOwnedUTXOs: feeAddrUtxos,
-		},
-	}
-
-	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, claim)
+	})
 
 	p.logger.Info("Added BatchExecutedClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.BatchExecutedClaimString(claim))
+		"txHash", tx.Hash, "chainId", tx.OriginChainID, "BatchNonceId", metadata.BatchNonceID)
+
+	return nil
 }
 
 func (*BatchExecutedProcessorImpl) validate(

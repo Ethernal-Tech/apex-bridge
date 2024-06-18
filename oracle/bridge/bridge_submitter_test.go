@@ -27,7 +27,6 @@ func TestBridgeSubmitter(t *testing.T) {
 						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
 						SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 						DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
-						OutputUTXO:              core.UTXO{},
 						Receivers:               []core.BridgingRequestReceiver{},
 					},
 				},
@@ -35,7 +34,6 @@ func TestBridgeSubmitter(t *testing.T) {
 					{
 						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
 						BatchNonceId:            1,
-						OutputUTXOs:             core.UTXOs{},
 					},
 				},
 			},

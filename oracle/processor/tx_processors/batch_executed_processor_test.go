@@ -77,7 +77,6 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, [32]byte{}, claims.BatchExecutedClaims[0].ObservedTransactionHash)
-		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 0)
 	})
 
 	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
@@ -146,12 +145,6 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, txHash[:], claims.BatchExecutedClaims[0].ObservedTransactionHash[:])
 		require.Equal(t, batchNonceID, claims.BatchExecutedClaims[0].BatchNonceId)
-		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs)
-		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs, 1)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.MultisigOwnedUTXOs[0].Amount, txOutputs[0].Amount)
-		require.NotNil(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs)
-		require.Len(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs, 1)
-		require.Equal(t, claims.BatchExecutedClaims[0].OutputUTXOs.FeePayerOwnedUTXOs[0].Amount, txOutputs[1].Amount)
 	})
 
 	t.Run("validate method fail", func(t *testing.T) {

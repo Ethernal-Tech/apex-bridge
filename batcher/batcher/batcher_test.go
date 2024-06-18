@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -61,7 +62,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		_, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to query bridge.GetNextBatchID")
@@ -74,9 +75,10 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), nil)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
+		require.Equal(t, batchID, uint64(0))
 	})
 
 	t.Run("GetConfirmedTransactions returns error", func(t *testing.T) {
@@ -87,16 +89,17 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(nil, testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to query bridge.GetConfirmedTransactions")
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
+			ObservedTransactionHash: indexer.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []contractbinding.IBridgeStructsReceiver{
@@ -118,16 +121,12 @@ func TestBatcherExecute(t *testing.T) {
 			Return((*core.GeneratedBatchTxData)(nil), testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to generate batch transaction")
+		require.Equal(t, batchNonceID, batchID)
 	})
-
-	utxos := eth.UTXOs{
-		MultisigOwnedUTXOs: []eth.UTXO{},
-		FeePayerOwnedUTXOs: []eth.UTXO{},
-	}
 
 	t.Run("SignBatchTransaction returns error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
@@ -139,15 +138,15 @@ func TestBatcherExecute(t *testing.T) {
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
-				Utxos:  utxos,
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return(nil, nil, testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to sign batch transaction")
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	t.Run("SubmitSignedBatch returns error", func(t *testing.T) {
@@ -160,16 +159,16 @@ func TestBatcherExecute(t *testing.T) {
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
-				Utxos:  utxos,
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to submit signed batch")
+		require.Equal(t, batchID, batchNonceID)
 	})
 
 	t.Run("execute pass", func(t *testing.T) {
@@ -182,15 +181,41 @@ func TestBatcherExecute(t *testing.T) {
 			Return(&core.GeneratedBatchTxData{
 				TxRaw:  []byte{0},
 				TxHash: "txHash",
-				Utxos:  utxos,
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(nil)
 
 		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
+		require.Equal(t, batchID, batchNonceID)
+	})
+
+	t.Run("execute same tx hash", func(t *testing.T) {
+		const txHash = "txHash"
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &cardanoChainOperationsMock{}
+
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
+			Return(&core.GeneratedBatchTxData{
+				TxRaw:  []byte{0},
+				TxHash: txHash,
+			}, nil)
+
+		b := NewBatcher(config, hclog.Default(), operationsMock, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true})
+		b.lastBatch = lastBatchData{
+			id:     1,
+			txHash: txHash,
+		}
+
+		batchID, err := b.execute(ctx)
+
+		require.NoError(t, err)
+		require.Equal(t, batchNonceID, batchID)
 	})
 }
 
