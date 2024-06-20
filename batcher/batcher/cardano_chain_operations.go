@@ -35,8 +35,8 @@ const (
 	minFeeUtxosSum       = 3_000_000
 	takeAtLeastUtxoCount = 50
 
-	proposerEpochBlockCount   = 20
-	proposerSlotToleranceDiff = 1000
+	proposerEpochBlockCount             = 20
+	proposerSlotToleranceDiffMultipiler = 8
 )
 
 type txVariableDataInfo struct {
@@ -54,12 +54,13 @@ func (txvar txVariableDataInfo) toBatchProposal() eth.BatchProposerData {
 }
 
 func (txvar *txVariableDataInfo) update(
-	slotRoundingThreshold, txCost uint64,
+	slotRoundingThreshold, txCost uint64, outputsCount int,
 ) (err error) {
 	txvar.slot = getRoundedSlot(txvar.slot, slotRoundingThreshold)
 	txvar.feeUtxos = txvar.feeUtxos[:min(len(txvar.feeUtxos), maxFeeUtxoCount)]
 	txvar.multisigUtxos, err = getNeededUtxos(
-		txvar.multisigUtxos, txCost, minUtxoAmount, len(txvar.feeUtxos), maxUtxoCount, takeAtLeastUtxoCount)
+		txvar.multisigUtxos, txCost, minUtxoAmount,
+		outputsCount+len(txvar.feeUtxos), maxUtxoCount, takeAtLeastUtxoCount)
 
 	return err
 }
@@ -68,9 +69,10 @@ func (txvar *txVariableDataInfo) validateAndUpdate(
 	proposal eth.BatchProposerData, slotRoundingThreshold, txCost uint64,
 ) (err error) {
 	txvar.slot = getRoundedSlot(txvar.slot, slotRoundingThreshold)
+	maxAllowedDiff := proposerSlotToleranceDiffMultipiler * slotRoundingThreshold
 
-	if txvar.slot >= proposal.Slot && txvar.slot-proposal.Slot > proposerSlotToleranceDiff ||
-		txvar.slot < proposal.Slot && proposal.Slot-txvar.slot > proposerSlotToleranceDiff {
+	if txvar.slot >= proposal.Slot && txvar.slot-proposal.Slot > maxAllowedDiff ||
+		txvar.slot < proposal.Slot && proposal.Slot-txvar.slot > maxAllowedDiff {
 		return fmt.Errorf("proposed slot is not good: %d. current: %d", proposal.Slot, txvar.slot)
 	}
 
@@ -80,7 +82,7 @@ func (txvar *txVariableDataInfo) validateAndUpdate(
 	}
 
 	if len(proposal.FeePayerUTXOs)+len(proposal.MultisigUTXOs) > maxUtxoCount {
-		return fmt.Errorf("proposed fee utxos count is not good: %d. max: %d",
+		return fmt.Errorf("proposed utxos count is not good: %d. max: %d",
 			len(proposal.FeePayerUTXOs)+len(proposal.MultisigUTXOs), maxUtxoCount)
 	}
 
@@ -184,7 +186,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	err = cco.validateAndUpdateTxVariableData(
-		isProposer, &txVariableData, proposal, cco.Config.SlotRoundingThreshold, txOutputs.Sum.Uint64())
+		isProposer, &txVariableData, proposal,
+		cco.Config.SlotRoundingThreshold, txOutputs.Sum.Uint64(), len(txOutputs.Outputs))
 	if err != nil {
 		return nil, err
 	}
@@ -350,8 +353,8 @@ func (cco *CardanoChainOperations) getTxVariableData(
 }
 
 func (cco *CardanoChainOperations) validateAndUpdateTxVariableData(
-	isProposer bool, txVariableData *txVariableDataInfo,
-	proposal eth.BatchProposerData, slotRoundingThreshold, txCost uint64,
+	isProposer bool, txVariableData *txVariableDataInfo, proposal eth.BatchProposerData,
+	slotRoundingThreshold, txCost uint64, outputsCount int,
 ) error {
 	if !isProposer {
 		return txVariableData.validateAndUpdate(proposal, slotRoundingThreshold, txCost)
@@ -368,7 +371,7 @@ func (cco *CardanoChainOperations) validateAndUpdateTxVariableData(
 		*txVariableData = oldTxVariableData
 	}
 
-	return txVariableData.update(slotRoundingThreshold, txCost)
+	return txVariableData.update(slotRoundingThreshold, txCost, outputsCount)
 }
 
 func getRoundedSlot(slot, threshold uint64) uint64 {
@@ -468,12 +471,7 @@ func getNeededUtxos(
 		chosenUTXOsSum += utxo.Amount // overflow is not considered
 
 		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx := findMinUtxo(chosenUTXOs)
-
-			chosenUTXOs[minChosenUTXOIdx] = utxo
-			chosenUTXOsSum -= minChosenUTXO.Amount
-			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
-			utxoCount--
+			return nil, fmt.Errorf("max utxo count is reached: %d", maxUtxoCount)
 		}
 
 		if chosenUTXOsSum >= txCostWithMinChange || chosenUTXOsSum == desiredAmount {
@@ -498,20 +496,6 @@ func getNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
-}
-
-func findMinUtxo(utxos []cardanowallet.Utxo) (cardanowallet.Utxo, int) {
-	min := utxos[0]
-	idx := 0
-
-	for i, utxo := range utxos[1:] {
-		if utxo.Amount < min.Amount {
-			min = utxo
-			idx = i + 1
-		}
-	}
-
-	return min, idx
 }
 
 func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
