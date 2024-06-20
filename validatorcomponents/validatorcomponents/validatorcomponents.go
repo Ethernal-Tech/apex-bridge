@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -17,6 +18,7 @@ import (
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
@@ -66,19 +68,8 @@ func NewValidatorComponents(
 	}
 
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
-
-	err = populateUtxosAndAddresses(
-		ctx, oracleConfig,
-		eth.NewBridgeSmartContract(
-			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
-			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
-		logger,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
-	}
-
 	indexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
+	txProviders := make(map[string]wallet.ITxProvider, len(oracleConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
 		indexerDB, err := indexerDb.NewDatabaseInit("",
@@ -88,6 +79,31 @@ func NewValidatorComponents(
 		}
 
 		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
+
+		// Handle Ethereum, and other type of chains
+		cardanoConfig, err := cardanotx.NewCardanoChainConfig(cardanoChainConfig.ChainSpecific)
+		if err != nil {
+			return nil, err
+		}
+
+		utxoRetriever, err := cardanoConfig.CreateTxProvider()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tx provider: %w", err)
+		}
+
+		txProviders[cardanoChainConfig.ChainID] = utxoRetriever
+	}
+
+	err = populateUtxosAndAddresses(
+		ctx, oracleConfig,
+		eth.NewBridgeSmartContract(
+			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
+			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
+		txProviders,
+		logger.Named("populateUtxosAndAddresses"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
 	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
@@ -211,10 +227,9 @@ func populateUtxosAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
 	smartContract eth.IBridgeSmartContract,
-	logger hclog.Logger,
+	txProviders map[string]wallet.ITxProvider,
+	l hclog.Logger,
 ) error {
-	l := logger.Named("populateUtxosAndAddresses")
-
 	l.Debug("trying to populate utxos and addresses")
 
 	var allRegisteredChains []contractbinding.IBridgeStructsChain
@@ -227,19 +242,18 @@ func populateUtxosAndAddresses(
 
 		return err
 	})
-
 	if err != nil {
 		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
 
 	l.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
-	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []eth.UTXO) {
+	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []wallet.Utxo) {
 		for _, x := range utxos {
 			*outputs = append(*outputs, &indexer.TxInputOutput{
 				Input: indexer.TxInput{
-					Hash:  x.TxHash,
-					Index: uint32(x.TxIndex),
+					Hash:  indexer.NewHashFromHexString(x.Hash),
+					Index: x.Index,
 				},
 				Output: indexer.TxOutput{
 					Address: address,
@@ -258,45 +272,47 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
-		var availableUtxos eth.UTXOs
+		var multisigUtxos, feeUtxos []wallet.Utxo
 
-		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, chainID)
+		err = common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+			multisigUtxos, err = txProviders[chainID].GetUtxos(ctx, regChain.AddressMultisig)
 			if err != nil {
-				l.Error(
-					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
-					"chainId", chainID, "err", err)
+				l.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
+					"chainId", chainID, "multisig", regChain.AddressMultisig, "err", err)
+
+				return err
+			}
+
+			feeUtxos, err = txProviders[chainID].GetUtxos(ctx, regChain.AddressFeePayer)
+			if err != nil {
+				l.Error("Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
+					"chainId", chainID, "fee", regChain.AddressFeePayer, "err", err)
 			}
 
 			return err
 		})
-
 		if err != nil {
 			return fmt.Errorf("error while RetryForever of GetAvailableUTXOs. err: %w", err)
 		}
 
-		l.Debug("done GetAvailableUTXOs", "chainID", chainID, "availableUtxos", availableUtxos)
+		l.Debug("done GetAvailableUTXOs", "chainID", chainID, "multisig", len(multisigUtxos), "fee", len(feeUtxos))
+
+		initialUtxos := make([]*indexer.TxInputOutput, 0, len(multisigUtxos)+len(feeUtxos))
+
+		addUtxos(&initialUtxos, regChain.AddressMultisig, multisigUtxos)
+		addUtxos(&initialUtxos, regChain.AddressFeePayer, feeUtxos)
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
 			FeeAddress:      regChain.AddressFeePayer,
 		}
-
-		chainConfig.InitialUtxos = make([]*indexer.TxInputOutput, 0,
-			len(availableUtxos.MultisigOwnedUTXOs)+len(availableUtxos.FeePayerOwnedUTXOs))
-
-		// InitialUtxos wont be needed, initially they should be included with GetAvailableUTXOs
-		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
-		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
-		addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, availableUtxos.MultisigOwnedUTXOs)
-		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
-
+		chainConfig.InitialUtxos = initialUtxos
 		resultChains[chainID] = chainConfig
 
 		l.Debug("updated chainConfig", "chainConfig", chainConfig)
 	}
 
-	config.CardanoChains = resultChains
+	config.CardanoChains = resultChains // we want to remove non registered chains
 
 	return nil
 }

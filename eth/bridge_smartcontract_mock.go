@@ -36,14 +36,16 @@ func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destina
 	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error) {
+func (m *BridgeSmartContractMock) GetBatchProposerData(
+	ctx context.Context, destinationChain string,
+) (BatchProposerData, error) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
-		return UTXOs{}, args.Error(1)
+		return BatchProposerData{}, args.Error(1)
 	}
 
-	arg0, _ := args.Get(0).(UTXOs)
+	arg0, _ := args.Get(0).(BatchProposerData)
 
 	return arg0, args.Error(1)
 }

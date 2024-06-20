@@ -436,8 +436,5 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount)
-
-		require.NotNil(t, claims.BridgingRequestClaims[0].OutputUTXO)
-		require.Equal(t, txOutputs[0].Amount, claims.BridgingRequestClaims[0].OutputUTXO.Amount)
 	})
 }
