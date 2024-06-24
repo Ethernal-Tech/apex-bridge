@@ -127,7 +127,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 }
 */
 
-func (*BridgingRequestedProcessorImpl) validate(
+func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) error {
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
@@ -164,8 +164,11 @@ func (*BridgingRequestedProcessorImpl) validate(
 		receiverAddr := strings.Join(receiver.Address, "")
 		// BridgingRequestedProcessorImpl must know for which chain it operates
 
-		_ /*addr*/, err := wallet.NewAddress(receiverAddr)
-		if err != nil /*|| addr.GetNetwork() != destinationChainConfig.NetworkID we don't have NetworkID yet*/ {
+		addr, err := wallet.NewAddress(receiverAddr)
+		if err != nil || uint32(addr.GetNetwork()) != destinationChainConfig.NetworkID {
+			p.logger.Warn("Invalid address", "addr", receiverAddr, "network", addr.GetNetwork(),
+				"expected", destinationChainConfig.NetworkID, "err", err)
+
 			foundAnInvalidReceiverAddr = true
 
 			break

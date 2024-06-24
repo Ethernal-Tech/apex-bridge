@@ -14,6 +14,7 @@ type CardanoChainConfig struct {
 	ChainID                  string
 	NetworkAddress           string                   `json:"networkAddress"`
 	NetworkMagic             uint32                   `json:"networkMagic"`
+	NetworkID                uint32                   `json:"networkID"`
 	StartBlockHash           string                   `json:"startBlockHash"`
 	StartSlot                uint64                   `json:"startSlot"`
 	StartBlockNumber         uint64                   `json:"startBlockNumber"`
