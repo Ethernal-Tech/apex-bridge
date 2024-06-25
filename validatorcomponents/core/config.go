@@ -9,6 +9,7 @@ import (
 
 type CardanoChainConfig struct {
 	NetworkAddress           string   `json:"networkAddress"`
+	NetworkID                uint32   `json:"networkID"`
 	NetworkMagic             uint32   `json:"networkMagic"`
 	StartBlockHash           string   `json:"startBlockHash"`
 	StartSlot                uint64   `json:"startSlot"`
@@ -55,6 +56,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			ChainID:                  chainID,
 			NetworkAddress:           ccConfig.NetworkAddress,
 			NetworkMagic:             ccConfig.NetworkMagic,
+			NetworkID:                ccConfig.NetworkID,
 			StartBlockHash:           ccConfig.StartBlockHash,
 			StartSlot:                ccConfig.StartSlot,
 			StartBlockNumber:         ccConfig.StartBlockNumber,

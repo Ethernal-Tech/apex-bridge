@@ -1,9 +1,9 @@
 package clicreateaddress
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -11,19 +11,16 @@ import (
 )
 
 const (
-	keyFlag               = "key"
-	testnetMagicFlag      = "testnet"
-	addrPrefixReplaceFlag = "prefix"
+	keyFlag       = "key"
+	networkIDFlag = "network-id"
 
-	keyFlagDesc               = "cardano verification key for validator"
-	testnetMagicFlagDesc      = "testnet magic number. leave 0 for mainnet"
-	addrPrefixReplaceFlagDesc = "prefix replacement for a address"
+	keyFlagDesc       = "cardano verification key for validator"
+	networkIDFlagDesc = "network ID"
 )
 
 type createAddressParams struct {
-	keys         []string
-	testnetMagic uint
-	addrPrefix   string
+	keys      []string
+	networkID uint
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -68,17 +65,10 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().UintVar(
-		&ip.testnetMagic,
-		testnetMagicFlag,
+		&ip.networkID,
+		networkIDFlag,
 		0,
-		testnetMagicFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.addrPrefix,
-		addrPrefixReplaceFlag,
-		"",
-		addrPrefixReplaceFlagDesc,
+		networkIDFlagDesc,
 	)
 }
 
@@ -87,22 +77,28 @@ func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
 
 	script, err := wallet.NewPolicyScript(ip.keys, int(atLeast))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create policy script: %w", err)
 	}
 
-	address, err := script.CreateMultiSigAddress(ip.testnetMagic)
+	policyId, err := script.GetPolicyID()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate policy id: %w", err)
 	}
 
-	if ip.addrPrefix != "" {
-		address = strings.Replace(
-			strings.Replace(address, "addr_test", ip.addrPrefix, 1),
-			"addr", ip.addrPrefix, 1,
-		)
+	policyIdBytes, err := hex.DecodeString(policyId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode policy id string: %w", err)
+	}
+
+	stakeCredential, err := wallet.NewStakeCredential(policyIdBytes, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stake credential: %w", err)
 	}
 
 	return &CmdResult{
-		address: address,
+		address: (wallet.EnterpriseAddress{
+			Network: wallet.CardanoNetworkType(ip.networkID),
+			Payment: stakeCredential,
+		}).String(),
 	}, nil
 }

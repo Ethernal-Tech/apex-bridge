@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +21,7 @@ import (
 const (
 	primeNetworkAddressFlag        = "prime-network-address"
 	primeNetworkMagicFlag          = "prime-network-magic"
+	primeNetworkIDFlag             = "prime-network-id"
 	primeKeysDirFlag               = "prime-keys-dir"
 	primeOgmiosURLFlag             = "prime-ogmios-url"
 	primeBlockfrostURLFlag         = "prime-blockfrost-url"
@@ -30,6 +32,7 @@ const (
 
 	vectorNetworkAddressFlag        = "vector-network-address"
 	vectorNetworkMagicFlag          = "vector-network-magic"
+	vectorNetworkIDFlag             = "vector-network-id"
 	vectorKeysDirFlag               = "vector-keys-dir"
 	vectorOgmiosURLFlag             = "vector-ogmios-url"
 	vectorBlockfrostURLFlag         = "vector-blockfrost-url"
@@ -56,7 +59,8 @@ const (
 	telemetryFlag = "telemetry"
 
 	primeNetworkAddressFlagDesc        = "(mandatory) address of prime network"
-	primeNetworkMagicFlagDesc          = "network magic of prime network (default 0)"
+	primeNetworkMagicFlagDesc          = "prime network magic (default 0)"
+	primeNetworkIDFlagDesc             = "prime network id"
 	primeKeysDirFlagDesc               = "path to cardano keys directory for prime network"
 	primeOgmiosURLFlagDesc             = "ogmios URL for prime network"
 	primeBlockfrostURLFlagDesc         = "blockfrost URL for prime network"
@@ -66,7 +70,8 @@ const (
 	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
-	vectorNetworkMagicFlagDesc          = "network magic of vector network (default 0)"
+	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
+	vectorNetworkIDFlagDesc             = "vector network id"
 	vectorKeysDirFlagDesc               = "path to cardano keys directory for vector network"
 	vectorOgmiosURLFlagDesc             = "ogmios URL for vector network"
 	vectorBlockfrostURLFlagDesc         = "blockfrost URL for vector network"
@@ -110,6 +115,7 @@ const (
 type generateConfigsParams struct {
 	primeNetworkAddress        string
 	primeNetworkMagic          uint32
+	primeNetworkID             uint32
 	primeKeysDir               string
 	primeOgmiosURL             string
 	primeBlockfrostURL         string
@@ -120,6 +126,7 @@ type generateConfigsParams struct {
 
 	vectorNetworkAddress        string
 	vectorNetworkMagic          uint32
+	vectorNetworkID             uint32
 	vectorKeysDir               string
 	vectorOgmiosURL             string
 	vectorBlockfrostURL         string
@@ -221,6 +228,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultNetworkMagic,
 		primeNetworkMagicFlagDesc,
 	)
+	cmd.Flags().Uint32Var(
+		&p.primeNetworkID,
+		primeNetworkIDFlag,
+		uint32(wallet.MainNetNetwork),
+		primeNetworkIDFlagDesc,
+	)
 	cmd.Flags().StringVar(
 		&p.primeKeysDir,
 		primeKeysDirFlag,
@@ -275,6 +288,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorNetworkMagicFlag,
 		defaultNetworkMagic,
 		vectorNetworkMagicFlagDesc,
+	)
+	cmd.Flags().Uint32Var(
+		&p.vectorNetworkID,
+		vectorNetworkIDFlag,
+		uint32(wallet.VectorMainNetNetwork),
+		vectorNetworkIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.vectorKeysDir,
@@ -426,6 +445,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
 				NetworkMagic:             p.primeNetworkMagic,
+				NetworkID:                p.primeNetworkID,
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,
@@ -443,6 +463,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
 				NetworkMagic:             p.vectorNetworkMagic,
+				NetworkID:                p.vectorNetworkID,
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,
