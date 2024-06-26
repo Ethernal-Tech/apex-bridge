@@ -213,7 +213,7 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(blockfrostURLFlag, socketPathFlag, ogmiosURLFlag)
 }
 
-func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
+func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
@@ -295,6 +295,9 @@ func (ip *registerChainParams) Execute() (common.ICommandResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
+	outputter.WriteOutput()
 
 	receipt, err := ip.ethTxHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if err != nil {

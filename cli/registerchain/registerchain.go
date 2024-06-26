@@ -28,7 +28,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	results, err := registerChainParamsData.Execute()
+	results, err := registerChainParamsData.Execute(outputter)
 	if err != nil {
 		outputter.SetError(err)
 
