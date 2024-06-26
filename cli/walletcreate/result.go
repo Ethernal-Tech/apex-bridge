@@ -20,25 +20,27 @@ type CmdResult struct {
 }
 
 func (r CmdResult) GetOutput() string {
-	var buffer bytes.Buffer
-
-	vals := []string{
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKey)),
-		fmt.Sprintf("Key Hash|%s", r.KeyHash),
-	}
+	var (
+		buffer  bytes.Buffer
+		vals    []string
+		valsFee []string
+	)
 
 	if r.showPrivateKey {
 		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.SigningKey)))
 	}
 
-	valsFee := []string{
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKeyFee)),
-		fmt.Sprintf("Key Hash|%s", r.KeyHashFee),
-	}
+	vals = append(vals,
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKey)),
+		fmt.Sprintf("Key Hash|%s", r.KeyHash))
 
 	if r.showPrivateKey {
 		valsFee = append(valsFee, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.SigningKeyFee)))
 	}
+
+	valsFee = append(valsFee,
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKeyFee)),
+		fmt.Sprintf("Key Hash|%s", r.KeyHashFee))
 
 	buffer.WriteString("\n[SECRETS ")
 	buffer.WriteString(r.chainID)

@@ -1,65 +1,73 @@
 package cardanotx
 
 import (
-	"path"
+	"encoding/json"
+	"fmt"
 
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-const (
-	multisigPath    = "multisig"
-	multisigFeePath = "multisigfee"
-)
-
 type CardanoWallet struct {
-	MultiSig    cardanowallet.IWallet
-	MultiSigFee cardanowallet.IWallet
+	MultiSig    *cardanowallet.Wallet `json:"multisig"`
+	MultiSigFee *cardanowallet.Wallet `json:"fee"`
 }
 
-func GenerateWallet(directory string, isStake bool, forceRegenerate bool) (*CardanoWallet, error) {
-	var walletMngr cardanowallet.IWalletManager
-	if isStake {
-		walletMngr = cardanowallet.NewStakeWalletManager()
-	} else {
-		walletMngr = cardanowallet.NewWalletManager()
+func GenerateWallet(
+	mngr secrets.SecretsManager, chain string, isStake bool, forceRegenerate bool,
+) (*CardanoWallet, error) {
+	keyName := fmt.Sprintf("%s%s_key", secrets.CardanoKeyLocalPrefix, chain)
+
+	if mngr.HasSecret(keyName) {
+		if !forceRegenerate {
+			return LoadWallet(mngr, chain)
+		}
+
+		if err := mngr.RemoveSecret(keyName); err != nil {
+			return nil, err
+		}
 	}
 
-	walletMultiSig, err := walletMngr.Create(path.Join(directory, multisigPath), forceRegenerate)
+	multisigWallet, err := cardanowallet.GenerateWallet(isStake)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate multisig wallet: %w", err)
 	}
 
-	walletMultiSigFee, err := walletMngr.Create(path.Join(directory, multisigFeePath), forceRegenerate)
+	feeWallet, err := cardanowallet.GenerateWallet(isStake)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate fee wallet: %w", err)
 	}
 
-	return &CardanoWallet{
-		MultiSig:    walletMultiSig,
-		MultiSigFee: walletMultiSigFee,
-	}, nil
+	cardanoWallet := &CardanoWallet{
+		MultiSig:    multisigWallet,
+		MultiSigFee: feeWallet,
+	}
+
+	bytes, err := json.Marshal(cardanoWallet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal wallet: %w", err)
+	}
+
+	if err := mngr.SetSecret(keyName, bytes); err != nil {
+		return nil, fmt.Errorf("failed to store wallet: %w", err)
+	}
+
+	return cardanoWallet, err
 }
 
-func LoadWallet(directory string, isStake bool) (*CardanoWallet, error) {
-	var walletMngr cardanowallet.IWalletManager
-	if isStake {
-		walletMngr = cardanowallet.NewStakeWalletManager()
-	} else {
-		walletMngr = cardanowallet.NewWalletManager()
-	}
+func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, error) {
+	keyName := fmt.Sprintf("%s%s_key", secrets.CardanoKeyLocalPrefix, chain)
 
-	walletMultiSig, err := walletMngr.Load(path.Join(directory, multisigPath))
+	bytes, err := mngr.GetSecret(keyName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	walletMultiSigFee, err := walletMngr.Load(path.Join(directory, multisigFeePath))
-	if err != nil {
-		return nil, err
+	var cardanoWallet *CardanoWallet
+
+	if err := json.Unmarshal(bytes, &cardanoWallet); err != nil {
+		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	return &CardanoWallet{
-		MultiSig:    walletMultiSig,
-		MultiSigFee: walletMultiSigFee,
-	}, nil
+	return cardanoWallet, nil
 }

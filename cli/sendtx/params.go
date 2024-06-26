@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"strconv"
 	"strings"
 
@@ -15,7 +14,6 @@ import (
 )
 
 const (
-	privateKeyDirFlag      = "key-dir"
 	privateKeyFlag         = "key"
 	ogmiosURLSrcFlag       = "ogmios-src"
 	receiverFlag           = "receiver"
@@ -26,7 +24,6 @@ const (
 	feeAmountFlag          = "fee"
 	ogmiosURLDstFlag       = "ogmios-dst"
 
-	privateKeyDirFlagDesc      = "wallet directory"
 	privateKeyFlagDesc         = "wallet private signing key"
 	ogmiosURLSrcFlagDesc       = "source chain ogmios url"
 	receiverFlagDesc           = "receiver addr:amount"
@@ -42,24 +39,23 @@ const (
 )
 
 type sendTxParams struct {
-	privateKeyDirectory string
-	privateKeyRaw       string
-	ogmiosURLSrc        string
-	receivers           []string
-	testnetMagicSrc     uint
-	chainIDDst          string
-	multisigAddrSrc     string
-	multisigFeeAddrDst  string
-	feeAmount           uint64
-	ogmiosURLDst        string
+	privateKeyRaw      string
+	ogmiosURLSrc       string
+	receivers          []string
+	testnetMagicSrc    uint
+	chainIDDst         string
+	multisigAddrSrc    string
+	multisigFeeAddrDst string
+	feeAmount          uint64
+	ogmiosURLDst       string
 
 	receiversParsed []cardanowallet.TxOutput
 	wallet          cardanowallet.IWallet
 }
 
 func (ip *sendTxParams) validateFlags() error {
-	if ip.privateKeyDirectory == "" && ip.privateKeyRaw == "" {
-		return fmt.Errorf("--%s or --%s must be specified", privateKeyDirFlag, privateKeyFlag)
+	if ip.privateKeyRaw == "" {
+		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
 	}
 
 	if ip.ogmiosURLSrc == "" || !common.IsValidURL(ip.ogmiosURLSrc) {
@@ -90,28 +86,14 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 	}
 
-	if ip.privateKeyRaw != "" {
-		bytes, err := (cardanowallet.Key{
-			Hex: ip.privateKeyRaw,
-		}).GetKeyBytes()
-		if err != nil || len(bytes) != 32 {
-			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
-		}
-
-		ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes),
-			bytes)
-	} else {
-		// first try to load with stake wallet manager, then with wallet manager
-		wallet, err := cardanowallet.NewStakeWalletManager().Load(path.Clean(ip.privateKeyDirectory))
-		if err != nil {
-			wallet, err = cardanowallet.NewWalletManager().Load(path.Clean(ip.privateKeyDirectory))
-			if err != nil {
-				return fmt.Errorf("invalid --%s value %s, err: %w", privateKeyDirFlag, ip.privateKeyDirectory, err)
-			}
-		}
-
-		ip.wallet = wallet
+	bytes, err := (cardanowallet.Key{
+		Hex: ip.privateKeyRaw,
+	}).GetKeyBytes()
+	if err != nil || len(bytes) != 32 {
+		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 	}
+
+	ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
 
 	receivers := make([]cardanowallet.TxOutput, 0, len(ip.receivers))
 
@@ -156,13 +138,6 @@ func (ip *sendTxParams) validateFlags() error {
 }
 
 func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(
-		&ip.privateKeyDirectory,
-		privateKeyDirFlag,
-		"",
-		privateKeyDirFlagDesc,
-	)
-
 	cmd.Flags().StringVar(
 		&ip.privateKeyRaw,
 		privateKeyFlag,
@@ -225,8 +200,6 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		"",
 		ogmiosURLDstFlagDesc,
 	)
-
-	cmd.MarkFlagsMutuallyExclusive(privateKeyDirFlag, privateKeyFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {

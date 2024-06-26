@@ -33,8 +33,6 @@ type BridgeConfig struct {
 	NodeURL              string       `json:"nodeUrl"`
 	DynamicTx            bool         `json:"dynamicTx"`
 	SmartContractAddress string       `json:"scAddress"`
-	ValidatorDataDir     string       `json:"validatorDataDir"`
-	ValidatorConfigPath  string       `json:"validatorConfigPath"`
 	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
@@ -51,10 +49,12 @@ type BridgingSettings struct {
 }
 
 type AppConfig struct {
-	CardanoChains    map[string]*CardanoChainConfig `json:"cardanoChains"`
-	Bridge           BridgeConfig                   `json:"bridge"`
-	Settings         AppSettings                    `json:"appSettings"`
-	BridgingSettings BridgingSettings               `json:"bridgingSettings"`
+	ValidatorDataDir    string                         `json:"validatorDataDir"`
+	ValidatorConfigPath string                         `json:"validatorConfigPath"`
+	CardanoChains       map[string]*CardanoChainConfig `json:"cardanoChains"`
+	Bridge              BridgeConfig                   `json:"bridge"`
+	Settings            AppSettings                    `json:"appSettings"`
+	BridgingSettings    BridgingSettings               `json:"bridgingSettings"`
 }
 
 func (appConfig *AppConfig) FillOut() {

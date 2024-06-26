@@ -11,37 +11,44 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
 
 type lastBatchData struct {
-	id   uint64
-	slot uint64
+	id     uint64
+	txHash string
 }
 
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
-	logger                      hclog.Logger
 	operations                  core.ChainOperations
+	db                          indexer.Database
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
+	logger                      hclog.Logger
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
 
 func NewBatcher(
 	config *core.BatcherConfiguration,
+	db indexer.Database,
+	operations core.ChainOperations,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
-	operations core.ChainOperations, bridgeSmartContract eth.IBridgeSmartContract,
-	bridgingRequestStateUpdater common.BridgingRequestStateUpdater) *BatcherImpl {
+) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
-		logger:                      logger,
+		db:                          db,
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
+		logger:                      logger,
 	}
 }
 
@@ -57,18 +64,14 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 		case <-time.After(waitTime):
 		}
 
-		if err := b.execute(ctx); err != nil {
+		batchID, err := b.execute(ctx)
+		if err != nil {
 			if errors.Is(err, errNonActiveBatchPeriod) {
 				b.logger.Info("execution skipped", "reason", err)
 			} else {
-				// update telemetry
-				if b.lastBatch.id == 0 {
-					batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
-					if err == nil {
-						telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID)
-					}
-				} else {
-					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, b.lastBatch.id+1)
+				// update telemetry only if batchID is specified
+				if batchID != 0 {
+					telemetry.UpdateBatcherBatchSubmitFailed(b.config.Chain.ChainID, batchID)
 				}
 
 				b.logger.Error("execution failed", "err", err)
@@ -77,24 +80,23 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 	}
 }
 
-func (b *BatcherImpl) execute(ctx context.Context) error {
+func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	// Check if I should create batch
 	batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetNextBatchID for chainID: %s. err: %w", b.config.Chain.ChainID, err)
+		return 0, fmt.Errorf("failed to query bridge.GetNextBatchID for chainID: %s. err: %w",
+			b.config.Chain.ChainID, err)
 	}
 
 	if batchID == 0 {
 		b.logger.Info("Waiting on a new batch", "chainID", b.config.Chain.ChainID)
 
-		return nil
+		return 0, nil
 	}
 
 	if batchID < b.lastBatch.id {
-		b.logger.Info("retrieved batch id not good", "chainID", b.config.Chain.ChainID,
-			"old", b.lastBatch.id, "new", batchID)
-
-		return nil
+		return 0, fmt.Errorf("retrieved batch id is not good for chainID: %s. old: %d vs new: %d",
+			b.config.Chain.ChainID, b.lastBatch.id, batchID)
 	}
 
 	b.logger.Info("Starting batch creation process", "chainID", b.config.Chain.ChainID, "batchID", batchID)
@@ -102,12 +104,12 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Get confirmed transactions from smart contract
 	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
+		return batchID, fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
 	if len(confirmedTransactions) == 0 {
-		return fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
+		return batchID, fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
 			b.config.Chain.ChainID)
 	}
 
@@ -118,15 +120,16 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
 		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	if err != nil {
-		return fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
+		return batchID, fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
-	if b.lastBatch.id == batchID && b.lastBatch.slot >= generatedBatchData.Slot {
-		b.logger.Debug("already submitted", "chainID", b.config.Chain.ChainID,
-			"batchID", batchID, "slot", b.lastBatch.slot)
+	if generatedBatchData.TxHash == b.lastBatch.txHash {
+		// there is nothing different to submit
+		b.logger.Debug("generated batch is the same as the previous one",
+			"chainID", b.config.Chain.ChainID, "batchID", batchID, "txHash", b.lastBatch.txHash)
 
-		return nil
+		return batchID, nil
 	}
 
 	b.logger.Info("Created batch tx", "chainID", b.config.Chain.ChainID, "txHash", generatedBatchData.TxHash,
@@ -135,7 +138,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
 	if err != nil {
-		return fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
+		return batchID, fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
@@ -160,7 +163,7 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
 	if err != nil {
-		return fmt.Errorf("failed to submit signed batch: %w", err)
+		return batchID, fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
 	if b.lastBatch.id != batchID {
@@ -184,19 +187,21 @@ func (b *BatcherImpl) execute(ctx context.Context) error {
 
 	// update last batch data
 	b.lastBatch = lastBatchData{
-		id:   batchID,
-		slot: generatedBatchData.Slot,
+		id:     batchID,
+		txHash: generatedBatchData.TxHash,
 	}
 
-	return nil
+	return batchID, nil
 }
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(config core.ChainConfig, logger hclog.Logger) (core.ChainOperations, error) {
+func GetChainSpecificOperations(
+	config core.ChainConfig, secretsManager secrets.SecretsManager, logger hclog.Logger,
+) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case "cardano":
-		return NewCardanoChainOperations(config.ChainSpecific, logger)
+		return NewCardanoChainOperations(config.ChainSpecific, secretsManager, config.ChainID, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

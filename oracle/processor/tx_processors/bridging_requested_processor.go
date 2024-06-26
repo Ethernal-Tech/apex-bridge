@@ -166,9 +166,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 		addr, err := wallet.NewAddress(receiverAddr)
 		if err != nil || uint32(addr.GetNetwork()) != destinationChainConfig.NetworkID {
-			p.logger.Warn("Invalid address", "addr", receiverAddr, "network", addr.GetNetwork(),
-				"expected", destinationChainConfig.NetworkID, "err", err)
-
 			foundAnInvalidReceiverAddr = true
 
 			break

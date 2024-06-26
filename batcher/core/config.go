@@ -8,8 +8,6 @@ type BridgeConfig struct {
 	NodeURL              string `json:"nodeUrl"`
 	DynamicTx            bool   `json:"dynamicTx"`
 	SmartContractAddress string `json:"scAddress"`
-	ValidatorDataDir     string `json:"validatorDataDir"`
-	ValidatorConfigPath  string `json:"validatorConfigPath"`
 }
 
 type BatcherConfiguration struct {
@@ -25,7 +23,9 @@ type ChainConfig struct {
 }
 
 type BatcherManagerConfiguration struct {
-	Bridge        BridgeConfig  `json:"bridge"`
-	Chains        []ChainConfig `json:"chains"`
-	PullTimeMilis uint64        `json:"pullTime"`
+	ValidatorDataDir    string        `json:"validatorDataDir"`
+	ValidatorConfigPath string        `json:"validatorConfigPath"`
+	Bridge              BridgeConfig  `json:"bridge"`
+	Chains              []ChainConfig `json:"chains"`
+	PullTimeMilis       uint64        `json:"pullTime"`
 }

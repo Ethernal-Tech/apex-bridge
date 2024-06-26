@@ -3,9 +3,8 @@ package batchermanager
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -13,8 +12,9 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	infraCommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,12 +29,11 @@ func TestBatcherManagerOperations(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	jsonData := []byte(fmt.Sprintf(`{
+	jsonData := []byte(`{
 		"socketPath": "./socket",
 		"testnetMagic": 2,
-		"potentialFee": 300000,
-		"keysDirPath": "%s"
-		}`, testDir))
+		"potentialFee": 300000
+		}`)
 
 	config := &core.BatcherManagerConfiguration{
 		Chains: []core.ChainConfig{
@@ -44,15 +43,21 @@ func TestBatcherManagerOperations(t *testing.T) {
 				ChainSpecific: json.RawMessage(jsonData),
 			},
 		},
-		Bridge:        core.BridgeConfig{},
-		PullTimeMilis: 2500,
+		Bridge: core.BridgeConfig{},
 	}
 
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
 	for _, chainConfig := range config.Chains {
-		wallet, err := cardanotx.GenerateWallet(testDir, false, true)
+		wallet, err := cardanotx.GenerateWallet(secretsMngr, chainConfig.ChainID, true, false)
 		require.NoError(t, err)
 
-		chainOp, err := batcher.GetChainSpecificOperations(chainConfig, hclog.NewNullLogger())
+		chainOp, err := batcher.GetChainSpecificOperations(
+			chainConfig, secretsMngr, hclog.NewNullLogger())
 		assert.NoError(t, err)
 
 		operationsType := reflect.TypeOf(chainOp)
@@ -89,18 +94,18 @@ func TestBatcherManagerCreation(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	_, err = cardanotx.GenerateWallet(testDir, false, true)
+	secretsPath := filepath.Join(testDir, "stp")
+
+	secretsMngr, err := common.GetSecretsManager(secretsPath, "", true)
 	require.NoError(t, err)
 
-	ecdsaValidatoSecretDirPath := path.Join(testDir, secrets.ConsensusFolderLocal)
-	require.NoError(t, infraCommon.CreateDirSafe(ecdsaValidatoSecretDirPath, 0770))
+	err = secretsMngr.SetSecret(secrets.ValidatorKey, []byte("6a9d5cf2d80878afcd6c268fc4972f23eab59ac258435d8c9ac5790b5e15da6d"))
+	require.NoError(t, err)
 
-	ecdsaValidatoSecretFilePath := path.Join(ecdsaValidatoSecretDirPath, secrets.ValidatorKeyLocal)
-	require.NoError(t, os.WriteFile(ecdsaValidatoSecretFilePath, []byte(
-		"6a9d5cf2d80878afcd6c268fc4972f23eab59ac258435d8c9ac5790b5e15da6d",
-	), 0770))
+	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", true, true)
+	require.NoError(t, err)
 
-	t.Run("creation fails - invalid operations", func(t *testing.T) {
+	t.Run("creation fails - secrets manager", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
 			Chains: []core.ChainConfig{
 				{
@@ -111,7 +116,61 @@ func TestBatcherManagerCreation(t *testing.T) {
 			},
 		}
 
-		_, err := NewBatcherManager(context.Background(), invalidConfig, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		require.Error(t, err)
+		_, err := NewBatcherManager(context.Background(),
+			invalidConfig, nil, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		require.ErrorContains(t, err, "failed to create secrets manager")
+	})
+
+	t.Run("creation fails - invalid operations", func(t *testing.T) {
+		invalidConfig := &core.BatcherManagerConfiguration{
+			ValidatorDataDir: secretsPath,
+			Chains: []core.ChainConfig{
+				{
+					ChainID:       common.ChainIDStrPrime,
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage(""),
+				},
+			},
+		}
+
+		_, err := NewBatcherManager(context.Background(),
+			invalidConfig, nil, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
+	})
+
+	t.Run("creation fails - database for chain not exists", func(t *testing.T) {
+		invalidConfig := &core.BatcherManagerConfiguration{
+			ValidatorDataDir: secretsPath,
+			Chains: []core.ChainConfig{
+				{
+					ChainID:       common.ChainIDStrPrime,
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage([]byte(`{ "testnetMagic": 2, "socketPath": "./" }`)),
+				},
+			},
+		}
+
+		_, err := NewBatcherManager(context.Background(),
+			invalidConfig, map[string]indexer.Database{}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		require.ErrorContains(t, err, "database not exists")
+	})
+
+	t.Run("pass", func(t *testing.T) {
+		invalidConfig := &core.BatcherManagerConfiguration{
+			ValidatorDataDir: secretsPath,
+			Chains: []core.ChainConfig{
+				{
+					ChainID:       common.ChainIDStrPrime,
+					ChainType:     "Cardano",
+					ChainSpecific: json.RawMessage([]byte(`{ "testnetMagic": 2, "socketPath": "./" }`)),
+				},
+			},
+		}
+
+		_, err := NewBatcherManager(context.Background(),
+			invalidConfig, map[string]indexer.Database{
+				common.ChainIDStrPrime: &indexer.DatabaseMock{},
+			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		require.NoError(t, err)
 	})
 }

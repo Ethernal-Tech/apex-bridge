@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -15,6 +15,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -30,18 +32,26 @@ func TestCardanoChainOperations(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	_, err = cardano.GenerateWallet(testDir, false, false)
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
 	require.NoError(t, err)
 
-	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	_, err = cardano.GenerateWallet(secretsMngr, "vector", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
 		"socketPath": "./socket",
 		"testnetMagic": 2,
-		"potentialFee": 300000,
-		"keysDirPath": "%s"
-		}`, testDir)))
+		"potentialFee": 300000
+		}`))
 
 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
@@ -65,7 +75,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		utxoCount := 10 // 10x 1Ada
@@ -91,7 +101,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "vector", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := generateUTXOInputs(30, 1000000)
@@ -116,7 +126,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "vector", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := generateUTXOInputs(30, 1000000)
@@ -142,7 +152,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "vector", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		count := 400
@@ -168,7 +178,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "vector", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := generateUTXORandomInputs(100, 1000000, 10000000)
@@ -192,7 +202,7 @@ func TestCardanoChainOperations(t *testing.T) {
 	})
 
 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
-		cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+		cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "prime", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		inputs := generateUTXOInputsOrdered()                         // 50, 40, 30, 101, 102, 103, 104, 105
@@ -227,16 +237,21 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	wallet, err := cardano.GenerateWallet(testDir, false, false)
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
 	require.NoError(t, err)
 
-	configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
-		"socketPath": "./socket",
-		"testnetMagic": 42,
-		"keysDirPath": "%s"
-		}`, testDir)))
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
 
-	cco, err := NewCardanoChainOperations(configRaw, hclog.NewNullLogger())
+	configRaw := json.RawMessage([]byte(`{
+		"socketPath": "./socket",
+		"testnetMagic": 42
+		}`))
+
+	cco, err := NewCardanoChainOperations(configRaw, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.TxProvider = &cardano.TxProviderTestMock{

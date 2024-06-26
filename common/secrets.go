@@ -34,13 +34,3 @@ func GetSecretsManager(
 		Path: dataPath,
 	})
 }
-
-func GetSecretsManagerFromConfig(
-	config *secretsInfra.SecretsManagerConfig,
-) (secretsInfra.SecretsManager, error) {
-	if config == nil {
-		config = &secretsInfra.SecretsManagerConfig{} // dummy, will raise unsupported error
-	}
-
-	return secretsInfraHelper.CreateSecretsManager(config)
-}

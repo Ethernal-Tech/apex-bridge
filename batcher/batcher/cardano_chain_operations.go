@@ -14,6 +14,7 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -45,6 +46,8 @@ type CardanoChainOperations struct {
 
 func NewCardanoChainOperations(
 	jsonConfig json.RawMessage,
+	secretsManager secrets.SecretsManager,
+	chainID string,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -57,9 +60,9 @@ func NewCardanoChainOperations(
 		return nil, fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
-	cardanoWallet, err := cardanoConfig.LoadWallet()
+	cardanoWallet, err := cardano.LoadWallet(secretsManager, chainID)
 	if err != nil {
-		return nil, fmt.Errorf("error while loading wallet info: %w", err)
+		return nil, err
 	}
 
 	return &CardanoChainOperations{
