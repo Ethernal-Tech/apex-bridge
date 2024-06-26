@@ -54,7 +54,7 @@ func TestBatcherExecute(t *testing.T) {
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 			hclog.NewNullLogger())
-		err := b.execute(ctx)
+		_, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to query bridge.GetNextBatchID")
@@ -68,9 +68,10 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
+		require.Equal(t, uint64(0), batchID)
 	})
 
 	t.Run("GetConfirmedTransactions returns error", func(t *testing.T) {
@@ -82,10 +83,11 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to query bridge.GetConfirmedTransactions")
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
@@ -114,10 +116,11 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to generate batch transaction")
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	utxos := eth.UTXOs{
@@ -141,10 +144,11 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to sign batch transaction")
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	t.Run("SubmitSignedBatch returns error", func(t *testing.T) {
@@ -164,10 +168,38 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to submit signed batch")
+		require.Equal(t, batchNonceID, batchID)
+	})
+
+	t.Run("execute same tx hash", func(t *testing.T) {
+		const txHash = "txHash"
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &cardanoChainOperationsMock{}
+
+		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
+		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
+		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
+			Return(&core.GeneratedBatchTxData{
+				TxRaw:  []byte{0},
+				TxHash: txHash,
+			}, nil)
+
+		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		b.lastBatch = lastBatchData{
+			id:     1,
+			txHash: txHash,
+		}
+
+		batchID, err := b.execute(ctx)
+
+		require.NoError(t, err)
+		require.Equal(t, batchNonceID, batchID)
 	})
 
 	t.Run("execute pass", func(t *testing.T) {
@@ -187,9 +219,10 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, &indexer.DatabaseMock{}, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		err := b.execute(ctx)
+		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
+		require.Equal(t, batchNonceID, batchID)
 	})
 }
 
@@ -264,8 +297,11 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
-		cfg := chainConfig
-		cfg.ChainType = "CaRDaNo"
+		defer func() {
+			chainConfig.ChainType = "Cardano"
+		}()
+
+		chainConfig.ChainType = "CaRDaNo"
 
 		chainOp, err := GetChainSpecificOperations(chainConfig, secretsMngr, hclog.NewNullLogger())
 		require.NoError(t, err)
