@@ -34,15 +34,6 @@ func NewEthTxWalletFromSecretManager(sm secretsInfra.SecretsManager) (*EthTxWall
 	return NewEthTxWallet(string(privateKey))
 }
 
-func NewEthTxWalletFromSecretManagerConfig(config *secretsInfra.SecretsManagerConfig) (*EthTxWallet, error) {
-	sm, err := apexcommon.GetSecretsManagerFromConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewEthTxWalletFromSecretManager(sm)
-}
-
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
 	bytes, err := apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
 	if err != nil {

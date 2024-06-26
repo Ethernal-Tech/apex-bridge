@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -24,6 +25,7 @@ var _ core.BatcherManager = (*BatchManagerImpl)(nil)
 func NewBatcherManager(
 	ctx context.Context,
 	config *core.BatcherManagerConfiguration,
+	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
@@ -53,17 +55,24 @@ func NewBatcherManager(
 			return nil, err
 		}
 
-		batchers = append(batchers, batcher.NewBatcher(
+		db, exists := indexerDbs[chainConfig.ChainID]
+		if !exists {
+			return nil, fmt.Errorf("database not exists for chain: %s", chainConfig.ChainID)
+		}
+
+		batcher := batcher.NewBatcher(
 			&core.BatcherConfiguration{
 				Bridge:        config.Bridge,
 				Chain:         chainConfig,
 				PullTimeMilis: config.PullTimeMilis,
 			},
+			db,
 			operations,
 			bridgeSmartContract,
 			bridgingRequestStateUpdater,
-			logger.Named(strings.ToUpper(chainConfig.ChainID)),
-		))
+			logger.Named(strings.ToUpper(chainConfig.ChainID)))
+
+		batchers = append(batchers, batcher)
 	}
 
 	return &BatchManagerImpl{

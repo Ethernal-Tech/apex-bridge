@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
@@ -23,6 +24,7 @@ type lastBatchData struct {
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	operations                  core.ChainOperations
+	db                          indexer.Database
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
@@ -33,6 +35,7 @@ var _ core.Batcher = (*BatcherImpl)(nil)
 
 func NewBatcher(
 	config *core.BatcherConfiguration,
+	db indexer.Database,
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -40,6 +43,7 @@ func NewBatcher(
 ) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
+		db:                          db,
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
