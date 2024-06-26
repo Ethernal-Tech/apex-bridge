@@ -67,7 +67,7 @@ func NewValidatorComponents(
 
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
-	err = populateUtxosAndAddresses(
+	err = fixChainsAndAddresses(
 		ctx, oracleConfig,
 		eth.NewBridgeSmartContract(
 			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
@@ -207,22 +207,20 @@ func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
 	return v.oracle.ErrorCh()
 }
 
-func populateUtxosAndAddresses(
+func fixChainsAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
-	l := logger.Named("populateUtxosAndAddresses")
-
-	l.Debug("trying to populate utxos and addresses")
-
 	var allRegisteredChains []contractbinding.IBridgeStructsChain
+
+	logger.Debug("Retrieving all registered chains...")
 
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
 		if err != nil {
-			l.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+			logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
 		}
 
 		return err
@@ -232,22 +230,7 @@ func populateUtxosAndAddresses(
 		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
 
-	l.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
-
-	addUtxos := func(outputs *[]*indexer.TxInputOutput, address string, utxos []eth.UTXO) {
-		for _, x := range utxos {
-			*outputs = append(*outputs, &indexer.TxInputOutput{
-				Input: indexer.TxInput{
-					Hash:  x.TxHash,
-					Index: uint32(x.TxIndex),
-				},
-				Output: indexer.TxOutput{
-					Address: address,
-					Amount:  x.Amount,
-				},
-			})
-		}
-	}
+	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
 	resultChains := make(map[string]*oracleCore.CardanoChainConfig, len(allRegisteredChains))
 
@@ -258,42 +241,12 @@ func populateUtxosAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
-		var availableUtxos eth.UTXOs
-
-		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			availableUtxos, err = smartContract.GetAvailableUTXOs(ctxInner, chainID)
-			if err != nil {
-				l.Error(
-					"Failed to GetAvailableUTXOs while creating ValidatorComponents. Retrying...",
-					"chainId", chainID, "err", err)
-			}
-
-			return err
-		})
-
-		if err != nil {
-			return fmt.Errorf("error while RetryForever of GetAvailableUTXOs. err: %w", err)
-		}
-
-		l.Debug("done GetAvailableUTXOs", "chainID", chainID, "availableUtxos", availableUtxos)
-
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
 			FeeAddress:      regChain.AddressFeePayer,
 		}
 
-		chainConfig.InitialUtxos = make([]*indexer.TxInputOutput, 0,
-			len(availableUtxos.MultisigOwnedUTXOs)+len(availableUtxos.FeePayerOwnedUTXOs))
-
-		// InitialUtxos wont be needed, initially they should be included with GetAvailableUTXOs
-		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, regChain.Utxos.MultisigOwnedUTXOs)
-		// addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, regChain.Utxos.FeePayerOwnedUTXOs)
-		addUtxos(&chainConfig.InitialUtxos, regChain.AddressMultisig, availableUtxos.MultisigOwnedUTXOs)
-		addUtxos(&chainConfig.InitialUtxos, regChain.AddressFeePayer, availableUtxos.FeePayerOwnedUTXOs)
-
 		resultChains[chainID] = chainConfig
-
-		l.Debug("updated chainConfig", "chainConfig", chainConfig)
 	}
 
 	config.CardanoChains = resultChains

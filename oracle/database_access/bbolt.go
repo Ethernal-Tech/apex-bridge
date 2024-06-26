@@ -3,7 +3,6 @@ package databaseaccess
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -138,7 +137,7 @@ func (bd *BBoltDatabase) ClearUnprocessedTxs(chainID string) error {
 				return err
 			}
 
-			if strings.Compare(unprocessedTx.OriginChainID, chainID) == 0 {
+			if unprocessedTx.OriginChainID == chainID {
 				if err := cursor.Bucket().Delete(unprocessedTx.ToUnprocessedTxKey()); err != nil {
 					return err
 				}
@@ -303,7 +302,7 @@ func (bd *BBoltDatabase) ClearExpectedTxs(chainID string) error {
 				return err
 			}
 
-			if strings.Compare(expectedTx.ChainID, chainID) == 0 {
+			if expectedTx.ChainID == chainID && !expectedTx.IsInvalid && !expectedTx.IsProcessed {
 				if err := cursor.Bucket().Delete(expectedTx.Key()); err != nil {
 					return err
 				}

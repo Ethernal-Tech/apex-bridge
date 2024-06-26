@@ -195,7 +195,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		sm, _ := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
 		err := sm.IncludedInBatch(common.ChainIDStrVector, 1, []common.BridgingRequestStateKey{{}})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "failed to get")
 	})
 
 	t.Run("IncludedInBatch 3", func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.IncludedInBatch(common.ChainIDStrVector, 1, []common.BridgingRequestStateKey{{}})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: batch destinationChainId not equal to BridgingRequestState.DestinationChainId")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates for")
 	})
 
 	t.Run("IncludedInBatch 4", func(t *testing.T) {
@@ -221,7 +221,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.IncludedInBatch(common.ChainIDStrVector, 1, []common.BridgingRequestStateKey{{}})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to save updated BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates for")
 	})
 
 	t.Run("IncludedInBatch 5", func(t *testing.T) {
@@ -267,7 +267,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.SubmittedToDestination(common.ChainIDStrVector, 1)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to update a BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to update")
 	})
 
 	t.Run("SubmittedToDestination 4", func(t *testing.T) {
@@ -283,7 +283,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.SubmittedToDestination(common.ChainIDStrVector, 1)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to save updated BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to save updated")
 	})
 
 	t.Run("SubmittedToDestination 5", func(t *testing.T) {
@@ -330,7 +330,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.FailedToExecuteOnDestination(common.ChainIDStrVector, 1)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to update a BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to update")
 	})
 
 	t.Run("FailedToExecuteOnDestination 4", func(t *testing.T) {
@@ -347,7 +347,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.FailedToExecuteOnDestination(common.ChainIDStrVector, 1)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to save updated BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to save updated")
 	})
 
 	t.Run("FailedToExecuteOnDestination 5", func(t *testing.T) {
@@ -395,7 +395,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.ExecutedOnDestination(common.ChainIDStrVector, 1, indexer.Hash{})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to update a BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to update")
 	})
 
 	t.Run("ExecutedOnDestination 4", func(t *testing.T) {
@@ -412,7 +412,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.ExecutedOnDestination(common.ChainIDStrVector, 1, indexer.Hash{})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to update some BridgingRequestStates. errors: failed to save updated BridgingRequestState")
+		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to save updated")
 	})
 
 	t.Run("ExecutedOnDestination 5", func(t *testing.T) {

@@ -24,7 +24,6 @@ type lastBatchData struct {
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	operations                  core.ChainOperations
-	db                          indexer.Database
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
@@ -35,7 +34,6 @@ var _ core.Batcher = (*BatcherImpl)(nil)
 
 func NewBatcher(
 	config *core.BatcherConfiguration,
-	db indexer.Database,
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -43,7 +41,6 @@ func NewBatcher(
 ) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
-		db:                          db,
 		operations:                  operations,
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
@@ -155,7 +152,6 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		FeePayerMultisigSignature: multisigFeeSignature,
 		FirstTxNonceId:            firstTxNonceID,
 		LastTxNonceId:             lastTxNonceID,
-		UsedUTXOs:                 generatedBatchData.Utxos,
 	}
 
 	b.logger.Debug("Submitting signed batch to smart contract", "chainID", b.config.Chain.ChainID,
@@ -196,12 +192,13 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
 func GetChainSpecificOperations(
-	config core.ChainConfig, secretsManager secrets.SecretsManager, logger hclog.Logger,
+	config core.ChainConfig, db indexer.Database, secretsManager secrets.SecretsManager, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case "cardano":
-		return NewCardanoChainOperations(config.ChainSpecific, secretsManager, config.ChainID, logger)
+		return NewCardanoChainOperations(
+			config.ChainSpecific, db, secretsManager, config.ChainID, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

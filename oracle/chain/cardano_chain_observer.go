@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math"
 	"strings"
@@ -35,26 +34,23 @@ func NewCardanoChainObserver(
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	if len(config.InitialUtxos) > 0 {
-		logger.Debug("trying to insert utxos", "utxos", config.InitialUtxos)
+	if err := initUtxos(indexerDB, config.InitialUtxos); err != nil {
+		return nil, err
+	}
 
-		err := initUtxos(indexerDB, config.InitialUtxos)
-		if err != nil {
+	/*
+		if err := oracleDB.ClearUnprocessedTxs(config.ChainID); err != nil {
 			return nil, err
 		}
 
-		logger.Info("inserted utxos", "utxos", config.InitialUtxos)
-	}
+		if err := oracleDB.ClearExpectedTxs(config.ChainID); err != nil {
+			return nil, err
+		}
+	*/
 
-	err := updateLastConfirmedBlockFromSc(ctx, indexerDB, oracleDB, bridgeDataFetcher, config.ChainID, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to updateLastConfirmedBlockFromSc. err: %w", err)
-	}
-
-	confirmedBlockHandler := func(cb *indexer.CardanoBlock, txs []*indexer.Tx) error {
-		logger.Info("Confirmed Txs", "txs", len(txs))
-
-		telemetry.UpdateOracleTxsReceivedCounter(config.ChainID, len(txs))
+	confirmedBlockHandler := func(block *indexer.CardanoBlock, blockTxs []*indexer.Tx) error {
+		logger.Info("Confirmed Block Handler invoked",
+			"block", block.Hash, "slot", block.Slot, "block txs", len(blockTxs))
 
 		txs, err := indexerDB.GetUnprocessedConfirmedTxs(0)
 		if err != nil {
@@ -69,11 +65,17 @@ func NewCardanoChainObserver(
 
 		logger.Info("Txs have been processed", "txs", txs)
 
-		return indexerDB.MarkConfirmedTxsProcessed(txs)
+		err = indexerDB.MarkConfirmedTxsProcessed(txs)
+		if err != nil {
+			return err
+		}
+
+		telemetry.UpdateOracleTxsReceivedCounter(config.ChainID, len(txs))
+
+		return nil
 	}
 
 	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-
 	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
@@ -86,6 +88,11 @@ func NewCardanoChainObserver(
 }
 
 func (co *CardanoChainObserverImpl) Start() error {
+	bp, err := co.indexerDB.GetLatestBlockPoint()
+	if err == nil && bp != nil {
+		co.logger.Debug("Started...", "hash", bp.BlockHash, "slot", bp.BlockSlot)
+	}
+
 	go func() {
 		_ = common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
 			err = co.syncer.Sync()
@@ -122,29 +129,20 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 }
 
 func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerConfig, *indexer.BlockSyncerConfig) {
-	var startBlockHash []byte
-	if config.StartBlockHash == "" {
-		startBlockHash = []byte(nil)
-	} else {
-		startBlockHash, _ = hex.DecodeString(config.StartBlockHash)
-	}
+	networkAddress := strings.TrimPrefix(
+		strings.TrimPrefix(config.NetworkAddress, "http://"),
+		"https://")
 
-	networkAddress := config.NetworkAddress
-	networkAddress = strings.TrimPrefix(networkAddress, "http://")
-	networkAddress = strings.TrimPrefix(networkAddress, "https://")
-
-	addressesOfInterest := []string{
+	addressesOfInterest := append([]string{
 		config.BridgingAddresses.BridgingAddress,
 		config.BridgingAddresses.FeeAddress,
-	}
-
-	addressesOfInterest = append(addressesOfInterest, config.OtherAddressesOfInterest...)
+	}, config.OtherAddressesOfInterest...)
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
 			BlockSlot:   config.StartSlot,
-			BlockHash:   indexer.NewHashFromBytes(startBlockHash),
-			BlockNumber: config.StartBlockNumber - 1,
+			BlockHash:   indexer.NewHashFromHexString(config.StartBlockHash),
+			BlockNumber: config.StartBlockNumber,
 		},
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
@@ -164,88 +162,9 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 }
 
 func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
-	var nonExistingUtxos []*indexer.TxInputOutput
-
-	for _, x := range utxos {
-		r, err := db.GetTxOutput(x.Input)
-		if err != nil {
-			return err
-		} else if r.Address == "" {
-			nonExistingUtxos = append(nonExistingUtxos, x)
-		}
-	}
-
-	return db.OpenTx().AddTxOutputs(nonExistingUtxos).Execute()
-}
-
-func updateLastConfirmedBlockFromSc(
-	ctx context.Context,
-	indexerDB indexer.Database,
-	oracleDB core.CardanoTxsProcessorDB,
-	bridgeDataFetcher core.BridgeDataFetcher,
-	chainID string,
-	logger hclog.Logger,
-) error {
-	var blockPointSc *indexer.BlockPoint
-
-	l := logger.Named("updateLastConfirmedBlockFromSc")
-
-	l.Debug("trying to update last confirmed block")
-
-	err := common.RetryForever(ctx, 2*time.Second, func(context.Context) (err error) {
-		blockPointSc, err = bridgeDataFetcher.FetchLatestBlockPoint(chainID)
-		if err != nil {
-			l.Error(
-				"Failed to FetchLatestBlockPoint while creating CardanoChainObserver. Retrying...",
-				"chainId", chainID, "err", err)
-		}
-
-		return err
-	})
-
-	if err != nil {
-		return fmt.Errorf("error while RetryForever of FetchLatestBlockPoint. err: %w", err)
-	}
-
-	l.Debug("done FetchLatestBlockPoint", "blockPointSc", blockPointSc)
-
-	if blockPointSc == nil {
+	if len(utxos) == 0 {
 		return nil
 	}
 
-	blockPointDB, err := indexerDB.GetLatestBlockPoint()
-	if err != nil {
-		return err
-	}
-
-	l.Debug("done GetLatestBlockPoint", "blockPointDB", blockPointDB)
-
-	if blockPointDB != nil {
-		if blockPointDB.BlockSlot > blockPointSc.BlockSlot {
-			l.Debug("slot from db higher than from sc",
-				"blockPointDB.BlockSlot", blockPointDB.BlockSlot, "blockPointSc.BlockSlot", blockPointSc.BlockSlot)
-
-			return nil
-		}
-
-		if blockPointDB.BlockHash == blockPointSc.BlockHash &&
-			blockPointDB.BlockSlot == blockPointSc.BlockSlot {
-			l.Debug("slot from db same as from sc",
-				"blockPointDB.BlockSlot", blockPointDB.BlockSlot, "blockPointSc.BlockSlot", blockPointSc.BlockSlot)
-
-			return nil
-		}
-	}
-
-	if err := oracleDB.ClearUnprocessedTxs(chainID); err != nil {
-		return err
-	}
-
-	if err := oracleDB.ClearExpectedTxs(chainID); err != nil {
-		return err
-	}
-
-	l.Info("updating last confirmed block", "to blockPoint", blockPointSc)
-
-	return indexerDB.OpenTx().SetLatestBlockPoint(blockPointSc).Execute()
+	return db.OpenTx().DeleteAllTxOutputsPhysically().AddTxOutputs(utxos).Execute()
 }
