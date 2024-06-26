@@ -32,30 +32,30 @@ func TestWallet(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("loading without stake", func(t *testing.T) {
-		wallet2, err := LoadWallet(secretsMngr, "prime")
+		walletWithoutStake, err := LoadWallet(secretsMngr, "prime")
 		require.NoError(t, err)
 
-		require.Equal(t, wallet, wallet2)
+		require.Equal(t, wallet, walletWithoutStake)
 	})
 
 	t.Run("loading with stake", func(t *testing.T) {
-		wallet2, err := LoadWallet(secretsMngr, "vector")
+		walletWithStake, err := LoadWallet(secretsMngr, "vector")
 		require.NoError(t, err)
 
-		require.Equal(t, walletStake, wallet2)
+		require.Equal(t, walletStake, walletWithStake)
 	})
 
 	t.Run("idempotent without stake", func(t *testing.T) {
-		wallet2, err := GenerateWallet(secretsMngr, "prime", false, false)
+		walletWithoutStake, err := GenerateWallet(secretsMngr, "prime", false, false)
 		require.NoError(t, err)
 
-		require.Equal(t, wallet, wallet2)
+		require.Equal(t, wallet, walletWithoutStake)
 	})
 
 	t.Run("idempotent with stake", func(t *testing.T) {
-		wallet2, err := GenerateWallet(secretsMngr, "vector", true, false)
+		walletWithStake, err := GenerateWallet(secretsMngr, "vector", true, false)
 		require.NoError(t, err)
 
-		require.Equal(t, walletStake, wallet2)
+		require.Equal(t, walletStake, walletWithStake)
 	})
 }
