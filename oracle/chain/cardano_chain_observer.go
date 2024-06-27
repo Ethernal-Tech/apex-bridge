@@ -38,20 +38,12 @@ func NewCardanoChainObserver(
 		return nil, err
 	}
 
-	/*
-		if err := oracleDB.ClearUnprocessedTxs(config.ChainID); err != nil {
-			return nil, err
-		}
-
-		if err := oracleDB.ClearExpectedTxs(config.ChainID); err != nil {
-			return nil, err
-		}
-	*/
-
 	confirmedBlockHandler := func(block *indexer.CardanoBlock, blockTxs []*indexer.Tx) error {
 		logger.Info("Confirmed Block Handler invoked",
 			"block", block.Hash, "slot", block.Slot, "block txs", len(blockTxs))
 
+		// do not rely only on blockTx, instead retrieve all unprocessed transactions from the database
+		// to account for any previous errors
 		txs, err := indexerDB.GetUnprocessedConfirmedTxs(0)
 		if err != nil {
 			return err

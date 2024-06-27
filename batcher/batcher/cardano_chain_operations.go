@@ -3,6 +3,7 @@ package batcher
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -243,12 +244,7 @@ func (cco *CardanoChainOperations) createBatchTx(
 	return &core.GeneratedBatchTxData{
 		TxRaw:  txRaw,
 		TxHash: txHash,
-		Utxos: eth.UTXOs{
-			MultisigOwnedUTXOs: convertUTXOsToScUTXOS(multisigUtxos),
-			FeePayerOwnedUTXOs: convertUTXOsToScUTXOS(feeUtxos),
-		},
-		Slot: slotNumber,
-	}, err
+	}, nil
 }
 
 func (cco *CardanoChainOperations) getSlotNumber(
@@ -348,20 +344,6 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 		}
 
 		result.Sum += utxo.Output.Amount
-	}
-
-	return result
-}
-
-func convertUTXOsToScUTXOS(utxos []*indexer.TxInputOutput) (result []eth.UTXO) {
-	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
-	result = make([]eth.UTXO, len(utxos))
-
-	for i, utxo := range utxos {
-		result[i] = eth.UTXO{
-			TxHash:  utxo.Input.Hash,
-			TxIndex: uint64(utxo.Input.Index),
-		}
 	}
 
 	return result
