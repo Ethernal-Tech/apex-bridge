@@ -1,6 +1,7 @@
 package clirelayer
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -50,6 +51,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 		return
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("PANIC", "err", r)
+			outputter.SetError(fmt.Errorf("%v", r))
+		}
+	}()
 
 	relayerManager, err := relayermanager.NewRelayerManager(config, logger)
 	if err != nil {
