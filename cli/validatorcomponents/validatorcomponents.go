@@ -2,6 +2,7 @@ package clivalidatorcomponents
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -49,6 +50,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 		return
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("PANIC", "err", r)
+			outputter.SetError(fmt.Errorf("%v", r))
+		}
+	}()
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()

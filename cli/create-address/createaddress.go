@@ -1,6 +1,8 @@
 package clicreateaddress
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +29,12 @@ func runPreRun(_ *cobra.Command, _ []string) error {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
+
+	defer func() {
+		if r := recover(); r != nil {
+			outputter.SetError(fmt.Errorf("%v", r))
+		}
+	}()
 
 	results, err := params.Execute()
 	if err != nil {
