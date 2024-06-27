@@ -34,7 +34,7 @@ func NewCardanoChainObserver(
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	if err := initUtxos(indexerDB, config.InitialUtxos); err != nil {
+	if err := initUtxos(indexerDB, config.StartBlockNumber, config.InitialUtxos, logger); err != nil {
 		return nil, err
 	}
 
@@ -104,8 +104,6 @@ func (co *CardanoChainObserverImpl) Start() error {
 func (co *CardanoChainObserverImpl) Dispose() error {
 	err := co.syncer.Close()
 	if err != nil {
-		co.logger.Error("Syncer close failed", "err", err)
-
 		return fmt.Errorf("syncer close failed. err: %w", err)
 	}
 
@@ -153,8 +151,23 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 	return indexerConfig, syncerConfig
 }
 
-func initUtxos(db indexer.Database, utxos []*indexer.TxInputOutput) error {
+func initUtxos(
+	db indexer.Database, blockSlot uint64, utxos []*indexer.TxInputOutput, logger hclog.Logger,
+) error {
 	if len(utxos) == 0 {
+		return nil
+	}
+
+	latestBlockPoint, err := db.GetLatestBlockPoint()
+	if err != nil {
+		return fmt.Errorf("could not retrieve latest block point while initializing utxos: %w", err)
+	}
+
+	// in oracle we already have more recent block
+	if latestBlockPoint != nil && latestBlockPoint.BlockSlot >= blockSlot {
+		logger.Info("Oracle database contains more recent block",
+			"hash", latestBlockPoint.BlockHash, "slot", latestBlockPoint.BlockSlot)
+
 		return nil
 	}
 

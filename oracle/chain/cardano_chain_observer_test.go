@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path"
 	"testing"
@@ -21,20 +22,18 @@ func TestCardanoChainObserver(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "boltdb-test")
 	require.NoError(t, err)
 
-	defer func() {
+	foldersCleanup := func() {
 		os.RemoveAll(testDir)
 		os.Remove(testDir)
-	}()
+	}
+
+	defer foldersCleanup()
 
 	settings := core.AppSettings{
 		DbsPath: testDir,
 		Logger: logger.LoggerConfig{
 			LogFilePath: testDir,
 		},
-	}
-
-	foldersCleanup := func() {
-		os.RemoveAll(testDir)
 	}
 
 	chainConfig := &core.CardanoChainConfig{
@@ -79,6 +78,8 @@ func TestCardanoChainObserver(t *testing.T) {
 		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, bridgeDataFetcher, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
+
+		defer chainObserver.Dispose()
 
 		errChan := chainObserver.ErrorCh()
 		require.NotNil(t, errChan)
@@ -173,5 +174,62 @@ func TestCardanoChainObserver(t *testing.T) {
 			t.Fatal("timeout")
 		case <-doneCh:
 		}
+	})
+}
+
+func Test_initUtxos(t *testing.T) {
+	dbMock := &indexer.DatabaseMock{}
+	dbWriterMock := &indexer.DBTransactionWriterMock{}
+	utxos := []*indexer.TxInputOutput{
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1")},
+			Output: indexer.TxOutput{Amount: 100},
+		},
+	}
+
+	t.Run("error", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, errors.New("test error")).Once()
+
+		require.Error(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+	})
+
+	t.Run("updated in db", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
+
+		dbMock.On("OpenTx").Return(dbWriterMock).Once()
+		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Once()
+		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Once()
+		dbWriterMock.On("Execute").Return(error(nil)).Once()
+
+		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+	})
+
+	t.Run("updated in db smaller slot", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
+			BlockSlot: uint64(50),
+		}, error(nil)).Once()
+
+		dbMock.On("OpenTx").Return(dbWriterMock).Once()
+		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Once()
+		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Once()
+		dbWriterMock.On("Execute").Return(error(nil)).Once()
+
+		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+	})
+
+	t.Run("skipping - has equal slot", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
+			BlockSlot: uint64(100),
+		}, error(nil)).Once()
+
+		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+	})
+
+	t.Run("skipping - has greater slot", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
+			BlockSlot: uint64(150),
+		}, error(nil)).Once()
+
+		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
 	})
 }
