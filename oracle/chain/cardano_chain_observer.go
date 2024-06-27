@@ -34,7 +34,9 @@ func NewCardanoChainObserver(
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	if err := initUtxos(indexerDB, config.StartBlockNumber, config.InitialUtxos, logger); err != nil {
+	err := initOracleState(indexerDB,
+		oracleDB, config.StartBlockHash, config.StartBlockNumber, config.InitialUtxos, config.ChainID, logger)
+	if err != nil {
 		return nil, err
 	}
 
@@ -151,10 +153,15 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 	return indexerConfig, syncerConfig
 }
 
-func initUtxos(
-	db indexer.Database, blockSlot uint64, utxos []*indexer.TxInputOutput, logger hclog.Logger,
+func initOracleState(
+	db indexer.Database, oracleDB core.CardanoTxsProcessorDB,
+	blockHashStr string, blockSlot uint64, utxos []*indexer.TxInputOutput,
+	chainID string, logger hclog.Logger,
 ) error {
-	if len(utxos) == 0 {
+	blockHash := indexer.NewHashFromHexString(blockHashStr)
+	if blockHash == (indexer.Hash{}) {
+		logger.Info("Configuration block hash is zero hash", "slot", blockSlot)
+
 		return nil
 	}
 
@@ -163,13 +170,29 @@ func initUtxos(
 		return fmt.Errorf("could not retrieve latest block point while initializing utxos: %w", err)
 	}
 
+	currentBlockSlot := uint64(0)
+	if latestBlockPoint != nil {
+		currentBlockSlot = latestBlockPoint.BlockSlot
+	}
+
 	// in oracle we already have more recent block
-	if latestBlockPoint != nil && latestBlockPoint.BlockSlot >= blockSlot {
+	if currentBlockSlot >= blockSlot {
 		logger.Info("Oracle database contains more recent block",
-			"hash", latestBlockPoint.BlockHash, "slot", latestBlockPoint.BlockSlot)
+			"hash", currentBlockSlot, "slot", currentBlockSlot)
 
 		return nil
 	}
 
-	return db.OpenTx().DeleteAllTxOutputsPhysically().AddTxOutputs(utxos).Execute()
+	if err := oracleDB.ClearUnprocessedTxs(chainID); err != nil {
+		return err
+	}
+
+	if err := oracleDB.ClearExpectedTxs(chainID); err != nil {
+		return err
+	}
+
+	return db.OpenTx().DeleteAllTxOutputsPhysically().SetLatestBlockPoint(&indexer.BlockPoint{
+		BlockSlot: blockSlot,
+		BlockHash: blockHash,
+	}).AddTxOutputs(utxos).Execute()
 }

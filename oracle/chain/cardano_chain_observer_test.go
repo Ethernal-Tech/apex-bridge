@@ -40,9 +40,8 @@ func TestCardanoChainObserver(t *testing.T) {
 		ChainID:                common.ChainIDStrPrime,
 		NetworkAddress:         "backbone.cardano-mainnet.iohk.io:3001",
 		NetworkMagic:           764824073,
-		StartBlockHash:         "df12b7a87cc041f238f400e3a410d1edb2f4a6fbcbedafff8fd9d507ef4947d7",
-		StartSlot:              76593517,
-		StartBlockNumber:       8000030,
+		StartBlockHash:         "335ac2d90bc37906c1264cfdc5769a652293cf64fa42b0c74d323473938b8ff1",
+		StartSlot:              127933773,
 		ConfirmationBlockCount: 10,
 		OtherAddressesOfInterest: []string{
 			"addr1v9kganeshgdqyhwnyn9stxxgl7r4y2ejfyqjn88n7ncapvs4sugsd",
@@ -177,7 +176,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	})
 }
 
-func Test_initUtxos(t *testing.T) {
+func Test_initOracleState(t *testing.T) {
 	dbMock := &indexer.DatabaseMock{}
 	dbWriterMock := &indexer.DBTransactionWriterMock{}
 	utxos := []*indexer.TxInputOutput{
@@ -186,35 +185,42 @@ func Test_initUtxos(t *testing.T) {
 			Output: indexer.TxOutput{Amount: 100},
 		},
 	}
+	blockSlot := uint64(100)
+	oracleDbMock := &core.CardanoTxsProcessorDBMock{}
+	blockHash := "0xA1"
+	chainID := "prime"
 
 	t.Run("error", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, errors.New("test error")).Once()
 
-		require.Error(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
-	t.Run("updated in db", func(t *testing.T) {
-		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
-
-		dbMock.On("OpenTx").Return(dbWriterMock).Once()
-		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Once()
-		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Once()
-		dbWriterMock.On("Execute").Return(error(nil)).Once()
-
-		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+	t.Run("empty hash", func(t *testing.T) {
+		require.NoError(t, initOracleState(dbMock, oracleDbMock, "", blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("updated in db smaller slot", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
 			BlockSlot: uint64(50),
 		}, error(nil)).Once()
 
-		dbMock.On("OpenTx").Return(dbWriterMock).Once()
-		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Once()
-		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Once()
-		dbWriterMock.On("Execute").Return(error(nil)).Once()
+		dbMock.On("OpenTx").Return(dbWriterMock).Twice()
+		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Twice()
+		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Twice()
+		dbWriterMock.On("SetLatestBlockPoint", &indexer.BlockPoint{
+			BlockSlot: blockSlot,
+			BlockHash: indexer.NewHashFromHexString(blockHash),
+		}).Return(dbMock).Twice()
+		dbWriterMock.On("Execute").Return(error(nil)).Twice()
+		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Twice()
+		oracleDbMock.On("ClearExpectedTxs", chainID).Return(error(nil)).Twice()
 
-		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+		// empty
+		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		// smaller
+		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("skipping - has equal slot", func(t *testing.T) {
@@ -222,7 +228,7 @@ func Test_initUtxos(t *testing.T) {
 			BlockSlot: uint64(100),
 		}, error(nil)).Once()
 
-		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("skipping - has greater slot", func(t *testing.T) {
@@ -230,6 +236,21 @@ func Test_initUtxos(t *testing.T) {
 			BlockSlot: uint64(150),
 		}, error(nil)).Once()
 
-		require.NoError(t, initUtxos(dbMock, uint64(100), utxos, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+	})
+
+	t.Run("ClearUnprocessedTxs error", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
+		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(errors.New("test error")).Once()
+
+		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+	})
+
+	t.Run("ClearExpectedTxs error", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
+		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Once()
+		oracleDbMock.On("ClearExpectedTxs", chainID).Return(errors.New("test error")).Once()
+
+		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 }
