@@ -61,6 +61,17 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 		case <-time.After(waitTime):
 		}
 
+		isSync, err := b.operations.IsSynchronized(ctx, b.bridgeSmartContract, b.config.Chain.ChainID)
+		if err != nil {
+			b.logger.Error("is synchronized check failed", "err", err)
+
+			continue
+		} else if !isSync {
+			b.logger.Info("batcher is not synchronized - creating batch skipped")
+
+			continue
+		}
+
 		batchID, err := b.execute(ctx)
 		if err != nil {
 			if errors.Is(err, errNonActiveBatchPeriod) {

@@ -400,3 +400,12 @@ func (c *cardanoChainOperationsMock) SignBatchTransaction(txHash string) ([]byte
 
 	return args.Get(0).([]byte), args.Get(1).([]byte), args.Error(2)
 }
+
+// IsSynchronized implements core.ChainOperations.
+func (c *cardanoChainOperationsMock) IsSynchronized(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
+) (bool, error) {
+	args := c.Called(ctx, bridgeSmartContract, chainID)
+
+	return args.Get(0).(bool), args.Error(1)
+}

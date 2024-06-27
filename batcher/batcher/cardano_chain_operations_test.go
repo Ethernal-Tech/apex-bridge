@@ -1,43 +1,113 @@
 package batcher
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"math/big"
+	"os"
+	"path"
 	"testing"
 
+	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCardanoChainOperations(t *testing.T) {
-	// 	testDir, err := os.MkdirTemp("", "bat-chain-ops")
-	// 	require.NoError(t, err)
+	testDir, err := os.MkdirTemp("", "bat-chain-ops")
+	require.NoError(t, err)
 
-	// 	defer func() {
-	// 		os.RemoveAll(testDir)
-	// 		os.Remove(testDir)
-	// 	}()
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
 
-	// 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-	// 		Path: path.Join(testDir, "stp"),
-	// 		Type: secrets.Local,
-	// 	})
-	// 	require.NoError(t, err)
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: path.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
 
-	// 	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
-	// 	require.NoError(t, err)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
 
-	// 	_, err = cardano.GenerateWallet(secretsMngr, "vector", true, false)
-	// 	require.NoError(t, err)
+	_, err = cardano.GenerateWallet(secretsMngr, "vector", true, false)
+	require.NoError(t, err)
 
-	// 	configRaw := json.RawMessage([]byte(`{
-	// 		"socketPath": "./socket",
-	// 		"testnetMagic": 2,
-	// 		"potentialFee": 300000
-	// 		}`))
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 2,
+			"potentialFee": 300000
+			}`))
+
+	t.Run("IsSynchronized", func(t *testing.T) {
+		chainID := "prime"
+		dbMock := &indexer.DatabaseMock{}
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		ctx := context.Background()
+		scBlock1 := &eth.CardanoBlock{
+			BlockSlot: big.NewInt(15),
+		}
+		scBlock2 := &eth.CardanoBlock{
+			BlockSlot: big.NewInt(20),
+		}
+		oracleBlock1 := &indexer.BlockPoint{
+			BlockSlot: uint64(10),
+		}
+		oracleBlock2 := &indexer.BlockPoint{
+			BlockSlot: uint64(20),
+		}
+		testErr1 := errors.New("test error 1")
+		testErr2 := errors.New("test error 2")
+
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, chainID).Return((*eth.CardanoBlock)(nil), testErr1).Once()
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, chainID).Return((*eth.CardanoBlock)(nil), nil).Once()
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, chainID).Return(scBlock1, nil).Times(3)
+		bridgeSmartContractMock.On("GetLastObservedBlock", ctx, chainID).Return(scBlock2, nil).Once()
+
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testErr2).Once()
+		dbMock.On("GetLatestBlockPoint").Return(oracleBlock1, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(oracleBlock2, nil).Twice()
+
+		cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+		require.NoError(t, err)
+
+		// sc error
+		_, err = cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.ErrorIs(t, err, testErr1)
+
+		// sc point not set
+		val, err := cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.NoError(t, err)
+		require.True(t, val)
+
+		// database error
+		_, err = cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.ErrorIs(t, err, testErr2)
+
+		// not in sync
+		val, err = cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.NoError(t, err)
+		require.False(t, val)
+
+		// in sync
+		val, err = cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.NoError(t, err)
+		require.True(t, val)
+
+		// in sync again
+		val, err = cco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
+		require.NoError(t, err)
+		require.True(t, val)
+	})
 
 	// 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
 	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "prime", hclog.NewNullLogger())

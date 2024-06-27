@@ -170,6 +170,28 @@ func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, 
 	return witnessMultiSig, witnessMultiSigFee, nil
 }
 
+// IsSynchronized implements core.IsSynchronized.
+func (cco *CardanoChainOperations) IsSynchronized(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
+) (bool, error) {
+	lastObservedBlockBridge, err := bridgeSmartContract.GetLastObservedBlock(ctx, chainID)
+	if err != nil {
+		return false, err
+	}
+
+	if lastObservedBlockBridge == nil {
+		return true, nil
+	}
+
+	lastOracleBlockPoint, err := cco.db.GetLatestBlockPoint()
+	if err != nil {
+		return false, err
+	}
+
+	return lastOracleBlockPoint != nil &&
+		lastOracleBlockPoint.BlockSlot >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
+}
+
 /* UTXOs are sorted by Nonce and taken from first to last until txCost has been met or maxUtxoCount reached
  * if txCost has been met, tx is created regularly
  * if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach txCost
