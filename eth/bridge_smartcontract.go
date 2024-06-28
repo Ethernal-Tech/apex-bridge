@@ -21,7 +21,6 @@ type IBridgeSmartContract interface {
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
-	GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (*CardanoBlock, error)
 	GetValidatorsCardanoData(ctx context.Context, destinationChain string) ([]ValidatorCardanoData, error)
 	GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error)
@@ -107,7 +106,6 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
 		FirstTxNonceId:            signedBatch.FirstTxNonceId,
 		LastTxNonceId:             signedBatch.LastTxNonceId,
-		UsedUTXOs:                 signedBatch.UsedUTXOs,
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -157,29 +155,6 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 	return contract.GetConfirmedTransactions(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(destinationChain))
-}
-
-func (bsc *BridgeSmartContractImpl) GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error) {
-	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
-	if err != nil {
-		return UTXOs{}, err
-	}
-
-	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
-		ethTxHelper.GetClient())
-	if err != nil {
-		return UTXOs{}, bsc.ethHelper.ProcessError(err)
-	}
-
-	availableUtxos, err := contract.GetAvailableUTXOs(&bind.CallOpts{
-		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
-	if err != nil {
-		return UTXOs{}, bsc.ethHelper.ProcessError(err)
-	}
-
-	return availableUtxos, nil
 }
 
 // GetLastObservedBlock implements IBridgeSmartContract.

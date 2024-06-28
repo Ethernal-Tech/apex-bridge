@@ -36,18 +36,6 @@ func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destina
 	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetAvailableUTXOs(ctx context.Context, destinationChain string) (UTXOs, error) {
-	args := m.Called(ctx, destinationChain)
-
-	if args.Get(0) == nil {
-		return UTXOs{}, args.Error(1)
-	}
-
-	arg0, _ := args.Get(0).(UTXOs)
-
-	return arg0, args.Error(1)
-}
-
 func (m *BridgeSmartContractMock) GetConfirmedTransactions(
 	ctx context.Context, destinationChain string,
 ) (

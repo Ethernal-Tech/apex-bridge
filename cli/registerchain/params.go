@@ -188,7 +188,6 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					AddressMultisig: ip.multisigAddr,
 					AddressFeePayer: ip.multisigFeeAddr,
 				},
-				contractbinding.IBridgeStructsUTXOs{},
 				initialTokenSupply,
 				contractbinding.IBridgeStructsValidatorCardanoData{
 					VerifyingKey:    [32]byte(walletCardano.MultiSig.GetVerificationKey()),
