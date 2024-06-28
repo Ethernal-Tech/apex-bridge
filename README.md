@@ -39,18 +39,10 @@ $ go run ./main.go register-chain \
         --addr addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh \
         --addr-fee addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u \
         --token-supply 20000000 \
-        --blockfrost https://cardano-preview.blockfrost.io/api/v0 \
-        --blockfrost-api-key preview7mGSjpyEKb24OxQ4cCxomxZ5axMs5PvE \
         --bridge-url https://polygon-mumbai.blockpi.network/v1/rpc/public \
         --bridge-addr 0x8F371EeFe210ad18a2Ce45d51B48E56aBa1a58A9        
 ```
 - instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
-- there is possibility to use one of these tx providers:
-- blockfrost with `--blockfrost URL` and `--blockfrost-api-key API_KEY` flags
-- ogmios with `--ogmios URL` flag
-- cardano cli with  `--socket-path SOCKET_PATH` and `--network-magic NUMBER` flags
-
-Block frost/ogmios/socket path to local Cardano node is used only for retrieving utxos for `addr` and `addr-fee`
 
 # How to create multisig address
 ```shell
