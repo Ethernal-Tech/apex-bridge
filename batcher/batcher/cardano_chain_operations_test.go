@@ -177,7 +177,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	})
 
-	t.Run("GetTip return error", func(t *testing.T) {
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []contractbinding.IBridgeStructsValidatorCardanoData{
 			{
@@ -187,7 +187,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-		txProviderMock.On("GetTip", ctx).Return(nil, testError).Once()
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
@@ -204,7 +204,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-		txProviderMock.On("GetTip", ctx).Return(cardanowallet.QueryTipData{Slot: 50}, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
@@ -223,7 +223,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsCardanoData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-		txProviderMock.On("GetTip", ctx).Return(cardanowallet.QueryTipData{Slot: 50}, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{

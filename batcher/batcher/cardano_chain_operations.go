@@ -99,7 +99,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	slotNumber, err := cco.getSlotNumber(ctx, noBatchPeriodPercent)
+	slotNumber, err := cco.getSlotNumber(noBatchPeriodPercent)
 	if err != nil {
 		return nil, err
 	}
@@ -209,20 +209,25 @@ func (cco *CardanoChainOperations) IsSynchronized(
 }
 
 func (cco *CardanoChainOperations) getSlotNumber(
-	ctx context.Context, noBatchPeriodPercent float64,
+	noBatchPeriodPercent float64,
 ) (uint64, error) {
-	data, err := cco.txProvider.GetTip(ctx)
+	data, err := cco.db.GetLatestBlockPoint()
 	if err != nil {
 		return 0, err
+	}
+
+	slot := uint64(0)
+	if data != nil {
+		slot = data.BlockSlot
 	}
 
 	newSlot, err := getSlotNumberWithRoundingThreshold(
-		data.Slot, cco.config.SlotRoundingThreshold, noBatchPeriodPercent)
+		slot, cco.config.SlotRoundingThreshold, noBatchPeriodPercent)
 	if err != nil {
 		return 0, err
 	}
 
-	cco.logger.Debug("calculate slotNumber with rounding", "slot", data.Slot, "newSlot", newSlot)
+	cco.logger.Debug("calculate slotNumber with rounding", "slot", slot, "newSlot", newSlot)
 
 	return newSlot, nil
 }
