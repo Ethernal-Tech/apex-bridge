@@ -78,7 +78,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
-		defer chainObserver.Dispose()
+		defer chainObserver.Dispose() //nolint:errcheck
 
 		errChan := chainObserver.ErrorCh()
 		require.NotNil(t, errChan)
@@ -186,18 +186,18 @@ func Test_initOracleState(t *testing.T) {
 		},
 	}
 	blockSlot := uint64(100)
-	oracleDbMock := &core.CardanoTxsProcessorDBMock{}
+	oracleDBMock := &core.CardanoTxsProcessorDBMock{}
 	blockHash := "0xA1"
 	chainID := "prime"
 
 	t.Run("error", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, errors.New("test error")).Once()
 
-		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("empty hash", func(t *testing.T) {
-		require.NoError(t, initOracleState(dbMock, oracleDbMock, "", blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDBMock, "", blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("updated in db smaller slot", func(t *testing.T) {
@@ -214,13 +214,13 @@ func Test_initOracleState(t *testing.T) {
 			BlockHash: indexer.NewHashFromHexString(blockHash),
 		}).Return(dbMock).Twice()
 		dbWriterMock.On("Execute").Return(error(nil)).Twice()
-		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Twice()
-		oracleDbMock.On("ClearExpectedTxs", chainID).Return(error(nil)).Twice()
+		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Twice()
+		oracleDBMock.On("ClearExpectedTxs", chainID).Return(error(nil)).Twice()
 
 		// empty
-		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 		// smaller
-		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("skipping - has equal slot", func(t *testing.T) {
@@ -228,7 +228,7 @@ func Test_initOracleState(t *testing.T) {
 			BlockSlot: uint64(100),
 		}, error(nil)).Once()
 
-		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("skipping - has greater slot", func(t *testing.T) {
@@ -236,21 +236,21 @@ func Test_initOracleState(t *testing.T) {
 			BlockSlot: uint64(150),
 		}, error(nil)).Once()
 
-		require.NoError(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("ClearUnprocessedTxs error", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
-		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(errors.New("test error")).Once()
+		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(errors.New("test error")).Once()
 
-		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
 	t.Run("ClearExpectedTxs error", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
-		oracleDbMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Once()
-		oracleDbMock.On("ClearExpectedTxs", chainID).Return(errors.New("test error")).Once()
+		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Once()
+		oracleDBMock.On("ClearExpectedTxs", chainID).Return(errors.New("test error")).Once()
 
-		require.Error(t, initOracleState(dbMock, oracleDbMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
+		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 }

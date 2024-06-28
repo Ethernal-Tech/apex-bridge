@@ -126,33 +126,49 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
+	txOutputs := getOutputs(confirmedTransactions)
+
+	multisigUtxos, feeUtxos, err := cco.getUTXOs(
+		multisigAddress, multisigFeeAddress, txOutputs)
 	if err != nil {
 		return nil, err
 	}
 
-	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	cco.logger.Info("Creating batch tx", "chainID", chainID, "batchID", batchNonceID,
+		"slot", slotNumber, "ttl", cco.config.TTLSlotNumberInc, "magic", cco.config.TestNetMagic)
+
+	// Create Tx
+	txRaw, txHash, err := cardano.CreateTx(
+		uint(cco.config.TestNetMagic),
+		protocolParams,
+		slotNumber+cco.config.TTLSlotNumberInc,
+		metadata,
+		cardano.TxInputInfos{
+			MultiSig: &cardano.TxInputInfo{
+				PolicyScript: multisigPolicyScript,
+				Address:      multisigAddress,
+				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
+			},
+			MultiSigFee: &cardano.TxInputInfo{
+				PolicyScript: multisigFeePolicyScript,
+				Address:      multisigFeeAddress,
+				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+			},
+		},
+		txOutputs.Outputs,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	cco.logger.Debug("UTXOs retrieved", "multisig", multisigUtxos, "fee", feeUtxos)
-
-	txOutput := getOutputs(confirmedTransactions)
-
-	txInfos := cardano.TxInputInfos{
-		MultiSig: &cardano.TxInputInfo{
-			PolicyScript: multisigPolicyScript,
-			Address:      multisigAddress,
-		},
-		MultiSigFee: &cardano.TxInputInfo{
-			PolicyScript: multisigFeePolicyScript,
-			Address:      multisigFeeAddress,
-		},
+	if len(txRaw) > maxTxSize {
+		return nil, errors.New("fatal error, tx size too big")
 	}
 
-	return cco.createBatchTx(
-		multisigUtxos, feeUtxos, metadata, protocolParams, txInfos, txOutput, slotNumber)
+	return &core.GeneratedBatchTxData{
+		TxRaw:  txRaw,
+		TxHash: txHash,
+	}, nil
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -190,60 +206,6 @@ func (cco *CardanoChainOperations) IsSynchronized(
 
 	return lastOracleBlockPoint != nil &&
 		lastOracleBlockPoint.BlockSlot >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
-}
-
-/* UTXOs are sorted by Nonce and taken from first to last until txCost has been met or maxUtxoCount reached
- * if txCost has been met, tx is created regularly
- * if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach txCost
- */
-func (cco *CardanoChainOperations) createBatchTx(
-	multisigUtxos []*indexer.TxInputOutput,
-	feeUtxos []*indexer.TxInputOutput,
-	metadata []byte, protocolParams []byte,
-	txInfos cardano.TxInputInfos,
-	txOutputs cardano.TxOutputs, slotNumber uint64,
-) (dt *core.GeneratedBatchTxData, err error) {
-	cco.logger.Info("creating batch tx",
-		"slot", slotNumber, "ttl", cco.config.TTLSlotNumberInc, "magic", cco.config.TestNetMagic)
-
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))]
-	multisigUtxos, err = getNeededUtxos(
-		multisigUtxos,
-		txOutputs.Sum.Uint64(),
-		minUtxoAmount,
-		len(feeUtxos)+len(txOutputs.Outputs),
-		maxUtxoCount,
-		takeAtLeastUtxoCount)
-	if err != nil {
-		return nil, err
-	}
-
-	cco.logger.Debug("creating batch tx - UTXOs selected", "multisig", multisigUtxos, "fee", feeUtxos)
-
-	txInfos.MultiSig.TxInputs = convertUTXOsToTxInputs(multisigUtxos)
-	txInfos.MultiSigFee.TxInputs = convertUTXOsToTxInputs(feeUtxos)
-
-	// Create Tx
-	txRaw, txHash, err := cardano.CreateTx(
-		uint(cco.config.TestNetMagic),
-		protocolParams,
-		slotNumber+cco.config.TTLSlotNumberInc,
-		metadata,
-		txInfos,
-		txOutputs.Outputs,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(txRaw) > maxTxSize {
-		return nil, errors.New("fatal error, tx size too big")
-	}
-
-	return &core.GeneratedBatchTxData{
-		TxRaw:  txRaw,
-		TxHash: txHash,
-	}, nil
 }
 
 func (cco *CardanoChainOperations) getSlotNumber(
@@ -313,6 +275,39 @@ func (cco *CardanoChainOperations) getCardanoData(
 	return multisigKeyHashes, multisigFeeKeyHashes, nil
 }
 
+func (cco *CardanoChainOperations) getUTXOs(
+	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
+) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
+	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return
+	}
+
+	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return
+	}
+
+	cco.logger.Debug("UTXOs retrieved", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+
+	multisigUtxos, err = getNeededUtxos(
+		multisigUtxos,
+		txOutputs.Sum.Uint64(),
+		minUtxoAmount,
+		len(feeUtxos)+len(txOutputs.Outputs),
+		maxUtxoCount,
+		takeAtLeastUtxoCount)
+	if err != nil {
+		return
+	}
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	return
+}
+
 func getSlotNumberWithRoundingThreshold(
 	slotNumber, threshold uint64, noBatchPeriodPercent float64,
 ) (uint64, error) {
@@ -349,6 +344,10 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 }
 
 // getNeededUtxos returns only needed input utxos
+// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
+// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
+// if desiredAmount has been met, tx is created regularly
+// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
 func getNeededUtxos(
 	inputUTXOs []*indexer.TxInputOutput,
 	desiredAmount uint64,
@@ -357,8 +356,7 @@ func getNeededUtxos(
 	maxUtxoCount int,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	// Create initial UTXO set
-	txCostWithMinChange := minUtxoAmount + desiredAmount
+	txCostWithMinChange := minUtxoAmount + desiredAmount // if we have change then it must be greater than this amount
 
 	// algorithm that chooses multisig UTXOs
 	chosenUTXOsSum := uint64(0)

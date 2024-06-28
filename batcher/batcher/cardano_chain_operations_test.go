@@ -87,213 +87,6 @@ func TestCardanoChainOperations_IsSynchronized(t *testing.T) {
 	require.True(t, val)
 }
 
-func TestCardanoChainOperations(t *testing.T) {
-	t.Skip()
-	// testDir, err := os.MkdirTemp("", "bat-chain-ops")
-	// require.NoError(t, err)
-
-	// defer func() {
-	// 	os.RemoveAll(testDir)
-	// 	os.Remove(testDir)
-	// }()
-
-	// secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-	// 	Path: path.Join(testDir, "stp"),
-	// 	Type: secrets.Local,
-	// })
-	// require.NoError(t, err)
-
-	// _, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
-	// require.NoError(t, err)
-
-	// _, err = cardano.GenerateWallet(secretsMngr, "vector", true, false)
-	// require.NoError(t, err)
-
-	// configRaw := json.RawMessage([]byte(`{
-	// 		"socketPath": "./socket",
-	// 		"testnetMagic": 2,
-	// 		"potentialFee": 300000
-	// 		}`))
-
-	// 	t.Run("CreateBatchTx_AllInputs1Ada", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "prime", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		utxoCount := 10 // 10x 1Ada
-	// 		inputs := generateUTXOInputs(utxoCount*2, 1000000)
-	// 		outputs := calculateTxCost(generateUTXOOutputs(utxoCount, 1000000))
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.Len(t, result.Utxos.MultisigOwnedUTXOs, utxoCount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-1].Amount)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_HalfInputs1Ada+Fill", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "prime", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		utxoCount := 10 // 10x 1Ada
-	// 		inputs := generateUTXOInputs(utxoCount, 1000000)
-	// 		outputs := calculateTxCost(generateUTXOOutputs(utxoCount*2, 1000000))
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.Len(t, result.Utxos.FeePayerOwnedUTXOs, len(inputs.FeePayerOwnedUTXOs))
-	// 		require.Len(t, result.Utxos.MultisigOwnedUTXOs, utxoCount+1) // 10 +1
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-2].Amount)
-	// 		require.Equal(t, uint64(1000000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-1].Amount)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "vector", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		inputs := generateUTXOInputs(30, 1000000)
-	// 		outputs := calculateTxCost(generateUTXOOutputs(400, 1000000))
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
-	// 		require.Len(t, result.Utxos.FeePayerOwnedUTXOs, len(inputs.FeePayerOwnedUTXOs))
-	// 		require.Equal(t, uint64(1000000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-2].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-1].Amount)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_TxSizeTooBig_IncludeBig2", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "vector", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		inputs := generateUTXOInputs(30, 1000000)
-	// 		outputs := calculateTxCost(generateUTXOOutputs(400, 10000000)) // 4000Ada
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
-	// 		require.Equal(t, uint64(1000000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(2000000000), result.Utxos.MultisigOwnedUTXOs[1].Amount)
-	// 		require.Equal(t, uint64(3000000000), result.Utxos.MultisigOwnedUTXOs[2].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-2].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-1].Amount)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_TxSizeTooBig_LargeInput", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "vector", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		count := 400
-	// 		amount := 1000000
-	// 		inputs := generateUTXOInputs(count, uint64(amount))
-	// 		outputs := calculateTxCost(generateUTXOOutputs(count, uint64(amount)))
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.Less(t, len(result.Utxos.MultisigOwnedUTXOs), 30)
-	// 		require.Equal(t, uint64(1000000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-2].Amount)
-	// 		require.Equal(t, uint64(1000000), result.Utxos.MultisigOwnedUTXOs[len(result.Utxos.MultisigOwnedUTXOs)-1].Amount)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_RandomInputs", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "vector", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		inputs := generateUTXORandomInputs(100, 1000000, 10000000)
-	// 		outputs := calculateTxCost(generateUTXORandomOutputs(200, 1000000, 10000000))
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxRaw), 16000)
-	// 		require.LessOrEqual(t, len(result.Utxos.MultisigOwnedUTXOs), 101)
-
-	// 		utxoSum := calculateUTXOSum(result.Utxos.MultisigOwnedUTXOs)
-	// 		require.Equal(t, utxoSum.Cmp(outputs.Sum), 1)
-	// 	})
-
-	// 	t.Run("CreateBatchTx_MinUtxoOrder", func(t *testing.T) {
-	// 		cco, err := NewCardanoChainOperations(configRaw, &indexer.DatabaseMock{}, secretsMngr, "prime", hclog.NewNullLogger())
-	// 		require.NoError(t, err)
-
-	// 		inputs := generateUTXOInputsOrdered()                         // 50, 40, 30, 101, 102, 103, 104, 105
-	// 		outputs := calculateTxCost(generateUTXOOutputs(403, 1000000)) // 403Ada
-	// 		txInfos := generateTxInfos(t, cco.Config.TestNetMagic)
-
-	// 		metadata, err := cardano.CreateBatchMetaData(100)
-	// 		require.NoError(t, err)
-	// 		protocolParams, err := generateProtocolParams()
-	// 		require.NoError(t, err)
-
-	// 		slotNumber := uint64(12345)
-
-	// 		result, err := cco.createBatchTx(inputs, metadata, protocolParams, txInfos, outputs, slotNumber)
-	// 		require.NoError(t, err)
-	// 		require.Less(t, len(result.TxHash), 16000)
-	// 		require.Len(t, result.Utxos.MultisigOwnedUTXOs, 5)
-	// 		require.Equal(t, uint64(50000000), result.Utxos.MultisigOwnedUTXOs[0].Amount)
-	// 		require.Equal(t, uint64(104000000), result.Utxos.MultisigOwnedUTXOs[1].Amount)
-	// 		require.Equal(t, uint64(103000000), result.Utxos.MultisigOwnedUTXOs[2].Amount)
-	// 		require.Equal(t, uint64(101000000), result.Utxos.MultisigOwnedUTXOs[3].Amount)
-	// 		require.Equal(t, uint64(102000000), result.Utxos.MultisigOwnedUTXOs[4].Amount)
-	// 	})
-	// }
-}
-
 func TestGenerateBatchTransaction(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
@@ -468,297 +261,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NotNil(t, witnessMultiSigFee)
 	})
 }
-
-// func calculateTxCost(outputs []cardanowallet.TxOutput) cardano.TxOutputs {
-// 	txCost := big.NewInt(0)
-// 	for _, o := range outputs {
-// 		txCost.Add(txCost, big.NewInt(int64(o.Amount)))
-// 	}
-
-// 	return cardano.TxOutputs{
-// 		Outputs: outputs,
-// 		Sum:     txCost,
-// 	}
-// }
-
-// func calculateUTXOSum(inputs []eth.UTXO) *big.Int {
-// 	txCost := big.NewInt(0)
-// 	for _, i := range inputs {
-// 		txCost.Add(txCost, new(big.Int).SetUint64(i.Amount))
-// 	}
-
-// 	return txCost
-// }
-
-// func generateUTXOInputs(count int, amount uint64) (inputs eth.UTXOs) {
-// 	// Count x Input Ada, 1000Ada, 2000Ada, 3000Ada, 4000Ada, 5000Ada
-// 	inputs = eth.UTXOs{
-// 		MultisigOwnedUTXOs: make([]eth.UTXO, count+6),
-// 		FeePayerOwnedUTXOs: []eth.UTXO{
-// 			{
-// 				Nonce:   1000,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1000,
-// 				Amount:  10000000,
-// 			},
-// 			{
-// 				Nonce:   1001,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1001,
-// 				Amount:  10000000,
-// 			},
-// 		},
-// 	}
-
-// 	for i := 0; i < count; i++ {
-// 		inputs.MultisigOwnedUTXOs[i] = eth.UTXO{
-// 			Nonce:   uint64(i),
-// 			TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 			TxIndex: uint64(i),
-// 			Amount:  amount,
-// 		}
-// 	}
-
-// 	for i := 0; i < 5; i++ {
-// 		inputs.MultisigOwnedUTXOs[count+i] = eth.UTXO{
-// 			Nonce:   uint64(count + i),
-// 			TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 			TxIndex: uint64(count + i),
-// 			Amount:  uint64(1000000000 * (i + 1)),
-// 		}
-// 	}
-
-// 	inputs.MultisigOwnedUTXOs[count+5] = eth.UTXO{
-// 		Nonce:   uint64(count + 5),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: uint64(count + 5),
-// 		Amount:  1000000000000,
-// 	}
-
-// 	return
-// }
-
-// func generateUTXORandomInputs(count int, min uint64, max uint64) (inputs eth.UTXOs) {
-// 	// Count x [min-max] Ada, 1000000Ada
-// 	inputs = eth.UTXOs{
-// 		MultisigOwnedUTXOs: make([]eth.UTXO, count+1),
-// 		FeePayerOwnedUTXOs: []eth.UTXO{
-// 			{
-// 				Nonce:   1000,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1000,
-// 				Amount:  10000000,
-// 			},
-// 			{
-// 				Nonce:   1001,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1001,
-// 				Amount:  10000000,
-// 			},
-// 		},
-// 	}
-
-// 	for i := 0; i < count; i++ {
-// 		randomAmount := rand.Uint64() % max
-// 		if randomAmount < min {
-// 			randomAmount += min
-// 		}
-
-// 		inputs.MultisigOwnedUTXOs[i] = eth.UTXO{
-// 			Nonce:   uint64(i),
-// 			TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 			TxIndex: uint64(i),
-// 			Amount:  randomAmount,
-// 		}
-// 	}
-
-// 	inputs.MultisigOwnedUTXOs[count] = eth.UTXO{
-// 		Nonce:   uint64(count + 5),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: uint64(count + 5),
-// 		Amount:  1000000000000,
-// 	}
-
-// 	return
-// }
-
-// func generateUTXOInputsOrdered() (inputs eth.UTXOs) {
-// 	// Count x Input Ada, 1000Ada, 2000Ada, 3000Ada, 4000Ada, 5000Ada
-// 	inputs = eth.UTXOs{
-// 		MultisigOwnedUTXOs: make([]eth.UTXO, 8),
-// 		FeePayerOwnedUTXOs: []eth.UTXO{
-// 			{
-// 				Nonce:   1000,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1000,
-// 				Amount:  10000000,
-// 			},
-// 			{
-// 				Nonce:   1001,
-// 				TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 				TxIndex: 1001,
-// 				Amount:  10000000,
-// 			},
-// 		},
-// 	}
-// 	inputs.MultisigOwnedUTXOs[0] = eth.UTXO{
-// 		Nonce:   uint64(0),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  50000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[1] = eth.UTXO{
-// 		Nonce:   uint64(1),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  40000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[2] = eth.UTXO{
-// 		Nonce:   uint64(2),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  30000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[3] = eth.UTXO{
-// 		Nonce:   uint64(3),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  101000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[4] = eth.UTXO{
-// 		Nonce:   uint64(3),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  102000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[5] = eth.UTXO{
-// 		Nonce:   uint64(5),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  103000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[6] = eth.UTXO{
-// 		Nonce:   uint64(6),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  104000000,
-// 	}
-// 	inputs.MultisigOwnedUTXOs[7] = eth.UTXO{
-// 		Nonce:   uint64(7),
-// 		TxHash:  common.MustHashToBytes32("d50577e2ff7b6df8e37beb178f86837284673a78977a45b065fec457995998b5"),
-// 		TxIndex: 0,
-// 		Amount:  105000000,
-// 	}
-
-// 	return
-// }
-
-// func generateUTXOOutputs(count int, amount uint64) (outputs []cardanowallet.TxOutput) {
-// 	outputs = make([]cardanowallet.TxOutput, count)
-// 	for i := 0; i < count; i++ {
-// 		outputs[i] = cardanowallet.TxOutput{
-// 			Addr:   "addr_test1vq7vsmgan2adwapu6r3xs5049s6dsf8hlgex68mwgxzraks4c0dpp",
-// 			Amount: amount,
-// 		}
-// 	}
-
-// 	return
-// }
-
-// func generateUTXORandomOutputs(count int, min uint64, max uint64) (outputs []cardanowallet.TxOutput) {
-// 	outputs = make([]cardanowallet.TxOutput, count)
-
-// 	for i := 0; i < count; i++ {
-// 		randomAmount := rand.Uint64() % max
-// 		if randomAmount < min {
-// 			randomAmount += min
-// 		}
-
-// 		outputs[i] = cardanowallet.TxOutput{
-// 			Addr:   "addr_test1vq7vsmgan2adwapu6r3xs5049s6dsf8hlgex68mwgxzraks4c0dpp",
-// 			Amount: randomAmount,
-// 		}
-// 	}
-
-// 	return
-// }
-
-// func generateTxInfos(t *testing.T, testnetMagic uint32) cardano.TxInputInfos {
-// 	t.Helper()
-
-// 	dummyKeyHashes := []string{
-// 		"eff5e22355217ec6d770c3668010c2761fa0863afa12e96cff8a2205",
-// 		"ad8e0ab92e1febfcaf44889d68c3ae78b59dc9c5fa9e05a272214c13",
-// 		"bfd1c0eb0a453a7b7d668166ce5ca779c655e09e11487a6fac72dd6f",
-// 		"b4689f2e8f37b406c5eb41b1fe2c9e9f4eec2597c3cc31b8dfee8f56",
-// 		"39c196d28f804f70704b6dec5991fbb1112e648e067d17ca7abe614b",
-// 		"adea661341df075349cbb2ad02905ce1828f8cf3e66f5012d48c3168",
-// 	}
-
-// 	multisigPolicyScript, err := cardanowallet.NewPolicyScript(dummyKeyHashes[0:3], 3)
-// 	require.NoError(t, err)
-// 	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(dummyKeyHashes[3:], 3)
-// 	require.NoError(t, err)
-
-// 	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(uint(testnetMagic))
-// 	require.NoError(t, err)
-// 	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(testnetMagic))
-// 	require.NoError(t, err)
-
-// 	return cardano.TxInputInfos{
-// 		MultiSig: &cardano.TxInputInfo{
-// 			PolicyScript: multisigPolicyScript,
-// 			Address:      multisigAddress,
-// 		},
-// 		MultiSigFee: &cardano.TxInputInfo{
-// 			PolicyScript: multisigFeePolicyScript,
-// 			Address:      multisigFeeAddress,
-// 		},
-// 	}
-// }
-
-// func generateProtocolParams() ([]byte, error) {
-// 	resultJSON := map[string]interface{}{
-// 		"collateralPercentage": 150,
-// 		"costModels":           nil,
-// 		"decentralization":     nil,
-// 		"executionUnitPrices": map[string]interface{}{
-// 			"priceMemory": 5.77e-2,
-// 			"priceSteps":  7.21e-5,
-// 		},
-// 		"extraPraosEntropy": nil,
-// 		"maxBlockBodySize":  65536,
-// 		"maxBlockExecutionUnits": map[string]interface{}{
-// 			"memory": 80000000,
-// 			"steps":  40000000000,
-// 		},
-// 		"maxBlockHeaderSize":  1100,
-// 		"maxCollateralInputs": 3,
-// 		"maxTxExecutionUnits": map[string]interface{}{
-// 			"memory": 16000000,
-// 			"steps":  10000000000,
-// 		},
-// 		"maxTxSize":           16384,
-// 		"maxValueSize":        5000,
-// 		"minPoolCost":         0,
-// 		"minUTxOValue":        nil,
-// 		"monetaryExpansion":   0.1,
-// 		"poolPledgeInfluence": 0,
-// 		"poolRetireMaxEpoch":  18,
-// 		"protocolVersion": map[string]interface{}{
-// 			"major": 7,
-// 			"minor": 0,
-// 		},
-// 		"stakeAddressDeposit": 0,
-// 		"stakePoolDeposit":    0,
-// 		"stakePoolTargetNum":  100,
-// 		"treasuryCut":         0.1,
-// 		"txFeeFixed":          155381,
-// 		"txFeePerByte":        44,
-// 		"utxoCostPerByte":     4310,
-// 	}
-
-// return json.Marshal(resultJSON)}
 
 func Test_getSlotNumberWithRoundingThreshold(t *testing.T) {
 	_, err := getSlotNumberWithRoundingThreshold(66, 60, 0.125)
@@ -945,4 +447,64 @@ func Test_getOutputs(t *testing.T) {
 			Amount: 3000,
 		},
 	}, res.Outputs)
+}
+
+func Test_getUTXOs(t *testing.T) {
+	dbMock := &indexer.DatabaseMock{}
+	multisigAddr := "0x001"
+	feeAddr := "0x002"
+	testErr := errors.New("test err")
+	ops := &CardanoChainOperations{
+		db:     dbMock,
+		logger: hclog.NewNullLogger(),
+	}
+	txOutputs := cardano.TxOutputs{
+		Outputs: []cardanowallet.TxOutput{
+			{}, {}, {},
+		},
+		Sum: new(big.Int).SetUint64(2_000_000),
+	}
+
+	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
+
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		require.Error(t, err)
+	})
+
+	t.Run("GetAllTxOutputs fee error", func(t *testing.T) {
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
+
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		require.Error(t, err)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+		expectedUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 1900},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAA"), Index: 100},
+				Output: indexer.TxOutput{Amount: 10},
+			},
+		}
+		allMultisigUtxos := expectedUtxos[0:2]
+		allFeeUtxos := expectedUtxos[2:]
+
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+
+		require.NoError(t, err)
+		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
+		require.Equal(t, expectedUtxos[2:], feeUtxos)
+	})
 }
