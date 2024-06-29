@@ -29,10 +29,10 @@ var (
 // Get real tx size from protocolParams/config
 const (
 	minUtxoAmount        = uint64(1000000)
-	maxFeeUtxoCount      = 50
+	maxFeeUtxoCount      = 4
 	maxUtxoCount         = 300
 	maxTxSize            = 16000
-	takeAtLeastUtxoCount = 10
+	takeAtLeastUtxoCount = 6 // maxNumberOfTransactions + 1
 
 	noBatchPeriodPercent = 0.0625
 )
@@ -134,8 +134,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	cco.logger.Info("Creating batch tx", "chainID", chainID, "batchID", batchNonceID,
-		"slot", slotNumber, "ttl", cco.config.TTLSlotNumberInc, "magic", cco.config.TestNetMagic)
+	cco.logger.Info("Creating batch tx", "batchID", batchNonceID, "magic", cco.config.TestNetMagic,
+		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(

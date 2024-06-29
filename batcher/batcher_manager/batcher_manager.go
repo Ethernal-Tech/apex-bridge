@@ -55,8 +55,9 @@ func NewBatcherManager(
 			return nil, fmt.Errorf("database not exists for chain: %s", chainConfig.ChainID)
 		}
 
-		operations, err := batcher.GetChainSpecificOperations(chainConfig, db,
-			secretsManager, logger)
+		chainLogger := logger.Named(strings.ToUpper(chainConfig.ChainID))
+
+		operations, err := batcher.GetChainSpecificOperations(chainConfig, db, secretsManager, chainLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +71,7 @@ func NewBatcherManager(
 			operations,
 			bridgeSmartContract,
 			bridgingRequestStateUpdater,
-			logger.Named(strings.ToUpper(chainConfig.ChainID)))
+			chainLogger)
 
 		batchers = append(batchers, batcher)
 	}
