@@ -9,8 +9,6 @@ import (
 type GeneratedBatchTxData struct {
 	TxRaw  []byte
 	TxHash string
-	Utxos  eth.UTXOs
-	Slot   uint64
 }
 
 type BatcherManager interface {
@@ -27,6 +25,9 @@ type ChainOperations interface {
 		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
 	SignBatchTransaction(txHash string) ([]byte, []byte, error)
+	IsSynchronized(
+		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
+	) (bool, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

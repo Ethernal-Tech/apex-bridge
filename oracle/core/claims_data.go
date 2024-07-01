@@ -22,8 +22,6 @@ type BatchExecutedClaim = contractbinding.IBridgeStructsBatchExecutedClaim
 type BatchExecutionFailedClaim = contractbinding.IBridgeStructsBatchExecutionFailedClaim
 type RefundRequestClaim = contractbinding.IBridgeStructsRefundRequestClaim
 type RefundExecutedClaim = contractbinding.IBridgeStructsRefundExecutedClaim
-type UTXO = contractbinding.IBridgeStructsUTXO
-type UTXOs = contractbinding.IBridgeStructsUTXOs
 type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiver
 
 type BridgeClaims struct {
@@ -69,9 +67,6 @@ func RefundExecutedClaimString(c RefundExecutedClaim) string {
 	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nRefundTxHash = ")
 	sb.WriteString(hex.EncodeToString(c.RefundTxHash[:]))
-	sb.WriteString("\nUtxo = ")
-	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 
 	return sb.String()
 }
@@ -87,9 +82,6 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.Receiver)
-	sb.WriteString("\nUtxo = ")
-	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.Utxo.Nonce, hex.EncodeToString(c.Utxo.TxHash[:]), c.Utxo.TxIndex, c.Utxo.Amount))
 	sb.WriteString("\nRawTransaction = ")
 	sb.WriteString(hex.EncodeToString(c.RawTransaction))
 	sb.WriteString("\nMultisigSignature = ")
@@ -122,23 +114,6 @@ func BatchExecutedClaimString(c BatchExecutedClaim) string {
 	sb.WriteString(common.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(fmt.Sprint(c.BatchNonceId))
-	sb.WriteString("\nMultisigOwnedUTXOs = [")
-
-	for _, utxo := range c.OutputUTXOs.MultisigOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
-	}
-
-	sb.WriteString("]")
-
-	sb.WriteString("\nFeePayerOwnedUTXOs = [")
-
-	for _, utxo := range c.OutputUTXOs.FeePayerOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, hex.EncodeToString(utxo.TxHash[:]), utxo.TxIndex, utxo.Amount))
-	}
-
-	sb.WriteString("]")
 
 	return sb.String()
 }
@@ -163,9 +138,6 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	sb.WriteString("\nReceivers = [")
 	sb.WriteString(sbReceivers.String())
 	sb.WriteString("]")
-	sb.WriteString("\nOutputUTXO = ")
-	sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-		c.OutputUTXO.Nonce, hex.EncodeToString(c.OutputUTXO.TxHash[:]), c.OutputUTXO.TxIndex, c.OutputUTXO.Amount))
 	sb.WriteString("\nTotalAmount = ")
 	sb.WriteString(c.TotalAmount.String())
 	sb.WriteString("\nSourceChainID = ")

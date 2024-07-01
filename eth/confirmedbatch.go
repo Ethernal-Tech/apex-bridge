@@ -11,8 +11,6 @@ import (
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
-type UTXOs = contractbinding.IBridgeStructsUTXOs
-type UTXO = contractbinding.IBridgeStructsUTXO
 type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
 
 type ConfirmedBatch struct {
@@ -52,27 +50,6 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
 	sb.WriteString("\nlast tx nonce id = ")
 	sb.WriteString(fmt.Sprint(b.LastTxNonceId))
-
-	sb.WriteString("\nmultisig owned used utxos cnt = ")
-	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.MultisigOwnedUTXOs)))
-	sb.WriteString("\nmultisig owned used utxos = [")
-
-	for _, utxo := range b.UsedUTXOs.MultisigOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
-	}
-
-	sb.WriteString("]")
-	sb.WriteString("\nfeepayer owned used utxos cnt = ")
-	sb.WriteString(fmt.Sprint(len(b.UsedUTXOs.FeePayerOwnedUTXOs)))
-	sb.WriteString("\nfeepayer owned used utxos = [")
-
-	for _, utxo := range b.UsedUTXOs.FeePayerOwnedUTXOs {
-		sb.WriteString(fmt.Sprintf("{ Nonce = %v, TxHash = %s, TxIndex = %v, Amount = %v }",
-			utxo.Nonce, utxo.TxHash, utxo.TxIndex, utxo.Amount))
-	}
-
-	sb.WriteString("]")
 
 	return sb.String()
 }
