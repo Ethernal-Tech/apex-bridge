@@ -21,7 +21,7 @@ type OracleImpl struct {
 
 var _ core.Oracle = (*OracleImpl)(nil)
 
-func NewOracle(
+func NewEthOracle(
 	ctx context.Context,
 	appConfig *core.AppConfig,
 	logger hclog.Logger,
