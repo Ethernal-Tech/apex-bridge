@@ -95,6 +95,8 @@ const (
 
 	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
+	defaultPrimeBlockConfirmationCount       = 10
+	defaultVectorBlockConfirmationCount      = 10
 	defaultNetworkMagic                      = 0
 	defaultLogsPath                          = "./logs"
 	defaultDBsPath                           = "./db"
@@ -102,9 +104,9 @@ const (
 	defaultOutputDir                         = "./"
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
-	defaultPrimeTTLSlotNumberInc             = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultPrimeTTLSlotNumberInc             = 1800 + defaultPrimeBlockConfirmationCount*10 // BlockTimeSeconds
 	defaultPrimeSlotRoundingThreshold        = 60
-	defaultVectorTTLSlotNumberInc            = 1800 + 20*10 // ConfirmationBlockCount * BlockTimeSeconds
+	defaultVectorTTLSlotNumberInc            = 1800 + defaultVectorBlockConfirmationCount*10 // BlockTimeSeconds
 	defaultVectorSlotRoundingThreshold       = 60
 )
 
@@ -435,7 +437,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,
-				ConfirmationBlockCount:   10,
+				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
 				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				OgmiosURL:                p.primeOgmiosURL,
@@ -452,7 +454,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,
-				ConfirmationBlockCount:   10,
+				ConfirmationBlockCount:   defaultVectorBlockConfirmationCount,
 				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				OgmiosURL:                p.vectorOgmiosURL,
