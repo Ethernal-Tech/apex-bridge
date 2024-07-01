@@ -3,7 +3,8 @@ package oracle
 import (
 	"context"
 
-	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -19,7 +20,7 @@ type OracleImpl struct {
 	errorCh chan error
 }
 
-var _ core.Oracle = (*OracleImpl)(nil)
+var _ oracleCore.Oracle = (*OracleImpl)(nil)
 
 func NewEthOracle(
 	ctx context.Context,
