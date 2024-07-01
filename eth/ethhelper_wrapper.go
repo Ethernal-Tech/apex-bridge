@@ -107,7 +107,7 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
-		return "", e.ProcessError(err)
+		return "", e.ProcessError(fmt.Errorf("failed to receive receipt for tx %s: %w", tx.Hash(), err))
 	}
 
 	e.logger.Info("tx has been included in block", "tx hash", tx.Hash(),
@@ -115,7 +115,8 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		"gas used", receipt.BlobGasUsed, "cumulative gas used", receipt.CumulativeGasUsed)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
-		return receipt.BlockHash.String(), fmt.Errorf("receipts status not successful: %v", receipt.Status)
+		return receipt.BlockHash.String(),
+			fmt.Errorf("tx receipt status is unsuccessful for %s: %v", tx.Hash(), receipt.Status)
 	}
 
 	return receipt.BlockHash.String(), nil
