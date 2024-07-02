@@ -55,6 +55,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 ) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
 	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
+	oracleEthChains := make(map[string]*ethOracleCore.EthChainConfig, len(appConfig.EthChains))
 
 	for chainID, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
@@ -87,6 +88,12 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		})
 	}
 
+	for chainID := range appConfig.EthChains {
+		oracleEthChains[chainID] = &ethOracleCore.EthChainConfig{
+			ChainID: chainID,
+		}
+	}
+
 	oracleConfig := &oracleCore.AppConfig{
 		ValidatorDataDir:    appConfig.ValidatorDataDir,
 		ValidatorConfigPath: appConfig.ValidatorConfigPath,
@@ -99,7 +106,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	ethOracleConfig := &ethOracleCore.AppConfig{
 		ValidatorDataDir:    appConfig.ValidatorDataDir,
 		ValidatorConfigPath: appConfig.ValidatorConfigPath,
-		EthChains:           appConfig.EthChains,
+		EthChains:           oracleEthChains,
 		Bridge:              appConfig.Bridge,
 		Settings:            appConfig.Settings,
 		BridgingSettings:    appConfig.BridgingSettings,

@@ -21,7 +21,10 @@ import (
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
+
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 )
 
@@ -35,6 +38,7 @@ type ValidatorComponentsImpl struct {
 	shouldRunAPI    bool
 	db              core.Database
 	oracle          oracleCore.Oracle
+	ethOracle       oracleCore.Oracle
 	batcherManager  batcherCore.BatcherManager
 	relayerImitator core.RelayerImitator
 	api             core.API
@@ -65,7 +69,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	oracleConfig, _, batcherConfig := appConfig.SeparateConfigs()
+	oracleConfig, ethOracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
 		ctx, oracleConfig,
@@ -93,6 +97,11 @@ func NewValidatorComponents(
 	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
+	}
+
+	ethOracle, err := ethOracle.NewEthOracle(ctx, ethOracleConfig, logger.Named("eth_oracle"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
 	}
 
 	batcherManager, err := batchermanager.NewBatcherManager(
@@ -133,6 +142,7 @@ func NewValidatorComponents(
 		shouldRunAPI:    shouldRunAPI,
 		db:              db,
 		oracle:          oracle,
+		ethOracle:       ethOracle,
 		batcherManager:  batcherManager,
 		relayerImitator: relayerImitator,
 		api:             apiObj,
@@ -152,6 +162,11 @@ func (v *ValidatorComponentsImpl) Start() error {
 	err = v.oracle.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
+	}
+
+	err = v.ethOracle.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start eth_oracle. error: %w", err)
 	}
 
 	v.batcherManager.Start()
@@ -175,6 +190,11 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
+	}
+
+	if err := v.ethOracle.Dispose(); err != nil {
+		v.logger.Error("error while disposing eth_oracle", "err", err)
+		errs = append(errs, fmt.Errorf("error while disposing eth_oracle. err: %w", err))
 	}
 
 	if v.shouldRunAPI {
