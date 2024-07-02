@@ -65,7 +65,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
+	oracleConfig, _, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
 		ctx, oracleConfig,
