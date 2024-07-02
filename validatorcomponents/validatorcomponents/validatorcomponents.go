@@ -21,7 +21,10 @@ import (
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
+
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 )
 
@@ -35,11 +38,13 @@ type ValidatorComponentsImpl struct {
 	shouldRunAPI    bool
 	db              core.Database
 	oracle          oracleCore.Oracle
+	ethOracle       oracleCore.Oracle
 	batcherManager  batcherCore.BatcherManager
 	relayerImitator core.RelayerImitator
 	api             core.API
 	telemetry       *telemetry.Telemetry
 	logger          hclog.Logger
+	errorCh         chan error
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -65,7 +70,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
+	oracleConfig, ethOracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
 		ctx, oracleConfig,
@@ -93,6 +98,11 @@ func NewValidatorComponents(
 	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
+	}
+
+	ethOracle, err := ethOracle.NewEthOracle(ctx, ethOracleConfig, logger.Named("eth_oracle"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
 	}
 
 	batcherManager, err := batchermanager.NewBatcherManager(
@@ -133,6 +143,7 @@ func NewValidatorComponents(
 		shouldRunAPI:    shouldRunAPI,
 		db:              db,
 		oracle:          oracle,
+		ethOracle:       ethOracle,
 		batcherManager:  batcherManager,
 		relayerImitator: relayerImitator,
 		api:             apiObj,
@@ -154,6 +165,11 @@ func (v *ValidatorComponentsImpl) Start() error {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
 	}
 
+	err = v.ethOracle.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start eth_oracle. error: %w", err)
+	}
+
 	v.batcherManager.Start()
 
 	if v.shouldRunAPI {
@@ -161,6 +177,10 @@ func (v *ValidatorComponentsImpl) Start() error {
 	}
 
 	go v.relayerImitator.Start()
+
+	v.errorCh = make(chan error, 1)
+
+	go v.errorHandler()
 
 	v.logger.Debug("Started ValidatorComponents")
 
@@ -175,6 +195,11 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
+	}
+
+	if err := v.ethOracle.Dispose(); err != nil {
+		v.logger.Error("error while disposing eth_oracle", "err", err)
+		errs = append(errs, fmt.Errorf("error while disposing eth_oracle. err: %w", err))
 	}
 
 	if v.shouldRunAPI {
@@ -194,6 +219,8 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}
 
+	close(v.errorCh)
+
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
 	}
@@ -204,7 +231,23 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 }
 
 func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
-	return v.oracle.ErrorCh()
+	return v.errorCh
+}
+
+func (v *ValidatorComponentsImpl) errorHandler() {
+outsideloop:
+	for {
+		select {
+		case err := <-v.oracle.ErrorCh():
+			v.errorCh <- err
+		case err := <-v.ethOracle.ErrorCh():
+			v.errorCh <- err
+		case <-v.ctx.Done():
+			break outsideloop
+		}
+	}
+
+	v.logger.Debug("Exiting validatorcomponents error handler")
 }
 
 func fixChainsAndAddresses(

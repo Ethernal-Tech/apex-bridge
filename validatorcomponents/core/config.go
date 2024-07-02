@@ -3,6 +3,7 @@ package core
 import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 )
@@ -36,21 +37,25 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
-	ValidatorDataDir             string                         `json:"validatorDataDir"`
-	ValidatorConfigPath          string                         `json:"validatorConfigPath"`
-	CardanoChains                map[string]*CardanoChainConfig `json:"cardanoChains"`
-	Bridge                       oracleCore.BridgeConfig        `json:"bridge"`
-	BridgingSettings             oracleCore.BridgingSettings    `json:"bridgingSettings"`
-	Settings                     oracleCore.AppSettings         `json:"appSettings"`
-	RelayerImitatorPullTimeMilis uint64                         `json:"relayerImitatorPullTime"`
-	BatcherPullTimeMilis         uint64                         `json:"batcherPullTime"`
-	APIConfig                    APIConfig                      `json:"api"`
-	Telemetry                    telemetry.TelemetryConfig      `json:"telemetry"`
+	ValidatorDataDir             string                                   `json:"validatorDataDir"`
+	ValidatorConfigPath          string                                   `json:"validatorConfigPath"`
+	CardanoChains                map[string]*CardanoChainConfig           `json:"cardanoChains"`
+	EthChains                    map[string]*ethOracleCore.EthChainConfig `json:"ethChains"`
+	Bridge                       oracleCore.BridgeConfig                  `json:"bridge"`
+	BridgingSettings             oracleCore.BridgingSettings              `json:"bridgingSettings"`
+	Settings                     oracleCore.AppSettings                   `json:"appSettings"`
+	RelayerImitatorPullTimeMilis uint64                                   `json:"relayerImitatorPullTime"`
+	BatcherPullTimeMilis         uint64                                   `json:"batcherPullTime"`
+	APIConfig                    APIConfig                                `json:"api"`
+	Telemetry                    telemetry.TelemetryConfig                `json:"telemetry"`
 }
 
-func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {
+func (appConfig *AppConfig) SeparateConfigs() (
+	*oracleCore.AppConfig, *ethOracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
+) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
 	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
+	oracleEthChains := make(map[string]*ethOracleCore.EthChainConfig, len(appConfig.EthChains))
 
 	for chainID, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
@@ -83,6 +88,12 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		})
 	}
 
+	for chainID := range appConfig.EthChains {
+		oracleEthChains[chainID] = &ethOracleCore.EthChainConfig{
+			ChainID: chainID,
+		}
+	}
+
 	oracleConfig := &oracleCore.AppConfig{
 		ValidatorDataDir:    appConfig.ValidatorDataDir,
 		ValidatorConfigPath: appConfig.ValidatorConfigPath,
@@ -90,6 +101,15 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Settings:            appConfig.Settings,
 		BridgingSettings:    appConfig.BridgingSettings,
 		CardanoChains:       oracleCardanoChains,
+	}
+
+	ethOracleConfig := &ethOracleCore.AppConfig{
+		ValidatorDataDir:    appConfig.ValidatorDataDir,
+		ValidatorConfigPath: appConfig.ValidatorConfigPath,
+		EthChains:           oracleEthChains,
+		Bridge:              appConfig.Bridge,
+		Settings:            appConfig.Settings,
+		BridgingSettings:    appConfig.BridgingSettings,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
@@ -104,5 +124,5 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Chains:        batcherChains,
 	}
 
-	return oracleConfig, batcherConfig
+	return oracleConfig, ethOracleConfig, batcherConfig
 }
