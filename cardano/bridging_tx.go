@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -172,7 +171,7 @@ func (bts *BridgingTxSender) WaitForTx(
 		go func(idx int, recv cardanowallet.TxOutput) {
 			defer wg.Done()
 
-			var expectedAmount *big.Int
+			var expectedAmount uint64
 
 			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
 				utxos, err := bts.TxUtxoRetrieverDst.GetUtxos(ctx, recv.Addr)
@@ -185,11 +184,11 @@ func (bts *BridgingTxSender) WaitForTx(
 				return
 			}
 
-			expectedAmount.Add(expectedAmount, new(big.Int).SetUint64(recv.Amount))
+			expectedAmount += recv.Amount
 
 			errs[idx] = cardanowallet.WaitForAmount(
-				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount *big.Int) bool {
-					return newAmount.Cmp(expectedAmount) >= 0
+				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount uint64) bool {
+					return newAmount >= expectedAmount
 				},
 				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
 		}(i, x)
