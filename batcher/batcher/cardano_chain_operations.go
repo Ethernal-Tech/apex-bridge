@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -112,13 +111,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
 
 	multisigAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, cco.config.NetworkID, multisigPolicyScript)
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript)
 	if err != nil {
 		return nil, err
 	}
 
 	multisigFeeAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, cco.config.NetworkID, multisigFeePolicyScript)
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +296,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum.Uint64(),
+		txOutputs.Sum,
 		minUtxoAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
@@ -429,7 +428,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
-		Sum:     big.NewInt(0),
+		Sum:     0,
 	}
 
 	for addr, amount := range receiversMap {
@@ -442,7 +441,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 			Addr:   addr,
 			Amount: amount,
 		})
-		result.Sum.Add(result.Sum, new(big.Int).SetUint64(amount))
+		result.Sum += amount
 	}
 
 	// sort outputs because all batchers should have same order of outputs

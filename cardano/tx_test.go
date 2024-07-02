@@ -22,15 +22,16 @@ func TestCreateTx(t *testing.T) {
 		"f0f4837b3a306752a2b3e52394168bc7391de3dce11364b723cc55cf",
 		"47344d5bd7b2fea56336ba789579705a944760032585ef64084c92db",
 	}
+	testnetMagic := uint(42)
 	networkID := wallet.MainNetNetwork
 	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes))
 	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
 	cardanoCliBinary := common.ResolveCardanoCliBinary(networkID)
 
-	multiSigAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, networkID, policyScriptMultiSig)
+	multiSigAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)
 
-	feeAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, networkID, policyScriptFee)
+	feeAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, testnetMagic, policyScriptFee)
 	require.NoError(t, err)
 
 	txInputsInfos := TxInputInfos{
@@ -93,7 +94,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -134,7 +135,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -179,7 +180,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -224,7 +225,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -269,7 +270,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -314,7 +315,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
@@ -363,7 +364,7 @@ func TestCreateTx(t *testing.T) {
 		}
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, uint(42), protocolParameters, 1000, nil, txInputsInfos, outputs)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
 
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
