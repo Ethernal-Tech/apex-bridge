@@ -178,7 +178,7 @@ func (v *ValidatorComponentsImpl) Start() error {
 
 	go v.relayerImitator.Start()
 
-	v.errorCh = make(chan error)
+	v.errorCh = make(chan error, 1)
 
 	go v.errorHandler()
 
