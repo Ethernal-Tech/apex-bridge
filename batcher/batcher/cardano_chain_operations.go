@@ -38,11 +38,12 @@ const (
 )
 
 type CardanoChainOperations struct {
-	config     *cardano.CardanoChainConfig
-	wallet     *cardano.CardanoWallet
-	txProvider cardanowallet.ITxDataRetriever
-	db         indexer.Database
-	logger     hclog.Logger
+	config           *cardano.CardanoChainConfig
+	wallet           *cardano.CardanoWallet
+	txProvider       cardanowallet.ITxDataRetriever
+	db               indexer.Database
+	cardanoCliBinary string
+	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
@@ -68,11 +69,12 @@ func NewCardanoChainOperations(
 	}
 
 	return &CardanoChainOperations{
-		wallet:     cardanoWallet,
-		config:     cardanoConfig,
-		txProvider: txProvider,
-		db:         db,
-		logger:     logger,
+		wallet:           cardanoWallet,
+		config:           cardanoConfig,
+		txProvider:       txProvider,
+		cardanoCliBinary: common.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
+		db:               db,
+		logger:           logger,
 	}, nil
 }
 
@@ -104,24 +106,19 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigPolicyScript, err := cardanowallet.NewPolicyScript(
+	multisigPolicyScript := cardanowallet.NewPolicyScript(
 		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigKeyHashes)))))
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(
+	multisigFeePolicyScript := cardanowallet.NewPolicyScript(
 		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
+
+	multisigAddress, err := cardano.GetAddressFromPolicyScript(
+		cco.cardanoCliBinary, cco.config.NetworkID, multisigPolicyScript)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(uint(cco.config.TestNetMagic))
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(cco.config.TestNetMagic))
+	multisigFeeAddress, err := cardano.GetAddressFromPolicyScript(
+		cco.cardanoCliBinary, cco.config.NetworkID, multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +136,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
+		cco.cardanoCliBinary,
 		uint(cco.config.TestNetMagic),
 		protocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,

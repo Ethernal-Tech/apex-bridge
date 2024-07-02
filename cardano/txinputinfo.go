@@ -14,17 +14,15 @@ type TxInputInfos struct {
 }
 
 func NewTxInputInfos(
-	keyHashesMultiSig []string, keyHashesMultiSigFee []string, testNetMagic uint,
+	cardanoCliBinary string, networkID cardanowallet.CardanoNetworkType,
+	keyHashesMultiSig []string, keyHashesMultiSigFee []string,
 ) (*TxInputInfos, error) {
 	result := [2]*TxInputInfo{}
 
 	for i, keyHashes := range [][]string{keyHashesMultiSig, keyHashesMultiSigFee} {
-		ps, err := cardanowallet.NewPolicyScript(keyHashes, len(keyHashes)*2/3+1)
-		if err != nil {
-			return nil, err
-		}
+		ps := cardanowallet.NewPolicyScript(keyHashes, len(keyHashes)*2/3+1)
 
-		addr, err := ps.CreateMultiSigAddress(testNetMagic)
+		addr, err := GetAddressFromPolicyScript(cardanoCliBinary, networkID, ps)
 		if err != nil {
 			return nil, err
 		}

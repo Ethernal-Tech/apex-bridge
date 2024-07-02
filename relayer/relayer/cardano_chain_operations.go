@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -16,8 +17,9 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	txProvider cardanowallet.ITxProvider
-	logger     hclog.Logger
+	txProvider       cardanowallet.ITxProvider
+	cardanoCliBinary string
+	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
@@ -35,8 +37,9 @@ func NewCardanoChainOperations(
 	}
 
 	return &CardanoChainOperations{
-		txProvider: txProvider,
-		logger:     logger,
+		txProvider:       txProvider,
+		cardanoCliBinary: common.ResolveCardanoCliBinary(config.NetworkID),
+		logger:           logger,
 	}, nil
 }
 
@@ -51,7 +54,7 @@ func (cco *CardanoChainOperations) SendTx(
 	copy(witnesses, smartContractData.MultisigSignatures)
 	copy(witnesses[len(smartContractData.MultisigSignatures):], smartContractData.FeePayerMultisigSignatures)
 
-	txSigned, err := cardanotx.AssembleTxWitnesses(smartContractData.RawTransaction, witnesses)
+	txSigned, err := cardanotx.AssembleTxWitnesses(cco.cardanoCliBinary, smartContractData.RawTransaction, witnesses)
 	if err != nil {
 		return err
 	}

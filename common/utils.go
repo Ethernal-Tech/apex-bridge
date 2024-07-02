@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 )
@@ -94,4 +95,8 @@ func SafeSubtract(a, b, def uint64) uint64 {
 
 func MustHashToBytes32(hash string) (res [32]byte) {
 	return indexer.NewHashFromHexString(hash)
+}
+
+func ResolveCardanoCliBinary(networkID cardanowallet.CardanoNetworkType) string {
+	return cardanowallet.ResolveCardanoCliBinary(networkID)
 }

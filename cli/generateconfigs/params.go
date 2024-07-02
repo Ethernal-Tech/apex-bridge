@@ -433,7 +433,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
 				NetworkMagic:             p.primeNetworkMagic,
-				NetworkID:                p.primeNetworkID,
+				NetworkID:                wallet.CardanoNetworkType(p.primeNetworkID),
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,
@@ -450,7 +450,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
 				NetworkMagic:             p.vectorNetworkMagic,
-				NetworkID:                p.vectorNetworkID,
+				NetworkID:                wallet.CardanoNetworkType(p.vectorNetworkID),
 				StartBlockHash:           "",
 				StartSlot:                0,
 				StartBlockNumber:         0,

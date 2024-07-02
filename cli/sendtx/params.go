@@ -17,6 +17,7 @@ const (
 	privateKeyFlag         = "key"
 	ogmiosURLSrcFlag       = "ogmios-src"
 	receiverFlag           = "receiver"
+	networkIDSrcFlag       = "network-id-src"
 	testnetMagicFlag       = "testnet-src"
 	chainIDFlag            = "chain-dst"
 	multisigAddrSrcFlag    = "addr-multisig-src"
@@ -28,6 +29,7 @@ const (
 	ogmiosURLSrcFlagDesc       = "source chain ogmios url"
 	receiverFlagDesc           = "receiver addr:amount"
 	testnetMagicFlagDesc       = "source testnet magic number. leave 0 for mainnet"
+	networkIDSrcFlagDesc       = "source network id"
 	chainIDFlagDesc            = "destination chain ID (prime, vector, etc)"
 	multisigAddrSrcFlagDesc    = "source multisig address"
 	multisigFeeAddrDstFlagDesc = "destination fee payer address"
@@ -42,6 +44,7 @@ type sendTxParams struct {
 	privateKeyRaw      string
 	ogmiosURLSrc       string
 	receivers          []string
+	networkIDSrc       uint
 	testnetMagicSrc    uint
 	chainIDDst         string
 	multisigAddrSrc    string
@@ -86,9 +89,7 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 	}
 
-	bytes, err := (cardanowallet.Key{
-		Hex: ip.privateKeyRaw,
-	}).GetKeyBytes()
+	bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
 	if err != nil || len(bytes) != 32 {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 	}
@@ -200,25 +201,36 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		"",
 		ogmiosURLDstFlagDesc,
 	)
+
+	cmd.Flags().UintVar(
+		&ip.networkIDSrc,
+		networkIDSrcFlag,
+		0,
+		networkIDSrcFlagDesc,
+	)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
+	cardanoCliBinary := common.ResolveCardanoCliBinary(networkID)
 	txSender := cardanotx.NewBridgingTxSender(
+		cardanoCliBinary,
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc)
 
-	senderAddr, _, err := cardanowallet.GetWalletAddressCli(ip.wallet, ip.testnetMagicSrc)
+	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	txRaw, txHash, err := txSender.CreateTx(context.Background(), ip.chainIDDst, senderAddr, ip.receiversParsed)
+	txRaw, txHash, err := txSender.CreateTx(
+		context.Background(), ip.chainIDDst, senderAddr.String(), ip.receiversParsed)
 	if err != nil {
 		return nil, err
 	}
 
-	err = txSender.SendTx(context.Background(), ip.wallet, txRaw, txHash)
+	err = txSender.SendTx(context.Background(), txRaw, txHash, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +246,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 	}
 
 	return CmdResult{
-		SenderAddr: senderAddr,
+		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
 		Receipts:   ip.receiversParsed,
 		TxHash:     txHash,

@@ -25,6 +25,7 @@ const (
 )
 
 type BridgingTxSender struct {
+	cardanoCliBinary   string
 	TxProviderSrc      cardanowallet.ITxProvider
 	TxUtxoRetrieverDst cardanowallet.IUTxORetriever
 	MultiSigAddrSrc    string
@@ -35,6 +36,7 @@ type BridgingTxSender struct {
 }
 
 func NewBridgingTxSender(
+	cardanoCliBinary string,
 	txProvider cardanowallet.ITxProvider,
 	txUtxoRetriever cardanowallet.IUTxORetriever,
 	testNetMagic uint,
@@ -42,6 +44,7 @@ func NewBridgingTxSender(
 	ttlSlotNumberInc uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
+		cardanoCliBinary:   cardanoCliBinary,
 		TxProviderSrc:      txProvider,
 		TxUtxoRetrieverDst: txUtxoRetriever,
 		TestNetMagicSrc:    testNetMagic,
@@ -93,7 +96,7 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	builder, err := cardanowallet.NewTxBuilder()
+	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
 	if err != nil {
 		return nil, "", err
 	}
@@ -131,9 +134,21 @@ func (bts *BridgingTxSender) CreateTx(
 }
 
 func (bts *BridgingTxSender) SendTx(
-	ctx context.Context, cardanoWallet cardanowallet.IWallet, txRaw []byte, txHash string,
+	ctx context.Context, txRaw []byte, txHash string, cardanoWallet cardanowallet.IWallet,
 ) error {
-	txSigned, err := cardanowallet.SignTx(txRaw, txHash, cardanoWallet)
+	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
+	if err != nil {
+		return err
+	}
+
+	defer builder.Dispose()
+
+	witness, err := cardanowallet.CreateTxWitness(txHash, cardanoWallet)
+	if err != nil {
+		return err
+	}
+
+	txSigned, err := builder.AssembleTxWitnesses(txRaw, [][]byte{witness})
 	if err != nil {
 		return err
 	}

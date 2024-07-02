@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type BridgingAddresses struct {
@@ -12,16 +13,16 @@ type BridgingAddresses struct {
 
 type CardanoChainConfig struct {
 	ChainID                  string
-	NetworkAddress           string                   `json:"networkAddress"`
-	NetworkMagic             uint32                   `json:"networkMagic"`
-	NetworkID                uint32                   `json:"networkID"`
-	StartBlockHash           string                   `json:"startBlockHash"`
-	StartSlot                uint64                   `json:"startSlot"`
-	StartBlockNumber         uint64                   `json:"startBlockNumber"`
-	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
-	BridgingAddresses        BridgingAddresses        `json:"bridgingAddresses"`
-	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
-	InitialUtxos             []*indexer.TxInputOutput `json:"initialUtxos"`
+	NetworkAddress           string                           `json:"networkAddress"`
+	NetworkMagic             uint32                           `json:"networkMagic"`
+	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
+	StartBlockHash           string                           `json:"startBlockHash"`
+	StartSlot                uint64                           `json:"startSlot"`
+	StartBlockNumber         uint64                           `json:"startBlockNumber"`
+	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
+	BridgingAddresses        BridgingAddresses                `json:"bridgingAddresses"`
+	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
+	InitialUtxos             []*indexer.TxInputOutput         `json:"initialUtxos"`
 }
 
 type SubmitConfig struct {

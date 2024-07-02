@@ -9,6 +9,7 @@ import (
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
@@ -120,9 +121,10 @@ func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.
 	}
 
 	if requestBody.TxRaw == "" || requestBody.SigningKeyHex == "" || requestBody.TxHash == "" {
-		c.logger.Debug("signBridgingTx request", "err", err.Error(), "url", r.URL)
+		c.logger.Debug("signBridgingTx request", "txRaw", requestBody.TxRaw,
+			"signingKeyHex", requestBody.SigningKeyHex, "txHash", requestBody.TxHash)
 
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid input data")
 		if rerr != nil {
 			c.logger.Error("error while WriteErrorResponse", "err", rerr)
 		}
@@ -188,7 +190,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			break
 		}
 
-		_, err := wallet.GetAddressInfo(receiver.Addr)
+		_, err := wallet.NewAddress(receiver.Addr)
 		if err != nil {
 			foundAnInvalidReceiverAddr = true
 
@@ -259,6 +261,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	bridgingTxSender := cardanotx.NewBridgingTxSender(
+		common.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
 		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
 		sourceChainConfig.BridgingAddresses.BridgingAddress,
 		cardanoConfig.TTLSlotNumberInc,
@@ -290,25 +293,36 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxRequest) (
 	string, error,
 ) {
-	signingKeyBytes, err := hex.DecodeString(requestBody.SigningKeyHex)
+	signingKeyBytes, err := common.DecodeHex(requestBody.SigningKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode singing key hex: %w", err)
 	}
 
-	txRawBytes, err := hex.DecodeString(requestBody.TxRaw)
+	txRawBytes, err := common.DecodeHex(requestBody.TxRaw)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode raw tx: %w", err)
 	}
 
+	cardanoCliBinary := common.ResolveCardanoCliBinary(wallet.CardanoNetworkType(requestBody.NetworkID))
 	senderWallet := wallet.NewWallet(
 		wallet.GetVerificationKeyFromSigningKey(signingKeyBytes), signingKeyBytes)
 
-	signedTxBytes, err := wallet.SignTx(txRawBytes, requestBody.TxHash, senderWallet)
+	txBuilder, err := wallet.NewTxBuilder(cardanoCliBinary)
+	if err != nil {
+		return "", fmt.Errorf("failed to create tx builder: %w", err)
+	}
+
+	defer txBuilder.Dispose()
+
+	witness, err := wallet.CreateTxWitness(requestBody.TxHash, senderWallet)
+	if err != nil {
+		return "", fmt.Errorf("failed to create witness: %w", err)
+	}
+
+	signedTxBytes, err := txBuilder.AssembleTxWitnesses(txRawBytes, [][]byte{witness})
 	if err != nil {
 		return "", fmt.Errorf("failed to sign tx: %w", err)
 	}
 
-	signedTx := hex.EncodeToString(signedTxBytes)
-
-	return signedTx, nil
+	return hex.EncodeToString(signedTxBytes), nil
 }
