@@ -3,7 +3,7 @@ package oracle
 import (
 	"context"
 
-	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -14,7 +14,7 @@ const (
 
 type OracleImpl struct {
 	ctx       context.Context
-	appConfig *core.AppConfig
+	appConfig *ethOracleCore.AppConfig
 	logger    hclog.Logger
 
 	errorCh chan error
@@ -24,7 +24,7 @@ var _ oracleCore.Oracle = (*OracleImpl)(nil)
 
 func NewEthOracle(
 	ctx context.Context,
-	appConfig *core.AppConfig,
+	appConfig *ethOracleCore.AppConfig,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	return &OracleImpl{
