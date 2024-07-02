@@ -56,3 +56,10 @@ type EthTxFailedProcessor interface {
 	GetType() common.BridgingTxType
 	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *BridgeExpectedEthTx, appConfig *AppConfig) error
 }
+
+type EthChainObserver interface {
+	Start() error
+	Dispose() error
+	GetConfig() *EthChainConfig
+	ErrorCh() <-chan error
+}
