@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -38,7 +37,7 @@ func NewCardanoChainOperations(
 
 	return &CardanoChainOperations{
 		txProvider:       txProvider,
-		cardanoCliBinary: common.ResolveCardanoCliBinary(config.NetworkID),
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
 		logger:           logger,
 	}, nil
 }

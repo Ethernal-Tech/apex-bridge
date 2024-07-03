@@ -75,7 +75,7 @@ func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
 	networkID := wallet.CardanoNetworkType(ip.networkID)
 	atLeast := common.GetRequiredSignaturesForConsensus(uint64(len(ip.keys)))
 	script := wallet.NewPolicyScript(ip.keys, int(atLeast))
-	cliUtils := wallet.NewCliUtils(common.ResolveCardanoCliBinary(networkID))
+	cliUtils := wallet.NewCliUtils(wallet.ResolveCardanoCliBinary(networkID))
 
 	policyID, err := cliUtils.GetPolicyID(script)
 	if err != nil {

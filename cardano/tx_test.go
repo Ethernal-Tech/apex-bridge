@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +25,7 @@ func TestCreateTx(t *testing.T) {
 	networkID := wallet.MainNetNetwork
 	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes))
 	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
-	cardanoCliBinary := common.ResolveCardanoCliBinary(networkID)
+	cardanoCliBinary := wallet.ResolveCardanoCliBinary(networkID)
 
 	multiSigAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)

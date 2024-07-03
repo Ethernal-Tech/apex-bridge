@@ -261,7 +261,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	bridgingTxSender := cardanotx.NewBridgingTxSender(
-		common.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
+		wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
 		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
 		sourceChainConfig.BridgingAddresses.BridgingAddress,
 		cardanoConfig.TTLSlotNumberInc,
@@ -303,7 +303,7 @@ func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxReque
 		return "", fmt.Errorf("failed to decode raw tx: %w", err)
 	}
 
-	cardanoCliBinary := common.ResolveCardanoCliBinary(wallet.CardanoNetworkType(requestBody.NetworkID))
+	cardanoCliBinary := wallet.ResolveCardanoCliBinary(wallet.CardanoNetworkType(requestBody.NetworkID))
 	senderWallet := wallet.NewWallet(
 		wallet.GetVerificationKeyFromSigningKey(signingKeyBytes), signingKeyBytes)
 

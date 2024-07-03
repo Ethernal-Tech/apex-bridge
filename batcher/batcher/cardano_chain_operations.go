@@ -71,7 +71,7 @@ func NewCardanoChainOperations(
 		wallet:           cardanoWallet,
 		config:           cardanoConfig,
 		txProvider:       txProvider,
-		cardanoCliBinary: common.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		db:               db,
 		logger:           logger,
 	}, nil

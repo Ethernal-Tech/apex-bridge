@@ -212,7 +212,7 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
-	cardanoCliBinary := common.ResolveCardanoCliBinary(networkID)
+	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkID)
 	txSender := cardanotx.NewBridgingTxSender(
 		cardanoCliBinary,
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),

@@ -6,12 +6,10 @@ import (
 	"errors"
 	"math/big"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 )
@@ -96,27 +94,4 @@ func SafeSubtract(a, b, def uint64) uint64 {
 
 func MustHashToBytes32(hash string) (res [32]byte) {
 	return indexer.NewHashFromHexString(hash)
-}
-
-func ResolveCardanoCliBinary(networkID cardanowallet.CardanoNetworkType) string {
-	var env, name string
-
-	switch networkID {
-	case cardanowallet.VectorMainNetNetwork, cardanowallet.VectorTestNetNetwork:
-		env = "CARDANO_CLI_BINARY_VECTOR"
-		name = "vector-cli"
-	default:
-		env = "CARDANO_CLI_BINARY"
-		name = "cardano-cli"
-	}
-
-	return tryResolveFromEnv(env, name)
-}
-
-func tryResolveFromEnv(env, name string) string {
-	if bin := os.Getenv(env); bin != "" {
-		return bin
-	}
-	// fallback
-	return name
 }
