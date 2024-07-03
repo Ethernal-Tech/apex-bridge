@@ -71,3 +71,14 @@ func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, erro
 
 	return cardanoWallet, nil
 }
+
+func GetAddress(
+	networkID cardanowallet.CardanoNetworkType, cardanoWallet cardanowallet.IWallet,
+) (cardanowallet.CardanoAddress, error) {
+	if len(cardanoWallet.GetStakeVerificationKey()) > 0 {
+		return cardanowallet.NewBaseAddress(networkID,
+			cardanoWallet.GetVerificationKey(), cardanoWallet.GetStakeVerificationKey())
+	}
+
+	return cardanowallet.NewEnterpriseAddress(networkID, cardanoWallet.GetVerificationKey())
+}

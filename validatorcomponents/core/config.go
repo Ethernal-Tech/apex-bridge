@@ -5,24 +5,25 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type CardanoChainConfig struct {
-	NetworkAddress           string   `json:"networkAddress"`
-	NetworkID                uint32   `json:"networkID"`
-	NetworkMagic             uint32   `json:"networkMagic"`
-	StartBlockHash           string   `json:"startBlockHash"`
-	StartSlot                uint64   `json:"startSlot"`
-	StartBlockNumber         uint64   `json:"startBlockNumber"`
-	TTLSlotNumberInc         uint64   `json:"ttlSlotNumberIncrement"`
-	ConfirmationBlockCount   uint     `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string `json:"otherAddressesOfInterest"`
-	OgmiosURL                string   `json:"ogmiosUrl"`
-	BlockfrostURL            string   `json:"blockfrostUrl"`
-	BlockfrostAPIKey         string   `json:"blockfrostApiKey"`
-	SocketPath               string   `json:"socketPath"`
-	PotentialFee             uint64   `json:"potentialFee"`
-	SlotRoundingThreshold    uint64   `json:"slotRoundingThreshold"` // empty if we want to use value from sc
+	NetworkAddress           string                    `json:"networkAddress"`
+	NetworkID                wallet.CardanoNetworkType `json:"networkID"`
+	NetworkMagic             uint32                    `json:"networkMagic"`
+	StartBlockHash           string                    `json:"startBlockHash"`
+	StartSlot                uint64                    `json:"startSlot"`
+	StartBlockNumber         uint64                    `json:"startBlockNumber"`
+	TTLSlotNumberInc         uint64                    `json:"ttlSlotNumberIncrement"`
+	ConfirmationBlockCount   uint                      `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string                  `json:"otherAddressesOfInterest"`
+	OgmiosURL                string                    `json:"ogmiosUrl"`
+	BlockfrostURL            string                    `json:"blockfrostUrl"`
+	BlockfrostAPIKey         string                    `json:"blockfrostApiKey"`
+	SocketPath               string                    `json:"socketPath"`
+	PotentialFee             uint64                    `json:"potentialFee"`
+	SlotRoundingThreshold    uint64                    `json:"slotRoundingThreshold"`
 }
 
 type APIConfig struct {
@@ -66,6 +67,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		}
 
 		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
+			NetworkID:             ccConfig.NetworkID,
 			TestNetMagic:          ccConfig.NetworkMagic,
 			OgmiosURL:             ccConfig.OgmiosURL,
 			BlockfrostURL:         ccConfig.BlockfrostURL,

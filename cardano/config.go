@@ -10,14 +10,15 @@ import (
 )
 
 type CardanoChainConfig struct {
-	TestNetMagic          uint32 `json:"testnetMagic"`
-	OgmiosURL             string `json:"ogmiosUrl,omitempty"`
-	BlockfrostURL         string `json:"blockfrostUrl,omitempty"`
-	BlockfrostAPIKey      string `json:"blockfrostApiKey,omitempty"`
-	SocketPath            string `json:"socketPath,omitempty"`
-	PotentialFee          uint64 `json:"potentialFee"`
-	TTLSlotNumberInc      uint64 `json:"ttlSlotNumberIncrement"`
-	SlotRoundingThreshold uint64 `json:"slotRoundingThreshold"`
+	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
+	TestNetMagic          uint32                           `json:"testnetMagic"`
+	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
+	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
+	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
+	SocketPath            string                           `json:"socketPath,omitempty"`
+	PotentialFee          uint64                           `json:"potentialFee"`
+	TTLSlotNumberInc      uint64                           `json:"ttlSlotNumberIncrement"`
+	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
 }
 
 var _ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)
@@ -46,7 +47,8 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	if config.SocketPath != "" {
-		return cardanowallet.NewTxProviderCli(uint(config.TestNetMagic), config.SocketPath)
+		return cardanowallet.NewTxProviderCli(
+			uint(config.TestNetMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	}
 
 	if config.BlockfrostURL != "" {

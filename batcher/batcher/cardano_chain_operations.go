@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -38,11 +37,12 @@ const (
 )
 
 type CardanoChainOperations struct {
-	config     *cardano.CardanoChainConfig
-	wallet     *cardano.CardanoWallet
-	txProvider cardanowallet.ITxDataRetriever
-	db         indexer.Database
-	logger     hclog.Logger
+	config           *cardano.CardanoChainConfig
+	wallet           *cardano.CardanoWallet
+	txProvider       cardanowallet.ITxDataRetriever
+	db               indexer.Database
+	cardanoCliBinary string
+	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
@@ -68,11 +68,12 @@ func NewCardanoChainOperations(
 	}
 
 	return &CardanoChainOperations{
-		wallet:     cardanoWallet,
-		config:     cardanoConfig,
-		txProvider: txProvider,
-		db:         db,
-		logger:     logger,
+		wallet:           cardanoWallet,
+		config:           cardanoConfig,
+		txProvider:       txProvider,
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
+		db:               db,
+		logger:           logger,
 	}, nil
 }
 
@@ -104,24 +105,19 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigPolicyScript, err := cardanowallet.NewPolicyScript(
+	multisigPolicyScript := cardanowallet.NewPolicyScript(
 		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigKeyHashes)))))
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeePolicyScript, err := cardanowallet.NewPolicyScript(
+	multisigFeePolicyScript := cardanowallet.NewPolicyScript(
 		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
+
+	multisigAddress, err := cardano.GetAddressFromPolicyScript(
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigAddress, err := multisigPolicyScript.CreateMultiSigAddress(uint(cco.config.TestNetMagic))
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeeAddress, err := multisigFeePolicyScript.CreateMultiSigAddress(uint(cco.config.TestNetMagic))
+	multisigFeeAddress, err := cardano.GetAddressFromPolicyScript(
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -134,11 +130,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	cco.logger.Info("Creating batch tx", "batchID", batchNonceID, "magic", cco.config.TestNetMagic,
+	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
+		"magic", cco.config.TestNetMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
+		cco.cardanoCliBinary,
 		uint(cco.config.TestNetMagic),
 		protocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
@@ -293,13 +291,14 @@ func (cco *CardanoChainOperations) getUTXOs(
 		return
 	}
 
-	cco.logger.Debug("UTXOs retrieved", "multisig", multisigUtxos, "fee", feeUtxos)
+	cco.logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum.Uint64(),
+		txOutputs.Sum,
 		minUtxoAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
@@ -431,7 +430,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
-		Sum:     big.NewInt(0),
+		Sum:     0,
 	}
 
 	for addr, amount := range receiversMap {
@@ -444,7 +443,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 			Addr:   addr,
 			Amount: amount,
 		})
-		result.Sum.Add(result.Sum, new(big.Int).SetUint64(amount))
+		result.Sum += amount
 	}
 
 	// sort outputs because all batchers should have same order of outputs

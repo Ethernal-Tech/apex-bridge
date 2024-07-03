@@ -424,7 +424,7 @@ func Test_getOutputs(t *testing.T) {
 
 	res := getOutputs(txs)
 
-	assert.Equal(t, big.NewInt(6830), res.Sum)
+	assert.Equal(t, uint64(6830), res.Sum)
 	assert.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   "0x1",
@@ -462,7 +462,7 @@ func Test_getUTXOs(t *testing.T) {
 		Outputs: []cardanowallet.TxOutput{
 			{}, {}, {},
 		},
-		Sum: new(big.Int).SetUint64(2_000_000),
+		Sum: 2_000_000,
 	}
 
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {

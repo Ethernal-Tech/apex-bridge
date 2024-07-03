@@ -16,8 +16,9 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
-	txProvider cardanowallet.ITxProvider
-	logger     hclog.Logger
+	txProvider       cardanowallet.ITxProvider
+	cardanoCliBinary string
+	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
@@ -35,8 +36,9 @@ func NewCardanoChainOperations(
 	}
 
 	return &CardanoChainOperations{
-		txProvider: txProvider,
-		logger:     logger,
+		txProvider:       txProvider,
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		logger:           logger,
 	}, nil
 }
 
@@ -51,7 +53,7 @@ func (cco *CardanoChainOperations) SendTx(
 	copy(witnesses, smartContractData.MultisigSignatures)
 	copy(witnesses[len(smartContractData.MultisigSignatures):], smartContractData.FeePayerMultisigSignatures)
 
-	txSigned, err := cardanotx.AssembleTxWitnesses(smartContractData.RawTransaction, witnesses)
+	txSigned, err := cardanotx.AssembleTxWitnesses(cco.cardanoCliBinary, smartContractData.RawTransaction, witnesses)
 	if err != nil {
 		return err
 	}

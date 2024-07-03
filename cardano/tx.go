@@ -6,7 +6,9 @@ import (
 )
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
-func CreateTx(testNetMagic uint,
+func CreateTx(
+	cardanoCliBinary string,
+	testNetMagic uint,
 	protocolParams []byte,
 	timeToLive uint64,
 	metadataBytes []byte,
@@ -18,7 +20,7 @@ func CreateTx(testNetMagic uint,
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
 	changeAmount := common.SafeSubtract(txInputInfos.MultiSig.Sum+multisigAmount, outputsAmount, 0)
 
-	builder, err := cardanowallet.NewTxBuilder()
+	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
 		return nil, "", err
 	}
@@ -84,8 +86,15 @@ func CreateTxWitness(txHash string, key cardanowallet.ISigner) ([]byte, error) {
 }
 
 // AssembleTxWitnesses assembles all witnesses in final cbor of signed tx
-func AssembleTxWitnesses(txRaw []byte, witnesses [][]byte) ([]byte, error) {
-	return cardanowallet.AssembleTxWitnesses(txRaw, witnesses)
+func AssembleTxWitnesses(cardanoCliBinary string, txRaw []byte, witnesses [][]byte) ([]byte, error) {
+	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
+	if err != nil {
+		return nil, err
+	}
+
+	defer builder.Dispose()
+
+	return builder.AssembleTxWitnesses(txRaw, witnesses)
 }
 
 func CreateBatchMetaData(v uint64) ([]byte, error) {
@@ -103,4 +112,10 @@ func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uin
 	}
 
 	return -1, 0
+}
+
+func GetAddressFromPolicyScript(
+	cardanoCliBinary string, testNetMagic uint, ps *cardanowallet.PolicyScript,
+) (string, error) {
+	return cardanowallet.NewCliUtils(cardanoCliBinary).GetPolicyScriptAddress(testNetMagic, ps)
 }

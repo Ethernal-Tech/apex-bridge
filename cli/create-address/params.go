@@ -1,7 +1,6 @@
 package clicreateaddress
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -73,32 +72,22 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
+	networkID := wallet.CardanoNetworkType(ip.networkID)
 	atLeast := common.GetRequiredSignaturesForConsensus(uint64(len(ip.keys)))
+	script := wallet.NewPolicyScript(ip.keys, int(atLeast))
+	cliUtils := wallet.NewCliUtils(wallet.ResolveCardanoCliBinary(networkID))
 
-	script, err := wallet.NewPolicyScript(ip.keys, int(atLeast))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create policy script: %w", err)
-	}
-
-	policyId, err := script.GetPolicyID()
+	policyID, err := cliUtils.GetPolicyID(script)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate policy id: %w", err)
 	}
 
-	policyIdBytes, err := hex.DecodeString(policyId)
+	addr, err := wallet.NewPolicyScriptAddress(networkID, policyID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode policy id string: %w", err)
-	}
-
-	stakeCredential, err := wallet.NewStakeCredential(policyIdBytes, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create stake credential: %w", err)
+		return nil, fmt.Errorf("failed to create address: %w", err)
 	}
 
 	return &CmdResult{
-		address: (wallet.EnterpriseAddress{
-			Network: wallet.CardanoNetworkType(ip.networkID),
-			Payment: stakeCredential,
-		}).String(),
+		address: addr.String(),
 	}, nil
 }

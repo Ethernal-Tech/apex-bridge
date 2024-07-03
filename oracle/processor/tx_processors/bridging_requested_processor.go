@@ -44,7 +44,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
-		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
+		p.addBridgingRequestClaim(claims, tx, metadata)
 	} else {
 		//nolint:godox
 		// TODO: Refund
@@ -56,7 +56,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
+	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
 ) {
 	totalAmount := big.NewInt(0)
 
@@ -152,7 +152,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		// BridgingRequestedProcessorImpl must know for which chain it operates
 
 		addr, err := wallet.NewAddress(receiverAddr)
-		if err != nil || uint32(addr.GetNetwork()) != destinationChainConfig.NetworkID {
+		if err != nil || addr.GetNetwork() != destinationChainConfig.NetworkID {
 			foundAnInvalidReceiverAddr = true
 
 			break

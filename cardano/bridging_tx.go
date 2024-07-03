@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +24,7 @@ const (
 )
 
 type BridgingTxSender struct {
+	cardanoCliBinary   string
 	TxProviderSrc      cardanowallet.ITxProvider
 	TxUtxoRetrieverDst cardanowallet.IUTxORetriever
 	MultiSigAddrSrc    string
@@ -35,6 +35,7 @@ type BridgingTxSender struct {
 }
 
 func NewBridgingTxSender(
+	cardanoCliBinary string,
 	txProvider cardanowallet.ITxProvider,
 	txUtxoRetriever cardanowallet.IUTxORetriever,
 	testNetMagic uint,
@@ -42,6 +43,7 @@ func NewBridgingTxSender(
 	ttlSlotNumberInc uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
+		cardanoCliBinary:   cardanoCliBinary,
 		TxProviderSrc:      txProvider,
 		TxUtxoRetrieverDst: txUtxoRetriever,
 		TestNetMagicSrc:    testNetMagic,
@@ -93,7 +95,7 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	builder, err := cardanowallet.NewTxBuilder()
+	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
 	if err != nil {
 		return nil, "", err
 	}
@@ -131,9 +133,21 @@ func (bts *BridgingTxSender) CreateTx(
 }
 
 func (bts *BridgingTxSender) SendTx(
-	ctx context.Context, cardanoWallet cardanowallet.IWallet, txRaw []byte, txHash string,
+	ctx context.Context, txRaw []byte, txHash string, cardanoWallet cardanowallet.IWallet,
 ) error {
-	txSigned, err := cardanowallet.SignTx(txRaw, txHash, cardanoWallet)
+	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
+	if err != nil {
+		return err
+	}
+
+	defer builder.Dispose()
+
+	witness, err := cardanowallet.CreateTxWitness(txHash, cardanoWallet)
+	if err != nil {
+		return err
+	}
+
+	txSigned, err := builder.AssembleTxWitnesses(txRaw, [][]byte{witness})
 	if err != nil {
 		return err
 	}
@@ -157,7 +171,7 @@ func (bts *BridgingTxSender) WaitForTx(
 		go func(idx int, recv cardanowallet.TxOutput) {
 			defer wg.Done()
 
-			var expectedAmount *big.Int
+			var expectedAmount uint64
 
 			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
 				utxos, err := bts.TxUtxoRetrieverDst.GetUtxos(ctx, recv.Addr)
@@ -170,11 +184,11 @@ func (bts *BridgingTxSender) WaitForTx(
 				return
 			}
 
-			expectedAmount.Add(expectedAmount, new(big.Int).SetUint64(recv.Amount))
+			expectedAmount += recv.Amount
 
 			errs[idx] = cardanowallet.WaitForAmount(
-				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount *big.Int) bool {
-					return newAmount.Cmp(expectedAmount) >= 0
+				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount uint64) bool {
+					return newAmount >= expectedAmount
 				},
 				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
 		}(i, x)

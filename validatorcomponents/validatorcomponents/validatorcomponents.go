@@ -241,6 +241,9 @@ func fixChainsAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
+		logger.Debug("Registered chain received",
+			"chainID", chainID, "multisig", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
+
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
 			FeeAddress:      regChain.AddressFeePayer,
