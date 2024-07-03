@@ -290,7 +290,9 @@ func (cco *CardanoChainOperations) getUTXOs(
 		return
 	}
 
-	cco.logger.Debug("UTXOs retrieved", "multisig", multisigUtxos, "fee", feeUtxos)
+	cco.logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos,
+		"binary", cco.cardanoCliBinary, "testnetMagic", cco.config.TestNetMagic)
 
 	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
