@@ -193,10 +193,6 @@ func (cco *CardanoChainOperations) IsSynchronized(
 		return false, err
 	}
 
-	if lastObservedBlockBridge == nil {
-		return true, nil
-	}
-
 	lastOracleBlockPoint, err := cco.db.GetLatestBlockPoint()
 	if err != nil {
 		return false, err
@@ -233,7 +229,7 @@ func (cco *CardanoChainOperations) getSlotNumber(
 func (cco *CardanoChainOperations) getCardanoData(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 ) ([]string, []string, error) {
-	validatorsData, err := bridgeSmartContract.GetValidatorsCardanoData(ctx, chainID)
+	validatorsData, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
 	if err != nil {
 		return nil, nil, err
 	}

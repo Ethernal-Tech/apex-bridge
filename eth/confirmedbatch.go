@@ -11,7 +11,7 @@ import (
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
-type ValidatorCardanoData = contractbinding.IBridgeStructsValidatorCardanoData
+type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 
 type ConfirmedBatch struct {
 	ID                         uint64

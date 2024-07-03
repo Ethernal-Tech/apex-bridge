@@ -42,7 +42,7 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer
 		if err == nil {
 			var blockPoint *indexer.BlockPoint
 
-			if block != nil && block.BlockSlot != nil && block.BlockSlot.BitLen() > 0 {
+			if block.BlockSlot != nil && block.BlockSlot.BitLen() > 0 {
 				blockPoint = &indexer.BlockPoint{
 					BlockSlot: block.BlockSlot.Uint64(),
 					BlockHash: block.BlockHash,

@@ -60,7 +60,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchLatestBlockPoint nil", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetLastObservedBlock").Return(nil, nil)
+		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{}, nil)
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
@@ -72,7 +72,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchLatestBlockPoint err", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetLastObservedBlock").Return(nil, fmt.Errorf("test err"))
+		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{}, fmt.Errorf("test err"))
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
@@ -88,14 +88,14 @@ func TestBridgeDataFetcher(t *testing.T) {
 		bSlot := uint64(100)
 
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(0),
 			BlockHash: bHash,
-		}, nil).Once()
-		bridgeSC.On("GetLastObservedBlock").Return(&eth.CardanoBlock{
+		}, error(nil)).Once()
+		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(bSlot),
 			BlockHash: bHash,
-		}, nil)
+		}, error(nil))
 		bridgeDataFetcher := NewBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)

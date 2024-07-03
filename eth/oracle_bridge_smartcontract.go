@@ -21,7 +21,7 @@ type SubmitOpts struct {
 }
 
 type IOracleBridgeSmartContract interface {
-	GetLastObservedBlock(ctx context.Context, sourceChain string) (*CardanoBlock, error)
+	GetLastObservedBlock(ctx context.Context, sourceChain string) (CardanoBlock, error)
 	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
 	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) error
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
@@ -59,27 +59,27 @@ func NewOracleBridgeSmartContractWithWallet(
 
 func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 	ctx context.Context, sourceChain string,
-) (*CardanoBlock, error) {
+) (CardanoBlock, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return CardanoBlock{}, err
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		common.HexToAddress(bsc.smartContractAddress),
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
 	}
 
 	result, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(sourceChain))
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(

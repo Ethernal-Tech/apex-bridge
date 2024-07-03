@@ -35,6 +35,7 @@ $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/ca
 ```shell
 $ go run ./main.go register-chain \
         --chain prime \
+        --type 0 \
         --validator-data-dir /home/bbs/blade \
         --addr addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh \
         --addr-fee addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u \
