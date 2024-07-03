@@ -12,6 +12,7 @@ import (
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
+type BridgeReceiver = contractbinding.IBridgeStructsReceiver
 
 type ConfirmedBatch struct {
 	ID                         uint64
@@ -22,9 +23,7 @@ type ConfirmedBatch struct {
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
-) (
-	*ConfirmedBatch, error,
-) {
+) (*ConfirmedBatch, error) {
 	return &ConfirmedBatch{
 		ID:                         contractConfirmedBatch.Id,
 		RawTransaction:             contractConfirmedBatch.RawTransaction,

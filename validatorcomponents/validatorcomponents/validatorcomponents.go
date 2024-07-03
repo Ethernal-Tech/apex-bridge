@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
@@ -213,7 +212,7 @@ func fixChainsAndAddresses(
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
-	var allRegisteredChains []contractbinding.IBridgeStructsChain
+	var allRegisteredChains []eth.Chain
 
 	logger.Debug("Retrieving all registered chains...")
 
@@ -241,15 +240,18 @@ func fixChainsAndAddresses(
 			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
-		logger.Debug("Registered chain received",
-			"chainID", chainID, "multisig", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
+		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
+			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
 
 		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 			BridgingAddress: regChain.AddressMultisig,
 			FeeAddress:      regChain.AddressFeePayer,
 		}
 
-		resultChains[chainID] = chainConfig
+		// should handle evm too
+		if regChain.ChainType == common.ChainTypeCardano {
+			resultChains[chainID] = chainConfig
+		}
 	}
 
 	config.CardanoChains = resultChains

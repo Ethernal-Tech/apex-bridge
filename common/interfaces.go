@@ -17,3 +17,8 @@ type BridgingRequestStateUpdater interface {
 type ChainSpecificConfig interface {
 	GetChainType() string
 }
+
+type BridgingRequestStateKey struct {
+	SourceChainID string
+	SourceTxHash  indexer.Hash
+}

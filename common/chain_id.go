@@ -3,6 +3,9 @@ package common
 type chainIDNum = uint8
 
 const (
+	ChainTypeCardano = iota
+	ChainTypeEVM     = 1
+
 	ChainIDStrPrime  = "prime"
 	ChainIDStrVector = "vector"
 

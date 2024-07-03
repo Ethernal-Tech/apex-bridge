@@ -12,7 +12,6 @@ import (
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -120,7 +119,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		Receivers: []contractbinding.IBridgeStructsReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 		}},
@@ -360,7 +359,7 @@ func Test_getNeededUtxos(t *testing.T) {
 func Test_getOutputs(t *testing.T) {
 	txs := []eth.ConfirmedTransaction{
 		{
-			Receivers: []contractbinding.IBridgeStructsReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
 					Amount:             100,
@@ -376,7 +375,7 @@ func Test_getOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []contractbinding.IBridgeStructsReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x4",
 					Amount:             50,
@@ -392,7 +391,7 @@ func Test_getOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []contractbinding.IBridgeStructsReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x5",
 					Amount:             3000,
@@ -400,7 +399,7 @@ func Test_getOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []contractbinding.IBridgeStructsReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
 					Amount:             2000,

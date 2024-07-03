@@ -194,7 +194,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
-				contractbinding.IBridgeStructsChain{
+				eth.Chain{
 					Id:              common.ToNumChainID(ip.chainID),
 					ChainType:       ip.chainType,
 					AddressMultisig: ip.multisigAddr,
