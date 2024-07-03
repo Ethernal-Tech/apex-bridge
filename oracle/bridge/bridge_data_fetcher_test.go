@@ -84,7 +84,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	})
 
 	t.Run("FetchLatestBlockPoint valid", func(t *testing.T) {
-		bHash := common.MustHashToBytes32("FFBB")
+		bHash := common.NewHashFromHexString("FFBB")
 		bSlot := uint64(100)
 
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}

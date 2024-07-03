@@ -60,7 +60,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &core.BridgeClaims{}
-		txHash := common.MustHashToBytes32("0x2244FF")
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantFullMetadata,

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 )
@@ -90,8 +89,4 @@ func SafeSubtract(a, b, def uint64) uint64 {
 	}
 
 	return def
-}
-
-func MustHashToBytes32(hash string) (res [32]byte) {
-	return indexer.NewHashFromHexString(hash)
 }

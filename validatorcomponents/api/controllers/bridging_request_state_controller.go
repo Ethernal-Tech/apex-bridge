@@ -8,7 +8,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -70,7 +69,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	}
 
 	chainID := chainIDArr[0]
-	txHash := indexer.NewHashFromHexString(txHashArr[0])
+	txHash := common.NewHashFromHexString(txHashArr[0])
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
 	if err != nil {
@@ -126,10 +125,10 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 	chainID := chainIDArr[0]
 
 	txHashesStrs := queryValues["txHash"]
-	txHashes := make([]indexer.Hash, len(txHashesStrs))
+	txHashes := make([]common.Hash, len(txHashesStrs))
 
 	for i, x := range txHashesStrs {
-		txHashes[i] = common.MustHashToBytes32(x)
+		txHashes[i] = common.NewHashFromHexString(x)
 	}
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)

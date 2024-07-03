@@ -93,7 +93,7 @@ func TestBatcherExecute(t *testing.T) {
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
+			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []contractbinding.IBridgeStructsReceiver{
@@ -319,7 +319,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("getBridgingRequestStateKeys", func(t *testing.T) {
-		included := [][32]byte{
+		included := []common.Hash{
 			{1},
 			{4},
 			{5},
@@ -331,12 +331,12 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				Nonce:                   4,
 			},
 			{
-				ObservedTransactionHash: [32]byte{2},
+				ObservedTransactionHash: common.Hash{2},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
 			{
-				ObservedTransactionHash: [32]byte{3},
+				ObservedTransactionHash: common.Hash{3},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 				Nonce:                   6,
 			},
@@ -351,7 +351,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				Nonce:                   5,
 			},
 			{
-				ObservedTransactionHash: [32]byte{6},
+				ObservedTransactionHash: common.Hash{6},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
