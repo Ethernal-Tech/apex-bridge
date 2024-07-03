@@ -249,8 +249,11 @@ func fixChainsAndAddresses(
 		}
 
 		// should handle evm too
-		if regChain.ChainType == common.ChainTypeCardano {
+		switch regChain.ChainType {
+		case common.ChainTypeCardano:
 			resultChains[chainID] = chainConfig
+		default:
+			logger.Debug("Do not know how to handle chain type", "chainID", chainID, "type", regChain.ChainType)
 		}
 	}
 

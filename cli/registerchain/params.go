@@ -162,14 +162,24 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	var validatorChainData eth.ValidatorChainData
+
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
 
-	walletCardano, err := cardanotx.LoadWallet(secretsManager, ip.chainID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
+	switch ip.chainType {
+	case common.ChainTypeCardano:
+		walletCardano, err := cardanotx.LoadWallet(secretsManager, ip.chainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
+		}
+
+		validatorChainData.VerifyingKey = [32]byte(walletCardano.MultiSig.GetVerificationKey())
+		validatorChainData.VerifyingKeyFee = [32]byte(walletCardano.MultiSigFee.GetVerificationKey())
+	default:
+		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}
 
 	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
@@ -201,10 +211,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					AddressFeePayer: ip.multisigFeeAddr,
 				},
 				initialTokenSupply,
-				eth.ValidatorChainData{
-					VerifyingKey:    [32]byte(walletCardano.MultiSig.GetVerificationKey()),
-					VerifyingKeyFee: [32]byte(walletCardano.MultiSigFee.GetVerificationKey()),
-				})
+				validatorChainData)
 		})
 	if err != nil {
 		return nil, err
