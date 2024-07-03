@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math/big"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -98,5 +99,24 @@ func MustHashToBytes32(hash string) (res [32]byte) {
 }
 
 func ResolveCardanoCliBinary(networkID cardanowallet.CardanoNetworkType) string {
-	return cardanowallet.ResolveCardanoCliBinary(networkID)
+	var env, name string
+
+	switch networkID {
+	case cardanowallet.VectorMainNetNetwork, cardanowallet.VectorTestNetNetwork:
+		env = "CARDANO_CLI_BINARY_VECTOR"
+		name = "vector-cli"
+	default:
+		env = "CARDANO_CLI_BINARY"
+		name = "cardano-cli"
+	}
+
+	return tryResolveFromEnv(env, name)
+}
+
+func tryResolveFromEnv(env, name string) string {
+	if bin := os.Getenv(env); bin != "" {
+		return bin
+	}
+	// fallback
+	return name
 }

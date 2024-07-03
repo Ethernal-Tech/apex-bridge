@@ -130,7 +130,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	cco.logger.Info("Creating batch tx", "batchID", batchNonceID, "magic", cco.config.TestNetMagic,
+	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
+		"magic", cco.config.TestNetMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	// Create Tx
@@ -291,8 +292,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 	}
 
 	cco.logger.Debug("UTXOs retrieved",
-		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos,
-		"binary", cco.cardanoCliBinary, "testnetMagic", cco.config.TestNetMagic)
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
