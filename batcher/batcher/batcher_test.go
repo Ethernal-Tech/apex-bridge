@@ -319,7 +319,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	})
 
 	t.Run("getBridgingRequestStateKeys", func(t *testing.T) {
-		included := []common.Hash{
+		included := [][32]byte{
 			{1},
 			{4},
 			{5},
@@ -331,12 +331,12 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				Nonce:                   4,
 			},
 			{
-				ObservedTransactionHash: common.Hash{2},
+				ObservedTransactionHash: [32]byte{2},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
 			{
-				ObservedTransactionHash: common.Hash{3},
+				ObservedTransactionHash: [32]byte{3},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 				Nonce:                   6,
 			},
@@ -351,7 +351,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				Nonce:                   5,
 			},
 			{
-				ObservedTransactionHash: common.Hash{6},
+				ObservedTransactionHash: [32]byte{6},
 				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 				Nonce:                   2,
 			},
