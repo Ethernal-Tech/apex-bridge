@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -35,7 +34,7 @@ type BridgingRequestStateUpdaterMock struct {
 var _ BridgingRequestStateUpdater = (*BridgingRequestStateUpdaterMock)(nil)
 
 // New implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) New(sourceChainID string, tx *indexer.Tx) error {
+func (m *BridgingRequestStateUpdaterMock) New(sourceChainID string, tx *NewBridgingRequestStateModel) error {
 	if m.ReturnNil {
 		return nil
 	}
@@ -46,7 +45,7 @@ func (m *BridgingRequestStateUpdaterMock) New(sourceChainID string, tx *indexer.
 }
 
 // NewMultiple implements BridgingRequestStateUpdater.
-func (m *BridgingRequestStateUpdaterMock) NewMultiple(sourceChainID string, txs []*indexer.Tx) error {
+func (m *BridgingRequestStateUpdaterMock) NewMultiple(sourceChainID string, txs []*NewBridgingRequestStateModel) error {
 	if m.ReturnNil {
 		return nil
 	}
@@ -119,7 +118,7 @@ func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
-	destinationChainID string, batchID uint64, destinationTxHash indexer.Hash,
+	destinationChainID string, batchID uint64, destinationTxHash Hash,
 ) error {
 	if m.ReturnNil {
 		return nil

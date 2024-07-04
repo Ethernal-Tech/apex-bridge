@@ -92,7 +92,7 @@ func TestBatcherExecute(t *testing.T) {
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
+			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []eth.BridgeReceiver{

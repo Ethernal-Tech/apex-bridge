@@ -24,7 +24,7 @@ func TestBridgeSubmitter(t *testing.T) {
 			ContractClaims: core.ContractClaims{
 				BridgingRequestClaims: []core.BridgingRequestClaim{
 					{
-						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
+						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
 						SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 						DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
 						Receivers:               []core.BridgingRequestReceiver{},
@@ -32,7 +32,7 @@ func TestBridgeSubmitter(t *testing.T) {
 				},
 				BatchExecutedClaims: []core.BatchExecutedClaim{
 					{
-						ObservedTransactionHash: common.MustHashToBytes32("0x11"),
+						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
 						BatchNonceId:            1,
 					},
 				},
