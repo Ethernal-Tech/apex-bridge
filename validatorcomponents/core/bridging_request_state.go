@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 type BridgingRequestStatus string
@@ -20,30 +20,22 @@ const (
 
 type BridgingRequestState struct {
 	SourceChainID      string
-	SourceTxHash       indexer.Hash
+	SourceTxHash       common.Hash
 	DestinationChainID string
 	BatchID            uint64
 	Status             BridgingRequestStatus
-	DestinationTxHash  indexer.Hash
-}
-
-func (s *BridgingRequestState) ToStrKey() string {
-	return ToBridgingRequestStateStrKey(s.SourceChainID, s.SourceTxHash)
+	DestinationTxHash  common.Hash
 }
 
 func (s *BridgingRequestState) ToDBKey() []byte {
 	return ToBridgingRequestStateDBKey(s.SourceChainID, s.SourceTxHash)
 }
 
-func ToBridgingRequestStateStrKey(sourceChainID string, sourceTxHash indexer.Hash) string {
-	return fmt.Sprintf("%v_%s", sourceChainID, sourceTxHash)
-}
-
-func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash indexer.Hash) []byte {
+func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash common.Hash) []byte {
 	return append(append([]byte(sourceChainID), '_'), sourceTxHash[:]...)
 }
 
-func NewBridgingRequestState(sourceChainID string, sourceTxHash indexer.Hash) *BridgingRequestState {
+func NewBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) *BridgingRequestState {
 	return &BridgingRequestState{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
@@ -111,7 +103,7 @@ func (s *BridgingRequestState) ToFailedToExecuteOnDestination() error {
 	return nil
 }
 
-func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash indexer.Hash) error {
+func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash common.Hash) error {
 	if s.Status != BridgingRequestStatusIncludedInBatch &&
 		s.Status != BridgingRequestStatusSubmittedToDestination {
 		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",

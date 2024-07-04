@@ -6,21 +6,22 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
+	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	oracleUtils "github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxProcessor = (*BridgingRequestedProcessorImpl)(nil)
+var _ core.EthTxProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
 	logger hclog.Logger
 }
 
-func NewBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
+func NewEthBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
-		logger: logger.Named("bridging_requested_processor"),
+		logger: logger.Named("eth_bridging_requested_processor"),
 	}
 }
 
@@ -29,9 +30,10 @@ func (*BridgingRequestedProcessorImpl) GetType() common.BridgingTxType {
 }
 
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, appConfig *core.AppConfig,
+	claims *oracleCore.BridgeClaims, tx *core.EthTx, appConfig *oracleCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
+		common.MetadataEncodingTypeJSON, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
@@ -44,7 +46,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
-		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
+		p.addBridgingRequestClaim(claims, tx, metadata)
 	} else {
 		//nolint:godox
 		// TODO: Refund
@@ -56,37 +58,21 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx,
-	metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
+	claims *oracleCore.BridgeClaims, tx *core.EthTx, metadata *common.BridgingRequestMetadata,
 ) {
-	destConfig := appConfig.CardanoChains[metadata.DestinationChainID]
 	totalAmount := big.NewInt(0)
 
-	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
+	receivers := make([]oracleCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	for _, receiver := range metadata.Transactions {
-		receiverAddr := strings.Join(receiver.Address, "")
-
-		if receiverAddr == destConfig.BridgingAddresses.FeeAddress {
-			// fee address will be added at the end
-			continue
-		}
-
-		receivers = append(receivers, core.BridgingRequestReceiver{
-			DestinationAddress: receiverAddr,
+		receivers = append(receivers, oracleCore.BridgingRequestReceiver{
+			DestinationAddress: strings.Join(receiver.Address, ""),
 			Amount:             receiver.Amount,
 		})
 
 		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
 	}
 
-	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
-
-	receivers = append(receivers, core.BridgingRequestReceiver{
-		DestinationAddress: destConfig.BridgingAddresses.FeeAddress,
-		Amount:             metadata.FeeAmount,
-	})
-
-	claim := core.BridgingRequestClaim{
+	claim := oracleCore.BridgingRequestClaim{
 		ObservedTransactionHash: tx.Hash,
 		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
@@ -97,7 +83,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", oracleCore.BridgingRequestClaimString(claim))
 }
 
 /*
@@ -131,14 +117,9 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 */
 
 func (p *BridgingRequestedProcessorImpl) validate(
-	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
+	tx *core.EthTx, metadata *common.BridgingRequestMetadata, appConfig *oracleCore.AppConfig,
 ) error {
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
-	if err != nil {
-		return err
-	}
-
-	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	cardanoDestConfig, ethDestConfig := oracleUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 	if cardanoDestConfig == nil && ethDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
 	}
@@ -148,10 +129,14 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	receiverAmountSum := uint64(0)
-	feeSum := uint64(0)
+	var (
+		receiverAmountSum        = big.NewInt(0)
+		feeSum            uint64 = 0
+	)
+
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
+	foundTheFeeReceiverAddr := false
 
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
@@ -172,18 +157,18 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			}
 
 			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+				foundTheFeeReceiverAddr = true
 				feeSum += receiver.Amount
-			} else {
-				receiverAmountSum += receiver.Amount
 			}
 		} else if ethDestConfig != nil {
 			// a TODO: validate eth addresses
 			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
+				foundTheFeeReceiverAddr = true
 				feeSum += receiver.Amount
-			} else {
-				receiverAmountSum += receiver.Amount
 			}
 		}
+
+		receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 	}
 
 	if cardanoDestConfig != nil && foundAUtxoValueBelowMinimumValue {
@@ -194,17 +179,17 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount += feeSum
-	receiverAmountSum += metadata.FeeAmount
+	if !foundTheFeeReceiverAddr {
+		return fmt.Errorf("destination chain fee address not found in receiver addrs in metadata: %v", metadata)
+	}
 
-	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
+	if feeSum < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
-	if receiverAmountSum != multisigUtxo.Amount {
-		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
-			receiverAmountSum, multisigUtxo.Amount)
+	if receiverAmountSum.Cmp(tx.Value) != 0 {
+		return fmt.Errorf("receivers amounts and tx value missmatch: expected %v but got %v",
+			receiverAmountSum, tx.Value)
 	}
 
 	return nil

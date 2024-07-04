@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240717094823-5253d497eee7
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125458-8837f3837cc0
+	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d
 	github.com/armon/go-metrics v0.4.1
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
@@ -31,7 +32,6 @@ require (
 	github.com/DataDog/go-tuf v1.0.2-0.5.2 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/sketches-go v1.4.2 // indirect
-	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.51.18 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

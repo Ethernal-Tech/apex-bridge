@@ -8,7 +8,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,7 +57,7 @@ func TestBoltDatabase(t *testing.T) {
 
 	const primeChainID = "chainId"
 
-	testTxHash := indexer.Hash{1, 2, 89, 188}
+	testTxHash := common.Hash{1, 2, 89, 188}
 
 	t.Run("AddBridgingRequestState", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
@@ -86,7 +85,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddBridgingRequestState(core.NewBridgingRequestState(primeChainID, testTxHash))
 		require.NoError(t, err)
 
-		state, err := db.GetBridgingRequestState("vect", indexer.Hash{89, 8})
+		state, err := db.GetBridgingRequestState("vect", common.Hash{89, 8})
 		require.NoError(t, err)
 		require.Nil(t, state)
 
