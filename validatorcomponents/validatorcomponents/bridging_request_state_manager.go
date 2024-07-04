@@ -6,7 +6,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -29,8 +28,8 @@ func NewBridgingRequestStateManager(
 }
 
 // New implements core.BridgingRequestStateManager.
-func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, tx *indexer.Tx) error {
-	state := core.NewBridgingRequestState(sourceChainID, tx.Hash)
+func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *common.NewBridgingRequestStateModel) error {
+	state := core.NewBridgingRequestState(sourceChainID, model.SourceTxHash)
 
 	err := m.db.AddBridgingRequestState(state)
 	if err != nil {
@@ -44,11 +43,13 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, tx *indexer.
 }
 
 // NewMultiple implements core.BridgingRequestStateManager.
-func (m *BridgingRequestStateManagerImpl) NewMultiple(sourceChainID string, txs []*indexer.Tx) error {
+func (m *BridgingRequestStateManagerImpl) NewMultiple(
+	sourceChainID string, models []*common.NewBridgingRequestStateModel,
+) error {
 	var errs []error
 
-	for _, tx := range txs {
-		err := m.New(sourceChainID, tx)
+	for _, model := range models {
+		err := m.New(sourceChainID, model)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -154,7 +155,7 @@ func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
 
 // ExecutedOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
-	destinationChainID string, batchID uint64, destinationTxHash indexer.Hash,
+	destinationChainID string, batchID uint64, destinationTxHash common.Hash,
 ) error {
 	return m.updateStatesByBatchID(destinationChainID, batchID, func(state *core.BridgingRequestState) error {
 		return state.ToExecutedOnDestination(destinationTxHash)
@@ -163,7 +164,7 @@ func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
 
 // Get implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Get(
-	sourceChainID string, sourceTxHash indexer.Hash,
+	sourceChainID string, sourceTxHash common.Hash,
 ) (
 	*core.BridgingRequestState, error,
 ) {
@@ -178,7 +179,7 @@ func (m *BridgingRequestStateManagerImpl) Get(
 
 // GetAllForUser implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) GetMultiple(
-	sourceChainID string, sourceTxHashes []indexer.Hash,
+	sourceChainID string, sourceTxHashes []common.Hash,
 ) ([]*core.BridgingRequestState, error) {
 	var (
 		result = make([]*core.BridgingRequestState, 0, len(sourceTxHashes))

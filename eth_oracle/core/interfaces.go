@@ -3,13 +3,8 @@ package core
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/ethgo"
 )
-
-type EthConfirmedBlocksDB interface {
-	AddConfirmedBlock(chainID string, block *EthBlock) error
-	GetLatestConfirmedBlocks(chainID string, maxCnt int) ([]*EthBlock, error)
-	GetConfirmedBlocksFrom(chainID string, blockNumber uint64, maxCnt int) ([]*EthBlock, error)
-}
 
 type BridgeExpectedEthTxsDB interface {
 	AddExpectedTxs(expectedTxs []*BridgeExpectedEthTx) error
@@ -27,11 +22,10 @@ type EthTxsDB interface {
 	ClearUnprocessedTxs(chainID string) error
 	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedEthTx) error
 	AddProcessedTxs(processedTxs []*ProcessedEthTx) error
-	GetProcessedTx(chainID string, txHash string) (*ProcessedEthTx, error)
+	GetProcessedTx(chainID string, txHash ethgo.Hash) (*ProcessedEthTx, error)
 }
 
 type EthTxsProcessorDB interface {
-	EthConfirmedBlocksDB
 	EthTxsDB
 	BridgeExpectedEthTxsDB
 }
@@ -43,23 +37,23 @@ type Database interface {
 }
 
 type EthTxsProcessor interface {
-	NewUnprocessedTxs(originChainID string, txs []*IndexerEthTx) error
+	NewUnprocessedLog(originChainID string, log *ethgo.Log) error
 	Start()
 }
 
 type EthTxProcessor interface {
 	GetType() common.BridgingTxType
-	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *EthTx, appConfig *AppConfig) error
+	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *EthTx, appConfig *oracleCore.AppConfig) error
 }
 
 type EthTxFailedProcessor interface {
 	GetType() common.BridgingTxType
-	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *BridgeExpectedEthTx, appConfig *AppConfig) error
+	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *BridgeExpectedEthTx, appConfig *oracleCore.AppConfig) error
 }
 
 type EthChainObserver interface {
 	Start() error
 	Dispose() error
-	GetConfig() *EthChainConfig
+	GetConfig() *oracleCore.EthChainConfig
 	ErrorCh() <-chan error
 }

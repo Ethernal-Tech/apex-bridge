@@ -3,13 +3,12 @@ package core
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
 type BridgingRequestStateDB interface {
 	AddBridgingRequestState(state *BridgingRequestState) error
 	UpdateBridgingRequestState(state *BridgingRequestState) error
-	GetBridgingRequestState(sourceChainID string, sourceTxHash indexer.Hash) (*BridgingRequestState, error)
+	GetBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) (*BridgingRequestState, error)
 	GetBridgingRequestStatesByBatchID(destinationChainID string, batchID uint64) ([]*BridgingRequestState, error)
 }
 
@@ -33,8 +32,8 @@ type API interface {
 type BridgingRequestStateManager interface {
 	common.BridgingRequestStateUpdater
 
-	Get(sourceChainID string, sourceTxHash indexer.Hash) (*BridgingRequestState, error)
-	GetMultiple(sourceChainID string, sourceTxHashes []indexer.Hash) ([]*BridgingRequestState, error)
+	Get(sourceChainID string, sourceTxHash common.Hash) (*BridgingRequestState, error)
+	GetMultiple(sourceChainID string, sourceTxHashes []common.Hash) ([]*BridgingRequestState, error)
 }
 
 type RelayerImitator interface {

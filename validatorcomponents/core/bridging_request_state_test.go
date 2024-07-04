@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBridgingRequestState(t *testing.T) {
 	const chainID = common.ChainIDStrPrime
 
-	txHash := indexer.Hash{1, 88, 208}
+	txHash := common.Hash{1, 88, 208}
+	destinationTxHash := common.NewHashFromHexString("0xFF")
 
 	t.Run("NewBridgingRequestState", func(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
@@ -37,7 +37,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
@@ -77,7 +77,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 	})
@@ -106,7 +106,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
@@ -143,7 +143,7 @@ func TestBridgingRequestState(t *testing.T) {
 		err = state.ToIncludedInBatch(1)
 		require.NoError(t, err)
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.NoError(t, err)
 
 		state = NewBridgingRequestState(chainID, txHash)
@@ -194,7 +194,7 @@ func TestBridgingRequestState(t *testing.T) {
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.NoError(t, err)
 		require.Equal(t, BridgingRequestStatusExecutedOnDestination, state.Status)
 	})
@@ -239,7 +239,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 	})
@@ -252,7 +252,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.NoError(t, err)
 
 		err = state.ToInvalidRequest()
@@ -275,7 +275,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToExecutedOnDestination(common.MustHashToBytes32("0xFF"))
+		err = state.ToExecutedOnDestination(destinationTxHash)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 	})

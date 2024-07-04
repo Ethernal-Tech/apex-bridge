@@ -96,7 +96,7 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 	bp.logger.Info("NewUnprocessedTxs", "txs", txs)
 
 	var (
-		bridgingRequests  []*indexer.Tx
+		bridgingRequests  []*common.NewBridgingRequestStateModel
 		relevantTxs       []*core.CardanoTx
 		processedTxs      []*core.ProcessedCardanoTx
 		invalidTxsCounter int
@@ -132,7 +132,12 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		relevantTxs = append(relevantTxs, cardanoTx)
 
 		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
-			bridgingRequests = append(bridgingRequests, tx)
+			bridgingRequests = append(
+				bridgingRequests,
+				&common.NewBridgingRequestStateModel{
+					SourceTxHash: common.Hash(tx.Hash),
+				},
+			)
 		}
 	}
 
@@ -162,9 +167,11 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
 	}
 
-	err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
-	if err != nil {
-		bp.logger.Error("error while adding new bridging request states", "err", err)
+	if len(bridgingRequests) > 0 {
+		err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
+		if err != nil {
+			bp.logger.Error("error while adding new bridging request states", "err", err)
+		}
 	}
 
 	return nil
@@ -273,7 +280,6 @@ func (bp *CardanoTxsProcessorImpl) processAllStartingWithChain(
 	sort.Strings(keys)
 
 	for _, key := range keys {
-
 		chainID := bp.appConfig.CardanoChains[key].ChainID
 		if chainID != startChainID {
 			for priority := uint8(0); priority <= core.LastProcessingPriority; priority++ {
@@ -733,7 +739,7 @@ func (bp *CardanoTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 					} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
 						err := bp.bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
 							SourceChainID: tx.OriginChainID,
-							SourceTxHash:  tx.Hash,
+							SourceTxHash:  common.Hash(tx.Hash),
 						})
 
 						if err != nil {
