@@ -2,47 +2,41 @@ package core
 
 import (
 	"encoding/binary"
-	"encoding/hex"
+	"math/big"
+
+	"github.com/Ethernal-Tech/ethgo"
 )
-
-// will probably be replaced by struct from indexer
-type EthBlock struct {
-	Number uint64 `json:"num"`
-	Hash   string `json:"hash"`
-}
-
-// will probably be replaced by struct from indexer
-type IndexerEthTx struct {
-	BlockNumber uint64 `json:"block_number"`
-	BlockHash   string `json:"block_hash"`
-	Hash        string `json:"hash"`
-	// will probably be replaced by something from indexer
-	Metadata []byte `json:"metadata"`
-}
 
 type EthTx struct {
 	OriginChainID string `json:"origin_chain_id"`
 	Priority      uint8  `json:"priority"`
 
-	IndexerEthTx
+	BlockNumber uint64        `json:"block_number"`
+	BlockHash   ethgo.Hash    `json:"block_hash"`
+	Hash        ethgo.Hash    `json:"hash"`
+	TxIndex     uint64        `json:"tx_index"`
+	Value       *big.Int      `json:"value"`
+	Removed     bool          `json:"removed"`
+	LogIndex    uint64        `json:"log_index"`
+	Address     ethgo.Address `json:"addr"`
+	Metadata    []byte        `json:"metadata"`
 }
 
 type ProcessedEthTx struct {
-	BlockNumber   uint64 `json:"block_number"`
-	BlockHash     string `json:"block_hash"`
-	OriginChainID string `json:"origin_chain_id"`
-	Hash          string `json:"hash"`
-	Priority      uint8  `json:"priority"`
-	IsInvalid     bool   `json:"is_invalid"`
+	BlockNumber   uint64     `json:"block_number"`
+	BlockHash     ethgo.Hash `json:"block_hash"`
+	OriginChainID string     `json:"origin_chain_id"`
+	Hash          ethgo.Hash `json:"hash"`
+	Priority      uint8      `json:"priority"`
+	IsInvalid     bool       `json:"is_invalid"`
 }
 
 type BridgeExpectedEthTx struct {
-	ChainID string `json:"chain_id"`
-	Hash    string `json:"hash"`
-	// will probably be replaced by something from indexer
-	Metadata []byte `json:"metadata"`
-	TTL      uint64 `json:"ttl"`
-	Priority uint8  `json:"priority"`
+	ChainID  string     `json:"chain_id"`
+	Hash     ethgo.Hash `json:"hash"`
+	Metadata []byte     `json:"metadata"`
+	TTL      uint64     `json:"ttl"`
+	Priority uint8      `json:"priority"`
 }
 
 type BridgeExpectedEthDBTx struct {
@@ -55,19 +49,18 @@ type BridgeExpectedEthDBTx struct {
 type BridgeClaimsBlockInfo struct {
 	ChainID string
 	Number  uint64
-	Hash    string
 }
 
 func (bi *BridgeClaimsBlockInfo) EqualWithUnprocessed(tx *EthTx) bool {
-	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber && bi.Hash == tx.BlockHash
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber
 }
 
 func (bi *BridgeClaimsBlockInfo) EqualWithProcessed(tx *ProcessedEthTx) bool {
-	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber && bi.Hash == tx.BlockHash
+	return bi.ChainID == tx.OriginChainID && bi.Number == tx.BlockNumber
 }
 
-func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedEthTx, block *EthBlock) bool {
-	return bi.ChainID == tx.ChainID && bi.Number == block.Number && bi.Hash == block.Hash
+func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedEthTx, blockNumber uint64) bool {
+	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
 }
 
 func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
@@ -81,14 +74,12 @@ func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
 	}
 }
 
-func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, originChainID string, txHash string) []byte {
+func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, originChainID string, txHash ethgo.Hash) []byte {
 	bytes := [9]byte{priority}
 
 	binary.BigEndian.PutUint64(bytes[1:], blockNumber)
 
-	txHashBytes, _ := hex.DecodeString(txHash)
-
-	return append(append(bytes[:], []byte(originChainID)...), txHashBytes...)
+	return append(append(bytes[:], []byte(originChainID)...), txHash[:]...)
 }
 
 func (tx EthTx) ToUnprocessedTxKey() []byte {
@@ -99,10 +90,8 @@ func (tx ProcessedEthTx) ToUnprocessedTxKey() []byte {
 	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
 }
 
-func ToEthTxKey(originChainID string, txHash string) []byte {
-	txHashBytes, _ := hex.DecodeString(txHash)
-
-	return append([]byte(originChainID), txHashBytes...)
+func ToEthTxKey(originChainID string, txHash ethgo.Hash) []byte {
+	return append([]byte(originChainID), txHash[:]...)
 }
 
 func (tx EthTx) ToEthTxKey() []byte {
@@ -130,9 +119,7 @@ func (tx BridgeExpectedEthTx) ToExpectedTxKey() []byte {
 
 	binary.BigEndian.PutUint64(bytes[1:], tx.TTL)
 
-	txHashBytes, _ := hex.DecodeString(tx.Hash)
-
-	return append(append(bytes[:], []byte(tx.ChainID)...), txHashBytes...)
+	return append(append(bytes[:], []byte(tx.ChainID)...), tx.Hash[:]...)
 }
 
 func (tx BridgeExpectedEthTx) Key() []byte {

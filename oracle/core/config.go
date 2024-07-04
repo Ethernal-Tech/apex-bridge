@@ -11,6 +11,11 @@ type BridgingAddresses struct {
 	FeeAddress      string `json:"feeAddress"`
 }
 
+type EthChainConfig struct {
+	ChainID           string
+	BridgingAddresses BridgingAddresses `json:"bridgingAddresses"`
+}
+
 type CardanoChainConfig struct {
 	ChainID                  string
 	NetworkAddress           string                           `json:"networkAddress"`
@@ -53,6 +58,7 @@ type AppConfig struct {
 	ValidatorDataDir    string                         `json:"validatorDataDir"`
 	ValidatorConfigPath string                         `json:"validatorConfigPath"`
 	CardanoChains       map[string]*CardanoChainConfig `json:"cardanoChains"`
+	EthChains           map[string]*EthChainConfig     `json:"ethChains"`
 	Bridge              BridgeConfig                   `json:"bridge"`
 	Settings            AppSettings                    `json:"appSettings"`
 	BridgingSettings    BridgingSettings               `json:"bridgingSettings"`
@@ -61,5 +67,9 @@ type AppConfig struct {
 func (appConfig *AppConfig) FillOut() {
 	for chainID, cardanoChainConfig := range appConfig.CardanoChains {
 		cardanoChainConfig.ChainID = chainID
+	}
+
+	for chainID, ethChainConfig := range appConfig.EthChains {
+		ethChainConfig.ChainID = chainID
 	}
 }

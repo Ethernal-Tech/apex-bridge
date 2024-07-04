@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/hashicorp/go-hclog"
@@ -13,7 +14,7 @@ import (
 type EthChainObserverImpl struct {
 	ctx     context.Context
 	logger  hclog.Logger
-	config  *core.EthChainConfig
+	config  *oracleCore.EthChainConfig
 	tracker *eventTracker.EventTracker
 }
 
@@ -22,7 +23,7 @@ var _ core.EthChainObserver = (*EthChainObserverImpl)(nil)
 func NewEthChainObserver(
 	ctx context.Context,
 	logger hclog.Logger,
-	config *core.EthChainConfig,
+	config *oracleCore.EthChainConfig,
 ) (*EthChainObserverImpl, error) {
 	trackerConfig := &eventTracker.EventTrackerConfig{
 		SyncBatchSize: 10,
@@ -60,7 +61,7 @@ func (co *EthChainObserverImpl) Dispose() error {
 	return nil
 }
 
-func (co *EthChainObserverImpl) GetConfig() *core.EthChainConfig {
+func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
 	return nil
 }
 

@@ -71,7 +71,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	oracleConfig, ethOracleConfig, batcherConfig := appConfig.SeparateConfigs()
+	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
 		ctx, oracleConfig,
@@ -101,7 +101,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
-	ethOracle, err := ethOracle.NewEthOracle(ctx, ethOracleConfig, logger.Named("eth_oracle"))
+	ethOracle, err := ethOracle.NewEthOracle(ctx, oracleConfig, logger.Named("eth_oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
 	}

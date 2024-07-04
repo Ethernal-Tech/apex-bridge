@@ -426,7 +426,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
-		txHash := common.MustHashToBytes32("0x2244FF")
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			{Address: []string{validTestAddress}, Amount: utxoMinValue},

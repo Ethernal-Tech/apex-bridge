@@ -84,7 +84,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 	})
 
 	t.Run("FetchLatestBlockPoint valid", func(t *testing.T) {
-		bHash := common.MustHashToBytes32("FFBB")
+		bHash := indexer.Hash(common.NewHashFromHexString("FFBB"))
 		bSlot := uint64(100)
 
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
@@ -107,7 +107,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 		blockPoint, err = bridgeDataFetcher.FetchLatestBlockPoint(common.ChainIDStrPrime)
 		require.NoError(t, err)
 		require.NotNil(t, blockPoint)
-		require.Equal(t, indexer.Hash(bHash), blockPoint.BlockHash)
+		require.Equal(t, bHash, blockPoint.BlockHash)
 		require.Equal(t, bSlot, blockPoint.BlockSlot)
 	})
 }
