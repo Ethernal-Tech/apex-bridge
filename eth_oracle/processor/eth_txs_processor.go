@@ -97,7 +97,6 @@ func NewEthTxsProcessor(
 func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
 	bp.logger.Info("NewUnprocessedLog", "log", log)
 
-	//nolint:prealloc
 	var (
 		bridgingRequests  []*common.NewBridgingRequestStateModel
 		relevantTxs       []*core.EthTx
@@ -105,16 +104,23 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		invalidTxsCounter int
 	)
 
-	onIrrelevantTx := func(ethTx *core.EthTx) {
-		processedTxs = append(processedTxs, ethTx.ToProcessedEthTx(false))
-		invalidTxsCounter++
+	// a TODO: finish this
+	tx := &core.EthTx{
+		OriginChainID: originChainID,
+		Priority:      1,
+
+		BlockNumber: log.BlockNumber,
+		BlockHash:   log.BlockHash,
+		Hash:        log.TransactionHash,
+		TxIndex:     log.TransactionIndex,
+		Removed:     log.Removed,
+		LogIndex:    log.LogIndex,
+		Address:     log.Address,
+		// Value: ,
+		// Metadata: ,
 	}
 
-	// a TODO: finish this
-	// treat every event as a separate "tx"
-	txs := make([]*core.EthTx, 0)
-
-	// Unpack log here, and for each relevant event create ethTx and add to txs
+	// Unpack log here, and check if its a relevant event
 	// will probably use binding UnpackLog or binding.<name>ContractFilterer.Parse<event>(log).
 	// also fetch the transaction.value() using ethtxhelper
 	/*
@@ -130,25 +136,15 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		}
 	*/
 
-	for _, tx := range txs {
-		/*
-			ethTx := &core.EthTx{
-				OriginChainID: originChainID,
-				// IndexerEthTx:  *tx,
-				Priority: 1,
-			}
-		*/
-		bp.logger.Debug("Checking if tx is relevant", "tx", tx)
+	bp.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-		txProcessor, err := bp.getTxProcessor(tx.MetadataJSON)
-		if err != nil {
-			bp.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
+	txProcessor, err := bp.getTxProcessor(tx.Metadata)
+	if err != nil {
+		bp.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
-			onIrrelevantTx(tx)
-
-			continue
-		}
-
+		processedTxs = append(processedTxs, tx.ToProcessedEthTx(false))
+		invalidTxsCounter++
+	} else {
 		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
 			tx.Priority = 0
 		}
@@ -191,9 +187,11 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
 	}
 
-	err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
-	if err != nil {
-		bp.logger.Error("error while adding new bridging request states", "err", err)
+	if len(bridgingRequests) > 0 {
+		err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
+		if err != nil {
+			bp.logger.Error("error while adding new bridging request states", "err", err)
+		}
 	}
 
 	return nil
@@ -558,7 +556,7 @@ func (bp *EthTxsProcessorImpl) checkUnprocessedTxs(
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		bp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
 
-		txProcessor, err := bp.getTxProcessor(unprocessedTx.MetadataJSON)
+		txProcessor, err := bp.getTxProcessor(unprocessedTx.Metadata)
 		if err != nil {
 			bp.logger.Error("Failed to get tx processor for unprocessed tx", "tx", unprocessedTx, "err", err)
 
@@ -673,7 +671,7 @@ func (bp *EthTxsProcessorImpl) checkExpectedTxs(
 
 		bp.logger.Debug("Checking if expired tx is relevant", "expiredTx", expiredTx)
 
-		txProcessor, err := bp.getFailedTxProcessor(expiredTx.MetadataJSON)
+		txProcessor, err := bp.getFailedTxProcessor(expiredTx.Metadata)
 		if err != nil {
 			bp.logger.Error("Failed to get tx processor for expired tx", "tx", expiredTx, "err", err)
 
@@ -759,7 +757,7 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 		if tx.IsInvalid {
 			for _, unprocessedTx := range unprocessedTxs {
 				if bytes.Equal(unprocessedTx.ToEthTxKey(), tx.ToEthTxKey()) {
-					txProcessor, err := bp.getTxProcessor(unprocessedTx.MetadataJSON)
+					txProcessor, err := bp.getTxProcessor(unprocessedTx.Metadata)
 					if err != nil {
 						bp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
 					} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {

@@ -33,7 +33,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *oracleCore.BridgeClaims, tx *core.EthTx, appConfig *oracleCore.AppConfig,
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
-		common.MetadataEncodingTypeJSON, tx.MetadataJSON)
+		common.MetadataEncodingTypeJSON, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}

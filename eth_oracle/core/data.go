@@ -11,15 +11,15 @@ type EthTx struct {
 	OriginChainID string `json:"origin_chain_id"`
 	Priority      uint8  `json:"priority"`
 
-	BlockNumber  uint64        `json:"block_number"`
-	BlockHash    ethgo.Hash    `json:"block_hash"`
-	Hash         ethgo.Hash    `json:"hash"`
-	TxIndex      uint64        `json:"tx_index"`
-	Value        *big.Int      `json:"value"`
-	Removed      bool          `json:"removed"`
-	LogIndex     uint64        `json:"log_index"`
-	Address      ethgo.Address `json:"addr"`
-	MetadataJSON []byte        `json:"metadata_json"`
+	BlockNumber uint64        `json:"block_number"`
+	BlockHash   ethgo.Hash    `json:"block_hash"`
+	Hash        ethgo.Hash    `json:"hash"`
+	TxIndex     uint64        `json:"tx_index"`
+	Value       *big.Int      `json:"value"`
+	Removed     bool          `json:"removed"`
+	LogIndex    uint64        `json:"log_index"`
+	Address     ethgo.Address `json:"addr"`
+	Metadata    []byte        `json:"metadata"`
 }
 
 type ProcessedEthTx struct {
@@ -32,11 +32,11 @@ type ProcessedEthTx struct {
 }
 
 type BridgeExpectedEthTx struct {
-	ChainID      string     `json:"chain_id"`
-	Hash         ethgo.Hash `json:"hash"`
-	MetadataJSON []byte     `json:"metadata_json"`
-	TTL          uint64     `json:"ttl"`
-	Priority     uint8      `json:"priority"`
+	ChainID  string     `json:"chain_id"`
+	Hash     ethgo.Hash `json:"hash"`
+	Metadata []byte     `json:"metadata"`
+	TTL      uint64     `json:"ttl"`
+	Priority uint8      `json:"priority"`
 }
 
 type BridgeExpectedEthDBTx struct {

@@ -167,9 +167,11 @@ func (bp *CardanoTxsProcessorImpl) NewUnprocessedTxs(originChainID string, txs [
 		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
 	}
 
-	err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
-	if err != nil {
-		bp.logger.Error("error while adding new bridging request states", "err", err)
+	if len(bridgingRequests) > 0 {
+		err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
+		if err != nil {
+			bp.logger.Error("error while adding new bridging request states", "err", err)
+		}
 	}
 
 	return nil
