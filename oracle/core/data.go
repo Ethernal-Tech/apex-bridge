@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/binary"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
@@ -41,8 +40,6 @@ type BridgeExpectedCardanoDBTx struct {
 	IsProcessed bool `json:"is_processed"`
 	IsInvalid   bool `json:"is_invalid"`
 }
-
-type ContractCardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{

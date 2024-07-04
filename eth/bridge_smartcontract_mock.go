@@ -38,9 +38,7 @@ func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destina
 
 func (m *BridgeSmartContractMock) GetConfirmedTransactions(
 	ctx context.Context, destinationChain string,
-) (
-	[]ConfirmedTransaction, error,
-) {
+) ([]ConfirmedTransaction, error) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
@@ -54,32 +52,28 @@ func (m *BridgeSmartContractMock) GetConfirmedTransactions(
 
 func (m *BridgeSmartContractMock) GetLastObservedBlock(
 	ctx context.Context, destinationChain string,
-) (
-	*CardanoBlock, error,
-) {
+) (CardanoBlock, error) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return CardanoBlock{}, args.Error(1)
 	}
 
-	arg0, _ := args.Get(0).(*CardanoBlock)
+	arg0, _ := args.Get(0).(CardanoBlock)
 
 	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetValidatorsCardanoData(
+func (m *BridgeSmartContractMock) GetValidatorsChainData(
 	ctx context.Context, destinationChain string,
-) (
-	[]ValidatorCardanoData, error,
-) {
+) ([]ValidatorChainData, error) {
 	args := m.Called(ctx, destinationChain)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	arg0, _ := args.Get(0).([]ValidatorCardanoData)
+	arg0, _ := args.Get(0).([]ValidatorChainData)
 
 	return arg0, args.Error(1)
 }

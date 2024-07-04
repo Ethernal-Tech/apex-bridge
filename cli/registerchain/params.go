@@ -9,6 +9,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,11 +25,13 @@ const (
 	bridgeURLFlag          = "bridge-url"
 	bridgeSCAddrFlag       = "bridge-addr"
 	chainIDFlag            = "chain"
+	chainTypeFlag          = "type"
 	initialTokenSupplyFlag = "token-supply"
 
 	validatorDataDirFlagDesc   = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc    = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc            = "chain ID (prime, vector, etc)"
+	chainTypeFlagDesc          = "chain type (0 is Cardano, 1 is EVM, etc)"
 	socketPathFlagDesc         = "socket path for cardano node"
 	multisigAddrFlagDesc       = "multisig address"
 	multisigFeeAddrFlagDesc    = "fee payer address"
@@ -45,6 +48,7 @@ type registerChainParams struct {
 	bridgeURL          string
 	bridgeSCAddr       string
 	chainID            string
+	chainType          uint8
 	initialTokenSupply string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
@@ -147,18 +151,35 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
+	cmd.Flags().Uint8Var(
+		&ip.chainType,
+		chainTypeFlag,
+		0,
+		chainTypeFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
 
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	var validatorChainData eth.ValidatorChainData
+
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
 
-	walletCardano, err := cardanotx.LoadWallet(secretsManager, ip.chainID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
+	switch ip.chainType {
+	case common.ChainTypeCardano:
+		walletCardano, err := cardanotx.LoadWallet(secretsManager, ip.chainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
+		}
+
+		validatorChainData.VerifyingKey = [32]byte(walletCardano.MultiSig.GetVerificationKey())
+		validatorChainData.VerifyingKeyFee = [32]byte(walletCardano.MultiSigFee.GetVerificationKey())
+	default:
+		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}
 
 	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
@@ -183,16 +204,14 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
-				contractbinding.IBridgeStructsChain{
+				eth.Chain{
 					Id:              common.ToNumChainID(ip.chainID),
+					ChainType:       ip.chainType,
 					AddressMultisig: ip.multisigAddr,
 					AddressFeePayer: ip.multisigFeeAddr,
 				},
 				initialTokenSupply,
-				contractbinding.IBridgeStructsValidatorCardanoData{
-					VerifyingKey:    [32]byte(walletCardano.MultiSig.GetVerificationKey()),
-					VerifyingKeyFee: [32]byte(walletCardano.MultiSigFee.GetVerificationKey()),
-				})
+				validatorChainData)
 		})
 	if err != nil {
 		return nil, err

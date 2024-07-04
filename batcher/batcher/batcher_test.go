@@ -14,7 +14,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -96,7 +95,7 @@ func TestBatcherExecute(t *testing.T) {
 			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
-			Receivers: []contractbinding.IBridgeStructsReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x333",
 					Amount:             10,
