@@ -4,7 +4,7 @@ type chainIDNum = uint8
 
 const (
 	ChainTypeCardano = iota
-	ChainTypeEVM     = 1
+	ChainTypeEVM
 
 	ChainIDStrPrime  = "prime"
 	ChainIDStrVector = "vector"
