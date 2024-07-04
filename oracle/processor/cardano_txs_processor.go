@@ -542,11 +542,6 @@ func (bp *CardanoTxsProcessorImpl) checkUnprocessedTxs(
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution &&
-			!bridgeClaims.CanAddBatchExecutedClaim() {
-			continue
-		}
-
 		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, bp.appConfig)
 		if err != nil {
 			bp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
