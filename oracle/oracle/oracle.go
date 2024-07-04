@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/eth"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -33,12 +31,9 @@ type OracleImpl struct {
 	ctx                      context.Context
 	appConfig                *core.AppConfig
 	cardanoTxsProcessor      core.CardanoTxsProcessor
-	indexerDbs               map[string]indexer.Database
 	cardanoChainObservers    []core.CardanoChainObserver
 	db                       core.Database
 	expectedTxsFetcher       core.ExpectedTxsFetcher
-	bridgeDataFetcher        *bridge.BridgeDataFetcherImpl
-	bridgeSubmitter          core.BridgeSubmitter
 	confirmedBlockSubmitters []core.ConfirmedBlocksSubmitter
 	logger                   hclog.Logger
 
@@ -50,6 +45,8 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewOracle(
 	ctx context.Context,
 	appConfig *core.AppConfig,
+	bridgeDataFetcher core.BridgeDataFetcher,
+	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -58,31 +55,6 @@ func NewOracle(
 	if err != nil {
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
-
-	secretsManager, err := common.GetSecretsManager(
-		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
-	}
-
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
-	}
-
-	bridgeSC := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
-	bridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		wallet, appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
-	}
-
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, bridgeSC, logger.Named("bridge_data_fetcher"))
-	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, bridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
@@ -131,10 +103,7 @@ func NewOracle(
 		appConfig:                appConfig,
 		cardanoTxsProcessor:      cardanoTxsProcessor,
 		cardanoChainObservers:    cardanoChainObservers,
-		indexerDbs:               indexerDbs,
 		expectedTxsFetcher:       expectedTxsFetcher,
-		bridgeDataFetcher:        bridgeDataFetcher,
-		bridgeSubmitter:          bridgeSubmitter,
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
 		db:                       db,
 		logger:                   logger,
@@ -168,14 +137,6 @@ func (o *OracleImpl) Start() error {
 
 func (o *OracleImpl) Dispose() error {
 	errs := make([]error, 0)
-
-	for _, indexerDB := range o.indexerDbs {
-		err := indexerDB.Close()
-		if err != nil {
-			o.logger.Error("Failed to close indexer db", "err", err)
-			errs = append(errs, fmt.Errorf("failed to close indexer db. err %w", err))
-		}
-	}
 
 	for _, cco := range o.cardanoChainObservers {
 		err := cco.Dispose()
