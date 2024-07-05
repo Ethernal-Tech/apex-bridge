@@ -11,6 +11,9 @@ const (
 
 	ChainIDIntPrime  = chainIDNum(1)
 	ChainIDIntVector = chainIDNum(2)
+
+	ChainTypeCardanoStr = "cardano"
+	ChainTypeEVMStr     = "evm"
 )
 
 var (

@@ -540,12 +540,12 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {
-				ChainType:     "Cardano",
+				ChainType:     common.ChainTypeCardanoStr,
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: primeChainSpecificJSONRaw,
 			},
 			common.ChainIDStrVector: {
-				ChainType:     "Cardano",
+				ChainType:     common.ChainTypeCardanoStr,
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: vectorChainSpecificJSONRaw,
 			},

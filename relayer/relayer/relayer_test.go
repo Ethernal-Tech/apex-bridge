@@ -30,10 +30,10 @@ func TestRelayerExecute(t *testing.T) {
 	defer cancelCtx()
 
 	confirmedBatchRet := &eth.ConfirmedBatch{
-		ID:                         0,
-		RawTransaction:             []byte{},
-		MultisigSignatures:         [][]byte{},
-		FeePayerMultisigSignatures: [][]byte{},
+		ID:             0,
+		RawTransaction: []byte{},
+		Signatures:     [][]byte{},
+		FeeSignatures:  [][]byte{},
 	}
 
 	testError := errors.New("test err")
@@ -126,7 +126,7 @@ func TestRelayerExecute(t *testing.T) {
 
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
-		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(testError)
+		operationsMock.On("SendTx", ctx, bridgeSmartContractMock, confirmedBatchRet).Return(testError)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
 		err := r.execute(ctx)
@@ -142,7 +142,7 @@ func TestRelayerExecute(t *testing.T) {
 
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
-		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(nil)
+		operationsMock.On("SendTx", ctx, bridgeSmartContractMock, confirmedBatchRet).Return(nil)
 		dbMock.On("AddLastSubmittedBatchID", common.ChainIDStrPrime, mock.Anything).Return(testError)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
@@ -159,7 +159,7 @@ func TestRelayerExecute(t *testing.T) {
 
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
-		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(nil)
+		operationsMock.On("SendTx", ctx, bridgeSmartContractMock, confirmedBatchRet).Return(nil)
 		dbMock.On("AddLastSubmittedBatchID", common.ChainIDStrPrime, mock.Anything).Return(nil)
 
 		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)

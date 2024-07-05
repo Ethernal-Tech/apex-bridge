@@ -3,6 +3,7 @@ package core
 import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -84,7 +85,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
 			ChainID:       chainID,
-			ChainType:     "Cardano",
+			ChainType:     common.ChainTypeCardanoStr,
 			ChainSpecific: chainSpecificJSONRaw,
 		})
 	}
