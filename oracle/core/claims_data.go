@@ -51,11 +51,7 @@ func (bc *BridgeClaims) Any() bool {
 }
 
 func (bc *BridgeClaims) CanAddMore(max int) bool {
-	return bc.Count() < max && len(bc.BatchExecutedClaims) == 0
-}
-
-func (bc *BridgeClaims) CanAddBatchExecutedClaim() bool {
-	return bc.Count() == 0
+	return bc.Count() < max
 }
 
 func RefundExecutedClaimString(c RefundExecutedClaim) string {
