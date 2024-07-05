@@ -62,9 +62,9 @@ var (
 )
 
 type EVMChainConfig struct {
-	NodeURL           cardanowallet.CardanoNetworkType `json:"nodeURL"`
-	SmartContractAddr string                           `json:"smartContractAddr"`
-	RelayerAddr       string                           `json:"relayerAddr"`
+	NodeURL           string `json:"nodeURL"`
+	SmartContractAddr string `json:"smartContractAddr"`
+	RelayerAddr       string `json:"relayerAddr"`
 }
 
 func NewEVMChainConfig(rawMessage json.RawMessage) (*EVMChainConfig, error) {
