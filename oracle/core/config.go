@@ -1,10 +1,11 @@
 package core
 
 import (
+	"time"
+
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/Ethernal-Tech/ethgo"
 )
 
 type BridgingAddresses struct {
@@ -13,14 +14,14 @@ type BridgingAddresses struct {
 }
 
 type EthChainConfig struct {
-	ChainID                string
-	BridgingAddresses      BridgingAddresses              `json:"bridgingAddresses"`
-	RPCEndpoint            string                         `json:"rpcEndpoint"`
-	SyncBatchSize          uint64                         `json:"syncBatchSize"`
-	NumBlockConfirmations  uint64                         `json:"numBlockConfirmations"`
-	NumOfBlocksToReconcile uint64                         `json:"numOfBlocksToReconcile"`
-	StartBlockNumber       uint64                         `json:"startBlockNumber"`
-	LogFilter              map[ethgo.Address][]ethgo.Hash `json:"logFilter"`
+	ChainID                 string
+	BridgingAddresses       BridgingAddresses `json:"bridgingAddresses"`
+	RPCEndpoint             string            `json:"rpcEndpoint"`
+	SyncBatchSize           uint64            `json:"syncBatchSize"`
+	NumBlockConfirmations   uint64            `json:"numBlockConfirmations"`
+	NumOfBlocksToReconcile  uint64            `json:"numOfBlocksToReconcile"`
+	StartBlockNumber        uint64            `json:"startBlockNumber"`
+	PoolIntervalMiliseconds time.Duration     `json:"poolIntervalMs"`
 }
 
 type CardanoChainConfig struct {

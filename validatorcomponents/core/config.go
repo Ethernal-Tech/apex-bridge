@@ -98,7 +98,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NumBlockConfirmations:  ecConfig.NumBlockConfirmations,
 			NumOfBlocksToReconcile: ecConfig.NumOfBlocksToReconcile,
 			StartBlockNumber:       ecConfig.StartBlockNumber,
-			LogFilter:              ecConfig.LogFilter,
 		}
 	}
 

@@ -28,7 +28,6 @@ func NewEthChainObserver(
 	txsProcessor ethOracleCore.EthTxsProcessor,
 	oracleDB ethOracleCore.EthTxsProcessorDB,
 	indexerDB eventTrackerStore.EventTrackerStore,
-	bridgeDataFetcher oracleCore.BridgeDataFetcher,
 	logger hclog.Logger,
 ) (*EthChainObserverImpl, error) {
 	trackerConfig := loadTrackerConfigs(config, txsProcessor, logger)
@@ -69,20 +68,15 @@ func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
 	return co.config
 }
 
-func (co *EthChainObserverImpl) ErrorCh() <-chan error {
-	return nil
-}
-
 func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracleCore.EthTxsProcessor,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	return &eventTracker.EventTrackerConfig{
 		RPCEndpoint:            config.RPCEndpoint,
-		PollInterval:           10 * time.Second,
+		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
 		SyncBatchSize:          config.SyncBatchSize,
 		NumBlockConfirmations:  config.NumBlockConfirmations,
 		NumOfBlocksToReconcile: config.NumOfBlocksToReconcile,
-		LogFilter:              config.LogFilter,
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:      config.ChainID,
 			TxsProcessor: txsProcessor,
@@ -104,6 +98,8 @@ func (handler confirmedEventHandler) AddLog(log *ethgo.Log) error {
 
 	err := handler.TxsProcessor.NewUnprocessedLog(handler.ChainID, log)
 	if err != nil {
+		handler.Logger.Error("Failed to process new log", "err", err, "log", log)
+
 		return err
 	}
 

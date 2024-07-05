@@ -12,9 +12,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -39,7 +41,7 @@ type ValidatorComponentsImpl struct {
 	db                core.Database
 	cardanoIndexerDbs map[string]indexer.Database
 	oracle            oracleCore.Oracle
-	ethOracle         oracleCore.Oracle
+	ethOracle         ethOracleCore.Oracle
 	batcherManager    batcherCore.BatcherManager
 	relayerImitator   core.RelayerImitator
 	api               core.API
@@ -281,8 +283,6 @@ outsideloop:
 	for {
 		select {
 		case err := <-v.oracle.ErrorCh():
-			v.errorCh <- err
-		case err := <-v.ethOracle.ErrorCh():
 			v.errorCh <- err
 		case <-v.ctx.Done():
 			break outsideloop
