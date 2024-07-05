@@ -83,7 +83,7 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 			Logger:       logger,
 		},
 		Logger: logger,
-		// TODO: Populate LogFilter, with sc address and events to track
+		// a TODO: Populate LogFilter, with sc address and events to track
 	}
 }
 
