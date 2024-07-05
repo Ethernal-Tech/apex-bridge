@@ -65,9 +65,6 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check ErrorCh", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
@@ -87,9 +84,6 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetConfig", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
@@ -107,9 +101,6 @@ func TestCardanoChainObserver(t *testing.T) {
 
 	t.Run("check start stop", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
-
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
@@ -130,9 +121,6 @@ func TestCardanoChainObserver(t *testing.T) {
 
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
-
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
 
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
