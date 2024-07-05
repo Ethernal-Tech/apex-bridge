@@ -56,7 +56,6 @@ func (f *ExpectedTxsFetcherImpl) Start() {
 }
 
 func (f *ExpectedTxsFetcherImpl) fetchData() error {
-	// a TODO: also fetch expected eth txs
 	var expectedTxs []*core.BridgeExpectedCardanoTx
 
 	for chainID := range f.appConfig.CardanoChains {
