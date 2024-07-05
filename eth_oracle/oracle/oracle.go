@@ -7,11 +7,13 @@ import (
 	"path"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	eth_chain "github.com/Ethernal-Tech/apex-bridge/eth_oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/eth_oracle/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor"
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/failed_tx_processors"
 	txprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/tx_processors"
+
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
@@ -22,11 +24,12 @@ const (
 )
 
 type OracleImpl struct {
-	ctx             context.Context
-	appConfig       *oracleCore.AppConfig
-	ethTxsProcessor core.EthTxsProcessor
-	db              core.Database
-	logger          hclog.Logger
+	ctx               context.Context
+	appConfig         *oracleCore.AppConfig
+	ethTxsProcessor   core.EthTxsProcessor
+	ethChainObservers []core.EthChainObserver
+	db                core.Database
+	logger            hclog.Logger
 
 	errorCh chan error
 }
@@ -62,12 +65,28 @@ func NewEthOracle(
 		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
 		indexerDbs, bridgingRequestStateUpdater, logger.Named("eth_txs_processor"))
 
+	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.CardanoChains))
+
+	for _, ethChainConfig := range appConfig.EthChains {
+		indexerDB := indexerDbs[ethChainConfig.ChainID]
+
+		eco, err := eth_chain.NewEthChainObserver(
+			ctx, ethChainConfig, ethTxsProcessor, db, indexerDB, bridgeDataFetcher,
+			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create eth chain observer for `%s`: %w", ethChainConfig.ChainID, err)
+		}
+
+		ethChainObservers = append(ethChainObservers, eco)
+	}
+
 	return &OracleImpl{
-		ctx:             ctx,
-		appConfig:       appConfig,
-		ethTxsProcessor: ethTxsProcessor,
-		db:              db,
-		logger:          logger,
+		ctx:               ctx,
+		appConfig:         appConfig,
+		ethTxsProcessor:   ethTxsProcessor,
+		ethChainObservers: ethChainObservers,
+		db:                db,
+		logger:            logger,
 	}, nil
 }
 
