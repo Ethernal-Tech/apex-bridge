@@ -67,11 +67,11 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) (*indexer.
 }
 
 func GetChainConfig(appConfig *core.AppConfig, chainID string) (*core.CardanoChainConfig, *core.EthChainConfig) {
-	if cardanoChainConfig := appConfig.CardanoChains[chainID]; cardanoChainConfig != nil {
+	if cardanoChainConfig, exists := appConfig.CardanoChains[chainID]; exists {
 		return cardanoChainConfig, nil
 	}
 
-	if ethChainConfig := appConfig.EthChains[chainID]; ethChainConfig != nil {
+	if ethChainConfig, exists := appConfig.EthChains[chainID]; exists {
 		return nil, ethChainConfig
 	}
 

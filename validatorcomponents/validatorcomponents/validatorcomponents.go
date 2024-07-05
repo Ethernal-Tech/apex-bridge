@@ -7,26 +7,27 @@ import (
 	"path/filepath"
 	"time"
 
+	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
+	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
-
-	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
-	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
-
-	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
-
-	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 )
 
 const (
@@ -35,17 +36,18 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
-	ctx             context.Context
-	shouldRunAPI    bool
-	db              core.Database
-	oracle          oracleCore.Oracle
-	ethOracle       oracleCore.Oracle
-	batcherManager  batcherCore.BatcherManager
-	relayerImitator core.RelayerImitator
-	api             core.API
-	telemetry       *telemetry.Telemetry
-	logger          hclog.Logger
-	errorCh         chan error
+	ctx               context.Context
+	shouldRunAPI      bool
+	db                core.Database
+	cardanoIndexerDbs map[string]indexer.Database
+	oracle            oracleCore.Oracle
+	ethOracle         oracleCore.Oracle
+	batcherManager    batcherCore.BatcherManager
+	relayerImitator   core.RelayerImitator
+	api               core.API
+	telemetry         *telemetry.Telemetry
+	logger            hclog.Logger
+	errorCh           chan error
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -84,7 +86,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	indexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
+	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
 		indexerDB, err := indexerDb.NewDatabaseInit("",
@@ -93,21 +95,53 @@ func NewValidatorComponents(
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
-		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
+		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
+	// a TODO: instantiate eth observer dbs here
+	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore)
+
+	secretsManager, err := common.GetSecretsManager(
+		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
+	}
+
+	oracleBridgeSC := eth.NewOracleBridgeSmartContract(
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
+
+	oracleBridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		wallet, appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
+	}
+
+	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
+	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+
+	oracle, err := oracle.NewOracle(
+		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, cardanoIndexerDbs,
+		bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
-	ethOracle, err := ethOracle.NewEthOracle(ctx, oracleConfig, logger.Named("eth_oracle"))
+	ethOracle, err := ethOracle.NewEthOracle(
+		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, ethIndexerDbs,
+		bridgingRequestStateManager, logger.Named("eth_oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
 	}
 
 	batcherManager, err := batchermanager.NewBatcherManager(
-		ctx, batcherConfig, indexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		ctx, batcherConfig, cardanoIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
@@ -142,16 +176,17 @@ func NewValidatorComponents(
 	}
 
 	return &ValidatorComponentsImpl{
-		ctx:             ctx,
-		shouldRunAPI:    shouldRunAPI,
-		db:              db,
-		oracle:          oracle,
-		ethOracle:       ethOracle,
-		batcherManager:  batcherManager,
-		relayerImitator: relayerImitator,
-		api:             apiObj,
-		telemetry:       telemetry,
-		logger:          logger,
+		ctx:               ctx,
+		shouldRunAPI:      shouldRunAPI,
+		db:                db,
+		cardanoIndexerDbs: cardanoIndexerDbs,
+		oracle:            oracle,
+		ethOracle:         ethOracle,
+		batcherManager:    batcherManager,
+		relayerImitator:   relayerImitator,
+		api:               apiObj,
+		telemetry:         telemetry,
+		logger:            logger,
 	}, nil
 }
 
@@ -194,6 +229,14 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	v.logger.Info("Disposing ValidatorComponents")
 
 	errs := make([]error, 0)
+
+	for _, indexerDB := range v.cardanoIndexerDbs {
+		err := indexerDB.Close()
+		if err != nil {
+			v.logger.Error("Failed to close cardano indexer db", "err", err)
+			errs = append(errs, fmt.Errorf("failed to close cardano indexer db. err %w", err))
+		}
+	}
 
 	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
@@ -280,12 +323,14 @@ func fixChainsAndAddresses(
 
 	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
-	resultChains := make(map[string]*oracleCore.CardanoChainConfig, len(allRegisteredChains))
+	cardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
+	ethChains := make(map[string]*oracleCore.EthChainConfig)
 
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
-		chainConfig, exists := config.CardanoChains[chainID]
-		if !exists {
+
+		cardanoChainConfig, ethChainConfig := utils.GetChainConfig(config, chainID)
+		if cardanoChainConfig == nil && ethChainConfig == nil {
 			return fmt.Errorf("no config for registered chain: %s", chainID)
 		}
 
@@ -328,12 +373,20 @@ func fixChainsAndAddresses(
 			}
 
 			resultChains[chainID] = chainConfig
+		case common.ChainTypeEVM:
+			ethChainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: regChain.AddressMultisig,
+				FeeAddress:      regChain.AddressFeePayer,
+			}
+
+			ethChains[chainID] = ethChainConfig
 		default:
 			logger.Debug("Do not know how to handle chain type", "chainID", chainID, "type", regChain.ChainType)
 		}
 	}
 
-	config.CardanoChains = resultChains
+	config.CardanoChains = cardanoChains
+	config.EthChains = ethChains
 
 	return nil
 }
