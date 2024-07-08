@@ -2,41 +2,42 @@ package chain
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
 )
 
 type EthChainObserverImpl struct {
 	ctx     context.Context
-	logger  hclog.Logger
 	config  *oracleCore.EthChainConfig
 	tracker *eventTracker.EventTracker
+	logger  hclog.Logger
 }
 
-var _ core.EthChainObserver = (*EthChainObserverImpl)(nil)
+var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
 
 func NewEthChainObserver(
 	ctx context.Context,
-	logger hclog.Logger,
 	config *oracleCore.EthChainConfig,
+	txsProcessor ethOracleCore.EthTxsProcessor,
+	oracleDB ethOracleCore.EthTxsProcessorDB,
+	indexerDB eventTrackerStore.EventTrackerStore,
+	logger hclog.Logger,
 ) (*EthChainObserverImpl, error) {
-	trackerConfig := &eventTracker.EventTrackerConfig{
-		SyncBatchSize: 10,
-		RPCEndpoint:   "https://some-url.com",
-		PollInterval:  10 * time.Second,
-	}
+	trackerConfig := loadTrackerConfigs(config, txsProcessor, logger)
 
-	trackerStore, err := eventTrackerStore.NewBoltDBEventTrackerStore("/path/to/my.db")
+	err := initOracleState(indexerDB, oracleDB, config.StartBlockNumber, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	ethTracker, err := eventTracker.NewEventTracker(trackerConfig, trackerStore, 0)
+	ethTracker, err := eventTracker.NewEventTracker(trackerConfig, indexerDB, config.StartBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -58,13 +59,79 @@ func (co *EthChainObserverImpl) Start() error {
 }
 
 func (co *EthChainObserverImpl) Dispose() error {
+	co.tracker.Close()
+
 	return nil
 }
 
 func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
+	return co.config
+}
+
+func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracleCore.EthTxsProcessor,
+	logger hclog.Logger,
+) *eventTracker.EventTrackerConfig {
+	return &eventTracker.EventTrackerConfig{
+		RPCEndpoint:            config.RPCEndpoint,
+		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
+		SyncBatchSize:          config.SyncBatchSize,
+		NumBlockConfirmations:  config.NumBlockConfirmations,
+		NumOfBlocksToReconcile: uint64(0),
+		EventSubscriber: &confirmedEventHandler{
+			ChainID:      config.ChainID,
+			TxsProcessor: txsProcessor,
+			Logger:       logger,
+		},
+		Logger: logger,
+		// a TODO: Populate LogFilter, with sc address and events to track
+	}
+}
+
+type confirmedEventHandler struct {
+	TxsProcessor ethOracleCore.EthTxsProcessor
+	ChainID      string
+	Logger       hclog.Logger
+}
+
+func (handler confirmedEventHandler) AddLog(log *ethgo.Log) error {
+	handler.Logger.Info("Confirmed Event Handler invoked",
+		"block hash", log.BlockHash, "block number", log.BlockNumber, "tx hash", log.TransactionHash)
+
+	err := handler.TxsProcessor.NewUnprocessedLog(handler.ChainID, log)
+	if err != nil {
+		handler.Logger.Error("Failed to process new log", "err", err, "log", log)
+
+		return err
+	}
+
+	handler.Logger.Info("Log has been processed", "log", log)
+
 	return nil
 }
 
-func (co *EthChainObserverImpl) ErrorCh() <-chan error {
-	return nil
+func initOracleState(
+	db eventTrackerStore.EventTrackerStore, oracleDB ethOracleCore.EthTxsProcessorDB, blockNumber uint64,
+	chainID string, logger hclog.Logger,
+) error {
+	currentBlockNumber, err := db.GetLastProcessedBlock()
+	if err != nil {
+		return fmt.Errorf("could not retrieve latest block point while initializing utxos: %w", err)
+	}
+
+	// in oracle we already have more recent block
+	if currentBlockNumber >= blockNumber {
+		logger.Info("Oracle database contains more recent block", "block number", currentBlockNumber)
+
+		return nil
+	}
+
+	if err := oracleDB.ClearUnprocessedTxs(chainID); err != nil {
+		return err
+	}
+
+	if err := oracleDB.ClearExpectedTxs(chainID); err != nil {
+		return err
+	}
+
+	return db.InsertLastProcessedBlock(blockNumber)
 }
