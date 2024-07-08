@@ -22,8 +22,8 @@ type RelayerImpl struct {
 var _ core.Relayer = (*RelayerImpl)(nil)
 
 func NewRelayer(
-	config *core.RelayerConfiguration, bridgeSmartContract eth.IBridgeSmartContract, logger hclog.Logger,
-	operations core.ChainOperations, db core.Database,
+	config *core.RelayerConfiguration, bridgeSmartContract eth.IBridgeSmartContract,
+	operations core.ChainOperations, db core.Database, logger hclog.Logger,
 ) *RelayerImpl {
 	return &RelayerImpl{
 		config:              config,
