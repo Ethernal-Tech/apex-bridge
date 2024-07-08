@@ -123,18 +123,17 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
 
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
 	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	oracle, err := oracle.NewOracle(
-		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, cardanoIndexerDbs,
+		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, ethIndexerDbs,
+		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("eth_oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)

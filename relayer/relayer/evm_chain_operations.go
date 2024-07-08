@@ -48,13 +48,13 @@ func (cco *EVMChainOperations) SendTx(
 
 	bitmap := common.NewBitmap(smartContractData.Bitmap)
 
-	// TODO: aggregate bls public keys
+	// a TODO: aggregate bls public keys
 	for i, x := range validatorsDatas {
 		if bitmap.IsSet(uint64(i)) {
 			fmt.Println(i, x.Key)
 		}
 	}
 
-	// TODO: send actual tx to nexus/evm chain
+	// a TODO: send actual tx to nexus/evm chain
 	return nil
 }
