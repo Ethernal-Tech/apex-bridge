@@ -155,13 +155,13 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	firstTxNonceID, lastTxNonceID := getFirstAndLastTxNonceID(confirmedTransactions)
 	// Submit batch to smart contract
 	signedBatch := eth.SignedBatch{
-		Id:                        batchID,
-		DestinationChainId:        common.ToNumChainID(b.config.Chain.ChainID),
-		RawTransaction:            generatedBatchData.TxRaw,
-		MultisigSignature:         multisigSignature,
-		FeePayerMultisigSignature: multisigFeeSignature,
-		FirstTxNonceId:            firstTxNonceID,
-		LastTxNonceId:             lastTxNonceID,
+		Id:                 batchID,
+		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
+		RawTransaction:     generatedBatchData.TxRaw,
+		Signature:          multisigSignature,
+		FeeSignature:       multisigFeeSignature,
+		FirstTxNonceId:     firstTxNonceID,
+		LastTxNonceId:      lastTxNonceID,
 	}
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
@@ -204,8 +204,11 @@ func GetChainSpecificOperations(
 ) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
-	case "cardano":
+	case common.ChainTypeCardanoStr:
 		return NewCardanoChainOperations(
+			config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+	case common.ChainTypeEVMStr:
+		return NewEVMChainOperations(
 			config.ChainSpecific, db, secretsManager, config.ChainID, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)

@@ -10,7 +10,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type SendTxFunc = func(ctx context.Context, confirmedBatch *eth.ConfirmedBatch) error
+type SendTxFunc = func(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch,
+) error
 
 func RelayerExecute(
 	ctx context.Context,
@@ -54,7 +56,7 @@ func RelayerExecute(
 
 	logger.Info("Submitting batch tx", "chainID", chainID, "confirmedBatch", confirmedBatch)
 
-	if err := sendTx(ctx, confirmedBatch); err != nil {
+	if err := sendTx(ctx, bridgeSmartContract, confirmedBatch); err != nil {
 		return fmt.Errorf("failed to send confirmed batch for chainID: %s. err: %w", chainID, err)
 	}
 
