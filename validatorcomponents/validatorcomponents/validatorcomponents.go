@@ -100,8 +100,17 @@ func NewValidatorComponents(
 		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	// a TODO: instantiate eth observer dbs here
-	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore)
+	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(appConfig.EthChains))
+
+	for _, ethChainConfig := range oracleConfig.EthChains {
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(path.Join(
+			appConfig.Settings.DbsPath, ethChainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", ethChainConfig.ChainID, err)
+		}
+
+		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
+	}
 
 	secretsManager, err := common.GetSecretsManager(
 		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
@@ -125,18 +134,17 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
 
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
 	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	oracle, err := oracle.NewOracle(
-		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, cardanoIndexerDbs,
+		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleConfig, bridgeDataFetcher, bridgeSubmitter, ethIndexerDbs,
+		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("eth_oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)

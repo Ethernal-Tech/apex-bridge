@@ -61,3 +61,7 @@ type EthChainObserver interface {
 	Dispose() error
 	GetConfig() *oracleCore.EthChainConfig
 }
+
+type EthBridgeDataFetcher interface {
+	FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error)
+}
