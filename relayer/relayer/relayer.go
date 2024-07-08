@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/hashicorp/go-hclog"
@@ -67,8 +68,10 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 func GetChainSpecificOperations(config core.ChainConfig, logger hclog.Logger) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
-	case "cardano":
+	case common.ChainTypeCardanoStr:
 		return NewCardanoChainOperations(config.ChainSpecific, logger)
+	case common.ChainTypeEVMStr:
+		return NewEVMChainOperations(config.ChainSpecific, config.ChainID, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

@@ -85,6 +85,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
 
+	minUtxoAmount := new(big.Int).SetUint64(minUtxoAmount)
+
 	defer func() {
 		os.RemoveAll(testDir)
 		os.Remove(testDir)
@@ -143,8 +145,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte{},
-				VerifyingKeyFee: [32]byte{},
+				Key: [4]*big.Int{
+					new(big.Int), new(big.Int),
+				},
 			},
 		}
 
@@ -159,8 +162,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte{},
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+				},
 			},
 		}
 
@@ -175,8 +179,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -192,8 +198,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -211,8 +219,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -362,15 +372,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
-					Amount:             100,
+					Amount:             big.NewInt(100),
 				},
 				{
 					DestinationAddress: "0x2",
-					Amount:             200,
+					Amount:             big.NewInt(200),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             400,
+					Amount:             big.NewInt(400),
 				},
 			},
 		},
@@ -378,15 +388,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x4",
-					Amount:             50,
+					Amount:             big.NewInt(50),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             900,
+					Amount:             big.NewInt(900),
 				},
 				{
 					DestinationAddress: "0x11",
-					Amount:             0,
+					Amount:             big.NewInt(0),
 				},
 			},
 		},
@@ -394,7 +404,7 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x5",
-					Amount:             3000,
+					Amount:             big.NewInt(3000),
 				},
 			},
 		},
@@ -402,15 +412,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
-					Amount:             2000,
+					Amount:             big.NewInt(2000),
 				},
 				{
 					DestinationAddress: "0x4",
-					Amount:             170,
+					Amount:             big.NewInt(170),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             10,
+					Amount:             big.NewInt(10),
 				},
 			},
 		},

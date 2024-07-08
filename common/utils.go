@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
+	"golang.org/x/crypto/sha3"
 )
 
 func IsValidURL(input string) bool {
@@ -89,4 +90,18 @@ func SafeSubtract(a, b, def uint64) uint64 {
 	}
 
 	return def
+}
+
+// Keccak256 calculates the Keccak256
+func Keccak256(v ...[]byte) ([]byte, error) {
+	h := sha3.NewLegacyKeccak256()
+
+	for _, i := range v {
+		_, err := h.Write(i)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return h.Sum(nil), nil
 }

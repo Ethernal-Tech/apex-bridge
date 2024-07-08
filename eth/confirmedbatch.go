@@ -3,6 +3,7 @@ package eth
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -15,20 +16,22 @@ type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 type BridgeReceiver = contractbinding.IBridgeStructsReceiver
 
 type ConfirmedBatch struct {
-	ID                         uint64
-	RawTransaction             []byte
-	MultisigSignatures         [][]byte
-	FeePayerMultisigSignatures [][]byte
+	ID             uint64
+	RawTransaction []byte
+	Signatures     [][]byte
+	FeeSignatures  [][]byte
+	Bitmap         *big.Int
 }
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
 ) (*ConfirmedBatch, error) {
 	return &ConfirmedBatch{
-		ID:                         contractConfirmedBatch.Id,
-		RawTransaction:             contractConfirmedBatch.RawTransaction,
-		MultisigSignatures:         contractConfirmedBatch.MultisigSignatures,
-		FeePayerMultisigSignatures: contractConfirmedBatch.FeePayerMultisigSignatures,
+		ID:             contractConfirmedBatch.Id,
+		RawTransaction: contractConfirmedBatch.RawTransaction,
+		Signatures:     contractConfirmedBatch.Signatures,
+		FeeSignatures:  contractConfirmedBatch.FeeSignatures,
+		Bitmap:         contractConfirmedBatch.Bitmap,
 	}, nil
 }
 
@@ -42,9 +45,9 @@ func BatchToString(b SignedBatch) string {
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(hex.EncodeToString(b.MultisigSignature))
+	sb.WriteString(hex.EncodeToString(b.Signature))
 	sb.WriteString("\nfee payer multisig signature = ")
-	sb.WriteString(hex.EncodeToString(b.FeePayerMultisigSignature))
+	sb.WriteString(hex.EncodeToString(b.FeeSignature))
 	sb.WriteString("\nfirst tx nonce id = ")
 	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
 	sb.WriteString("\nlast tx nonce id = ")
@@ -60,9 +63,11 @@ func (b ConfirmedBatch) String() string {
 	sb.WriteString(fmt.Sprint(b.ID))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
+	sb.WriteString("\nbitmap = ")
+	sb.WriteString(b.Bitmap.String())
 	sb.WriteString("\nmultisig signatures = [")
 
-	for i, sig := range b.MultisigSignatures {
+	for i, sig := range b.Signatures {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
@@ -73,7 +78,7 @@ func (b ConfirmedBatch) String() string {
 	sb.WriteString("]")
 	sb.WriteString("\nfee payer multisig signatures = [")
 
-	for i, sig := range b.FeePayerMultisigSignatures {
+	for i, sig := range b.FeeSignatures {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
