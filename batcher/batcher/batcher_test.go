@@ -98,7 +98,7 @@ func TestBatcherExecute(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x333",
-					Amount:             10,
+					Amount:             big.NewInt(10),
 				},
 			},
 		},

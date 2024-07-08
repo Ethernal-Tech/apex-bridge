@@ -73,7 +73,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
-			Amount:             receiver.Amount,
+			Amount:             new(big.Int).SetUint64(receiver.Amount),
 		})
 
 		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
@@ -83,7 +83,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	receivers = append(receivers, core.BridgingRequestReceiver{
 		DestinationAddress: destConfig.BridgingAddresses.FeeAddress,
-		Amount:             metadata.FeeAmount,
+		Amount:             new(big.Int).SetUint64(metadata.FeeAmount),
 	})
 
 	claim := core.BridgingRequestClaim{

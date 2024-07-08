@@ -97,13 +97,13 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	}
 
 	newSignedBatch := SignedBatch{
-		Id:                        signedBatch.Id,
-		DestinationChainId:        signedBatch.DestinationChainId,
-		RawTransaction:            signedBatch.RawTransaction,
-		MultisigSignature:         signedBatch.MultisigSignature,
-		FeePayerMultisigSignature: signedBatch.FeePayerMultisigSignature,
-		FirstTxNonceId:            signedBatch.FirstTxNonceId,
-		LastTxNonceId:             signedBatch.LastTxNonceId,
+		Id:                 signedBatch.Id,
+		DestinationChainId: signedBatch.DestinationChainId,
+		RawTransaction:     signedBatch.RawTransaction,
+		Signature:          signedBatch.Signature,
+		FeeSignature:       signedBatch.FeeSignature,
+		FirstTxNonceId:     signedBatch.FirstTxNonceId,
+		LastTxNonceId:      signedBatch.LastTxNonceId,
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {

@@ -21,11 +21,9 @@ type CardanoChainConfig struct {
 	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
 }
 
-var _ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)
-
 // GetChainType implements ChainSpecificConfig.
 func (*CardanoChainConfig) GetChainType() string {
-	return "Cardano"
+	return common.ChainTypeCardanoStr
 }
 
 func NewCardanoChainConfig(rawMessage json.RawMessage) (*CardanoChainConfig, error) {
@@ -56,4 +54,33 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
+}
+
+var (
+	_ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)
+	_ common.ChainSpecificConfig = (*EVMChainConfig)(nil)
+)
+
+type EVMChainConfig struct {
+	NodeURL           string `json:"nodeURL"`
+	SmartContractAddr string `json:"smartContractAddr"`
+	RelayerAddr       string `json:"relayerAddr"`
+}
+
+func NewEVMChainConfig(rawMessage json.RawMessage) (*EVMChainConfig, error) {
+	var config EVMChainConfig
+	if err := json.Unmarshal(rawMessage, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal EVM configuration: %w", err)
+	}
+
+	return &config, nil
+}
+
+// GetChainType implements ChainSpecificConfig.
+func (*EVMChainConfig) GetChainType() string {
+	return common.ChainTypeEVMStr
+}
+
+func (config EVMChainConfig) Serialize() ([]byte, error) {
+	return json.Marshal(config)
 }
