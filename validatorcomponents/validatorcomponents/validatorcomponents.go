@@ -98,8 +98,17 @@ func NewValidatorComponents(
 		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	// a TODO: instantiate eth observer dbs here
-	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore)
+	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(appConfig.EthChains))
+
+	for _, ethChainConfig := range oracleConfig.EthChains {
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(path.Join(
+			appConfig.Settings.DbsPath, ethChainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", ethChainConfig.ChainID, err)
+		}
+
+		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
+	}
 
 	secretsManager, err := common.GetSecretsManager(
 		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
