@@ -90,9 +90,15 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		})
 	}
 
-	for chainID := range appConfig.EthChains {
+	for chainID, ecConfig := range appConfig.EthChains {
 		oracleEthChains[chainID] = &oracleCore.EthChainConfig{
-			ChainID: chainID,
+			ChainID:                 chainID,
+			BridgingAddresses:       ecConfig.BridgingAddresses,
+			RPCEndpoint:             ecConfig.RPCEndpoint,
+			SyncBatchSize:           ecConfig.SyncBatchSize,
+			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
+			StartBlockNumber:        ecConfig.StartBlockNumber,
+			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
 		}
 	}
 

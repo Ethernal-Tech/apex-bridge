@@ -89,7 +89,7 @@ func NewOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB, bridgeDataFetcher,
+			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB,
 			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
