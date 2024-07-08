@@ -79,7 +79,7 @@ func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []by
 		return nil, nil, err
 	}
 
-	// TODO: calculate bls signature of txHash
+	// a TODO: calculate bls signature of txHash
 	blsSignature := txsHashBytes
 
 	return blsSignature, nil, nil

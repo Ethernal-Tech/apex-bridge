@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -45,7 +46,7 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewOracle(
 	ctx context.Context,
 	appConfig *core.AppConfig,
-	bridgeDataFetcher core.BridgeDataFetcher,
+	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -55,6 +56,8 @@ func NewOracle(
 	if err != nil {
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
+
+	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))

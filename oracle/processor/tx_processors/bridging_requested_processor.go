@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -177,7 +178,12 @@ func (p *BridgingRequestedProcessorImpl) validate(
 				receiverAmountSum += receiver.Amount
 			}
 		} else if ethDestConfig != nil {
-			// a TODO: validate eth addresses
+			if !goEthCommon.IsHexAddress(receiverAddr) {
+				foundAnInvalidReceiverAddr = true
+
+				break
+			}
+
 			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
 				feeSum += receiver.Amount
 			} else {
