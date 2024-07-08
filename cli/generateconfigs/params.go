@@ -515,6 +515,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	primeChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
+		NetworkID:        wallet.CardanoNetworkType(p.primeNetworkID),
 		TestNetMagic:     p.primeNetworkMagic,
 		OgmiosURL:        p.primeOgmiosURL,
 		BlockfrostURL:    p.primeBlockfrostURL,
@@ -524,6 +525,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	})
 
 	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
+		NetworkID:        wallet.CardanoNetworkType(p.vectorNetworkID),
 		TestNetMagic:     p.vectorNetworkMagic,
 		OgmiosURL:        p.vectorOgmiosURL,
 		BlockfrostURL:    p.vectorBlockfrostURL,

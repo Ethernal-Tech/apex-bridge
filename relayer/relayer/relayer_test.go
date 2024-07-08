@@ -46,7 +46,7 @@ func TestRelayerExecute(t *testing.T) {
 
 		dbMock := &databaseaccess.DBMock{}
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to retrieve confirmed batch")
@@ -61,7 +61,7 @@ func TestRelayerExecute(t *testing.T) {
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(nil, testError)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get last submitted batch id from db")
@@ -80,7 +80,7 @@ func TestRelayerExecute(t *testing.T) {
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(nil, nil)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.NoError(t, err)
 	})
@@ -94,7 +94,7 @@ func TestRelayerExecute(t *testing.T) {
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "last submitted batch id greater than received: last submitted 1 > received 0")
@@ -111,7 +111,7 @@ func TestRelayerExecute(t *testing.T) {
 		dbMock := &databaseaccess.DBMock{}
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.NoError(t, err)
 	})
@@ -128,7 +128,7 @@ func TestRelayerExecute(t *testing.T) {
 		dbMock.On("GetLastSubmittedBatchID", common.ChainIDStrPrime).Return(lastConfirmedBatchID, nil)
 		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(testError)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to send confirmed batch")
@@ -145,7 +145,7 @@ func TestRelayerExecute(t *testing.T) {
 		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(nil)
 		dbMock.On("AddLastSubmittedBatchID", common.ChainIDStrPrime, mock.Anything).Return(testError)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		err := r.execute(ctx)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
@@ -162,7 +162,7 @@ func TestRelayerExecute(t *testing.T) {
 		operationsMock.On("SendTx", ctx, confirmedBatchRet).Return(nil)
 		dbMock.On("AddLastSubmittedBatchID", common.ChainIDStrPrime, mock.Anything).Return(nil)
 
-		r := NewRelayer(relayerConfig, bridgeSmartContractMock, hclog.Default(), operationsMock, dbMock)
+		r := NewRelayer(relayerConfig, bridgeSmartContractMock, operationsMock, dbMock, hclog.Default())
 		require.NoError(t, r.execute(ctx))
 	})
 }
