@@ -176,8 +176,8 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 			return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
 		}
 
-		validatorChainData.VerifyingKey = [32]byte(walletCardano.MultiSig.GetVerificationKey())
-		validatorChainData.VerifyingKeyFee = [32]byte(walletCardano.MultiSigFee.GetVerificationKey())
+		validatorChainData.Key[0] = new(big.Int).SetBytes(walletCardano.MultiSig.VerificationKey)
+		validatorChainData.Key[1] = new(big.Int).SetBytes(walletCardano.MultiSigFee.VerificationKey)
 	default:
 		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}

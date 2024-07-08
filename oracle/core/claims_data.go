@@ -80,8 +80,8 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString(c.Receiver)
 	sb.WriteString("\nRawTransaction = ")
 	sb.WriteString(hex.EncodeToString(c.RawTransaction))
-	sb.WriteString("\nMultisigSignature = ")
-	sb.WriteString(hex.EncodeToString(c.MultisigSignature))
+	sb.WriteString("\nSignature = ")
+	sb.WriteString(hex.EncodeToString(c.Signature))
 	sb.WriteString("\nRetryCounter = ")
 	sb.WriteString(fmt.Sprint(c.RetryCounter))
 

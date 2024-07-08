@@ -46,9 +46,9 @@ type CardanoChainOperationsMock struct {
 var _ core.ChainOperations = (*CardanoChainOperationsMock)(nil)
 
 func (m *CardanoChainOperationsMock) SendTx(
-	ctx context.Context, smartContractData *eth.ConfirmedBatch,
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
 ) error {
-	args := m.Called(ctx, smartContractData)
+	args := m.Called(ctx, bridgeSmartContract, smartContractData)
 
 	return args.Error(0)
 }

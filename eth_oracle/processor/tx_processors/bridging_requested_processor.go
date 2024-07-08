@@ -66,7 +66,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	for _, receiver := range metadata.Transactions {
 		receivers = append(receivers, oracleCore.BridgingRequestReceiver{
 			DestinationAddress: strings.Join(receiver.Address, ""),
-			Amount:             receiver.Amount,
+			Amount:             new(big.Int).SetUint64(receiver.Amount),
 		})
 
 		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))

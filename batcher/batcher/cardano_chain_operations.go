@@ -242,21 +242,24 @@ func (cco *CardanoChainOperations) getCardanoData(
 	)
 
 	for i, validator := range validatorsData {
-		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKey[:])
+		verifyingKey := validator.Key[0].Bytes()
+		verifyingKeyFee := validator.Key[1].Bytes()
+
+		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(verifyingKey)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), validator.VerifyingKey[:]) {
+		if bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), verifyingKey) {
 			verificationKeyIdx = i
 		}
 
-		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKeyFee[:])
+		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(verifyingKeyFee)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), validator.VerifyingKeyFee[:]) {
+		if bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), verifyingKeyFee) {
 			feeVerificationKeyIdx = i
 		}
 	}
@@ -420,7 +423,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
-			receiversMap[receiver.DestinationAddress] += receiver.Amount
+			receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
 		}
 	}
 
