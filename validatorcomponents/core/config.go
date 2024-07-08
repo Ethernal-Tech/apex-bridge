@@ -96,7 +96,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			RPCEndpoint:             ecConfig.RPCEndpoint,
 			SyncBatchSize:           ecConfig.SyncBatchSize,
 			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
-			NumOfBlocksToReconcile:  ecConfig.NumOfBlocksToReconcile,
 			StartBlockNumber:        ecConfig.StartBlockNumber,
 			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
 		}

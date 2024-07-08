@@ -19,7 +19,6 @@ type EthChainConfig struct {
 	RPCEndpoint             string            `json:"rpcEndpoint"`
 	SyncBatchSize           uint64            `json:"syncBatchSize"`
 	NumBlockConfirmations   uint64            `json:"numBlockConfirmations"`
-	NumOfBlocksToReconcile  uint64            `json:"numOfBlocksToReconcile"`
 	StartBlockNumber        uint64            `json:"startBlockNumber"`
 	PoolIntervalMiliseconds time.Duration     `json:"poolIntervalMs"`
 }

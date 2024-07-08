@@ -76,7 +76,7 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
 		SyncBatchSize:          config.SyncBatchSize,
 		NumBlockConfirmations:  config.NumBlockConfirmations,
-		NumOfBlocksToReconcile: config.NumOfBlocksToReconcile,
+		NumOfBlocksToReconcile: uint64(0),
 		EventSubscriber: &confirmedEventHandler{
 			ChainID:      config.ChainID,
 			TxsProcessor: txsProcessor,
