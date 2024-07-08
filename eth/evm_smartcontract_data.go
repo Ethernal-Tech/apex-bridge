@@ -47,7 +47,9 @@ func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction,
 		return nil, err
 	}
 
-	return abi.ConvertType(dt[0], new(EVMSmartContractTransaction)).(*EVMSmartContractTransaction), nil
+	tx, _ := abi.ConvertType(dt[0], new(EVMSmartContractTransaction)).(*EVMSmartContractTransaction)
+
+	return tx, nil
 }
 
 func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {

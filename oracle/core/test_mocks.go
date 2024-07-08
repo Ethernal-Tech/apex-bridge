@@ -56,13 +56,6 @@ func (m *BridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpected
 	return nil, args.Error(1)
 }
 
-// Dispose implements BridgeDataFetcher.
-func (m *BridgeDataFetcherMock) Dispose() error {
-	args := m.Called()
-
-	return args.Error(0)
-}
-
 var _ BridgeDataFetcher = (*BridgeDataFetcherMock)(nil)
 
 type ExpectedTxsFetcherMock struct {
