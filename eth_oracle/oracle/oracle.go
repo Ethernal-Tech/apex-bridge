@@ -7,6 +7,8 @@ import (
 	"path"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/bridge"
 	eth_chain "github.com/Ethernal-Tech/apex-bridge/eth_oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/eth_oracle/database_access"
@@ -23,12 +25,13 @@ const (
 )
 
 type OracleImpl struct {
-	ctx               context.Context
-	appConfig         *oracleCore.AppConfig
-	ethTxsProcessor   core.EthTxsProcessor
-	ethChainObservers []core.EthChainObserver
-	db                core.Database
-	logger            hclog.Logger
+	ctx                context.Context
+	appConfig          *oracleCore.AppConfig
+	ethTxsProcessor    core.EthTxsProcessor
+	expectedTxsFetcher oracleCore.ExpectedTxsFetcher
+	ethChainObservers  []core.EthChainObserver
+	db                 core.Database
+	logger             hclog.Logger
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -36,7 +39,7 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewEthOracle(
 	ctx context.Context,
 	appConfig *oracleCore.AppConfig,
-	bridgeDataFetcher oracleCore.BridgeDataFetcher,
+	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter oracleCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -46,6 +49,12 @@ func NewEthOracle(
 	if err != nil {
 		return nil, fmt.Errorf("failed to open eth oracle database: %w", err)
 	}
+
+	bridgeDataFetcher := bridge.NewEthBridgeDataFetcher(
+		ctx, oracleBridgeSC, logger.Named("eth_bridge_data_fetcher"))
+
+	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
+		ctx, bridgeDataFetcher, appConfig, db, logger.Named("eth_expected_txs_fetcher"))
 
 	txProcessors := []core.EthTxProcessor{
 		txprocessors.NewEthBatchExecutedProcessor(logger),
@@ -78,12 +87,13 @@ func NewEthOracle(
 	}
 
 	return &OracleImpl{
-		ctx:               ctx,
-		appConfig:         appConfig,
-		ethTxsProcessor:   ethTxsProcessor,
-		ethChainObservers: ethChainObservers,
-		db:                db,
-		logger:            logger,
+		ctx:                ctx,
+		appConfig:          appConfig,
+		ethTxsProcessor:    ethTxsProcessor,
+		expectedTxsFetcher: expectedTxsFetcher,
+		ethChainObservers:  ethChainObservers,
+		db:                 db,
+		logger:             logger,
 	}, nil
 }
 
@@ -91,6 +101,7 @@ func (o *OracleImpl) Start() error {
 	o.logger.Debug("Starting EthOracle")
 
 	go o.ethTxsProcessor.Start()
+	go o.expectedTxsFetcher.Start()
 
 	for _, eco := range o.ethChainObservers {
 		err := eco.Start()
