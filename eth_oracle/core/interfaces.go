@@ -36,6 +36,11 @@ type Database interface {
 	Close() error
 }
 
+type Oracle interface {
+	Start() error
+	Dispose() error
+}
+
 type EthTxsProcessor interface {
 	NewUnprocessedLog(originChainID string, log *ethgo.Log) error
 	Start()
@@ -55,5 +60,4 @@ type EthChainObserver interface {
 	Start() error
 	Dispose() error
 	GetConfig() *oracleCore.EthChainConfig
-	ErrorCh() <-chan error
 }
