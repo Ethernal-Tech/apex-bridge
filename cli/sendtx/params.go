@@ -2,7 +2,6 @@ package clisendtx
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,43 +13,40 @@ import (
 )
 
 const (
-	privateKeyFlag         = "key"
-	ogmiosURLSrcFlag       = "ogmios-src"
-	receiverFlag           = "receiver"
-	networkIDSrcFlag       = "network-id-src"
-	testnetMagicFlag       = "testnet-src"
-	chainIDFlag            = "chain-dst"
-	multisigAddrSrcFlag    = "addr-multisig-src"
-	multisigFeeAddrDstFlag = "addr-fee-dst"
-	feeAmountFlag          = "fee"
-	ogmiosURLDstFlag       = "ogmios-dst"
+	privateKeyFlag      = "key"
+	ogmiosURLSrcFlag    = "ogmios-src"
+	receiverFlag        = "receiver"
+	networkIDSrcFlag    = "network-id-src"
+	testnetMagicFlag    = "testnet-src"
+	chainIDFlag         = "chain-dst"
+	multisigAddrSrcFlag = "addr-multisig-src"
+	feeAmountFlag       = "fee"
+	ogmiosURLDstFlag    = "ogmios-dst"
 
-	privateKeyFlagDesc         = "wallet private signing key"
-	ogmiosURLSrcFlagDesc       = "source chain ogmios url"
-	receiverFlagDesc           = "receiver addr:amount"
-	testnetMagicFlagDesc       = "source testnet magic number. leave 0 for mainnet"
-	networkIDSrcFlagDesc       = "source network id"
-	chainIDFlagDesc            = "destination chain ID (prime, vector, etc)"
-	multisigAddrSrcFlagDesc    = "source multisig address"
-	multisigFeeAddrDstFlagDesc = "destination fee payer address"
-	feeAmountFlagDesc          = "amount for multisig fee addr"
-	ogmiosURLDstFlagDesc       = "destination chain ogmios url"
+	privateKeyFlagDesc      = "wallet private signing key"
+	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
+	receiverFlagDesc        = "receiver addr:amount"
+	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
+	networkIDSrcFlagDesc    = "source network id"
+	chainIDFlagDesc         = "destination chain ID (prime, vector, etc)"
+	multisigAddrSrcFlagDesc = "source multisig address"
+	feeAmountFlagDesc       = "amount for multisig fee addr"
+	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 )
 
 type sendTxParams struct {
-	privateKeyRaw      string
-	ogmiosURLSrc       string
-	receivers          []string
-	networkIDSrc       uint
-	testnetMagicSrc    uint
-	chainIDDst         string
-	multisigAddrSrc    string
-	multisigFeeAddrDst string
-	feeAmount          uint64
-	ogmiosURLDst       string
+	privateKeyRaw   string
+	ogmiosURLSrc    string
+	receivers       []string
+	networkIDSrc    uint
+	testnetMagicSrc uint
+	chainIDDst      string
+	multisigAddrSrc string
+	feeAmount       uint64
+	ogmiosURLDst    string
 
 	receiversParsed []cardanowallet.TxOutput
 	wallet          cardanowallet.IWallet
@@ -75,10 +71,6 @@ func (ip *sendTxParams) validateFlags() error {
 
 	if len(ip.receivers) == 0 {
 		return fmt.Errorf("--%s not specified", receiverFlag)
-	}
-
-	if ip.multisigFeeAddrDst == "" {
-		return fmt.Errorf("--%s not specified", multisigFeeAddrDstFlag)
 	}
 
 	if ip.multisigAddrSrc == "" {
@@ -123,15 +115,6 @@ func (ip *sendTxParams) validateFlags() error {
 			Amount: amount,
 		})
 	}
-
-	if cardanotx.IsAddressInOutputs(receivers, ip.multisigFeeAddrDst) {
-		return errors.New("fee address can not be in receivers list")
-	}
-
-	receivers = append(receivers, cardanowallet.TxOutput{
-		Addr:   ip.multisigFeeAddrDst,
-		Amount: ip.feeAmount,
-	})
 
 	ip.receiversParsed = receivers
 
@@ -181,13 +164,6 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		multisigAddrSrcFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&ip.multisigFeeAddrDst,
-		multisigFeeAddrDstFlag,
-		"",
-		multisigFeeAddrDstFlagDesc,
-	)
-
 	cmd.Flags().Uint64Var(
 		&ip.feeAmount,
 		feeAmountFlag,
@@ -225,7 +201,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 	}
 
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(), ip.receiversParsed)
+		context.Background(), ip.chainIDDst, senderAddr.String(), ip.receiversParsed, ip.feeAmount)
 	if err != nil {
 		return nil, err
 	}

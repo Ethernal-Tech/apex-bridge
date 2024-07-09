@@ -44,7 +44,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
-		p.addBridgingRequestClaim(claims, tx, metadata)
+		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
 		//nolint:godox
 		// TODO: Refund
@@ -56,19 +56,35 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
+	claims *core.BridgeClaims, tx *core.CardanoTx,
+	metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) {
+	destConfig := appConfig.CardanoChains[metadata.DestinationChainID]
 	totalAmount := big.NewInt(0)
 
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
 	for _, receiver := range metadata.Transactions {
+		receiverAddr := strings.Join(receiver.Address, "")
+
+		if receiverAddr == destConfig.BridgingAddresses.FeeAddress {
+			// fee address will be added at the end
+			continue
+		}
+
 		receivers = append(receivers, core.BridgingRequestReceiver{
-			DestinationAddress: strings.Join(receiver.Address, ""),
+			DestinationAddress: receiverAddr,
 			Amount:             receiver.Amount,
 		})
 
 		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
 	}
+
+	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
+
+	receivers = append(receivers, core.BridgingRequestReceiver{
+		DestinationAddress: destConfig.BridgingAddresses.FeeAddress,
+		Amount:             metadata.FeeAmount,
+	})
 
 	claim := core.BridgingRequestClaim{
 		ObservedTransactionHash: tx.Hash,
@@ -132,14 +148,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	var (
-		receiverAmountSum uint64 = 0
-		feeSum            uint64 = 0
-	)
-
+	receiverAmountSum := uint64(0)
+	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
-	foundTheFeeReceiverAddr := false
 
 	for _, receiver := range metadata.Transactions {
 		if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
@@ -159,11 +171,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		}
 
 		if receiverAddr == destinationChainConfig.BridgingAddresses.FeeAddress {
-			foundTheFeeReceiverAddr = true
 			feeSum += receiver.Amount
+		} else {
+			receiverAmountSum += receiver.Amount
 		}
-
-		receiverAmountSum += receiver.Amount
 	}
 
 	if foundAUtxoValueBelowMinimumValue {
@@ -174,11 +185,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	if !foundTheFeeReceiverAddr {
-		return fmt.Errorf("destination chain fee address not found in receiver addrs in metadata: %v", metadata)
-	}
+	// update fee amount if needed with sum of fee address receivers
+	metadata.FeeAmount += feeSum
+	receiverAmountSum += metadata.FeeAmount
 
-	if feeSum < appConfig.BridgingSettings.MinFeeForBridging {
+	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
