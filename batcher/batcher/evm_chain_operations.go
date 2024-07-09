@@ -12,7 +12,7 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
@@ -23,13 +23,13 @@ var (
 
 type EVMChainOperations struct {
 	config *cardano.EVMChainConfig
-	db     indexer.Database
+	db     eventTrackerStore.EventTrackerStore
 	logger hclog.Logger
 }
 
 func NewEVMChainOperations(
 	jsonConfig json.RawMessage,
-	db indexer.Database,
+	db eventTrackerStore.EventTrackerStore,
 	secretsManager secrets.SecretsManager,
 	chainID string,
 	logger hclog.Logger,

@@ -151,7 +151,7 @@ func NewValidatorComponents(
 	}
 
 	batcherManager, err := batchermanager.NewBatcherManager(
-		ctx, batcherConfig, cardanoIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		ctx, batcherConfig, cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
