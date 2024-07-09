@@ -205,6 +205,11 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody.BridgingFee = max(requestBody.BridgingFee, feeSum)
 	requestBody.Transactions = transactions
 
+	// this is just convinient way to setup default min fee
+	if requestBody.BridgingFee == 0 {
+		requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
+	}
+
 	if foundAUtxoValueBelowMinimumValue {
 		return fmt.Errorf("found a utxo value below minimum value in request body receivers: %v", requestBody)
 	}
