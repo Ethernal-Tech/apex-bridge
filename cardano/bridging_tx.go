@@ -59,6 +59,7 @@ func (bts *BridgingTxSender) CreateTx(
 	chain string,
 	senderAddr string,
 	receivers []cardanowallet.TxOutput,
+	feeAmount uint64,
 ) ([]byte, string, error) {
 	qtd, err := bts.TxProviderSrc.GetTip(ctx)
 	if err != nil {
@@ -73,12 +74,12 @@ func (bts *BridgingTxSender) CreateTx(
 		}
 	}
 
-	metadata, err := bts.createMetadata(chain, senderAddr, receivers)
+	metadata, err := bts.createMetadata(chain, senderAddr, receivers, feeAmount)
 	if err != nil {
 		return nil, "", err
 	}
 
-	outputsSum := cardanowallet.GetOutputsSum(receivers)
+	outputsSum := cardanowallet.GetOutputsSum(receivers) + feeAmount
 	outputs := []cardanowallet.TxOutput{
 		{
 			Addr:   bts.MultiSigAddrSrc,
@@ -200,13 +201,14 @@ func (bts *BridgingTxSender) WaitForTx(
 }
 
 func (bts *BridgingTxSender) createMetadata(
-	chain, senderAddr string, receivers []cardanowallet.TxOutput,
+	chain, senderAddr string, receivers []cardanowallet.TxOutput, feeAmount uint64,
 ) ([]byte, error) {
 	metadataObj := common.BridgingRequestMetadata{
 		BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 		DestinationChainID: chain,
 		SenderAddr:         common.SplitString(senderAddr, splitStringLength),
 		Transactions:       make([]common.BridgingRequestMetadataTransaction, 0, len(receivers)+1),
+		FeeAmount:          feeAmount,
 	}
 
 	for _, x := range receivers {

@@ -174,14 +174,10 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			len(requestBody.Transactions), c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
 	}
 
-	var (
-		receiverAmountSum uint64 = 0
-		feeSum            uint64 = 0
-	)
-
+	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
-	foundTheFeeReceiverAddr := false
+	transactions := make([]request.CreateBridgingTxTransactionRequest, 0, len(requestBody.Transactions))
 
 	for _, receiver := range requestBody.Transactions {
 		if receiver.Amount < c.oracleConfig.BridgingSettings.UtxoMinValue {
@@ -197,13 +193,17 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			break
 		}
 
+		// if fee address is specified in transactions just add amount to the fee sum
+		// otherwise keep this transaction
 		if receiver.Addr == destinationChainConfig.BridgingAddresses.FeeAddress {
-			foundTheFeeReceiverAddr = true
 			feeSum += receiver.Amount
+		} else {
+			transactions = append(transactions, receiver)
 		}
-
-		receiverAmountSum += receiver.Amount
 	}
+
+	requestBody.BridgingFee = max(requestBody.BridgingFee, feeSum)
+	requestBody.Transactions = transactions
 
 	if foundAUtxoValueBelowMinimumValue {
 		return fmt.Errorf("found a utxo value below minimum value in request body receivers: %v", requestBody)
@@ -211,21 +211,6 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	if foundAnInvalidReceiverAddr {
 		return fmt.Errorf("found an invalid receiver addr in request body: %v", requestBody)
-	}
-
-	if !foundTheFeeReceiverAddr {
-		if requestBody.BridgingFee == 0 {
-			requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
-		}
-
-		requestBody.Transactions = append(requestBody.Transactions,
-			request.CreateBridgingTxTransactionRequest{
-				Addr:   destinationChainConfig.BridgingAddresses.FeeAddress,
-				Amount: requestBody.BridgingFee,
-			},
-		)
-	} else {
-		requestBody.BridgingFee = feeSum
 	}
 
 	if requestBody.BridgingFee < c.oracleConfig.BridgingSettings.MinFeeForBridging {
@@ -269,17 +254,17 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	bridgingTxSender.PotentialFee = cardanoConfig.PotentialFee
 
-	receivers := make([]wallet.TxOutput, 0, len(requestBody.Transactions))
-	for _, tx := range requestBody.Transactions {
-		receivers = append(receivers, wallet.TxOutput{
+	receivers := make([]wallet.TxOutput, len(requestBody.Transactions))
+	for i, tx := range requestBody.Transactions {
+		receivers[i] = wallet.TxOutput{
 			Addr:   tx.Addr,
 			Amount: tx.Amount,
-		})
+		}
 	}
 
 	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
 		context.Background(), requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers,
+		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
