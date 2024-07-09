@@ -186,7 +186,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount = max(metadata.FeeAmount, feeSum)
+	metadata.FeeAmount += feeSum
 	receiverAmountSum += metadata.FeeAmount
 
 	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {

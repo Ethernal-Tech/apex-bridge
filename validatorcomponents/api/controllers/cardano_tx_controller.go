@@ -202,7 +202,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		}
 	}
 
-	requestBody.BridgingFee = max(requestBody.BridgingFee, feeSum)
+	requestBody.BridgingFee += feeSum
 	requestBody.Transactions = transactions
 
 	// this is just convinient way to setup default min fee

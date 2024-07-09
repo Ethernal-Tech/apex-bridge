@@ -263,14 +263,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 				{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			},
-			FeeAmount: 0,
+			FeeAmount: 100,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 
 		claims := &core.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: utxoMinValue + minFeeForBridging},
+			{Address: primeBridgingAddr, Amount: utxoMinValue + minFeeForBridging + 100},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
