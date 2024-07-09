@@ -62,9 +62,9 @@ var (
 )
 
 type EVMChainConfig struct {
-	NodeURL           string `json:"nodeURL"`
-	SmartContractAddr string `json:"smartContractAddr"`
-	RelayerAddr       string `json:"relayerAddr"`
+	NodeURL      string `json:"nodeUrl"`
+	BridgingAddr string `json:"bridgingAddr"`
+	FeePayerAddr string `json:"feePayerAddr"`
 }
 
 func NewEVMChainConfig(rawMessage json.RawMessage) (*EVMChainConfig, error) {

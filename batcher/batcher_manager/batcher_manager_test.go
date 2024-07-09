@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
@@ -48,7 +49,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 		}
 
 		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, nil, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			invalidConfig, nil, nil, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "failed to create secrets manager")
 	})
 
@@ -67,6 +68,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 		_, err := NewBatcherManager(context.Background(),
 			invalidConfig, map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
+			}, map[string]eventTrackerStore.EventTrackerStore{
+				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
 			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
@@ -84,7 +87,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 		}
 
 		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, map[string]indexer.Database{}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			invalidConfig, map[string]indexer.Database{}, map[string]eventTrackerStore.EventTrackerStore{},
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "database not exists")
 	})
 
@@ -103,6 +107,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 		_, err := NewBatcherManager(context.Background(),
 			invalidConfig, map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
+			}, map[string]eventTrackerStore.EventTrackerStore{
+				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
 			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.NoError(t, err)
 	})

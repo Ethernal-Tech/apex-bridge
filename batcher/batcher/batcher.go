@@ -4,15 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -196,23 +193,6 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	}
 
 	return batchID, nil
-}
-
-// GetChainSpecificOperations returns the chain-specific operations based on the chain type
-func GetChainSpecificOperations(
-	config core.ChainConfig, db indexer.Database, secretsManager secrets.SecretsManager, logger hclog.Logger,
-) (core.ChainOperations, error) {
-	// Create the appropriate chain-specific configuration based on the chain type
-	switch strings.ToLower(config.ChainType) {
-	case common.ChainTypeCardanoStr:
-		return NewCardanoChainOperations(
-			config.ChainSpecific, db, secretsManager, config.ChainID, logger)
-	case common.ChainTypeEVMStr:
-		return NewEVMChainOperations(
-			config.ChainSpecific, db, secretsManager, config.ChainID, logger)
-	default:
-		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
-	}
 }
 
 func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (uint64, uint64) {
