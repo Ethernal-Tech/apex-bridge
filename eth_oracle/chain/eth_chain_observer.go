@@ -72,7 +72,7 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	return &eventTracker.EventTrackerConfig{
-		RPCEndpoint:            config.RPCEndpoint,
+		RPCEndpoint:            config.NodeURL,
 		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
 		SyncBatchSize:          config.SyncBatchSize,
 		NumBlockConfirmations:  config.NumBlockConfirmations,

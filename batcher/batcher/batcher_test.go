@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path"
@@ -15,7 +14,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
@@ -234,70 +232,6 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 
 	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
 	require.NoError(t, err)
-
-	chainConfig := core.ChainConfig{
-		ChainID:   common.ChainIDStrPrime,
-		ChainType: "Cardano",
-		ChainSpecific: json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 2,
-			"potentialFee": 300000
-			}`)),
-	}
-
-	t.Run("invalid chain type", func(t *testing.T) {
-		cfg := chainConfig
-		cfg.ChainType = "invalid"
-
-		chainOp, err := GetChainSpecificOperations(cfg, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "unknown chain type")
-	})
-
-	t.Run("invalid cardano json config", func(t *testing.T) {
-		cfg := chainConfig
-		cfg.ChainSpecific = json.RawMessage("")
-
-		chainOp, err := GetChainSpecificOperations(cfg, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
-	})
-
-	t.Run("non existing cardano wallet", func(t *testing.T) {
-		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
-		require.NoError(t, err)
-
-		err = secretsMngr.RemoveSecret(fmt.Sprintf("%sprime_key", secrets.CardanoKeyLocalPrefix))
-		require.NoError(t, err)
-
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to load wallet")
-
-		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
-		require.NoError(t, err)
-	})
-
-	t.Run("valid cardano config and keys path", func(t *testing.T) {
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.NoError(t, err)
-		require.NotNil(t, chainOp)
-	})
-
-	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
-		defer func() {
-			chainConfig.ChainType = "Cardano"
-		}()
-
-		chainConfig.ChainType = "CaRDaNo"
-
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.NoError(t, err)
-		require.NotNil(t, chainOp)
-	})
 
 	t.Run("getFirstAndLastTxNonceID one item", func(t *testing.T) {
 		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{

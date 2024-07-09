@@ -55,7 +55,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
 ) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
-	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
+	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
 
 	for chainID, ccConfig := range appConfig.CardanoChains {
@@ -94,12 +94,24 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		oracleEthChains[chainID] = &oracleCore.EthChainConfig{
 			ChainID:                 chainID,
 			BridgingAddresses:       ecConfig.BridgingAddresses,
-			RPCEndpoint:             ecConfig.RPCEndpoint,
+			NodeURL:                 ecConfig.NodeURL,
 			SyncBatchSize:           ecConfig.SyncBatchSize,
 			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
 			StartBlockNumber:        ecConfig.StartBlockNumber,
 			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
 		}
+
+		chainSpecificJSONRaw, _ := (cardanotx.EVMChainConfig{
+			NodeURL:      ecConfig.NodeURL,
+			BridgingAddr: ecConfig.BridgingAddresses.BridgingAddress,
+			FeePayerAddr: ecConfig.BridgingAddresses.FeeAddress,
+		}).Serialize()
+
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainID:       chainID,
+			ChainType:     common.ChainTypeEVMStr,
+			ChainSpecific: chainSpecificJSONRaw,
+		})
 	}
 
 	oracleConfig := &oracleCore.AppConfig{

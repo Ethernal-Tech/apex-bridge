@@ -60,6 +60,12 @@ func (ri *RelayerImitatorImpl) Start() {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
+
+		for chainID := range ri.config.EthChains {
+			if err := ri.execute(ri.ctx, chainID); err != nil {
+				ri.logger.Error("execute failed", "err", err)
+			}
+		}
 	}
 }
 

@@ -16,7 +16,7 @@ type BridgingAddresses struct {
 type EthChainConfig struct {
 	ChainID                 string
 	BridgingAddresses       BridgingAddresses `json:"bridgingAddresses"`
-	RPCEndpoint             string            `json:"rpcEndpoint"`
+	NodeURL                 string            `json:"nodeUrl"`
 	SyncBatchSize           uint64            `json:"syncBatchSize"`
 	NumBlockConfirmations   uint64            `json:"numBlockConfirmations"`
 	StartBlockNumber        uint64            `json:"startBlockNumber"`
