@@ -477,7 +477,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BridgingSettings: oCore.BridgingSettings{
 			MinFeeForBridging:              1000010,
 			UtxoMinValue:                   1000000,
-			MaxReceiversPerBridgingRequest: 5,
+			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},
 		Settings: oCore.AppSettings{

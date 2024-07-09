@@ -261,10 +261,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
-				{Address: []string{
-					vectorBridgingFeeAddr[:5],
-					vectorBridgingFeeAddr[5:],
-				}, Amount: minFeeForBridging},
+				{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			},
 			FeeAmount: 0,
 		})
@@ -431,10 +428,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		txHash := common.MustHashToBytes32("0x2244FF")
 		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: []string{
-				vectorBridgingFeeAddr[:5],
-				vectorBridgingFeeAddr[5:],
-			}, Amount: minFeeForBridging},
+			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			{Address: []string{validTestAddress}, Amount: utxoMinValue},
 		}
 
