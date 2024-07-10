@@ -47,7 +47,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 
 	err = p.validate(tx, metadata, appConfig)
 	if err == nil {
-		p.addBridgingRequestClaim(claims, tx, metadata)
+		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
 		//nolint:godox
 		// TODO: Refund
@@ -59,12 +59,30 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
-	claims *oracleCore.BridgeClaims, tx *core.EthTx, metadata *common.BridgingRequestMetadata,
+	claims *oracleCore.BridgeClaims, tx *core.EthTx,
+	metadata *common.BridgingRequestMetadata, appConfig *oracleCore.AppConfig,
 ) {
 	totalAmount := big.NewInt(0)
 
+	var destFeeAddress string
+
+	cardanoDestConfig, ethDestConfig := oracleUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	if cardanoDestConfig != nil {
+		destFeeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+	} else {
+		destFeeAddress = ethDestConfig.BridgingAddresses.FeeAddress
+	}
+
 	receivers := make([]oracleCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
+
 	for _, receiver := range metadata.Transactions {
+		receiverAddr := strings.Join(receiver.Address, "")
+
+		if receiverAddr == destFeeAddress {
+			// fee address will be added at the end
+			continue
+		}
+
 		receivers = append(receivers, oracleCore.BridgingRequestReceiver{
 			DestinationAddress: strings.Join(receiver.Address, ""),
 			Amount:             new(big.Int).SetUint64(receiver.Amount),
@@ -72,6 +90,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
 	}
+
+	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
+
+	receivers = append(receivers, oracleCore.BridgingRequestReceiver{
+		DestinationAddress: destFeeAddress,
+		Amount:             new(big.Int).SetUint64(metadata.FeeAmount),
+	})
 
 	claim := oracleCore.BridgingRequestClaim{
 		ObservedTransactionHash: tx.Hash,
@@ -130,14 +155,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	var (
-		receiverAmountSum        = big.NewInt(0)
-		feeSum            uint64 = 0
-	)
-
+	receiverAmountSum := big.NewInt(0)
+	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
-	foundTheFeeReceiverAddr := false
 
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
@@ -158,8 +179,9 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			}
 
 			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-				foundTheFeeReceiverAddr = true
 				feeSum += receiver.Amount
+			} else {
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		} else if ethDestConfig != nil {
 			if !goEthCommon.IsHexAddress(receiverAddr) {
@@ -169,12 +191,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			}
 
 			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
-				foundTheFeeReceiverAddr = true
 				feeSum += receiver.Amount
+			} else {
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		}
-
-		receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 	}
 
 	if cardanoDestConfig != nil && foundAUtxoValueBelowMinimumValue {
@@ -185,11 +206,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	if !foundTheFeeReceiverAddr {
-		return fmt.Errorf("destination chain fee address not found in receiver addrs in metadata: %v", metadata)
-	}
+	// update fee amount if needed with sum of fee address receivers
+	metadata.FeeAmount += feeSum
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
 
-	if feeSum < appConfig.BridgingSettings.MinFeeForBridging {
+	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
