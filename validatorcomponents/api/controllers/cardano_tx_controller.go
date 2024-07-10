@@ -159,6 +159,7 @@ func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.
 func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
+	// a TODO: fix this to support eth too
 	_, exists := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
 	if !exists {
 		return fmt.Errorf("source chain not registered: %v", requestBody.SourceChainID)
@@ -228,6 +229,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
+	// a TODO: fix this to support eth too
 	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
 
 	var batcherChainConfig batcherCore.ChainConfig
