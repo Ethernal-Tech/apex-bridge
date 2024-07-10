@@ -60,14 +60,23 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) {
-	destConfig := appConfig.CardanoChains[metadata.DestinationChainID]
 	totalAmount := big.NewInt(0)
 
+	var destFeeAddress string
+
+	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	if cardanoDestConfig != nil {
+		destFeeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+	} else {
+		destFeeAddress = ethDestConfig.BridgingAddresses.FeeAddress
+	}
+
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
+
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if receiverAddr == destConfig.BridgingAddresses.FeeAddress {
+		if receiverAddr == destFeeAddress {
 			// fee address will be added at the end
 			continue
 		}
@@ -83,7 +92,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
 
 	receivers = append(receivers, core.BridgingRequestReceiver{
-		DestinationAddress: destConfig.BridgingAddresses.FeeAddress,
+		DestinationAddress: destFeeAddress,
 		Amount:             new(big.Int).SetUint64(metadata.FeeAmount),
 	})
 
@@ -149,7 +158,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	receiverAmountSum := uint64(0)
+	receiverAmountSum := big.NewInt(0)
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
@@ -175,7 +184,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
 				feeSum += receiver.Amount
 			} else {
-				receiverAmountSum += receiver.Amount
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		} else if ethDestConfig != nil {
 			if !goEthCommon.IsHexAddress(receiverAddr) {
@@ -187,7 +196,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
 				feeSum += receiver.Amount
 			} else {
-				receiverAmountSum += receiver.Amount
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		}
 	}
@@ -202,13 +211,13 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.FeeAmount += feeSum
-	receiverAmountSum += metadata.FeeAmount
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
 
 	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
-	if receiverAmountSum != multisigUtxo.Amount {
+	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
 		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
 			receiverAmountSum, multisigUtxo.Amount)
 	}
