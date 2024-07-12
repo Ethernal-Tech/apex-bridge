@@ -164,7 +164,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
 		"signedBatch", eth.BatchToString(signedBatch))
 
-	err = b.bridgeSmartContract.SubmitSignedBatch(ctx, signedBatch)
+	err = b.operations.Submit(ctx, b.bridgeSmartContract, signedBatch)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to submit signed batch: %w", err)
 	}

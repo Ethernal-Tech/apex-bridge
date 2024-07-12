@@ -202,6 +202,13 @@ func (cco *CardanoChainOperations) IsSynchronized(
 		lastOracleBlockPoint.BlockSlot >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
 }
 
+// Submit implements core.Submit.
+func (cco *CardanoChainOperations) Submit(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
+) error {
+	return bridgeSmartContract.SubmitSignedBatch(ctx, batch)
+}
+
 func (cco *CardanoChainOperations) getSlotNumber(
 	noBatchPeriodPercent float64,
 ) (uint64, error) {
