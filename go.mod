@@ -87,6 +87,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/umbracle/fastrlp v0.1.1-0.20230504065717-58a1b8a9929d // indirect
+	github.com/umbracle/go-eth-bn256 v0.0.0-20230125114011-47cb310d9b0b // indirect
 	github.com/utxorpc/go-codegen v0.5.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.55.0 // indirect
@@ -116,6 +117,7 @@ require (
 )
 
 require (
+	github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/blinklabs-io/gouroboros v0.79.0 // indirect

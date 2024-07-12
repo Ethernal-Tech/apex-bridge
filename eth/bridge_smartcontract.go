@@ -19,6 +19,7 @@ type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
 	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
+	SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (CardanoBlock, error)
@@ -96,20 +97,32 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 		return bsc.ethHelper.ProcessError(err)
 	}
 
-	newSignedBatch := SignedBatch{
-		Id:                 signedBatch.Id,
-		DestinationChainId: signedBatch.DestinationChainId,
-		RawTransaction:     signedBatch.RawTransaction,
-		Signature:          signedBatch.Signature,
-		FeeSignature:       signedBatch.FeeSignature,
-		FirstTxNonceId:     signedBatch.FirstTxNonceId,
-		LastTxNonceId:      signedBatch.LastTxNonceId,
+	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		opts.GasLimit = submitBatchGasLimit
+
+		return contract.SubmitSignedBatch(opts, signedBatch)
+	})
+
+	return bsc.ethHelper.ProcessError(err)
+}
+
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		common.HexToAddress(bsc.smartContractAddress),
+		ethTxHelper.GetClient())
+	if err != nil {
+		return bsc.ethHelper.ProcessError(err)
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = submitBatchGasLimit
 
-		return contract.SubmitSignedBatch(opts, newSignedBatch)
+		return contract.SubmitSignedBatchEVM(opts, signedBatch)
 	})
 
 	return bsc.ethHelper.ProcessError(err)
