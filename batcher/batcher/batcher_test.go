@@ -154,7 +154,7 @@ func TestBatcherExecute(t *testing.T) {
 				TxHash: "txHash",
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
-		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(testError)
+		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
@@ -204,7 +204,7 @@ func TestBatcherExecute(t *testing.T) {
 				TxHash: "txHash",
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
-		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(nil)
+		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
@@ -341,4 +341,10 @@ func (c *cardanoChainOperationsMock) IsSynchronized(
 	args := c.Called(ctx, bridgeSmartContract, chainID)
 
 	return args.Get(0).(bool), args.Error(1)
+}
+
+func (c *cardanoChainOperationsMock) Submit(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
+) error {
+	return c.Called(ctx, bridgeSmartContract, batch).Error(0)
 }
