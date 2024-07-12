@@ -29,6 +29,10 @@ func (m *BridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedB
 	return m.Called(ctx, signedBatch).Error(0)
 }
 
+func (m *BridgeSmartContractMock) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
+	return m.Called(ctx, signedBatch).Error(0)
+}
+
 func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
 	args := m.Called(ctx, destinationChain)
 	arg0, _ := args.Get(0).(bool)

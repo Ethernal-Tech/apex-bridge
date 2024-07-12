@@ -12,7 +12,7 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
+	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
 )
@@ -22,14 +22,13 @@ var (
 )
 
 type EVMChainOperations struct {
-	config *cardano.EVMChainConfig
-	db     eventTrackerStore.EventTrackerStore
-	logger hclog.Logger
+	config     *cardano.EVMChainConfig
+	privateKey *bn256.PrivateKey
+	logger     hclog.Logger
 }
 
 func NewEVMChainOperations(
 	jsonConfig json.RawMessage,
-	db eventTrackerStore.EventTrackerStore,
 	secretsManager secrets.SecretsManager,
 	chainID string,
 	logger hclog.Logger,
@@ -39,10 +38,15 @@ func NewEVMChainOperations(
 		return nil, err
 	}
 
+	privateKey, err := eth.GetValidatorPrivateKey(secretsManager, chainID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &EVMChainOperations{
-		config: config,
-		db:     db,
-		logger: logger,
+		config:     config,
+		privateKey: privateKey,
+		logger:     logger,
 	}, nil
 }
 
@@ -79,16 +83,29 @@ func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []by
 		return nil, nil, err
 	}
 
-	// a TODO: calculate bls signature of txHash
-	blsSignature := txsHashBytes
+	signature, err := cco.privateKey.Sign(txsHashBytes, eth.BN256Domain)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return blsSignature, nil, nil
+	signatureBytes, err := signature.Marshal()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signatureBytes, nil, nil
 }
 
 func (cco *EVMChainOperations) IsSynchronized(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 ) (bool, error) {
 	return true, nil
+}
+
+func (cco *EVMChainOperations) Submit(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
+) error {
+	return bridgeSmartContract.SubmitSignedBatchEVM(ctx, batch)
 }
 
 func newEVMSmartContractTransaction(
