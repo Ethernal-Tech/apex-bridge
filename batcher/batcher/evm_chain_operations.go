@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
+	"fmt"
 	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/bn256"
@@ -22,29 +21,21 @@ var (
 )
 
 type EVMChainOperations struct {
-	config     *cardano.EVMChainConfig
 	privateKey *bn256.PrivateKey
 	logger     hclog.Logger
 }
 
 func NewEVMChainOperations(
-	jsonConfig json.RawMessage,
 	secretsManager secrets.SecretsManager,
 	chainID string,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
-	config, err := cardano.NewEVMChainConfig(jsonConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	privateKey, err := eth.GetValidatorPrivateKey(secretsManager, chainID)
+	privateKey, err := eth.GetValidatorBLSPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &EVMChainOperations{
-		config:     config,
 		privateKey: privateKey,
 		logger:     logger,
 	}, nil
@@ -58,7 +49,7 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	txs := newEVMSmartContractTransaction(chainID, confirmedTransactions)
+	txs := newEVMSmartContractTransaction(batchNonceID, confirmedTransactions)
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -109,34 +100,44 @@ func (cco *EVMChainOperations) Submit(
 }
 
 func newEVMSmartContractTransaction(
-	chainID string, confirmedTransactions []eth.ConfirmedTransaction,
-) (result eth.EVMSmartContractTransaction) {
-	mp := map[string]*big.Int{}
+	batchNonceID uint64, confirmedTransactions []eth.ConfirmedTransaction,
+) eth.EVMSmartContractTransaction {
+	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
 
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
-			if val, exists := mp[recv.DestinationAddress]; exists {
-				val.Add(val, recv.Amount)
+			key := fmt.Sprintf("%d_%s", tx.SourceChainId, recv.DestinationAddress)
+
+			val, exists := sourceAddrTxMap[key]
+			if !exists {
+				val.Amount = new(big.Int).Set(recv.Amount)
+				val.Address = common.HexToAddress(recv.DestinationAddress)
+				val.SourceID = tx.SourceChainId
 			} else {
-				mp[recv.DestinationAddress] = new(big.Int).Set(recv.Amount)
+				val.Amount.Add(val.Amount, recv.Amount)
 			}
+
+			sourceAddrTxMap[key] = val
 		}
 	}
 
-	result.ChainID = common.ToNumChainID(chainID)
-	result.Receivers = make([]eth.EVMSmartContractTransactionReceiver, 0, len(mp))
+	receivers := make([]eth.EVMSmartContractTransactionReceiver, 0, len(sourceAddrTxMap))
 
-	for k, v := range mp {
-		result.Receivers = append(result.Receivers, eth.EVMSmartContractTransactionReceiver{
-			Address: common.HexToAddress(k),
-			Amount:  v,
-		})
+	for _, v := range sourceAddrTxMap {
+		receivers = append(receivers, v)
 	}
 
 	// every batcher should have same order
-	sort.Slice(result.Receivers, func(i, j int) bool {
-		return bytes.Compare(result.Receivers[i].Address[:], result.Receivers[j].Address[:]) < 0
+	sort.Slice(receivers, func(i, j int) bool {
+		if receivers[i].SourceID == receivers[j].SourceID {
+			return bytes.Compare(receivers[i].Address[:], receivers[j].Address[:]) < 0
+		}
+
+		return receivers[i].SourceID < receivers[j].SourceID
 	})
 
-	return result
+	return eth.EVMSmartContractTransaction{
+		BatchNonceID: batchNonceID,
+		Receivers:    receivers,
+	}
 }

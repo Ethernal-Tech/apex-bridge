@@ -39,6 +39,12 @@ const (
 	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
 	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
 
+	nexusNodeURLFlag           = "nexus-node-url"
+	nexusSmartContractAddrFlag = "nexus-sc-address"
+
+	relayerDataDirFlag    = "relayer-data-dir"
+	relayerConfigPathFlag = "relayer-config-path"
+
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
 
@@ -76,6 +82,12 @@ const (
 	vectorSocketPathFlagDesc            = "socket path for vector network"
 	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+
+	nexusNodeURLFlagDesc           = "node URL of nexus chain"
+	nexusSmartContractAddrFlagDesc = "smart contract address on nexus chain"
+
+	relayerDataDirFlagDesc    = "path to relayer data directory when using local secrets manager"
+	relayerConfigPathFlagDesc = "path to to relayer secrets manager config file"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
@@ -130,6 +142,12 @@ type generateConfigsParams struct {
 	vectorSocketPath            string
 	vectorTTLSlotInc            uint64
 	vectorSlotRoundingThreshold uint64
+
+	nexusNodeURL           string
+	nexusSmartContractAddr string
+
+	relayerDataDir    string
+	relayerConfigPath string
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -324,6 +342,32 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.nexusNodeURL,
+		nexusNodeURLFlag,
+		"",
+		nexusNodeURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nexusSmartContractAddr,
+		nexusSmartContractAddrFlag,
+		"",
+		nexusSmartContractAddrFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.relayerDataDir,
+		relayerDataDirFlag,
+		"",
+		relayerDataDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerConfigPath,
+		relayerConfigPathFlag,
+		"",
+		relayerConfigPathFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.bridgeNodeURL,
 		bridgeNodeURLFlag,
 		"",
@@ -417,6 +461,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		validatorConfig = path.Clean(validatorConfig)
 	}
 
+	// TODO: add checks for relayer config fields
+
 	telemetryConfig := telemetry.TelemetryConfig{}
 
 	if p.telemetry != "" {
@@ -463,6 +509,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
+			},
+		},
+		EthChains: map[string]*oCore.EthChainConfig{
+			common.ChainIDStrNexus: {
+				// TODO: populate this
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -534,6 +585,13 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		PotentialFee:     300000,
 	})
 
+	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
+		NodeURL:           p.nexusNodeURL,
+		SmartContractAddr: p.nexusSmartContractAddr,
+		DataDir:           p.relayerDataDir,
+		ConfigPath:        p.relayerConfigPath,
+	})
+
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -550,6 +608,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ChainType:     common.ChainTypeCardanoStr,
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: vectorChainSpecificJSONRaw,
+			},
+			common.ChainIDStrNexus: {
+				ChainType:     common.ChainTypeEVMStr,
+				DbsPath:       path.Join(p.dbsPath, "relayer"),
+				ChainSpecific: nexusChainSpecificJSONRaw,
 			},
 		},
 		PullTimeMilis: 1000,

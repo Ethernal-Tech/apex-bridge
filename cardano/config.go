@@ -58,17 +58,19 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 var (
 	_ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)
-	_ common.ChainSpecificConfig = (*EVMChainConfig)(nil)
+	_ common.ChainSpecificConfig = (*RelayerEVMChainConfig)(nil)
 )
 
-type EVMChainConfig struct {
-	NodeURL      string `json:"nodeUrl"`
-	BridgingAddr string `json:"bridgingAddr"`
-	FeePayerAddr string `json:"feePayerAddr"`
+type RelayerEVMChainConfig struct {
+	NodeURL           string `json:"nodeUrl"`
+	SmartContractAddr string `json:"smartContractAddr"`
+	DynamicTx         bool   `json:"dynamicTx"`
+	DataDir           string `json:"dataDir,omitempty"`
+	ConfigPath        string `json:"configPath,omitempty"`
 }
 
-func NewEVMChainConfig(rawMessage json.RawMessage) (*EVMChainConfig, error) {
-	var config EVMChainConfig
+func NewRelayerEVMChainConfig(rawMessage json.RawMessage) (*RelayerEVMChainConfig, error) {
+	var config RelayerEVMChainConfig
 	if err := json.Unmarshal(rawMessage, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal EVM configuration: %w", err)
 	}
@@ -77,10 +79,10 @@ func NewEVMChainConfig(rawMessage json.RawMessage) (*EVMChainConfig, error) {
 }
 
 // GetChainType implements ChainSpecificConfig.
-func (*EVMChainConfig) GetChainType() string {
+func (*RelayerEVMChainConfig) GetChainType() string {
 	return common.ChainTypeEVMStr
 }
 
-func (config EVMChainConfig) Serialize() ([]byte, error) {
+func (config RelayerEVMChainConfig) Serialize() ([]byte, error) {
 	return json.Marshal(config)
 }

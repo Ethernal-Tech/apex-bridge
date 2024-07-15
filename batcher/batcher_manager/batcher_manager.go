@@ -121,8 +121,7 @@ func getCardanoOperations(
 func getEthOperations(
 	config core.ChainConfig, secretsManager secrets.SecretsManager, logger hclog.Logger,
 ) (core.ChainOperations, error) {
-	operations, err := batcher.NewEVMChainOperations(
-		config.ChainSpecific, secretsManager, config.ChainID, logger)
+	operations, err := batcher.NewEVMChainOperations(secretsManager, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}
