@@ -181,7 +181,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		validatorChainData.Key[2] = new(big.Int)
 		validatorChainData.Key[3] = new(big.Int)
 	case common.ChainTypeEVM:
-		privateKey, err := eth.GetValidatorPrivateKey(secretsManager, ip.chainID)
+		privateKey, err := eth.GetValidatorBLSPrivateKey(secretsManager, ip.chainID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load eth wallet: %w", err)
 		}

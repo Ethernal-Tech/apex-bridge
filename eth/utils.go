@@ -10,7 +10,7 @@ var (
 	BN256Domain, _ = common.Keccak256([]byte("DOMAIN_APEX_BRIDGE_EVM"))
 )
 
-func GetValidatorPrivateKey(secretsManager secrets.SecretsManager, _ string) (*bn256.PrivateKey, error) {
+func GetValidatorBLSPrivateKey(secretsManager secrets.SecretsManager, _ string) (*bn256.PrivateKey, error) {
 	pkBytes, err := secretsManager.GetSecret(secrets.ValidatorBLSKey)
 	if err != nil {
 		return nil, err
