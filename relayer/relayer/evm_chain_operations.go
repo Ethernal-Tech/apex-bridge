@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -60,10 +61,19 @@ func NewEVMChainOperations(
 // SendTx implements core.ChainOperations.
 func (cco *EVMChainOperations) SendTx(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
-) error {
-	bitmap := common.NewBitmap(smartContractData.Bitmap)
+) (err error) {
+	signatures := make(bn256.Signatures, len(smartContractData.Signatures))
+	for i, bytes := range smartContractData.Signatures {
+		signatures[i], err = bn256.UnmarshalSignature(bytes)
+		if err != nil {
+			return fmt.Errorf("invalid signature: %w", err)
+		}
+	}
 
-	fmt.Println(bitmap)
+	bitmap := common.NewBitmap(smartContractData.Bitmap)
+	signature, _ := signatures.Aggregate().Marshal() // error is always nil
+
+	fmt.Println(bitmap, signature)
 	// a TODO: send actual tx to nexus/evm chain
 	return nil
 }

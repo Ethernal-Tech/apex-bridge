@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -93,7 +93,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	}()
 
 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: path.Join(testDir, "stp"),
+		Path: filepath.Join(testDir, "stp"),
 		Type: secrets.Local,
 	})
 	require.NoError(t, err)
