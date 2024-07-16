@@ -128,7 +128,7 @@ func getEthOperations(
 	}
 
 	operations, err := batcher.NewEVMChainOperations(
-		secretsManager, db, config.ChainID, logger)
+		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}

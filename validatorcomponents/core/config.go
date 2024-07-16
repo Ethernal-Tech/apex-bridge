@@ -25,6 +25,8 @@ type CardanoChainConfig struct {
 	SocketPath               string                    `json:"socketPath"`
 	PotentialFee             uint64                    `json:"potentialFee"`
 	SlotRoundingThreshold    uint64                    `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent     float64                   `json:"noBatchPeriodPercent"`
+	TakeAtLeastUtxoCount     int                       `json:"takeAtLeastUtxoCount"`
 }
 
 type APIConfig struct {
@@ -81,6 +83,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			PotentialFee:          ccConfig.PotentialFee,
 			TTLSlotNumberInc:      ccConfig.TTLSlotNumberInc,
 			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
+			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
+			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
@@ -101,9 +105,16 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
 		}
 
+		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
+			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
+			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
+			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
+		}).Serialize()
+
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
-			ChainID:   chainID,
-			ChainType: common.ChainTypeEVMStr,
+			ChainID:       chainID,
+			ChainType:     common.ChainTypeEVMStr,
+			ChainSpecific: chainSpecificJSONRaw,
 		})
 	}
 

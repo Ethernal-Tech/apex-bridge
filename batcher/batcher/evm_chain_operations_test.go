@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -23,6 +23,7 @@ import (
 func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 	ctx := context.Background()
 	batchNonceID := uint64(7834)
+	ttlBlockNumberInc := uint64(5)
 
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
@@ -46,6 +47,17 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 
 	require.NoError(t, secretsMngr.SetSecret(secrets.ValidatorBLSKey, privateKeyBytes))
 
+	chainSpecificJSONRaw, err := (cardanotx.BatcherEVMChainConfig{
+		TTLBlockNumberInc:      ttlBlockNumberInc,
+		BlockRoundingThreshold: 6,
+		NoBatchPeriodPercent:   0.1,
+	}).Serialize()
+	require.NoError(t, err)
+
+	dbMock := eventTrackerStore.NewTestTrackerStore(t)
+
+	require.NoError(t, dbMock.InsertLastProcessedBlock(uint64(4)))
+
 	t.Run("pass", func(t *testing.T) {
 		confirmedTxs := []eth.ConfirmedTransaction{
 			{
@@ -58,13 +70,14 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 				},
 			},
 		}
-		ops, err := NewEVMChainOperations(secretsMngr, nil, common.ChainIDStrNexus, hclog.NewNullLogger())
+		ops, err := NewEVMChainOperations(
+			chainSpecificJSONRaw, secretsMngr, dbMock, common.ChainIDStrNexus, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		dt, err := ops.GenerateBatchTransaction(ctx, nil, common.ChainIDStrNexus, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
-		txs := newEVMSmartContractTransaction(batchNonceID, confirmedTxs)
+		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs)
 
 		txsBytes, err := txs.Pack()
 		require.NoError(t, err)
@@ -73,8 +86,6 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, hex.EncodeToString(hash), dt.TxHash)
-
-		fmt.Println(dt.TxHash)
 	})
 }
 
@@ -98,6 +109,7 @@ func TestEthChain_SignBatchTransaction(t *testing.T) {
 
 func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 	batchNonceID := uint64(213)
+	ttl := uint64(39203902)
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
 			SourceChainId: 2,
@@ -136,9 +148,10 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		},
 	}
 
-	result := newEVMSmartContractTransaction(batchNonceID, confirmedTxs)
+	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs)
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
+		TTL:          ttl,
 		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				SourceID: 1,

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -22,23 +24,31 @@ var (
 )
 
 type EVMChainOperations struct {
+	config     *cardano.BatcherEVMChainConfig
 	privateKey *bn256.PrivateKey
 	db         eventTrackerStore.EventTrackerStore
 	logger     hclog.Logger
 }
 
 func NewEVMChainOperations(
+	jsonConfig json.RawMessage,
 	secretsManager secrets.SecretsManager,
 	db eventTrackerStore.EventTrackerStore,
 	chainID string,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
+	config, err := cardano.NewBatcherEVMChainConfig(jsonConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	privateKey, err := eth.GetValidatorBLSPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &EVMChainOperations{
+		config:     config,
 		privateKey: privateKey,
 		db:         db,
 		logger:     logger,
@@ -53,7 +63,19 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	txs := newEVMSmartContractTransaction(batchNonceID, confirmedTransactions)
+	lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	blockRounded, err := getNumberWithRoundingThreshold(
+		lastProcessedBlock, cco.config.BlockRoundingThreshold, cco.config.NoBatchPeriodPercent)
+	if err != nil {
+		return nil, err
+	}
+
+	txs := newEVMSmartContractTransaction(
+		batchNonceID, blockRounded+cco.config.TTLBlockNumberInc, confirmedTransactions)
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -114,7 +136,7 @@ func (cco *EVMChainOperations) Submit(
 }
 
 func newEVMSmartContractTransaction(
-	batchNonceID uint64, confirmedTransactions []eth.ConfirmedTransaction,
+	batchNonceID uint64, ttl uint64, confirmedTransactions []eth.ConfirmedTransaction,
 ) eth.EVMSmartContractTransaction {
 	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
 
@@ -152,6 +174,7 @@ func newEVMSmartContractTransaction(
 
 	return eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
+		TTL:          ttl,
 		Receivers:    receivers,
 	}
 }

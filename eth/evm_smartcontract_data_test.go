@@ -11,6 +11,7 @@ import (
 func TestEVMSmartContractTransaction(t *testing.T) {
 	obj := &EVMSmartContractTransaction{
 		BatchNonceID: 100,
+		TTL:          uint64(8398923),
 		Receivers: []EVMSmartContractTransactionReceiver{
 			{
 				SourceID: 2,

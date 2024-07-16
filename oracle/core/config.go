@@ -21,6 +21,9 @@ type EthChainConfig struct {
 	NumBlockConfirmations   uint64            `json:"numBlockConfirmations"`
 	StartBlockNumber        uint64            `json:"startBlockNumber"`
 	PoolIntervalMiliseconds time.Duration     `json:"poolIntervalMs"`
+	TTLBlockNumberInc       uint64            `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold  uint64            `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent    float64           `json:"noBatchPeriodPercent"`
 }
 
 type CardanoChainConfig struct {

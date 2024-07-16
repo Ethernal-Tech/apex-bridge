@@ -266,50 +266,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 }
 
-func Test_getSlotNumberWithRoundingThreshold(t *testing.T) {
-	_, err := getSlotNumberWithRoundingThreshold(66, 60, 0.125)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(12, 60, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(115, 60, 0.125)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(224, 80, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(336, 80, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(0, 60, 0.125)
-	assert.ErrorContains(t, err, "slot number is zero")
-
-	val, err := getSlotNumberWithRoundingThreshold(75, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(120), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(105, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(120), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(40, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(60), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(270, 80, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(320), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(223, 80, 0.2)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(240), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(337, 80, 0.2)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(400), val)
-}
-
 func Test_getNeededUtxos(t *testing.T) {
 	inputs := []*indexer.TxInputOutput{
 		{
@@ -459,7 +415,10 @@ func Test_getUTXOs(t *testing.T) {
 	feeAddr := "0x002"
 	testErr := errors.New("test err")
 	ops := &CardanoChainOperations{
-		db:     dbMock,
+		db: dbMock,
+		config: &cardano.CardanoChainConfig{
+			NoBatchPeriodPercent: 0.1,
+		},
 		logger: hclog.NewNullLogger(),
 	}
 	txOutputs := cardano.TxOutputs{

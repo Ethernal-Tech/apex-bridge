@@ -19,6 +19,8 @@ type CardanoChainConfig struct {
 	PotentialFee          uint64                           `json:"potentialFee"`
 	TTLSlotNumberInc      uint64                           `json:"ttlSlotNumberIncrement"`
 	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
+	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -60,6 +62,30 @@ var (
 	_ common.ChainSpecificConfig = (*CardanoChainConfig)(nil)
 	_ common.ChainSpecificConfig = (*RelayerEVMChainConfig)(nil)
 )
+
+type BatcherEVMChainConfig struct {
+	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
+}
+
+func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {
+	var config BatcherEVMChainConfig
+	if err := json.Unmarshal(rawMessage, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal EVM configuration: %w", err)
+	}
+
+	return &config, nil
+}
+
+// GetChainType implements ChainSpecificConfig.
+func (*BatcherEVMChainConfig) GetChainType() string {
+	return common.ChainTypeEVMStr
+}
+
+func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
+	return json.Marshal(config)
+}
 
 type RelayerEVMChainConfig struct {
 	NodeURL           string `json:"nodeUrl"`
