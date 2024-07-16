@@ -11,7 +11,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
-	// 	"github.com/Ethernal-Tech/ethgo"
 )
 
 const (
