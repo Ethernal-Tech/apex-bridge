@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125458-8837f3837cc0
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240703091214-f6cce399955b
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240715161154-f7653967d470
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d
 	github.com/armon/go-metrics v0.4.1
 	github.com/ethereum/go-ethereum v1.13.14

@@ -19,21 +19,16 @@ import (
 )
 
 var (
-	errNonActiveBatchPeriod = errors.New("non active batch period")
-
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 )
 
 // nolintlint TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 // Get real tx size from protocolParams/config
 const (
-	minUtxoAmount        = uint64(1000000)
-	maxFeeUtxoCount      = 4
-	maxUtxoCount         = 300
-	maxTxSize            = 16000
-	takeAtLeastUtxoCount = 6 // maxNumberOfTransactions + 1
-
-	noBatchPeriodPercent = 0.0625
+	minUtxoAmount   = uint64(1000000)
+	maxFeeUtxoCount = 4
+	maxUtxoCount    = 300
+	maxTxSize       = 16000
 )
 
 type CardanoChainOperations struct {
@@ -100,7 +95,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	slotNumber, err := cco.getSlotNumber(noBatchPeriodPercent)
+	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
 		return nil, err
 	}
@@ -209,9 +204,7 @@ func (cco *CardanoChainOperations) Submit(
 	return bridgeSmartContract.SubmitSignedBatch(ctx, batch)
 }
 
-func (cco *CardanoChainOperations) getSlotNumber(
-	noBatchPeriodPercent float64,
-) (uint64, error) {
+func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 	data, err := cco.db.GetLatestBlockPoint()
 	if err != nil {
 		return 0, err
@@ -222,8 +215,8 @@ func (cco *CardanoChainOperations) getSlotNumber(
 		slot = data.BlockSlot
 	}
 
-	newSlot, err := getSlotNumberWithRoundingThreshold(
-		slot, cco.config.SlotRoundingThreshold, noBatchPeriodPercent)
+	newSlot, err := getNumberWithRoundingThreshold(
+		slot, cco.config.SlotRoundingThreshold, cco.config.NoBatchPeriodPercent)
 	if err != nil {
 		return 0, err
 	}
@@ -308,7 +301,8 @@ func (cco *CardanoChainOperations) getUTXOs(
 		minUtxoAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
-		takeAtLeastUtxoCount)
+		cco.config.TakeAtLeastUtxoCount,
+	)
 	if err != nil {
 		return
 	}
@@ -316,24 +310,6 @@ func (cco *CardanoChainOperations) getUTXOs(
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
 	return
-}
-
-func getSlotNumberWithRoundingThreshold(
-	slotNumber, threshold uint64, noBatchPeriodPercent float64,
-) (uint64, error) {
-	if slotNumber == 0 {
-		return 0, errors.New("slot number is zero")
-	}
-
-	newSlot := ((slotNumber + threshold - 1) / threshold) * threshold
-	diffFromPrevious := slotNumber - (newSlot - threshold)
-
-	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
-		diffFromPrevious >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
-		return 0, fmt.Errorf("%w: (slot, rounded) = (%d, %d)", errNonActiveBatchPeriod, slotNumber, newSlot)
-	}
-
-	return newSlot, nil
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
