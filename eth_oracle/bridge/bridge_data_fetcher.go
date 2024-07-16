@@ -2,12 +2,16 @@ package bridge
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
+	// 	"github.com/Ethernal-Tech/ethgo"
 )
 
 const (
@@ -41,29 +45,40 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 			if len(lastBatchRawTx) == 0 {
 				return nil, nil
 			}
-			// a TODO: finish this
-			/*
-				tx, err := indexer.ParseTxInfo(lastBatchRawTx)
-				if err != nil {
-					df.logger.Error("Failed to ParseTxInfo", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
 
-					return nil, fmt.Errorf("failed to ParseTxInfo. err: %w", err)
-				}
+			tx, err := eth.NewEVMSmartContractTransaction(lastBatchRawTx)
+			if err != nil {
+				df.logger.Error("Failed to parse evm tx", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
 
-				expectedTx := &core.BridgeExpectedEthTx{
-					ChainID:  chainID,
-					Hash:     indexer.NewHashFromHexString(tx.Hash),
-					TTL:      tx.TTL,
-					Metadata: tx.MetaData,
-					Priority: 0,
-				}
+				return nil, fmt.Errorf("failed to parse evm tx. err: %w", err)
+			}
 
-				df.logger.Debug("FetchExpectedTx", "for chainID", chainID, "expectedTx", expectedTx)
+			txHash, err := common.Keccak256(lastBatchRawTx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create txHash. err: %w", err)
+			}
 
-				return expectedTx, nil
-			*/
+			expectedTxMetada := common.BatchExecutedMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
+				BatchNonceID:   tx.BatchNonceID,
+			}
 
-			return nil, nil
+			txMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, expectedTxMetada)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal metadata. err: %w", err)
+			}
+
+			expectedTx := &core.BridgeExpectedEthTx{
+				ChainID:  chainID,
+				Hash:     ethgo.BytesToHash(txHash),
+				TTL:      tx.TTL,
+				Metadata: txMetadata,
+				Priority: 0,
+			}
+
+			df.logger.Debug("FetchExpectedTx", "for chainID", chainID, "expectedTx", expectedTx)
+
+			return expectedTx, nil
 		} else {
 			df.logger.Error("Failed to GetExpectedTx from Bridge SC", "err", err)
 		}
