@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
@@ -22,11 +23,13 @@ var (
 
 type EVMChainOperations struct {
 	privateKey *bn256.PrivateKey
+	db         eventTrackerStore.EventTrackerStore
 	logger     hclog.Logger
 }
 
 func NewEVMChainOperations(
 	secretsManager secrets.SecretsManager,
+	db eventTrackerStore.EventTrackerStore,
 	chainID string,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
@@ -37,6 +40,7 @@ func NewEVMChainOperations(
 
 	return &EVMChainOperations{
 		privateKey: privateKey,
+		db:         db,
 		logger:     logger,
 	}, nil
 }
@@ -90,7 +94,17 @@ func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []by
 func (cco *EVMChainOperations) IsSynchronized(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 ) (bool, error) {
-	return true, nil
+	lastObservedBlockBridge, err := bridgeSmartContract.GetLastObservedBlock(ctx, chainID)
+	if err != nil {
+		return false, err
+	}
+
+	latestBlock, err := cco.db.GetLastProcessedBlock()
+	if err != nil {
+		return false, err
+	}
+
+	return latestBlock >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
 }
 
 func (cco *EVMChainOperations) Submit(
