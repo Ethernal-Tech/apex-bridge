@@ -65,6 +65,7 @@ $ go run ./main.go generate-configs \
         --output-relayer-file-name "<relayer config json output file name>.json" \
         --prime-network-address "<address of prime network>" \
         --prime-network-magic <network magic of prime network> \
+        --prime-network-id <network id of prime network> \
         --prime-ogmios-url "<ogmios URL for prime network>" \
         --prime-blockfrost-url "<blockfrost URL for prime network>" \
         --prime-blockfrost-api-key "<blockfrost API key for prime network>" \
@@ -73,6 +74,7 @@ $ go run ./main.go generate-configs \
         --prime-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --vector-network-address "<address of vector network>" \
         --vector-network-magic <network magic of vector network> \
+        --vector-network-id <network id of vector network> \
         --vector-blockfrost-url "<blockfrost URL for vector network>" \
         --vector-ogmios-url "<ogmios URL for vector network>" \
         --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
