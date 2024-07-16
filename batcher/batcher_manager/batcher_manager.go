@@ -65,7 +65,7 @@ func NewBatcherManager(
 				return nil, err
 			}
 		case common.ChainTypeEVMStr:
-			operations, err = getEthOperations(chainConfig, secretsManager, logger)
+			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -119,10 +119,16 @@ func getCardanoOperations(
 }
 
 func getEthOperations(
-	config core.ChainConfig, secretsManager secrets.SecretsManager, logger hclog.Logger,
+	config core.ChainConfig, ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
+	secretsManager secrets.SecretsManager, logger hclog.Logger,
 ) (core.ChainOperations, error) {
+	db, exists := ethIndexerDbs[config.ChainID]
+	if !exists {
+		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
+	}
+
 	operations, err := batcher.NewEVMChainOperations(
-		config.ChainSpecific, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}

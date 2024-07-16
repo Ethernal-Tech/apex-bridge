@@ -417,6 +417,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		validatorConfig = path.Clean(validatorConfig)
 	}
 
+	// TODO: add checks for relayer config fields
+
 	telemetryConfig := telemetry.TelemetryConfig{}
 
 	if p.telemetry != "" {
@@ -446,6 +448,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
+				NoBatchPeriodPercent:     0.0625,
+				TakeAtLeastUtxoCount:     6,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -463,7 +467,17 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
+				NoBatchPeriodPercent:     0.0625,
+				TakeAtLeastUtxoCount:     6,
 			},
+		},
+		EthChains: map[string]*oCore.EthChainConfig{
+			// common.ChainIDStrNexus: {
+			// 	// TODO: populate all the fields
+			// 	TTLBlockNumberInc:      6, // this should be flag
+			// 	BlockRoundingThreshold: 6, // this should be flag
+			// 	NoBatchPeriodPercent:   0.2,
+			// },
 		},
 		Bridge: oCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -534,6 +548,13 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		PotentialFee:     300000,
 	})
 
+	// nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
+	// 	NodeURL:           p.nexusNodeURL,
+	// 	SmartContractAddr: p.nexusSmartContractAddr,
+	// 	DataDir:           p.relayerDataDir,
+	// 	ConfigPath:        p.relayerConfigPath,
+	// })
+
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -551,6 +572,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				DbsPath:       path.Join(p.dbsPath, "relayer"),
 				ChainSpecific: vectorChainSpecificJSONRaw,
 			},
+			// common.ChainIDStrNexus: {
+			// 	ChainType:     common.ChainTypeEVMStr,
+			// 	DbsPath:       path.Join(p.dbsPath, "relayer"),
+			// 	ChainSpecific: nexusChainSpecificJSONRaw,
+			// },
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
