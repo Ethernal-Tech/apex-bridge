@@ -64,6 +64,7 @@ $ go run ./main.go generate-configs \
         --output-validator-components-file-name "<validator components config json output file name>.json" \
         --output-relayer-file-name "<relayer config json output file name>.json" \
         --prime-network-address "<address of prime network>" \
+        --prime-network-id <network id of prime network> \
         --prime-network-magic <network magic of prime network> \
         --prime-ogmios-url "<ogmios URL for prime network>" \
         --prime-blockfrost-url "<blockfrost URL for prime network>" \
@@ -73,6 +74,7 @@ $ go run ./main.go generate-configs \
         --prime-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
         --vector-network-address "<address of vector network>" \
         --vector-network-magic <network magic of vector network> \
+        --vector-network-id <network id of vector network> \
         --vector-blockfrost-url "<blockfrost URL for vector network>" \
         --vector-ogmios-url "<ogmios URL for vector network>" \
         --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
@@ -114,7 +116,6 @@ $ go run ./main.go sendtx \
         --testnet-src 42 \
         --chain-dst vector \
         --addr-multisig-src addr_test1wzk57y7l9q6qxdyrm4a3nlp535w5l8xglg0kvtl8hp9l8rgpj7q2x \
-        --addr-fee-dst addr_test1wpfghl7y6t4uvawfn8ajgejwldsj63rjvg0d6pssv0az0kq3w3l4z \
         --fee 1_100_000 \
         --ogmios-dst http://localhost:1338 
 ```
