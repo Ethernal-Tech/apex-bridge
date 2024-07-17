@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
@@ -176,7 +176,7 @@ func NewValidatorComponents(
 			controllers.NewCardanoTxController(
 				oracleConfig, batcherConfig, logger.Named("cardano_tx_controller")),
 			controllers.NewOracleStateController(
-				indexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
+				cardanoIndexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
@@ -337,34 +337,29 @@ func fixChainsAndAddresses(
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
 
-		cardanoChainConfig, ethChainConfig := utils.GetChainConfig(config, chainID)
-		if cardanoChainConfig == nil && ethChainConfig == nil {
-			return fmt.Errorf("no config for registered chain: %s", chainID)
-		}
-
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
-
-		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
-			BridgingAddress: regChain.AddressMultisig,
-			FeeAddress:      regChain.AddressFeePayer,
-		}
-
-		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
-			if err != nil {
-				logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
-			}
-
-			return err
-		})
-		if err != nil {
-			return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
-		}
 
 		// should handle evm too
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
+			chainConfig, exists := config.CardanoChains[chainID]
+			if !exists {
+				return fmt.Errorf("no configuration for chain: %s", chainID)
+			}
+
+			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+				validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
+				if err != nil {
+					logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+				}
+
+				return err
+			})
+			if err != nil {
+				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
+			}
+
 			multisigAddr, feeAddr, err := getCardanoAddresses(
 				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), chainConfig.NetworkMagic, validatorsData)
 			if err != nil {
@@ -380,8 +375,13 @@ func fixChainsAndAddresses(
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
 
-			resultChains[chainID] = chainConfig
+			cardanoChains[chainID] = chainConfig
 		case common.ChainTypeEVM:
+			ethChainConfig, exists := config.EthChains[chainID]
+			if !exists {
+				return fmt.Errorf("no configuration for evm chain: %s", chainID)
+			}
+
 			ethChainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
 				BridgingAddress: regChain.AddressMultisig,
 				FeeAddress:      regChain.AddressFeePayer,
@@ -416,12 +416,12 @@ func getCardanoAddresses(
 	multisigFeeKeyHashes := make([]string, len(validatorsData))
 
 	for i, x := range validatorsData {
-		keyHash, err := wallet.GetKeyHash(x.VerifyingKey[:])
+		keyHash, err := wallet.GetKeyHash(x.Key[0].Bytes())
 		if err != nil {
 			return "", "", err
 		}
 
-		keyHashFee, err := wallet.GetKeyHash(x.VerifyingKeyFee[:])
+		keyHashFee, err := wallet.GetKeyHash(x.Key[1].Bytes())
 		if err != nil {
 			return "", "", err
 		}

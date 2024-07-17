@@ -67,10 +67,16 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	var destFeeAddress string
 
 	cardanoDestConfig, ethDestConfig := oracleUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
-	if cardanoDestConfig != nil {
+
+	switch {
+	case cardanoDestConfig != nil:
 		destFeeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
-	} else {
+	case ethDestConfig != nil:
 		destFeeAddress = ethDestConfig.BridgingAddresses.FeeAddress
+	default:
+		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
+
+		return
 	}
 
 	receivers := make([]oracleCore.BridgingRequestReceiver, 0, len(metadata.Transactions))

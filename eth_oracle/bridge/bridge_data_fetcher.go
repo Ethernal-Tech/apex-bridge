@@ -62,7 +62,7 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 				BatchNonceID:   tx.BatchNonceID,
 			}
 
-			txMetadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, expectedTxMetada)
+			txMetadata, err := common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, expectedTxMetada)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal metadata. err: %w", err)
 			}
