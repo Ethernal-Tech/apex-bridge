@@ -69,8 +69,6 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 
-	utxosMap := make(map[string][]*indexer.TxInputOutput, len(addresses))
-
 	latestBlockPoint, err := db.GetLatestBlockPoint()
 	if err != nil {
 		c.setError(w, r, fmt.Sprintf("get latest point: %v", err))
@@ -78,15 +76,15 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	utxosMap := make(map[string][]*indexer.TxInputOutput, len(addresses))
+
 	for _, addr := range addresses {
-		utxos, err := db.GetAllTxOutputs(addr, true)
+		utxosMap[addr], err = db.GetAllTxOutputs(addr, true)
 		if err != nil {
 			c.setError(w, r, fmt.Sprintf("get all tx outputs: %v", err))
 
 			return
 		}
-
-		utxosMap[addr] = utxos
 	}
 
 	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, utxosMap, latestBlockPoint))
