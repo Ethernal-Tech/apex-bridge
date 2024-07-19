@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -54,7 +54,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create telemetry. err: %w", err)
 	}
 
-	db, err := databaseaccess.NewDatabase(path.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
+	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
 	}
@@ -81,7 +81,7 @@ func NewValidatorComponents(
 
 	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
 		indexerDB, err := indexerDb.NewDatabaseInit("",
-			path.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
+			filepath.Join(appConfig.Settings.DbsPath, cardanoChainConfig.ChainID+".db"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
@@ -118,7 +118,9 @@ func NewValidatorComponents(
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
 			controllers.NewCardanoTxController(
-				oracleConfig, batcherConfig, logger.Named("bridging_request_state_controller")),
+				oracleConfig, batcherConfig, logger.Named("cardano_tx_controller")),
+			controllers.NewOracleStateController(
+				indexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
@@ -260,4 +262,14 @@ func fixChainsAndAddresses(
 	config.CardanoChains = resultChains
 
 	return nil
+}
+
+func getAddressesMap(cardanoChainConfig map[string]*oracleCore.CardanoChainConfig) map[string][]string {
+	result := make(map[string][]string, len(cardanoChainConfig))
+
+	for key, config := range cardanoChainConfig {
+		result[key] = []string{config.BridgingAddresses.BridgingAddress, config.BridgingAddresses.FeeAddress}
+	}
+
+	return result
 }
