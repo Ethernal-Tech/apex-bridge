@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -16,6 +17,7 @@ import (
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
@@ -214,7 +216,10 @@ func fixChainsAndAddresses(
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
-	var allRegisteredChains []eth.Chain
+	var (
+		allRegisteredChains []eth.Chain
+		validatorsData      []eth.ValidatorChainData
+	)
 
 	logger.Debug("Retrieving all registered chains...")
 
@@ -226,7 +231,6 @@ func fixChainsAndAddresses(
 
 		return err
 	})
-
 	if err != nil {
 		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
 	}
@@ -250,9 +254,36 @@ func fixChainsAndAddresses(
 			FeeAddress:      regChain.AddressFeePayer,
 		}
 
+		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+			validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
+			if err != nil {
+				logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+			}
+
+			return err
+		})
+		if err != nil {
+			return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
+		}
+
 		// should handle evm too
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
+			multisigAddr, feeAddr, err := getCardanoAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), chainConfig.NetworkMagic, validatorsData)
+			if err != nil {
+				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
+			}
+
+			if multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
+				feeAddr != chainConfig.BridgingAddresses.FeeAddress {
+
+				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)", multisigAddr, feeAddr,
+					chainConfig.BridgingAddresses.BridgingAddress, chainConfig.BridgingAddresses.FeeAddress)
+			} else {
+				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
+			}
+
 			resultChains[chainID] = chainConfig
 		default:
 			logger.Debug("Do not know how to handle chain type", "chainID", chainID, "type", regChain.ChainType)
@@ -272,4 +303,45 @@ func getAddressesMap(cardanoChainConfig map[string]*oracleCore.CardanoChainConfi
 	}
 
 	return result
+}
+
+func getCardanoAddresses(
+	cardanoCliBinary string, networkMagic uint32, validatorsData []eth.ValidatorChainData,
+) (string, string, error) {
+	multisigKeyHashes := make([]string, len(validatorsData))
+	multisigFeeKeyHashes := make([]string, len(validatorsData))
+
+	for i, x := range validatorsData {
+		keyHash, err := wallet.GetKeyHash(x.VerifyingKey[:])
+		if err != nil {
+			return "", "", err
+		}
+
+		keyHashFee, err := wallet.GetKeyHash(x.VerifyingKeyFee[:])
+		if err != nil {
+			return "", "", err
+		}
+
+		multisigKeyHashes[i] = keyHash
+		multisigFeeKeyHashes[i] = keyHashFee
+	}
+
+	multisigPolicyScript := wallet.NewPolicyScript(
+		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
+	multisigFeePolicyScript := wallet.NewPolicyScript(
+		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
+
+	multisigAddress, err := cardanotx.GetAddressFromPolicyScript(
+		cardanoCliBinary, uint(networkMagic), multisigPolicyScript)
+	if err != nil {
+		return "", "", err
+	}
+
+	multisigFeeAddress, err := cardanotx.GetAddressFromPolicyScript(
+		cardanoCliBinary, uint(networkMagic), multisigFeePolicyScript)
+	if err != nil {
+		return "", "", err
+	}
+
+	return multisigAddress, multisigFeeAddress, nil
 }
