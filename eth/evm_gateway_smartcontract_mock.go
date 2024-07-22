@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -13,7 +14,7 @@ type EVMGatewaySmartContractMock struct {
 var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractMock)(nil)
 
 func (m *EVMGatewaySmartContractMock) Deposit(
-	ctx context.Context, signature []byte, bitmap []byte, data []byte,
+	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
 	args := m.Called(ctx, signature, bitmap, data)
 

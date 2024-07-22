@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -14,7 +15,7 @@ import (
 const depositGasLimit = uint64(8_000_000)
 
 type IEVMGatewaySmartContract interface {
-	Deposit(ctx context.Context, signature []byte, bitmap []byte, data []byte) error
+	Deposit(ctx context.Context, signature []byte, bitmap *big.Int, data []byte) error
 }
 
 type EVMGatewaySmartContractImpl struct {
@@ -48,7 +49,7 @@ func NewEVMGatewaySmartContractWithWallet(
 }
 
 func (bsc *EVMGatewaySmartContractImpl) Deposit(
-	ctx context.Context, signature []byte, bitmap []byte, data []byte,
+	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {

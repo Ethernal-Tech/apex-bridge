@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -93,13 +92,11 @@ func TestEVMChainOperations(t *testing.T) {
 			sigBytes1, sigBytes2,
 		}
 
-		bitmap := []byte(common.NewBitmap(batch.Bitmap))
-
 		finalSigBytes, err := bn256.Signatures{signature1, signature2}.Aggregate().Marshal()
 		require.NoError(t, err)
 
-		scMock.On("Deposit", ctx, finalSigBytes, bitmap, batch.RawTransaction).Return(errors.New("hello")).Once()
-		scMock.On("Deposit", ctx, finalSigBytes, bitmap, batch.RawTransaction).Return(error(nil)).Once()
+		scMock.On("Deposit", ctx, finalSigBytes, batch.Bitmap, batch.RawTransaction).Return(errors.New("hello")).Once()
+		scMock.On("Deposit", ctx, finalSigBytes, batch.Bitmap, batch.RawTransaction).Return(error(nil)).Once()
 
 		ops := &EVMChainOperations{
 			evmSmartContract: scMock,

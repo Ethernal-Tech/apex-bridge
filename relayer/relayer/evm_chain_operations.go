@@ -69,8 +69,7 @@ func (cco *EVMChainOperations) SendTx(
 		}
 	}
 
-	bitmap := common.NewBitmap(smartContractData.Bitmap)
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
 
-	return cco.evmSmartContract.Deposit(ctx, signature, bitmap, smartContractData.RawTransaction)
+	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
 }
