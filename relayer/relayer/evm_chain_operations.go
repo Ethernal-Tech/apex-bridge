@@ -8,7 +8,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
@@ -18,7 +17,7 @@ var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type EVMChainOperations struct {
 	config           *cardanotx.RelayerEVMChainConfig
-	evmSmartContract eth.IBridgeSmartContract // TODO: replace with correct smart contract interface
+	evmSmartContract eth.IEVMGatewaySmartContract
 	chainID          string
 	logger           hclog.Logger
 }
@@ -39,12 +38,12 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	wallet, err := eth.GetRelayerEVMPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
 
-	evmSmartContract, err := eth.NewBridgeSmartContractWithWallet(
+	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
 		config.NodeURL, config.SmartContractAddr, wallet, config.DynamicTx, logger)
 	if err != nil {
 		return nil, err
@@ -60,7 +59,7 @@ func NewEVMChainOperations(
 
 // SendTx implements core.ChainOperations.
 func (cco *EVMChainOperations) SendTx(
-	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
+	ctx context.Context, _ eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
 ) (err error) {
 	signatures := make(bn256.Signatures, len(smartContractData.Signatures))
 	for i, bytes := range smartContractData.Signatures {
@@ -70,10 +69,7 @@ func (cco *EVMChainOperations) SendTx(
 		}
 	}
 
-	bitmap := common.NewBitmap(smartContractData.Bitmap)
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
 
-	fmt.Println(bitmap, signature)
-	// a TODO: send actual tx to nexus/evm chain
-	return nil
+	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
 }

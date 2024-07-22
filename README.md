@@ -6,18 +6,37 @@ $ git config url."git@github.com:Ethernal-Tech/cardano-infrastructure.git".inste
 $ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get -u github.com/Ethernal-Tech/cardano-infrastructure
 ```
 
-# How to generate go binding for smart contract
-First build smart contracts in blade
-```
-./scripts/build-sc.sh 
-```
-then in apex-bridge execute this
+# How to generate go binding for smart contract(s)
+- Let's say we will place smart contract repositories in the directory `/home/igor/development/ethernal/apex-bridge/`
+- Clone them:
 ```shell
-BASEPATH=/home/bbs/Documents/development/cardano_bridge/\!final/blade-apex-bridge/apex-bridge-smartcontracts/
+   git clone https://github.com/Ethernal-Tech/apex-bridge-smartcontracts/   
+```
+```shell
+   git clone https://github.com/Ethernal-Tech/apex-evm-gateway
+```
+- Build them:
+```shell
+cd apex-bridge-smartcontracts && npm i && npx hardhat compile && cd ..
+```
+```shell
+cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
+```
+- Generate bridge bindings with the command:
+```shell
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
 solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
        --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
 abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+```
+- Generate nexus bindings with the command:
+```shell
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
+solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
+       --abi ${BASEPATH}contracts/Gateway.sol -o ./contractbinding/contractbuild --optimize
+abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi --pkg main \
+       --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
 ```
 
 # How to generate blade secrets
@@ -29,20 +48,20 @@ $ blade secrets init --insecure --data-dir ./blade-secrets
 ```shell
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --show-pk
 ```
-- instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
-- its possible to use `--type stake` flag if we want wallet which includes stake signing key also
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
+- It's possible to use the `--type stake` flag if we want a wallet that includes the stake signing key as well
 
 # How to generate bls keys for evm batcher(s)
 ```shell
 $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type evm
 ```
-- instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
 
 # How to generate ecdsa keys for evm relayer(s)
 ```shell
 $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type relayer-evm
 ```
-- instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
 
 # How to register chain for validator
 ```shell
