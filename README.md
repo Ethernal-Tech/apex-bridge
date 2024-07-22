@@ -25,9 +25,22 @@ abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --p
 $ blade secrets init --insecure --data-dir ./blade-secrets
 ```
 
-# How to generate cardano keys for batcher
+# How to generate cardano keys for cardano batcher(s)
 ```shell
 $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --show-pk
+```
+- instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
+- its possible to use `--type stake` flag if we want wallet which includes stake signing key also
+
+# How to generate bls keys for evm batcher(s)
+```shell
+$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type evm
+```
+- instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
+
+# How to generate ecdsa keys for evm relayer(s)
+```shell
+$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type relayer-evm
 ```
 - instead of `--validator-data-dir` it is possible to set blade configuration file with `--validator-config /path/config.json`.
 
