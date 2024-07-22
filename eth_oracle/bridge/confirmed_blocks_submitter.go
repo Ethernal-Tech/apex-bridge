@@ -13,14 +13,14 @@ import (
 )
 
 type ConfirmedBlocksSubmitterImpl struct {
-	ctx                 context.Context
-	bridgeSubmitter     eth_core.BridgeSubmitter
-	appConfig           *core.AppConfig
-	chainID             string
-	indexerDB           eventTrackerStore.EventTrackerStore
-	oracleDB            eth_core.EthTxsDB
-	logger              hclog.Logger
-	latestConfirmedSlot uint64
+	ctx               context.Context
+	bridgeSubmitter   eth_core.BridgeSubmitter
+	appConfig         *core.AppConfig
+	chainID           string
+	indexerDB         eventTrackerStore.EventTrackerStore
+	oracleDB          eth_core.EthTxsDB
+	logger            hclog.Logger
+	latestBlockNumber uint64
 }
 
 var _ core.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
@@ -40,14 +40,14 @@ func NewConfirmedBlocksSubmitter(
 	}
 
 	return &ConfirmedBlocksSubmitterImpl{
-		ctx:                 ctx,
-		bridgeSubmitter:     bridgeSubmitter,
-		appConfig:           appConfig,
-		chainID:             chainID,
-		indexerDB:           indexerDB,
-		oracleDB:            oracleDB,
-		logger:              logger.Named("confirmed_blocks_submitter_" + chainID),
-		latestConfirmedSlot: latestBlockPoint,
+		ctx:               ctx,
+		bridgeSubmitter:   bridgeSubmitter,
+		appConfig:         appConfig,
+		chainID:           chainID,
+		indexerDB:         indexerDB,
+		oracleDB:          oracleDB,
+		logger:            logger.Named("confirmed_blocks_submitter_" + chainID),
+		latestBlockNumber: latestBlockPoint,
 	}, nil
 }
 
@@ -70,12 +70,12 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
-	from := bs.latestConfirmedSlot
+	from := bs.latestBlockNumber
 	if from != 0 {
 		from++
 	}
 
-	bs.logger.Debug("Executing ConfirmedBlocksSubmitterImpl", "chainID", bs.chainID, "from slot", from)
+	bs.logger.Debug("Executing ConfirmedBlocksSubmitterImpl", "chainID", bs.chainID, "from block", from)
 
 	lastProcessedBlock, err := bs.indexerDB.GetLastProcessedBlock()
 	if err != nil {
@@ -96,8 +96,8 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
 
-	bs.latestConfirmedSlot = lastProcessedBlock
-	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestConfirmedSlot", bs.latestConfirmedSlot)
+	bs.latestBlockNumber = lastProcessedBlock
+	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestBlockNumber", bs.latestBlockNumber)
 
 	return nil
 }
