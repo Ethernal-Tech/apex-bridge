@@ -25,13 +25,14 @@ const (
 )
 
 type OracleImpl struct {
-	ctx                context.Context
-	appConfig          *oracleCore.AppConfig
-	ethTxsProcessor    core.EthTxsProcessor
-	expectedTxsFetcher oracleCore.ExpectedTxsFetcher
-	ethChainObservers  []core.EthChainObserver
-	db                 core.Database
-	logger             hclog.Logger
+	ctx                      context.Context
+	appConfig                *oracleCore.AppConfig
+	ethTxsProcessor          core.EthTxsProcessor
+	expectedTxsFetcher       oracleCore.ExpectedTxsFetcher
+	ethChainObservers        []core.EthChainObserver
+	confirmedBlockSubmitters []core.EthConfirmedBlocksSubmitter
+	db                       core.Database
+	logger                   hclog.Logger
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -40,7 +41,7 @@ func NewEthOracle(
 	ctx context.Context,
 	appConfig *oracleCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
-	bridgeSubmitter oracleCore.BridgeSubmitter,
+	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -72,9 +73,18 @@ func NewEthOracle(
 		indexerDbs, bridgingRequestStateUpdater, logger.Named("eth_txs_processor"))
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))
+	confirmedBlockSubmitters := make([]core.EthConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
 
 	for _, ethChainConfig := range appConfig.EthChains {
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
+
+		cbs, err := bridge.NewConfirmedBlocksSubmitter(
+			ctx, bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create evm block submitter for `%s`: %w", ethChainConfig.ChainID, err)
+		}
+
+		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		eco, err := eth_chain.NewEthChainObserver(
 			ctx, ethChainConfig, ethTxsProcessor, db, indexerDB,
@@ -87,13 +97,14 @@ func NewEthOracle(
 	}
 
 	return &OracleImpl{
-		ctx:                ctx,
-		appConfig:          appConfig,
-		ethTxsProcessor:    ethTxsProcessor,
-		expectedTxsFetcher: expectedTxsFetcher,
-		ethChainObservers:  ethChainObservers,
-		db:                 db,
-		logger:             logger,
+		ctx:                      ctx,
+		appConfig:                appConfig,
+		ethTxsProcessor:          ethTxsProcessor,
+		expectedTxsFetcher:       expectedTxsFetcher,
+		ethChainObservers:        ethChainObservers,
+		confirmedBlockSubmitters: confirmedBlockSubmitters,
+		db:                       db,
+		logger:                   logger,
 	}, nil
 }
 
@@ -102,6 +113,10 @@ func (o *OracleImpl) Start() error {
 
 	go o.ethTxsProcessor.Start()
 	go o.expectedTxsFetcher.Start()
+
+	for _, cbs := range o.confirmedBlockSubmitters {
+		cbs.StartSubmit()
+	}
 
 	for _, eco := range o.ethChainObservers {
 		err := eco.Start()

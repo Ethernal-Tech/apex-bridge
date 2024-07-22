@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/ethgo"
 )
@@ -64,4 +65,14 @@ type EthChainObserver interface {
 
 type EthBridgeDataFetcher interface {
 	FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error)
+}
+
+type BridgeSubmitter interface {
+	SubmitClaims(claims *oracleCore.BridgeClaims, submitOpts *eth.SubmitOpts) error
+	SubmitConfirmedBlocks(chainID string, blocks uint64, lastBlock uint64) error
+}
+
+type EthConfirmedBlocksSubmitter interface {
+	StartSubmit()
+	GetChainID() string
 }

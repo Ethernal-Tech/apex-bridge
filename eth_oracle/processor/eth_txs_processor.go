@@ -34,7 +34,7 @@ type EthTxsProcessorImpl struct {
 	db                          core.EthTxsProcessorDB
 	txProcessors                map[string]core.EthTxProcessor
 	failedTxProcessors          map[string]core.EthTxFailedProcessor
-	bridgeSubmitter             oracleCore.BridgeSubmitter
+	bridgeSubmitter             core.BridgeSubmitter
 	indexerDbs                  map[string]eventTrackerStore.EventTrackerStore
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
@@ -52,7 +52,7 @@ func NewEthTxsProcessor(
 	db core.EthTxsProcessorDB,
 	txProcessors []core.EthTxProcessor,
 	failedTxProcessors []core.EthTxFailedProcessor,
-	bridgeSubmitter oracleCore.BridgeSubmitter,
+	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
