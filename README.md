@@ -7,21 +7,22 @@ $ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get -u github.com
 ```
 
 # How to generate go binding for smart contract(s)
-Let say we wil have all smart contract repositories in directory `/home/igor/development/ethernal/apex-bridge/`
+Let say we will have all smart contract repositories in directory `/home/igor/development/ethernal/apex-bridge/`
+- Clone them:
 ```shell
    git clone https://github.com/Ethernal-Tech/apex-bridge-smartcontracts/   
 ```
 ```shell
    git clone https://github.com/Ethernal-Tech/apex-evm-gateway
 ```
+- Build them:
 ```shell
 cd apex-bridge-smartcontracts && npm i && npx hardhat compile && cd ..
 ```
 ```shell
 cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 ```
-
-for bridge bindings execute:
+- To generate bridge bindings execute:
 ```shell
 BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
 solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
@@ -29,8 +30,7 @@ solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
 abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
 ```
-
-for nexus bindings execute:
+- To generate nexus bindings execute:
 ```shell
 BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
 solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
