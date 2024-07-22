@@ -14,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	eth_bridge "github.com/Ethernal-Tech/apex-bridge/eth_oracle/bridge"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
@@ -143,8 +144,10 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
+	ethBridgeSubmitter := eth_bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, ethIndexerDbs,
+		ctx, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("eth_oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
