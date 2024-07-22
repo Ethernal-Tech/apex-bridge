@@ -18,7 +18,7 @@ var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type EVMChainOperations struct {
 	config           *cardanotx.RelayerEVMChainConfig
-	evmSmartContract eth.IBridgeSmartContract // TODO: replace with correct smart contract interface
+	evmSmartContract eth.IEVMGatewaySmartContract
 	chainID          string
 	logger           hclog.Logger
 }
@@ -44,7 +44,7 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
 
-	evmSmartContract, err := eth.NewBridgeSmartContractWithWallet(
+	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
 		config.NodeURL, config.SmartContractAddr, wallet, config.DynamicTx, logger)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,5 @@ func (cco *EVMChainOperations) SendTx(
 	bitmap := common.NewBitmap(smartContractData.Bitmap)
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
 
-	fmt.Println(bitmap, signature)
-	// a TODO: send actual tx to nexus/evm chain
-	return nil
+	return cco.evmSmartContract.Deposit(ctx, signature, bitmap, smartContractData.RawTransaction)
 }

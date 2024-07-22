@@ -6,18 +6,37 @@ $ git config url."git@github.com:Ethernal-Tech/cardano-infrastructure.git".inste
 $ GOPRIVATE=github.com/Ethernal-Tech/cardano-infrastructure go get -u github.com/Ethernal-Tech/cardano-infrastructure
 ```
 
-# How to generate go binding for smart contract
-First build smart contracts in blade
-```
-./scripts/build-sc.sh 
-```
-then in apex-bridge execute this
+# How to generate go binding for smart contract(s)
+Let say we wil have all smart contract repositories in directory `/home/igor/development/ethernal/apex-bridge/`
 ```shell
-BASEPATH=/home/bbs/Documents/development/cardano_bridge/\!final/blade-apex-bridge/apex-bridge-smartcontracts/
+   git clone https://github.com/Ethernal-Tech/apex-bridge-smartcontracts/   
+```
+```shell
+   git clone https://github.com/Ethernal-Tech/apex-evm-gateway
+```
+```shell
+cd apex-bridge-smartcontracts && npm i && npx hardhat compile && cd ..
+```
+```shell
+cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
+```
+
+for bridge bindings execute:
+```shell
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
 solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
        --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
 abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+```
+
+for nexus bindings execute:
+```shell
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
+solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
+       --abi ${BASEPATH}contracts/Gateway.sol -o ./contractbinding/contractbuild --optimize
+abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi --pkg main \
+       --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
 ```
 
 # How to generate blade secrets
