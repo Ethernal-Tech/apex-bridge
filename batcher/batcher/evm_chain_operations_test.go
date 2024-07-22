@@ -21,6 +21,7 @@ import (
 )
 
 func TestEthChain_GenerateBatchTransaction(t *testing.T) {
+	chainID := common.ChainIDStrNexus
 	ctx := context.Background()
 	batchNonceID := uint64(7834)
 	ttlBlockNumberInc := uint64(5)
@@ -39,13 +40,8 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	privateKey, err := bn256.GeneratePrivateKey()
+	_, err = eth.CreateAndSaveBatcherEVMPrivateKey(secretsMngr, chainID, true)
 	require.NoError(t, err)
-
-	privateKeyBytes, err := privateKey.Marshal()
-	require.NoError(t, err)
-
-	require.NoError(t, secretsMngr.SetSecret(secrets.ValidatorBLSKey, privateKeyBytes))
 
 	chainSpecificJSONRaw, err := (cardanotx.BatcherEVMChainConfig{
 		TTLBlockNumberInc:      ttlBlockNumberInc,
@@ -71,10 +67,10 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 			},
 		}
 		ops, err := NewEVMChainOperations(
-			chainSpecificJSONRaw, secretsMngr, dbMock, common.ChainIDStrNexus, hclog.NewNullLogger())
+			chainSpecificJSONRaw, secretsMngr, dbMock, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		dt, err := ops.GenerateBatchTransaction(ctx, nil, common.ChainIDStrNexus, confirmedTxs, batchNonceID)
+		dt, err := ops.GenerateBatchTransaction(ctx, nil, chainID, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
 		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs)
