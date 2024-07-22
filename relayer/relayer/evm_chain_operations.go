@@ -8,7 +8,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
@@ -39,7 +38,7 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	wallet, err := eth.GetRelayerEVMPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
@@ -60,7 +59,7 @@ func NewEVMChainOperations(
 
 // SendTx implements core.ChainOperations.
 func (cco *EVMChainOperations) SendTx(
-	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
+	ctx context.Context, _ eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
 ) (err error) {
 	signatures := make(bn256.Signatures, len(smartContractData.Signatures))
 	for i, bytes := range smartContractData.Signatures {
