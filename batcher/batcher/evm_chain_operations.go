@@ -42,7 +42,7 @@ func NewEVMChainOperations(
 		return nil, err
 	}
 
-	privateKey, err := eth.GetValidatorBLSPrivateKey(secretsManager, chainID)
+	privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, chainID)
 	if err != nil {
 		return nil, err
 	}
