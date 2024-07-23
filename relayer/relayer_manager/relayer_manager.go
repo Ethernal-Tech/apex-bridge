@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -38,7 +38,7 @@ func NewRelayerManager(
 		}
 
 		db, err := databaseaccess.NewDatabase(
-			path.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
+			filepath.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
 		if err != nil {
 			return nil, err
 		}

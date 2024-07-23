@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -104,7 +103,7 @@ func NewValidatorComponents(
 	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(appConfig.EthChains))
 
 	for _, ethChainConfig := range oracleConfig.EthChains {
-		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(path.Join(
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(
 			appConfig.Settings.DbsPath, ethChainConfig.ChainID+".db"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", ethChainConfig.ChainID, err)
