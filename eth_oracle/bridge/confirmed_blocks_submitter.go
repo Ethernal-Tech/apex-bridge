@@ -84,12 +84,17 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
+	lastBlockToSubmit := lastProcessedBlock
+	if lastBlockToSubmit > from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold) {
+		lastBlockToSubmit = from + uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
+	}
+
 	var blockCounter = uint64(0)
 
 	bs.logger.Debug("Checking if blocks are processed", "chainID", bs.chainID, "from block", from,
-		"to last block", lastProcessedBlock)
+		"to last block", lastBlockToSubmit)
 
-	for blockIdx := from; blockIdx <= lastProcessedBlock; blockIdx++ {
+	for blockIdx := from; blockIdx <= lastBlockToSubmit; blockIdx++ {
 		if !bs.checkIfBlockIsProcessed(blockIdx) {
 			break
 		}
