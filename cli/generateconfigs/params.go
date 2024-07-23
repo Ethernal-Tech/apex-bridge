@@ -771,7 +771,7 @@ func parseStartingBlock(s string) (uint64, string, error) {
 	}
 
 	val, err := strconv.ParseUint(parts[0], 10, 64)
-	if len(parts) != 2 {
+	if err != nil {
 		return 0, "", err
 	}
 
