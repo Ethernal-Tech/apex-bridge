@@ -3,7 +3,7 @@ package databaseaccess
 import (
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -20,7 +20,7 @@ func TestBoltDatabase(t *testing.T) {
 		os.Remove(testDir)
 	}()
 
-	filePath := path.Join(testDir, "temp_test.db")
+	filePath := filepath.Join(testDir, "temp_test.db")
 
 	dbCleanup := func() {
 		if _, err := os.Stat(filePath); err == nil {
