@@ -84,19 +84,32 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
-	if lastProcessedBlock < from {
+	var blockCounter = uint64(0)
+
+	bs.logger.Debug("Checking if blocks are processed", "chainID", bs.chainID, "from block", from,
+		"to last block", lastProcessedBlock)
+
+	for blockIdx := from; blockIdx <= lastProcessedBlock; blockIdx++ {
+		if !bs.checkIfBlockIsProcessed(blockIdx) {
+			break
+		}
+
+		blockCounter++
+	}
+
+	if blockCounter == 0 {
 		bs.logger.Debug("No new processed blocks", "chainID", bs.chainID)
 
 		return nil
 	}
 
-	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, from, lastProcessedBlock); err != nil {
+	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, from, blockCounter); err != nil {
 		bs.logger.Error("error submitting confirmed blocks", "err", err)
 
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
 
-	bs.latestBlockNumber = lastProcessedBlock
+	bs.latestBlockNumber = from + blockCounter - 1
 	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestBlockNumber", bs.latestBlockNumber)
 
 	return nil
@@ -104,4 +117,26 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 
 func (bs *ConfirmedBlocksSubmitterImpl) GetChainID() string {
 	return bs.chainID
+}
+
+func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(blockNumber uint64) bool {
+	logs, err := bs.indexerDB.GetLogsByBlockNumber(blockNumber)
+	if err != nil {
+		bs.logger.Error("error getting logs for", "blockNumber", blockNumber, "err", err)
+
+		return false
+	}
+
+	for _, log := range logs {
+		prTx, err := bs.oracleDB.GetProcessedTx(bs.chainID, log.TransactionHash)
+		if err != nil {
+			bs.logger.Error("error getting processed log for block", "err", err)
+		}
+
+		if prTx == nil {
+			return false
+		}
+	}
+
+	return true
 }

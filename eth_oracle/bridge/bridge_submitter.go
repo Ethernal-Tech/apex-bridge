@@ -43,10 +43,10 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(claims *oracleCore.BridgeClaims, sub
 	return nil
 }
 
-func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, firstBlock uint64, lastProcessedBlock uint64,
+func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, firstBlock uint64, blockCount uint64,
 ) error {
-	contractBlocks := make([]eth.CardanoBlock, 0, lastProcessedBlock-firstBlock+1)
-	for blockNumber := firstBlock; blockNumber <= lastProcessedBlock; blockNumber++ {
+	contractBlocks := make([]eth.CardanoBlock, 0, blockCount)
+	for blockNumber := firstBlock; blockNumber < firstBlock+blockCount; blockNumber++ {
 		contractBlocks = append(contractBlocks, eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(blockNumber),
 		})
@@ -54,12 +54,14 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, firstBlock 
 
 	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, contractBlocks)
 	if err != nil {
-		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", chainID, "block", lastProcessedBlock, "err", err)
+		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", "chainID", chainID, "from block", firstBlock,
+			"blockCount", blockCount, "err", err)
 
 		return err
 	}
 
-	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "last block", lastProcessedBlock)
+	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "from block", firstBlock,
+		"blockCount", blockCount)
 
 	return nil
 }

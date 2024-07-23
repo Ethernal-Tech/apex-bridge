@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	eth_core "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/ethgo"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
@@ -86,6 +87,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
+		indexerDB.On("GetLogsByBlockNumber", mock.Anything).Return([]*ethgo.Log{}, nil)
 
 		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
@@ -103,6 +105,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
+		indexerDB.On("GetLogsByBlockNumber", mock.Anything).Return([]*ethgo.Log{}, nil)
 
 		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
 
