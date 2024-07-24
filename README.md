@@ -91,7 +91,7 @@ All options
 ``` shell
 $ go run ./main.go generate-configs \
         --validator-data-dir <path to bridge chain data directory when using local secrets manager> \
-        --validator-config-path <path to to bridge chain secrets manager config file> \        
+        --validator-config <path to bridge chain secrets manager config file> \        
         --output-dir <path to config jsons output directory> \
         --output-validator-components-file-name <validator components config json output file name>.json \
         --output-relayer-file-name <relayer config json output file name>.json \
