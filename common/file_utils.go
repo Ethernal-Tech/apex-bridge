@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -59,9 +58,9 @@ func LoadConfig[TReturn any](configPath string, configPrefix string) (*TReturn, 
 		}
 
 		if prfx := strings.TrimSpace(configPrefix); prfx != "" {
-			configPath = path.Join(filepath.Dir(ex), strings.Join([]string{prfx, "config.json"}, "_"))
+			configPath = filepath.Join(filepath.Dir(ex), strings.Join([]string{prfx, "config.json"}, "_"))
 		} else {
-			configPath = path.Join(filepath.Dir(ex), "config.json")
+			configPath = filepath.Join(filepath.Dir(ex), "config.json")
 		}
 	}
 

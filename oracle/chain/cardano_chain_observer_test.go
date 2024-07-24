@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -56,7 +56,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath, 0750))
 
-		indexerDB, err := indexerDb.NewDatabaseInit("", path.Join(settings.DbsPath, chainConfig.ChainID+".db"))
+		indexerDB, err := indexerDb.NewDatabaseInit("", filepath.Join(settings.DbsPath, chainConfig.ChainID+".db"))
 		require.NoError(t, err)
 
 		return indexerDB

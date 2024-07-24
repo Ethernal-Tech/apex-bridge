@@ -90,36 +90,46 @@ $ go run ./main.go create-address \
 All options
 ``` shell
 $ go run ./main.go generate-configs \
-        --validator-data-dir "<path to bridge chain data directory when using local secrets manager>" \
-        --validator-config-path "<path to to bridge chain secrets manager config file>" \        
-        --output-dir "<path to config jsons output directory>" \
-        --output-validator-components-file-name "<validator components config json output file name>.json" \
-        --output-relayer-file-name "<relayer config json output file name>.json" \
-        --prime-network-address "<address of prime network>" \
+        --validator-data-dir <path to bridge chain data directory when using local secrets manager> \
+        --validator-config <path to bridge chain secrets manager config file> \        
+        --output-dir <path to config jsons output directory> \
+        --output-validator-components-file-name <validator components config json output file name>.json \
+        --output-relayer-file-name <relayer config json output file name>.json \
+        --prime-network-address <address of prime network> \
         --prime-network-id <network id of prime network> \
         --prime-network-magic <network magic of prime network> \
-        --prime-ogmios-url "<ogmios URL for prime network>" \
-        --prime-blockfrost-url "<blockfrost URL for prime network>" \
-        --prime-blockfrost-api-key "<blockfrost API key for prime network>" \
-        --prime-socket-path "<socket path for prime network>" \
+        --prime-ogmios-url <ogmios URL for prime network> \
+        --prime-blockfrost-url <blockfrost URL for prime network> \
+        --prime-blockfrost-api-key <blockfrost API key for prime network> \
+        --prime-socket-path <socket path for prime network> \
         --prime-ttl-slot-inc <ttl slot increment for prime> \
-        --prime-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
-        --vector-network-address "<address of vector network>" \
+        --prime-slot-rounding-threshold <prime slot rounding threshold> \
+        --prime-starting-block <slot:hash> \
+        --vector-network-address <address of vector network> \
         --vector-network-magic <network magic of vector network> \
         --vector-network-id <network id of vector network> \
-        --vector-blockfrost-url "<blockfrost URL for vector network>" \
-        --vector-ogmios-url "<ogmios URL for vector network>" \
-        --vector-blockfrost-api-key "<blockfrost API key for vector network>" \
-        --vector-socket-path "<socket path for vector network>" \
+        --vector-blockfrost-url <blockfrost URL for vector network> \
+        --vector-ogmios-url <ogmios URL for vector network> \
+        --vector-blockfrost-api-key <blockfrost API key for vector network> \
+        --vector-socket-path <socket path for vector network> \
         --vector-ttl-slot-inc <ttl slot increment for vector> \
-        --vector-slot-rounding-threshold <take slot from sc if zero otherwise calculate slot from tip with rounding> \
-        --bridge-node-url "<node URL of bridge chain>" \
-        --bridge-sc-address "<bridging smart contract address on bridge chain>" \
-        --dbs-path "<path to where databases will be stored>" \
-        --logs-path "<path to where logs will be stored>" \
+        --vector-slot-rounding-threshold <vector slot rounding threshold> \
+        --vector-starting-block <slot:hash> \
+        --nexus-node-url <nexus node URL> \
+        --nexus-sc-address <nexus smart contract address> \
+        --nexus-relayer-addr <nexus relayer address> \
+        --nexus-ttl-block-inc <nexus ttl block increment> \
+        --nexus-block-rounding-threshold <nexus block rounding threshold> \
+        --nexus-starting-block <block number> \
+        --bridge-node-url <node URL of bridge chain> \
+        --bridge-sc-address <bridging smart contract address on bridge chain> \
+        --relayer-data-dir <relayer data dir for secrets> \
+        --relayer-config <relayer secrets config file path> \
+        --dbs-path <path to where databases will be stored> \
+        --logs-path <path to where logs will be stored> \
         --api-port <port at which API should run> \
-        --api-keys "<api key 1>" \
-        --api-keys "<api key 2>"
+        --api-keys <api key 1> \
+        --api-keys <api key 2>
 ```
 optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used if telemetry is desired
 
@@ -127,12 +137,16 @@ Minimal example
 ``` shell
 $ go run ./main.go generate-configs \
         --validator-data-dir "./blade-dir" \
+        --relayer-data-dir "./blade-dir" \
         --prime-network-address "localhost:13001" \
         --prime-network-magic 142 \
         --prime-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
         --vector-network-address "localhost:23001" \
         --vector-network-magic 242 \
         --vector-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
+        --nexus-node-url "localhost:5500" \
+        --nexus-sc-address "0x816402271eE6DA078Fc8Cb537aDBDD58219485BB" \
+        --nexus-relayer-addr "0x816402271FE6D9078Fc8Cb537aDBDD58219485BB" \
         --bridge-node-url "https://polygon-mumbai-pokt.nodies.app" \
         --bridge-sc-address "0x816402271eE6D9078Fc8Cb537aDBDD58219485BB" \
         --api-keys "test_api_key_1"

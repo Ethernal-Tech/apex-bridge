@@ -3,7 +3,7 @@ package relayermanager
 import (
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -49,14 +49,14 @@ func TestRelayerManagerConfig(t *testing.T) {
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
-			LogFilePath:   path.Join(testDir, "relayer_logs"),
+			LogFilePath:   filepath.Join(testDir, "relayer_logs"),
 			LogLevel:      hclog.Debug,
 			JSONLogFormat: false,
 			AppendFile:    true,
 		},
 	}
 
-	configFilePath := path.Join(testDir, "config.json")
+	configFilePath := filepath.Join(testDir, "config.json")
 
 	bytes, err := json.Marshal(expectedConfig)
 	require.NoError(t, err)
