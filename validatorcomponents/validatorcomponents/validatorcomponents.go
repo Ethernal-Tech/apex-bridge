@@ -350,6 +350,11 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("no configuration for chain: %s", chainID)
 			}
 
+			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: regChain.AddressMultisig,
+				FeeAddress:      regChain.AddressFeePayer,
+			}
+
 			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 				validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
 				if err != nil {
