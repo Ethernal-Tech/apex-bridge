@@ -77,7 +77,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	utxosMap := make(map[string][]oracleCore.CardanoChainConfigUtxo, len(addresses))
+	var outputUtxos []oracleCore.CardanoChainConfigUtxo
 
 	for _, addr := range addresses {
 		utxos, err := db.GetAllTxOutputs(addr, true)
@@ -87,9 +87,11 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		output := make([]oracleCore.CardanoChainConfigUtxo, len(utxos))
+		start := len(outputUtxos)
+		outputUtxos = append(outputUtxos, make([]oracleCore.CardanoChainConfigUtxo, len(utxos))...)
+
 		for i, inp := range utxos {
-			output[i] = oracleCore.CardanoChainConfigUtxo{
+			outputUtxos[i+start] = oracleCore.CardanoChainConfigUtxo{
 				Hash:    inp.Input.Hash,
 				Index:   inp.Input.Index,
 				Address: inp.Output.Address,
@@ -97,11 +99,9 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 				Slot:    inp.Output.Slot,
 			}
 		}
-
-		utxosMap[addr] = output
 	}
 
-	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, utxosMap, latestBlockPoint))
+	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, outputUtxos, latestBlockPoint))
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
 	}
