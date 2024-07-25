@@ -207,6 +207,7 @@ func convertUtxos(input []core.CardanoChainConfigUtxo) (output []*indexer.TxInpu
 			Output: indexer.TxOutput{
 				Address: inp.Address,
 				Amount:  inp.Amount,
+				Slot:    inp.Slot,
 			},
 		}
 	}

@@ -17,6 +17,7 @@ type CardanoChainConfigUtxo struct {
 	Index   uint32   `json:"index"`
 	Address string   `json:"address"`
 	Amount  uint64   `json:"amount"`
+	Slot    uint64   `json:"slot"`
 }
 
 type EthChainConfig struct {

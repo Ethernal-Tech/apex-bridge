@@ -258,12 +258,14 @@ func Test_convertUtxos(t *testing.T) {
 			Index:   2,
 			Address: "0xffaa",
 			Amount:  uint64(200),
+			Slot:    34,
 		},
 		{
 			Hash:    indexer.NewHashFromHexString("0x1"),
 			Index:   1,
 			Address: "0xff03",
 			Amount:  uint64(500),
+			Slot:    196,
 		},
 	}
 
@@ -276,6 +278,7 @@ func Test_convertUtxos(t *testing.T) {
 			Output: indexer.TxOutput{
 				Address: "0xffaa",
 				Amount:  200,
+				Slot:    34,
 			},
 		},
 		{
@@ -286,6 +289,7 @@ func Test_convertUtxos(t *testing.T) {
 			Output: indexer.TxOutput{
 				Address: "0xff03",
 				Amount:  500,
+				Slot:    196,
 			},
 		},
 	}, convertUtxos(utxos))
