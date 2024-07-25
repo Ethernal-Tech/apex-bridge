@@ -77,9 +77,10 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var outputUtxos []oracleCore.CardanoChainConfigUtxo
+	addressesUtxos := make([][]*indexer.TxInputOutput, len(addresses))
+	count := 0
 
-	for _, addr := range addresses {
+	for i, addr := range addresses {
 		utxos, err := db.GetAllTxOutputs(addr, true)
 		if err != nil {
 			c.setError(w, r, fmt.Sprintf("get all tx outputs: %v", err))
@@ -87,17 +88,21 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		start := len(outputUtxos)
-		outputUtxos = append(outputUtxos, make([]oracleCore.CardanoChainConfigUtxo, len(utxos))...)
+		addressesUtxos[i] = utxos
+		count += len(utxos)
+	}
 
-		for i, inp := range utxos {
-			outputUtxos[i+start] = oracleCore.CardanoChainConfigUtxo{
+	outputUtxos := make([]oracleCore.CardanoChainConfigUtxo, 0, count)
+
+	for i := range addresses {
+		for _, inp := range addressesUtxos[i] {
+			outputUtxos = append(outputUtxos, oracleCore.CardanoChainConfigUtxo{
 				Hash:    inp.Input.Hash,
 				Index:   inp.Input.Index,
 				Address: inp.Output.Address,
 				Amount:  inp.Output.Amount,
 				Slot:    inp.Output.Slot,
-			}
+			})
 		}
 	}
 
