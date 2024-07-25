@@ -167,10 +167,18 @@ func TestCardanoChainObserver(t *testing.T) {
 func Test_initOracleState(t *testing.T) {
 	dbMock := &indexer.DatabaseMock{}
 	dbWriterMock := &indexer.DBTransactionWriterMock{}
-	utxos := []*indexer.TxInputOutput{
+	utxos := []core.CardanoChainConfigUtxo{
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1")},
-			Output: indexer.TxOutput{Amount: 100},
+			Hash:    indexer.NewHashFromHexString("0x1"),
+			Index:   2,
+			Address: "0xffaa",
+			Amount:  uint64(200),
+		},
+		{
+			Hash:    indexer.NewHashFromHexString("0x2"),
+			Index:   1,
+			Address: "0xff03",
+			Amount:  uint64(500),
 		},
 	}
 	blockSlot := uint64(100)
@@ -196,7 +204,7 @@ func Test_initOracleState(t *testing.T) {
 
 		dbMock.On("OpenTx").Return(dbWriterMock).Twice()
 		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Twice()
-		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Twice()
+		dbWriterMock.On("AddTxOutputs", convertUtxos(utxos)).Return(dbMock).Twice()
 		dbWriterMock.On("SetLatestBlockPoint", &indexer.BlockPoint{
 			BlockSlot: blockSlot,
 			BlockHash: indexer.NewHashFromHexString(blockHash),
@@ -241,4 +249,44 @@ func Test_initOracleState(t *testing.T) {
 
 		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
+}
+
+func Test_convertUtxos(t *testing.T) {
+	utxos := []core.CardanoChainConfigUtxo{
+		{
+			Hash:    indexer.NewHashFromHexString("0x2"),
+			Index:   2,
+			Address: "0xffaa",
+			Amount:  uint64(200),
+		},
+		{
+			Hash:    indexer.NewHashFromHexString("0x1"),
+			Index:   1,
+			Address: "0xff03",
+			Amount:  uint64(500),
+		},
+	}
+
+	require.Equal(t, []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{
+				Hash:  indexer.NewHashFromHexString("0x2"),
+				Index: 2,
+			},
+			Output: indexer.TxOutput{
+				Address: "0xffaa",
+				Amount:  200,
+			},
+		},
+		{
+			Input: indexer.TxInput{
+				Hash:  indexer.NewHashFromHexString("0x1"),
+				Index: 1,
+			},
+			Output: indexer.TxOutput{
+				Address: "0xff03",
+				Amount:  500,
+			},
+		},
+	}, convertUtxos(utxos))
 }

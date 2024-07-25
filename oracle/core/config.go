@@ -3,7 +3,6 @@ package core
 import (
 	"time"
 
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -11,6 +10,13 @@ import (
 type BridgingAddresses struct {
 	BridgingAddress string `json:"address"`
 	FeeAddress      string `json:"feeAddress"`
+}
+
+type CardanoChainConfigUtxo struct {
+	Hash    [32]byte `json:"id"`
+	Index   uint32   `json:"index"`
+	Address string   `json:"address"`
+	Amount  uint64   `json:"amount"`
 }
 
 type EthChainConfig struct {
@@ -33,11 +39,10 @@ type CardanoChainConfig struct {
 	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
 	StartBlockHash           string                           `json:"startBlockHash"`
 	StartSlot                uint64                           `json:"startSlot"`
-	StartBlockNumber         uint64                           `json:"startBlockNumber"`
 	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
 	BridgingAddresses        BridgingAddresses                `json:"bridgingAddresses"`
 	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
-	InitialUtxos             []*indexer.TxInputOutput         `json:"initialUtxos"`
+	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
 }
 
 type SubmitConfig struct {
