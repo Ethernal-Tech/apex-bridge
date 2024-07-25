@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -76,15 +77,28 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	utxosMap := make(map[string][]*indexer.TxInputOutput, len(addresses))
+	utxosMap := make(map[string][]oracleCore.CardanoChainConfigUtxo, len(addresses))
 
 	for _, addr := range addresses {
-		utxosMap[addr], err = db.GetAllTxOutputs(addr, true)
+		utxos, err := db.GetAllTxOutputs(addr, true)
 		if err != nil {
 			c.setError(w, r, fmt.Sprintf("get all tx outputs: %v", err))
 
 			return
 		}
+
+		output := make([]oracleCore.CardanoChainConfigUtxo, len(utxos))
+		for i, inp := range utxos {
+			output[i] = oracleCore.CardanoChainConfigUtxo{
+				Hash:    inp.Input.Hash,
+				Index:   inp.Input.Index,
+				Address: inp.Output.Address,
+				Amount:  inp.Output.Amount,
+				Slot:    inp.Output.Slot,
+			}
+		}
+
+		utxosMap[addr] = output
 	}
 
 	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, utxosMap, latestBlockPoint))
