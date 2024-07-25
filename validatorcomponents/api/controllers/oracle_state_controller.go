@@ -101,7 +101,8 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, outputUtxos, latestBlockPoint))
+	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(
+		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash))
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
 	}
