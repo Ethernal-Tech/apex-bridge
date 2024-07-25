@@ -94,8 +94,8 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 
 	outputUtxos := make([]oracleCore.CardanoChainConfigUtxo, 0, count)
 
-	for i := range addresses {
-		for _, inp := range addressesUtxos[i] {
+	for _, utxos := range addressesUtxos {
+		for _, inp := range utxos {
 			outputUtxos = append(outputUtxos, oracleCore.CardanoChainConfigUtxo{
 				Hash:    inp.Input.Hash,
 				Index:   inp.Input.Index,
