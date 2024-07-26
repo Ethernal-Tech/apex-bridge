@@ -337,13 +337,13 @@ func fixChainsAndAddresses(
 	cardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
 	ethChains := make(map[string]*oracleCore.EthChainConfig)
 
+	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
 
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
 
-		// should handle evm too
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
 			chainConfig, exists := config.CardanoChains[chainID]
@@ -405,7 +405,7 @@ func fixChainsAndAddresses(
 	config.EthChains = ethChains
 
 	batcherChainConfigs := make([]batcherCore.ChainConfig, 0, len(batcherConfig.Chains))
-
+	// handle config for batchers
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
 
