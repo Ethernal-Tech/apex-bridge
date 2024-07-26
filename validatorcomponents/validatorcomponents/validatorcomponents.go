@@ -78,7 +78,7 @@ func NewValidatorComponents(
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
-		ctx, oracleConfig,
+		ctx, oracleConfig, batcherConfig,
 		eth.NewBridgeSmartContract(
 			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
 			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
@@ -309,6 +309,7 @@ outsideloop:
 func fixChainsAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
+	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
@@ -402,6 +403,22 @@ func fixChainsAndAddresses(
 
 	config.CardanoChains = cardanoChains
 	config.EthChains = ethChains
+
+	batcherChainConfigs := make([]batcherCore.ChainConfig, 0, len(batcherConfig.Chains))
+
+	for _, regChain := range allRegisteredChains {
+		chainID := common.ToStrChainID(regChain.Id)
+
+		for _, chain := range batcherConfig.Chains {
+			if chain.ChainID == chainID {
+				batcherChainConfigs = append(batcherChainConfigs, chain)
+
+				break
+			}
+		}
+	}
+
+	batcherConfig.Chains = batcherChainConfigs
 
 	return nil
 }
