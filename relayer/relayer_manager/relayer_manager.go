@@ -110,7 +110,7 @@ func FixChains(config *core.RelayerManagerConfiguration, logger hclog.Logger) er
 	err := common.RetryForever(context.Background(), 2*time.Second, func(ctxInner context.Context) (err error) {
 		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
 		if err != nil {
-			logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+			logger.Error("Failed to GetAllRegisteredChains while creating Relayers. Retrying...", "err", err)
 		}
 
 		return err
