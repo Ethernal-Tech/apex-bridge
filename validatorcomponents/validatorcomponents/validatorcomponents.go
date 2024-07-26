@@ -78,7 +78,7 @@ func NewValidatorComponents(
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
-		ctx, oracleConfig,
+		ctx, oracleConfig, batcherConfig,
 		eth.NewBridgeSmartContract(
 			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
 			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
@@ -309,6 +309,7 @@ outsideloop:
 func fixChainsAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
+	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
@@ -336,18 +337,23 @@ func fixChainsAndAddresses(
 	cardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
 	ethChains := make(map[string]*oracleCore.EthChainConfig)
 
+	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
 
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
 
-		// should handle evm too
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
 			chainConfig, exists := config.CardanoChains[chainID]
 			if !exists {
 				return fmt.Errorf("no configuration for chain: %s", chainID)
+			}
+
+			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: regChain.AddressMultisig,
+				FeeAddress:      regChain.AddressFeePayer,
 			}
 
 			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
@@ -397,6 +403,22 @@ func fixChainsAndAddresses(
 
 	config.CardanoChains = cardanoChains
 	config.EthChains = ethChains
+
+	batcherChainConfigs := make([]batcherCore.ChainConfig, 0, len(batcherConfig.Chains))
+	// handle config for batchers
+	for _, regChain := range allRegisteredChains {
+		chainID := common.ToStrChainID(regChain.Id)
+
+		for _, chain := range batcherConfig.Chains {
+			if chain.ChainID == chainID {
+				batcherChainConfigs = append(batcherChainConfigs, chain)
+
+				break
+			}
+		}
+	}
+
+	batcherConfig.Chains = batcherChainConfigs
 
 	return nil
 }

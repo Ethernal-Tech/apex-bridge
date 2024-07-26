@@ -10,23 +10,23 @@ import (
 )
 
 type CardanoChainConfig struct {
-	NetworkAddress           string                    `json:"networkAddress"`
-	NetworkID                wallet.CardanoNetworkType `json:"networkID"`
-	NetworkMagic             uint32                    `json:"networkMagic"`
-	StartBlockHash           string                    `json:"startBlockHash"`
-	StartSlot                uint64                    `json:"startSlot"`
-	StartBlockNumber         uint64                    `json:"startBlockNumber"`
-	TTLSlotNumberInc         uint64                    `json:"ttlSlotNumberIncrement"`
-	ConfirmationBlockCount   uint                      `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                  `json:"otherAddressesOfInterest"`
-	OgmiosURL                string                    `json:"ogmiosUrl"`
-	BlockfrostURL            string                    `json:"blockfrostUrl"`
-	BlockfrostAPIKey         string                    `json:"blockfrostApiKey"`
-	SocketPath               string                    `json:"socketPath"`
-	PotentialFee             uint64                    `json:"potentialFee"`
-	SlotRoundingThreshold    uint64                    `json:"slotRoundingThreshold"`
-	NoBatchPeriodPercent     float64                   `json:"noBatchPeriodPercent"`
-	TakeAtLeastUtxoCount     int                       `json:"takeAtLeastUtxoCount"`
+	NetworkAddress           string                              `json:"networkAddress"`
+	NetworkID                wallet.CardanoNetworkType           `json:"networkID"`
+	NetworkMagic             uint32                              `json:"networkMagic"`
+	StartBlockHash           string                              `json:"startBlockHash"`
+	StartSlot                uint64                              `json:"startSlot"`
+	InitialUtxos             []oracleCore.CardanoChainConfigUtxo `json:"initialUtxos"`
+	TTLSlotNumberInc         uint64                              `json:"ttlSlotNumberIncrement"`
+	ConfirmationBlockCount   uint                                `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string                            `json:"otherAddressesOfInterest"`
+	OgmiosURL                string                              `json:"ogmiosUrl"`
+	BlockfrostURL            string                              `json:"blockfrostUrl"`
+	BlockfrostAPIKey         string                              `json:"blockfrostApiKey"`
+	SocketPath               string                              `json:"socketPath"`
+	PotentialFee             uint64                              `json:"potentialFee"`
+	SlotRoundingThreshold    uint64                              `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent     float64                             `json:"noBatchPeriodPercent"`
+	TakeAtLeastUtxoCount     int                                 `json:"takeAtLeastUtxoCount"`
 }
 
 type APIConfig struct {
@@ -68,7 +68,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NetworkID:                ccConfig.NetworkID,
 			StartBlockHash:           ccConfig.StartBlockHash,
 			StartSlot:                ccConfig.StartSlot,
-			StartBlockNumber:         ccConfig.StartBlockNumber,
+			InitialUtxos:             ccConfig.InitialUtxos,
 			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
 			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
 		}

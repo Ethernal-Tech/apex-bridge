@@ -35,7 +35,7 @@ func NewCardanoChainObserver(
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
 	err := initOracleState(indexerDB,
-		oracleDB, config.StartBlockHash, config.StartBlockNumber, config.InitialUtxos, config.ChainID, logger)
+		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +132,8 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
-			BlockSlot:   config.StartSlot,
-			BlockHash:   indexer.NewHashFromHexString(config.StartBlockHash),
-			BlockNumber: config.StartBlockNumber,
+			BlockSlot: config.StartSlot,
+			BlockHash: indexer.NewHashFromHexString(config.StartBlockHash),
 		},
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
@@ -155,7 +154,7 @@ func loadSyncerConfigs(config *core.CardanoChainConfig) (*indexer.BlockIndexerCo
 
 func initOracleState(
 	db indexer.Database, oracleDB core.CardanoTxsProcessorDB,
-	blockHashStr string, blockSlot uint64, utxos []*indexer.TxInputOutput,
+	blockHashStr string, blockSlot uint64, utxos []core.CardanoChainConfigUtxo,
 	chainID string, logger hclog.Logger,
 ) error {
 	blockHash := indexer.NewHashFromHexString(blockHashStr)
@@ -194,5 +193,24 @@ func initOracleState(
 	return db.OpenTx().DeleteAllTxOutputsPhysically().SetLatestBlockPoint(&indexer.BlockPoint{
 		BlockSlot: blockSlot,
 		BlockHash: blockHash,
-	}).AddTxOutputs(utxos).Execute()
+	}).AddTxOutputs(convertUtxos(utxos)).Execute()
+}
+
+func convertUtxos(input []core.CardanoChainConfigUtxo) (output []*indexer.TxInputOutput) {
+	output = make([]*indexer.TxInputOutput, len(input))
+	for i, inp := range input {
+		output[i] = &indexer.TxInputOutput{
+			Input: indexer.TxInput{
+				Hash:  inp.Hash,
+				Index: inp.Index,
+			},
+			Output: indexer.TxOutput{
+				Address: inp.Address,
+				Amount:  inp.Amount,
+				Slot:    inp.Slot,
+			},
+		}
+	}
+
+	return output
 }
