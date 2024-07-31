@@ -833,14 +833,14 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 			return nil, err
 		}
 
-		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
-		if err != nil {
-			bp.logger.Error("failed to create new evm smart contract tx", err)
-
-			return nil, err
-		}
-
 		if deposit != nil {
+			evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
+			if err != nil {
+				bp.logger.Error("failed to create new evm smart contract tx", err)
+
+				return nil, err
+			}
+
 			batchExecutedMetadata := common.BatchExecutedMetadata{
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceID:   evmTx.BatchNonceID,
@@ -856,19 +856,21 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		}
 
 		if withdraw != nil {
-			bridgingRequestMetadata := common.BridgingRequestMetadata{
-				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-				DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
-				SenderAddr:         []string{withdraw.Sender.String()},
-				Transactions:       []common.BridgingRequestMetadataTransaction{},
-				FeeAmount:          withdraw.FeeAmount.Uint64(),
-			}
+			txs := []common.BridgingRequestMetadataTransaction{}
 			for _, tx := range withdraw.Receivers {
-				bridgingRequestMetadata.Transactions = append(bridgingRequestMetadata.Transactions,
+				txs = append(txs,
 					common.BridgingRequestMetadataTransaction{
 						Amount:  tx.Amount.Uint64(),
 						Address: []string{tx.Receiver},
 					})
+			}
+
+			bridgingRequestMetadata := common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+				DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
+				SenderAddr:         []string{withdraw.Sender.String()},
+				Transactions:       txs,
+				FeeAmount:          withdraw.FeeAmount.Uint64(),
 			}
 
 			tx.Metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, bridgingRequestMetadata)

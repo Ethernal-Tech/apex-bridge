@@ -82,8 +82,9 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 		return nil
 	}
 
-	logFilter := make(map[ethgo.Address][]ethgo.Hash)
-	logFilter[scAddress] = append(logFilter[scAddress], eventSigs...)
+	logFilter := map[ethgo.Address][]ethgo.Hash{
+		scAddress: eventSigs,
+	}
 
 	return &eventTracker.EventTrackerConfig{
 		RPCEndpoint:            config.NodeURL,
