@@ -782,8 +782,6 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		return nil, err
 	}
 
-	value := transaction.Value()
-
 	contract, err := contractbinding.NewGateway(
 		common.HexToAddress(bp.appConfig.Bridge.SmartContractAddress),
 		ethHelper.GetClient())
@@ -810,7 +808,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		Topics:      topics,
 	}
 
-	metadata := []byte{}
+	var metadata []byte
 
 	logEventType := log.Topics[0]
 	switch logEventType {
@@ -834,6 +832,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceID:   evmTx.BatchNonceID,
 			}
+
 			metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
 			if err != nil {
 				bp.logger.Error("failed to marshal metadata", err)
@@ -891,6 +890,6 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		LogIndex:    log.LogIndex,
 		Address:     log.Address,
 		Metadata:    metadata,
-		Value:       value,
+		Value:       transaction.Value(),
 	}, nil
 }
