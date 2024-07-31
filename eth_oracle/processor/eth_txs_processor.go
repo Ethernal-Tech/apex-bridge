@@ -756,19 +756,6 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 }
 
 func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*core.EthTx, error) {
-	tx := &core.EthTx{
-		OriginChainID: originChainID,
-		Priority:      1,
-
-		BlockNumber: log.BlockNumber,
-		BlockHash:   log.BlockHash,
-		Hash:        log.TransactionHash,
-		TxIndex:     log.TransactionIndex,
-		Removed:     log.Removed,
-		LogIndex:    log.LogIndex,
-		Address:     log.Address,
-	}
-
 	events, err := eth.GetNexusEventSignatures()
 	if err != nil {
 		bp.logger.Error("failed to get nexus event signatures", err)
@@ -795,7 +782,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		return nil, err
 	}
 
-	tx.Value = transaction.Value()
+	value := transaction.Value()
 
 	contract, err := contractbinding.NewGateway(
 		common.HexToAddress(bp.appConfig.Bridge.SmartContractAddress),
@@ -806,9 +793,9 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		return nil, err
 	}
 
-	topics := []ethereum_common.Hash{}
-	for _, topic := range log.Topics {
-		topics = append(topics, ethereum_common.Hash(topic))
+	topics := make([]ethereum_common.Hash, len(log.Topics))
+	for idx, topic := range log.Topics {
+		topics[idx] = ethereum_common.Hash(topic)
 	}
 
 	parsedLog := types.Log{
@@ -822,6 +809,8 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		Removed:     log.Removed,
 		Topics:      topics,
 	}
+
+	metadata := []byte{}
 
 	logEventType := log.Topics[0]
 	switch logEventType {
@@ -845,7 +834,12 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceID:   evmTx.BatchNonceID,
 			}
-			tx.Metadata, _ = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
+			metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
+			if err != nil {
+				bp.logger.Error("failed to marshal metadata", err)
+
+				return nil, err
+			}
 		}
 	case withdrawEventSig:
 		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
@@ -856,13 +850,12 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		}
 
 		if withdraw != nil {
-			txs := []common.BridgingRequestMetadataTransaction{}
-			for _, tx := range withdraw.Receivers {
-				txs = append(txs,
-					common.BridgingRequestMetadataTransaction{
-						Amount:  tx.Amount.Uint64(),
-						Address: []string{tx.Receiver},
-					})
+			txs := make([]common.BridgingRequestMetadataTransaction, len(withdraw.Receivers))
+			for idx, tx := range withdraw.Receivers {
+				txs[idx] = common.BridgingRequestMetadataTransaction{
+					Amount:  tx.Amount.Uint64(),
+					Address: []string{tx.Receiver},
+				}
 			}
 
 			bridgingRequestMetadata := common.BridgingRequestMetadata{
@@ -873,7 +866,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 				FeeAmount:          withdraw.FeeAmount.Uint64(),
 			}
 
-			tx.Metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, bridgingRequestMetadata)
+			metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, bridgingRequestMetadata)
 			if err != nil {
 				bp.logger.Error("failed to marshal metadata", err)
 
@@ -883,10 +876,21 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	default:
 		bp.logger.Error("unknown event type in log", log)
 
-		err := fmt.Errorf("unknown event type in unprocessed log")
-
-		return nil, err
+		return nil, fmt.Errorf("unknown event type in unprocessed log")
 	}
 
-	return tx, nil
+	return &core.EthTx{
+		OriginChainID: originChainID,
+		Priority:      1,
+
+		BlockNumber: log.BlockNumber,
+		BlockHash:   log.BlockHash,
+		Hash:        log.TransactionHash,
+		TxIndex:     log.TransactionIndex,
+		Removed:     log.Removed,
+		LogIndex:    log.LogIndex,
+		Address:     log.Address,
+		Metadata:    metadata,
+		Value:       value,
+	}, nil
 }
