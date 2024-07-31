@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -71,6 +72,20 @@ func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
 func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracleCore.EthTxsProcessor,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
+	bridgingAddress := config.BridgingAddresses.BridgingAddress
+	scAddress := ethgo.HexToAddress(bridgingAddress)
+
+	eventSigs, err := eth.GetNexusEventSignatures()
+	if err != nil {
+		logger.Error("failed to get nexus event signatures", err)
+
+		return nil
+	}
+
+	logFilter := map[ethgo.Address][]ethgo.Hash{
+		scAddress: eventSigs,
+	}
+
 	return &eventTracker.EventTrackerConfig{
 		RPCEndpoint:            config.NodeURL,
 		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
@@ -82,8 +97,8 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 			TxsProcessor: txsProcessor,
 			Logger:       logger,
 		},
-		Logger: logger,
-		// a TODO: Populate LogFilter, with sc address and events to track
+		Logger:    logger,
+		LogFilter: logFilter,
 	}
 }
 

@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 var (
@@ -84,4 +86,22 @@ func CreateAndSaveRelayerEVMPrivateKey(
 	}
 
 	return ethWallet, ethWallet.Save(secretsManager, keyName)
+}
+
+func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	hashes := make([]ethgo.Hash, len(events))
+	for i, ev := range events {
+		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
+	}
+
+	return hashes, nil
+}
+
+func GetNexusEventSignatures() ([]ethgo.Hash, error) {
+	return GetEventSignatures([]string{"Deposit", "Withdraw"})
 }
