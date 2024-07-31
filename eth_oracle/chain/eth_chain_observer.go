@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -75,11 +75,9 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 	bridgingAddress := config.BridgingAddresses.BridgingAddress
 	scAddress := ethgo.HexToAddress(bridgingAddress)
 
-	events := []string{"Deposit", "Withdraw"}
-
-	eventSigs, err := getEventSignatures(events)
+	eventSigs, err := eth.GetNexusEventSignatures()
 	if err != nil {
-		logger.Error("failed to get event signatures", err)
+		logger.Error("failed to get nexus event signatures", err)
 
 		return nil
 	}
@@ -150,18 +148,4 @@ func initOracleState(
 	}
 
 	return db.InsertLastProcessedBlock(blockNumber)
-}
-
-func getEventSignatures(events []string) ([]ethgo.Hash, error) {
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
-	if err != nil {
-		return nil, err
-	}
-
-	hashes := make([]ethgo.Hash, len(events))
-	for i, ev := range events {
-		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
-	}
-
-	return hashes, nil
 }

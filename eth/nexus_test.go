@@ -1,4 +1,4 @@
-package ethtxhelper
+package eth
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/Ethernal-Tech/ethgo"
@@ -38,7 +40,7 @@ func (sub es) AddLog(log *ethgo.Log) error {
 	fmt.Println("AddLog new event")
 	fmt.Printf("%+v\n", log)
 
-	events, _ := getEventSignatures([]string{"Deposit", "Withdraw"})
+	events, _ := GetNexusEventSignatures()
 
 	switch log.Topics[0] {
 	case events[0]:
@@ -56,12 +58,12 @@ func (sub es) AddLog(log *ethgo.Log) error {
 func TestNexus(t *testing.T) {
 	t.Skip()
 
-	wallet, err := NewEthTxWallet(dummyMumbaiTestAccPk)
+	wallet, err := ethtxhelper.NewEthTxWallet(dummyMumbaiTestAccPk)
 	require.NoError(t, err)
 
-	txHelper, err := NewEThTxHelper(
-		WithNodeURL(testNodeURL), WithGasFeeMultiplier(150),
-		WithZeroGasPrice(false), WithDefaultGasLimit(0))
+	txHelper, err := ethtxhelper.NewEThTxHelper(
+		ethtxhelper.WithNodeURL(testNodeURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	require.NoError(t, err)
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -97,7 +99,7 @@ func TestNexus(t *testing.T) {
 
 	tx2, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.Withdraw(txOpts, 1, wallet.addr, []contractbinding.TestGatewayReceiverWithdraw{
+			return contract.Withdraw(txOpts, 1, wallet.GetAddress(), []contractbinding.TestGatewayReceiverWithdraw{
 				{
 					Receiver: "",
 					Amount:   big.NewInt(121),
@@ -126,9 +128,7 @@ func TestNexus(t *testing.T) {
 	// bridgingAddress := "0xABEF000000000000000000000000000000000000"
 	scAddress2 := ethgo.HexToAddress(scAddress)
 
-	events := []string{"Deposit", "Withdraw"}
-
-	eventSigs, err := getEventSignatures(events)
+	eventSigs, err := GetNexusEventSignatures()
 	if err != nil {
 		fmt.Println("failed to get event signatures", err)
 	}
@@ -181,18 +181,4 @@ func TestNexus(t *testing.T) {
 
 	<-context.Background().Done()
 	fmt.Println("Closing...")
-}
-
-func getEventSignatures(events []string) ([]ethgo.Hash, error) {
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
-	if err != nil {
-		return nil, err
-	}
-
-	hashes := make([]ethgo.Hash, len(events))
-	for i, ev := range events {
-		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
-	}
-
-	return hashes, nil
 }
