@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -71,6 +72,21 @@ func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
 func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracleCore.EthTxsProcessor,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
+	bridgingAddress := config.BridgingAddresses.BridgingAddress
+	scAddress := ethgo.HexToAddress(bridgingAddress)
+
+	events := []string{"Deposit", "Withdraw"}
+
+	eventSigs, err := getEventSignatures(events)
+	if err != nil {
+		logger.Error("failed to get event signatures", err)
+
+		return nil
+	}
+
+	logFilter := make(map[ethgo.Address][]ethgo.Hash)
+	logFilter[scAddress] = append(logFilter[scAddress], eventSigs...)
+
 	return &eventTracker.EventTrackerConfig{
 		RPCEndpoint:            config.NodeURL,
 		PollInterval:           config.PoolIntervalMiliseconds * time.Millisecond,
@@ -82,8 +98,8 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 			TxsProcessor: txsProcessor,
 			Logger:       logger,
 		},
-		Logger: logger,
-		// a TODO: Populate LogFilter, with sc address and events to track
+		Logger:    logger,
+		LogFilter: logFilter,
 	}
 }
 
@@ -134,4 +150,18 @@ func initOracleState(
 	}
 
 	return db.InsertLastProcessedBlock(blockNumber)
+}
+
+func getEventSignatures(events []string) ([]ethgo.Hash, error) {
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	hashes := make([]ethgo.Hash, len(events))
+	for i, ev := range events {
+		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
+	}
+
+	return hashes, nil
 }

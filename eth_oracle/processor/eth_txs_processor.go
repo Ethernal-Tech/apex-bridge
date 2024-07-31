@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/ethgo"
+	ethereum_common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -104,7 +108,6 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		invalidTxsCounter int
 	)
 
-	// a TODO: finish this
 	tx := &core.EthTx{
 		OriginChainID: originChainID,
 		Priority:      1,
@@ -116,25 +119,116 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		Removed:     log.Removed,
 		LogIndex:    log.LogIndex,
 		Address:     log.Address,
-		// Value: ,
-		// Metadata: ,
 	}
 
-	// Unpack log here, and check if its a relevant event
-	// will probably use binding UnpackLog or binding.<name>ContractFilterer.Parse<event>(log).
-	// also fetch the transaction.value() using ethtxhelper
-	/*
-		eventABIs := make([]string, 0)
-		abis := make([]abi.ABI, 0, len(eventABIs))
-		for idx, eventABI := range eventABIs {
-			abi, err := abi.JSON(strings.NewReader(eventABI))
-			if err != nil {
-				return fmt.Errorf("failed to create event ABI: %w", err)
+	events, err := getEventSignatures([]string{"Deposit", "Withdraw"})
+	if err != nil {
+		bp.logger.Error("failed to getEventSignatures", err)
+
+		return err
+	}
+
+	depositEventSig := events[0]
+	withdrawEventSig := events[1]
+
+	ethTxHelper := eth.NewEthHelperWrapper(bp.appConfig.Bridge.NodeURL, bp.appConfig.Bridge.DynamicTx, bp.logger)
+
+	ethHelper, err := ethTxHelper.GetEthHelper()
+	if err != nil {
+		bp.logger.Error("failed to get eth helper", err)
+
+		return err
+	}
+
+	transaction, _, err := ethHelper.GetClient().TransactionByHash(bp.ctx, ethereum_common.Hash(log.TransactionHash))
+	if err != nil {
+		bp.logger.Error("failed to get tx by hash", err)
+
+		return err
+	}
+
+	tx.Value = transaction.Value()
+
+	contract, err := contractbinding.NewGateway(
+		common.HexToAddress(bp.appConfig.Bridge.SmartContractAddress),
+		ethHelper.GetClient())
+	if err != nil {
+		bp.logger.Error("failed to get contractbinding gateway", err)
+
+		return err
+	}
+
+	parsedLog := types.Log{
+		Address:     ethereum_common.Address(log.Address),
+		Data:        log.Data,
+		BlockNumber: log.BlockNumber,
+		TxHash:      ethereum_common.Hash(log.TransactionHash),
+		TxIndex:     uint(log.TransactionIndex),
+		BlockHash:   ethereum_common.Hash(log.BlockHash),
+		Index:       uint(log.LogIndex),
+		Removed:     log.Removed,
+		Topics:      []ethereum_common.Hash{},
+	}
+
+	for _, h := range log.Topics {
+		parsedLog.Topics = append(parsedLog.Topics, ethereum_common.Hash(h))
+	}
+
+	logEventType := log.Topics[0]
+	switch logEventType {
+	case depositEventSig:
+		deposit, err := contract.GatewayFilterer.ParseDeposit(parsedLog)
+		if err != nil {
+			bp.logger.Error("failed to parse deposit event", err)
+
+			return err
+		}
+
+		if deposit != nil {
+			batchExecutedMetadata := common.BatchExecutedMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
+				BatchNonceID:   deposit.Raw.BlockNumber,
+			}
+			tx.Metadata, _ = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
+		}
+	case withdrawEventSig:
+		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
+		if err != nil {
+			bp.logger.Error("failed to parse withdraw event", err)
+
+			return err
+		}
+
+		if withdraw != nil {
+			bridgingRequestMetadata := common.BridgingRequestMetadata{
+				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+				DestinationChainID: strconv.FormatUint(uint64(withdraw.DestinationChainId), 10),
+				SenderAddr:         []string{withdraw.Sender.String()},
+				Transactions:       []common.BridgingRequestMetadataTransaction{},
+				FeeAmount:          withdraw.FeeAmount.Uint64(),
+			}
+			for _, tx := range withdraw.Receivers {
+				bridgingRequestMetadata.Transactions = append(bridgingRequestMetadata.Transactions,
+					common.BridgingRequestMetadataTransaction{
+						Amount:  tx.Amount.Uint64(),
+						Address: []string{tx.Receiver},
+					})
 			}
 
-			abis[idx] = abi
+			tx.Metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, bridgingRequestMetadata)
+			if err != nil {
+				bp.logger.Error("failed to marshal metadata", err)
+
+				return err
+			}
 		}
-	*/
+	default:
+		bp.logger.Error("unknown event type in log", log)
+
+		err := fmt.Errorf("unknown event type in unprocessed log")
+
+		return err
+	}
 
 	bp.logger.Debug("Checking if tx is relevant", "tx", tx)
 
@@ -775,4 +869,18 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 	}
 
 	return nil
+}
+
+func getEventSignatures(events []string) ([]ethgo.Hash, error) {
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	hashes := make([]ethgo.Hash, len(events))
+	for i, ev := range events {
+		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
+	}
+
+	return hashes, nil
 }
