@@ -3,12 +3,17 @@ package clisendtx
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
@@ -37,18 +42,54 @@ const (
 	ttlSlotNumberInc = 500
 )
 
+type receiverAmount struct {
+	ReceiverAddr string
+	Amount       uint64
+}
+
+func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
+	txOutputs := make([]cardanowallet.TxOutput, len(receivers))
+	for idx, rec := range receivers {
+		txOutputs[idx] = cardanowallet.TxOutput{
+			Addr:   rec.ReceiverAddr,
+			Amount: rec.Amount,
+		}
+	}
+	return txOutputs
+}
+
+func ToGatewayStruct(receivers []receiverAmount) []contractbinding.IGatewayStructsReceiverWithdraw {
+	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	for idx, rec := range receivers {
+		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
+			Receiver: rec.ReceiverAddr,
+			Amount:   big.NewInt(int64(rec.Amount)),
+		}
+	}
+	return gatewayOutputs
+}
+
 type sendTxParams struct {
-	privateKeyRaw   string
+	txType string // cardano or evm
+
+	// common
+	privateKeyRaw string
+	receivers     []string
+	chainIDDst    string
+	feeAmount     uint64
+
+	// apex
 	ogmiosURLSrc    string
-	receivers       []string
 	networkIDSrc    uint
 	testnetMagicSrc uint
-	chainIDDst      string
 	multisigAddrSrc string
-	feeAmount       uint64
 	ogmiosURLDst    string
 
-	receiversParsed []cardanowallet.TxOutput
+	// nexus
+	gatewayAddress string
+	nexusUrl       string
+
+	receiversParsed []receiverAmount
 	wallet          cardanowallet.IWallet
 }
 
@@ -88,7 +129,7 @@ func (ip *sendTxParams) validateFlags() error {
 
 	ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
 
-	receivers := make([]cardanowallet.TxOutput, 0, len(ip.receivers))
+	receivers := make([]receiverAmount, 0, len(ip.receivers))
 
 	for i, x := range ip.receivers {
 		vals := strings.Split(x, ":")
@@ -101,6 +142,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
+		// TODO:nexus check cardano/evm address
 		if amount < cardanowallet.MinUTxODefaultValue {
 			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
@@ -110,9 +152,9 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
-		receivers = append(receivers, cardanowallet.TxOutput{
-			Addr:   vals[0],
-			Amount: amount,
+		receivers = append(receivers, receiverAmount{
+			ReceiverAddr: vals[0],
+			Amount:       amount,
 		})
 	}
 
@@ -187,6 +229,16 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	if ip.txType == "evm" {
+		return ip.executeEvm(outputter)
+	} else if ip.txType == "cardano" || ip.txType == "" {
+		return ip.executeCardano(outputter)
+	}
+
+	return nil, fmt.Errorf("")
+}
+
+func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkID)
 	txSender := cardanotx.NewBridgingTxSender(
@@ -200,8 +252,10 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 		return nil, err
 	}
 
+	receivers := ToTxOutput(ip.receiversParsed)
+
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(), ip.receiversParsed, ip.feeAmount)
+		context.Background(), ip.chainIDDst, senderAddr.String(), receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +269,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(context.Background(), ip.receiversParsed)
+		err = txSender.WaitForTx(context.Background(), receivers)
 		if err != nil {
 			return nil, err
 		}
@@ -226,5 +280,44 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 		ChainID:    ip.chainIDDst,
 		Receipts:   ip.receiversParsed,
 		TxHash:     txHash,
+	}, nil
+}
+
+func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	txHelper, err := ethtxhelper.NewEThTxHelper(
+		ethtxhelper.WithNodeURL(ip.nexusUrl), ethtxhelper.WithGasFeeMultiplier(150), // TODO:nexus check fee params
+		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewGateway(common.HexToAddress(ip.gatewayAddress), txHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{},
+		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), big.NewInt(150))
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
+	if types.ReceiptStatusSuccessful != receipt.Status {
+		return nil, err
+	}
+
+	return CmdResult{
+		SenderAddr: wallet.GetAddress().String(),
+		ChainID:    ip.chainIDDst,
+		Receipts:   ip.receiversParsed,
+		TxHash:     receipt.TxHash.String(),
 	}, nil
 }
