@@ -28,8 +28,8 @@ func (*BatchExecutionFailedProcessorImpl) GetType() common.BridgingTxType {
 func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(
 	claims *oracleCore.BridgeClaims, tx *core.BridgeExpectedEthTx, appConfig *oracleCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BatchExecutedMetadata](
-		common.MetadataEncodingTypeJSON, tx.Metadata)
+	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+		tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
@@ -50,7 +50,7 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
-	claims *oracleCore.BridgeClaims, tx *core.BridgeExpectedEthTx, metadata *common.BatchExecutedMetadata,
+	claims *oracleCore.BridgeClaims, tx *core.BridgeExpectedEthTx, metadata *core.BatchExecutedEthMetadata,
 ) {
 	claim := oracleCore.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
@@ -65,7 +65,7 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(
-	tx *core.BridgeExpectedEthTx, metadata *common.BatchExecutedMetadata, appConfig *oracleCore.AppConfig,
+	tx *core.BridgeExpectedEthTx, metadata *core.BatchExecutedEthMetadata, appConfig *oracleCore.AppConfig,
 ) error {
 	// no validation needed
 	return nil

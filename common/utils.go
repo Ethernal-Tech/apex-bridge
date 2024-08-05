@@ -105,3 +105,36 @@ func Keccak256(v ...[]byte) ([]byte, error) {
 
 	return h.Sum(nil), nil
 }
+
+const (
+	DfmDecimals = 6
+	WeiDecimals = 18
+)
+
+func DfmToWei(dfm *big.Int) *big.Int {
+	wei, _ := new(big.Int).SetString(dfm.String(), 10)
+	base := big.NewInt(10)
+
+	return wei.Mul(wei, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil))
+}
+
+func WeiToDfm(wei *big.Int) *big.Int {
+	dfm, _ := new(big.Int).SetString(wei.String(), 10)
+	base := big.NewInt(10)
+	dfm.Div(dfm, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil))
+
+	return dfm
+}
+
+func WeiToDfmCeil(wei *big.Int) *big.Int {
+	dfm, _ := new(big.Int).SetString(wei.String(), 10)
+	base := big.NewInt(10)
+	mod := big.NewInt(0)
+	dfm.DivMod(dfm, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil), mod)
+
+	if mod.Cmp(big.NewInt(0)) != 0 {
+		dfm.Add(dfm, big.NewInt(1))
+	}
+
+	return dfm
+}

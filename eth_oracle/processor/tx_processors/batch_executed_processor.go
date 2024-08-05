@@ -28,8 +28,8 @@ func (*BatchExecutedProcessorImpl) GetType() common.BridgingTxType {
 func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 	claims *oracleCore.BridgeClaims, tx *core.EthTx, appConfig *oracleCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BatchExecutedMetadata](
-		common.MetadataEncodingTypeJSON, tx.Metadata)
+	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+		tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
@@ -57,7 +57,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (*BatchExecutedProcessorImpl) validate(
-	tx *core.EthTx, metadata *common.BatchExecutedMetadata, appConfig *oracleCore.AppConfig,
+	tx *core.EthTx, metadata *core.BatchExecutedEthMetadata, appConfig *oracleCore.AppConfig,
 ) error {
 	return nil
 }

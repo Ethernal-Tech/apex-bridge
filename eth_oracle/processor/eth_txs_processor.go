@@ -828,12 +828,12 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 				return nil, err
 			}
 
-			batchExecutedMetadata := common.BatchExecutedMetadata{
+			batchExecutedMetadata := core.BatchExecutedEthMetadata{
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceID:   evmTx.BatchNonceID,
 			}
 
-			metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
+			metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
 			if err != nil {
 				bp.logger.Error("failed to marshal metadata", err)
 
@@ -849,23 +849,23 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		}
 
 		if withdraw != nil {
-			txs := make([]common.BridgingRequestMetadataTransaction, len(withdraw.Receivers))
+			txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
 			for idx, tx := range withdraw.Receivers {
-				txs[idx] = common.BridgingRequestMetadataTransaction{
-					Amount:  tx.Amount.Uint64(),
-					Address: []string{tx.Receiver},
+				txs[idx] = core.BridgingRequestEthMetadataTransaction{
+					Amount:  tx.Amount,
+					Address: tx.Receiver,
 				}
 			}
 
-			bridgingRequestMetadata := common.BridgingRequestMetadata{
+			bridgingRequestMetadata := core.BridgingRequestEthMetadata{
 				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 				DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
-				SenderAddr:         []string{withdraw.Sender.String()},
+				SenderAddr:         withdraw.Sender.String(),
 				Transactions:       txs,
-				FeeAmount:          withdraw.FeeAmount.Uint64(),
+				FeeAmount:          withdraw.FeeAmount,
 			}
 
-			metadata, err = common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, bridgingRequestMetadata)
+			metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
 			if err != nil {
 				bp.logger.Error("failed to marshal metadata", err)
 

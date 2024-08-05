@@ -11,11 +11,13 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	oracleUtils "github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -159,13 +161,13 @@ func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.
 func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
-	_, exists := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
-	if !exists {
-		return fmt.Errorf("source chain not registered: %v", requestBody.SourceChainID)
+	cardanoSrcConfig, _ := oracleUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
+	if cardanoSrcConfig == nil {
+		return fmt.Errorf("origin chain not registered: %v", requestBody.SourceChainID)
 	}
 
-	destinationChainConfig := c.oracleConfig.CardanoChains[requestBody.DestinationChainID]
-	if destinationChainConfig == nil {
+	cardanoDestConfig, ethDestConfig := oracleUtils.GetChainConfig(c.oracleConfig, requestBody.DestinationChainID)
+	if cardanoDestConfig == nil && ethDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}
 
@@ -180,25 +182,39 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	transactions := make([]request.CreateBridgingTxTransactionRequest, 0, len(requestBody.Transactions))
 
 	for _, receiver := range requestBody.Transactions {
-		if receiver.Amount < c.oracleConfig.BridgingSettings.UtxoMinValue {
-			foundAUtxoValueBelowMinimumValue = true
+		if cardanoDestConfig != nil {
+			if receiver.Amount < c.oracleConfig.BridgingSettings.UtxoMinValue {
+				foundAUtxoValueBelowMinimumValue = true
 
-			break
-		}
+				break
+			}
 
-		_, err := wallet.NewAddress(receiver.Addr)
-		if err != nil {
-			foundAnInvalidReceiverAddr = true
+			addr, err := wallet.NewAddress(receiver.Addr)
+			if err != nil || addr.GetNetwork() != cardanoDestConfig.NetworkID {
+				foundAnInvalidReceiverAddr = true
 
-			break
-		}
+				break
+			}
 
-		// if fee address is specified in transactions just add amount to the fee sum
-		// otherwise keep this transaction
-		if receiver.Addr == destinationChainConfig.BridgingAddresses.FeeAddress {
-			feeSum += receiver.Amount
-		} else {
-			transactions = append(transactions, receiver)
+			// if fee address is specified in transactions just add amount to the fee sum
+			// otherwise keep this transaction
+			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+				feeSum += receiver.Amount
+			} else {
+				transactions = append(transactions, receiver)
+			}
+		} else if ethDestConfig != nil {
+			if !goEthCommon.IsHexAddress(receiver.Addr) {
+				foundAnInvalidReceiverAddr = true
+
+				break
+			}
+
+			if receiver.Addr == ethDestConfig.BridgingAddresses.FeeAddress {
+				feeSum += receiver.Amount
+			} else {
+				transactions = append(transactions, receiver)
+			}
 		}
 	}
 
