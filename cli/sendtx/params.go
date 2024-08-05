@@ -27,6 +27,7 @@ const (
 	multisigAddrSrcFlag = "addr-multisig-src"
 	feeAmountFlag       = "fee"
 	ogmiosURLDstFlag    = "ogmios-dst"
+	txTypeFlag          = "tx-type"
 
 	privateKeyFlagDesc      = "wallet private signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
@@ -37,6 +38,7 @@ const (
 	multisigAddrSrcFlagDesc = "source multisig address"
 	feeAmountFlagDesc       = "amount for multisig fee addr"
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
+	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
@@ -226,6 +228,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		0,
 		networkIDSrcFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&ip.txType,
+		txTypeFlag,
+		"",
+		txTypeFlagDesc,
+	)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -313,6 +322,9 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	if types.ReceiptStatusSuccessful != receipt.Status {
 		return nil, err
 	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", receipt.TxHash.String())))
+	outputter.WriteOutput()
 
 	return CmdResult{
 		SenderAddr: wallet.GetAddress().String(),
