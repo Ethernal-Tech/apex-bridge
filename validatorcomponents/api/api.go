@@ -71,9 +71,20 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	err := api.server.ListenAndServe()
+	retryWait := time.Second
+	retriesMaxCount := 5
+	ctx := context.Background()
+
+	err := utils.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
+		err := api.server.ListenAndServe()
+
+		return (err == nil || err == http.ErrServerClosed), err
+	})
+
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error while trying to start api server", "err", err)
+
+		return
 	}
 
 	api.logger.Debug("Started api")
