@@ -28,6 +28,8 @@ const (
 	feeAmountFlag       = "fee"
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
+	gatewayAddressFlag  = "gateway-addr"
+	nexusUrlFlag        = "nexus-url"
 
 	privateKeyFlagDesc      = "wallet private signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
@@ -39,6 +41,8 @@ const (
 	feeAmountFlagDesc       = "amount for multisig fee addr"
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
+	gatewayAddressFlagDesc  = "address of gateway contract"
+	nexusUrlFlagDesc        = "nexus chain URL"
 
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
@@ -96,40 +100,59 @@ type sendTxParams struct {
 }
 
 func (ip *sendTxParams) validateFlags() error {
+	if ip.txType != "" && ip.txType != "evm" && ip.txType != "cardano" {
+		return fmt.Errorf("invalid --%s type not supported", txTypeFlag)
+	}
+
 	if ip.privateKeyRaw == "" {
 		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
-	}
-
-	if ip.ogmiosURLSrc == "" || !common.IsValidURL(ip.ogmiosURLSrc) {
-		return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, ip.ogmiosURLSrc)
-	}
-
-	if ip.ogmiosURLDst != "" && !common.IsValidURL(ip.ogmiosURLDst) {
-		return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
-	}
-
-	if ip.chainIDDst == "" {
-		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	if len(ip.receivers) == 0 {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if ip.multisigAddrSrc == "" {
-		return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
+	if ip.chainIDDst == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	if ip.feeAmount < cardanowallet.MinUTxODefaultValue {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 	}
 
-	bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
-	if err != nil || len(bytes) != 32 {
-		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
-	}
+	if ip.txType == "evm" {
+		bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
+		if err != nil || len(bytes) != 20 {
+			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
+		}
 
-	ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+		if ip.gatewayAddress == "" {
+			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
+		}
+
+		if ip.nexusUrl == "" {
+			return fmt.Errorf("--%s not specified", nexusUrlFlag)
+		}
+	} else {
+		bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
+		if err != nil || len(bytes) != 32 {
+			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
+		}
+
+		ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+
+		if ip.ogmiosURLSrc == "" || !common.IsValidURL(ip.ogmiosURLSrc) {
+			return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, ip.ogmiosURLSrc)
+		}
+
+		if ip.multisigAddrSrc == "" {
+			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
+		}
+
+		if ip.ogmiosURLDst != "" && !common.IsValidURL(ip.ogmiosURLDst) {
+			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
+		}
+	}
 
 	receivers := make([]receiverAmount, 0, len(ip.receivers))
 
