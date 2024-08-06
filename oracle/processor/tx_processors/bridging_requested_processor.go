@@ -87,19 +87,29 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 			continue
 		}
 
+		receiverAmount := new(big.Int).SetUint64(receiver.Amount)
+		if ethDestConfig != nil {
+			receiverAmount = common.DfmToWei(receiverAmount)
+		}
+
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
-			Amount:             new(big.Int).SetUint64(receiver.Amount),
+			Amount:             receiverAmount,
 		})
 
-		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
+		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
+	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
+	if ethDestConfig != nil {
+		feeAmount = common.DfmToWei(feeAmount)
+	}
+
+	totalAmount.Add(totalAmount, feeAmount)
 
 	receivers = append(receivers, core.BridgingRequestReceiver{
 		DestinationAddress: destFeeAddress,
-		Amount:             new(big.Int).SetUint64(metadata.FeeAmount),
+		Amount:             feeAmount,
 	})
 
 	claim := core.BridgingRequestClaim{
@@ -154,6 +164,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
+	cardanoSrcConfig, _ := utils.GetChainConfig(appConfig, tx.OriginChainID)
+	if cardanoSrcConfig == nil {
+		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
+	}
+
 	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
 	if cardanoDestConfig == nil && ethDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
@@ -178,7 +193,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 				break
 			}
-			// BridgingRequestedProcessorImpl must know for which chain it operates
 
 			addr, err := wallet.NewAddress(receiverAddr)
 			if err != nil || addr.GetNetwork() != cardanoDestConfig.NetworkID {
@@ -207,7 +221,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		}
 	}
 
-	if cardanoDestConfig != nil && foundAUtxoValueBelowMinimumValue {
+	if foundAUtxoValueBelowMinimumValue {
 		return fmt.Errorf("found a utxo value below minimum value in metadata receivers: %v", metadata)
 	}
 
