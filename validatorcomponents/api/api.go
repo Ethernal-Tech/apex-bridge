@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/gorilla/handlers"
@@ -71,9 +72,16 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	err := api.server.ListenAndServe()
+	err := common.ExecuteWithRetry(api.ctx, 5, time.Second, func(context.Context) (bool, error) {
+		err := api.server.ListenAndServe()
+
+		return (err == nil || err == http.ErrServerClosed), err
+	})
+
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error while trying to start api server", "err", err)
+
+		return
 	}
 
 	api.logger.Debug("Started api")
