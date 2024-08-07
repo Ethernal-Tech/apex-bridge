@@ -121,10 +121,10 @@ func (ip *sendTxParams) validateFlags() error {
 	}
 
 	if ip.txType == "evm" {
-		bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
-		if err != nil || len(bytes) != 20 {
-			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
-		}
+		// bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
+		// if err != nil || len(bytes) != 20 {
+		// 	return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
+		// }
 
 		if ip.gatewayAddress == "" {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
@@ -167,9 +167,10 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		// TODO:nexus check cardano/evm address
-		if amount < cardanowallet.MinUTxODefaultValue {
-			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
+		if ip.txType != "evm" {
+			if amount < cardanowallet.MinUTxODefaultValue {
+				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
+			}
 		}
 
 		_, err = cardanowallet.NewAddress(vals[0])
@@ -190,17 +191,17 @@ func (ip *sendTxParams) validateFlags() error {
 
 func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
+		&ip.txType,
+		txTypeFlag,
+		"",
+		txTypeFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&ip.privateKeyRaw,
 		privateKeyFlag,
 		"",
 		privateKeyFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.ogmiosURLSrc,
-		ogmiosURLSrcFlag,
-		"",
-		ogmiosURLSrcFlagDesc,
 	)
 
 	cmd.Flags().StringArrayVar(
@@ -210,25 +211,11 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		receiverFlagDesc,
 	)
 
-	cmd.Flags().UintVar(
-		&ip.testnetMagicSrc,
-		testnetMagicFlag,
-		0,
-		testnetMagicFlagDesc,
-	)
-
 	cmd.Flags().StringVar(
 		&ip.chainIDDst,
 		chainIDFlag,
 		"",
 		chainIDFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.multisigAddrSrc,
-		multisigAddrSrcFlag,
-		"",
-		multisigAddrSrcFlagDesc,
 	)
 
 	cmd.Flags().Uint64Var(
@@ -239,10 +226,10 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.ogmiosURLDst,
-		ogmiosURLDstFlag,
+		&ip.ogmiosURLSrc,
+		ogmiosURLSrcFlag,
 		"",
-		ogmiosURLDstFlagDesc,
+		ogmiosURLSrcFlagDesc,
 	)
 
 	cmd.Flags().UintVar(
@@ -252,11 +239,39 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		networkIDSrcFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&ip.testnetMagicSrc,
+		testnetMagicFlag,
+		0,
+		testnetMagicFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
-		&ip.txType,
-		txTypeFlag,
+		&ip.multisigAddrSrc,
+		multisigAddrSrcFlag,
 		"",
-		txTypeFlagDesc,
+		multisigAddrSrcFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.ogmiosURLDst,
+		ogmiosURLDstFlag,
+		"",
+		ogmiosURLDstFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.gatewayAddress,
+		gatewayAddressFlag,
+		"",
+		gatewayAddressFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.nexusUrl,
+		nexusUrlFlag,
+		"",
+		nexusUrlFlagDesc,
 	)
 }
 
@@ -322,7 +337,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(ip.nexusUrl), ethtxhelper.WithGasFeeMultiplier(150), // TODO:nexus check fee params
+		ethtxhelper.WithNodeURL(ip.nexusUrl), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	if err != nil {
 		return nil, err
