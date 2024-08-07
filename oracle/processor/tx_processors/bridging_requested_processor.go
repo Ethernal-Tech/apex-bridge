@@ -88,10 +88,6 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		}
 
 		receiverAmount := new(big.Int).SetUint64(receiver.Amount)
-		if ethDestConfig != nil {
-			receiverAmount = common.DfmToWei(receiverAmount)
-		}
-
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
 			Amount:             receiverAmount,
@@ -101,9 +97,6 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	}
 
 	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
-	if ethDestConfig != nil {
-		feeAmount = common.DfmToWei(feeAmount)
-	}
 
 	totalAmount.Add(totalAmount, feeAmount)
 
