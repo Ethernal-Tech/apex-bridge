@@ -146,11 +146,11 @@ func newEVMSmartContractTransaction(
 
 			val, exists := sourceAddrTxMap[key]
 			if !exists {
-				val.Amount = new(big.Int).Set(recv.Amount)
+				val.Amount = common.DfmToWei(new(big.Int).Set(recv.Amount))
 				val.Address = common.HexToAddress(recv.DestinationAddress)
 				val.SourceID = tx.SourceChainId
 			} else {
-				val.Amount.Add(val.Amount, recv.Amount)
+				val.Amount.Add(val.Amount, common.DfmToWei(recv.Amount))
 			}
 
 			sourceAddrTxMap[key] = val
