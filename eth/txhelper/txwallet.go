@@ -55,6 +55,21 @@ func NewEthTxWallet(pk string) (*EthTxWallet, error) {
 	}, nil
 }
 
+func NewEthTxWalletFromPk(bytesString string) (*EthTxWallet, error) {
+	privateKey, err := crypto.ToECDSA([]byte(bytesString))
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the Ethereum address from the public key
+	ethereumAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	return &EthTxWallet{
+		privateKey: privateKey,
+		addr:       ethereumAddress,
+	}, nil
+}
+
 func GenerateNewEthTxWallet() (*EthTxWallet, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {

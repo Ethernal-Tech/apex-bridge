@@ -331,7 +331,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 }
 
 func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
+	wallet, err := ethtxhelper.NewEthTxWalletFromPk(ip.privateKeyRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -353,12 +353,12 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), big.NewInt(150))
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("4 %v", err)
 	}
 
 	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if types.ReceiptStatusSuccessful != receipt.Status {
-		return nil, err
+		return nil, fmt.Errorf("5 %v", err)
 	}
 
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", receipt.TxHash.String())))
