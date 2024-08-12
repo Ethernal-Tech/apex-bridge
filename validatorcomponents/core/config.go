@@ -103,6 +103,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
 			StartBlockNumber:        ecConfig.StartBlockNumber,
 			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
+			DynamicTx:               ecConfig.DynamicTx,
 		}
 
 		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
