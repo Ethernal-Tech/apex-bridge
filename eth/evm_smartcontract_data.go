@@ -8,30 +8,30 @@ import (
 )
 
 var (
-	txAbi, _ = abi.NewType("tuple", "EVMSmartContractTransaction", []abi.ArgumentMarshaling{
+	txAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
-			Name: "BatchNonceID",
+			Name: "batchId",
 			Type: "uint64",
 		},
 		{
-			Name: "TTL",
+			Name: "ttlExpired",
 			Type: "uint64",
 		},
 		{
-			Name:         "Receivers",
+			Name:         "_receivers",
 			Type:         "tuple[]",
-			InternalType: "EVMSmartContractTransactionReceiver[]",
+			InternalType: "struct IGatewayStructs.ReceiverDeposit[]",
 			Components: []abi.ArgumentMarshaling{
 				{
-					Name: "SourceID",
+					Name: "sourceChainId",
 					Type: "uint8",
 				},
 				{
-					Name: "Address",
+					Name: "receiver",
 					Type: "address",
 				},
 				{
-					Name: "Amount",
+					Name: "amount",
 					Type: "uint256",
 				},
 			},
@@ -40,15 +40,15 @@ var (
 )
 
 type EVMSmartContractTransactionReceiver struct {
-	SourceID uint8          `json:"sourceId"`
-	Address  common.Address `json:"addr"`
-	Amount   *big.Int       `json:"amount"`
+	SourceID uint8          `json:"sourceId" abi:"sourceChainId"`
+	Address  common.Address `json:"addr" abi:"receiver"`
+	Amount   *big.Int       `json:"amount" abi:"amount"`
 }
 
 type EVMSmartContractTransaction struct {
-	BatchNonceID uint64                                `json:"batchNonceId"`
-	TTL          uint64                                `json:"ttl"`
-	Receivers    []EVMSmartContractTransactionReceiver `json:"receivers"`
+	BatchNonceID uint64                                `json:"batchNonceId" abi:"batchId"`
+	TTL          uint64                                `json:"ttl" abi:"ttlExpired"`
+	Receivers    []EVMSmartContractTransactionReceiver `json:"receivers" abi:"_receivers"`
 }
 
 func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction, error) {
