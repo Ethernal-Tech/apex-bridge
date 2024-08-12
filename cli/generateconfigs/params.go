@@ -618,6 +618,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				TTLBlockNumberInc:       p.nexusTTLBlockNumberInc,
 				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
+				DynamicTx:               false,
 			},
 		},
 		Bridge: oCore.BridgeConfig{

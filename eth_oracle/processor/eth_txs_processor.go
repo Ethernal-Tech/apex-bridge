@@ -109,7 +109,7 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 
 	tx, err := bp.logToTx(originChainID, log)
 	if err != nil {
-		bp.logger.Error("failed to convert log into tx", err)
+		bp.logger.Error("failed to convert log into tx", "err", err)
 
 		return err
 	}
@@ -188,7 +188,8 @@ func (bp *EthTxsProcessorImpl) Start() {
 func (bp *EthTxsProcessorImpl) getTxProcessor(metadataJSON []byte) (
 	core.EthTxProcessor, error,
 ) {
-	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeJSON, metadataJSON)
+	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+		metadataJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,8 @@ func (bp *EthTxsProcessorImpl) getTxProcessor(metadataJSON []byte) (
 func (bp *EthTxsProcessorImpl) getFailedTxProcessor(metadataJSON []byte) (
 	core.EthTxFailedProcessor, error,
 ) {
-	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeJSON, metadataJSON)
+	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+		metadataJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -758,7 +760,7 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*core.EthTx, error) {
 	events, err := eth.GetNexusEventSignatures()
 	if err != nil {
-		bp.logger.Error("failed to get nexus event signatures", err)
+		bp.logger.Error("failed to get nexus event signatures", "err", err)
 
 		return nil, err
 	}
@@ -766,27 +768,34 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	depositEventSig := events[0]
 	withdrawEventSig := events[1]
 
-	ethTxHelper := eth.NewEthHelperWrapper(bp.appConfig.Bridge.NodeURL, bp.appConfig.Bridge.DynamicTx, bp.logger)
+	ethConfig, exists := bp.appConfig.EthChains[originChainID]
+	if !exists {
+		bp.logger.Error("originChainID not registered", "originChainID", originChainID)
+
+		return nil, fmt.Errorf("originChainID not registered. originChainID: %s", originChainID)
+	}
+
+	ethTxHelper := eth.NewEthHelperWrapper(ethConfig.NodeURL, ethConfig.DynamicTx, bp.logger)
 
 	ethHelper, err := ethTxHelper.GetEthHelper()
 	if err != nil {
-		bp.logger.Error("failed to get eth helper", err)
+		bp.logger.Error("failed to get eth helper", "err", err)
 
 		return nil, err
 	}
 
 	transaction, _, err := ethHelper.GetClient().TransactionByHash(bp.ctx, ethereum_common.Hash(log.TransactionHash))
 	if err != nil {
-		bp.logger.Error("failed to get tx by hash", err)
+		bp.logger.Error("failed to get tx by hash", "err", err)
 
 		return nil, err
 	}
 
 	contract, err := contractbinding.NewGateway(
-		common.HexToAddress(bp.appConfig.Bridge.SmartContractAddress),
+		common.HexToAddress(ethConfig.BridgingAddresses.BridgingAddress),
 		ethHelper.GetClient())
 	if err != nil {
-		bp.logger.Error("failed to get contractbinding gateway", err)
+		bp.logger.Error("failed to get contractbinding gateway", "err", err)
 
 		return nil, err
 	}
@@ -815,7 +824,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	case depositEventSig:
 		deposit, err := contract.GatewayFilterer.ParseDeposit(parsedLog)
 		if err != nil {
-			bp.logger.Error("failed to parse deposit event", err)
+			bp.logger.Error("failed to parse deposit event", "err", err)
 
 			return nil, err
 		}
@@ -823,7 +832,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		if deposit != nil {
 			evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
 			if err != nil {
-				bp.logger.Error("failed to create new evm smart contract tx", err)
+				bp.logger.Error("failed to create new evm smart contract tx", "err", err)
 
 				return nil, err
 			}
@@ -835,7 +844,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 
 			metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
 			if err != nil {
-				bp.logger.Error("failed to marshal metadata", err)
+				bp.logger.Error("failed to marshal metadata", "err", err)
 
 				return nil, err
 			}
@@ -843,7 +852,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	case withdrawEventSig:
 		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
 		if err != nil {
-			bp.logger.Error("failed to parse withdraw event", err)
+			bp.logger.Error("failed to parse withdraw event", "err", err)
 
 			return nil, err
 		}
@@ -867,13 +876,13 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 
 			metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
 			if err != nil {
-				bp.logger.Error("failed to marshal metadata", err)
+				bp.logger.Error("failed to marshal metadata", "err", err)
 
 				return nil, err
 			}
 		}
 	default:
-		bp.logger.Error("unknown event type in log", log)
+		bp.logger.Error("unknown event type in log", "log", log)
 
 		return nil, fmt.Errorf("unknown event type in unprocessed log")
 	}
