@@ -152,22 +152,22 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			{
 				SourceID: 1,
 				Address:  common.HexToAddress("0xff"),
-				Amount:   new(big.Int).SetUint64(10),
+				Amount:   common.DfmToWei(new(big.Int).SetUint64(10)),
 			},
 			{
 				SourceID: 2,
 				Address:  common.HexToAddress("0xf0"),
-				Amount:   new(big.Int).SetUint64(15),
+				Amount:   common.DfmToWei(new(big.Int).SetUint64(15)),
 			},
 			{
 				SourceID: 2,
 				Address:  common.HexToAddress("0xfa"),
-				Amount:   new(big.Int).SetUint64(200),
+				Amount:   common.DfmToWei(new(big.Int).SetUint64(200)),
 			},
 			{
 				SourceID: 2,
 				Address:  common.HexToAddress("0xff"),
-				Amount:   new(big.Int).SetUint64(111),
+				Amount:   common.DfmToWei(new(big.Int).SetUint64(111)),
 			},
 		},
 	}, result)

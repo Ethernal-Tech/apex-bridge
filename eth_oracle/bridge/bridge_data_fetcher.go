@@ -57,12 +57,12 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 				return nil, fmt.Errorf("failed to create txHash. err: %w", err)
 			}
 
-			expectedTxMetada := common.BatchExecutedMetadata{
+			expectedTxMetadata := core.BatchExecutedEthMetadata{
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
 				BatchNonceID:   tx.BatchNonceID,
 			}
 
-			txMetadata, err := common.MarshalMetadataMap(common.MetadataEncodingTypeJSON, expectedTxMetada)
+			txMetadata, err := core.MarshalEthMetadata(expectedTxMetadata)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal metadata. err: %w", err)
 			}
