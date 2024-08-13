@@ -48,6 +48,8 @@ const (
 	ttlSlotNumberInc = 500
 )
 
+var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
+
 type receiverAmount struct {
 	ReceiverAddr string
 	Amount       *big.Int
@@ -124,6 +126,10 @@ func (ip *sendTxParams) validateFlags() error {
 	}
 
 	if ip.txType == "evm" {
+		if ip.feeAmount.Cmp(minNexusBridgingFee) <= 0 {
+			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
+		}
+
 		if ip.gatewayAddress == "" {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
