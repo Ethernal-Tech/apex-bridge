@@ -116,10 +116,6 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if ip.feeAmount < 0 {
-		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
-	}
-
 	if ip.txType == "evm" {
 		if ip.gatewayAddress == "" {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
@@ -337,6 +333,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
+		// TODO: Estimate gas manually until https://github.com/ethereum/go-ethereum/issues/29798 is implemented
 		ethtxhelper.WithNodeURL(ip.nexusUrl), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	if err != nil {
@@ -348,9 +345,19 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
+	sumAmount := func(receivers []receiverAmount) *big.Int {
+		amount := new(big.Int).SetUint64(0)
+		for _, rcv := range receivers {
+			amount.Add(amount, rcv.Amount)
+		}
+		return amount
+	}
+
+	feeAmount := new(big.Int).SetUint64(ip.feeAmount)
+
 	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
 		From:  wallet.GetAddress(),
-		Value: ip.receiversParsed[0].Amount,
+		Value: feeAmount.Add(feeAmount, sumAmount(ip.receiversParsed)),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), new(big.Int).SetUint64(ip.feeAmount))
