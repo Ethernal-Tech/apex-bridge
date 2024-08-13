@@ -784,13 +784,6 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		return nil, err
 	}
 
-	transaction, _, err := ethHelper.GetClient().TransactionByHash(bp.ctx, ethereum_common.Hash(log.TransactionHash))
-	if err != nil {
-		bp.logger.Error("failed to get tx by hash", "err", err)
-
-		return nil, err
-	}
-
 	contract, err := contractbinding.NewGateway(
 		common.HexToAddress(ethConfig.BridgingAddresses.BridgingAddress),
 		ethHelper.GetClient())
@@ -899,6 +892,5 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		LogIndex:    log.LogIndex,
 		Address:     log.Address,
 		Metadata:    metadata,
-		Value:       transaction.Value(),
 	}, nil
 }
