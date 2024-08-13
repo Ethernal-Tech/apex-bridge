@@ -82,7 +82,7 @@ type sendTxParams struct {
 	privateKeyRaw string
 	receivers     []string
 	chainIDDst    string
-	feeAmount     uint64
+	feeString     string
 
 	// apex
 	ogmiosURLSrc    string
@@ -95,6 +95,7 @@ type sendTxParams struct {
 	gatewayAddress string
 	nexusUrl       string
 
+	feeAmount       *big.Int
 	receiversParsed []receiverAmount
 	wallet          cardanowallet.IWallet
 }
@@ -116,6 +117,12 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
+	if ip.feeString[0:2] == "0x" {
+		ip.feeAmount, _ = new(big.Int).SetString(ip.feeString, 16)
+	} else {
+		ip.feeAmount, _ = new(big.Int).SetString(ip.feeString, 10)
+	}
+
 	if ip.txType == "evm" {
 		if ip.gatewayAddress == "" {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
@@ -125,7 +132,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", nexusUrlFlag)
 		}
 	} else {
-		if ip.feeAmount < cardanowallet.MinUTxODefaultValue {
+		if ip.feeAmount.Uint64() < cardanowallet.MinUTxODefaultValue {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
@@ -213,10 +220,10 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
-	cmd.Flags().Uint64Var(
-		&ip.feeAmount,
+	cmd.Flags().StringVar(
+		&ip.feeString,
 		feeAmountFlag,
-		defaultFeeAmount,
+		"0",
 		feeAmountFlagDesc,
 	)
 
@@ -298,7 +305,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	receivers := ToTxOutput(ip.receiversParsed)
 
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(), receivers, ip.feeAmount)
+		context.Background(), ip.chainIDDst, senderAddr.String(), receivers, ip.feeAmount.Uint64())
 	if err != nil {
 		return nil, err
 	}
@@ -353,14 +360,12 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return amount
 	}
 
-	feeAmount := new(big.Int).SetUint64(ip.feeAmount)
-
 	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
 		From:  wallet.GetAddress(),
-		Value: feeAmount.Add(feeAmount, sumAmount(ip.receiversParsed)),
+		Value: ip.feeAmount.Add(ip.feeAmount, sumAmount(ip.receiversParsed)),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), new(big.Int).SetUint64(ip.feeAmount))
+			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), ip.feeAmount)
 		})
 	if err != nil {
 		return nil, fmt.Errorf("%v", err)
