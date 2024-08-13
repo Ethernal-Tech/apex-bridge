@@ -352,17 +352,8 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	sumAmount := func(receivers []receiverAmount) *big.Int {
-		amount := new(big.Int).SetUint64(0)
-		for _, rcv := range receivers {
-			amount.Add(amount, rcv.Amount)
-		}
-		return amount
-	}
-
 	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
-		From:  wallet.GetAddress(),
-		Value: ip.feeAmount.Add(ip.feeAmount, sumAmount(ip.receiversParsed)),
+		From: wallet.GetAddress(),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), ip.feeAmount)
