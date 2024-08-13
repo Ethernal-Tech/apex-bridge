@@ -9,7 +9,6 @@ import (
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -368,10 +367,16 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
 			}
 
-			multisigAddr, feeAddr, err := getCardanoAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), chainConfig.NetworkMagic, validatorsData)
+			multisigPolicyScript, multisigFeePolicyScript, err := eth.GetPolicyScripts(validatorsData, logger)
 			if err != nil {
-				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
+				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
+			}
+
+			multisigAddr, feeAddr, err := eth.GetMultisigAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
+				multisigPolicyScript, multisigFeePolicyScript)
+			if err != nil {
+				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
 			if multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
@@ -431,45 +436,4 @@ func getAddressesMap(cardanoChainConfig map[string]*oracleCore.CardanoChainConfi
 	}
 
 	return result
-}
-
-func getCardanoAddresses(
-	cardanoCliBinary string, networkMagic uint32, validatorsData []eth.ValidatorChainData,
-) (string, string, error) {
-	multisigKeyHashes := make([]string, len(validatorsData))
-	multisigFeeKeyHashes := make([]string, len(validatorsData))
-
-	for i, x := range validatorsData {
-		keyHash, err := wallet.GetKeyHash(x.Key[0].Bytes())
-		if err != nil {
-			return "", "", err
-		}
-
-		keyHashFee, err := wallet.GetKeyHash(x.Key[1].Bytes())
-		if err != nil {
-			return "", "", err
-		}
-
-		multisigKeyHashes[i] = keyHash
-		multisigFeeKeyHashes[i] = keyHashFee
-	}
-
-	multisigPolicyScript := wallet.NewPolicyScript(
-		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
-	multisigFeePolicyScript := wallet.NewPolicyScript(
-		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
-
-	multisigAddress, err := cardanotx.GetAddressFromPolicyScript(
-		cardanoCliBinary, uint(networkMagic), multisigPolicyScript)
-	if err != nil {
-		return "", "", err
-	}
-
-	multisigFeeAddress, err := cardanotx.GetAddressFromPolicyScript(
-		cardanoCliBinary, uint(networkMagic), multisigFeePolicyScript)
-	if err != nil {
-		return "", "", err
-	}
-
-	return multisigAddress, multisigFeeAddress, nil
 }

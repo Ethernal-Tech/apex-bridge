@@ -90,8 +90,9 @@ func (bts *BridgingTxSender) CreateTx(
 		},
 	}
 
-	inputs, err := cardanowallet.GetUTXOsForAmount(
-		ctx, bts.TxProviderSrc, senderAddr, outputsSum+bts.PotentialFee, cardanowallet.MinUTxODefaultValue)
+	desiredSum := outputsSum + bts.PotentialFee + cardanowallet.MinUTxODefaultValue
+
+	inputs, err := cardanowallet.GetUTXOsForAmount(ctx, bts.TxProviderSrc, senderAddr, desiredSum, desiredSum)
 	if err != nil {
 		return nil, "", err
 	}

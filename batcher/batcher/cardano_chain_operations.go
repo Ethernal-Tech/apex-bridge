@@ -10,7 +10,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -80,7 +79,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	multisigKeyHashes, multisigFeeKeyHashes, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +99,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigPolicyScript := cardanowallet.NewPolicyScript(
-		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigKeyHashes)))))
-	multisigFeePolicyScript := cardanowallet.NewPolicyScript(
-		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
-
-	multisigAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript)
+	multisigPolicyScript, multisigFeePolicyScript, err := eth.GetPolicyScripts(validatorsData, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigFeeAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigFeePolicyScript)
+	multisigAddress, multisigFeeAddress, err := eth.GetMultisigAddresses(
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript, multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -228,53 +221,32 @@ func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 
 func (cco *CardanoChainOperations) getCardanoData(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
-) ([]string, []string, error) {
+) ([]eth.ValidatorChainData, error) {
 	validatorsData, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var (
-		multisigKeyHashes     = make([]string, len(validatorsData))
-		multisigFeeKeyHashes  = make([]string, len(validatorsData))
-		verificationKeyIdx    = -1
-		feeVerificationKeyIdx = -1
-	)
+	hasVerificationKey, hasFeeVerificationKey := false, false
 
-	for i, validator := range validatorsData {
-		verifyingKey := validator.Key[0].Bytes()
-		verifyingKeyFee := validator.Key[1].Bytes()
-
-		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(verifyingKey)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), verifyingKey) {
-			verificationKeyIdx = i
-		}
-
-		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(verifyingKeyFee)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), verifyingKeyFee) {
-			feeVerificationKeyIdx = i
-		}
+	for _, validator := range validatorsData {
+		hasVerificationKey = hasVerificationKey ||
+			bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), validator.Key[0].Bytes())
+		hasFeeVerificationKey = hasFeeVerificationKey ||
+			bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), validator.Key[1].Bytes())
 	}
 
-	if verificationKeyIdx == -1 {
-		return nil, nil, fmt.Errorf(
+	if !hasVerificationKey {
+		return nil, fmt.Errorf(
 			"verifying key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	if feeVerificationKeyIdx == -1 {
-		return nil, nil, fmt.Errorf(
+	if !hasFeeVerificationKey {
+		return nil, fmt.Errorf(
 			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	return multisigKeyHashes, multisigFeeKeyHashes, nil
+	return validatorsData, nil
 }
 
 func (cco *CardanoChainOperations) getUTXOs(

@@ -8,7 +8,9 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	cardanoWallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -104,4 +106,55 @@ func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
 
 func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 	return GetEventSignatures([]string{"Deposit", "Withdraw"})
+}
+
+func GetPolicyScripts(
+	validatorsData []ValidatorChainData, logger hclog.Logger,
+) (*cardanoWallet.PolicyScript, *cardanoWallet.PolicyScript, error) {
+	var (
+		err                  error
+		multisigKeyHashes    = make([]string, len(validatorsData))
+		multisigFeeKeyHashes = make([]string, len(validatorsData))
+	)
+
+	for i, x := range validatorsData {
+		multisigKeyHashes[i], err = cardanoWallet.GetKeyHash(x.Key[0].Bytes())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		multisigFeeKeyHashes[i], err = cardanoWallet.GetKeyHash(x.Key[1].Bytes())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	if logger != nil {
+		logger.Debug("Validator key hashes", "multsig", multisigKeyHashes, "fee", multisigFeeKeyHashes)
+	}
+
+	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData))))
+	multisigPolicyScript := cardanoWallet.NewPolicyScript(multisigKeyHashes, atLeastSignersCount)
+	multisigFeePolicyScript := cardanoWallet.NewPolicyScript(multisigFeeKeyHashes, atLeastSignersCount)
+
+	return multisigPolicyScript, multisigFeePolicyScript, nil
+}
+
+func GetMultisigAddresses(
+	cardanoCliBinary string, networkMagic uint,
+	multisigPolicyScript, multisigFeePolicyScript *cardanoWallet.PolicyScript,
+) (string, string, error) {
+	cliUtils := cardanoWallet.NewCliUtils(cardanoCliBinary)
+
+	multisigAddress, err := cliUtils.GetPolicyScriptAddress(networkMagic, multisigPolicyScript)
+	if err != nil {
+		return "", "", err
+	}
+
+	multisigFeeAddress, err := cliUtils.GetPolicyScriptAddress(networkMagic, multisigFeePolicyScript)
+	if err != nil {
+		return "", "", err
+	}
+
+	return multisigAddress, multisigFeeAddress, nil
 }
