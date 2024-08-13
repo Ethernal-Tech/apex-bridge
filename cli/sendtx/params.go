@@ -50,7 +50,7 @@ const (
 
 type receiverAmount struct {
 	ReceiverAddr string
-	Amount       uint64
+	Amount       *big.Int
 }
 
 func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
@@ -58,7 +58,7 @@ func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
 	for idx, rec := range receivers {
 		txOutputs[idx] = cardanowallet.TxOutput{
 			Addr:   rec.ReceiverAddr,
-			Amount: rec.Amount,
+			Amount: rec.Amount.Uint64(),
 		}
 	}
 	return txOutputs
@@ -69,7 +69,7 @@ func ToGatewayStruct(receivers []receiverAmount) []contractbinding.IGatewayStruc
 	for idx, rec := range receivers {
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
-			Amount:   big.NewInt(int64(rec.Amount)),
+			Amount:   rec.Amount,
 		}
 	}
 	return gatewayOutputs
@@ -116,16 +116,11 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if ip.feeAmount < cardanowallet.MinUTxODefaultValue {
+	if ip.feeAmount < 0 {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 	}
 
 	if ip.txType == "evm" {
-		// bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
-		// if err != nil || len(bytes) != 20 {
-		// 	return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
-		// }
-
 		if ip.gatewayAddress == "" {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
@@ -134,6 +129,10 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", nexusUrlFlag)
 		}
 	} else {
+		if ip.feeAmount < cardanowallet.MinUTxODefaultValue {
+			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
+		}
+
 		bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
 		if err != nil || len(bytes) != 32 {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
@@ -180,7 +179,7 @@ func (ip *sendTxParams) validateFlags() error {
 
 		receivers = append(receivers, receiverAmount{
 			ReceiverAddr: vals[0],
-			Amount:       amount,
+			Amount:       new(big.Int).SetUint64(amount),
 		})
 	}
 
@@ -276,13 +275,14 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	if ip.txType == "evm" {
+	switch ip.txType {
+	case "evm":
 		return ip.executeEvm(outputter)
-	} else if ip.txType == "cardano" || ip.txType == "" {
+	case "cardano", "":
 		return ip.executeCardano(outputter)
+	default:
+		return nil, fmt.Errorf("txType not supported")
 	}
-
-	return nil, fmt.Errorf("")
 }
 
 func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -348,17 +348,20 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{},
+	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
+		From:  wallet.GetAddress(),
+		Value: ip.receiversParsed[0].Amount,
+	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), big.NewInt(150))
+			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), new(big.Int).SetUint64(ip.feeAmount))
 		})
 	if err != nil {
-		return nil, fmt.Errorf("4 %v", err)
+		return nil, fmt.Errorf("%v", err)
 	}
 
 	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if types.ReceiptStatusSuccessful != receipt.Status {
-		return nil, fmt.Errorf("5 %v", err)
+		return nil, fmt.Errorf("%v", err)
 	}
 
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", receipt.TxHash.String())))
