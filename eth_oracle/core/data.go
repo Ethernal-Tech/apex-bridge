@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/binary"
-	"math/big"
 
 	"github.com/Ethernal-Tech/ethgo"
 )
@@ -15,7 +14,6 @@ type EthTx struct {
 	BlockHash   ethgo.Hash    `json:"block_hash"`
 	Hash        ethgo.Hash    `json:"hash"`
 	TxIndex     uint64        `json:"tx_index"`
-	Value       *big.Int      `json:"value"`
 	Removed     bool          `json:"removed"`
 	LogIndex    uint64        `json:"log_index"`
 	Address     ethgo.Address `json:"addr"`

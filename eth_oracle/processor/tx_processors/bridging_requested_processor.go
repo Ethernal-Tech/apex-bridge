@@ -152,7 +152,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	receiverAmountSum := big.NewInt(0)
 	feeSum := big.NewInt(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
@@ -174,8 +173,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 		if receiver.Address == cardanoDestConfig.BridgingAddresses.FeeAddress {
 			feeSum.Add(feeSum, receiver.Amount)
-		} else {
-			receiverAmountSum.Add(receiverAmountSum, receiver.Amount)
 		}
 	}
 
@@ -189,16 +186,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.FeeAmount.Add(metadata.FeeAmount, feeSum)
-	receiverAmountSum.Add(receiverAmountSum, metadata.FeeAmount)
 
 	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
 	if feeAmountDfm.Uint64() < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
-	}
-
-	if receiverAmountSum.Cmp(tx.Value) != 0 {
-		return fmt.Errorf("receivers amounts and tx value missmatch: expected %v but got %v",
-			receiverAmountSum, tx.Value)
 	}
 
 	return nil
