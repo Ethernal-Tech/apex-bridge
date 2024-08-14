@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -119,11 +118,12 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if ip.feeString[0:2] == "0x" {
-		ip.feeAmount, _ = new(big.Int).SetString(ip.feeString, 16)
-	} else {
-		ip.feeAmount, _ = new(big.Int).SetString(ip.feeString, 10)
+	feeAmount, ok := new(big.Int).SetString(ip.feeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", feeAmountFlag, ip.feeString)
 	}
+
+	ip.feeAmount = feeAmount
 
 	if ip.txType == "evm" {
 		if ip.feeAmount.Cmp(minNexusBridgingFee) <= 0 {
@@ -170,25 +170,25 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d is invalid: %s", receiverFlag, i, x)
 		}
 
-		amount, err := strconv.ParseUint(vals[1], 0, 64)
-		if err != nil {
+		amount, ok := new(big.Int).SetString(vals[1], 0)
+		if !ok {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
 		if ip.txType != "evm" {
-			if amount < cardanowallet.MinUTxODefaultValue {
+			if amount.Uint64() < cardanowallet.MinUTxODefaultValue {
 				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 			}
 		}
 
-		_, err = cardanowallet.NewAddress(vals[0])
+		_, err := cardanowallet.NewAddress(vals[0])
 		if err != nil {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
 		receivers = append(receivers, receiverAmount{
 			ReceiverAddr: vals[0],
-			Amount:       new(big.Int).SetUint64(amount),
+			Amount:       amount,
 		})
 	}
 
@@ -281,6 +281,15 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		"",
 		nexusUrlFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLDstFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, testnetMagicFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, networkIDSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, ogmiosURLSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, ogmiosURLDstFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -362,15 +371,15 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		From: wallet.GetAddress(),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.Withdraw(txOpts, 1, ToGatewayStruct(ip.receiversParsed), ip.feeAmount)
+			return contract.Withdraw(txOpts, common.ToNumChainID(ip.chainIDDst), ToGatewayStruct(ip.receiversParsed), ip.feeAmount)
 		})
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if types.ReceiptStatusSuccessful != receipt.Status {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", receipt.TxHash.String())))
