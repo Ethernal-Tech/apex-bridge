@@ -126,7 +126,7 @@ func (ip *sendTxParams) validateFlags() error {
 	ip.feeAmount = feeAmount
 
 	if ip.txType == "evm" {
-		if ip.feeAmount.Cmp(minNexusBridgingFee) <= 0 {
+		if ip.feeAmount.Cmp(minNexusBridgingFee) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
