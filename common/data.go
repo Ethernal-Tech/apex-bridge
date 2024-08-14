@@ -5,7 +5,11 @@ import (
 	"strings"
 )
 
-const HashSize = 32
+const (
+	HashSize = 32
+
+	EthZeroAddr = "0x0000000000000000000000000000000000000000"
+)
 
 type Hash [HashSize]byte
 
