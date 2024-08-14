@@ -142,7 +142,7 @@ func newEVMSmartContractTransaction(
 
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
-			if recv.DestinationAddress == common.ETH_ZERO_ADDR {
+			if recv.DestinationAddress == common.EthZeroAddr {
 				feeAmount.Add(feeAmount, common.DfmToWei(recv.Amount))
 
 				continue

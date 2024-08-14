@@ -149,7 +149,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 				},
 				{
 					Amount:             feeAmount,
-					DestinationAddress: common.ETH_ZERO_ADDR,
+					DestinationAddress: common.EthZeroAddr,
 				},
 			},
 		},
