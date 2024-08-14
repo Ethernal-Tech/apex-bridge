@@ -100,8 +100,14 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	totalAmount.Add(totalAmount, feeAmount)
 
+	feeAddress := destFeeAddress
+	if ethDestConfig != nil {
+		// enable nexus gateway to pay bridging fee to msg.sender
+		feeAddress = common.ETH_ZERO_ADDR
+	}
+
 	receivers = append(receivers, core.BridgingRequestReceiver{
-		DestinationAddress: destFeeAddress,
+		DestinationAddress: feeAddress,
 		Amount:             feeAmount,
 	})
 

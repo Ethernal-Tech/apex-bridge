@@ -12,21 +12,19 @@ func TestEVMSmartContractTransaction(t *testing.T) {
 	obj := &EVMSmartContractTransaction{
 		BatchNonceID: 100,
 		TTL:          uint64(8398923),
+		FeeAmount:    big.NewInt(1),
 		Receivers: []EVMSmartContractTransactionReceiver{
 			{
-				SourceID: 2,
-				Address:  common.HexToAddress("0xFF00FF"),
-				Amount:   new(big.Int).SetUint64(100),
+				Address: common.HexToAddress("0xFF00FF"),
+				Amount:  new(big.Int).SetUint64(100),
 			},
 			{
-				SourceID: 1,
-				Address:  common.HexToAddress("0xFF0011"),
-				Amount:   new(big.Int).SetUint64(3),
+				Address: common.HexToAddress("0xFF0011"),
+				Amount:  new(big.Int).SetUint64(3),
 			},
 			{
-				SourceID: 2,
-				Address:  common.HexToAddress("0xFF0022"),
-				Amount:   new(big.Int).SetUint64(531),
+				Address: common.HexToAddress("0xFF0022"),
+				Amount:  new(big.Int).SetUint64(531),
 			},
 		},
 	}

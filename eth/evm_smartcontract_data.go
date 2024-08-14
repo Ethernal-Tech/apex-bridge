@@ -18,14 +18,14 @@ var (
 			Type: "uint64",
 		},
 		{
+			Name: "feeAmount",
+			Type: "uint256",
+		},
+		{
 			Name:         "_receivers",
 			Type:         "tuple[]",
 			InternalType: "struct IGatewayStructs.ReceiverDeposit[]",
 			Components: []abi.ArgumentMarshaling{
-				{
-					Name: "sourceChainId",
-					Type: "uint8",
-				},
 				{
 					Name: "receiver",
 					Type: "address",
@@ -40,14 +40,14 @@ var (
 )
 
 type EVMSmartContractTransactionReceiver struct {
-	SourceID uint8          `json:"sourceId" abi:"sourceChainId"`
-	Address  common.Address `json:"addr" abi:"receiver"`
-	Amount   *big.Int       `json:"amount" abi:"amount"`
+	Address common.Address `json:"addr" abi:"receiver"`
+	Amount  *big.Int       `json:"amount" abi:"amount"`
 }
 
 type EVMSmartContractTransaction struct {
 	BatchNonceID uint64                                `json:"batchNonceId" abi:"batchId"`
 	TTL          uint64                                `json:"ttl" abi:"ttlExpired"`
+	FeeAmount    *big.Int                              `json:"feeAmount" abi:"feeAmount"`
 	Receivers    []EVMSmartContractTransactionReceiver `json:"receivers" abi:"_receivers"`
 }
 

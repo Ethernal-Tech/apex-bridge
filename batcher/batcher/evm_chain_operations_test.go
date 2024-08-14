@@ -106,9 +106,10 @@ func TestEthChain_SignBatchTransaction(t *testing.T) {
 func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 	batchNonceID := uint64(213)
 	ttl := uint64(39203902)
+	feeAmount := new(big.Int).SetUint64(11)
+
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
-			SourceChainId: 2,
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(100),
@@ -121,7 +122,6 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			},
 		},
 		{
-			SourceChainId: 1,
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(10),
@@ -130,7 +130,6 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			},
 		},
 		{
-			SourceChainId: 2,
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
@@ -142,32 +141,37 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 				},
 			},
 		},
+		{
+			Receivers: []eth.BridgeReceiver{
+				{
+					Amount:             new(big.Int).SetUint64(15),
+					DestinationAddress: "0xf0",
+				},
+				{
+					Amount:             feeAmount,
+					DestinationAddress: common.ETH_ZERO_ADDR,
+				},
+			},
+		},
 	}
 
 	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs)
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
+		FeeAmount:    common.DfmToWei(feeAmount),
 		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
-				SourceID: 1,
-				Address:  common.HexToAddress("0xff"),
-				Amount:   common.DfmToWei(new(big.Int).SetUint64(10)),
+				Address: common.HexToAddress("0xf0"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(30)),
 			},
 			{
-				SourceID: 2,
-				Address:  common.HexToAddress("0xf0"),
-				Amount:   common.DfmToWei(new(big.Int).SetUint64(15)),
+				Address: common.HexToAddress("0xfa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(200)),
 			},
 			{
-				SourceID: 2,
-				Address:  common.HexToAddress("0xfa"),
-				Amount:   common.DfmToWei(new(big.Int).SetUint64(200)),
-			},
-			{
-				SourceID: 2,
-				Address:  common.HexToAddress("0xff"),
-				Amount:   common.DfmToWei(new(big.Int).SetUint64(111)),
+				Address: common.HexToAddress("0xff"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(121)),
 			},
 		},
 	}, result)
