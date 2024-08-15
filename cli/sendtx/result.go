@@ -28,7 +28,6 @@ func (r CmdResult) GetOutput() string {
 		kvPairs = append(kvPairs, fmt.Sprintf("Amount|%d", x.Amount))
 	}
 
-	buffer.WriteString("Transaction has been bridged\n")
 	buffer.WriteString(common.FormatKV(kvPairs))
 
 	return buffer.String()

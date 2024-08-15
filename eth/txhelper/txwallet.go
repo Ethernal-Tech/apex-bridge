@@ -36,27 +36,21 @@ func NewEthTxWalletFromSecretManager(sm secretsInfra.SecretsManager) (*EthTxWall
 }
 
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
-	bytes, err := apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
-	if err != nil {
-		return nil, err
+	var (
+		bytes []byte
+		err   error
+	)
+
+	if len(pk) == 32 {
+		bytes = ([]byte)(pk)
+	} else {
+		bytes, err = apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	privateKey, err := crypto.ToECDSA(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the Ethereum address from the public key
-	ethereumAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	return &EthTxWallet{
-		privateKey: privateKey,
-		addr:       ethereumAddress,
-	}, nil
-}
-
-func NewEthTxWalletFromPk(bytesString string) (*EthTxWallet, error) {
-	privateKey, err := crypto.ToECDSA([]byte(bytesString))
 	if err != nil {
 		return nil, err
 	}

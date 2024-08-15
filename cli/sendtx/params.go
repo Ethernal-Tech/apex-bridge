@@ -287,11 +287,9 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLDstFlag)
 	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, ogmiosURLSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, ogmiosURLDstFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -306,6 +304,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 }
 
 func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	receivers := ToTxOutput(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkID)
 	txSender := cardanotx.NewBridgingTxSender(
@@ -319,13 +318,14 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	receivers := ToTxOutput(ip.receiversParsed)
-
 	txRaw, txHash, err := txSender.CreateTx(
 		context.Background(), ip.chainIDDst, senderAddr.String(), receivers, ip.feeAmount.Uint64())
 	if err != nil {
 		return nil, err
 	}
+
+	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
+	outputter.WriteOutput()
 
 	err = txSender.SendTx(context.Background(), txRaw, txHash, ip.wallet)
 	if err != nil {
@@ -340,6 +340,9 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		if err != nil {
 			return nil, err
 		}
+
+		_, _ = outputter.Write([]byte("Transaction has been bridged"))
+		outputter.WriteOutput()
 	}
 
 	return CmdResult{
@@ -351,7 +354,11 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 }
 
 func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	wallet, err := ethtxhelper.NewEthTxWalletFromPk(ip.privateKeyRaw)
+	contractAddress := common.HexToAddress(ip.gatewayAddress)
+	chainID := common.ToNumChainID(ip.chainIDDst)
+	receivers := ToGatewayStruct(ip.receiversParsed)
+
+	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -365,33 +372,49 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	contract, err := contractbinding.NewGateway(common.HexToAddress(ip.gatewayAddress), txHelper.GetClient())
+	contract, err := contractbinding.NewGateway(contractAddress, txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
+
+	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
+	outputter.WriteOutput()
 
 	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
 		From: wallet.GetAddress(),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts,
-				common.ToNumChainID(ip.chainIDDst),
-				ToGatewayStruct(ip.receiversParsed),
-				ip.feeAmount,
+				txOpts, chainID, receivers, ip.feeAmount,
 			)
 		})
 	if err != nil {
 		return nil, err
 	}
 
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
+	outputter.WriteOutput()
+
 	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if types.ReceiptStatusSuccessful != receipt.Status {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", receipt.TxHash.String())))
-	outputter.WriteOutput()
+	if ip.ogmiosURLDst != "" {
+		cardanoReceivers := ToTxOutput(ip.receiversParsed)
+		for i := range cardanoReceivers {
+			cardanoReceivers[i].Amount = 1 // just need to see if there is some change
+		}
+
+		err = cardanotx.WaitForTx(
+			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst), cardanoReceivers)
+		if err != nil {
+			return nil, err
+		}
+
+		_, _ = outputter.Write([]byte("Transaction has been bridged"))
+		outputter.WriteOutput()
+	}
 
 	return CmdResult{
 		SenderAddr: wallet.GetAddress().String(),
