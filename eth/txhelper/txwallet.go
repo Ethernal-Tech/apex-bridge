@@ -36,9 +36,18 @@ func NewEthTxWalletFromSecretManager(sm secretsInfra.SecretsManager) (*EthTxWall
 }
 
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
-	bytes, err := apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
-	if err != nil {
-		return nil, err
+	var (
+		bytes []byte
+		err   error
+	)
+
+	if len(pk) == 32 {
+		bytes = ([]byte)(pk)
+	} else {
+		bytes, err = apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	privateKey, err := crypto.ToECDSA(bytes)

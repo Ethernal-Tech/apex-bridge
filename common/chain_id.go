@@ -38,3 +38,9 @@ func ToNumChainID(chainIDStr string) chainIDNum {
 func ToStrChainID(chainIDNum chainIDNum) string {
 	return intToStr[chainIDNum]
 }
+
+func IsExistingChainID(chainIDStr string) bool {
+	_, exists := strToInt[chainIDStr]
+
+	return exists
+}
