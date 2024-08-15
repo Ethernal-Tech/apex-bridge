@@ -85,7 +85,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
@@ -106,7 +105,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "origin chain not registered")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
