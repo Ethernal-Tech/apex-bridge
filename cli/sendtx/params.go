@@ -120,7 +120,7 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if ip.chainIDDst == "" {
+	if !common.IsExistingChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
@@ -181,15 +181,20 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if ip.txType != common.ChainTypeEVMStr {
+		switch ip.chainIDDst {
+		case common.ChainIDStrNexus:
+			if !ethcommon.IsHexAddress(vals[0]) {
+				return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
+			}
+		default:
 			if amount.Uint64() < cardanowallet.MinUTxODefaultValue {
 				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 			}
-		}
 
-		_, err := cardanowallet.NewAddress(vals[0])
-		if err != nil {
-			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
+			_, err := cardanowallet.NewAddress(vals[0])
+			if err != nil {
+				return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
+			}
 		}
 
 		receivers = append(receivers, receiverAmount{
