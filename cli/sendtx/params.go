@@ -11,7 +11,9 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
@@ -45,6 +47,8 @@ const (
 
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
+
+	gasLimitMultiplier = 1.6
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -364,8 +368,6 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
-		//nolint:godox
-		// TODO: Estimate gas manually until https://github.com/ethereum/go-ethereum/issues/29798 is implemented
 		ethtxhelper.WithNodeURL(ip.nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	if err != nil {
@@ -377,13 +379,22 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
+	_, _ = outputter.Write([]byte("Estimating gas..."))
+	outputter.WriteOutput()
+
+	estimatedGas, err := estimageGas(
+		wallet.GetAddress(), contractAddress, txHelper, chainID, receivers, ip.feeAmount)
+	if err != nil {
+		return nil, err
+	}
+
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{
-		From: wallet.GetAddress(),
-	},
+	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+			txOpts.GasLimit = estimatedGas
+
 			return contract.Withdraw(
 				txOpts, chainID, receivers, ip.feeAmount,
 			)
@@ -422,4 +433,30 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		Receipts:   ip.receiversParsed,
 		TxHash:     receipt.TxHash.String(),
 	}, nil
+}
+
+func estimageGas(
+	from, to ethcommon.Address, txHelper ethtxhelper.IEthTxHelper,
+	chainID uint8, receivers []contractbinding.IGatewayStructsReceiverWithdraw, fee *big.Int,
+) (uint64, error) {
+	parsed, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return 0, err
+	}
+
+	input, err := parsed.Pack("withdraw", chainID, receivers, fee)
+	if err != nil {
+		return 0, err
+	}
+
+	estimatedGas, err := txHelper.GetClient().EstimateGas(context.Background(), ethereum.CallMsg{
+		From: from,
+		To:   &to,
+		Data: input,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(float64(estimatedGas) * gasLimitMultiplier), nil
 }
