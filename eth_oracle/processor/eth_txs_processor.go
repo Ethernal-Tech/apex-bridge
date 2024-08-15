@@ -810,7 +810,10 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		Topics:      topics,
 	}
 
-	var metadata []byte
+	var (
+		metadata []byte
+		txHash   = log.TransactionHash
+	)
 
 	logEventType := log.Topics[0]
 	switch logEventType {
@@ -841,6 +844,13 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 
 				return nil, err
 			}
+
+			evmTxHash, err := common.Keccak256(deposit.Data)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create txHash. err: %w", err)
+			}
+
+			txHash = ethgo.BytesToHash(evmTxHash)
 		}
 	case withdrawEventSig:
 		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
@@ -886,7 +896,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 
 		BlockNumber: log.BlockNumber,
 		BlockHash:   log.BlockHash,
-		Hash:        log.TransactionHash,
+		Hash:        txHash,
 		TxIndex:     log.TransactionIndex,
 		Removed:     log.Removed,
 		LogIndex:    log.LogIndex,

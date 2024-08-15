@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -111,26 +112,35 @@ func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 func GetPolicyScripts(
 	validatorsData []ValidatorChainData, logger hclog.Logger,
 ) (*cardanoWallet.PolicyScript, *cardanoWallet.PolicyScript, error) {
-	var (
-		err                  error
-		multisigKeyHashes    = make([]string, len(validatorsData))
-		multisigFeeKeyHashes = make([]string, len(validatorsData))
-	)
+	multisigKeyHashes := make([]string, len(validatorsData))
+	multisigFeeKeyHashes := make([]string, len(validatorsData))
 
 	for i, x := range validatorsData {
-		multisigKeyHashes[i], err = cardanoWallet.GetKeyHash(x.Key[0].Bytes())
+		keyHash, err := cardanoWallet.GetKeyHash(x.Key[0].Bytes())
 		if err != nil {
 			return nil, nil, err
 		}
 
-		multisigFeeKeyHashes[i], err = cardanoWallet.GetKeyHash(x.Key[1].Bytes())
+		keyHashFee, err := cardanoWallet.GetKeyHash(x.Key[1].Bytes())
 		if err != nil {
 			return nil, nil, err
 		}
+
+		multisigKeyHashes[i] = keyHash
+		multisigFeeKeyHashes[i] = keyHashFee
 	}
 
 	if logger != nil {
-		logger.Debug("Validator key hashes", "multsig", multisigKeyHashes, "fee", multisigFeeKeyHashes)
+		pubKeys := make([]string, len(validatorsData))
+		feePubKeys := make([]string, len(validatorsData))
+
+		for i, x := range validatorsData {
+			pubKeys[i] = hex.EncodeToString(x.Key[0].Bytes())
+			feePubKeys[i] = hex.EncodeToString(x.Key[1].Bytes())
+		}
+
+		logger.Debug("Validator public keys/hashes multisig", "pubs", pubKeys, "hashes", multisigKeyHashes)
+		logger.Debug("Validator public keys/hashes fee", "pubs", feePubKeys, "hashes", multisigFeeKeyHashes)
 	}
 
 	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData))))
