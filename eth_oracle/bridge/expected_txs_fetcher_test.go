@@ -16,7 +16,7 @@ import (
 func TestExpectedTxsFetcher(t *testing.T) {
 	appConfig := &oracleCore.AppConfig{
 		EthChains: map[string]*oracleCore.EthChainConfig{
-			common.ChainIDStrPrime: {},
+			common.ChainIDStrNexus: {},
 		},
 	}
 
@@ -56,5 +56,20 @@ func TestExpectedTxsFetcher(t *testing.T) {
 		err := expectedTxsFetcher.fetchData()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to add expected txs")
+	})
+
+	t.Run("fetchData success", func(t *testing.T) {
+		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(&core.BridgeExpectedEthTx{}, nil)
+
+		db := &core.EthTxsProcessorDBMock{}
+		db.On("GetAllExpectedTxs", mock.Anything, mock.Anything).Return(nil, nil)
+		db.On("AddExpectedTxs", mock.Anything).Return(nil)
+
+		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, db, hclog.NewNullLogger())
+		require.NotNil(t, expectedTxsFetcher)
+
+		err := expectedTxsFetcher.fetchData()
+		require.NoError(t, err)
 	})
 }
