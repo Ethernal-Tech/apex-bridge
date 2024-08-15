@@ -17,6 +17,9 @@ import (
 )
 
 const (
+	txTypeEvm     = "evm"
+	tyTypeCardano = "cardano"
+
 	privateKeyFlag      = "key"
 	ogmiosURLSrcFlag    = "ogmios-src"
 	receiverFlag        = "receiver"
@@ -28,7 +31,7 @@ const (
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
-	nexusUrlFlag        = "nexus-url"
+	nexusURLFlag        = "nexus-url"
 
 	privateKeyFlagDesc      = "wallet private signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
@@ -41,7 +44,7 @@ const (
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
-	nexusUrlFlagDesc        = "nexus chain URL"
+	nexusURLFlagDesc        = "nexus chain URL"
 
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
@@ -62,6 +65,7 @@ func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
 			Amount: rec.Amount.Uint64(),
 		}
 	}
+
 	return txOutputs
 }
 
@@ -73,6 +77,7 @@ func ToGatewayStruct(receivers []receiverAmount) []contractbinding.IGatewayStruc
 			Amount:   rec.Amount,
 		}
 	}
+
 	return gatewayOutputs
 }
 
@@ -94,7 +99,7 @@ type sendTxParams struct {
 
 	// nexus
 	gatewayAddress string
-	nexusUrl       string
+	nexusURL       string
 
 	feeAmount       *big.Int
 	receiversParsed []receiverAmount
@@ -102,7 +107,7 @@ type sendTxParams struct {
 }
 
 func (ip *sendTxParams) validateFlags() error {
-	if ip.txType != "" && ip.txType != "evm" && ip.txType != "cardano" {
+	if ip.txType != "" && ip.txType != txTypeEvm && ip.txType != tyTypeCardano {
 		return fmt.Errorf("invalid --%s type not supported", txTypeFlag)
 	}
 
@@ -125,7 +130,7 @@ func (ip *sendTxParams) validateFlags() error {
 
 	ip.feeAmount = feeAmount
 
-	if ip.txType == "evm" {
+	if ip.txType == txTypeEvm {
 		if ip.feeAmount.Cmp(minNexusBridgingFee) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
@@ -134,8 +139,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
 
-		if ip.nexusUrl == "" {
-			return fmt.Errorf("--%s not specified", nexusUrlFlag)
+		if ip.nexusURL == "" {
+			return fmt.Errorf("--%s not specified", nexusURLFlag)
 		}
 	} else {
 		if ip.feeAmount.Uint64() < cardanowallet.MinUTxODefaultValue {
@@ -175,7 +180,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if ip.txType != "evm" {
+		if ip.txType != txTypeEvm {
 			if amount.Uint64() < cardanowallet.MinUTxODefaultValue {
 				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 			}
@@ -276,27 +281,27 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.nexusUrl,
-		nexusUrlFlag,
+		&ip.nexusURL,
+		nexusURLFlag,
 		"",
-		nexusUrlFlagDesc,
+		nexusURLFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLDstFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, testnetMagicFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, networkIDSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, ogmiosURLSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusUrlFlag, ogmiosURLDstFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, testnetMagicFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, networkIDSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, ogmiosURLSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, ogmiosURLDstFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	switch ip.txType {
-	case "evm":
+	case txTypeEvm:
 		return ip.executeEvm(outputter)
-	case "cardano", "":
+	case tyTypeCardano, "":
 		return ip.executeCardano(outputter)
 	default:
 		return nil, fmt.Errorf("txType not supported")
@@ -355,8 +360,9 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
+		//nolint:godox
 		// TODO: Estimate gas manually until https://github.com/ethereum/go-ethereum/issues/29798 is implemented
-		ethtxhelper.WithNodeURL(ip.nexusUrl), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithNodeURL(ip.nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	if err != nil {
 		return nil, err
@@ -371,7 +377,12 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		From: wallet.GetAddress(),
 	},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.Withdraw(txOpts, common.ToNumChainID(ip.chainIDDst), ToGatewayStruct(ip.receiversParsed), ip.feeAmount)
+			return contract.Withdraw(
+				txOpts,
+				common.ToNumChainID(ip.chainIDDst),
+				ToGatewayStruct(ip.receiversParsed),
+				ip.feeAmount,
+			)
 		})
 	if err != nil {
 		return nil, err
