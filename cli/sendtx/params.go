@@ -17,9 +17,6 @@ import (
 )
 
 const (
-	txTypeEvm     = "evm"
-	tyTypeCardano = "cardano"
-
 	privateKeyFlag      = "key"
 	ogmiosURLSrcFlag    = "ogmios-src"
 	receiverFlag        = "receiver"
@@ -107,7 +104,7 @@ type sendTxParams struct {
 }
 
 func (ip *sendTxParams) validateFlags() error {
-	if ip.txType != "" && ip.txType != txTypeEvm && ip.txType != tyTypeCardano {
+	if ip.txType != "" && ip.txType != common.ChainTypeEVMStr && ip.txType != common.ChainTypeCardanoStr {
 		return fmt.Errorf("invalid --%s type not supported", txTypeFlag)
 	}
 
@@ -130,7 +127,7 @@ func (ip *sendTxParams) validateFlags() error {
 
 	ip.feeAmount = feeAmount
 
-	if ip.txType == txTypeEvm {
+	if ip.txType == common.ChainTypeEVMStr {
 		if ip.feeAmount.Cmp(minNexusBridgingFee) < 0 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
@@ -180,7 +177,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if ip.txType != txTypeEvm {
+		if ip.txType != common.ChainTypeEVMStr {
 			if amount.Uint64() < cardanowallet.MinUTxODefaultValue {
 				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 			}
@@ -299,9 +296,9 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	switch ip.txType {
-	case txTypeEvm:
+	case common.ChainTypeEVMStr:
 		return ip.executeEvm(outputter)
-	case tyTypeCardano, "":
+	case common.ChainTypeCardanoStr, "":
 		return ip.executeCardano(outputter)
 	default:
 		return nil, fmt.Errorf("txType not supported")
