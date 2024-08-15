@@ -359,7 +359,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 			return nil, err
 		}
 
-		err = waitForAmounts(context.Background(), txHelper, ip.receiversParsed)
+		err = waitForAmounts(context.Background(), txHelper.GetClient(), ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}
@@ -405,10 +405,8 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{},
+	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{GasLimit: estimatedGas},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			txOpts.GasLimit = estimatedGas
-
 			return contract.Withdraw(
 				txOpts, chainID, receivers, ip.feeAmount,
 			)
@@ -475,11 +473,9 @@ func estimageGas(
 	return uint64(float64(estimatedGas) * gasLimitMultiplier), nil
 }
 
-func waitForAmounts(ctx context.Context, txHelper *ethtxhelper.EthTxHelperImpl, receivers []*receiverAmount) error {
+func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*receiverAmount) error {
 	errs := make([]error, len(receivers))
 	wg := sync.WaitGroup{}
-
-	client := txHelper.GetClient()
 
 	for i, x := range receivers {
 		wg.Add(1)
@@ -487,10 +483,13 @@ func waitForAmounts(ctx context.Context, txHelper *ethtxhelper.EthTxHelperImpl, 
 		go func(idx int, recv *receiverAmount) {
 			defer wg.Done()
 
-			var oldBalance *big.Int
+			var (
+				oldBalance *big.Int
+				addr       = common.HexToAddress(recv.ReceiverAddr)
+			)
 
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 10, time.Second*10, func() (bool, error) {
-				balance, err := client.BalanceAt(context.Background(), common.HexToAddress(recv.ReceiverAddr), nil)
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 3, time.Second*10, func() (bool, error) {
+				balance, err := client.BalanceAt(context.Background(), addr, nil)
 				if err != nil {
 					return false, err
 				}
@@ -506,25 +505,17 @@ func waitForAmounts(ctx context.Context, txHelper *ethtxhelper.EthTxHelperImpl, 
 
 			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
 
-			errs[idx] = waitForAmount(ctx, client, recv, func(u *big.Int) bool {
-				return u.Cmp(expectedBalance) >= 0
-			}, 10, time.Second*10)
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 15, time.Second*10, func() (bool, error) {
+				balance, err := client.BalanceAt(context.Background(), addr, nil)
+
+				return err == nil && balance.Cmp(expectedBalance) >= 0, err
+			}, nil)
 		}(i, x)
 	}
 
 	wg.Wait()
 
 	return errors.Join(errs...)
-}
-
-func waitForAmount(ctx context.Context, client *ethclient.Client, receiver *receiverAmount,
-	cmpHandler func(*big.Int) bool, numRetries int, waitTime time.Duration,
-) error {
-	return cardanowallet.ExecuteWithRetry(ctx, numRetries, waitTime, func() (bool, error) {
-		balance, err := client.BalanceAt(context.Background(), common.HexToAddress(receiver.ReceiverAddr), nil)
-
-		return err == nil && cmpHandler(balance), err
-	}, nil)
 }
 
 func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
