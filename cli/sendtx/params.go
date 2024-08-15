@@ -354,9 +354,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		_, _ = outputter.Write([]byte("Transaction has been bridged"))
 		outputter.WriteOutput()
 	} else if ip.nexusURL != "" {
-		txHelper, err := ethtxhelper.NewEThTxHelper(
-			ethtxhelper.WithNodeURL(ip.nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
-			ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+		txHelper, err := getTxHelper(ip.nexusURL)
 		if err != nil {
 			return nil, err
 		}
@@ -385,9 +383,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	txHelper, err := ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(ip.nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
-		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+	txHelper, err := getTxHelper(ip.nexusURL)
 	if err != nil {
 		return nil, err
 	}
@@ -529,4 +525,10 @@ func waitForAmount(ctx context.Context, client *ethclient.Client, receiver *rece
 
 		return err == nil && cmpHandler(balance), err
 	}, nil)
+}
+
+func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
+	return ethtxhelper.NewEThTxHelper(
+		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 }
