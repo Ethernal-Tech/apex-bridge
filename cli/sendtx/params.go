@@ -2,9 +2,12 @@ package clisendtx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
+	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -15,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +62,7 @@ type receiverAmount struct {
 	Amount       *big.Int
 }
 
-func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
+func ToTxOutput(receivers []*receiverAmount) []cardanowallet.TxOutput {
 	txOutputs := make([]cardanowallet.TxOutput, len(receivers))
 	for idx, rec := range receivers {
 		txOutputs[idx] = cardanowallet.TxOutput{
@@ -70,7 +74,7 @@ func ToTxOutput(receivers []receiverAmount) []cardanowallet.TxOutput {
 	return txOutputs
 }
 
-func ToGatewayStruct(receivers []receiverAmount) []contractbinding.IGatewayStructsReceiverWithdraw {
+func ToGatewayStruct(receivers []*receiverAmount) []contractbinding.IGatewayStructsReceiverWithdraw {
 	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
 	for idx, rec := range receivers {
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
@@ -103,7 +107,7 @@ type sendTxParams struct {
 	nexusURL       string
 
 	feeAmount       *big.Int
-	receiversParsed []receiverAmount
+	receiversParsed []*receiverAmount
 	wallet          cardanowallet.IWallet
 }
 
@@ -168,7 +172,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 	}
 
-	receivers := make([]receiverAmount, 0, len(ip.receivers))
+	receivers := make([]*receiverAmount, 0, len(ip.receivers))
 
 	for i, x := range ip.receivers {
 		vals := strings.Split(x, ":")
@@ -197,7 +201,7 @@ func (ip *sendTxParams) validateFlags() error {
 			}
 		}
 
-		receivers = append(receivers, receiverAmount{
+		receivers = append(receivers, &receiverAmount{
 			ReceiverAddr: vals[0],
 			Amount:       amount,
 		})
@@ -296,9 +300,6 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, testnetMagicFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, networkIDSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(nexusURLFlag, ogmiosURLSrcFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -352,6 +353,18 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 
 		_, _ = outputter.Write([]byte("Transaction has been bridged"))
 		outputter.WriteOutput()
+	} else if ip.nexusURL != "" {
+		txHelper, err := ethtxhelper.NewEThTxHelper(
+			ethtxhelper.WithNodeURL(ip.nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+			ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+		if err != nil {
+			return nil, err
+		}
+
+		err = waitForAmounts(context.Background(), txHelper, ip.receiversParsed)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return CmdResult{
@@ -464,4 +477,56 @@ func estimageGas(
 	}
 
 	return uint64(float64(estimatedGas) * gasLimitMultiplier), nil
+}
+
+func waitForAmounts(ctx context.Context, txHelper *ethtxhelper.EthTxHelperImpl, receivers []*receiverAmount) error {
+	errs := make([]error, len(receivers))
+	wg := sync.WaitGroup{}
+
+	client := txHelper.GetClient()
+
+	for i, x := range receivers {
+		wg.Add(1)
+
+		go func(idx int, recv *receiverAmount) {
+			defer wg.Done()
+
+			var oldBalance *big.Int
+
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 10, time.Second*10, func() (bool, error) {
+				balance, err := client.BalanceAt(context.Background(), common.HexToAddress(recv.ReceiverAddr), nil)
+				if err != nil {
+					return false, err
+				}
+
+				oldBalance = balance
+
+				return true, nil
+			}, nil)
+
+			if errs[idx] != nil {
+				return
+			}
+
+			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
+
+			errs[idx] = waitForAmount(ctx, client, recv, func(u *big.Int) bool {
+				return u.Cmp(expectedBalance) >= 0
+			}, 10, time.Second*10)
+		}(i, x)
+	}
+
+	wg.Wait()
+
+	return errors.Join(errs...)
+}
+
+func waitForAmount(ctx context.Context, client *ethclient.Client, receiver *receiverAmount,
+	cmpHandler func(*big.Int) bool, numRetries int, waitTime time.Duration,
+) error {
+	return cardanowallet.ExecuteWithRetry(ctx, numRetries, waitTime, func() (bool, error) {
+		balance, err := client.BalanceAt(context.Background(), common.HexToAddress(receiver.ReceiverAddr), nil)
+
+		return err == nil && cmpHandler(balance), err
+	}, nil)
 }

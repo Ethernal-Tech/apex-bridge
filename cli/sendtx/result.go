@@ -11,7 +11,7 @@ type CmdResult struct {
 	SenderAddr string
 	ChainID    string
 	TxHash     string
-	Receipts   []receiverAmount
+	Receipts   []*receiverAmount
 }
 
 func (r CmdResult) GetOutput() string {
