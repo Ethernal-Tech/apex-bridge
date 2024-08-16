@@ -11,26 +11,22 @@ import (
 
 func GetPolicyScripts(
 	validatorsData []eth.ValidatorChainData, logger hclog.Logger,
-) (*wallet.PolicyScript, *wallet.PolicyScript, error) {
+) (multisigPolicyScript *wallet.PolicyScript, feePolicyScript *wallet.PolicyScript, err error) {
 	multisigKeyHashes := make([]string, len(validatorsData))
 	multisigFeeKeyHashes := make([]string, len(validatorsData))
 
 	for i, x := range validatorsData {
-		verificationKey := wallet.PadKeyToSize(x.Key[0].Bytes())
-		verificationKeyFee := wallet.PadKeyToSize(x.Key[1].Bytes())
-
-		keyHash, err := wallet.GetKeyHash(verificationKey)
+		multisigKeyHashes[i], err = wallet.GetKeyHash(
+			wallet.PadKeyToSize(x.Key[0].Bytes()))
 		if err != nil {
 			return nil, nil, err
 		}
 
-		keyHashFee, err := wallet.GetKeyHash(verificationKeyFee)
+		multisigFeeKeyHashes[i], err = wallet.GetKeyHash(
+			wallet.PadKeyToSize(x.Key[1].Bytes()))
 		if err != nil {
 			return nil, nil, err
 		}
-
-		multisigKeyHashes[i] = keyHash
-		multisigFeeKeyHashes[i] = keyHashFee
 	}
 
 	if logger != nil {
@@ -47,10 +43,10 @@ func GetPolicyScripts(
 	}
 
 	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData))))
-	multisigPolicyScript := wallet.NewPolicyScript(multisigKeyHashes, atLeastSignersCount)
-	multisigFeePolicyScript := wallet.NewPolicyScript(multisigFeeKeyHashes, atLeastSignersCount)
+	multisigPolicyScript = wallet.NewPolicyScript(multisigKeyHashes, atLeastSignersCount)
+	feePolicyScript = wallet.NewPolicyScript(multisigFeeKeyHashes, atLeastSignersCount)
 
-	return multisigPolicyScript, multisigFeePolicyScript, nil
+	return multisigPolicyScript, feePolicyScript, nil
 }
 
 func GetMultisigAddresses(
