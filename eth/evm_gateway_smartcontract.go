@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const depositGasLimit = uint64(8_000_000)
+const depositGasLimitMultiplier = 1.7
 
 type IEVMGatewaySmartContract interface {
 	Deposit(ctx context.Context, signature []byte, bitmap *big.Int, data []byte) error
@@ -24,15 +24,6 @@ type EVMGatewaySmartContractImpl struct {
 }
 
 var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractImpl)(nil)
-
-func NewEVMGatewaySmartContract(
-	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
-) *EVMGatewaySmartContractImpl {
-	return &EVMGatewaySmartContractImpl{
-		smartContractAddress: smartContractAddress,
-		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
-	}
-}
 
 func NewEVMGatewaySmartContractWithWallet(
 	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
@@ -56,15 +47,24 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 		return err
 	}
 
-	contract, err := contractbinding.NewGateway(
-		common.HexToAddress(bsc.smartContractAddress),
-		ethTxHelper.GetClient())
+	toAddress := common.HexToAddress(bsc.smartContractAddress)
+
+	contract, err := contractbinding.NewGateway(toAddress, ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}
 
+	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
+		context.Background(), bsc.ethHelper.wallet.GetAddress(), toAddress, nil, depositGasLimitMultiplier,
+		contractbinding.GatewayMetaData, "deposit", signature, bitmap, data)
+	if err != nil {
+		return bsc.ethHelper.ProcessError(err)
+	}
+
+	bsc.ethHelper.logger.Debug("Estimated gas for deposit", "gas", estimatedGas, "original", estimatedGasOriginal)
+
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		opts.GasLimit = depositGasLimit
+		opts.GasLimit = estimatedGas
 
 		return contract.Deposit(opts, signature, bitmap, data)
 	})

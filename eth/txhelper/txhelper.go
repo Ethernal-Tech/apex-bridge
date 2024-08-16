@@ -34,6 +34,10 @@ type IEthTxHelper interface {
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context, wallet IEthTxWallet,
 		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
+	EstimateGas(
+		ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
+		bindMetadata *bind.MetaData, method string, args ...interface{},
+	) (uint64, uint64, error)
 	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
 
@@ -179,6 +183,33 @@ func (t *EthTxHelperImpl) SendTx(
 	}
 
 	return sendTxHandler(txOptsRes)
+}
+
+func (t *EthTxHelperImpl) EstimateGas(
+	ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
+	bindMetadata *bind.MetaData, method string, args ...interface{},
+) (uint64, uint64, error) {
+	parsed, err := bindMetadata.GetAbi()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	input, err := parsed.Pack(method, args...)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	estimatedGas, err := t.GetClient().EstimateGas(ctx, ethereum.CallMsg{
+		From:  from,
+		To:    &to,
+		Value: value,
+		Data:  input,
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint64(float64(estimatedGas) * gasLimitMultiplier), estimatedGas, nil
 }
 
 func (t *EthTxHelperImpl) PopulateTxOpts(
