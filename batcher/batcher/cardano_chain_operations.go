@@ -99,12 +99,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigPolicyScript, multisigFeePolicyScript, err := eth.GetPolicyScripts(validatorsData, nil)
+	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigAddress, multisigFeeAddress, err := eth.GetMultisigAddresses(
+	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
 		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript, multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
@@ -230,10 +230,10 @@ func (cco *CardanoChainOperations) getCardanoData(
 	hasVerificationKey, hasFeeVerificationKey := false, false
 
 	for _, validator := range validatorsData {
-		hasVerificationKey = hasVerificationKey ||
-			bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), validator.Key[0].Bytes())
-		hasFeeVerificationKey = hasFeeVerificationKey ||
-			bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), validator.Key[1].Bytes())
+		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(),
+			cardanowallet.PadKeyToSize(validator.Key[0].Bytes()))
+		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(),
+			cardanowallet.PadKeyToSize(validator.Key[1].Bytes()))
 	}
 
 	if !hasVerificationKey {
