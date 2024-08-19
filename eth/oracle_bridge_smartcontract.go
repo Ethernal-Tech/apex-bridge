@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const submitClaimsGasLimit = uint64(10_000_000)
-
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
 
@@ -115,18 +113,30 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 		return err
 	}
 
-	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
-		ethTxHelper.GetClient())
+	toAddress := common.HexToAddress(bsc.smartContractAddress)
+
+	contract, err := contractbinding.NewBridgeContract(toAddress, ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}
 
+	gasMultiplier := 1.0
+	if submitOpts != nil && submitOpts.GasLimitMultiplier != 0 {
+		gasMultiplier = float64(submitOpts.GasLimitMultiplier)
+	}
+
+	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
+		context.Background(), bsc.ethHelper.wallet.GetAddress(), toAddress, nil, gasMultiplier,
+		contractbinding.BridgeContractMetaData, "submitClaims", claims)
+	if err != nil {
+		return bsc.ethHelper.ProcessError(err)
+	}
+
+	bsc.ethHelper.logger.Debug("Estimated gas for submit claims",
+		"gas", estimatedGas, "original", estimatedGasOriginal)
+
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		opts.GasLimit = submitClaimsGasLimit
-		if submitOpts != nil && submitOpts.GasLimitMultiplier != 0 {
-			opts.GasLimit = uint64(float32(opts.GasLimit) * submitOpts.GasLimitMultiplier)
-		}
+		opts.GasLimit = estimatedGas
 
 		return contract.SubmitClaims(opts, claims)
 	})
