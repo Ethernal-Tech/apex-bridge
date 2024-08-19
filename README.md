@@ -53,15 +53,17 @@ $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/ca
 
 # How to generate bls keys for evm batcher(s)
 ```shell
-$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type evm
+$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --type evm --show-pk
 ```
-- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
+`--validator-config path_to_config/config.json`
 
 # How to generate ecdsa keys for evm relayer(s)
 ```shell
-$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --show-pk --type relayer-evm
+$ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --type relayer-evm --show-pk
 ```
-- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
+`--validator-config path_to_config/config.json`
 
 # How to register chain for validator
 ```shell
@@ -136,20 +138,20 @@ optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used 
 Minimal example
 ``` shell
 $ go run ./main.go generate-configs \
-        --validator-data-dir "./blade-dir" \
-        --relayer-data-dir "./blade-dir" \
-        --prime-network-address "localhost:13001" \
+        --validator-data-dir ./blade-dir \
+        --relayer-data-dir ./blade-dir \
+        --prime-network-address localhost:13001 \
         --prime-network-magic 142 \
-        --prime-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
-        --vector-network-address "localhost:23001" \
+        --prime-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
+        --vector-network-address localhost:23001 \
         --vector-network-magic 242 \
-        --vector-blockfrost-url "https://cardano-preview.blockfrost.io/api/v0" \
-        --nexus-node-url "localhost:5500" \
-        --nexus-sc-address "0x816402271eE6DA078Fc8Cb537aDBDD58219485BB" \
-        --nexus-relayer-addr "0x816402271FE6D9078Fc8Cb537aDBDD58219485BB" \
-        --bridge-node-url "https://polygon-mumbai-pokt.nodies.app" \
-        --bridge-sc-address "0x816402271eE6D9078Fc8Cb537aDBDD58219485BB" \
-        --api-keys "test_api_key_1"
+        --vector-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
+        --nexus-node-url localhost:5500 \
+        --nexus-sc-address 0x816402271eE6DA078Fc8Cb537aDBDD58219485BB \
+        --nexus-relayer-addr 0x816402271FE6D9078Fc8Cb537aDBDD58219485BB \
+        --bridge-node-url https://polygon-mumbai-pokt.nodies.app \
+        --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
+        --api-keys test_api_key_1
 ```
 
 # How to Send a Bridging Transaction from Prime to Vector (and Vice Versa)
@@ -157,11 +159,36 @@ $ go run ./main.go generate-configs \
 $ go run ./main.go sendtx \
         --key 58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0 \
         --ogmios-src http://localhost:1337 \
-        --receiver addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx:1_000_010 \
-        --receiver addr_test1wrvy8aw0trr4a93ujufac0l9jeh43p7a7z74dz8kljx2yxguldndk:2_000_010 \
-        --testnet-src 42 \
+        --addr-multisig-src addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx \
+        --testnet-src 3311 \
         --chain-dst vector \
-        --addr-multisig-src addr_test1wzk57y7l9q6qxdyrm4a3nlp535w5l8xglg0kvtl8hp9l8rgpj7q2x \
+        --receiver vector_test1vgxk3ha6hmftgjzrjlrxrndmqrg43y862pu909r87q8kpas0c0mzc:1_000_010 \
         --fee 1_100_000 \
         --ogmios-dst http://localhost:1338 
+```
+
+# How to Send a Bridging Transaction from Nexus to Prime
+```shell
+$ go run ./main.go sendtx \
+        --tx-type evm \
+        --key a7dc97a721e4ef7503bfc120fdf343030c2070d0cc0db8d1d9384ecf0bcd0aaf \
+        --nexus-url http://127.0.0.1:12001 \
+        --gateway-addr 0x1BBe094400C854934e46ce53E1f4Dd94f04F9376 \
+        --chain-dst prime \
+        --receiver addr_test1wq8vxyeq8waqx8cw8p400psmy0x2jd6jt78kffkrs670ctgfnasnk:1000000000000000000 \
+        --fee 1000010000000000000 \
+        --ogmios-dst http://localhost:1337
+```
+
+# How to Send a Bridging Transaction from Prime to Nexus
+```shell
+$ go run ./main.go sendtx \
+        --key 58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0 \
+        --ogmios-src http://localhost:1337 \
+        --addr-multisig-src addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx \
+        --testnet-src 3311 \
+        --chain-dst nexus \
+        --receiver 0x71C7656EC7ab88b098defB751B7401B5f6d8976F:1_000_000 \
+        --fee 1_100_000 \
+        --nexus-url http://127.0.0.1:12001
 ```

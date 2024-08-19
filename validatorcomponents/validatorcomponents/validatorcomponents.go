@@ -9,6 +9,7 @@ import (
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -367,12 +368,12 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
 			}
 
-			multisigPolicyScript, multisigFeePolicyScript, err := eth.GetPolicyScripts(validatorsData, logger)
+			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData, logger)
 			if err != nil {
 				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
 			}
 
-			multisigAddr, feeAddr, err := eth.GetMultisigAddresses(
+			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
 				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
 				multisigPolicyScript, multisigFeePolicyScript)
 			if err != nil {
