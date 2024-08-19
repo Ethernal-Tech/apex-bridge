@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const submitBatchGasLimitMultiplier = 1.5
+const submitBatchGasLimitMultiplier = 1.7
 
 type Chain = contractbinding.IBridgeStructsChain
 
@@ -86,11 +86,11 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 }
 
 func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
-	return bsc.submitSignedBatch(ctx, signedBatch, true)
+	return bsc.submitSignedBatch(ctx, signedBatch, false)
 }
 
 func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
-	return bsc.submitSignedBatch(ctx, signedBatch, false)
+	return bsc.submitSignedBatch(ctx, signedBatch, true)
 }
 
 func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
@@ -236,8 +236,9 @@ func (bsc *BridgeSmartContractImpl) submitSignedBatch(
 	}
 
 	var (
-		method    string
-		toAddress = common.HexToAddress(bsc.smartContractAddress)
+		method      string
+		fromAddress = bsc.ethHelper.wallet.GetAddress()
+		toAddress   = common.HexToAddress(bsc.smartContractAddress)
 	)
 
 	contract, err := contractbinding.NewBridgeContract(toAddress, ethTxHelper.GetClient())
@@ -252,8 +253,8 @@ func (bsc *BridgeSmartContractImpl) submitSignedBatch(
 	}
 
 	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
-		context.Background(), bsc.ethHelper.wallet.GetAddress(), toAddress, nil, submitBatchGasLimitMultiplier,
-		contractbinding.BridgeContractMetaData, "submitSignedBatch", signedBatch)
+		ctx, fromAddress, toAddress, nil, submitBatchGasLimitMultiplier,
+		contractbinding.BridgeContractMetaData, method, signedBatch)
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}

@@ -126,7 +126,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 	}
 
 	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
-		context.Background(), bsc.ethHelper.wallet.GetAddress(), toAddress, nil, gasMultiplier,
+		ctx, bsc.ethHelper.wallet.GetAddress(), toAddress, nil, gasMultiplier,
 		contractbinding.BridgeContractMetaData, "submitClaims", claims)
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)

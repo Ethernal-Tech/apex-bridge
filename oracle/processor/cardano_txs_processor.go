@@ -21,8 +21,8 @@ const (
 	TickTimeMs                  = 2000
 	TTLInsuranceOffset          = 2
 	MinBridgingClaimsToGroup    = 1
-	GasLimitMultiplierDefault   = float32(1)
-	GasLimitMultiplierIncrement = float32(0.5)
+	GasLimitMultiplierDefault   = float32(1.6)
+	GasLimitMultiplierIncrement = float32(0.05)
 	GasLimitMultiplierMax       = float32(3)
 )
 
