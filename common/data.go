@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/hex"
-	"strings"
 )
 
 const (
@@ -27,7 +26,7 @@ func (h Hash) String() string {
 }
 
 func NewHashFromHexString(hash string) Hash {
-	v, _ := hex.DecodeString(strings.TrimPrefix(hash, "0x"))
+	v, _ := DecodeHex(hash)
 
 	return NewHashFromBytes(v)
 }

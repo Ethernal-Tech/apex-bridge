@@ -8,6 +8,7 @@ import (
 
 	apexcommon "github.com/Ethernal-Tech/apex-bridge/common"
 	secretsInfra "github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -41,10 +42,10 @@ func NewEthTxWallet(pk string) (*EthTxWallet, error) {
 		err   error
 	)
 
-	if len(pk) == 32 {
+	if len(pk) == wallet.KeySize {
 		bytes = ([]byte)(pk)
 	} else {
-		bytes, err = apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
+		bytes, err = apexcommon.DecodeHex(strings.TrimSpace(pk))
 		if err != nil {
 			return nil, err
 		}
@@ -55,12 +56,9 @@ func NewEthTxWallet(pk string) (*EthTxWallet, error) {
 		return nil, err
 	}
 
-	// Get the Ethereum address from the public key
-	ethereumAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
 	return &EthTxWallet{
 		privateKey: privateKey,
-		addr:       ethereumAddress,
+		addr:       crypto.PubkeyToAddress(privateKey.PublicKey), // Get the Ethereum address from the public key
 	}, nil
 }
 
@@ -70,12 +68,9 @@ func GenerateNewEthTxWallet() (*EthTxWallet, error) {
 		return nil, err
 	}
 
-	// Get the Ethereum address from the public key
-	ethereumAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
 	return &EthTxWallet{
 		privateKey: privateKey,
-		addr:       ethereumAddress,
+		addr:       crypto.PubkeyToAddress(privateKey.PublicKey), // Get the Ethereum address from the public key
 	}, nil
 }
 
