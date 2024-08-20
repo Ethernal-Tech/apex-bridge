@@ -116,7 +116,8 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return receipt.BlockHash.String(),
-			fmt.Errorf("tx receipt status is unsuccessful for %s: %v", tx.Hash(), receipt.Status)
+			fmt.Errorf("tx receipt status is unsuccessful for %s, gas limit = %d, gas price = %s",
+				tx.Hash(), tx.Gas(), tx.GasPrice())
 	}
 
 	return receipt.BlockHash.String(), nil

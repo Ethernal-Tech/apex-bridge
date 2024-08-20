@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const submitBatchGasLimitMultiplier = 1.7
+const submitBatchGasLimitMultiplier = 1.9
 
 type Chain = contractbinding.IBridgeStructsChain
 
