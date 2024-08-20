@@ -100,25 +100,25 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 
 	tx, err := ethTxHelper.SendTx(ctx, e.wallet, bind.TransactOpts{}, handler)
 	if err != nil {
-		return "", e.ProcessError(err)
+		return "", e.ProcessError(err) // tx is not available here to pick hash/gas/gasprice
 	}
 
-	e.logger.Info("tx has been sent", "tx hash", tx.Hash())
+	e.logger.Info("tx has been sent", "hash", tx.Hash(), "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
-		return "", e.ProcessError(fmt.Errorf("failed to receive receipt for tx %s: %w", tx.Hash(), err))
+		return "", fmt.Errorf("failed to receive receipt for tx %s, gas limit = %d, gas price = %s: %w",
+			tx.Hash(), tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 	}
-
-	e.logger.Info("tx has been included in block", "tx hash", tx.Hash(),
-		"status", receipt.Status, "block", receipt.BlockNumber, "block hash", receipt.BlockHash,
-		"gas used", receipt.BlobGasUsed, "cumulative gas used", receipt.CumulativeGasUsed)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return receipt.BlockHash.String(),
 			fmt.Errorf("tx receipt status is unsuccessful for %s, gas limit = %d, gas price = %s",
 				tx.Hash(), tx.Gas(), tx.GasPrice())
 	}
+
+	e.logger.Info("tx has been included in block", "hash", tx.Hash(),
+		"block", receipt.BlockNumber, "block hash", receipt.BlockHash, "gas used", receipt.GasUsed)
 
 	return receipt.BlockHash.String(), nil
 }
