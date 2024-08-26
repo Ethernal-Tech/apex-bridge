@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,8 +16,35 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func IsValidURL(input string) bool {
-	_, err := url.ParseRequestURI(input)
+func IsValidHTTPURL(input string) bool {
+	u, err := url.Parse(input)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return false
+	}
+
+	return IsValidNetworkAddress(u.Host)
+}
+
+func IsValidNetworkAddress(input string) bool {
+	host, port, err := net.SplitHostPort(input)
+	if err != nil {
+		// If there's an error, it might be because the port is not included, so treat the input as the host
+		if !strings.Contains(err.Error(), "missing port in address") {
+			return false
+		}
+
+		host = input
+	} else if portVal, err := strconv.ParseInt(port, 10, 32); err != nil || portVal < 0 {
+		return false
+	}
+
+	// Check if host is a valid IP address
+	if net.ParseIP(host) != nil {
+		return true
+	}
+
+	// Check if the host is a valid domain name by trying to resolve it
+	_, err = net.LookupHost(host)
 
 	return err == nil
 }

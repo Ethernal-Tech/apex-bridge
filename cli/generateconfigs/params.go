@@ -195,7 +195,7 @@ type generateConfigsParams struct {
 }
 
 func (p *generateConfigsParams) validateFlags() error {
-	if p.primeNetworkAddress == "" || !common.IsValidURL(p.primeNetworkAddress) {
+	if !common.IsValidNetworkAddress(p.primeNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
@@ -204,24 +204,16 @@ func (p *generateConfigsParams) validateFlags() error {
 			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	}
 
-	if p.primeBlockfrostURL != "" && !common.IsValidURL(p.primeBlockfrostURL) {
+	if p.primeBlockfrostURL != "" && !common.IsValidHTTPURL(p.primeBlockfrostURL) {
 		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
 	}
 
-	if p.primeOgmiosURL != "" && !common.IsValidURL(p.primeOgmiosURL) {
+	if p.primeOgmiosURL != "" && !common.IsValidHTTPURL(p.primeOgmiosURL) {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
 
-	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
+	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
-	}
-
-	if p.vectorBlockfrostURL != "" && !common.IsValidURL(p.vectorBlockfrostURL) {
-		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
-	}
-
-	if p.vectorOgmiosURL != "" && !common.IsValidURL(p.vectorOgmiosURL) {
-		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
 	}
 
 	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
@@ -229,7 +221,15 @@ func (p *generateConfigsParams) validateFlags() error {
 			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 	}
 
-	if p.bridgeNodeURL == "" || !common.IsValidURL(p.bridgeNodeURL) {
+	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
+		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
+	}
+
+	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
+		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
+	}
+
+	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
 
@@ -245,12 +245,8 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one %s", apiKeysFlag)
 	}
 
-	if p.telemetry != "" {
-		parts := strings.Split(p.telemetry, ",")
-		// common.IsValidURL(parts[0]) currently returns false for 0.0.0.0:5001
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" { //
-			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
-		}
+	if p.telemetry != "" && !common.IsValidNetworkAddress(p.telemetry) {
+		return fmt.Errorf("invalid telemetry: %s", p.telemetry)
 	}
 
 	if p.primeStartingBlock != "" {
@@ -267,7 +263,7 @@ func (p *generateConfigsParams) validateFlags() error {
 		}
 	}
 
-	if p.nexusNodeURL == "" || !common.IsValidURL(p.nexusNodeURL) {
+	if !common.IsValidHTTPURL(p.nexusNodeURL) {
 		return fmt.Errorf("invalid %s: %s", nexusNodeURLFlag, p.nexusNodeURL)
 	}
 

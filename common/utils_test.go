@@ -136,3 +136,35 @@ func TestHexToAddress(t *testing.T) {
 	assert.Equal(t, append(make([]byte, 19), 0xAA), HexToAddress("0xAA").Bytes())
 	assert.Equal(t, append(make([]byte, 17), 0xCC, 0xFF, 0xAA), HexToAddress("0xCCFFAA").Bytes())
 }
+
+func TestIsValidHTTPURL(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, IsValidHTTPURL(""))
+	assert.False(t, IsValidHTTPURL("pera.com"))
+	assert.False(t, IsValidHTTPURL("httpS://pera.com:aaa/fe"))
+	assert.False(t, IsValidHTTPURL("/sevap"))
+	assert.False(t, IsValidHTTPURL("https://sevap:90:90"))
+	assert.False(t, IsValidHTTPURL("https://sevap:KRA"))
+	assert.False(t, IsValidHTTPURL("https://sevap:-54"))
+	assert.True(t, IsValidHTTPURL("http://pera.com"))
+	assert.True(t, IsValidHTTPURL("https://pera.com:3345"))
+	assert.True(t, IsValidHTTPURL("httpS://pera.com"))
+	assert.True(t, IsValidHTTPURL("httpS://pera.com:8989/fe"))
+	assert.True(t, IsValidHTTPURL("hTTp://pera.com/sto/pet?hello=123"))
+}
+
+func TestIsIsValidNetworkAddress(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, IsValidNetworkAddress("pera.com"))
+	assert.True(t, IsValidNetworkAddress("pera.com:1898"))
+	assert.True(t, IsValidNetworkAddress("192.8.0.1:1898"))
+	assert.True(t, IsValidNetworkAddress("192.8.0.21"))
+	assert.False(t, IsValidNetworkAddress("192.8.0"))
+	assert.False(t, IsValidNetworkAddress("pera.com:-1"))
+	assert.False(t, IsValidNetworkAddress("pera.com:2:0"))
+	assert.False(t, IsValidNetworkAddress("pera.com/23232"))
+	assert.False(t, IsValidNetworkAddress("http://pera.com:2"))
+	assert.False(t, IsValidNetworkAddress(""))
+}

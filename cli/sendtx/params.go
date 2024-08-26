@@ -143,8 +143,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
 
-		if ip.nexusURL == "" {
-			return fmt.Errorf("--%s not specified", nexusURLFlag)
+		if !common.IsValidHTTPURL(ip.nexusURL) {
+			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
 		}
 	} else {
 		if ip.feeAmount.Uint64() < cardanowallet.MinUTxODefaultValue {
@@ -158,7 +158,7 @@ func (ip *sendTxParams) validateFlags() error {
 
 		ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
 
-		if ip.ogmiosURLSrc == "" || !common.IsValidURL(ip.ogmiosURLSrc) {
+		if !common.IsValidHTTPURL(ip.ogmiosURLSrc) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, ip.ogmiosURLSrc)
 		}
 
@@ -166,7 +166,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if ip.ogmiosURLDst != "" && !common.IsValidURL(ip.ogmiosURLDst) {
+		if !common.IsValidHTTPURL(ip.ogmiosURLDst) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
 		}
 	}
