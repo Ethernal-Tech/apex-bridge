@@ -1,6 +1,9 @@
 package core
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
@@ -294,11 +297,26 @@ func (m *EventStoreMock) GetLogsByBlockNumber(blockNumber uint64) ([]*ethgo.Log,
 func (m *EventStoreMock) InsertLastProcessedBlock(blockNumber uint64) error {
 	args := m.Called(blockNumber)
 
-	return args.Error(1)
+	return args.Error(0)
 }
 
 func (m *EventStoreMock) InsertLogs(logs []*ethgo.Log) error {
 	args := m.Called(logs)
 
-	return args.Error(1)
+	return args.Error(0)
+}
+
+func SimulateRealEthMetadata[
+	T BaseEthMetadata | BridgingRequestEthMetadata | BatchExecutedEthMetadata,
+](
+	metadata T,
+) (
+	[]byte, error,
+) {
+	result, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %v, err: %w", metadata, err)
+	}
+
+	return result, nil
 }
