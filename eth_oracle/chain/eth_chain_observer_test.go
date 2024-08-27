@@ -16,7 +16,7 @@ import (
 )
 
 func TestEthChainObserver(t *testing.T) {
-	ctx := context.Background() //ctx, cncl := context.WithCancel(context.Background())
+	ctx := context.Background()
 	txsProcessorMock := &core.EthTxsProcessorMock{}
 	oracleDB := &core.EthTxsProcessorDBMock{}
 	indexerDB := &core.EventStoreMock{}
@@ -64,7 +64,6 @@ func TestEthChainObserver(t *testing.T) {
 }
 
 func Test_InitOracleState(t *testing.T) {
-
 	blockNumber := uint64(100)
 	chainID := "nexus"
 
@@ -149,7 +148,6 @@ func Test_InitOracleState(t *testing.T) {
 }
 
 func Test_AddLog(t *testing.T) {
-
 	txProcessorMock := &core.EthTxsProcessorMock{}
 	mockEventHandler := &confirmedEventHandler{
 		TxsProcessor: txProcessorMock,
@@ -160,14 +158,12 @@ func Test_AddLog(t *testing.T) {
 	mockLog := &ethgo.Log{}
 
 	t.Run("log processed successfully", func(t *testing.T) {
-
 		txProcessorMock.On("NewUnprocessedLog", "nexus", mockLog).Return(nil).Once()
 
 		require.NoError(t, mockEventHandler.AddLog(mockLog))
 	})
 
 	t.Run("NewUnprocessedLog errors", func(t *testing.T) {
-
 		txProcessorMock.On("NewUnprocessedLog", "nexus", mockLog).Return(errors.New("test error")).Once()
 
 		require.Error(t, mockEventHandler.AddLog(mockLog))

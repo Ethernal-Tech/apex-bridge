@@ -108,6 +108,8 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 	)
 
 	if log == nil || log.Data == nil || log.Topics == nil {
+		bp.logger.Error("empty log received")
+
 		return nil
 	}
 
