@@ -294,11 +294,11 @@ func (m *EventStoreMock) GetLogsByBlockNumber(blockNumber uint64) ([]*ethgo.Log,
 func (m *EventStoreMock) InsertLastProcessedBlock(blockNumber uint64) error {
 	args := m.Called(blockNumber)
 
-	return args.Error(1)
+	return args.Error(0)
 }
 
 func (m *EventStoreMock) InsertLogs(logs []*ethgo.Log) error {
 	args := m.Called(logs)
 
-	return args.Error(1)
+	return args.Error(0)
 }

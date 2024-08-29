@@ -55,7 +55,7 @@ type registerChainParams struct {
 }
 
 func (ip *registerChainParams) validateFlags() error {
-	if !common.IsValidURL(ip.bridgeURL) {
+	if !common.IsValidHTTPURL(ip.bridgeURL) {
 		return fmt.Errorf("invalid bridge node url: %s", ip.bridgeURL)
 	}
 

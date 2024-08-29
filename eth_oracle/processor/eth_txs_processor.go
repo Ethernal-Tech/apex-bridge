@@ -107,6 +107,12 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 		invalidTxsCounter int
 	)
 
+	if log == nil || log.Data == nil || log.Topics == nil {
+		bp.logger.Error("empty log received")
+
+		return nil
+	}
+
 	tx, err := bp.logToTx(originChainID, log)
 	if err != nil {
 		bp.logger.Error("failed to convert log into tx", "err", err)

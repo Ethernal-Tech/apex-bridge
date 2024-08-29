@@ -55,7 +55,7 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 	}
 
 	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
-		context.Background(), bsc.ethHelper.wallet.GetAddress(), toAddress, nil, depositGasLimitMultiplier,
+		ctx, bsc.ethHelper.wallet.GetAddress(), toAddress, nil, depositGasLimitMultiplier,
 		contractbinding.GatewayMetaData, "deposit", signature, bitmap, data)
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)

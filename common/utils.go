@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,8 +16,35 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func IsValidURL(input string) bool {
-	_, err := url.ParseRequestURI(input)
+func IsValidHTTPURL(input string) bool {
+	u, err := url.Parse(input)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return false
+	}
+
+	return IsValidNetworkAddress(u.Host)
+}
+
+func IsValidNetworkAddress(input string) bool {
+	host, port, err := net.SplitHostPort(input)
+	if err != nil {
+		// If there's an error, it might be because the port is not included, so treat the input as the host
+		if !strings.Contains(err.Error(), "missing port in address") {
+			return false
+		}
+
+		host = input
+	} else if portVal, err := strconv.ParseInt(port, 10, 32); err != nil || portVal < 0 {
+		return false
+	}
+
+	// Check if host is a valid IP address
+	if net.ParseIP(host) != nil {
+		return true
+	}
+
+	// Check if the host is a valid domain name by trying to resolve it
+	_, err = net.LookupHost(host)
 
 	return err == nil
 }
@@ -65,12 +94,7 @@ func IsContextDoneErr(err error) bool {
 // SplitString splits large string into slice of substrings
 func SplitString(s string, mxlen int) (res []string) {
 	for i := 0; i < len(s); i += mxlen {
-		end := i + mxlen
-		if end > len(s) {
-			end = len(s)
-		}
-
-		res = append(res, s[i:end])
+		res = append(res, s[i:min(i+mxlen, len(s))])
 	}
 
 	return res
@@ -112,14 +136,14 @@ const (
 )
 
 func DfmToWei(dfm *big.Int) *big.Int {
-	wei, _ := new(big.Int).SetString(dfm.String(), 10)
+	wei := new(big.Int).Set(dfm)
 	base := big.NewInt(10)
 
 	return wei.Mul(wei, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil))
 }
 
 func WeiToDfm(wei *big.Int) *big.Int {
-	dfm, _ := new(big.Int).SetString(wei.String(), 10)
+	dfm := new(big.Int).Set(wei)
 	base := big.NewInt(10)
 	dfm.Div(dfm, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil))
 
@@ -127,12 +151,12 @@ func WeiToDfm(wei *big.Int) *big.Int {
 }
 
 func WeiToDfmCeil(wei *big.Int) *big.Int {
-	dfm, _ := new(big.Int).SetString(wei.String(), 10)
+	dfm := new(big.Int).Set(wei)
 	base := big.NewInt(10)
-	mod := big.NewInt(0)
+	mod := new(big.Int)
 	dfm.DivMod(dfm, base.Exp(base, big.NewInt(WeiDecimals-DfmDecimals), nil), mod)
 
-	if mod.Cmp(big.NewInt(0)) != 0 {
+	if mod.BitLen() > 0 { // for zero big.Int BitLen() == 0
 		dfm.Add(dfm, big.NewInt(1))
 	}
 

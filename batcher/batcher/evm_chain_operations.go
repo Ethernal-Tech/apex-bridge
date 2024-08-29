@@ -94,7 +94,7 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-	txsHashBytes, err := hex.DecodeString(txHash)
+	txsHashBytes, err := common.DecodeHex(txHash)
 	if err != nil {
 		return nil, nil, err
 	}
