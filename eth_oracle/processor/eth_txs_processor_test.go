@@ -61,6 +61,7 @@ func TestEthTxsProcessor(t *testing.T) {
 	}
 
 	appConfig.FillOut()
+	appConfig.EthChains[common.ChainIDStrNexus].NodeURL = "http://127.0.0.1"
 
 	const (
 		dbFilePath      = "temp_test_oracle.db"
@@ -74,7 +75,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 	t.Cleanup(dbCleanup)
 
-	t.Run("NewCardanoTxsProcessor", func(t *testing.T) {
+	t.Run("TestEthTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		proc := NewEthTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
@@ -450,7 +451,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, proc.NewUnprocessedLog(originChainID, log))
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -520,7 +521,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, proc.NewUnprocessedLog(originChainID, log))
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -579,7 +580,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -639,7 +640,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -720,7 +721,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -812,7 +813,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
@@ -904,7 +905,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
 
-		metadata, err := ethcore.SimulateRealEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
+		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
 		require.NoError(t, err)
 
 		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{

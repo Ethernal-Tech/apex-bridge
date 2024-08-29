@@ -88,6 +88,5 @@ func (appConfig *AppConfig) FillOut() {
 
 	for chainID, ethChainConfig := range appConfig.EthChains {
 		ethChainConfig.ChainID = chainID
-		ethChainConfig.NodeURL = "http://127.0.0.1"
 	}
 }

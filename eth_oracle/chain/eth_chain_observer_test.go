@@ -3,19 +3,35 @@ package chain
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	eventTracker "github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
+
 	"github.com/Ethernal-Tech/ethgo"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEthChainObserver(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "boltdb-test")
+	require.NoError(t, err)
+
+	foldersCleanup := func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}
+
+	defer foldersCleanup()
+
 	ctx := context.Background()
 	txsProcessorMock := &core.EthTxsProcessorMock{}
 	oracleDB := &core.EthTxsProcessorDBMock{}
@@ -60,6 +76,103 @@ func TestEthChainObserver(t *testing.T) {
 		require.Equal(t, co.logger, logger)
 		require.Equal(t, co.ctx, ctx)
 		require.NotNil(t, co.tracker)
+	})
+
+	t.Run("chek start stop", func(t *testing.T) {
+		dbBlockNumber := uint64(1)
+
+		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+
+		chainObserver, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
+		require.NoError(t, err)
+		require.NotNil(t, chainObserver)
+
+		err = chainObserver.Start()
+		require.NoError(t, err)
+	})
+
+	t.Run("check newConfirmedTxs called", func(t *testing.T) {
+		t.Cleanup(foldersCleanup)
+
+		testConfig := &oracleCore.EthChainConfig{
+			ChainID:                 "nexus",
+			NodeURL:                 "https://lb.drpc.org/ogrpc?network=ethereum&dkey=Asw61vWBgEgGiV0n4Kq-zfq1GZCgZgMR75uYyp-Zw4Id",
+			PoolIntervalMiliseconds: 1 * time.Second,
+			SyncBatchSize:           10,
+			NumBlockConfirmations:   1,
+			StartBlockNumber:        uint64(20588829),
+		}
+
+		oracleDB.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
+		oracleDB.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
+		require.NoError(t, err)
+
+		chainObserver, err := NewEthChainObserver(ctx, testConfig, txsProcessorMock, oracleDB, indexerDB, logger)
+		require.NoError(t, err)
+		require.NotNil(t, chainObserver)
+
+		scAddress := ethgo.HexToAddress("0x8A796072784aaD48Bf321fBF98725Fb825E3e567")
+		eventSigs := []ethgo.Hash{
+			ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"),
+		}
+
+		trackerConfig := &eventTracker.EventTrackerConfig{
+			RPCEndpoint:            testConfig.NodeURL,
+			PollInterval:           1 * time.Second,
+			SyncBatchSize:          testConfig.SyncBatchSize,
+			NumBlockConfirmations:  testConfig.NumBlockConfirmations,
+			NumOfBlocksToReconcile: uint64(0),
+			EventSubscriber: &confirmedEventHandler{
+				ChainID:      testConfig.ChainID,
+				TxsProcessor: txsProcessorMock,
+				Logger:       logger,
+			},
+			Logger: logger,
+			LogFilter: map[ethgo.Address][]ethgo.Hash{
+				scAddress: eventSigs,
+			},
+		}
+
+		chainObserver.tracker, err = eventTracker.NewEventTracker(trackerConfig, indexerDB, testConfig.StartBlockNumber)
+		require.NoError(t, err)
+
+		err = chainObserver.Start()
+		require.NoError(t, err)
+
+		doneCh := make(chan bool, 1)
+		closed := false
+
+		txsProcessorMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
+			t.Helper()
+
+			if !closed {
+				close(doneCh)
+
+				closed = true
+			}
+
+			return nil
+		}
+
+		err = chainObserver.Start()
+		require.NoError(t, err)
+
+		timer := time.NewTimer(100 * time.Second)
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+			t.Fatal("timeout")
+		case <-doneCh:
+		}
 	})
 }
 
