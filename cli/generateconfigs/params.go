@@ -614,7 +614,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				TTLBlockNumberInc:       p.nexusTTLBlockNumberInc,
 				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
-				DynamicTx:               false,
+				DynamicTx:               true,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -691,7 +691,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		SmartContractAddr: p.nexusSmartContractAddr,
 		DataDir:           cleanPath(p.relayerDataDir),
 		ConfigPath:        cleanPath(p.relayerConfigPath),
-		DynamicTx:         false,
+		DynamicTx:         true,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
