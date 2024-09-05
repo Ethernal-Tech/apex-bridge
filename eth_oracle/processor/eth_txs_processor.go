@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/big"
 	"sort"
 	"time"
 
@@ -819,6 +820,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	var (
 		metadata []byte
 		txHash   = log.TransactionHash
+		txValue  *big.Int
 	)
 
 	logEventType := log.Topics[0]
@@ -866,30 +868,30 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 			return nil, err
 		}
 
-		if withdraw != nil {
-			txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
-			for idx, tx := range withdraw.Receivers {
-				txs[idx] = core.BridgingRequestEthMetadataTransaction{
-					Amount:  tx.Amount,
-					Address: tx.Receiver,
-				}
-			}
-
-			bridgingRequestMetadata := core.BridgingRequestEthMetadata{
-				BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-				DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
-				SenderAddr:         withdraw.Sender.String(),
-				Transactions:       txs,
-				FeeAmount:          withdraw.FeeAmount,
-			}
-
-			metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
-			if err != nil {
-				bp.logger.Error("failed to marshal metadata", "err", err)
-
-				return nil, err
+		txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
+		for idx, tx := range withdraw.Receivers {
+			txs[idx] = core.BridgingRequestEthMetadataTransaction{
+				Amount:  tx.Amount,
+				Address: tx.Receiver,
 			}
 		}
+
+		bridgingRequestMetadata := core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
+			SenderAddr:         withdraw.Sender.String(),
+			Transactions:       txs,
+			FeeAmount:          withdraw.FeeAmount,
+		}
+
+		metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
+		if err != nil {
+			bp.logger.Error("failed to marshal metadata", "err", err)
+
+			return nil, err
+		}
+
+		txValue = withdraw.Value
 	default:
 		bp.logger.Error("unknown event type in log", "log", log)
 
@@ -908,5 +910,6 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		LogIndex:    log.LogIndex,
 		Address:     log.Address,
 		Metadata:    metadata,
+		Value:       txValue,
 	}, nil
 }

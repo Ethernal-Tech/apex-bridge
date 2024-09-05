@@ -190,6 +190,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
 		}, appConfig)
 		require.NoError(t, err)
 	})
@@ -286,6 +287,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging)),
 		}, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
