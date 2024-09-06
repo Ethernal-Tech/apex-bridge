@@ -73,16 +73,20 @@ func ToTxOutput(receivers []*receiverAmount) []cardanowallet.TxOutput {
 	return txOutputs
 }
 
-func ToGatewayStruct(receivers []*receiverAmount) []contractbinding.IGatewayStructsReceiverWithdraw {
+func ToGatewayStruct(receivers []*receiverAmount) ([]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int) {
+	total := big.NewInt(0)
+
 	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
 	for idx, rec := range receivers {
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
 		}
+
+		total.Add(total, rec.Amount)
 	}
 
-	return gatewayOutputs
+	return gatewayOutputs, total
 }
 
 type sendTxParams struct {
@@ -375,7 +379,8 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
-	receivers := ToGatewayStruct(ip.receiversParsed)
+	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
+	totalAmount.Add(totalAmount, ip.feeAmount)
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
@@ -396,7 +401,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	outputter.WriteOutput()
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		context.Background(), wallet.GetAddress(), contractAddress, nil, gasLimitMultiplier,
+		context.Background(), wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
 		contractbinding.GatewayMetaData, "withdraw", chainID, receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
@@ -405,7 +410,11 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet, bind.TransactOpts{GasLimit: estimatedGas},
+	tx, err := txHelper.SendTx(context.Background(), wallet,
+		bind.TransactOpts{
+			GasLimit: estimatedGas,
+			Value:    totalAmount,
+		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
 				txOpts, chainID, receivers, ip.feeAmount,
