@@ -197,7 +197,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	if tx.Value == nil || tx.Value.Cmp(receiverAmountSum) != 0 {
-		return fmt.Errorf("tx value less not equal to receivers amounts: expected %v but got %v",
+		return fmt.Errorf("tx value is not equal to sum of receiver amounts + fee: expected %v but got %v",
 			receiverAmountSum, tx.Value)
 	}
 

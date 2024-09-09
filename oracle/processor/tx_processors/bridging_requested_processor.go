@@ -237,8 +237,8 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
-		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
-			receiverAmountSum, multisigUtxo.Amount)
+		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
+			multisigUtxo.Amount, receiverAmountSum)
 	}
 
 	return nil

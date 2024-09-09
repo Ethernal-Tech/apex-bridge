@@ -365,7 +365,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -393,7 +393,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
