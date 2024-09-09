@@ -196,8 +196,8 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
-	if tx.Value == nil || tx.Value.Cmp(receiverAmountSum) == -1 {
-		return fmt.Errorf("tx value less than receivers amounts: expected at least %v but got %v",
+	if tx.Value == nil || tx.Value.Cmp(receiverAmountSum) != 0 {
+		return fmt.Errorf("tx value is not equal to sum of receiver amounts + fee: expected %v but got %v",
 			receiverAmountSum, tx.Value)
 	}
 

@@ -241,6 +241,70 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim receivers amounts and tx value missmatch less", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []core.BridgingRequestEthMetadataTransaction{
+			{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+		}
+
+		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         "addr1",
+			Transactions:       receivers,
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Hash:          txHash,
+			Metadata:      validMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging - 1)),
+		}, appConfig)
+
+		require.Error(t, err)
+		require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim receivers amounts and tx value missmatch more", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []core.BridgingRequestEthMetadataTransaction{
+			{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+		}
+
+		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         "addr1",
+			Transactions:       receivers,
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Hash:          txHash,
+			Metadata:      validMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 1)),
+		}, appConfig)
+
+		require.Error(t, err)
+		require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
+	})
+
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
