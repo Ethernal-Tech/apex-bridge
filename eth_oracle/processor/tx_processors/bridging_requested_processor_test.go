@@ -274,7 +274,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	//nolint:dupl
-	t.Run("alidateAndAddClaim receivers amounts and tx value missmatch more", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim receivers amounts and tx value missmatch more", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
