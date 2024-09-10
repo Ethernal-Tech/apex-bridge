@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
@@ -92,13 +90,13 @@ func TestBatcherExecute(t *testing.T) {
 	getConfirmedTransactionsRet := []eth.ConfirmedTransaction{
 		{
 			Nonce:                   5,
-			ObservedTransactionHash: common.MustHashToBytes32("0x6674"),
+			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x333",
-					Amount:             10,
+					Amount:             big.NewInt(10),
 				},
 			},
 		},
@@ -156,7 +154,7 @@ func TestBatcherExecute(t *testing.T) {
 				TxHash: "txHash",
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
-		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(testError)
+		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
@@ -206,7 +204,7 @@ func TestBatcherExecute(t *testing.T) {
 				TxHash: "txHash",
 			}, nil)
 		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
-		bridgeSmartContractMock.On("SubmitSignedBatch", ctx, mock.Anything).Return(nil)
+		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
@@ -227,77 +225,13 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	}()
 
 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: path.Join(validPath, "stp"),
+		Path: filepath.Join(validPath, "stp"),
 		Type: secrets.Local,
 	})
 	require.NoError(t, err)
 
 	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
 	require.NoError(t, err)
-
-	chainConfig := core.ChainConfig{
-		ChainID:   common.ChainIDStrPrime,
-		ChainType: "Cardano",
-		ChainSpecific: json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 2,
-			"potentialFee": 300000
-			}`)),
-	}
-
-	t.Run("invalid chain type", func(t *testing.T) {
-		cfg := chainConfig
-		cfg.ChainType = "invalid"
-
-		chainOp, err := GetChainSpecificOperations(cfg, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "unknown chain type")
-	})
-
-	t.Run("invalid cardano json config", func(t *testing.T) {
-		cfg := chainConfig
-		cfg.ChainSpecific = json.RawMessage("")
-
-		chainOp, err := GetChainSpecificOperations(cfg, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
-	})
-
-	t.Run("non existing cardano wallet", func(t *testing.T) {
-		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
-		require.NoError(t, err)
-
-		err = secretsMngr.RemoveSecret(fmt.Sprintf("%sprime_key", secrets.CardanoKeyLocalPrefix))
-		require.NoError(t, err)
-
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.Nil(t, chainOp)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to load wallet")
-
-		_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
-		require.NoError(t, err)
-	})
-
-	t.Run("valid cardano config and keys path", func(t *testing.T) {
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.NoError(t, err)
-		require.NotNil(t, chainOp)
-	})
-
-	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
-		defer func() {
-			chainConfig.ChainType = "Cardano"
-		}()
-
-		chainConfig.ChainType = "CaRDaNo"
-
-		chainOp, err := GetChainSpecificOperations(chainConfig, &indexer.DatabaseMock{}, secretsMngr, hclog.NewNullLogger())
-		require.NoError(t, err)
-		require.NotNil(t, chainOp)
-	})
 
 	t.Run("getFirstAndLastTxNonceID one item", func(t *testing.T) {
 		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
@@ -407,4 +341,10 @@ func (c *cardanoChainOperationsMock) IsSynchronized(
 	args := c.Called(ctx, bridgeSmartContract, chainID)
 
 	return args.Get(0).(bool), args.Error(1)
+}
+
+func (c *cardanoChainOperationsMock) Submit(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
+) error {
+	return c.Called(ctx, bridgeSmartContract, batch).Error(0)
 }

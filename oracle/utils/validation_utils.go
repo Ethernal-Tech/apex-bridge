@@ -65,3 +65,15 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *core.AppConfig) (*indexer.
 
 	return multisigUtxoOutput, nil
 }
+
+func GetChainConfig(appConfig *core.AppConfig, chainID string) (*core.CardanoChainConfig, *core.EthChainConfig) {
+	if cardanoChainConfig, exists := appConfig.CardanoChains[chainID]; exists {
+		return cardanoChainConfig, nil
+	}
+
+	if ethChainConfig, exists := appConfig.EthChains[chainID]; exists {
+		return nil, ethChainConfig
+	}
+
+	return nil, nil
+}

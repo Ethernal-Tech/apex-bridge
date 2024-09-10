@@ -1,8 +1,45 @@
 package common
 
-import "github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+import (
+	"encoding/hex"
+)
+
+const (
+	HashSize = 32
+
+	EthZeroAddr = "0x0000000000000000000000000000000000000000"
+)
+
+type Hash [HashSize]byte
 
 type BridgingRequestStateKey struct {
 	SourceChainID string
-	SourceTxHash  indexer.Hash
+	SourceTxHash  Hash
+}
+
+type NewBridgingRequestStateModel struct {
+	SourceTxHash Hash
+}
+
+func (h Hash) String() string {
+	return hex.EncodeToString(h[:])
+}
+
+func NewHashFromHexString(hash string) Hash {
+	v, _ := DecodeHex(hash)
+
+	return NewHashFromBytes(v)
+}
+
+func NewHashFromBytes(bytes []byte) Hash {
+	if len(bytes) != HashSize {
+		result := Hash{}
+		size := min(HashSize, len(bytes))
+
+		copy(result[HashSize-size:], bytes[:size])
+
+		return result
+	}
+
+	return Hash(bytes)
 }

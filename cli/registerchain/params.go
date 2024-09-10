@@ -55,7 +55,7 @@ type registerChainParams struct {
 }
 
 func (ip *registerChainParams) validateFlags() error {
-	if !common.IsValidURL(ip.bridgeURL) {
+	if !common.IsValidHTTPURL(ip.bridgeURL) {
 		return fmt.Errorf("invalid bridge node url: %s", ip.bridgeURL)
 	}
 
@@ -176,8 +176,21 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 			return nil, fmt.Errorf("failed to load cardano wallet: %w", err)
 		}
 
-		validatorChainData.VerifyingKey = [32]byte(walletCardano.MultiSig.GetVerificationKey())
-		validatorChainData.VerifyingKeyFee = [32]byte(walletCardano.MultiSigFee.GetVerificationKey())
+		validatorChainData.Key[0] = new(big.Int).SetBytes(walletCardano.MultiSig.VerificationKey)
+		validatorChainData.Key[1] = new(big.Int).SetBytes(walletCardano.MultiSigFee.VerificationKey)
+		validatorChainData.Key[2] = new(big.Int)
+		validatorChainData.Key[3] = new(big.Int)
+	case common.ChainTypeEVM:
+		privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, ip.chainID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load eth wallet: %w", err)
+		}
+
+		bigInts := privateKey.PublicKey().ToBigInt()
+		validatorChainData.Key[0] = bigInts[0]
+		validatorChainData.Key[1] = bigInts[1]
+		validatorChainData.Key[2] = bigInts[2]
+		validatorChainData.Key[3] = bigInts[3]
 	default:
 		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
 	}

@@ -90,8 +90,9 @@ func (bts *BridgingTxSender) CreateTx(
 		},
 	}
 
-	inputs, err := cardanowallet.GetUTXOsForAmount(
-		ctx, bts.TxProviderSrc, senderAddr, outputsSum+bts.PotentialFee, cardanowallet.MinUTxODefaultValue)
+	desiredSum := outputsSum + bts.PotentialFee + cardanowallet.MinUTxODefaultValue
+
+	inputs, err := cardanowallet.GetUTXOsForAmount(ctx, bts.TxProviderSrc, senderAddr, desiredSum, desiredSum)
 	if err != nil {
 		return nil, "", err
 	}
@@ -163,41 +164,7 @@ func (bts *BridgingTxSender) SendTx(
 func (bts *BridgingTxSender) WaitForTx(
 	ctx context.Context, receivers []cardanowallet.TxOutput,
 ) error {
-	errs := make([]error, len(receivers))
-	wg := sync.WaitGroup{}
-
-	for i, x := range receivers {
-		wg.Add(1)
-
-		go func(idx int, recv cardanowallet.TxOutput) {
-			defer wg.Done()
-
-			var expectedAmount uint64
-
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
-				utxos, err := bts.TxUtxoRetrieverDst.GetUtxos(ctx, recv.Addr)
-				expectedAmount = cardanowallet.GetUtxosSum(utxos)
-
-				return err == nil, err
-			}, isRecoverableError)
-
-			if errs[idx] != nil {
-				return
-			}
-
-			expectedAmount += recv.Amount
-
-			errs[idx] = cardanowallet.WaitForAmount(
-				ctx, bts.TxUtxoRetrieverDst, recv.Addr, func(newAmount uint64) bool {
-					return newAmount >= expectedAmount
-				},
-				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
-		}(i, x)
-	}
-
-	wg.Wait()
-
-	return errors.Join(errs...)
+	return WaitForTx(ctx, bts.TxUtxoRetrieverDst, receivers)
 }
 
 func (bts *BridgingTxSender) createMetadata(
@@ -235,4 +202,44 @@ func IsAddressInOutputs(
 
 func isRecoverableError(err error) bool {
 	return strings.Contains(err.Error(), "status code 500") // retry if error is ogmios "status code 500"
+}
+
+func WaitForTx(
+	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []cardanowallet.TxOutput,
+) error {
+	errs := make([]error, len(receivers))
+	wg := sync.WaitGroup{}
+
+	for i, x := range receivers {
+		wg.Add(1)
+
+		go func(idx int, recv cardanowallet.TxOutput) {
+			defer wg.Done()
+
+			var expectedAmount uint64
+
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
+				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
+				expectedAmount = cardanowallet.GetUtxosSum(utxos)
+
+				return err == nil, err
+			}, isRecoverableError)
+
+			if errs[idx] != nil {
+				return
+			}
+
+			expectedAmount += recv.Amount
+
+			errs[idx] = cardanowallet.WaitForAmount(
+				ctx, txUtxoRetriever, recv.Addr, func(newAmount uint64) bool {
+					return newAmount >= expectedAmount
+				},
+				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
+		}(i, x)
+	}
+
+	wg.Wait()
+
+	return errors.Join(errs...)
 }

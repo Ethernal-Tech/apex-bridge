@@ -2,7 +2,7 @@ package cardanotx
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -20,7 +20,7 @@ func TestWallet(t *testing.T) {
 	}()
 
 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: path.Join(testDir, "w1"),
+		Path: filepath.Join(testDir, "w1"),
 		Type: secrets.Local,
 	})
 	require.NoError(t, err)

@@ -3,10 +3,13 @@ package relayermanager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
@@ -38,7 +41,7 @@ func NewRelayerManager(
 		}
 
 		db, err := databaseaccess.NewDatabase(
-			path.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
+			filepath.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
 		if err != nil {
 			return nil, err
 		}
@@ -96,4 +99,39 @@ func LoadConfig(path string) (*core.RelayerManagerConfiguration, error) {
 	}
 
 	return &appConfig, nil
+}
+
+func FixChains(config *core.RelayerManagerConfiguration, logger hclog.Logger) error {
+	allRegisteredChains := []eth.Chain(nil)
+	smartContract := eth.NewBridgeSmartContract(
+		config.Bridge.NodeURL, config.Bridge.SmartContractAddress,
+		config.Bridge.DynamicTx, logger)
+
+	err := common.RetryForever(context.Background(), 2*time.Second, func(ctxInner context.Context) (err error) {
+		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
+		if err != nil {
+			logger.Error("Failed to GetAllRegisteredChains while creating Relayers. Retrying...", "err", err)
+		}
+
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
+	}
+
+	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
+
+	chainConfigs := make(map[string]core.ChainConfig, len(config.Chains))
+
+	for _, regChain := range allRegisteredChains {
+		chainID := common.ToStrChainID(regChain.Id)
+
+		if cfg, exists := config.Chains[chainID]; exists {
+			chainConfigs[chainID] = cfg
+		}
+	}
+
+	config.Chains = chainConfigs
+
+	return nil
 }

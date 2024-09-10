@@ -60,6 +60,12 @@ func (ri *RelayerImitatorImpl) Start() {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
+
+		for chainID := range ri.config.EthChains {
+			if err := ri.execute(ri.ctx, chainID); err != nil {
+				ri.logger.Error("execute failed", "err", err)
+			}
+		}
 	}
 }
 
@@ -69,7 +75,7 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 		chainID,
 		ri.bridgeSmartContract,
 		ri.db,
-		func(ctx context.Context, confirmedBatch *eth.ConfirmedBatch) error {
+		func(ctx context.Context, _ eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch) error {
 			receivedBatchID := new(big.Int).SetUint64(confirmedBatch.ID)
 
 			err := ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -85,13 +85,15 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
 
+	minUtxoAmount := new(big.Int).SetUint64(minUtxoAmount)
+
 	defer func() {
 		os.RemoveAll(testDir)
 		os.Remove(testDir)
 	}()
 
 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: path.Join(testDir, "stp"),
+		Path: filepath.Join(testDir, "stp"),
 		Type: secrets.Local,
 	})
 	require.NoError(t, err)
@@ -143,8 +145,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte{},
-				VerifyingKeyFee: [32]byte{},
+				Key: [4]*big.Int{
+					new(big.Int), new(big.Int),
+				},
 			},
 		}
 
@@ -159,8 +162,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte{},
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+				},
 			},
 		}
 
@@ -175,8 +179,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -192,8 +198,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -211,8 +219,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
-				VerifyingKey:    [32]byte(wallet.MultiSig.GetVerificationKey()),
-				VerifyingKeyFee: [32]byte(wallet.MultiSigFee.GetVerificationKey()),
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
 			},
 		}
 
@@ -254,50 +264,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
 	})
-}
-
-func Test_getSlotNumberWithRoundingThreshold(t *testing.T) {
-	_, err := getSlotNumberWithRoundingThreshold(66, 60, 0.125)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(12, 60, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(115, 60, 0.125)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(224, 80, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(336, 80, 0.2)
-	assert.ErrorIs(t, err, errNonActiveBatchPeriod)
-
-	_, err = getSlotNumberWithRoundingThreshold(0, 60, 0.125)
-	assert.ErrorContains(t, err, "slot number is zero")
-
-	val, err := getSlotNumberWithRoundingThreshold(75, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(120), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(105, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(120), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(40, 60, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(60), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(270, 80, 0.125)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(320), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(223, 80, 0.2)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(240), val)
-
-	val, err = getSlotNumberWithRoundingThreshold(337, 80, 0.2)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(400), val)
 }
 
 func Test_getNeededUtxos(t *testing.T) {
@@ -362,15 +328,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
-					Amount:             100,
+					Amount:             big.NewInt(100),
 				},
 				{
 					DestinationAddress: "0x2",
-					Amount:             200,
+					Amount:             big.NewInt(200),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             400,
+					Amount:             big.NewInt(400),
 				},
 			},
 		},
@@ -378,15 +344,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x4",
-					Amount:             50,
+					Amount:             big.NewInt(50),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             900,
+					Amount:             big.NewInt(900),
 				},
 				{
 					DestinationAddress: "0x11",
-					Amount:             0,
+					Amount:             big.NewInt(0),
 				},
 			},
 		},
@@ -394,7 +360,7 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x5",
-					Amount:             3000,
+					Amount:             big.NewInt(3000),
 				},
 			},
 		},
@@ -402,15 +368,15 @@ func Test_getOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "0x1",
-					Amount:             2000,
+					Amount:             big.NewInt(2000),
 				},
 				{
 					DestinationAddress: "0x4",
-					Amount:             170,
+					Amount:             big.NewInt(170),
 				},
 				{
 					DestinationAddress: "0x3",
-					Amount:             10,
+					Amount:             big.NewInt(10),
 				},
 			},
 		},
@@ -449,7 +415,10 @@ func Test_getUTXOs(t *testing.T) {
 	feeAddr := "0x002"
 	testErr := errors.New("test err")
 	ops := &CardanoChainOperations{
-		db:     dbMock,
+		db: dbMock,
+		config: &cardano.CardanoChainConfig{
+			NoBatchPeriodPercent: 0.1,
+		},
 		logger: hclog.NewNullLogger(),
 	}
 	txOutputs := cardano.TxOutputs{

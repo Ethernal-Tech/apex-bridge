@@ -28,6 +28,7 @@ type ChainOperations interface {
 	IsSynchronized(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 	) (bool, error)
+	Submit(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

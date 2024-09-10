@@ -44,14 +44,14 @@ func NewCardanoChainOperations(
 
 // SendTx implements core.ChainOperations.
 func (cco *CardanoChainOperations) SendTx(
-	ctx context.Context, smartContractData *eth.ConfirmedBatch,
+	ctx context.Context, _ eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
 ) error {
 	cco.logger.Debug("confirmed batch - sending tx", "batchID", smartContractData.ID, "binary", cco.cardanoCliBinary)
 
 	witnesses := make(
-		[][]byte, len(smartContractData.MultisigSignatures)+len(smartContractData.FeePayerMultisigSignatures))
-	copy(witnesses, smartContractData.MultisigSignatures)
-	copy(witnesses[len(smartContractData.MultisigSignatures):], smartContractData.FeePayerMultisigSignatures)
+		[][]byte, len(smartContractData.Signatures)+len(smartContractData.FeeSignatures))
+	copy(witnesses, smartContractData.Signatures)
+	copy(witnesses[len(smartContractData.Signatures):], smartContractData.FeeSignatures)
 
 	txSigned, err := cardanotx.AssembleTxWitnesses(cco.cardanoCliBinary, smartContractData.RawTransaction, witnesses)
 	if err != nil {

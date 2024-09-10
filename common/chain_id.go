@@ -8,19 +8,26 @@ const (
 
 	ChainIDStrPrime  = "prime"
 	ChainIDStrVector = "vector"
+	ChainIDStrNexus  = "nexus"
 
 	ChainIDIntPrime  = chainIDNum(1)
 	ChainIDIntVector = chainIDNum(2)
+	ChainIDIntNexus  = chainIDNum(3)
+
+	ChainTypeCardanoStr = "cardano"
+	ChainTypeEVMStr     = "evm"
 )
 
 var (
 	strToInt = map[string]chainIDNum{
 		ChainIDStrPrime:  ChainIDIntPrime,
 		ChainIDStrVector: ChainIDIntVector,
+		ChainIDStrNexus:  ChainIDIntNexus,
 	}
 	intToStr = map[chainIDNum]string{
 		ChainIDIntPrime:  ChainIDStrPrime,
 		ChainIDIntVector: ChainIDStrVector,
+		ChainIDIntNexus:  ChainIDStrNexus,
 	}
 )
 
@@ -30,4 +37,10 @@ func ToNumChainID(chainIDStr string) chainIDNum {
 
 func ToStrChainID(chainIDNum chainIDNum) string {
 	return intToStr[chainIDNum]
+}
+
+func IsExistingChainID(chainIDStr string) bool {
+	_, exists := strToInt[chainIDStr]
+
+	return exists
 }

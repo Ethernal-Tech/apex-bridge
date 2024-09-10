@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -56,7 +56,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		require.NoError(t, common.CreateDirectoryIfNotExists(settings.DbsPath, 0750))
 
-		indexerDB, err := indexerDb.NewDatabaseInit("", path.Join(settings.DbsPath, chainConfig.ChainID+".db"))
+		indexerDB, err := indexerDb.NewDatabaseInit("", filepath.Join(settings.DbsPath, chainConfig.ChainID+".db"))
 		require.NoError(t, err)
 
 		return indexerDB
@@ -65,16 +65,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check ErrorCh", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -87,16 +84,13 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check GetConfig", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -108,9 +102,6 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check start stop", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
@@ -120,7 +111,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -131,9 +122,6 @@ func TestCardanoChainObserver(t *testing.T) {
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
-		bridgeDataFetcher.On("FetchLatestBlockPoint", mock.Anything).Return(&indexer.BlockPoint{}, error(nil))
-
 		db := &core.CardanoTxsProcessorDBMock{}
 		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
 		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
@@ -143,7 +131,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, bridgeDataFetcher, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -179,10 +167,18 @@ func TestCardanoChainObserver(t *testing.T) {
 func Test_initOracleState(t *testing.T) {
 	dbMock := &indexer.DatabaseMock{}
 	dbWriterMock := &indexer.DBTransactionWriterMock{}
-	utxos := []*indexer.TxInputOutput{
+	utxos := []core.CardanoChainConfigUtxo{
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1")},
-			Output: indexer.TxOutput{Amount: 100},
+			Hash:    indexer.NewHashFromHexString("0x1"),
+			Index:   2,
+			Address: "0xffaa",
+			Amount:  uint64(200),
+		},
+		{
+			Hash:    indexer.NewHashFromHexString("0x2"),
+			Index:   1,
+			Address: "0xff03",
+			Amount:  uint64(500),
 		},
 	}
 	blockSlot := uint64(100)
@@ -208,7 +204,7 @@ func Test_initOracleState(t *testing.T) {
 
 		dbMock.On("OpenTx").Return(dbWriterMock).Twice()
 		dbWriterMock.On("DeleteAllTxOutputsPhysically").Return(dbMock).Twice()
-		dbWriterMock.On("AddTxOutputs", utxos).Return(dbMock).Twice()
+		dbWriterMock.On("AddTxOutputs", convertUtxos(utxos)).Return(dbMock).Twice()
 		dbWriterMock.On("SetLatestBlockPoint", &indexer.BlockPoint{
 			BlockSlot: blockSlot,
 			BlockHash: indexer.NewHashFromHexString(blockHash),
@@ -253,4 +249,48 @@ func Test_initOracleState(t *testing.T) {
 
 		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
+}
+
+func Test_convertUtxos(t *testing.T) {
+	utxos := []core.CardanoChainConfigUtxo{
+		{
+			Hash:    indexer.NewHashFromHexString("0x2"),
+			Index:   2,
+			Address: "0xffaa",
+			Amount:  uint64(200),
+			Slot:    34,
+		},
+		{
+			Hash:    indexer.NewHashFromHexString("0x1"),
+			Index:   1,
+			Address: "0xff03",
+			Amount:  uint64(500),
+			Slot:    196,
+		},
+	}
+
+	require.Equal(t, []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{
+				Hash:  indexer.NewHashFromHexString("0x2"),
+				Index: 2,
+			},
+			Output: indexer.TxOutput{
+				Address: "0xffaa",
+				Amount:  200,
+				Slot:    34,
+			},
+		},
+		{
+			Input: indexer.TxInput{
+				Hash:  indexer.NewHashFromHexString("0x1"),
+				Index: 1,
+			},
+			Output: indexer.TxOutput{
+				Address: "0xff03",
+				Amount:  500,
+				Slot:    196,
+			},
+		},
+	}, convertUtxos(utxos))
 }

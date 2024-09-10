@@ -2,8 +2,10 @@ package cligenerateconfigs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -28,6 +30,7 @@ const (
 	primeSocketPathFlag            = "prime-socket-path"
 	primeTTLSlotIncFlag            = "prime-ttl-slot-inc"
 	primeSlotRoundingThresholdFlag = "prime-slot-rounding-threshold"
+	primeStartingBlockFlag         = "prime-starting-block"
 
 	vectorNetworkAddressFlag        = "vector-network-address"
 	vectorNetworkMagicFlag          = "vector-network-magic"
@@ -38,6 +41,7 @@ const (
 	vectorSocketPathFlag            = "vector-socket-path"
 	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
 	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
+	vectorStartingBlockFlag         = "vector-starting-block"
 
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
@@ -57,6 +61,15 @@ const (
 
 	telemetryFlag = "telemetry"
 
+	nexusSmartContractAddrFlag      = "nexus-sc-address"
+	nexusRelayerAddrFlag            = "nexus-relayer-addr"
+	nexusNodeURLFlag                = "nexus-node-url"
+	nexusTTLBlockNumberIncFlag      = "nexus-ttl-block-inc"
+	nexusBlockRoundingThresholdFlag = "nexus-block-rounding-threshold"
+	nexusStartingBlockFlag          = "nexus-starting-block"
+	relayerDataDirFlag              = "relayer-data-dir"
+	relayerConfigPathFlag           = "relayer-config"
+
 	primeNetworkAddressFlagDesc        = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc          = "prime network magic (default 0)"
 	primeNetworkIDFlagDesc             = "prime network id"
@@ -66,6 +79,7 @@ const (
 	primeSocketPathFlagDesc            = "socket path for prime network"
 	primeTTLSlotIncFlagDesc            = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	primeStartingBlockFlagDesc         = "slot: hash of the block from where to start prime oracle"
 
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
@@ -76,6 +90,7 @@ const (
 	vectorSocketPathFlagDesc            = "socket path for vector network"
 	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	vectorStartingBlockFlagDesc         = "slot: hash of the block from where to start vector oracle"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
@@ -95,6 +110,15 @@ const (
 
 	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
+	nexusSmartContractAddrFlagDesc      = "nexus smart contract address"
+	nexusRelayerAddrFlagDesc            = "nexus relayer address (EOA)"
+	nexusNodeURLFlagDesc                = "nexus node URL"
+	nexusTTLBlockNumberIncFlagDesc      = "TTL block increment for nexus"
+	nexusBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for nexus. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
+	relayerDataDirFlagDesc              = "path to relayer secret directory when using local secrets manager"
+	relayerConfigPathFlagDesc           = "path to relayer secrets manager config file"
+	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle"
+
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
 	defaultNetworkMagic                      = 0
@@ -108,6 +132,14 @@ const (
 	defaultPrimeSlotRoundingThreshold        = 60
 	defaultVectorTTLSlotNumberInc            = 1800 + defaultVectorBlockConfirmationCount*10 // BlockTimeSeconds
 	defaultVectorSlotRoundingThreshold       = 60
+	defaultNexusBlockConfirmationCount       = 1 // try zero also because nexus is instant finality chain
+	defaultNexusSyncBatchSize                = 20
+	defaultNexusPoolIntervalMiliseconds      = 1500
+	defaultNexusNoBatchPeriodPercent         = 0.2
+	defaultNoBatchPeriodPercent              = 0.0625
+	defaultTakeAtLeastUtxoCount              = 6
+	defaultNexusTTLBlockRoundingThreshold    = 10
+	defaultNexusTTLBlockNumberInc            = 20
 )
 
 type generateConfigsParams struct {
@@ -120,6 +152,7 @@ type generateConfigsParams struct {
 	primeSocketPath            string
 	primeTTLSlotInc            uint64
 	primeSlotRoundingThreshold uint64
+	primeStartingBlock         string
 
 	vectorNetworkAddress        string
 	vectorNetworkMagic          uint32
@@ -130,6 +163,7 @@ type generateConfigsParams struct {
 	vectorSocketPath            string
 	vectorTTLSlotInc            uint64
 	vectorSlotRoundingThreshold uint64
+	vectorStartingBlock         string
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -148,10 +182,20 @@ type generateConfigsParams struct {
 	outputRelayerFileName             string
 
 	telemetry string
+
+	nexusSmartContractAddr      string
+	nexusRelayerAddr            string
+	nexusNodeURL                string
+	nexusTTLBlockNumberInc      uint64
+	nexusBlockRoundingThreshold uint64
+	nexusStartingBlock          uint64
+
+	relayerDataDir    string
+	relayerConfigPath string
 }
 
 func (p *generateConfigsParams) validateFlags() error {
-	if p.primeNetworkAddress == "" || !common.IsValidURL(p.primeNetworkAddress) {
+	if !common.IsValidNetworkAddress(p.primeNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
@@ -160,24 +204,16 @@ func (p *generateConfigsParams) validateFlags() error {
 			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	}
 
-	if p.primeBlockfrostURL != "" && !common.IsValidURL(p.primeBlockfrostURL) {
+	if p.primeBlockfrostURL != "" && !common.IsValidHTTPURL(p.primeBlockfrostURL) {
 		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
 	}
 
-	if p.primeOgmiosURL != "" && !common.IsValidURL(p.primeOgmiosURL) {
+	if p.primeOgmiosURL != "" && !common.IsValidHTTPURL(p.primeOgmiosURL) {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
 
-	if p.vectorNetworkAddress == "" || !common.IsValidURL(p.vectorNetworkAddress) {
+	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
-	}
-
-	if p.vectorBlockfrostURL != "" && !common.IsValidURL(p.vectorBlockfrostURL) {
-		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
-	}
-
-	if p.vectorOgmiosURL != "" && !common.IsValidURL(p.vectorOgmiosURL) {
-		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
 	}
 
 	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
@@ -185,7 +221,15 @@ func (p *generateConfigsParams) validateFlags() error {
 			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 	}
 
-	if p.bridgeNodeURL == "" || !common.IsValidURL(p.bridgeNodeURL) {
+	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
+		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
+	}
+
+	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
+		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
+	}
+
+	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
 
@@ -201,12 +245,38 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one %s", apiKeysFlag)
 	}
 
-	if p.telemetry != "" {
-		parts := strings.Split(p.telemetry, ",")
-		// common.IsValidURL(parts[0]) currently returns false for 0.0.0.0:5001
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" { //
-			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
+	if p.telemetry != "" && !common.IsValidNetworkAddress(p.telemetry) {
+		return fmt.Errorf("invalid telemetry: %s", p.telemetry)
+	}
+
+	if p.primeStartingBlock != "" {
+		parts := strings.Split(p.primeStartingBlock, ":")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return fmt.Errorf("invalid prime starting block: %s", p.primeStartingBlock)
 		}
+	}
+
+	if p.vectorStartingBlock != "" {
+		parts := strings.Split(p.vectorStartingBlock, ":")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return fmt.Errorf("invalid vector starting block: %s", p.vectorStartingBlock)
+		}
+	}
+
+	if !common.IsValidHTTPURL(p.nexusNodeURL) {
+		return fmt.Errorf("invalid %s: %s", nexusNodeURLFlag, p.nexusNodeURL)
+	}
+
+	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+	}
+
+	if p.nexusSmartContractAddr == "" {
+		return fmt.Errorf("missing %s", nexusSmartContractAddrFlag)
+	}
+
+	if p.nexusRelayerAddr == "" {
+		return fmt.Errorf("missing %s", nexusRelayerAddrFlag)
 	}
 
 	return nil
@@ -267,6 +337,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultPrimeSlotRoundingThreshold,
 		primeSlotRoundingThresholdFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.primeStartingBlock,
+		primeStartingBlockFlag,
+		"",
+		primeStartingBlockFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.vectorNetworkAddress,
@@ -321,6 +397,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorSlotRoundingThresholdFlag,
 		defaultVectorSlotRoundingThreshold,
 		vectorSlotRoundingThresholdFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorStartingBlock,
+		vectorStartingBlockFlag,
+		"",
+		vectorStartingBlockFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -401,22 +483,62 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		telemetryFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&p.nexusSmartContractAddr,
+		nexusSmartContractAddrFlag,
+		"",
+		nexusSmartContractAddrFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nexusRelayerAddr,
+		nexusRelayerAddrFlag,
+		"",
+		nexusRelayerAddrFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nexusNodeURL,
+		nexusNodeURLFlag,
+		"",
+		nexusNodeURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerDataDir,
+		relayerDataDirFlag,
+		"",
+		relayerDataDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerConfigPath,
+		relayerConfigPathFlag,
+		"",
+		relayerConfigPathFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.nexusTTLBlockNumberInc,
+		nexusTTLBlockNumberIncFlag,
+		defaultNexusTTLBlockNumberInc,
+		nexusTTLBlockNumberIncFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.nexusBlockRoundingThreshold,
+		nexusBlockRoundingThresholdFlag,
+		defaultNexusTTLBlockRoundingThreshold,
+		nexusBlockRoundingThresholdFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.nexusStartingBlock,
+		nexusStartingBlockFlag,
+		0,
+		nexusStartingBlockFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
-	validatorDataDir := p.validatorDataDir
-	if validatorDataDir != "" {
-		validatorDataDir = path.Clean(validatorDataDir)
-	}
-
-	validatorConfig := p.validatorConfig
-	if validatorConfig != "" {
-		validatorConfig = path.Clean(validatorConfig)
-	}
-
 	telemetryConfig := telemetry.TelemetryConfig{}
 
 	if p.telemetry != "" {
@@ -426,17 +548,26 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		telemetryConfig.DataDogAddr = parts[1]
 	}
 
+	primeStartingSlot, primeStartingHash, err := parseStartingBlock(p.primeStartingBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	vectorStartingSlot, vectorStartingHash, err := parseStartingBlock(p.vectorStartingBlock)
+	if err != nil {
+		return nil, err
+	}
+
 	vcConfig := &vcCore.AppConfig{
-		ValidatorDataDir:    validatorDataDir,
-		ValidatorConfigPath: validatorConfig,
+		ValidatorDataDir:    cleanPath(p.validatorDataDir),
+		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*vcCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
 				NetworkMagic:             p.primeNetworkMagic,
 				NetworkID:                wallet.CardanoNetworkType(p.primeNetworkID),
-				StartBlockHash:           "",
-				StartSlot:                0,
-				StartBlockNumber:         0,
+				StartBlockHash:           primeStartingHash,
+				StartSlot:                primeStartingSlot,
 				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
 				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
@@ -446,14 +577,15 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SocketPath:               p.primeSocketPath,
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
+				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
 				NetworkMagic:             p.vectorNetworkMagic,
 				NetworkID:                wallet.CardanoNetworkType(p.vectorNetworkID),
-				StartBlockHash:           "",
-				StartSlot:                0,
-				StartBlockNumber:         0,
+				StartBlockHash:           vectorStartingHash,
+				StartSlot:                vectorStartingSlot,
 				ConfirmationBlockCount:   defaultVectorBlockConfirmationCount,
 				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
@@ -463,6 +595,26 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SocketPath:               p.vectorSocketPath,
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
+				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
+			},
+		},
+		EthChains: map[string]*oCore.EthChainConfig{
+			common.ChainIDStrNexus: {
+				ChainID: common.ChainIDStrNexus,
+				BridgingAddresses: oCore.BridgingAddresses{
+					BridgingAddress: p.nexusSmartContractAddr,
+					FeeAddress:      p.nexusRelayerAddr,
+				},
+				NodeURL:                 p.nexusNodeURL,
+				SyncBatchSize:           defaultNexusSyncBatchSize,
+				NumBlockConfirmations:   defaultNexusBlockConfirmationCount,
+				StartBlockNumber:        p.nexusStartingBlock,
+				PoolIntervalMiliseconds: defaultNexusPoolIntervalMiliseconds,
+				TTLBlockNumberInc:       p.nexusTTLBlockNumberInc,
+				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
+				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
+				DynamicTx:               true,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -482,12 +634,12 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
-				LogFilePath:   path.Join(p.logsPath, "validator-components.log"),
+				LogFilePath:   filepath.Join(p.logsPath, "validator-components.log"),
 				LogLevel:      hclog.Debug,
 				JSONLogFormat: false,
 				AppendFile:    true,
 			},
-			DbsPath: path.Join(p.dbsPath, "validatorcomponents"),
+			DbsPath: filepath.Join(p.dbsPath, "validatorcomponents"),
 		},
 		RelayerImitatorPullTimeMilis: 1000,
 		BatcherPullTimeMilis:         2500,
@@ -534,6 +686,14 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		PotentialFee:     300000,
 	})
 
+	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
+		NodeURL:           p.nexusNodeURL,
+		SmartContractAddr: p.nexusSmartContractAddr,
+		DataDir:           cleanPath(p.relayerDataDir),
+		ConfigPath:        cleanPath(p.relayerConfigPath),
+		DynamicTx:         true,
+	})
+
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -542,36 +702,41 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {
-				ChainType:     "Cardano",
-				DbsPath:       path.Join(p.dbsPath, "relayer"),
+				ChainType:     common.ChainTypeCardanoStr,
+				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
 				ChainSpecific: primeChainSpecificJSONRaw,
 			},
 			common.ChainIDStrVector: {
-				ChainType:     "Cardano",
-				DbsPath:       path.Join(p.dbsPath, "relayer"),
+				ChainType:     common.ChainTypeCardanoStr,
+				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
 				ChainSpecific: vectorChainSpecificJSONRaw,
+			},
+			common.ChainIDStrNexus: {
+				ChainType:     common.ChainTypeEVMStr,
+				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
+				ChainSpecific: nexusChainSpecificJSONRaw,
 			},
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
-			LogFilePath:   path.Join(p.logsPath, "relayer.log"),
+			LogFilePath:   filepath.Join(p.logsPath, "relayer.log"),
 			LogLevel:      hclog.Debug,
 			JSONLogFormat: false,
 			AppendFile:    true,
 		},
 	}
 
-	outputDirPath := path.Clean(p.outputDir)
+	outputDirPath := filepath.Clean(p.outputDir)
 	if err := common.CreateDirectoryIfNotExists(outputDirPath, 0770); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	vcConfigPath := path.Join(outputDirPath, p.outputValidatorComponentsFileName)
+	vcConfigPath := filepath.Join(outputDirPath, p.outputValidatorComponentsFileName)
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to create validator components config json: %w", err)
 	}
 
-	rConfigPath := path.Join(outputDirPath, p.outputRelayerFileName)
+	rConfigPath := filepath.Join(outputDirPath, p.outputRelayerFileName)
 	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to create relayer config json: %w", err)
 	}
@@ -580,4 +745,30 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		validatorComponentsConfigPath: vcConfigPath,
 		relayerConfigPath:             rConfigPath,
 	}, nil
+}
+
+func cleanPath(path string) string {
+	if path != "" {
+		return filepath.Clean(path)
+	}
+
+	return ""
+}
+
+func parseStartingBlock(s string) (uint64, string, error) {
+	if s == "" {
+		return 0, "", nil
+	}
+
+	parts := strings.Split(s, ":")
+	if len(parts) != 2 {
+		return 0, "", errors.New("invalid starting block")
+	}
+
+	val, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return val, parts[1], nil
 }

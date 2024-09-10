@@ -3,27 +3,30 @@ package core
 import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type CardanoChainConfig struct {
-	NetworkAddress           string                    `json:"networkAddress"`
-	NetworkID                wallet.CardanoNetworkType `json:"networkID"`
-	NetworkMagic             uint32                    `json:"networkMagic"`
-	StartBlockHash           string                    `json:"startBlockHash"`
-	StartSlot                uint64                    `json:"startSlot"`
-	StartBlockNumber         uint64                    `json:"startBlockNumber"`
-	TTLSlotNumberInc         uint64                    `json:"ttlSlotNumberIncrement"`
-	ConfirmationBlockCount   uint                      `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                  `json:"otherAddressesOfInterest"`
-	OgmiosURL                string                    `json:"ogmiosUrl"`
-	BlockfrostURL            string                    `json:"blockfrostUrl"`
-	BlockfrostAPIKey         string                    `json:"blockfrostApiKey"`
-	SocketPath               string                    `json:"socketPath"`
-	PotentialFee             uint64                    `json:"potentialFee"`
-	SlotRoundingThreshold    uint64                    `json:"slotRoundingThreshold"`
+	NetworkAddress           string                              `json:"networkAddress"`
+	NetworkID                wallet.CardanoNetworkType           `json:"networkID"`
+	NetworkMagic             uint32                              `json:"networkMagic"`
+	StartBlockHash           string                              `json:"startBlockHash"`
+	StartSlot                uint64                              `json:"startSlot"`
+	InitialUtxos             []oracleCore.CardanoChainConfigUtxo `json:"initialUtxos"`
+	TTLSlotNumberInc         uint64                              `json:"ttlSlotNumberIncrement"`
+	ConfirmationBlockCount   uint                                `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string                            `json:"otherAddressesOfInterest"`
+	OgmiosURL                string                              `json:"ogmiosUrl"`
+	BlockfrostURL            string                              `json:"blockfrostUrl"`
+	BlockfrostAPIKey         string                              `json:"blockfrostApiKey"`
+	SocketPath               string                              `json:"socketPath"`
+	PotentialFee             uint64                              `json:"potentialFee"`
+	SlotRoundingThreshold    uint64                              `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent     float64                             `json:"noBatchPeriodPercent"`
+	TakeAtLeastUtxoCount     int                                 `json:"takeAtLeastUtxoCount"`
 }
 
 type APIConfig struct {
@@ -37,21 +40,25 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
-	ValidatorDataDir             string                         `json:"validatorDataDir"`
-	ValidatorConfigPath          string                         `json:"validatorConfigPath"`
-	CardanoChains                map[string]*CardanoChainConfig `json:"cardanoChains"`
-	Bridge                       oracleCore.BridgeConfig        `json:"bridge"`
-	BridgingSettings             oracleCore.BridgingSettings    `json:"bridgingSettings"`
-	Settings                     oracleCore.AppSettings         `json:"appSettings"`
-	RelayerImitatorPullTimeMilis uint64                         `json:"relayerImitatorPullTime"`
-	BatcherPullTimeMilis         uint64                         `json:"batcherPullTime"`
-	APIConfig                    APIConfig                      `json:"api"`
-	Telemetry                    telemetry.TelemetryConfig      `json:"telemetry"`
+	ValidatorDataDir             string                                `json:"validatorDataDir"`
+	ValidatorConfigPath          string                                `json:"validatorConfigPath"`
+	CardanoChains                map[string]*CardanoChainConfig        `json:"cardanoChains"`
+	EthChains                    map[string]*oracleCore.EthChainConfig `json:"ethChains"`
+	Bridge                       oracleCore.BridgeConfig               `json:"bridge"`
+	BridgingSettings             oracleCore.BridgingSettings           `json:"bridgingSettings"`
+	Settings                     oracleCore.AppSettings                `json:"appSettings"`
+	RelayerImitatorPullTimeMilis uint64                                `json:"relayerImitatorPullTime"`
+	BatcherPullTimeMilis         uint64                                `json:"batcherPullTime"`
+	APIConfig                    APIConfig                             `json:"api"`
+	Telemetry                    telemetry.TelemetryConfig             `json:"telemetry"`
 }
 
-func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration) {
+func (appConfig *AppConfig) SeparateConfigs() (
+	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
+) {
 	oracleCardanoChains := make(map[string]*oracleCore.CardanoChainConfig, len(appConfig.CardanoChains))
-	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains))
+	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
 
 	for chainID, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
@@ -61,7 +68,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			NetworkID:                ccConfig.NetworkID,
 			StartBlockHash:           ccConfig.StartBlockHash,
 			StartSlot:                ccConfig.StartSlot,
-			StartBlockNumber:         ccConfig.StartBlockNumber,
+			InitialUtxos:             ccConfig.InitialUtxos,
 			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
 			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
 		}
@@ -76,11 +83,38 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 			PotentialFee:          ccConfig.PotentialFee,
 			TTLSlotNumberInc:      ccConfig.TTLSlotNumberInc,
 			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
+			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
+			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
 			ChainID:       chainID,
-			ChainType:     "Cardano",
+			ChainType:     common.ChainTypeCardanoStr,
+			ChainSpecific: chainSpecificJSONRaw,
+		})
+	}
+
+	for chainID, ecConfig := range appConfig.EthChains {
+		oracleEthChains[chainID] = &oracleCore.EthChainConfig{
+			ChainID:                 chainID,
+			BridgingAddresses:       ecConfig.BridgingAddresses,
+			NodeURL:                 ecConfig.NodeURL,
+			SyncBatchSize:           ecConfig.SyncBatchSize,
+			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
+			StartBlockNumber:        ecConfig.StartBlockNumber,
+			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
+			DynamicTx:               ecConfig.DynamicTx,
+		}
+
+		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
+			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
+			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
+			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
+		}).Serialize()
+
+		batcherChains = append(batcherChains, batcherCore.ChainConfig{
+			ChainID:       chainID,
+			ChainType:     common.ChainTypeEVMStr,
 			ChainSpecific: chainSpecificJSONRaw,
 		})
 	}
@@ -92,6 +126,7 @@ func (appConfig *AppConfig) SeparateConfigs() (*oracleCore.AppConfig, *batcherCo
 		Settings:            appConfig.Settings,
 		BridgingSettings:    appConfig.BridgingSettings,
 		CardanoChains:       oracleCardanoChains,
+		EthChains:           oracleEthChains,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{

@@ -237,7 +237,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			originChainID = common.ChainIDStrPrime
 		)
 
-		txHash := common.MustHashToBytes32("0x89FF")
+		txHash := indexer.Hash(common.NewHashFromHexString("0x89FF"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -288,7 +288,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			originChainID = common.ChainIDStrPrime
 		)
 
-		txHash := common.MustHashToBytes32("0xFFAA")
+		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAA"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -340,7 +340,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			originChainID = common.ChainIDStrPrime
 		)
 
-		txHash := common.MustHashToBytes32("0xFFAABB")
+		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAABB"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -393,7 +393,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		txHash := common.MustHashToBytes32("0xFFAACC")
+		txHash := indexer.Hash(common.NewHashFromHexString("0xFFAACC"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -445,7 +445,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		txHash := common.MustHashToBytes32("CC")
+		txHash := indexer.Hash(common.NewHashFromHexString("CC"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -502,7 +502,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		txHash := common.MustHashToBytes32("CCAA")
+		txHash := indexer.Hash(common.NewHashFromHexString("CCAA"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -558,7 +558,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			ttl     = 2
 		)
 
-		txHash := common.MustHashToBytes32("CCFF")
+		txHash := indexer.Hash(common.NewHashFromHexString("CCFF"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -622,9 +622,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := common.MustHashToBytes32("CCAA")
-		txHash2 := common.MustHashToBytes32("CCFF")
-		blockHash := common.MustHashToBytes32("1122")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAA"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFF"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("1122"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -701,9 +701,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := common.MustHashToBytes32("CCAA11")
-		txHash2 := common.MustHashToBytes32("CCFF22")
-		blockHash := common.MustHashToBytes32("112233")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAA11"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFF22"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -780,9 +780,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := common.MustHashToBytes32("11CCAA")
-		txHash2 := common.MustHashToBytes32("11CCFF")
-		blockHash := common.MustHashToBytes32("221122")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("11CCAA"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("11CCFF"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("221122"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
@@ -866,9 +866,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := common.MustHashToBytes32("CCAABB")
-		txHash2 := common.MustHashToBytes32("CCFFAA")
-		blockHash := common.MustHashToBytes32("112233")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAABB"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFFAA"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -947,9 +947,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := common.MustHashToBytes32("CCAABB")
-		txHash2 := common.MustHashToBytes32("CCFFAA")
-		blockHash := common.MustHashToBytes32("112233")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAABB"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFFAA"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
@@ -1041,9 +1041,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot2 = 15
 		)
 
-		txHash1 := common.MustHashToBytes32("AACCAABB")
-		txHash2 := common.MustHashToBytes32("AACCFFAA")
-		blockHash := common.MustHashToBytes32("AA112233")
+		txHash1 := indexer.Hash(common.NewHashFromHexString("AACCAABB"))
+		txHash2 := indexer.Hash(common.NewHashFromHexString("AACCFFAA"))
+		blockHash := indexer.Hash(common.NewHashFromHexString("AA112233"))
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})

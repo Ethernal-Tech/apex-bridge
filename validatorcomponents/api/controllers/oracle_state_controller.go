@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -76,18 +77,37 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	utxosMap := make(map[string][]*indexer.TxInputOutput, len(addresses))
+	addressesUtxos := make([][]*indexer.TxInputOutput, len(addresses))
+	count := 0
 
-	for _, addr := range addresses {
-		utxosMap[addr], err = db.GetAllTxOutputs(addr, true)
+	for i, addr := range addresses {
+		utxos, err := db.GetAllTxOutputs(addr, true)
 		if err != nil {
 			c.setError(w, r, fmt.Sprintf("get all tx outputs: %v", err))
 
 			return
 		}
+
+		addressesUtxos[i] = utxos
+		count += len(utxos)
 	}
 
-	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(chainID, utxosMap, latestBlockPoint))
+	outputUtxos := make([]oracleCore.CardanoChainConfigUtxo, 0, count)
+
+	for _, utxos := range addressesUtxos {
+		for _, inp := range utxos {
+			outputUtxos = append(outputUtxos, oracleCore.CardanoChainConfigUtxo{
+				Hash:    inp.Input.Hash,
+				Index:   inp.Input.Index,
+				Address: inp.Output.Address,
+				Amount:  inp.Output.Amount,
+				Slot:    inp.Output.Slot,
+			})
+		}
+	}
+
+	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(
+		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash))
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
 	}

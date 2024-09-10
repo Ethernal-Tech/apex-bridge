@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/utils"
 	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -59,31 +60,55 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *core.AppConfig,
 ) {
-	destConfig := appConfig.CardanoChains[metadata.DestinationChainID]
 	totalAmount := big.NewInt(0)
 
+	var destFeeAddress string
+
+	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
+
+	switch {
+	case cardanoDestConfig != nil:
+		destFeeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+	case ethDestConfig != nil:
+		destFeeAddress = ethDestConfig.BridgingAddresses.FeeAddress
+	default:
+		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
+
+		return
+	}
+
 	receivers := make([]core.BridgingRequestReceiver, 0, len(metadata.Transactions))
+
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if receiverAddr == destConfig.BridgingAddresses.FeeAddress {
+		if receiverAddr == destFeeAddress {
 			// fee address will be added at the end
 			continue
 		}
 
+		receiverAmount := new(big.Int).SetUint64(receiver.Amount)
 		receivers = append(receivers, core.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
-			Amount:             receiver.Amount,
+			Amount:             receiverAmount,
 		})
 
-		totalAmount.Add(totalAmount, new(big.Int).SetUint64(receiver.Amount))
+		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
+	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
+
+	totalAmount.Add(totalAmount, feeAmount)
+
+	feeAddress := destFeeAddress
+	if ethDestConfig != nil {
+		// enable nexus gateway to pay bridging fee to msg.sender
+		feeAddress = common.EthZeroAddr
+	}
 
 	receivers = append(receivers, core.BridgingRequestReceiver{
-		DestinationAddress: destConfig.BridgingAddresses.FeeAddress,
-		Amount:             metadata.FeeAmount,
+		DestinationAddress: feeAddress,
+		Amount:             feeAmount,
 	})
 
 	claim := core.BridgingRequestClaim{
@@ -138,8 +163,13 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
-	destinationChainConfig := appConfig.CardanoChains[metadata.DestinationChainID]
-	if destinationChainConfig == nil {
+	cardanoSrcConfig, _ := utils.GetChainConfig(appConfig, tx.OriginChainID)
+	if cardanoSrcConfig == nil {
+		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
+	}
+
+	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	if cardanoDestConfig == nil && ethDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
 	}
 
@@ -148,32 +178,45 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	receiverAmountSum := uint64(0)
+	receiverAmountSum := big.NewInt(0)
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
 	for _, receiver := range metadata.Transactions {
-		if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
-			foundAUtxoValueBelowMinimumValue = true
-
-			break
-		}
-
 		receiverAddr := strings.Join(receiver.Address, "")
-		// BridgingRequestedProcessorImpl must know for which chain it operates
 
-		addr, err := wallet.NewAddress(receiverAddr)
-		if err != nil || addr.GetNetwork() != destinationChainConfig.NetworkID {
-			foundAnInvalidReceiverAddr = true
+		if cardanoDestConfig != nil {
+			if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
+				foundAUtxoValueBelowMinimumValue = true
 
-			break
-		}
+				break
+			}
 
-		if receiverAddr == destinationChainConfig.BridgingAddresses.FeeAddress {
-			feeSum += receiver.Amount
-		} else {
-			receiverAmountSum += receiver.Amount
+			addr, err := wallet.NewAddress(receiverAddr)
+			if err != nil || addr.GetNetwork() != cardanoDestConfig.NetworkID {
+				foundAnInvalidReceiverAddr = true
+
+				break
+			}
+
+			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+				feeSum += receiver.Amount
+			} else {
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
+			}
+		} else if ethDestConfig != nil {
+			if !goEthCommon.IsHexAddress(receiverAddr) {
+				foundAnInvalidReceiverAddr = true
+
+				break
+			}
+
+			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
+				feeSum += receiver.Amount
+			} else {
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
+			}
 		}
 	}
 
@@ -187,15 +230,15 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.FeeAmount += feeSum
-	receiverAmountSum += metadata.FeeAmount
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
 
 	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
-	if receiverAmountSum != multisigUtxo.Amount {
-		return fmt.Errorf("receivers amounts and multisig amount missmatch: expected %v but got %v",
-			receiverAmountSum, multisigUtxo.Amount)
+	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
+		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
+			multisigUtxo.Amount, receiverAmountSum)
 	}
 
 	return nil

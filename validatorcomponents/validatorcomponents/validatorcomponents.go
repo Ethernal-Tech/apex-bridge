@@ -7,23 +7,29 @@ import (
 	"path/filepath"
 	"time"
 
+	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
+	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	eth_bridge "github.com/Ethernal-Tech/apex-bridge/eth_oracle/bridge"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+
+	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
-
-	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
-	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 )
 
 const (
@@ -32,15 +38,18 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
-	ctx             context.Context
-	shouldRunAPI    bool
-	db              core.Database
-	oracle          oracleCore.Oracle
-	batcherManager  batcherCore.BatcherManager
-	relayerImitator core.RelayerImitator
-	api             core.API
-	telemetry       *telemetry.Telemetry
-	logger          hclog.Logger
+	ctx               context.Context
+	shouldRunAPI      bool
+	db                core.Database
+	cardanoIndexerDbs map[string]indexer.Database
+	oracle            oracleCore.Oracle
+	ethOracle         ethOracleCore.Oracle
+	batcherManager    batcherCore.BatcherManager
+	relayerImitator   core.RelayerImitator
+	api               core.API
+	telemetry         *telemetry.Telemetry
+	logger            hclog.Logger
+	errorCh           chan error
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -69,7 +78,7 @@ func NewValidatorComponents(
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	err = fixChainsAndAddresses(
-		ctx, oracleConfig,
+		ctx, oracleConfig, batcherConfig,
 		eth.NewBridgeSmartContract(
 			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
 			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
@@ -79,7 +88,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	indexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
+	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range oracleConfig.CardanoChains {
 		indexerDB, err := indexerDb.NewDatabaseInit("",
@@ -88,16 +97,63 @@ func NewValidatorComponents(
 			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
-		indexerDbs[cardanoChainConfig.ChainID] = indexerDB
+		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	oracle, err := oracle.NewOracle(ctx, oracleConfig, indexerDbs, bridgingRequestStateManager, logger.Named("oracle"))
+	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(appConfig.EthChains))
+
+	for _, ethChainConfig := range oracleConfig.EthChains {
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(
+			appConfig.Settings.DbsPath, ethChainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", ethChainConfig.ChainID, err)
+		}
+
+		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
+	}
+
+	secretsManager, err := common.GetSecretsManager(
+		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
+	}
+
+	oracleBridgeSC := eth.NewOracleBridgeSmartContract(
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
+
+	oracleBridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
+		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+		wallet, appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
+	}
+
+	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+
+	oracle, err := oracle.NewOracle(
+		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
+		bridgingRequestStateManager, logger.Named("oracle"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle. err %w", err)
 	}
 
+	ethBridgeSubmitter := eth_bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+
+	ethOracle, err := ethOracle.NewEthOracle(
+		ctx, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
+		bridgingRequestStateManager, logger.Named("eth_oracle"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
+	}
+
 	batcherManager, err := batchermanager.NewBatcherManager(
-		ctx, batcherConfig, indexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		ctx, batcherConfig, cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
@@ -122,7 +178,7 @@ func NewValidatorComponents(
 			controllers.NewCardanoTxController(
 				oracleConfig, batcherConfig, logger.Named("cardano_tx_controller")),
 			controllers.NewOracleStateController(
-				indexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
+				cardanoIndexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
@@ -132,15 +188,17 @@ func NewValidatorComponents(
 	}
 
 	return &ValidatorComponentsImpl{
-		ctx:             ctx,
-		shouldRunAPI:    shouldRunAPI,
-		db:              db,
-		oracle:          oracle,
-		batcherManager:  batcherManager,
-		relayerImitator: relayerImitator,
-		api:             apiObj,
-		telemetry:       telemetry,
-		logger:          logger,
+		ctx:               ctx,
+		shouldRunAPI:      shouldRunAPI,
+		db:                db,
+		cardanoIndexerDbs: cardanoIndexerDbs,
+		oracle:            oracle,
+		ethOracle:         ethOracle,
+		batcherManager:    batcherManager,
+		relayerImitator:   relayerImitator,
+		api:               apiObj,
+		telemetry:         telemetry,
+		logger:            logger,
 	}, nil
 }
 
@@ -157,6 +215,11 @@ func (v *ValidatorComponentsImpl) Start() error {
 		return fmt.Errorf("failed to start oracle. error: %w", err)
 	}
 
+	err = v.ethOracle.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start eth_oracle. error: %w", err)
+	}
+
 	v.batcherManager.Start()
 
 	if v.shouldRunAPI {
@@ -164,6 +227,10 @@ func (v *ValidatorComponentsImpl) Start() error {
 	}
 
 	go v.relayerImitator.Start()
+
+	v.errorCh = make(chan error, 1)
+
+	go v.errorHandler()
 
 	v.logger.Debug("Started ValidatorComponents")
 
@@ -175,9 +242,22 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 
 	errs := make([]error, 0)
 
+	for _, indexerDB := range v.cardanoIndexerDbs {
+		err := indexerDB.Close()
+		if err != nil {
+			v.logger.Error("Failed to close cardano indexer db", "err", err)
+			errs = append(errs, fmt.Errorf("failed to close cardano indexer db. err %w", err))
+		}
+	}
+
 	if err := v.oracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
+	}
+
+	if err := v.ethOracle.Dispose(); err != nil {
+		v.logger.Error("error while disposing eth_oracle", "err", err)
+		errs = append(errs, fmt.Errorf("error while disposing eth_oracle. err: %w", err))
 	}
 
 	if v.shouldRunAPI {
@@ -197,6 +277,8 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}
 
+	close(v.errorCh)
+
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
 	}
@@ -207,12 +289,27 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 }
 
 func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
-	return v.oracle.ErrorCh()
+	return v.errorCh
+}
+
+func (v *ValidatorComponentsImpl) errorHandler() {
+outsideloop:
+	for {
+		select {
+		case err := <-v.oracle.ErrorCh():
+			v.errorCh <- err
+		case <-v.ctx.Done():
+			break outsideloop
+		}
+	}
+
+	v.logger.Debug("Exiting validatorcomponents error handler")
 }
 
 func fixChainsAndAddresses(
 	ctx context.Context,
 	config *oracleCore.AppConfig,
+	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
@@ -237,42 +334,50 @@ func fixChainsAndAddresses(
 
 	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
-	resultChains := make(map[string]*oracleCore.CardanoChainConfig, len(allRegisteredChains))
+	cardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
+	ethChains := make(map[string]*oracleCore.EthChainConfig)
 
+	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
 		chainID := common.ToStrChainID(regChain.Id)
-		chainConfig, exists := config.CardanoChains[chainID]
-		if !exists {
-			return fmt.Errorf("no config for registered chain: %s", chainID)
-		}
 
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)
 
-		chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
-			BridgingAddress: regChain.AddressMultisig,
-			FeeAddress:      regChain.AddressFeePayer,
-		}
-
-		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
-			if err != nil {
-				logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
-			}
-
-			return err
-		})
-		if err != nil {
-			return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
-		}
-
-		// should handle evm too
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
-			multisigAddr, feeAddr, err := getCardanoAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), chainConfig.NetworkMagic, validatorsData)
+			chainConfig, exists := config.CardanoChains[chainID]
+			if !exists {
+				return fmt.Errorf("no configuration for chain: %s", chainID)
+			}
+
+			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: regChain.AddressMultisig,
+				FeeAddress:      regChain.AddressFeePayer,
+			}
+
+			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+				validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
+				if err != nil {
+					logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
+				}
+
+				return err
+			})
 			if err != nil {
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
+			}
+
+			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData, logger)
+			if err != nil {
+				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
+			}
+
+			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
+				multisigPolicyScript, multisigFeePolicyScript)
+			if err != nil {
+				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
 			if multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
@@ -284,13 +389,42 @@ func fixChainsAndAddresses(
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
 
-			resultChains[chainID] = chainConfig
+			cardanoChains[chainID] = chainConfig
+		case common.ChainTypeEVM:
+			ethChainConfig, exists := config.EthChains[chainID]
+			if !exists {
+				return fmt.Errorf("no configuration for evm chain: %s", chainID)
+			}
+
+			ethChainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: regChain.AddressMultisig,
+				FeeAddress:      regChain.AddressFeePayer,
+			}
+
+			ethChains[chainID] = ethChainConfig
 		default:
 			logger.Debug("Do not know how to handle chain type", "chainID", chainID, "type", regChain.ChainType)
 		}
 	}
 
-	config.CardanoChains = resultChains
+	config.CardanoChains = cardanoChains
+	config.EthChains = ethChains
+
+	batcherChainConfigs := make([]batcherCore.ChainConfig, 0, len(batcherConfig.Chains))
+	// handle config for batchers
+	for _, regChain := range allRegisteredChains {
+		chainID := common.ToStrChainID(regChain.Id)
+
+		for _, chain := range batcherConfig.Chains {
+			if chain.ChainID == chainID {
+				batcherChainConfigs = append(batcherChainConfigs, chain)
+
+				break
+			}
+		}
+	}
+
+	batcherConfig.Chains = batcherChainConfigs
 
 	return nil
 }
@@ -303,45 +437,4 @@ func getAddressesMap(cardanoChainConfig map[string]*oracleCore.CardanoChainConfi
 	}
 
 	return result
-}
-
-func getCardanoAddresses(
-	cardanoCliBinary string, networkMagic uint32, validatorsData []eth.ValidatorChainData,
-) (string, string, error) {
-	multisigKeyHashes := make([]string, len(validatorsData))
-	multisigFeeKeyHashes := make([]string, len(validatorsData))
-
-	for i, x := range validatorsData {
-		keyHash, err := wallet.GetKeyHash(x.VerifyingKey[:])
-		if err != nil {
-			return "", "", err
-		}
-
-		keyHashFee, err := wallet.GetKeyHash(x.VerifyingKeyFee[:])
-		if err != nil {
-			return "", "", err
-		}
-
-		multisigKeyHashes[i] = keyHash
-		multisigFeeKeyHashes[i] = keyHashFee
-	}
-
-	multisigPolicyScript := wallet.NewPolicyScript(
-		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
-	multisigFeePolicyScript := wallet.NewPolicyScript(
-		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))))
-
-	multisigAddress, err := cardanotx.GetAddressFromPolicyScript(
-		cardanoCliBinary, uint(networkMagic), multisigPolicyScript)
-	if err != nil {
-		return "", "", err
-	}
-
-	multisigFeeAddress, err := cardanotx.GetAddressFromPolicyScript(
-		cardanoCliBinary, uint(networkMagic), multisigFeePolicyScript)
-	if err != nil {
-		return "", "", err
-	}
-
-	return multisigAddress, multisigFeeAddress, nil
 }

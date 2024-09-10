@@ -365,7 +365,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -393,7 +393,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "receivers amounts and multisig amount missmatch")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -426,7 +426,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
-		txHash := common.MustHashToBytes32("0x2244FF")
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			{Address: []string{validTestAddress}, Amount: utxoMinValue},
@@ -461,9 +461,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, strings.Join(receivers[1].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
-		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount)
+		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 }

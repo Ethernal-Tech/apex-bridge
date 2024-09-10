@@ -59,6 +59,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
+	if err := relayermanager.FixChains(config, logger); err != nil {
+		logger.Error("relayer manager creation failed", "err", err)
+		outputter.SetError(err)
+
+		return
+	}
+
 	relayerManager, err := relayermanager.NewRelayerManager(config, logger)
 	if err != nil {
 		logger.Error("relayer manager creation failed", "err", err)

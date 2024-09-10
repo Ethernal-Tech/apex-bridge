@@ -10,7 +10,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -19,21 +18,16 @@ import (
 )
 
 var (
-	errNonActiveBatchPeriod = errors.New("non active batch period")
-
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 )
 
 // nolintlint TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 // Get real tx size from protocolParams/config
 const (
-	minUtxoAmount        = uint64(1000000)
-	maxFeeUtxoCount      = 4
-	maxUtxoCount         = 300
-	maxTxSize            = 16000
-	takeAtLeastUtxoCount = 6 // maxNumberOfTransactions + 1
-
-	noBatchPeriodPercent = 0.0625
+	minUtxoAmount   = uint64(1000000)
+	maxFeeUtxoCount = 4
+	maxUtxoCount    = 300
+	maxTxSize       = 16000
 )
 
 type CardanoChainOperations struct {
@@ -85,7 +79,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	multisigKeyHashes, multisigFeeKeyHashes, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,24 +94,18 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	slotNumber, err := cco.getSlotNumber(noBatchPeriodPercent)
+	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
 		return nil, err
 	}
 
-	multisigPolicyScript := cardanowallet.NewPolicyScript(
-		multisigKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigKeyHashes)))))
-	multisigFeePolicyScript := cardanowallet.NewPolicyScript(
-		multisigFeeKeyHashes, int(common.GetRequiredSignaturesForConsensus(uint64(len(multisigFeeKeyHashes)))))
-
-	multisigAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript)
+	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigFeeAddress, err := cardano.GetAddressFromPolicyScript(
-		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigFeePolicyScript)
+	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
+		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript, multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +190,14 @@ func (cco *CardanoChainOperations) IsSynchronized(
 		lastOracleBlockPoint.BlockSlot >= lastObservedBlockBridge.BlockSlot.Uint64(), nil
 }
 
-func (cco *CardanoChainOperations) getSlotNumber(
-	noBatchPeriodPercent float64,
-) (uint64, error) {
+// Submit implements core.Submit.
+func (cco *CardanoChainOperations) Submit(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
+) error {
+	return bridgeSmartContract.SubmitSignedBatch(ctx, batch)
+}
+
+func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 	data, err := cco.db.GetLatestBlockPoint()
 	if err != nil {
 		return 0, err
@@ -215,8 +208,8 @@ func (cco *CardanoChainOperations) getSlotNumber(
 		slot = data.BlockSlot
 	}
 
-	newSlot, err := getSlotNumberWithRoundingThreshold(
-		slot, cco.config.SlotRoundingThreshold, noBatchPeriodPercent)
+	newSlot, err := getNumberWithRoundingThreshold(
+		slot, cco.config.SlotRoundingThreshold, cco.config.NoBatchPeriodPercent)
 	if err != nil {
 		return 0, err
 	}
@@ -228,50 +221,32 @@ func (cco *CardanoChainOperations) getSlotNumber(
 
 func (cco *CardanoChainOperations) getCardanoData(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
-) ([]string, []string, error) {
+) ([]eth.ValidatorChainData, error) {
 	validatorsData, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var (
-		multisigKeyHashes     = make([]string, len(validatorsData))
-		multisigFeeKeyHashes  = make([]string, len(validatorsData))
-		verificationKeyIdx    = -1
-		feeVerificationKeyIdx = -1
-	)
+	hasVerificationKey, hasFeeVerificationKey := false, false
 
-	for i, validator := range validatorsData {
-		multisigKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKey[:])
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(), validator.VerifyingKey[:]) {
-			verificationKeyIdx = i
-		}
-
-		multisigFeeKeyHashes[i], err = cardanowallet.GetKeyHash(validator.VerifyingKeyFee[:])
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(), validator.VerifyingKeyFee[:]) {
-			feeVerificationKeyIdx = i
-		}
+	for _, validator := range validatorsData {
+		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(),
+			cardanowallet.PadKeyToSize(validator.Key[0].Bytes()))
+		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(),
+			cardanowallet.PadKeyToSize(validator.Key[1].Bytes()))
 	}
 
-	if verificationKeyIdx == -1 {
-		return nil, nil, fmt.Errorf(
+	if !hasVerificationKey {
+		return nil, fmt.Errorf(
 			"verifying key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	if feeVerificationKeyIdx == -1 {
-		return nil, nil, fmt.Errorf(
+	if !hasFeeVerificationKey {
+		return nil, fmt.Errorf(
 			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	}
 
-	return multisigKeyHashes, multisigFeeKeyHashes, nil
+	return validatorsData, nil
 }
 
 func (cco *CardanoChainOperations) getUTXOs(
@@ -298,7 +273,8 @@ func (cco *CardanoChainOperations) getUTXOs(
 		minUtxoAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
-		takeAtLeastUtxoCount)
+		cco.config.TakeAtLeastUtxoCount,
+	)
 	if err != nil {
 		return
 	}
@@ -306,24 +282,6 @@ func (cco *CardanoChainOperations) getUTXOs(
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
 	return
-}
-
-func getSlotNumberWithRoundingThreshold(
-	slotNumber, threshold uint64, noBatchPeriodPercent float64,
-) (uint64, error) {
-	if slotNumber == 0 {
-		return 0, errors.New("slot number is zero")
-	}
-
-	newSlot := ((slotNumber + threshold - 1) / threshold) * threshold
-	diffFromPrevious := slotNumber - (newSlot - threshold)
-
-	if diffFromPrevious <= uint64(float64(threshold)*noBatchPeriodPercent) ||
-		diffFromPrevious >= uint64(float64(threshold)*(1.0-noBatchPeriodPercent)) {
-		return 0, fmt.Errorf("%w: (slot, rounded) = (%d, %d)", errNonActiveBatchPeriod, slotNumber, newSlot)
-	}
-
-	return newSlot, nil
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
@@ -420,7 +378,7 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
-			receiversMap[receiver.DestinationAddress] += receiver.Amount
+			receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
 		}
 	}
 

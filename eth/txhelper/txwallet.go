@@ -2,11 +2,13 @@ package ethtxhelper
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"math/big"
 	"strings"
 
 	apexcommon "github.com/Ethernal-Tech/apex-bridge/common"
 	secretsInfra "github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -35,9 +37,18 @@ func NewEthTxWalletFromSecretManager(sm secretsInfra.SecretsManager) (*EthTxWall
 }
 
 func NewEthTxWallet(pk string) (*EthTxWallet, error) {
-	bytes, err := apexcommon.DecodeHex(strings.Trim(strings.Trim(pk, "\n"), " "))
-	if err != nil {
-		return nil, err
+	var (
+		bytes []byte
+		err   error
+	)
+
+	if len(pk) == wallet.KeySize {
+		bytes = ([]byte)(pk)
+	} else {
+		bytes, err = apexcommon.DecodeHex(strings.TrimSpace(pk))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	privateKey, err := crypto.ToECDSA(bytes)
@@ -45,12 +56,21 @@ func NewEthTxWallet(pk string) (*EthTxWallet, error) {
 		return nil, err
 	}
 
-	// Get the Ethereum address from the public key
-	ethereumAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+	return &EthTxWallet{
+		privateKey: privateKey,
+		addr:       crypto.PubkeyToAddress(privateKey.PublicKey), // Get the Ethereum address from the public key
+	}, nil
+}
+
+func GenerateNewEthTxWallet() (*EthTxWallet, error) {
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
 
 	return &EthTxWallet{
 		privateKey: privateKey,
-		addr:       ethereumAddress,
+		addr:       crypto.PubkeyToAddress(privateKey.PublicKey), // Get the Ethereum address from the public key
 	}, nil
 }
 
@@ -64,6 +84,19 @@ func (w EthTxWallet) GetAddress() common.Address {
 
 func (w EthTxWallet) SignTx(chainID *big.Int, tx *types.Transaction) (*types.Transaction, error) {
 	return types.SignTx(tx, types.NewLondonSigner(chainID), w.privateKey)
+}
+
+func (w EthTxWallet) Save(secretsManager secretsInfra.SecretsManager, key string) error {
+	privateKeyBytes := crypto.FromECDSA(w.privateKey)
+
+	return secretsManager.SetSecret(key, []byte(hex.EncodeToString(privateKeyBytes)))
+}
+
+func (w EthTxWallet) GetHexData() (string, string, string) {
+	privateKeyBytes := crypto.FromECDSA(w.privateKey)
+	publicKeyBytes := crypto.FromECDSAPub(&w.privateKey.PublicKey)
+
+	return hex.EncodeToString(privateKeyBytes), hex.EncodeToString(publicKeyBytes), w.addr.Hex()
 }
 
 func TxOpts2LegacyTx(to string, data []byte, txOpts *bind.TransactOpts) *types.Transaction {
