@@ -51,7 +51,6 @@ type AppConfig struct {
 	BatcherPullTimeMilis         uint64                                `json:"batcherPullTime"`
 	APIConfig                    APIConfig                             `json:"api"`
 	Telemetry                    telemetry.TelemetryConfig             `json:"telemetry"`
-	BatcherTestMode              uint8                                 `json:"batcherTestMode"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
@@ -140,7 +139,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,
-		TestMode:      appConfig.BatcherTestMode,
 	}
 
 	return oracleConfig, batcherConfig

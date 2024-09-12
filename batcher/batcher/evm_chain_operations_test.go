@@ -67,7 +67,7 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 			},
 		}
 		ops, err := NewEVMChainOperations(
-			chainSpecificJSONRaw, secretsMngr, dbMock, chainID, 0, hclog.NewNullLogger())
+			chainSpecificJSONRaw, secretsMngr, dbMock, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		dt, err := ops.GenerateBatchTransaction(ctx, nil, chainID, confirmedTxs, batchNonceID)

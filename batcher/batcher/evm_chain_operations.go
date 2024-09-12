@@ -37,7 +37,6 @@ func NewEVMChainOperations(
 	secretsManager secrets.SecretsManager,
 	db eventTrackerStore.EventTrackerStore,
 	chainID string,
-	testMode uint8,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
 	config, err := cardano.NewBatcherEVMChainConfig(jsonConfig)
@@ -54,7 +53,7 @@ func NewEVMChainOperations(
 		config:       config,
 		privateKey:   privateKey,
 		db:           db,
-		ttlFormatter: getTTLFormatter(testMode),
+		ttlFormatter: getTTLFormatter(config.TestMode),
 		logger:       logger,
 	}, nil
 }

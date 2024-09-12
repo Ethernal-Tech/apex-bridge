@@ -28,5 +28,4 @@ type BatcherManagerConfiguration struct {
 	Bridge              BridgeConfig  `json:"bridge"`
 	Chains              []ChainConfig `json:"chains"`
 	PullTimeMilis       uint64        `json:"pullTime"`
-	TestMode            uint8         `json:"testMode"`
 }
