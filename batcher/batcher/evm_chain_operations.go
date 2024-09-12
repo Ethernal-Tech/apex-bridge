@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
+	"golang.org/x/exp/rand"
 )
 
 var (
@@ -186,12 +187,10 @@ func newEVMSmartContractTransaction(
 }
 
 // getTTLFormatter returns formater for a test mode. By default it is just identity function
-// 1 - single batch fail
-// 2 - 5 batches fail in a raw
-// 3 - 5 bathces fail in "random" predetermined sequence
+// 1 - first batch will fail
+// 2 - first five batches will fail
+// 3 - First batch 5 bathces fail in "random" predetermined sequence
 func getTTLFormatter(testMode uint8) TTLFormatterFunc {
-	count := 0
-
 	switch testMode {
 	default:
 		return func(ttl, batchID uint64) uint64 {
@@ -199,23 +198,29 @@ func getTTLFormatter(testMode uint8) TTLFormatterFunc {
 		}
 	case 1:
 		return func(ttl, batchID uint64) uint64 {
-			if count > 0 {
+			if batchID > 1 {
 				return ttl
 			}
-
-			count++
 
 			return 0
 		}
-	case 2, 3:
+	case 2:
 		return func(ttl, batchID uint64) uint64 {
-			if count > 4 {
+			if batchID > 5 {
 				return ttl
 			}
 
-			count++
-
 			return 0
+		}
+	case 3:
+		return func(ttl, batchID uint64) uint64 {
+			const failureRate = 50
+
+			if batchID <= 5 && rand.Intn(100) > failureRate {
+				return 0
+			}
+
+			return ttl
 		}
 	}
 }
