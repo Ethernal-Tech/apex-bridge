@@ -38,7 +38,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 	chainConfig := &core.CardanoChainConfig{
 		ChainID:                common.ChainIDStrPrime,
-		NetworkAddress:         "backbone.cardano-mainnet.iohk.io:3001",
+		NetworkAddress:         "backbone.cardano.iog.io:3001",
 		NetworkMagic:           764824073,
 		StartBlockHash:         "335ac2d90bc37906c1264cfdc5769a652293cf64fa42b0c74d323473938b8ff1",
 		StartSlot:              127933773,
