@@ -22,11 +22,14 @@ var (
 	_ core.ChainOperations = (*EVMChainOperations)(nil)
 )
 
+type TTLFormatterFunc func(ttl uint64, batchID uint64) uint64
+
 type EVMChainOperations struct {
-	config     *cardano.BatcherEVMChainConfig
-	privateKey *bn256.PrivateKey
-	db         eventTrackerStore.EventTrackerStore
-	logger     hclog.Logger
+	config       *cardano.BatcherEVMChainConfig
+	privateKey   *bn256.PrivateKey
+	db           eventTrackerStore.EventTrackerStore
+	ttlFormatter TTLFormatterFunc
+	logger       hclog.Logger
 }
 
 func NewEVMChainOperations(
@@ -34,6 +37,7 @@ func NewEVMChainOperations(
 	secretsManager secrets.SecretsManager,
 	db eventTrackerStore.EventTrackerStore,
 	chainID string,
+	testMode uint8,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
 	config, err := cardano.NewBatcherEVMChainConfig(jsonConfig)
@@ -47,10 +51,11 @@ func NewEVMChainOperations(
 	}
 
 	return &EVMChainOperations{
-		config:     config,
-		privateKey: privateKey,
-		db:         db,
-		logger:     logger,
+		config:       config,
+		privateKey:   privateKey,
+		db:           db,
+		ttlFormatter: getTTLFormatter(testMode),
+		logger:       logger,
 	}, nil
 }
 
@@ -74,7 +79,9 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	}
 
 	txs := newEVMSmartContractTransaction(
-		batchNonceID, blockRounded+cco.config.TTLBlockNumberInc, confirmedTransactions)
+		batchNonceID,
+		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
+		confirmedTransactions)
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -176,5 +183,40 @@ func newEVMSmartContractTransaction(
 		TTL:          ttl,
 		FeeAmount:    feeAmount,
 		Receivers:    receivers,
+	}
+}
+
+// getTTLFormatter returns formater for a test mode. By default it is just identity function
+// 1 - single batch fail
+// 2 - 5 batches fail in a raw
+// 3 - 5 bathces fail in "random" predetermined sequence
+func getTTLFormatter(testMode uint8) TTLFormatterFunc {
+	count := 0
+
+	switch testMode {
+	default:
+		return func(ttl, batchID uint64) uint64 {
+			return ttl
+		}
+	case 1:
+		return func(ttl, batchID uint64) uint64 {
+			if count > 0 {
+				return ttl
+			}
+
+			count++
+
+			return 0
+		}
+	case 2, 3:
+		return func(ttl, batchID uint64) uint64 {
+			if count > 4 {
+				return ttl
+			}
+
+			count++
+
+			return 0
+		}
 	}
 }

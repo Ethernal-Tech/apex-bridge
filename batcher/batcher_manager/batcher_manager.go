@@ -65,16 +65,9 @@ func NewBatcherManager(
 				return nil, err
 			}
 		case common.ChainTypeEVMStr:
-			if config.TestMode > uint8(0) && config.TestMode < uint8(5) {
-				operations, err = getEthOperationsTestMode(chainConfig, ethIndexerDbs, secretsManager, logger, config.TestMode)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
-				if err != nil {
-					return nil, err
-				}
+			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, config.TestMode, logger)
+			if err != nil {
+				return nil, err
 			}
 		default:
 			return nil, fmt.Errorf("unknown chain type: %s", chainConfig.ChainType)
@@ -127,7 +120,7 @@ func getCardanoOperations(
 
 func getEthOperations(
 	config core.ChainConfig, ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, testMode uint8, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := ethIndexerDbs[config.ChainID]
 	if !exists {
@@ -135,25 +128,7 @@ func getEthOperations(
 	}
 
 	operations, err := batcher.NewEVMChainOperations(
-		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return operations, nil
-}
-
-func getEthOperationsTestMode(
-	config core.ChainConfig, ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
-	secretsManager secrets.SecretsManager, logger hclog.Logger, testMode uint8,
-) (core.ChainOperations, error) {
-	db, exists := ethIndexerDbs[config.ChainID]
-	if !exists {
-		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
-	}
-
-	operations, err := batcher.NewEVMChainOperationsTestMode(
-		config.ChainSpecific, secretsManager, db, config.ChainID, logger, testMode)
+		config.ChainSpecific, secretsManager, db, config.ChainID, testMode, logger)
 	if err != nil {
 		return nil, err
 	}
