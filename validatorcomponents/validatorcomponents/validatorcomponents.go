@@ -301,7 +301,9 @@ outsideloop:
 		select {
 		case err := <-v.oracle.ErrorCh():
 			wcerr := v.errorCh.Write(err)
-			v.logger.Error("Failed to write to error channel", "err", wcerr)
+			if wcerr != nil {
+				v.logger.Error("Failed to write to error channel", "err", wcerr)
+			}
 		case <-v.ctx.Done():
 			break outsideloop
 		}
