@@ -29,14 +29,14 @@ const (
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
-	Deploy(ctx context.Context, wallet IEthTxWallet,
-		txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte) (string, string, error)
+	Deploy(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+		abiData abi.ABI, bytecode []byte, params ...interface{}) (string, string, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context, wallet IEthTxWallet,
 		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
 	EstimateGas(
 		ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-		bindMetadata *bind.MetaData, method string, args ...interface{},
+		abi *abi.ABI, method string, args ...interface{},
 	) (uint64, uint64, error)
 	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
@@ -94,7 +94,8 @@ func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending boo
 }
 
 func (t *EthTxHelperImpl) Deploy(
-	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte,
+	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+	abiData abi.ABI, bytecode []byte, params ...interface{},
 ) (string, string, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -123,7 +124,7 @@ func (t *EthTxHelperImpl) Deploy(
 	}
 
 	// Deploy the contract
-	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client)
+	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
 	if err != nil {
 		return "", "", err
 	}
@@ -187,14 +188,9 @@ func (t *EthTxHelperImpl) SendTx(
 
 func (t *EthTxHelperImpl) EstimateGas(
 	ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-	bindMetadata *bind.MetaData, method string, args ...interface{},
+	abi *abi.ABI, method string, args ...interface{},
 ) (uint64, uint64, error) {
-	parsed, err := bindMetadata.GetAbi()
-	if err != nil {
-		return 0, 0, err
-	}
-
-	input, err := parsed.Pack(method, args...)
+	input, err := abi.Pack(method, args...)
 	if err != nil {
 		return 0, 0, err
 	}

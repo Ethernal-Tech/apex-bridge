@@ -5,6 +5,7 @@ import (
 	"os"
 
 	clicreateaddress "github.com/Ethernal-Tech/apex-bridge/cli/create-address"
+	clideployevm "github.com/Ethernal-Tech/apex-bridge/cli/deploy-evm"
 	cligenerateconfigs "github.com/Ethernal-Tech/apex-bridge/cli/generateconfigs"
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
@@ -39,6 +40,7 @@ func (rc *RootCommand) registerSubCommands() {
 		clicreateaddress.GetCreateAddressCommand(),
 		cligenerateconfigs.GetGenerateConfigsCommand(),
 		clisendtx.GetSendTxCommand(),
+		clideployevm.GetDeployEVMCommand(),
 	)
 }
 

@@ -42,6 +42,11 @@ func NewEVMGatewaySmartContractWithWallet(
 func (bsc *EVMGatewaySmartContractImpl) Deposit(
 	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
+	parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return err
@@ -56,7 +61,7 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 
 	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
 		ctx, bsc.ethHelper.wallet.GetAddress(), toAddress, nil, depositGasLimitMultiplier,
-		contractbinding.GatewayMetaData, "deposit", signature, bitmap, data)
+		parsedABI, "deposit", signature, bitmap, data)
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}
