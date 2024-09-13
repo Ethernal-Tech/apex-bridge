@@ -49,7 +49,7 @@ type ValidatorComponentsImpl struct {
 	api               core.API
 	telemetry         *telemetry.Telemetry
 	logger            hclog.Logger
-	errorCh           chan error
+	errorCh           *common.SafeCh[error]
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -228,7 +228,7 @@ func (v *ValidatorComponentsImpl) Start() error {
 
 	go v.relayerImitator.Start()
 
-	v.errorCh = make(chan error, 1)
+	v.errorCh = common.MakeSafeCh[error](1)
 
 	go v.errorHandler()
 
@@ -277,7 +277,10 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}
 
-	close(v.errorCh)
+	if err := v.errorCh.Close(); err != nil {
+		v.logger.Error("Failed to close error channel", "err", err)
+		errs = append(errs, fmt.Errorf("failed to close error channel. err: %w", err))
+	}
 
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
@@ -288,8 +291,8 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	return nil
 }
 
-func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
-	return v.errorCh
+func (v *ValidatorComponentsImpl) ErrorCh() (<-chan error, error) {
+	return v.errorCh.ReadCh()
 }
 
 func (v *ValidatorComponentsImpl) errorHandler() {
@@ -297,7 +300,8 @@ outsideloop:
 	for {
 		select {
 		case err := <-v.oracle.ErrorCh():
-			v.errorCh <- err
+			wcerr := v.errorCh.Write(err)
+			v.logger.Error("Failed to write to error channel", "err", wcerr)
 		case <-v.ctx.Done():
 			break outsideloop
 		}

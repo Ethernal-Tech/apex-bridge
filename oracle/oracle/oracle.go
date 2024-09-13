@@ -175,8 +175,8 @@ type ErrorOrigin struct {
 }
 
 func (o *OracleImpl) errorHandler() {
-	agg := make(chan ErrorOrigin)
-	defer close(agg)
+	agg := common.MakeSafeCh[ErrorOrigin](0)
+	defer agg.Close()
 
 	for _, co := range o.cardanoChainObservers {
 		go func(errChan <-chan error, origin string) {
@@ -187,9 +187,13 @@ func (o *OracleImpl) errorHandler() {
 					if err != nil {
 						o.logger.Error("chain observer error", "origin", origin, "err", err)
 						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
-							agg <- ErrorOrigin{
+							werr := agg.Write(ErrorOrigin{
 								err:    err,
 								origin: origin,
+							})
+
+							if werr != nil {
+								o.logger.Error("error while writing to the agg channel", "origin", origin, "err", werr)
 							}
 
 							break outsideloop
@@ -203,11 +207,19 @@ func (o *OracleImpl) errorHandler() {
 		}(co.ErrorCh(), co.GetConfig().ChainID)
 	}
 
-	select {
-	case errorOrigin := <-agg:
-		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
-		o.errorCh <- errorOrigin.err
-	case <-o.ctx.Done():
+	aggCh, err := agg.ReadCh()
+	if err != nil {
+		o.logger.Error("error while getting agg channel", "err", err)
+
+		<-o.ctx.Done()
+	} else {
+		select {
+		case errorOrigin := <-aggCh:
+			o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
+			o.errorCh <- errorOrigin.err
+		case <-o.ctx.Done():
+		}
 	}
+
 	o.logger.Debug("Exiting oracle error handler")
 }

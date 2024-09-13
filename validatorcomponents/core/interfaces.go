@@ -43,5 +43,5 @@ type RelayerImitator interface {
 type ValidatorComponents interface {
 	Start() error
 	Dispose() error
-	ErrorCh() <-chan error
+	ErrorCh() (<-chan error, error)
 }
