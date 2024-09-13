@@ -16,7 +16,6 @@ import (
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/hashicorp/go-hclog"
-	"golang.org/x/exp/rand"
 )
 
 var (
@@ -214,9 +213,7 @@ func getTTLFormatter(testMode uint8) TTLFormatterFunc {
 		}
 	case 3:
 		return func(ttl, batchID uint64) uint64 {
-			const failureRate = 50
-
-			if batchID <= 5 && rand.Intn(100) > failureRate {
+			if batchID%2 == 0 && batchID <= 10 {
 				return 0
 			}
 
