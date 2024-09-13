@@ -38,7 +38,7 @@ func (sch *SafeCh[T]) Close() error {
 
 func (sch *SafeCh[T]) ReadCh() <-chan T {
 	if sch.ch == nil {
-		sch.ch = make(chan T, 1)
+		sch.ch = make(chan T)
 	}
 
 	return sch.ch
