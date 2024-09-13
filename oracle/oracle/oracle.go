@@ -207,18 +207,11 @@ func (o *OracleImpl) errorHandler() {
 		}(co.ErrorCh(), co.GetConfig().ChainID)
 	}
 
-	aggCh, err := agg.ReadCh()
-	if err != nil {
-		o.logger.Error("error while getting agg channel", "err", err)
-
-		<-o.ctx.Done()
-	} else {
-		select {
-		case errorOrigin := <-aggCh:
-			o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
-			o.errorCh <- errorOrigin.err
-		case <-o.ctx.Done():
-		}
+	select {
+	case errorOrigin := <-agg.ReadCh():
+		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
+		o.errorCh <- errorOrigin.err
+	case <-o.ctx.Done():
 	}
 
 	o.logger.Debug("Exiting oracle error handler")

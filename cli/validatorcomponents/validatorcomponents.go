@@ -88,17 +88,10 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 
-	vcCh, err := validatorComponents.ErrorCh()
-	if err != nil {
-		logger.Error("error while getting validator components error channel", "err", err)
-
-		<-signalChannel
-	} else {
-		select {
-		case <-signalChannel:
-		case err = <-vcCh:
-			outputter.SetError(err)
-		}
+	select {
+	case <-signalChannel:
+	case err = <-validatorComponents.ErrorCh():
+		outputter.SetError(err)
 	}
 
 	outputter.SetCommandResult(&CmdResult{})

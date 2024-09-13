@@ -14,18 +14,16 @@ func TestSafeCh(t *testing.T) {
 
 		require.Nil(t, safeCh.ch)
 
-		ch, err := safeCh.ReadCh()
-		require.Nil(t, ch)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "channel not initialized. use MakeSafeCh")
-
-		err = safeCh.Write(1)
+		err := safeCh.Write(1)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "channel not initialized. use MakeSafeCh")
 
 		err = safeCh.Close()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "channel not initialized. use MakeSafeCh")
+
+		ch := safeCh.ReadCh()
+		require.NotNil(t, ch)
 	})
 
 	t.Run("TestMakeSafeCh", func(t *testing.T) {
@@ -98,11 +96,7 @@ func TestSafeCh(t *testing.T) {
 			require.NoError(t, err)
 		}(t, safeCh)
 
-		ch, err := safeCh.ReadCh()
-		require.NotNil(t, ch)
-		require.NoError(t, err)
-
-		value, ok := <-ch
+		value, ok := <-safeCh.ReadCh()
 		require.True(t, ok)
 		require.Equal(t, 1, value)
 	})
@@ -118,15 +112,11 @@ func TestSafeCh(t *testing.T) {
 			require.NoError(t, err)
 		}(t, safeCh)
 
-		ch, err := safeCh.ReadCh()
-		require.NotNil(t, ch)
-		require.NoError(t, err)
-
-		value, ok := <-ch
+		value, ok := <-safeCh.ReadCh()
 		require.True(t, ok)
 		require.Equal(t, 1, value)
 
-		err = safeCh.Close()
+		err := safeCh.Close()
 		require.NoError(t, err)
 	})
 
@@ -137,11 +127,7 @@ func TestSafeCh(t *testing.T) {
 		err := safeCh.Close()
 		require.NoError(t, err)
 
-		ch, err := safeCh.ReadCh()
-		require.NotNil(t, ch)
-		require.NoError(t, err)
-
-		_, ok := <-ch
+		_, ok := <-safeCh.ReadCh()
 		require.False(t, ok)
 	})
 
@@ -165,13 +151,9 @@ func TestSafeCh(t *testing.T) {
 
 		firstIteration := true
 
-		ch, err := safeCh.ReadCh()
-		require.NotNil(t, ch)
-		require.NoError(t, err)
-
 		for {
 			select {
-			case value, ok := <-ch:
+			case value, ok := <-safeCh.ReadCh():
 				if firstIteration {
 					require.True(t, ok)
 					require.Equal(t, 1, value)

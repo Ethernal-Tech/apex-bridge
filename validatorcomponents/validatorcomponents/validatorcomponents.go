@@ -291,7 +291,7 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	return nil
 }
 
-func (v *ValidatorComponentsImpl) ErrorCh() (<-chan error, error) {
+func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
 	return v.errorCh.ReadCh()
 }
 

@@ -36,12 +36,12 @@ func (sch *SafeCh[T]) Close() error {
 	return nil
 }
 
-func (sch *SafeCh[T]) ReadCh() (<-chan T, error) {
+func (sch *SafeCh[T]) ReadCh() <-chan T {
 	if sch.ch == nil {
-		return nil, errors.New("channel not initialized. use MakeSafeCh")
+		sch.ch = make(chan T, 1)
 	}
 
-	return sch.ch, nil
+	return sch.ch
 }
 
 func (sch *SafeCh[T]) Write(obj T) error {
