@@ -148,7 +148,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	dir := filepath.Clean(ip.evmDir)
 
 	if ip.evmClone {
-		newDir, err := cloneSmartContract(dir)
+		newDir, err := cloneSmartContract(dir, outputter)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Deploying contracts started..."))
+	_, _ = outputter.Write([]byte("Deploying the smart contracts has started..."))
 	outputter.WriteOutput()
 
 	gatewayProxyAddr, gatewayAddr, err := ethcontracts.DeployContractWithProxy(
@@ -304,7 +304,10 @@ func executeCLICommand(binary string, args []string, workingDir string, envVaria
 	return stdOutBuffer.String(), nil
 }
 
-func cloneSmartContract(dir string) (string, error) {
+func cloneSmartContract(dir string, outputter common.OutputFormatter) (string, error) {
+	_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
+	outputter.WriteOutput()
+
 	if _, err := executeCLICommand(
 		"git", []string{"clone", "--progress", evmGatewayRepositoryURL}, dir); err != nil {
 		// git clone writes to stderror, check if messages are ok...
