@@ -1,9 +1,13 @@
 package clideployevm
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
+	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -19,34 +23,37 @@ const (
 	defaultGasLimit           = uint64(5_242_880)
 	defaultGasLimitMultiplier = float64(1.7)
 
-	bridgeNodeURLFlag = "bridge-url"
-	bridgeSCAddrFlag  = "bridge-addr"
-	evmNodeURLFlag    = "url"
-	evmPrivateKeyFlag = "key"
-	evmSCDirFlag      = "dir"
-	evmChainIDFlag    = "chain"
-	evmDynamicTxFlag  = "dynamic-tx"
+	bridgeNodeURLFlag    = "bridge-url"
+	bridgeSCAddrFlag     = "bridge-addr"
+	evmNodeURLFlag       = "url"
+	evmPrivateKeyFlag    = "key"
+	evmCompiledSCDirFlag = "dir"
+	evmChainIDFlag       = "chain"
+	evmDynamicTxFlag     = "dynamic-tx"
+	evmSCSolFilesDirFlag = "dir-sol"
 
-	bridgeNodeURLFlagDesc = "bridge node url"
-	bridgeSCAddrFlagDesc  = "bridge smart contract address"
-	evmNodeURLFlagDesc    = "evm node url"
-	evmSCDirFlagDesc      = "evm smart contracts directory (sol files)"
-	evmPrivateKeyFlagDesc = "private key for evm chain"
-	evmChainIDFlagDesc    = "evm chain ID (prime, vector, etc)"
-	evmDynamicTxFlagDesc  = "Dynamic tx"
+	bridgeNodeURLFlagDesc    = "bridge node url"
+	bridgeSCAddrFlagDesc     = "bridge smart contract address"
+	evmNodeURLFlagDesc       = "evm node url"
+	evmCompiledSCDirFlagDesc = "compiled evm smart contracts directory (json files)"
+	evmPrivateKeyFlagDesc    = "private key for evm chain"
+	evmChainIDFlagDesc       = "evm chain ID (prime, vector, etc)"
+	evmDynamicTxFlagDesc     = "dynamic tx"
+	evmSCSolFilesDirFlagDesc = "directory where evm smart contracts solidity files are located"
 
 	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
 	defaultEVMChainID   = common.ChainIDStrNexus
 )
 
 type deployEVMParams struct {
-	bridgeNodeURL string
-	bridgeSCAddr  string
-	evmNodeURL    string
-	evmPrivateKey string
-	evmDir        string
-	evmChainID    string
-	evmDynamicTx  bool
+	bridgeNodeURL  string
+	bridgeSCAddr   string
+	evmNodeURL     string
+	evmPrivateKey  string
+	evmDir         string
+	evmSolFilesDir string
+	evmChainID     string
+	evmDynamicTx   bool
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -104,9 +111,16 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.evmDir,
-		evmSCDirFlag,
+		evmCompiledSCDirFlag,
 		"",
-		evmSCDirFlagDesc,
+		evmCompiledSCDirFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.evmSolFilesDir,
+		evmSCSolFilesDirFlag,
+		"",
+		evmSCSolFilesDirFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -127,6 +141,16 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
+	if fpath := filepath.Clean(ip.evmSolFilesDir); fpath != "" {
+		if _, err := executeCLICommand("npm", []string{"install"}, fpath); err != nil {
+			return nil, err
+		}
+
+		if _, err := executeCLICommand("npx", []string{"hardhat", "compile"}, fpath); err != nil {
+			return nil, err
+		}
+	}
+
 	validatorsData, err := ip.getValidatorsChainData(ctx)
 	if err != nil {
 		return nil, err
@@ -138,7 +162,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	}
 
 	artifacts, err := ethcontracts.LoadArtifacts(
-		ip.evmDir, "ERC1967Proxy", "Gateway", "NativeTokenPredicate", "NativeTokenWallet", "Validators")
+		filepath.Clean(ip.evmDir),
+		"ERC1967Proxy", "Gateway", "NativeTokenPredicate", "NativeTokenWallet", "Validators")
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +240,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 
 	_, err = ethcontracts.ExecuteContractMethod(
 		ctx, txHelper, wallet, artifacts["NativeTokenWallet"], defaultGasLimitMultiplier, true,
-		nativeTokenWalletProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr, big.NewInt(1_000_000_000))
+		nativeTokenWalletProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr, big.NewInt(0))
 	if err != nil {
 		return nil, err
 	}
@@ -249,4 +274,28 @@ func (ip *deployEVMParams) getValidatorsChainData(ctx context.Context) ([]eth.Va
 	bridgeSC := eth.NewBridgeSmartContract(ip.bridgeNodeURL, ip.bridgeSCAddr, false, hclog.NewNullLogger())
 
 	return bridgeSC.GetValidatorsChainData(ctx, ip.evmChainID)
+}
+
+func executeCLICommand(binary string, args []string, workingDir string, envVariables ...string) (string, error) {
+	var (
+		stdErrBuffer bytes.Buffer
+		stdOutBuffer bytes.Buffer
+	)
+
+	cmd := exec.Command(binary, args...)
+	cmd.Stderr = &stdErrBuffer
+	cmd.Stdout = &stdOutBuffer
+	cmd.Dir = workingDir
+
+	cmd.Env = append(os.Environ(), envVariables...)
+
+	err := cmd.Run()
+
+	if stdErrBuffer.Len() > 0 {
+		return "", fmt.Errorf("error while executing command: %s", stdErrBuffer.String())
+	} else if err != nil {
+		return "", err
+	}
+
+	return stdOutBuffer.String(), nil
 }
