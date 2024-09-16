@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -30,7 +31,7 @@ const (
 	evmCompiledSCDirFlag = "dir"
 	evmChainIDFlag       = "chain"
 	evmDynamicTxFlag     = "dynamic-tx"
-	evmSCSolFilesDirFlag = "dir-sol"
+	evmCloneEvmRepoFlag  = "clone"
 
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
@@ -39,21 +40,25 @@ const (
 	evmPrivateKeyFlagDesc    = "private key for evm chain"
 	evmChainIDFlagDesc       = "evm chain ID (prime, vector, etc)"
 	evmDynamicTxFlagDesc     = "dynamic tx"
-	evmSCSolFilesDirFlagDesc = "directory where evm smart contracts solidity files are located"
+	evmCloneEvmRepoFlagDesc  = "clone evm gateway repository and build smart contracts"
 
 	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
 	defaultEVMChainID   = common.ChainIDStrNexus
+
+	evmGatewayRepositoryName        = "apex-evm-gateway"
+	evmGatewayRepositoryURL         = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
+	evmGatewayRepositoryArtifactDir = "artifacts"
 )
 
 type deployEVMParams struct {
-	bridgeNodeURL  string
-	bridgeSCAddr   string
-	evmNodeURL     string
-	evmPrivateKey  string
-	evmDir         string
-	evmSolFilesDir string
-	evmChainID     string
-	evmDynamicTx   bool
+	bridgeNodeURL string
+	bridgeSCAddr  string
+	evmNodeURL    string
+	evmPrivateKey string
+	evmDir        string
+	evmClone      bool
+	evmChainID    string
+	evmDynamicTx  bool
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -116,11 +121,11 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		evmCompiledSCDirFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&ip.evmSolFilesDir,
-		evmSCSolFilesDirFlag,
-		"",
-		evmSCSolFilesDirFlagDesc,
+	cmd.Flags().BoolVar(
+		&ip.evmClone,
+		evmCloneEvmRepoFlag,
+		false,
+		evmCloneEvmRepoFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -140,15 +145,21 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 
 func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
+	dir := filepath.Clean(ip.evmDir)
 
-	if fpath := filepath.Clean(ip.evmSolFilesDir); fpath != "" {
-		if _, err := executeCLICommand("npm", []string{"install"}, fpath); err != nil {
+	if ip.evmClone {
+		newDir, err := cloneSmartContract(dir)
+		if err != nil {
 			return nil, err
 		}
 
-		if _, err := executeCLICommand("npx", []string{"hardhat", "compile"}, fpath); err != nil {
-			return nil, err
-		}
+		dir = newDir
+	}
+
+	artifacts, err := ethcontracts.LoadArtifacts(
+		dir, "ERC1967Proxy", "Gateway", "NativeTokenPredicate", "NativeTokenWallet", "Validators")
+	if err != nil {
+		return nil, err
 	}
 
 	validatorsData, err := ip.getValidatorsChainData(ctx)
@@ -157,13 +168,6 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	}
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.evmPrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	artifacts, err := ethcontracts.LoadArtifacts(
-		filepath.Clean(ip.evmDir),
-		"ERC1967Proxy", "Gateway", "NativeTokenPredicate", "NativeTokenWallet", "Validators")
 	if err != nil {
 		return nil, err
 	}
@@ -298,4 +302,30 @@ func executeCLICommand(binary string, args []string, workingDir string, envVaria
 	}
 
 	return stdOutBuffer.String(), nil
+}
+
+func cloneSmartContract(dir string) (string, error) {
+	if _, err := executeCLICommand(
+		"git", []string{"clone", "--progress", evmGatewayRepositoryURL}, dir); err != nil {
+		// git clone writes to stderror, check if messages are ok...
+		// or there is already
+		str := strings.TrimSpace(err.Error())
+		if !strings.Contains(str, "Cloning into") && !strings.HasSuffix(str, "done.") &&
+			!strings.Contains(str, fmt.Sprintf("'%s' already exists", evmGatewayRepositoryName)) {
+			return "", err
+		}
+	}
+
+	dir = filepath.Join(dir, evmGatewayRepositoryName)
+
+	// do not listen for errors on following commands
+	_, _ = executeCLICommand("git", []string{"checkout", "main"}, dir)
+	_, _ = executeCLICommand("git", []string{"pull", "origin"}, dir)
+	_, _ = executeCLICommand("npm", []string{"install"}, dir)
+
+	if _, err := executeCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, evmGatewayRepositoryArtifactDir), nil
 }
