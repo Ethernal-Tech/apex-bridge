@@ -83,8 +83,6 @@ func (api *APIImpl) Start() {
 
 		return
 	}
-
-	api.logger.Debug("Started api")
 }
 
 func (api *APIImpl) Dispose() error {
