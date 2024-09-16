@@ -23,25 +23,25 @@ const (
 	defaultGasLimit           = uint64(5_242_880)
 	defaultGasLimitMultiplier = float64(1.7)
 
-	bridgeNodeURLFlag    = "bridge-url"
-	bridgeSCAddrFlag     = "bridge-addr"
-	evmNodeURLFlag       = "url"
-	evmPrivateKeyFlag    = "key"
-	evmCompiledSCDirFlag = "dir"
-	evmChainIDFlag       = "chain"
-	evmDynamicTxFlag     = "dynamic-tx"
-	evmCloneEvmRepoFlag  = "clone"
-	evmBranchNameFlag    = "branch"
+	bridgeNodeURLFlag   = "bridge-url"
+	bridgeSCAddrFlag    = "bridge-addr"
+	evmNodeURLFlag      = "url"
+	evmPrivateKeyFlag   = "key"
+	evmSCDirFlag        = "dir"
+	evmChainIDFlag      = "chain"
+	evmDynamicTxFlag    = "dynamic-tx"
+	evmCloneEvmRepoFlag = "clone"
+	evmBranchNameFlag   = "branch"
 
-	bridgeNodeURLFlagDesc    = "bridge node url"
-	bridgeSCAddrFlagDesc     = "bridge smart contract address"
-	evmNodeURLFlagDesc       = "evm node url"
-	evmCompiledSCDirFlagDesc = "compiled evm smart contracts directory (json files)"
-	evmPrivateKeyFlagDesc    = "private key for evm chain"
-	evmChainIDFlagDesc       = "evm chain ID (prime, vector, etc)"
-	evmDynamicTxFlagDesc     = "dynamic tx"
-	evmCloneEvmRepoFlagDesc  = "clone evm gateway repository and build smart contracts"
-	evmBranchNameFlagDesc    = "branch to use if the evm gateway repository is cloned"
+	bridgeNodeURLFlagDesc   = "bridge node url"
+	bridgeSCAddrFlagDesc    = "bridge smart contract address"
+	evmNodeURLFlagDesc      = "evm node url"
+	evmSCDirFlagDesc        = "yhe directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located."
+	evmPrivateKeyFlagDesc   = "private key for evm chain"
+	evmChainIDFlagDesc      = "evm chain ID (prime, vector, etc)"
+	evmDynamicTxFlagDesc    = "dynamic tx"
+	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
+	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
 
 	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
 	defaultEVMChainID   = common.ChainIDStrNexus
@@ -118,9 +118,9 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.evmDir,
-		evmCompiledSCDirFlag,
+		evmSCDirFlag,
 		"",
-		evmCompiledSCDirFlagDesc,
+		evmSCDirFlagDesc,
 	)
 
 	cmd.Flags().BoolVar(
