@@ -277,8 +277,6 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}
 
-	close(v.errorCh)
-
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing validatorcomponents. errors: %w", errors.Join(errs...))
 	}
@@ -297,7 +295,10 @@ outsideloop:
 	for {
 		select {
 		case err := <-v.oracle.ErrorCh():
-			v.errorCh <- err
+			if err != nil {
+				v.logger.Error("oracle error", "err", err)
+				v.errorCh <- err
+			}
 		case <-v.ctx.Done():
 			break outsideloop
 		}
