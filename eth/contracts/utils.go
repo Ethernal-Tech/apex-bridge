@@ -10,20 +10,53 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func DeployContractWithProxy(
+type IEthContractUtils interface {
+	DeployWithProxy(
+		ctx context.Context,
+		artifact *Artifact,
+		proxyArtifact *Artifact,
+		initParams ...interface{},
+	) (ethcommon.Address, ethcommon.Address, error)
+	ExecuteMethod(
+		ctx context.Context,
+		artifact *Artifact,
+		address ethcommon.Address,
+		method string,
+		args ...interface{},
+	) (ethcommon.Hash, error)
+}
+
+type ethContractUtils struct {
+	txHelper           ethtxhelper.IEthTxHelper
+	wallet             ethtxhelper.IEthTxWallet
+	gasLimitMultipiler float64
+	waitForTx          bool
+}
+
+func NewEthContractUtils(
+	txHelper ethtxhelper.IEthTxHelper, wallet ethtxhelper.IEthTxWallet, gasLimitMultiplies float64, waitForTx bool,
+) IEthContractUtils {
+	return &ethContractUtils{
+		txHelper:           txHelper,
+		wallet:             wallet,
+		gasLimitMultipiler: gasLimitMultiplies,
+		waitForTx:          waitForTx,
+	}
+}
+
+func (ecu *ethContractUtils) DeployWithProxy(
 	ctx context.Context,
-	txHelper ethtxhelper.IEthTxHelper,
-	wallet ethtxhelper.IEthTxWallet,
 	artifact *Artifact,
 	proxyArtifact *Artifact,
 	initParams ...interface{},
 ) (ethcommon.Address, ethcommon.Address, error) {
-	addrString, txHash, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *artifact.Abi, artifact.Bytecode)
+	addrString, txHash, err := ecu.txHelper.Deploy(
+		ctx, ecu.wallet, bind.TransactOpts{}, *artifact.Abi, artifact.Bytecode)
 	if err != nil {
 		return ethcommon.Address{}, ethcommon.Address{}, err
 	}
 
-	receipt, err := txHelper.WaitForReceipt(ctx, txHash, true)
+	receipt, err := ecu.txHelper.WaitForReceipt(ctx, txHash, true)
 	if err != nil {
 		return ethcommon.Address{}, ethcommon.Address{}, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
@@ -38,13 +71,13 @@ func DeployContractWithProxy(
 		return ethcommon.Address{}, ethcommon.Address{}, err
 	}
 
-	addrProxyStr, txHash, err := txHelper.Deploy(
-		ctx, wallet, bind.TransactOpts{}, *proxyArtifact.Abi, proxyArtifact.Bytecode, addr, initializationData)
+	addrProxyStr, txHash, err := ecu.txHelper.Deploy(
+		ctx, ecu.wallet, bind.TransactOpts{}, *proxyArtifact.Abi, proxyArtifact.Bytecode, addr, initializationData)
 	if err != nil {
 		return ethcommon.Address{}, ethcommon.Address{}, err
 	}
 
-	receipt, err = txHelper.WaitForReceipt(ctx, txHash, true)
+	receipt, err = ecu.txHelper.WaitForReceipt(ctx, txHash, true)
 	if err != nil {
 		return ethcommon.Address{}, ethcommon.Address{}, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
@@ -55,47 +88,40 @@ func DeployContractWithProxy(
 	return ethcommon.HexToAddress(addrProxyStr), addr, nil
 }
 
-func ExecuteContractMethod(
+func (ecu *ethContractUtils) ExecuteMethod(
 	ctx context.Context,
-	txHelper ethtxhelper.IEthTxHelper,
-	wallet ethtxhelper.IEthTxWallet,
 	artifact *Artifact,
-	gasLimitMultipiler float64,
-	waitForTx bool,
 	address ethcommon.Address,
 	method string,
 	args ...interface{},
-) (string, error) {
-	estimatedGas, _, err := txHelper.EstimateGas(
-		ctx, wallet.GetAddress(), address, nil, gasLimitMultipiler,
-		artifact.Abi, method, args...)
+) (ethcommon.Hash, error) {
+	estimatedGas, _, err := ecu.txHelper.EstimateGas(
+		ctx, ecu.wallet.GetAddress(), address, nil, ecu.gasLimitMultipiler, artifact.Abi, method, args...)
 	if err != nil {
-		return "", err
+		return ethcommon.Hash{}, err
 	}
 
 	bc := bind.NewBoundContract(
-		address, *artifact.Abi, txHelper.GetClient(), txHelper.GetClient(), txHelper.GetClient())
+		address, *artifact.Abi, ecu.txHelper.GetClient(), ecu.txHelper.GetClient(), ecu.txHelper.GetClient())
 
-	tx, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
+	tx, err := ecu.txHelper.SendTx(ctx, ecu.wallet, bind.TransactOpts{},
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
 			return bc.Transact(opts, method, args...)
 		})
 	if err != nil {
-		return "", err
+		return ethcommon.Hash{}, err
 	}
 
-	txHash := tx.Hash().String()
-
-	if waitForTx {
-		receipt, err := txHelper.WaitForReceipt(ctx, txHash, true)
+	if ecu.waitForTx {
+		receipt, err := ecu.txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 		if err != nil {
-			return "", err
+			return ethcommon.Hash{}, err
 		} else if receipt.Status != types.ReceiptStatusSuccessful {
-			return "", fmt.Errorf("receipt status for %s is %d", txHash, receipt.Status)
+			return ethcommon.Hash{}, fmt.Errorf("receipt status for %s is %d", tx.Hash(), receipt.Status)
 		}
 	}
 
-	return txHash, nil
+	return tx.Hash(), nil
 }

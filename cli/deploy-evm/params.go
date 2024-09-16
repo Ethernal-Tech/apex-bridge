@@ -36,7 +36,7 @@ const (
 	bridgeNodeURLFlagDesc   = "bridge node url"
 	bridgeSCAddrFlagDesc    = "bridge smart contract address"
 	evmNodeURLFlagDesc      = "evm node url"
-	evmSCDirFlagDesc        = "yhe directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located."
+	evmSCDirFlagDesc        = "yhe directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
 	evmPrivateKeyFlagDesc   = "private key for evm chain"
 	evmChainIDFlagDesc      = "evm chain ID (prime, vector, etc)"
 	evmDynamicTxFlagDesc    = "dynamic tx"
@@ -195,8 +195,10 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Deploying the smart contracts has started..."))
 	outputter.WriteOutput()
 
-	gatewayProxyAddr, gatewayAddr, err := ethcontracts.DeployContractWithProxy(
-		ctx, txHelper, wallet, artifacts["Gateway"], artifacts["ERC1967Proxy"])
+	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier, true)
+
+	gatewayProxyAddr, gatewayAddr, err := ethContractUtils.DeployWithProxy(
+		ctx, artifacts["Gateway"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +206,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Gateway has been deployed"))
 	outputter.WriteOutput()
 
-	nativeTokenPredicateProxyAddr, nativeTokenPredicateAddr, err := ethcontracts.DeployContractWithProxy(
-		ctx, txHelper, wallet, artifacts["NativeTokenPredicate"], artifacts["ERC1967Proxy"])
+	nativeTokenPredicateProxyAddr, nativeTokenPredicateAddr, err := ethContractUtils.DeployWithProxy(
+		ctx, artifacts["NativeTokenPredicate"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +215,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenPredicate has been deployed"))
 	outputter.WriteOutput()
 
-	nativeTokenWalletProxyAddr, nativeTokenWalletAddr, err := ethcontracts.DeployContractWithProxy(
-		ctx, txHelper, wallet, artifacts["NativeTokenWallet"], artifacts["ERC1967Proxy"])
+	nativeTokenWalletProxyAddr, nativeTokenWalletAddr, err := ethContractUtils.DeployWithProxy(
+		ctx, artifacts["NativeTokenWallet"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
@@ -222,8 +224,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenWallet has been deployed"))
 	outputter.WriteOutput()
 
-	validatorsProxyAddr, validatorsAddr, err := ethcontracts.DeployContractWithProxy(
-		ctx, txHelper, wallet, artifacts["Validators"], artifacts["ERC1967Proxy"])
+	validatorsProxyAddr, validatorsAddr, err := ethContractUtils.DeployWithProxy(
+		ctx, artifacts["Validators"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +233,9 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Validators has been deployed"))
 	outputter.WriteOutput()
 
-	_, err = ethcontracts.ExecuteContractMethod(
-		ctx, txHelper, wallet, artifacts["Gateway"], defaultGasLimitMultiplier, true,
-		gatewayProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr, validatorsProxyAddr)
+	_, err = ethContractUtils.ExecuteMethod(
+		ctx, artifacts["Gateway"], gatewayProxyAddr, "setDependencies",
+		nativeTokenPredicateProxyAddr, validatorsProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -241,9 +243,9 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Gateway has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethcontracts.ExecuteContractMethod(
-		ctx, txHelper, wallet, artifacts["NativeTokenPredicate"], defaultGasLimitMultiplier, true,
-		nativeTokenPredicateProxyAddr, "setDependencies", gatewayProxyAddr, nativeTokenWalletProxyAddr)
+	_, err = ethContractUtils.ExecuteMethod(
+		ctx, artifacts["NativeTokenPredicate"], nativeTokenPredicateProxyAddr, "setDependencies",
+		gatewayProxyAddr, nativeTokenWalletProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -251,9 +253,9 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenPredicate has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethcontracts.ExecuteContractMethod(
-		ctx, txHelper, wallet, artifacts["NativeTokenWallet"], defaultGasLimitMultiplier, true,
-		nativeTokenWalletProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr)
+	_, err = ethContractUtils.ExecuteMethod(
+		ctx, artifacts["NativeTokenWallet"], nativeTokenWalletProxyAddr, "setDependencies",
+		nativeTokenPredicateProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -261,9 +263,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenWallet has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethcontracts.ExecuteContractMethod(
-		ctx, txHelper, wallet, artifacts["Validators"], defaultGasLimitMultiplier, true,
-		validatorsProxyAddr, "setValidatorsChainData", validatorsData)
+	_, err = ethContractUtils.ExecuteMethod(
+		ctx, artifacts["Validators"], validatorsProxyAddr, "setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
 	}
