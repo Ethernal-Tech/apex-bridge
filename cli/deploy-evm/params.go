@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,6 +31,7 @@ const (
 	evmChainIDFlag       = "chain"
 	evmDynamicTxFlag     = "dynamic-tx"
 	evmCloneEvmRepoFlag  = "clone"
+	evmBranchNameFlag    = "branch"
 
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
@@ -41,6 +41,7 @@ const (
 	evmChainIDFlagDesc       = "evm chain ID (prime, vector, etc)"
 	evmDynamicTxFlagDesc     = "dynamic tx"
 	evmCloneEvmRepoFlagDesc  = "clone evm gateway repository and build smart contracts"
+	evmBranchNameFlagDesc    = "branch to use if the evm gateway repository is cloned"
 
 	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
 	defaultEVMChainID   = common.ChainIDStrNexus
@@ -58,6 +59,7 @@ type deployEVMParams struct {
 	evmDir        string
 	evmClone      bool
 	evmChainID    string
+	evmBranchName string
 	evmDynamicTx  bool
 }
 
@@ -141,6 +143,13 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		false,
 		evmDynamicTxFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&ip.evmBranchName,
+		evmBranchNameFlag,
+		"main",
+		evmBranchNameFlagDesc,
+	)
 }
 
 func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -148,7 +157,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	dir := filepath.Clean(ip.evmDir)
 
 	if ip.evmClone {
-		newDir, err := cloneSmartContract(dir, outputter)
+		newDir, err := cloneSmartContract(dir, ip.evmBranchName, outputter)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +253,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 
 	_, err = ethcontracts.ExecuteContractMethod(
 		ctx, txHelper, wallet, artifacts["NativeTokenWallet"], defaultGasLimitMultiplier, true,
-		nativeTokenWalletProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr, big.NewInt(0))
+		nativeTokenWalletProxyAddr, "setDependencies", nativeTokenPredicateProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +313,7 @@ func executeCLICommand(binary string, args []string, workingDir string, envVaria
 	return stdOutBuffer.String(), nil
 }
 
-func cloneSmartContract(dir string, outputter common.OutputFormatter) (string, error) {
+func cloneSmartContract(dir, evmBranchName string, outputter common.OutputFormatter) (string, error) {
 	_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
 	outputter.WriteOutput()
 
@@ -322,7 +331,7 @@ func cloneSmartContract(dir string, outputter common.OutputFormatter) (string, e
 	dir = filepath.Join(dir, evmGatewayRepositoryName)
 
 	// do not listen for errors on following commands
-	_, _ = executeCLICommand("git", []string{"checkout", "main"}, dir)
+	_, _ = executeCLICommand("git", []string{"checkout", evmBranchName}, dir)
 	_, _ = executeCLICommand("git", []string{"pull", "origin"}, dir)
 	_, _ = executeCLICommand("npm", []string{"install"}, dir)
 
