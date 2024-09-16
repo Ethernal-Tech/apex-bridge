@@ -32,6 +32,7 @@ type EthChainConfig struct {
 	BlockRoundingThreshold  uint64            `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent    float64           `json:"noBatchPeriodPercent"`
 	DynamicTx               bool              `json:"dynamicTx"`
+	TestMode                uint8             `json:"testMode"`
 }
 
 type CardanoChainConfig struct {
