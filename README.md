@@ -192,3 +192,13 @@ $ go run ./main.go sendtx \
         --fee 1_100_000 \
         --nexus-url http://127.0.0.1:12001
 ```
+
+# How to Deploy Nexus Smart Contracts
+```shell
+$ go run ./main.go deploy-evm \
+        --bridge-url http://localhost:12013 \
+        -url http://127.0.0.1:12001 \
+        --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
+        --dir /home/igor/development \
+        --clone
+```
