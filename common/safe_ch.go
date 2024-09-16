@@ -22,10 +22,6 @@ func (sch *SafeCh[T]) Close() error {
 	sch.m.Lock()
 	defer sch.m.Unlock()
 
-	if sch.ch == nil {
-		return errors.New("channel not initialized. use MakeSafeCh")
-	}
-
 	if sch.closed {
 		return errors.New("channel already closed")
 	}
@@ -37,20 +33,12 @@ func (sch *SafeCh[T]) Close() error {
 }
 
 func (sch *SafeCh[T]) ReadCh() <-chan T {
-	if sch.ch == nil {
-		sch.ch = make(chan T)
-	}
-
 	return sch.ch
 }
 
 func (sch *SafeCh[T]) Write(obj T) error {
 	sch.m.Lock()
 	defer sch.m.Unlock()
-
-	if sch.ch == nil {
-		return errors.New("channel not initialized. use MakeSafeCh")
-	}
 
 	if sch.closed {
 		return errors.New("trying to write to a closed channel")

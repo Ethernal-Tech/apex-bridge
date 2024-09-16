@@ -8,24 +8,6 @@ import (
 )
 
 func TestSafeCh(t *testing.T) {
-	t.Run("TestInvalidSafeCh", func(t *testing.T) {
-		safeCh := &SafeCh[int]{}
-		require.NotNil(t, safeCh)
-
-		require.Nil(t, safeCh.ch)
-
-		err := safeCh.Write(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "channel not initialized. use MakeSafeCh")
-
-		err = safeCh.Close()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "channel not initialized. use MakeSafeCh")
-
-		ch := safeCh.ReadCh()
-		require.NotNil(t, ch)
-	})
-
 	t.Run("TestMakeSafeCh", func(t *testing.T) {
 		safeCh := MakeSafeCh[int](1)
 		require.NotNil(t, safeCh)
