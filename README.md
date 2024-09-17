@@ -205,3 +205,4 @@ $ go run ./main.go deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+- `--bridge-url` and `--bridge-addr` are optional (instead of `--bls-key`)
