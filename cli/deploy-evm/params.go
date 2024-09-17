@@ -13,8 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/hashicorp/go-hclog"
+	"github.com/Ethernal-Tech/bn256"
 	"github.com/spf13/cobra"
 )
 
@@ -23,28 +22,25 @@ const (
 	defaultGasLimit           = uint64(5_242_880)
 	defaultGasLimitMultiplier = float64(1.1)
 
-	bridgeNodeURLFlag   = "bridge-url"
-	bridgeSCAddrFlag    = "bridge-addr"
 	evmNodeURLFlag      = "url"
-	evmPrivateKeyFlag   = "key"
 	evmSCDirFlag        = "dir"
+	evmPrivateKeyFlag   = "key"
+	evmBlsKeyFlag       = "bls-key"
 	evmChainIDFlag      = "chain"
 	evmDynamicTxFlag    = "dynamic-tx"
 	evmCloneEvmRepoFlag = "clone"
 	evmBranchNameFlag   = "branch"
 
-	bridgeNodeURLFlagDesc   = "bridge node url"
-	bridgeSCAddrFlagDesc    = "bridge smart contract address"
 	evmNodeURLFlagDesc      = "evm node url"
-	evmSCDirFlagDesc        = "yhe directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
+	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
 	evmPrivateKeyFlagDesc   = "private key for evm chain"
+	evmBlsKeyFlagDesc       = "bls key of the bridge validator. it can be used multiple times, but the order must be the same as on the bridge" //nolint:lll
 	evmChainIDFlagDesc      = "evm chain ID (prime, vector, etc)"
 	evmDynamicTxFlagDesc    = "dynamic tx"
 	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
 	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
 
-	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
-	defaultEVMChainID   = common.ChainIDStrNexus
+	defaultEVMChainID = common.ChainIDStrNexus
 
 	evmGatewayRepositoryName        = "apex-evm-gateway"
 	evmGatewayRepositoryURL         = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
@@ -52,11 +48,10 @@ const (
 )
 
 type deployEVMParams struct {
-	bridgeNodeURL string
-	bridgeSCAddr  string
 	evmNodeURL    string
 	evmPrivateKey string
 	evmDir        string
+	evmBlsKeys    []string
 	evmClone      bool
 	evmChainID    string
 	evmBranchName string
@@ -64,16 +59,8 @@ type deployEVMParams struct {
 }
 
 func (ip *deployEVMParams) validateFlags() error {
-	if !common.IsValidHTTPURL(ip.bridgeNodeURL) {
-		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
-	}
-
 	if !common.IsValidHTTPURL(ip.evmNodeURL) {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
-	}
-
-	if !ethcommon.IsHexAddress(ip.bridgeSCAddr) {
-		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
 	if !common.IsExistingChainID(ip.evmChainID) {
@@ -84,22 +71,19 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmChainIDFlag)
 	}
 
+	if len(ip.evmBlsKeys) == 0 {
+		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
+	}
+
 	return nil
 }
 
 func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(
-		&ip.bridgeNodeURL,
-		bridgeNodeURLFlag,
-		"",
-		bridgeNodeURLFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.bridgeSCAddr,
-		bridgeSCAddrFlag,
-		defaultBridgeSCAddr,
-		bridgeSCAddrFlagDesc,
+	cmd.Flags().StringSliceVar(
+		&ip.evmBlsKeys,
+		evmBlsKeyFlag,
+		nil,
+		evmBlsKeyFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -171,11 +155,6 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	validatorsData, err := ip.getValidatorsChainData(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.evmPrivateKey)
 	if err != nil {
 		return nil, err
@@ -188,6 +167,11 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	validatorsData, err := ip.getValidatorsChainData()
 	if err != nil {
 		return nil, err
 	}
@@ -298,10 +282,26 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	}, nil
 }
 
-func (ip *deployEVMParams) getValidatorsChainData(ctx context.Context) ([]eth.ValidatorChainData, error) {
-	bridgeSC := eth.NewBridgeSmartContract(ip.bridgeNodeURL, ip.bridgeSCAddr, false, hclog.NewNullLogger())
+func (ip *deployEVMParams) getValidatorsChainData() ([]eth.ValidatorChainData, error) {
+	result := make([]eth.ValidatorChainData, len(ip.evmBlsKeys))
 
-	return bridgeSC.GetValidatorsChainData(ctx, ip.evmChainID)
+	for i, x := range ip.evmBlsKeys {
+		blsRaw, err := common.DecodeHex(x)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err := bn256.UnmarshalPublicKey(blsRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		result[i] = eth.ValidatorChainData{
+			Key: key.ToBigInt(),
+		}
+	}
+
+	return result, nil
 }
 
 func executeCLICommand(binary string, args []string, workingDir string, envVariables ...string) (string, error) {
