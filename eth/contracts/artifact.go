@@ -16,7 +16,7 @@ func DecodeArtifact(data []byte) (*Artifact, error) {
 	var hexRes HexArtifact
 
 	if err := json.Unmarshal(data, &hexRes); err != nil {
-		return nil, fmt.Errorf("artifact found but no correct format: %w", err)
+		return nil, fmt.Errorf("artifact found but with incorrect format: %w", err)
 	}
 
 	bytecode, err := common.DecodeHex(hexRes.Bytecode)
@@ -59,11 +59,11 @@ type Artifact struct {
 }
 
 func LoadArtifacts(directory string, names ...string) (map[string]*Artifact, error) {
-	mp := make(map[string]bool, len(names))
 	result := make(map[string]*Artifact, len(names))
+	count := 0
 
 	for _, x := range names {
-		mp[x+".json"] = true
+		result[x] = nil
 	}
 
 	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
@@ -71,14 +71,15 @@ func LoadArtifacts(directory string, names ...string) (map[string]*Artifact, err
 			return err
 		}
 
-		// Print the file or directory path
-		if mp[info.Name()] {
-			a, err := LoadArtifactFromFile(path)
+		fileName := strings.TrimSuffix(info.Name(), ".json")
+		if value, exists := result[fileName]; exists && value == nil {
+			artifact, err := LoadArtifactFromFile(path)
 			if err != nil {
 				return err
 			}
 
-			result[strings.TrimSuffix(info.Name(), ".json")] = a
+			result[fileName] = artifact
+			count++
 		}
 
 		return nil
@@ -87,8 +88,8 @@ func LoadArtifacts(directory string, names ...string) (map[string]*Artifact, err
 		return nil, err
 	}
 
-	if len(result) != len(names) {
-		return nil, fmt.Errorf("some artifacts not found: %d vs %d", len(result), len(names))
+	if count != len(names) {
+		return nil, fmt.Errorf("some artifacts were not found: %d vs %d", count, len(names))
 	}
 
 	return result, nil

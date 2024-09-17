@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -224,7 +223,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("All the transactions has been included in blockchain. Initializing contracts..."))
+	_, _ = outputter.Write([]byte("Transactions have been included in the blockchain. Initializing contracts..."))
 	outputter.WriteOutput()
 
 	txHash1, err := ethContractUtils.ExecuteMethod(
@@ -234,7 +233,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Gateway has been initialized"))
+	_, _ = outputter.Write([]byte("Gateway initialization transaction has been sent"))
 	outputter.WriteOutput()
 
 	txHash2, err := ethContractUtils.ExecuteMethod(
@@ -244,7 +243,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("NativeTokenPredicate has been initialized"))
+	_, _ = outputter.Write([]byte("NativeTokenPredicate initialization transaction has been sent"))
 	outputter.WriteOutput()
 
 	txHash3, err := ethContractUtils.ExecuteMethod(
@@ -253,7 +252,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("NativeTokenWallet has been initialized"))
+	_, _ = outputter.Write([]byte("NativeTokenWallet initialization transaction has been sent"))
 	outputter.WriteOutput()
 
 	txHash4, err := ethContractUtils.ExecuteMethod(
@@ -262,7 +261,7 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Validators has been initialized."))
+	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txHash1, txHash2, txHash3, txHash4)
@@ -304,7 +303,7 @@ func (ip *deployEVMParams) getValidatorsChainData() ([]eth.ValidatorChainData, e
 	return result, nil
 }
 
-func executeCLICommand(binary string, args []string, workingDir string, envVariables ...string) (string, error) {
+func executeCLICommand(binary string, args []string, workingDir string) (string, error) {
 	var (
 		stdErrBuffer bytes.Buffer
 		stdOutBuffer bytes.Buffer
@@ -314,8 +313,6 @@ func executeCLICommand(binary string, args []string, workingDir string, envVaria
 	cmd.Stderr = &stdErrBuffer
 	cmd.Stdout = &stdOutBuffer
 	cmd.Dir = workingDir
-
-	cmd.Env = append(os.Environ(), envVariables...)
 
 	err := cmd.Run()
 
