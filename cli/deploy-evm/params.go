@@ -21,7 +21,7 @@ import (
 const (
 	defaultGasFeeMultiplier   = 200 // 170%
 	defaultGasLimit           = uint64(5_242_880)
-	defaultGasLimitMultiplier = float64(1.7)
+	defaultGasLimitMultiplier = float64(1.1)
 
 	bridgeNodeURLFlag   = "bridge-url"
 	bridgeSCAddrFlag    = "bridge-addr"
@@ -195,47 +195,57 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Deploying the smart contracts has started..."))
 	outputter.WriteOutput()
 
-	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier, true)
+	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier)
 
-	gatewayProxyAddr, gatewayAddr, err := ethContractUtils.DeployWithProxy(
+	gatewayProxyAddr, gatewayProxyTxHash, gatewayAddr, gatewayTxHash, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["Gateway"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Gateway has been deployed"))
+	_, _ = outputter.Write([]byte("Gateway has been sent"))
 	outputter.WriteOutput()
 
-	nativeTokenPredicateProxyAddr, nativeTokenPredicateAddr, err := ethContractUtils.DeployWithProxy(
+	predicateProxyAddr, predicateProxyTxHash, predicateAddr, predicateTxHash, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["NativeTokenPredicate"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("NativeTokenPredicate has been deployed"))
+	_, _ = outputter.Write([]byte("NativeTokenPredicate has been sent"))
 	outputter.WriteOutput()
 
-	nativeTokenWalletProxyAddr, nativeTokenWalletAddr, err := ethContractUtils.DeployWithProxy(
+	walletProxyAddr, walletProxyTxHash, walletAddr, walletTxHash, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["NativeTokenWallet"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("NativeTokenWallet has been deployed"))
+	_, _ = outputter.Write([]byte("NativeTokenWallet has been sent"))
 	outputter.WriteOutput()
 
-	validatorsProxyAddr, validatorsAddr, err := ethContractUtils.DeployWithProxy(
+	validatorsProxyAddr, validsProxyTxHash, validatorsAddr, validsTxHash, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["Validators"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Validators has been deployed"))
+	_, _ = outputter.Write([]byte("Validators has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
-	_, err = ethContractUtils.ExecuteMethod(
+	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper,
+		gatewayProxyTxHash, gatewayTxHash, predicateProxyTxHash, predicateTxHash,
+		walletProxyTxHash, walletTxHash, validsProxyTxHash, validsTxHash)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte("All the transactions has been included in blockchain. Initializing contracts..."))
+	outputter.WriteOutput()
+
+	txHash1, err := ethContractUtils.ExecuteMethod(
 		ctx, artifacts["Gateway"], gatewayProxyAddr, "setDependencies",
-		nativeTokenPredicateProxyAddr, validatorsProxyAddr)
+		predicateProxyAddr, validatorsProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +253,9 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Gateway has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenPredicate"], nativeTokenPredicateProxyAddr, "setDependencies",
-		gatewayProxyAddr, nativeTokenWalletProxyAddr)
+	txHash2, err := ethContractUtils.ExecuteMethod(
+		ctx, artifacts["NativeTokenPredicate"], predicateProxyAddr, "setDependencies",
+		gatewayProxyAddr, walletProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -253,9 +263,8 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenPredicate has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenWallet"], nativeTokenWalletProxyAddr, "setDependencies",
-		nativeTokenPredicateProxyAddr)
+	txHash3, err := ethContractUtils.ExecuteMethod(
+		ctx, artifacts["NativeTokenWallet"], walletProxyAddr, "setDependencies", predicateProxyAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -263,22 +272,27 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("NativeTokenWallet has been initialized"))
 	outputter.WriteOutput()
 
-	_, err = ethContractUtils.ExecuteMethod(
+	txHash4, err := ethContractUtils.ExecuteMethod(
 		ctx, artifacts["Validators"], validatorsProxyAddr, "setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Validators has been initialized"))
+	_, _ = outputter.Write([]byte("Validators has been initialized."))
 	outputter.WriteOutput()
+
+	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txHash1, txHash2, txHash3, txHash4)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CmdResult{
 		gatewayProxyAddr:              gatewayProxyAddr.String(),
 		gatewayAddr:                   gatewayAddr.String(),
-		nativeTokenPredicateProxyAddr: nativeTokenPredicateProxyAddr.String(),
-		nativeTokenPredicateAddr:      nativeTokenPredicateAddr.String(),
-		nativeTokenWalletProxyAddr:    nativeTokenWalletProxyAddr.String(),
-		nativeTokenWalletAddr:         nativeTokenWalletAddr.String(),
+		nativeTokenPredicateProxyAddr: predicateProxyAddr.String(),
+		nativeTokenPredicateAddr:      predicateAddr.String(),
+		nativeTokenWalletProxyAddr:    walletProxyAddr.String(),
+		nativeTokenWalletAddr:         walletAddr.String(),
 		validatorsProxyAddr:           validatorsProxyAddr.String(),
 		validatorsAddr:                validatorsAddr.String(),
 	}, nil

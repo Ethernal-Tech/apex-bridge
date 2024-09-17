@@ -139,7 +139,7 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
 			if !skipNotFound && errors.Is(err, ethereum.NotFound) {
-				return nil, err
+				return nil, fmt.Errorf("transaction %s not found", hash)
 			}
 		} else if receipt != nil {
 			return receipt, nil
@@ -337,4 +337,31 @@ func copyTxOpts(dst, src *bind.TransactOpts) {
 	dst.GasLimit = src.GasLimit
 	dst.Nonce = src.Nonce
 	dst.Value = src.Value
+}
+
+func WaitForTransactions(
+	ctx context.Context, txHelper IEthTxHelper, txHashes ...string,
+) ([]*types.Receipt, error) {
+	receipts := make([]*types.Receipt, len(txHashes))
+	errs := make([]error, len(txHashes))
+	sg := sync.WaitGroup{}
+
+	for i, txHash := range txHashes {
+		sg.Add(1)
+
+		go func(idx int, txHash string) {
+			defer sg.Done()
+
+			rec, err := txHelper.WaitForReceipt(ctx, txHash, true)
+			if err == nil && rec.Status != types.ReceiptStatusSuccessful {
+				err = fmt.Errorf("receipt status for %s is unsuccessful", txHash)
+			}
+
+			receipts[idx], errs[idx] = rec, err
+		}(i, txHash)
+	}
+
+	sg.Wait()
+
+	return receipts, errors.Join(errs...)
 }
