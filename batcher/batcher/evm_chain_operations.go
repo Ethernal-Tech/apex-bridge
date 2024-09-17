@@ -205,15 +205,15 @@ func getTTLFormatter(testMode uint8) TTLFormatterFunc {
 		}
 	case 2:
 		return func(ttl, batchID uint64) uint64 {
-			if batchID > 5 {
-				return ttl
+			if batchID%2 == 1 && batchID <= 10 {
+				return 0
 			}
 
-			return 0
+			return ttl
 		}
 	case 3:
 		return func(ttl, batchID uint64) uint64 {
-			if batchID%2 == 0 && batchID <= 10 {
+			if batchID%3 == 1 && batchID <= 15 {
 				return 0
 			}
 
