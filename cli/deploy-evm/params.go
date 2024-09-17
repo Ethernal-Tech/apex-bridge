@@ -1,12 +1,9 @@
 package clideployevm
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -41,9 +38,9 @@ const (
 
 	defaultEVMChainID = common.ChainIDStrNexus
 
-	evmGatewayRepositoryName        = "apex-evm-gateway"
-	evmGatewayRepositoryURL         = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
-	evmGatewayRepositoryArtifactDir = "artifacts"
+	evmGatewayRepositoryName         = "apex-evm-gateway"
+	evmGatewayRepositoryURL          = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
+	evmGatewayRepositoryArtifactsDir = "artifacts"
 )
 
 type deployEVMParams struct {
@@ -140,7 +137,11 @@ func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICo
 	dir := filepath.Clean(ip.evmDir)
 
 	if ip.evmClone {
-		newDir, err := cloneSmartContract(dir, ip.evmBranchName, outputter)
+		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
+		outputter.WriteOutput()
+
+		newDir, err := ethcontracts.CloneAndBuildContracts(
+			dir, evmGatewayRepositoryURL, evmGatewayRepositoryName, evmGatewayRepositoryArtifactsDir, ip.evmBranchName)
 		if err != nil {
 			return nil, err
 		}
@@ -301,55 +302,4 @@ func (ip *deployEVMParams) getValidatorsChainData() ([]eth.ValidatorChainData, e
 	}
 
 	return result, nil
-}
-
-func executeCLICommand(binary string, args []string, workingDir string) (string, error) {
-	var (
-		stdErrBuffer bytes.Buffer
-		stdOutBuffer bytes.Buffer
-	)
-
-	cmd := exec.Command(binary, args...)
-	cmd.Stderr = &stdErrBuffer
-	cmd.Stdout = &stdOutBuffer
-	cmd.Dir = workingDir
-
-	err := cmd.Run()
-
-	if stdErrBuffer.Len() > 0 {
-		return "", fmt.Errorf("error while executing command: %s", stdErrBuffer.String())
-	} else if err != nil {
-		return "", err
-	}
-
-	return stdOutBuffer.String(), nil
-}
-
-func cloneSmartContract(dir, evmBranchName string, outputter common.OutputFormatter) (string, error) {
-	_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
-	outputter.WriteOutput()
-
-	if _, err := executeCLICommand(
-		"git", []string{"clone", "--progress", evmGatewayRepositoryURL}, dir); err != nil {
-		// git clone writes to stderror, check if messages are ok...
-		// or there is already
-		str := strings.TrimSpace(err.Error())
-		if !strings.Contains(str, "Cloning into") && !strings.HasSuffix(str, "done.") &&
-			!strings.Contains(str, fmt.Sprintf("'%s' already exists", evmGatewayRepositoryName)) {
-			return "", err
-		}
-	}
-
-	dir = filepath.Join(dir, evmGatewayRepositoryName)
-
-	// do not listen for errors on following commands
-	_, _ = executeCLICommand("git", []string{"checkout", evmBranchName}, dir)
-	_, _ = executeCLICommand("git", []string{"pull", "origin"}, dir)
-	_, _ = executeCLICommand("npm", []string{"install"}, dir)
-
-	if _, err := executeCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
-		return "", err
-	}
-
-	return filepath.Join(dir, evmGatewayRepositoryArtifactDir), nil
 }
