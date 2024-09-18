@@ -29,14 +29,14 @@ const (
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
-	Deploy(ctx context.Context, wallet IEthTxWallet,
-		txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte) (string, string, error)
+	Deploy(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+		abiData abi.ABI, bytecode []byte, params ...interface{}) (string, string, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context, wallet IEthTxWallet,
 		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
 	EstimateGas(
 		ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-		bindMetadata *bind.MetaData, method string, args ...interface{},
+		abi *abi.ABI, method string, args ...interface{},
 	) (uint64, uint64, error)
 	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
@@ -94,7 +94,8 @@ func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending boo
 }
 
 func (t *EthTxHelperImpl) Deploy(
-	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, abiData abi.ABI, bytecode []byte,
+	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+	abiData abi.ABI, bytecode []byte, params ...interface{},
 ) (string, string, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -123,7 +124,7 @@ func (t *EthTxHelperImpl) Deploy(
 	}
 
 	// Deploy the contract
-	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client)
+	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
 	if err != nil {
 		return "", "", err
 	}
@@ -138,7 +139,7 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
 			if !skipNotFound && errors.Is(err, ethereum.NotFound) {
-				return nil, err
+				return nil, fmt.Errorf("transaction %s not found", hash)
 			}
 		} else if receipt != nil {
 			return receipt, nil
@@ -187,14 +188,9 @@ func (t *EthTxHelperImpl) SendTx(
 
 func (t *EthTxHelperImpl) EstimateGas(
 	ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-	bindMetadata *bind.MetaData, method string, args ...interface{},
+	abi *abi.ABI, method string, args ...interface{},
 ) (uint64, uint64, error) {
-	parsed, err := bindMetadata.GetAbi()
-	if err != nil {
-		return 0, 0, err
-	}
-
-	input, err := parsed.Pack(method, args...)
+	input, err := abi.Pack(method, args...)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -341,4 +337,31 @@ func copyTxOpts(dst, src *bind.TransactOpts) {
 	dst.GasLimit = src.GasLimit
 	dst.Nonce = src.Nonce
 	dst.Value = src.Value
+}
+
+func WaitForTransactions(
+	ctx context.Context, txHelper IEthTxHelper, txHashes ...string,
+) ([]*types.Receipt, error) {
+	receipts := make([]*types.Receipt, len(txHashes))
+	errs := make([]error, len(txHashes))
+	sg := sync.WaitGroup{}
+
+	for i, txHash := range txHashes {
+		sg.Add(1)
+
+		go func(idx int, txHash string) {
+			defer sg.Done()
+
+			rec, err := txHelper.WaitForReceipt(ctx, txHash, true)
+			if err == nil && rec.Status != types.ReceiptStatusSuccessful {
+				err = fmt.Errorf("receipt status for %s is unsuccessful", txHash)
+			}
+
+			receipts[idx], errs[idx] = rec, err
+		}(i, txHash)
+	}
+
+	sg.Wait()
+
+	return receipts, errors.Join(errs...)
 }

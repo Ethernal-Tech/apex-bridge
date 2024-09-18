@@ -400,9 +400,14 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Estimating gas..."))
 	outputter.WriteOutput()
 
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
 	estimatedGas, _, err := txHelper.EstimateGas(
 		context.Background(), wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		contractbinding.GatewayMetaData, "withdraw", chainID, receivers, ip.feeAmount)
+		abi, "withdraw", chainID, receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
 	}
