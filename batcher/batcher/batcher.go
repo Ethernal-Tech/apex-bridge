@@ -176,7 +176,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		if err != nil {
 			b.logger.Error(
 				"error while updating bridging request states to IncludedInBatch",
-				"chain", b.config.Chain.ChainID, "batchID", batchID)
+				"chain", b.config.Chain.ChainID, "batchID", batchID, "err", err)
 		}
 
 		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchID)

@@ -156,8 +156,6 @@ func (o *OracleImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close oracle db. err %w", err))
 	}
 
-	close(o.errorCh)
-
 	if len(errs) > 0 {
 		return fmt.Errorf("errors while disposing oracle. errors: %w", errors.Join(errs...))
 	}
@@ -176,7 +174,6 @@ type ErrorOrigin struct {
 
 func (o *OracleImpl) errorHandler() {
 	agg := make(chan ErrorOrigin)
-	defer close(agg)
 
 	for _, co := range o.cardanoChainObservers {
 		go func(errChan <-chan error, origin string) {
