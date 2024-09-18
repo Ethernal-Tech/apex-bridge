@@ -22,11 +22,14 @@ var (
 	_ core.ChainOperations = (*EVMChainOperations)(nil)
 )
 
+type TTLFormatterFunc func(ttl uint64, batchID uint64) uint64
+
 type EVMChainOperations struct {
-	config     *cardano.BatcherEVMChainConfig
-	privateKey *bn256.PrivateKey
-	db         eventTrackerStore.EventTrackerStore
-	logger     hclog.Logger
+	config       *cardano.BatcherEVMChainConfig
+	privateKey   *bn256.PrivateKey
+	db           eventTrackerStore.EventTrackerStore
+	ttlFormatter TTLFormatterFunc
+	logger       hclog.Logger
 }
 
 func NewEVMChainOperations(
@@ -47,10 +50,11 @@ func NewEVMChainOperations(
 	}
 
 	return &EVMChainOperations{
-		config:     config,
-		privateKey: privateKey,
-		db:         db,
-		logger:     logger,
+		config:       config,
+		privateKey:   privateKey,
+		db:           db,
+		ttlFormatter: getTTLFormatter(config.TestMode),
+		logger:       logger,
 	}, nil
 }
 
@@ -74,7 +78,9 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	}
 
 	txs := newEVMSmartContractTransaction(
-		batchNonceID, blockRounded+cco.config.TTLBlockNumberInc, confirmedTransactions)
+		batchNonceID,
+		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
+		confirmedTransactions)
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -176,5 +182,50 @@ func newEVMSmartContractTransaction(
 		TTL:          ttl,
 		FeeAmount:    feeAmount,
 		Receivers:    receivers,
+	}
+}
+
+// getTTLFormatter returns formater for a test mode. By default it is just identity function
+// 1 - first batch will fail
+// 2 - first five batches will fail
+// 3 - First batch 5 bathces fail in "random" predetermined sequence
+func getTTLFormatter(testMode uint8) TTLFormatterFunc {
+	switch testMode {
+	default:
+		return func(ttl, batchID uint64) uint64 {
+			return ttl
+		}
+	case 1:
+		return func(ttl, batchID uint64) uint64 {
+			if batchID > 1 {
+				return ttl
+			}
+
+			return 0
+		}
+	case 2:
+		return func(ttl, batchID uint64) uint64 {
+			if batchID > 5 {
+				return ttl
+			}
+
+			return 0
+		}
+	case 3:
+		return func(ttl, batchID uint64) uint64 {
+			if batchID%2 == 1 && batchID <= 10 {
+				return 0
+			}
+
+			return ttl
+		}
+	case 4:
+		return func(ttl, batchID uint64) uint64 {
+			if batchID%3 == 1 && batchID <= 15 {
+				return 0
+			}
+
+			return ttl
+		}
 	}
 }

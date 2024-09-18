@@ -67,6 +67,7 @@ type BatcherEVMChainConfig struct {
 	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
+	TestMode               uint8   `json:"testMode"`
 }
 
 func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {
