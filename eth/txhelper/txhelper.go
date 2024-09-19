@@ -19,6 +19,7 @@ import (
 )
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
+type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
 
 const (
 	defaultGasLimit         = uint64(5_242_880) // 0x500000
@@ -52,6 +53,7 @@ type EthTxHelperImpl struct {
 	zeroGasPrice     bool
 	defaultGasLimit  uint64
 	chainID          *big.Int
+	nonceRetrieveFn  NonceRetrieveFunc
 	mutex            sync.Mutex
 }
 
@@ -64,6 +66,9 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		gasFeeMultiplier: defaultGasFeeMultiplier,
 		zeroGasPrice:     true,
 		defaultGasLimit:  defaultGasLimit,
+		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
+			return client.PendingNonceAt(ctx, addr)
+		},
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -216,7 +221,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 
 	// Nonce retrieval
 	if txOpts.Nonce == nil {
-		nonce, err := t.client.PendingNonceAt(ctx, txOpts.From)
+		nonce, err := t.nonceRetrieveFn(ctx, t.client, from)
 		if err != nil {
 			return err
 		}
@@ -326,6 +331,39 @@ func WithDefaultGasLimit(gasLimit uint64) TxRelayerOption {
 func WithChainID(chainID *big.Int) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.chainID = chainID
+	}
+}
+
+func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.nonceRetrieveFn = fn
+	}
+}
+
+func WithNonceRetrieveCounterFunc() TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		counterMap := map[common.Address]uint64{}
+		lock := sync.Mutex{}
+
+		t.nonceRetrieveFn = func(
+			ctx context.Context, client *ethclient.Client, addr common.Address,
+		) (result uint64, err error) {
+			lock.Lock()
+			defer lock.Unlock()
+
+			if value, exists := counterMap[addr]; !exists {
+				result, err = client.NonceAt(ctx, addr, nil)
+				if err != nil {
+					return 0, err
+				}
+			} else {
+				result = value + 1
+			}
+
+			counterMap[addr] = result
+
+			return result, nil
+		}
 	}
 }
 
