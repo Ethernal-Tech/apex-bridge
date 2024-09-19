@@ -1,12 +1,15 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"net"
 	"net/url"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -192,4 +195,26 @@ func ExecuteWithRetry(ctx context.Context,
 	}
 
 	return ErrExecutionTimeout
+}
+
+func ExecuteCLICommand(binary string, args []string, workingDir string) (string, error) {
+	var (
+		stdErrBuffer bytes.Buffer
+		stdOutBuffer bytes.Buffer
+	)
+
+	cmd := exec.Command(binary, args...)
+	cmd.Stderr = &stdErrBuffer
+	cmd.Stdout = &stdOutBuffer
+	cmd.Dir = workingDir
+
+	err := cmd.Run()
+
+	if stdErrBuffer.Len() > 0 {
+		return "", fmt.Errorf("error while executing command: %s", stdErrBuffer.String())
+	} else if err != nil {
+		return "", err
+	}
+
+	return stdOutBuffer.String(), nil
 }
