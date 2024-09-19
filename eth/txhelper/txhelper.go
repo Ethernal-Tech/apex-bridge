@@ -343,14 +343,10 @@ func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
 func WithNonceRetrieveCounterFunc() TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		counterMap := map[common.Address]uint64{}
-		lock := sync.Mutex{}
 
 		t.nonceRetrieveFn = func(
 			ctx context.Context, client *ethclient.Client, addr common.Address,
 		) (result uint64, err error) {
-			lock.Lock()
-			defer lock.Unlock()
-
 			if value, exists := counterMap[addr]; !exists {
 				result, err = client.NonceAt(ctx, addr, nil)
 				if err != nil {
