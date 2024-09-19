@@ -1,12 +1,10 @@
 package ethcontracts
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -105,7 +103,7 @@ func LoadArtifacts(directory string, names ...string) (map[string]*Artifact, err
 func CloneAndBuildContracts(
 	dir, repositoryURL, repositoryName, artifactsDirName, branchName string,
 ) (string, error) {
-	if _, err := executeCLICommand(
+	if _, err := common.ExecuteCLICommand(
 		"git", []string{"clone", "--progress", repositoryURL}, dir); err != nil {
 		// git clone writes to stderror, check if messages are ok...
 		// or if there is already existing git directory
@@ -119,11 +117,11 @@ func CloneAndBuildContracts(
 	dir = filepath.Join(dir, repositoryName)
 
 	// do not listen for errors on following commands
-	_, _ = executeCLICommand("git", []string{"checkout", branchName}, dir)
-	_, _ = executeCLICommand("git", []string{"pull", "origin"}, dir)
-	_, _ = executeCLICommand("npm", []string{"install"}, dir)
+	_, _ = common.ExecuteCLICommand("git", []string{"checkout", branchName}, dir)
+	_, _ = common.ExecuteCLICommand("git", []string{"pull", "origin"}, dir)
+	_, _ = common.ExecuteCLICommand("npm", []string{"install"}, dir)
 
-	if _, err := executeCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
+	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
 		return "", err
 	}
 
@@ -132,10 +130,10 @@ func CloneAndBuildContracts(
 
 // CompileContract compiles contract with solcjs and then loads artifact. DeployedBytecode will be nil
 // Note: solcjs must be in the path
-func CompileAndLoadContract(contractFilePath string, includePath string) (*Artifact, error) {
+func CompileAndLoadContract(contractFilePath string, includePath string) (*Artifact, []byte, error) {
 	workingPath, err := os.MkdirTemp("", "compile-and-load-contract")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer os.RemoveAll(workingPath)
@@ -151,58 +149,36 @@ func CompileAndLoadContract(contractFilePath string, includePath string) (*Artif
 		params = append(params, "--include-path", includePath, "--base-path", ".")
 	}
 
-	if _, err := executeCLICommand("solcjs", params, directory); err != nil {
-		return nil, err
+	if _, err := common.ExecuteCLICommand("solcjs", params, directory); err != nil {
+		return nil, nil, err
 	}
 
 	parsedFileName := regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(fileName, "_")
 	binFilePath := filepath.Join(workingPath, fmt.Sprintf("%s_%s.bin", parsedFileName, fileNameWithoutExt))
 	abiFilePath := filepath.Join(workingPath, fmt.Sprintf("%s_%s.abi", parsedFileName, fileNameWithoutExt))
 
-	jsonRaw, err := os.ReadFile(abiFilePath)
+	abiRaw, err := os.ReadFile(abiFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load generated abi file: %s", abiFilePath)
+		return nil, nil, fmt.Errorf("failed to load generated abi file: %s", abiFilePath)
 	}
 
 	hexBin, err := os.ReadFile(binFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load generated bin file: %s", binFilePath)
+		return nil, nil, fmt.Errorf("failed to load generated bin file: %s", binFilePath)
 	}
 
 	abi := new(abi.ABI)
-	if err := json.Unmarshal(jsonRaw, &abi); err != nil {
-		return nil, err
+	if err := json.Unmarshal(abiRaw, &abi); err != nil {
+		return nil, nil, err
 	}
 
 	bytecode, err := hex.DecodeString(string(hexBin))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &Artifact{
 		Abi:      abi,
 		Bytecode: bytecode,
-	}, nil
-}
-
-func executeCLICommand(binary string, args []string, workingDir string) (string, error) {
-	var (
-		stdErrBuffer bytes.Buffer
-		stdOutBuffer bytes.Buffer
-	)
-
-	cmd := exec.Command(binary, args...)
-	cmd.Stderr = &stdErrBuffer
-	cmd.Stdout = &stdOutBuffer
-	cmd.Dir = workingDir
-
-	err := cmd.Run()
-
-	if stdErrBuffer.Len() > 0 {
-		return "", fmt.Errorf("error while executing command: %s", stdErrBuffer.String())
-	} else if err != nil {
-		return "", err
-	}
-
-	return stdOutBuffer.String(), nil
+	}, abiRaw, nil
 }
