@@ -210,7 +210,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 				break
 			}
 
-			if receiver.Addr == ethDestConfig.BridgingAddresses.FeeAddress {
+			if receiver.Addr == common.EthZeroAddr {
 				feeSum += receiver.Amount
 			} else {
 				transactions = append(transactions, receiver)

@@ -397,9 +397,8 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("no configuration for evm chain: %s", chainID)
 			}
 
-			ethChainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+			ethChainConfig.BridgingAddresses = oracleCore.EthBridgingAddresses{
 				BridgingAddress: regChain.AddressMultisig,
-				FeeAddress:      regChain.AddressFeePayer,
 			}
 
 			ethChains[chainID] = ethChainConfig

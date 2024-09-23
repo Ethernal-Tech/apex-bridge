@@ -119,7 +119,6 @@ $ go run ./main.go generate-configs \
         --vector-starting-block <slot:hash> \
         --nexus-node-url <nexus node URL> \
         --nexus-sc-address <nexus smart contract address> \
-        --nexus-relayer-addr <nexus relayer address> \
         --nexus-ttl-block-inc <nexus ttl block increment> \
         --nexus-block-rounding-threshold <nexus block rounding threshold> \
         --nexus-starting-block <block number> \
@@ -148,7 +147,6 @@ $ go run ./main.go generate-configs \
         --vector-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
         --nexus-node-url localhost:5500 \
         --nexus-sc-address 0x816402271eE6DA078Fc8Cb537aDBDD58219485BB \
-        --nexus-relayer-addr 0x816402271FE6D9078Fc8Cb537aDBDD58219485BB \
         --bridge-node-url https://polygon-mumbai-pokt.nodies.app \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
         --api-keys test_api_key_1
