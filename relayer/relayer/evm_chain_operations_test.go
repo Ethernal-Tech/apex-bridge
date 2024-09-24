@@ -26,10 +26,7 @@ func TestEVMChainOperations(t *testing.T) {
 
 	secretsDir := filepath.Join(testDir, "stp")
 
-	defer func() {
-		os.RemoveAll(testDir)
-		os.Remove(testDir)
-	}()
+	defer os.RemoveAll(testDir)
 
 	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
 		Path: secretsDir,
