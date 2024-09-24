@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -30,7 +31,7 @@ type IBridgeSmartContract interface {
 }
 
 type BridgeSmartContractImpl struct {
-	smartContractAddress string
+	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
 }
 
@@ -40,7 +41,7 @@ func NewBridgeSmartContract(
 	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
 ) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
-		smartContractAddress: smartContractAddress,
+		smartContractAddress: common.HexToAddress(smartContractAddress),
 		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
 	}
 }
@@ -54,7 +55,7 @@ func NewBridgeSmartContractWithWallet(
 	}
 
 	return &BridgeSmartContractImpl{
-		smartContractAddress: smartContractAddress,
+		smartContractAddress: common.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 	}, nil
 }
@@ -68,7 +69,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
@@ -91,7 +92,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
@@ -113,7 +114,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, si
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
@@ -135,7 +136,7 @@ func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, desti
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return false, bsc.ethHelper.ProcessError(err)
@@ -155,7 +156,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
@@ -176,7 +177,7 @@ func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
@@ -201,7 +202,7 @@ func (bsc *BridgeSmartContractImpl) GetValidatorsChainData(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
@@ -219,7 +220,7 @@ func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinat
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return 0, bsc.ethHelper.ProcessError(err)
@@ -237,7 +238,7 @@ func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) 
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)

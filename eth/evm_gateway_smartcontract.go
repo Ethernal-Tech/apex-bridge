@@ -4,10 +4,10 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -19,7 +19,7 @@ type IEVMGatewaySmartContract interface {
 }
 
 type EVMGatewaySmartContractImpl struct {
-	smartContractAddress string
+	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
 }
 
@@ -34,7 +34,7 @@ func NewEVMGatewaySmartContractWithWallet(
 	}
 
 	return &EVMGatewaySmartContractImpl{
-		smartContractAddress: smartContractAddress,
+		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 	}, nil
 }
@@ -52,15 +52,13 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 		return err
 	}
 
-	toAddress := common.HexToAddress(bsc.smartContractAddress)
-
-	contract, err := contractbinding.NewGateway(toAddress, ethTxHelper.GetClient())
+	contract, err := contractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
 	}
 
 	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
-		ctx, bsc.ethHelper.wallet.GetAddress(), toAddress, nil, depositGasLimitMultiplier,
+		ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
 		parsedABI, "deposit", signature, bitmap, data)
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
