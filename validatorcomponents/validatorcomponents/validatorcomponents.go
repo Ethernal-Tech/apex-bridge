@@ -377,11 +377,10 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
-			if chainConfig.BridgingAddresses.BridgingAddress != "" &&
-				(multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
-					feeAddr != chainConfig.BridgingAddresses.FeeAddress) {
+			if regChain.AddressMultisig != "" &&
+				(multisigAddr != regChain.AddressMultisig || feeAddr != regChain.AddressFeePayer) {
 				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)", multisigAddr, feeAddr,
-					chainConfig.BridgingAddresses.BridgingAddress, chainConfig.BridgingAddresses.FeeAddress)
+					regChain.AddressMultisig, regChain.AddressFeePayer)
 			} else {
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
