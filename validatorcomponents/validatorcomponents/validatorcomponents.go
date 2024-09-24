@@ -18,6 +18,7 @@ import (
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -395,6 +396,10 @@ func fixChainsAndAddresses(
 			ethChainConfig, exists := config.EthChains[chainID]
 			if !exists {
 				return fmt.Errorf("no configuration for evm chain: %s", chainID)
+			}
+
+			if !ethcommon.IsHexAddress(regChain.AddressMultisig) {
+				return fmt.Errorf("invalid gateway address for chain %s: %s", chainID, regChain.AddressMultisig)
 			}
 
 			ethChainConfig.BridgingAddresses = oracleCore.EthBridgingAddresses{
