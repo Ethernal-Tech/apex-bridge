@@ -45,7 +45,7 @@ func NewEVMChainOperations(
 	}
 
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
-		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, logger)
+		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit, logger)
 	if err != nil {
 		return nil, err
 	}

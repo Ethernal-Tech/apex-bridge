@@ -21,12 +21,14 @@ type IEVMGatewaySmartContract interface {
 type EVMGatewaySmartContractImpl struct {
 	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
+	depositGasLimit      uint64
 }
 
 var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractImpl)(nil)
 
 func NewEVMGatewaySmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
+	depositGasLimit uint64, logger hclog.Logger,
 ) (*EVMGatewaySmartContractImpl, error) {
 	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
 	if err != nil {
@@ -36,6 +38,7 @@ func NewEVMGatewaySmartContractWithWallet(
 	return &EVMGatewaySmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
+		depositGasLimit:      depositGasLimit,
 	}, nil
 }
 
@@ -57,11 +60,17 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 		return bsc.ethHelper.ProcessError(err)
 	}
 
-	estimatedGas, estimatedGasOriginal, err := ethTxHelper.EstimateGas(
-		ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
-		parsedABI, "deposit", signature, bitmap, data)
-	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+	var estimatedGas, estimatedGasOriginal uint64
+
+	if bsc.depositGasLimit > 0 {
+		estimatedGas = bsc.depositGasLimit
+	} else {
+		estimatedGas, estimatedGasOriginal, err = ethTxHelper.EstimateGas(
+			ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
+			parsedABI, "deposit", signature, bitmap, data)
+		if err != nil {
+			return bsc.ethHelper.ProcessError(err)
+		}
 	}
 
 	bsc.ethHelper.logger.Debug("Estimated gas for deposit", "gas", estimatedGas, "original", estimatedGasOriginal)

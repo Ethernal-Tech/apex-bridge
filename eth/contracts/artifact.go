@@ -143,10 +143,10 @@ func CompileAndLoadContract(contractFilePath string, includePath string) (*Artif
 	fileNameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
 	params := []string{
-		"--optimize", "--bin", "--abi", "-o", workingPath, fileName,
+		"--optimize", "--bin", "--abi", "-o", workingPath, fileName, "--base-path", directory,
 	}
 	if includePath != "" {
-		params = append(params, "--include-path", includePath, "--base-path", ".")
+		params = append(params, "--include-path", includePath)
 	}
 
 	if _, err := common.ExecuteCLICommand("solcjs", params, directory); err != nil {
