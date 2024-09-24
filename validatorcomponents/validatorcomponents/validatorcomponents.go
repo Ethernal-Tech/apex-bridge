@@ -353,11 +353,6 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("no configuration for chain: %s", chainID)
 			}
 
-			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
-				BridgingAddress: regChain.AddressMultisig,
-				FeeAddress:      regChain.AddressFeePayer,
-			}
-
 			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 				validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
 				if err != nil {
@@ -382,15 +377,19 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
-			if multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
-				feeAddr != chainConfig.BridgingAddresses.FeeAddress {
-
+			if chainConfig.BridgingAddresses.BridgingAddress != "" &&
+				(multisigAddr != chainConfig.BridgingAddresses.BridgingAddress ||
+					feeAddr != chainConfig.BridgingAddresses.FeeAddress) {
 				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)", multisigAddr, feeAddr,
 					chainConfig.BridgingAddresses.BridgingAddress, chainConfig.BridgingAddresses.FeeAddress)
 			} else {
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
 
+			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+				BridgingAddress: multisigAddr,
+				FeeAddress:      feeAddr,
+			}
 			cardanoChains[chainID] = chainConfig
 		case common.ChainTypeEVM:
 			ethChainConfig, exists := config.EthChains[chainID]

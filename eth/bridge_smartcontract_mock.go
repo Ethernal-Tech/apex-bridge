@@ -111,3 +111,9 @@ func (m *BridgeSmartContractMock) GetBlockNumber(ctx context.Context) (uint64, e
 
 	return 0, args.Error(1)
 }
+
+func (m *BridgeSmartContractMock) SetChainAdditionalData(
+	ctx context.Context, chainID, multisigAddr, feeAddr string,
+) error {
+	return m.Called(ctx, chainID, multisigAddr, feeAddr).Error(0)
+}
