@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -55,6 +56,20 @@ type registerChainParams struct {
 }
 
 func (ip *registerChainParams) validateFlags() error {
+	if ip.chainID == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDFlag)
+	}
+
+	ip.chainID = strings.ToLower(ip.chainID)
+
+	// for known chain IDs, chainType is already known
+	switch ip.chainID {
+	case common.ChainIDStrPrime, common.ChainIDStrVector:
+		ip.chainType = common.ChainTypeCardano
+	case common.ChainIDStrNexus:
+		ip.chainType = common.ChainTypeEVM
+	}
+
 	if !common.IsValidHTTPURL(ip.bridgeURL) {
 		return fmt.Errorf("invalid bridge node url: %s", ip.bridgeURL)
 	}
@@ -67,17 +82,13 @@ func (ip *registerChainParams) validateFlags() error {
 		return fmt.Errorf("multisig address not specified")
 	}
 
-	if ip.multisigFeeAddr == "" {
+	if ip.multisigFeeAddr == "" && ip.chainType == common.ChainTypeCardano {
 		return fmt.Errorf("fee payer address not specified")
 	}
 
 	addrDecoded, err := common.DecodeHex(ip.bridgeSCAddr)
 	if err != nil || len(addrDecoded) == 0 || len(addrDecoded) > 20 {
 		return fmt.Errorf("invalid bridge smart contract address: %s", ip.bridgeSCAddr)
-	}
-
-	if ip.chainID == "" {
-		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.bridgeURL))
