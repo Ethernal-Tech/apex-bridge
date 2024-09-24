@@ -117,16 +117,19 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 		Chains: map[string]core.ChainConfig{
 			common.ChainIDStrPrime: {
 				ChainType: common.ChainTypeCardanoStr,
+				DbsPath:   testDir,
 				ChainSpecific: json.RawMessage([]byte(`{
 					"blockFrostUrl": "http://hello.com"
 				}`)),
 			},
 			common.ChainIDStrVector: {
 				ChainType:     common.ChainTypeCardanoStr,
+				DbsPath:       testDir,
 				ChainSpecific: json.RawMessage("{}"),
 			},
 			common.ChainIDStrNexus: {
 				ChainType: common.ChainTypeEVMStr,
+				DbsPath:   testDir,
 				ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 					"dataDir": "%s"
 				}`, testDir))),
