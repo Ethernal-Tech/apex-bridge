@@ -2,6 +2,7 @@ package clideployevm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -369,8 +370,13 @@ func (ip *deployEVMParams) getValidatorsChainData(
 	}
 
 	result := make([]eth.ValidatorChainData, len(ip.evmBlsKeys))
+	existing := make(map[string]bool, len(ip.evmBlsKeys))
 
 	for i, x := range ip.evmBlsKeys {
+		if x == "" {
+			return nil, errors.New("empty key")
+		}
+
 		blsRaw, err := common.DecodeHex(x)
 		if err != nil {
 			return nil, err
@@ -381,6 +387,11 @@ func (ip *deployEVMParams) getValidatorsChainData(
 			return nil, err
 		}
 
+		if existing[x] {
+			return nil, fmt.Errorf("duplicate key: %s", x)
+		}
+
+		existing[x] = true
 		result[i] = eth.ValidatorChainData{
 			Key: key.ToBigInt(),
 		}

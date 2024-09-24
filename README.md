@@ -87,6 +87,14 @@ $ go run ./main.go create-address \
         --key 58209a9cefaa636d75dffa3a3a5ab446a191beac92b09ac82da513640e8e35935202
         ...
 ```
+or if you want to generate via bridge
+```shell
+$ go run ./main.go create-address \
+        --network-id network_ID \
+        --bridge-url http://127.0.0.1:12013 \
+        --bridge-addr 0xABEF000000000000000000000000000000000000 \
+        --chain prime
+```
 
 # How to generate config files
 All options
