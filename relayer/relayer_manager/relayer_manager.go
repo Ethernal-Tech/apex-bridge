@@ -26,39 +26,34 @@ type RelayerManagerImpl struct {
 var _ core.RelayerManager = (*RelayerManagerImpl)(nil)
 
 func NewRelayerManager(
+	ctx context.Context,
 	config *core.RelayerManagerConfiguration,
 	logger hclog.Logger,
 ) (*RelayerManagerImpl, error) {
-	relayers := make([]core.Relayer, 0, len(config.Chains))
+	var (
+		allRegisteredChains []eth.Chain
+		relayers            []core.Relayer
+		bridgeSmartContract = eth.NewBridgeSmartContract(
+			config.Bridge.NodeURL, config.Bridge.SmartContractAddress,
+			config.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
+	)
 
-	for chainID, chainConfig := range config.Chains {
-		chainConfig.ChainID = chainID
-		config.Chains[chainID] = chainConfig // update just to be sure that chainID is populated everywhere
-
-		operations, err := relayer.GetChainSpecificOperations(chainConfig, logger)
+	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+		allRegisteredChains, err = bridgeSmartContract.GetAllRegisteredChains(ctxInner)
 		if err != nil {
-			return nil, err
+			logger.Error("Failed to GetAllRegisteredChains while creating Relayers. Retrying...", "err", err)
 		}
 
-		db, err := databaseaccess.NewDatabase(
-			filepath.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
-		if err != nil {
-			return nil, err
-		}
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
+	}
 
-		relayers = append(relayers, relayer.NewRelayer(
-			&core.RelayerConfiguration{
-				Bridge:        config.Bridge,
-				Chain:         chainConfig,
-				PullTimeMilis: config.PullTimeMilis,
-			},
-			eth.NewBridgeSmartContract(
-				config.Bridge.NodeURL, config.Bridge.SmartContractAddress,
-				config.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
-			operations,
-			db,
-			logger.Named(strings.ToUpper(chainConfig.ChainID)),
-		))
+	relayers, config.Chains, err = getRelayersAndConfigurations(
+		bridgeSmartContract, allRegisteredChains, config, logger)
+	if err != nil {
+		return nil, err
 	}
 
 	return &RelayerManagerImpl{
@@ -134,4 +129,55 @@ func FixChains(config *core.RelayerManagerConfiguration, logger hclog.Logger) er
 	config.Chains = chainConfigs
 
 	return nil
+}
+
+func getRelayersAndConfigurations(
+	bridgeSmartContract eth.IBridgeSmartContract,
+	allRegisteredChains []eth.Chain,
+	config *core.RelayerManagerConfiguration,
+	logger hclog.Logger,
+) ([]core.Relayer, map[string]core.ChainConfig, error) {
+	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
+
+	relayers := make([]core.Relayer, 0, len(allRegisteredChains))
+	newChainsConfigs := make(map[string]core.ChainConfig, len(allRegisteredChains))
+
+	for _, chainData := range allRegisteredChains {
+		chainID := common.ToStrChainID(chainData.Id)
+
+		chainConfig, exists := config.Chains[chainID]
+		if !exists {
+			logger.Warn("No configuration for registered chain: %s. Chain type = %d", chainID, chainData.ChainType)
+
+			continue
+		}
+
+		chainConfig.ChainID = chainID
+		newChainsConfigs[chainID] = chainConfig
+
+		operations, err := relayer.GetChainSpecificOperations(chainConfig, chainData, logger)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		db, err := databaseaccess.NewDatabase(
+			filepath.Join(chainConfig.DbsPath, chainConfig.ChainID+".db"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		relayers = append(relayers, relayer.NewRelayer(
+			&core.RelayerConfiguration{
+				Bridge:        config.Bridge,
+				Chain:         chainConfig,
+				PullTimeMilis: config.PullTimeMilis,
+			},
+			bridgeSmartContract,
+			operations,
+			db,
+			logger.Named(strings.ToUpper(chainConfig.ChainID)),
+		))
+	}
+
+	return relayers, newChainsConfigs, nil
 }

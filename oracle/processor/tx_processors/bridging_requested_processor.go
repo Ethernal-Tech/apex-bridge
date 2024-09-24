@@ -62,15 +62,15 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 ) {
 	totalAmount := big.NewInt(0)
 
-	var destFeeAddress string
+	var feeAddress string
 
 	cardanoDestConfig, ethDestConfig := utils.GetChainConfig(appConfig, metadata.DestinationChainID)
 
 	switch {
 	case cardanoDestConfig != nil:
-		destFeeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+		feeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
 	case ethDestConfig != nil:
-		destFeeAddress = ethDestConfig.BridgingAddresses.FeeAddress
+		feeAddress = common.EthZeroAddr
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -82,7 +82,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if receiverAddr == destFeeAddress {
+		if receiverAddr == feeAddress {
 			// fee address will be added at the end
 			continue
 		}
@@ -99,12 +99,6 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
 
 	totalAmount.Add(totalAmount, feeAmount)
-
-	feeAddress := destFeeAddress
-	if ethDestConfig != nil {
-		// enable nexus gateway to pay bridging fee to msg.sender
-		feeAddress = common.EthZeroAddr
-	}
 
 	receivers = append(receivers, core.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
@@ -212,7 +206,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 				break
 			}
 
-			if receiverAddr == ethDestConfig.BridgingAddresses.FeeAddress {
+			if receiverAddr == common.EthZeroAddr {
 				feeSum += receiver.Amount
 			} else {
 				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))

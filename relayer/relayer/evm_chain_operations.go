@@ -25,6 +25,7 @@ type EVMChainOperations struct {
 func NewEVMChainOperations(
 	jsonConfig json.RawMessage,
 	chainID string,
+	gatewayAddress string,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
 	config, err := cardanotx.NewRelayerEVMChainConfig(jsonConfig)
@@ -44,7 +45,7 @@ func NewEVMChainOperations(
 	}
 
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
-		config.NodeURL, config.SmartContractAddr, wallet, config.DynamicTx, logger)
+		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, logger)
 	if err != nil {
 		return nil, err
 	}

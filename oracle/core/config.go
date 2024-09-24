@@ -12,6 +12,10 @@ type BridgingAddresses struct {
 	FeeAddress      string `json:"feeAddress"`
 }
 
+type EthBridgingAddresses struct {
+	BridgingAddress string `json:"address"`
+}
+
 type CardanoChainConfigUtxo struct {
 	Hash    [32]byte `json:"id"`
 	Index   uint32   `json:"index"`
@@ -21,18 +25,18 @@ type CardanoChainConfigUtxo struct {
 }
 
 type EthChainConfig struct {
-	ChainID                 string
-	BridgingAddresses       BridgingAddresses `json:"bridgingAddresses"`
-	NodeURL                 string            `json:"nodeUrl"`
-	SyncBatchSize           uint64            `json:"syncBatchSize"`
-	NumBlockConfirmations   uint64            `json:"numBlockConfirmations"`
-	StartBlockNumber        uint64            `json:"startBlockNumber"`
-	PoolIntervalMiliseconds time.Duration     `json:"poolIntervalMs"`
-	TTLBlockNumberInc       uint64            `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold  uint64            `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent    float64           `json:"noBatchPeriodPercent"`
-	DynamicTx               bool              `json:"dynamicTx"`
-	TestMode                uint8             `json:"testMode"`
+	ChainID                 string               `json:"-"`
+	BridgingAddresses       EthBridgingAddresses `json:"-"`
+	NodeURL                 string               `json:"nodeUrl"`
+	SyncBatchSize           uint64               `json:"syncBatchSize"`
+	NumBlockConfirmations   uint64               `json:"numBlockConfirmations"`
+	StartBlockNumber        uint64               `json:"startBlockNumber"`
+	PoolIntervalMiliseconds time.Duration        `json:"poolIntervalMs"`
+	TTLBlockNumberInc       uint64               `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold  uint64               `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent    float64              `json:"noBatchPeriodPercent"`
+	DynamicTx               bool                 `json:"dynamicTx"`
+	TestMode                uint8                `json:"testMode"`
 }
 
 type CardanoChainConfig struct {

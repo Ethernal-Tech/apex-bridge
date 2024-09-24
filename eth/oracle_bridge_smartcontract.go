@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -28,7 +29,7 @@ type IOracleBridgeSmartContract interface {
 }
 
 type OracleBridgeSmartContractImpl struct {
-	smartContractAddress string
+	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
 }
 
@@ -38,7 +39,7 @@ func NewOracleBridgeSmartContract(
 	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
 ) *OracleBridgeSmartContractImpl {
 	return &OracleBridgeSmartContractImpl{
-		smartContractAddress: smartContractAddress,
+		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
 	}
 }
@@ -52,7 +53,7 @@ func NewOracleBridgeSmartContractWithWallet(
 	}
 
 	return &OracleBridgeSmartContractImpl{
-		smartContractAddress: smartContractAddress,
+		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 	}, nil
 }
@@ -66,7 +67,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
@@ -91,7 +92,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return nil, bsc.ethHelper.ProcessError(err)
@@ -116,7 +117,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)
@@ -143,7 +144,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(bsc.smartContractAddress),
+		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
 		return bsc.ethHelper.ProcessError(err)

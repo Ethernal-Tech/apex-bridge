@@ -1,6 +1,7 @@
 package clirelayer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -66,7 +67,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	relayerManager, err := relayermanager.NewRelayerManager(config, logger)
+	relayerManager, err := relayermanager.NewRelayerManager(context.Background(), config, logger)
 	if err != nil {
 		logger.Error("relayer manager creation failed", "err", err)
 		outputter.SetError(err)

@@ -18,7 +18,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		primeBridgingAddr    = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		nexusBridgingAddr    = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
-		nexusBridgingFeeAddr = "0xdfFC0A92d235f33E6a2641581d5C840B23F357a9"
 		validTestAddress     = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
 
@@ -35,9 +34,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
 			common.ChainIDStrNexus: {
-				BridgingAddresses: oCore.BridgingAddresses{
+				BridgingAddresses: oCore.EthBridgingAddresses{
 					BridgingAddress: nexusBridgingAddr,
-					FeeAddress:      nexusBridgingFeeAddr,
 				},
 			},
 		},
