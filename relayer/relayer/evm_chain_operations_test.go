@@ -39,8 +39,7 @@ func TestEVMChainOperations(t *testing.T) {
 
 	t.Run("NewEVMChainOperations", func(t *testing.T) {
 		const (
-			nodeURL           = "localhost:5000"
-			smartContractAddr = "0xffa"
+			nodeURL = "localhost:5000"
 		)
 
 		_, err = eth.CreateAndSaveRelayerEVMPrivateKey(secretsMngr, chainID, true)
@@ -48,16 +47,14 @@ func TestEVMChainOperations(t *testing.T) {
 
 		configRaw := json.RawMessage([]byte(fmt.Sprintf(`{
 			"dataDir": "%s",
-			"nodeUrl": "%s",
-			"smartContractAddr": "%s"
-			}`, secretsDir, nodeURL, smartContractAddr)))
+			"nodeUrl": "%s"
+		}`, secretsDir, nodeURL)))
 
-		ops, err := NewEVMChainOperations(configRaw, chainID, hclog.NewNullLogger())
+		ops, err := NewEVMChainOperations(configRaw, chainID, "0x0ff", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		require.Equal(t, chainID, ops.chainID)
 		require.Equal(t, nodeURL, ops.config.NodeURL)
-		require.Equal(t, smartContractAddr, ops.config.SmartContractAddr)
 	})
 
 	t.Run("SendTx", func(t *testing.T) {

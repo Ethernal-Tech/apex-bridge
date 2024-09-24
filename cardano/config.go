@@ -89,11 +89,10 @@ func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
 }
 
 type RelayerEVMChainConfig struct {
-	NodeURL           string `json:"nodeUrl"`
-	SmartContractAddr string `json:"smartContractAddr"`
-	DynamicTx         bool   `json:"dynamicTx"`
-	DataDir           string `json:"dataDir,omitempty"`
-	ConfigPath        string `json:"configPath,omitempty"`
+	NodeURL    string `json:"nodeUrl"`
+	DynamicTx  bool   `json:"dynamicTx"`
+	DataDir    string `json:"dataDir,omitempty"`
+	ConfigPath string `json:"configPath,omitempty"`
 }
 
 func NewRelayerEVMChainConfig(rawMessage json.RawMessage) (*RelayerEVMChainConfig, error) {

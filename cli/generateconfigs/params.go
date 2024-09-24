@@ -61,7 +61,6 @@ const (
 
 	telemetryFlag = "telemetry"
 
-	nexusSmartContractAddrFlag      = "nexus-sc-address"
 	nexusNodeURLFlag                = "nexus-node-url"
 	nexusTTLBlockNumberIncFlag      = "nexus-ttl-block-inc"
 	nexusBlockRoundingThresholdFlag = "nexus-block-rounding-threshold"
@@ -109,7 +108,6 @@ const (
 
 	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
-	nexusSmartContractAddrFlagDesc      = "nexus smart contract address"
 	nexusNodeURLFlagDesc                = "nexus node URL"
 	nexusTTLBlockNumberIncFlagDesc      = "TTL block increment for nexus"
 	nexusBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for nexus. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
@@ -181,7 +179,6 @@ type generateConfigsParams struct {
 
 	telemetry string
 
-	nexusSmartContractAddr      string
 	nexusNodeURL                string
 	nexusTTLBlockNumberInc      uint64
 	nexusBlockRoundingThreshold uint64
@@ -266,10 +263,6 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
-	}
-
-	if p.nexusSmartContractAddr == "" {
-		return fmt.Errorf("missing %s", nexusSmartContractAddrFlag)
 	}
 
 	return nil
@@ -477,12 +470,6 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.nexusSmartContractAddr,
-		nexusSmartContractAddrFlag,
-		"",
-		nexusSmartContractAddrFlagDesc,
-	)
-	cmd.Flags().StringVar(
 		&p.nexusNodeURL,
 		nexusNodeURLFlag,
 		"",
@@ -669,11 +656,10 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	})
 
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
-		NodeURL:           p.nexusNodeURL,
-		SmartContractAddr: p.nexusSmartContractAddr,
-		DataDir:           cleanPath(p.relayerDataDir),
-		ConfigPath:        cleanPath(p.relayerConfigPath),
-		DynamicTx:         true,
+		NodeURL:    p.nexusNodeURL,
+		DataDir:    cleanPath(p.relayerDataDir),
+		ConfigPath: cleanPath(p.relayerConfigPath),
+		DynamicTx:  true,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
