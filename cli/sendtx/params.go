@@ -170,8 +170,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if !common.IsValidHTTPURL(ip.ogmiosURLDst) {
-			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
+		if !common.IsValidHTTPURL(ip.ogmiosURLDst) && !common.IsValidHTTPURL(ip.nexusURL) {
+			return fmt.Errorf("invalid --%s: %s and --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst, nexusURLFlag, ip.nexusURL)
 		}
 	}
 
