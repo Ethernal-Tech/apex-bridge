@@ -2,8 +2,10 @@ package eth
 
 import (
 	"context"
+	"encoding/hex"
 	"math/big"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -65,6 +67,12 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 	if bsc.depositGasLimit > 0 {
 		estimatedGas = bsc.depositGasLimit
 	} else {
+		bsc.ethHelper.logger.Debug("Estimating gas for deposit",
+			"wallet", bsc.ethHelper.wallet.GetAddress(),
+			"contract", bsc.smartContractAddress,
+			"signature", hex.EncodeToString(signature),
+			"bitmap", common.NewBitmap(bitmap))
+
 		estimatedGas, estimatedGasOriginal, err = ethTxHelper.EstimateGas(
 			ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
 			parsedABI, "deposit", signature, bitmap, data)
