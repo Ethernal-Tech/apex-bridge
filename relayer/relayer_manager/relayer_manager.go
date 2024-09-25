@@ -164,6 +164,10 @@ func getChainValidatorsDataInfoString(
 			return fmt.Sprintf("failed to retrieve validators data for %s, error: %s", chainID, err)
 		}
 
+		if sb.Len() > 0 {
+			sb.WriteRune('\n')
+		}
+
 		sb.WriteString(chainID)
 		sb.WriteString(" = ")
 
