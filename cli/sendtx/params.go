@@ -170,8 +170,16 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if !common.IsValidHTTPURL(ip.ogmiosURLDst) && !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s and --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst, nexusURLFlag, ip.nexusURL)
+		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+		}
+
+		if ip.ogmiosURLDst != "" && !common.IsValidHTTPURL(ip.ogmiosURLDst) {
+			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
+		}
+
+		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
+			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, ip.nexusURL)
 		}
 	}
 
@@ -303,6 +311,7 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, nexusURLFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
