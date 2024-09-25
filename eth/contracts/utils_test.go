@@ -67,8 +67,8 @@ func TestNexus(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	nodeUrl := "https://testnet.af.route3.dev/json-rpc/nexus-p2-c"
-	nodeUrl = "http://localhost:8545"
+	nodeUrl := "https://testnet.af.route3.dev/json-rpc/p2-c"
+	// nodeUrl = "http://localhost:8545"
 	pk := "4f1fe56b4f1d454bfea42fe20629dc61e99e783c4680773e6f3d663b8e984150"
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
