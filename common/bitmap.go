@@ -1,6 +1,10 @@
 package common
 
-import "math/big"
+import (
+	"math/big"
+	"strconv"
+	"strings"
+)
 
 // Bitmap Index 0 is LSB from the first bitmap byte
 type Bitmap []byte
@@ -29,6 +33,22 @@ func (b *Bitmap) IsSet(idx uint64) bool {
 	bit := uint8(1 << (idx % 8))
 
 	return (*b)[idx/8]&bit == bit
+}
+
+func (b *Bitmap) String() string {
+	var sb strings.Builder
+
+	for i := uint64(0); i < 256; i++ {
+		if sb.Len() > 0 {
+			sb.WriteString(", ")
+		}
+
+		if b.IsSet(i) {
+			sb.WriteString(strconv.FormatUint(i+1, 10))
+		}
+	}
+
+	return sb.String()
 }
 
 func extendByteSlice(b []byte, needLen int) []byte {

@@ -2,6 +2,7 @@ package relayer
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -71,6 +72,9 @@ func (cco *EVMChainOperations) SendTx(
 	}
 
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
+
+	cco.logger.Info("Submitting deposit transaction",
+		"signature", hex.EncodeToString(signature), "bitmap", smartContractData.Bitmap)
 
 	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
 }

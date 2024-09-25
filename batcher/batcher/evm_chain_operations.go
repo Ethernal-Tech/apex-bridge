@@ -92,9 +92,17 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
+	txHash := hex.EncodeToString(txsHashBytes)
+
+	cco.logger.Debug("Batch transaction data has been generated",
+		"id", batchNonceID, "tx", txs, "hash", txHash,
+		"lastBlock", lastProcessedBlock,
+		"rounding", cco.config.BlockRoundingThreshold,
+		"noBatchPercent", cco.config.NoBatchPeriodPercent)
+
 	return &core.GeneratedBatchTxData{
 		TxRaw:  txsBytes,
-		TxHash: hex.EncodeToString(txsHashBytes),
+		TxHash: txHash,
 	}, nil
 }
 
@@ -113,6 +121,12 @@ func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []by
 	signatureBytes, err := signature.Marshal()
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if cco.logger.IsDebug() {
+		cco.logger.Debug("Signature has been created",
+			"signature", hex.EncodeToString(signatureBytes),
+			"public", hex.EncodeToString(cco.privateKey.PublicKey().Marshal()))
 	}
 
 	return signatureBytes, nil, nil
