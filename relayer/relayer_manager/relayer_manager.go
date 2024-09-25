@@ -2,6 +2,7 @@ package relayermanager
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
+	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -56,6 +58,10 @@ func NewRelayerManager(
 		return nil, err
 	}
 
+	if logger.IsDebug() {
+		logger.Debug("Validators data per chain", "data", getChainValidatorsDataInfoString(ctx, bridgeSmartContract, config.Chains))
+	}
+
 	return &RelayerManagerImpl{
 		config:          config,
 		cardanoRelayers: relayers,
@@ -94,41 +100,6 @@ func LoadConfig(path string) (*core.RelayerManagerConfiguration, error) {
 	}
 
 	return &appConfig, nil
-}
-
-func FixChains(config *core.RelayerManagerConfiguration, logger hclog.Logger) error {
-	allRegisteredChains := []eth.Chain(nil)
-	smartContract := eth.NewBridgeSmartContract(
-		config.Bridge.NodeURL, config.Bridge.SmartContractAddress,
-		config.Bridge.DynamicTx, logger)
-
-	err := common.RetryForever(context.Background(), 2*time.Second, func(ctxInner context.Context) (err error) {
-		allRegisteredChains, err = smartContract.GetAllRegisteredChains(ctxInner)
-		if err != nil {
-			logger.Error("Failed to GetAllRegisteredChains while creating Relayers. Retrying...", "err", err)
-		}
-
-		return err
-	})
-	if err != nil {
-		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains. err: %w", err)
-	}
-
-	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
-
-	chainConfigs := make(map[string]core.ChainConfig, len(config.Chains))
-
-	for _, regChain := range allRegisteredChains {
-		chainID := common.ToStrChainID(regChain.Id)
-
-		if cfg, exists := config.Chains[chainID]; exists {
-			chainConfigs[chainID] = cfg
-		}
-	}
-
-	config.Chains = chainConfigs
-
-	return nil
 }
 
 func getRelayersAndConfigurations(
@@ -180,4 +151,44 @@ func getRelayersAndConfigurations(
 	}
 
 	return relayers, newChainsConfigs, nil
+}
+
+func getChainValidatorsDataInfoString(
+	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainsConfig map[string]core.ChainConfig,
+) string {
+	var sb strings.Builder
+
+	for chainID := range chainsConfig {
+		data, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
+		if err != nil {
+			return fmt.Sprintf("failed to retrieve validators data for %s, error: %s", chainID, err)
+		}
+
+		sb.WriteString(chainID)
+		sb.WriteString(" = ")
+
+		for i, x := range data {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+
+			switch chainID {
+			case common.ChainIDStrNexus:
+				pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
+				if err != nil {
+					return fmt.Sprintf("failed to unmarshal bls key for %s, error: %s", chainID, err)
+				}
+
+				sb.WriteString(hex.EncodeToString(pub.Marshal()))
+			default:
+				sb.WriteRune('(')
+				sb.WriteString(hex.EncodeToString(x.Key[0].Bytes()))
+				sb.WriteRune(',')
+				sb.WriteString(hex.EncodeToString(x.Key[1].Bytes()))
+				sb.WriteRune(')')
+			}
+		}
+	}
+
+	return sb.String()
 }
