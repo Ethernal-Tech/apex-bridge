@@ -311,7 +311,6 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
-	cmd.MarkFlagsMutuallyExclusive(ogmiosURLDstFlag, nexusURLFlag)
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
