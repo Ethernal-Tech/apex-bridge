@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"encoding/hex"
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -68,9 +67,7 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 	} else {
 		bsc.ethHelper.logger.Debug("Estimating gas for deposit",
 			"wallet", bsc.ethHelper.wallet.GetAddress(),
-			"contract", bsc.smartContractAddress,
-			"signature", hex.EncodeToString(signature),
-			"bitmap", bitmap)
+			"contract", bsc.smartContractAddress)
 
 		estimatedGas, estimatedGasOriginal, err = ethTxHelper.EstimateGas(
 			ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
