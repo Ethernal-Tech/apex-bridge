@@ -77,7 +77,8 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 		}
 	}
 
-	bsc.ethHelper.logger.Debug("Estimated gas for deposit", "gas", estimatedGas, "original", estimatedGasOriginal)
+	bsc.ethHelper.logger.Debug("Estimated gas for deposit", "gas", estimatedGas, "original", estimatedGasOriginal,
+		"wallet", bsc.ethHelper.wallet.GetAddress(), "contract", bsc.smartContractAddress)
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = estimatedGas
