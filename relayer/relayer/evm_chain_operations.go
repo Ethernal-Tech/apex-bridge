@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -45,8 +46,34 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
 
+	bigIntZero := new(big.Int).SetUint64(0)
+
+	gasPrice := new(big.Int).SetUint64(config.GasPrice)
+	if gasPrice.Cmp(bigIntZero) <= 0 {
+		gasPrice = nil
+	}
+
+	gasFeeCap := new(big.Int).SetUint64(config.GasFeeCap)
+	if gasFeeCap.Cmp(bigIntZero) <= 0 {
+		gasFeeCap = nil
+	}
+
+	gasTipCap := new(big.Int).SetUint64(config.GasTipCap)
+	if gasTipCap.Cmp(bigIntZero) <= 0 {
+		gasTipCap = nil
+	}
+
+	logger.Error("SASA RELAYER: ", gasPrice, gasFeeCap, gasTipCap)
+
+	if config.DynamicTx && gasPrice != nil {
+		return nil, fmt.Errorf("SASA RELAYER: dynamic tx, wrong gasPrice %w", err)
+	} else if !config.DynamicTx && (gasTipCap != nil || gasFeeCap != nil) {
+		return nil, fmt.Errorf("SASA RELAYER: NOT dynamic tx, wrong gasFeeCap and gasTipCap %w", err)
+	}
+
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
-		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit, logger)
+		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit,
+		gasPrice, gasFeeCap, gasTipCap, logger)
 	if err != nil {
 		return nil, err
 	}
