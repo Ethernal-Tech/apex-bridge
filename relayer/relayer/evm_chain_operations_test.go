@@ -94,6 +94,7 @@ func TestEVMChainOperations(t *testing.T) {
 
 		ops := &EVMChainOperations{
 			evmSmartContract: scMock,
+			logger:           hclog.NewNullLogger(),
 		}
 
 		require.Error(t, ops.SendTx(ctx, nil, batch))

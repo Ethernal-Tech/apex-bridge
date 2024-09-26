@@ -59,7 +59,8 @@ func NewRelayerManager(
 	}
 
 	if logger.IsDebug() {
-		logger.Debug("Validators data per chain", "data", getChainValidatorsDataInfoString(ctx, bridgeSmartContract, config.Chains))
+		logger.Debug("Validators data per chain",
+			"data", getChainValidatorsDataInfoString(ctx, bridgeSmartContract, config.Chains))
 	}
 
 	return &RelayerManagerImpl{

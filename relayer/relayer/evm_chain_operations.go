@@ -74,7 +74,9 @@ func (cco *EVMChainOperations) SendTx(
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
 
 	cco.logger.Info("Submitting deposit transaction",
-		"signature", hex.EncodeToString(signature), "bitmap", common.NewBitmap(smartContractData.Bitmap))
+		"signature", hex.EncodeToString(signature),
+		"bitmap", smartContractData.Bitmap,
+		"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
 
 	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
 }
