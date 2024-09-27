@@ -82,7 +82,8 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 			if err != nil {
 				ri.logger.Error(
 					"error while updating bridging request states to SubmittedToDestination",
-					"destinationChainId", chainID, "batchId", receivedBatchID.Uint64())
+					"destinationChainId", chainID, "batchId", receivedBatchID.Uint64(),
+					"err", err)
 			}
 
 			return nil

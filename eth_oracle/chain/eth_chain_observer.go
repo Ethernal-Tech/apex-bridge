@@ -77,7 +77,7 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 
 	eventSigs, err := eth.GetNexusEventSignatures()
 	if err != nil {
-		logger.Error("failed to get nexus event signatures", err)
+		logger.Error("failed to get nexus event signatures", "err", err)
 
 		return nil
 	}

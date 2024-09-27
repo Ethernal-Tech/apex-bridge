@@ -173,6 +173,9 @@ func (bp *EthTxsProcessorImpl) NewUnprocessedLog(originChainID string, log *ethg
 	}
 
 	if len(bridgingRequests) > 0 {
+		bp.logger.Debug("Adding multiple new bridging request states to db",
+			"chainID", originChainID, "states", bridgingRequests)
+
 		err := bp.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
 		if err != nil {
 			bp.logger.Error("error while adding new bridging request states", "err", err)
@@ -700,7 +703,8 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 			if err != nil {
 				bp.logger.Error(
 					"error while updating a bridging request state to SubmittedToBridge",
-					"sourceChainId", common.ToStrChainID(brClaim.SourceChainId), "sourceTxHash", brClaim.ObservedTransactionHash)
+					"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
+					"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
 			}
 		}
 	}
@@ -716,7 +720,7 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 				bp.logger.Error(
 					"error while updating bridging request states to ExecutedOnDestination",
 					"destinationChainId", common.ToStrChainID(beClaim.ChainId), "batchId", beClaim.BatchNonceId,
-					"destinationTxHash", beClaim.ObservedTransactionHash)
+					"destinationTxHash", beClaim.ObservedTransactionHash, "err", err)
 			}
 		}
 	}
@@ -730,7 +734,8 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 			if err != nil {
 				bp.logger.Error(
 					"error while updating bridging request states to FailedToExecuteOnDestination",
-					"destinationChainId", common.ToStrChainID(befClaim.ChainId), "batchId", befClaim.BatchNonceId)
+					"destinationChainId", common.ToStrChainID(befClaim.ChainId),
+					"batchId", befClaim.BatchNonceId, "err", err)
 			}
 		}
 	}
@@ -751,7 +756,8 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 						if err != nil {
 							bp.logger.Error(
 								"error while updating a bridging request state to Invalid",
-								"sourceChainId", tx.OriginChainID, "sourceTxHash", tx.Hash)
+								"sourceChainId", tx.OriginChainID,
+								"sourceTxHash", tx.Hash, "err", err)
 						}
 					}
 
