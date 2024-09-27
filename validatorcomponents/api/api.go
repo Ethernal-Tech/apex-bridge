@@ -89,7 +89,9 @@ func (api *APIImpl) Start() {
 
 func (api *APIImpl) Dispose() error {
 	api.logger.Debug("Stopping api")
+
 	err := api.server.Shutdown(context.Background())
+
 	api.logger.Debug("Called api shutdown")
 
 	if err != nil {
