@@ -2,6 +2,7 @@ package clideployevm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -28,8 +29,10 @@ const (
 	evmDynamicTxFlag    = "dynamic-tx"
 	evmCloneEvmRepoFlag = "clone"
 	evmBranchNameFlag   = "branch"
-	bridgeNodeURLFlag   = "bridge-url"
-	bridgeSCAddrFlag    = "bridge-addr"
+
+	bridgeNodeURLFlag    = "bridge-url"
+	bridgeSCAddrFlag     = "bridge-addr"
+	bridgePrivateKeyFlag = "bridge-key"
 
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
@@ -39,11 +42,12 @@ const (
 	evmDynamicTxFlagDesc    = "dynamic tx"
 	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
 	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
-	bridgeNodeURLFlagDesc   = "bridge node url"
-	bridgeSCAddrFlagDesc    = "bridge smart contract address"
 
-	defaultBridgeSCAddr = "0xABEF000000000000000000000000000000000005"
-	defaultEVMChainID   = common.ChainIDStrNexus
+	bridgeNodeURLFlagDesc    = "bridge node url"
+	bridgeSCAddrFlagDesc     = "bridge smart contract address"
+	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
+
+	defaultEVMChainID = common.ChainIDStrNexus
 
 	evmGatewayRepositoryName         = "apex-evm-gateway"
 	evmGatewayRepositoryURL          = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
@@ -60,8 +64,9 @@ type deployEVMParams struct {
 	evmBranchName string
 	evmDynamicTx  bool
 
-	bridgeNodeURL string
-	bridgeSCAddr  string
+	bridgeNodeURL    string
+	bridgeSCAddr     string
+	bridgePrivateKey string
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -159,12 +164,20 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.bridgeSCAddr,
 		bridgeSCAddrFlag,
-		defaultBridgeSCAddr,
+		"",
 		bridgeSCAddrFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.bridgePrivateKey,
+		bridgePrivateKeyFlag,
+		"",
+		bridgePrivateKeyFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
+	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, evmBlsKeyFlag)
 }
 
 func (ip *deployEVMParams) Execute(
@@ -207,7 +220,7 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	validatorsData, err := ip.getValidatorsChainData(ctx)
+	validatorsData, err := ip.getValidatorsChainData(ctx, outputter)
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +319,12 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
+	if ip.bridgePrivateKey != "" {
+		if err := ip.setChainAdditionalData(ctx, gatewayProxyAddr, outputter); err != nil {
+			return nil, err
+		}
+	}
+
 	return &CmdResult{
 		gatewayProxyAddr:              gatewayProxyAddr.String(),
 		gatewayAddr:                   gatewayAddr.String(),
@@ -318,16 +337,46 @@ func (ip *deployEVMParams) Execute(
 	}, nil
 }
 
-func (ip *deployEVMParams) getValidatorsChainData(ctx context.Context) ([]eth.ValidatorChainData, error) {
+func (ip *deployEVMParams) setChainAdditionalData(
+	ctx context.Context, gatewayProxyAddr ethcommon.Address, outputter common.OutputFormatter,
+) error {
+	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
+	outputter.WriteOutput()
+
+	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
+	if err != nil {
+		return err
+	}
+
+	bridgeSC, err := eth.NewBridgeSmartContractWithWallet(
+		ip.bridgeNodeURL, ip.bridgeSCAddr, wallet, false, hclog.NewNullLogger())
+	if err != nil {
+		return err
+	}
+
+	return bridgeSC.SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
+}
+
+func (ip *deployEVMParams) getValidatorsChainData(
+	ctx context.Context, outputter common.OutputFormatter,
+) ([]eth.ValidatorChainData, error) {
 	if ip.bridgeNodeURL != "" {
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Get data from bridge smart contract at %s...", ip.bridgeSCAddr)))
+		outputter.WriteOutput()
+
 		bridgeSC := eth.NewBridgeSmartContract(ip.bridgeNodeURL, ip.bridgeSCAddr, false, hclog.NewNullLogger())
 
 		return bridgeSC.GetValidatorsChainData(ctx, ip.evmChainID)
 	}
 
 	result := make([]eth.ValidatorChainData, len(ip.evmBlsKeys))
+	existing := make(map[string]bool, len(ip.evmBlsKeys))
 
 	for i, x := range ip.evmBlsKeys {
+		if x == "" {
+			return nil, errors.New("empty key")
+		}
+
 		blsRaw, err := common.DecodeHex(x)
 		if err != nil {
 			return nil, err
@@ -338,6 +387,11 @@ func (ip *deployEVMParams) getValidatorsChainData(ctx context.Context) ([]eth.Va
 			return nil, err
 		}
 
+		if existing[x] {
+			return nil, fmt.Errorf("duplicate key: %s", x)
+		}
+
+		existing[x] = true
 		result[i] = eth.ValidatorChainData{
 			Key: key.ToBigInt(),
 		}

@@ -12,7 +12,10 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const submitBatchGasLimit = uint64(8_000_000)
+const (
+	submitBatchGasLimit                      = uint64(8_000_000)
+	setChainAdditionalDataGasLimitMultipiler = 1.2
+)
 
 type Chain = contractbinding.IBridgeStructsChain
 
@@ -28,6 +31,7 @@ type IBridgeSmartContract interface {
 	GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error)
 	GetAllRegisteredChains(ctx context.Context) ([]Chain, error)
 	GetBlockNumber(ctx context.Context) (uint64, error)
+	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 }
 
 type BridgeSmartContractImpl struct {
@@ -261,4 +265,43 @@ func (bsc *BridgeSmartContractImpl) GetBlockNumber(ctx context.Context) (uint64,
 	}
 
 	return ethTxHelper.GetClient().BlockNumber(ctx)
+}
+
+func (bsc *BridgeSmartContractImpl) SetChainAdditionalData(
+	ctx context.Context, chainID, multisigAddr, feeAddr string,
+) error {
+	parsedABI, err := contractbinding.BridgeContractMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
+
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return bsc.ethHelper.ProcessError(err)
+	}
+
+	chainIDNum := common.ToNumChainID(chainID)
+
+	estimatedGas, _, err := ethTxHelper.EstimateGas(
+		ctx, bsc.ethHelper.wallet.GetAddress(),
+		bsc.smartContractAddress, nil, setChainAdditionalDataGasLimitMultipiler,
+		parsedABI, "setChainAdditionalData", chainIDNum, multisigAddr, feeAddr)
+	if err != nil {
+		return err
+	}
+
+	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		opts.GasLimit = estimatedGas
+
+		return contract.SetChainAdditionalData(opts, chainIDNum, multisigAddr, feeAddr)
+	})
+
+	return bsc.ethHelper.ProcessError(err)
 }

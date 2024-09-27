@@ -21,8 +21,6 @@ const (
 	defaultGasLimit        = 5_242_880
 	validatorDataDirFlag   = "validator-data-dir"
 	validatorConfigFlag    = "validator-config"
-	multisigAddrFlag       = "addr"
-	multisigFeeAddrFlag    = "addr-fee"
 	bridgeURLFlag          = "bridge-url"
 	bridgeSCAddrFlag       = "bridge-addr"
 	chainIDFlag            = "chain"
@@ -34,8 +32,6 @@ const (
 	chainIDFlagDesc            = "chain ID (prime, vector, etc)"
 	chainTypeFlagDesc          = "chain type (0 is Cardano, 1 is EVM, etc)"
 	socketPathFlagDesc         = "socket path for cardano node"
-	multisigAddrFlagDesc       = "multisig address"
-	multisigFeeAddrFlagDesc    = "fee payer address"
 	bridgeURLFlagDesc          = "bridge node url"
 	bridgeSCAddrFlagDesc       = "bridge smart contract address"
 	initialTokenSupplyFlagDesc = "initial token supply for the chain"
@@ -44,8 +40,6 @@ const (
 type registerChainParams struct {
 	validatorDataDir   string
 	validatorConfig    string
-	multisigAddr       string
-	multisigFeeAddr    string
 	bridgeURL          string
 	bridgeSCAddr       string
 	chainID            string
@@ -76,14 +70,6 @@ func (ip *registerChainParams) validateFlags() error {
 
 	if ip.validatorDataDir == "" && ip.validatorConfig == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
-	}
-
-	if ip.multisigAddr == "" {
-		return fmt.Errorf("multisig address not specified")
-	}
-
-	if ip.multisigFeeAddr == "" && ip.chainType == common.ChainTypeCardano {
-		return fmt.Errorf("fee payer address not specified")
 	}
 
 	addrDecoded, err := common.DecodeHex(ip.bridgeSCAddr)
@@ -118,20 +104,6 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		validatorConfigFlag,
 		"",
 		validatorConfigFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.multisigAddr,
-		multisigAddrFlag,
-		"",
-		multisigAddrFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.multisigFeeAddr,
-		multisigFeeAddrFlag,
-		"",
-		multisigFeeAddrFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -228,12 +200,8 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.RegisterChainGovernance(
 				txOpts,
-				eth.Chain{
-					Id:              common.ToNumChainID(ip.chainID),
-					ChainType:       ip.chainType,
-					AddressMultisig: ip.multisigAddr,
-					AddressFeePayer: ip.multisigFeeAddr,
-				},
+				common.ToNumChainID(ip.chainID),
+				ip.chainType,
 				initialTokenSupply,
 				validatorChainData)
 		})
