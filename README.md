@@ -71,8 +71,6 @@ $ go run ./main.go register-chain \
         --chain prime \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
-        --addr addr_test1wrs0nrc0rvrfl7pxjl8vgqp5xuvt8j4n8a2lu8gef80wxhq4lmleh \
-        --addr-fee addr_test1vqjysa7p4mhu0l25qknwznvj0kghtr29ud7zp732ezwtzec0w8g3u \
         --token-supply 20000000 \
         --bridge-url https://polygon-mumbai.blockpi.network/v1/rpc/public \
         --bridge-addr 0x8F371EeFe210ad18a2Ce45d51B48E56aBa1a58A9        
@@ -198,15 +196,27 @@ $ go run ./main.go sendtx \
 ```
 
 # How to Deploy Nexus Smart Contracts
+Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
 ```shell
 $ go run ./main.go deploy-evm \
-        -url http://127.0.0.1:12001 \
+        --url http://127.0.0.1:12001 \
+        --key NEXUS_OR_EVM_PRIVATE_KEY \
+        --dir /tmp \
+        --clone \
+        --bridge-url http://127.0.0.1:12013 \
+        --bridge-addr 0xABEF000000000000000000000000000000000000 \
+        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY     
+```
+-- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+Example with explicit bls keys:
+```shell
+$ go run ./main.go deploy-evm \
+        --url http://127.0.0.1:12001 \
         --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
-        --dir /home/igor/development \
-        --clone
+        --dir /tmp \
+        --clone \
         --bls-key 0x.... \
         --bls-key 0x.... \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
-- `--bridge-url` and `--bridge-addr` are optional (instead of `--bls-key`)
