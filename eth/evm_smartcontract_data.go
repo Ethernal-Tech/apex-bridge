@@ -1,7 +1,9 @@
 package eth
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -64,4 +66,30 @@ func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction,
 
 func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {
 	return abi.Arguments{{Type: txAbi}}.Pack(evmsctx)
+}
+
+func (evmsctx EVMSmartContractTransaction) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(fmt.Sprintf("%d\n", evmsctx.BatchNonceID))
+	sb.WriteString("ttl = ")
+	sb.WriteString(fmt.Sprintf("%d\n", evmsctx.TTL))
+	sb.WriteString("fee = ")
+	sb.WriteString(fmt.Sprintf("%s\n", evmsctx.FeeAmount))
+	sb.WriteString("receivers = ")
+
+	for i, v := range evmsctx.Receivers {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteRune('(')
+		sb.WriteString(v.Address.String())
+		sb.WriteRune(',')
+		sb.WriteString(v.Amount.String())
+		sb.WriteRune(')')
+	}
+
+	return sb.String()
 }

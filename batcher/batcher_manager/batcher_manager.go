@@ -52,8 +52,10 @@ func NewBatcherManager(
 		return nil, err
 	}
 
-	for _, chainConfig := range config.Chains {
+	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", config.Bridge.NodeURL,
+		"contract", config.Bridge.SmartContractAddress, "dynamicTx", config.Bridge.DynamicTx)
 
+	for _, chainConfig := range config.Chains {
 		chainLogger := logger.Named(strings.ToUpper(chainConfig.ChainID))
 
 		var operations core.ChainOperations

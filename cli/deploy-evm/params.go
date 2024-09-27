@@ -167,8 +167,9 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
 }
 
-func (ip *deployEVMParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	ctx := context.Background()
+func (ip *deployEVMParams) Execute(
+	ctx context.Context, outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	dir := filepath.Clean(ip.evmDir)
 
 	if ip.evmClone {

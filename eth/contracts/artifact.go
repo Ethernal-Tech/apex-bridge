@@ -108,7 +108,7 @@ func CloneAndBuildContracts(
 		// git clone writes to stderror, check if messages are ok...
 		// or if there is already existing git directory
 		str := strings.TrimSpace(err.Error())
-		if !strings.Contains(str, "Cloning into") && !strings.HasSuffix(str, "done.") &&
+		if !strings.HasSuffix(str, "done.") &&
 			!strings.Contains(str, fmt.Sprintf("'%s' already exists", repositoryName)) {
 			return "", err
 		}
