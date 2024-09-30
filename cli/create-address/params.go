@@ -173,7 +173,7 @@ func getKeyHashesFromBridge(
 		return nil, nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Validators chain data retrieved"))
+	_, _ = outputter.Write([]byte("Validators chain data retrieved:\n"))
 	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(chainID, validatorsData)))
 	outputter.WriteOutput()
 
