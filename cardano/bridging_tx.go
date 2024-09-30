@@ -41,7 +41,7 @@ func NewBridgingTxSender(
 	testNetMagic uint,
 	multiSigAddr string,
 	ttlSlotNumberInc uint64,
-	potentionalFee uint64,
+	potentialFee uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
 		cardanoCliBinary:   cardanoCliBinary,
@@ -49,7 +49,7 @@ func NewBridgingTxSender(
 		txUtxoRetrieverDst: txUtxoRetriever,
 		testNetMagicSrc:    testNetMagic,
 		multiSigAddrSrc:    multiSigAddr,
-		potentialFee:       potentionalFee,
+		potentialFee:       potentialFee,
 		ttlSlotNumberInc:   ttlSlotNumberInc,
 	}
 }
