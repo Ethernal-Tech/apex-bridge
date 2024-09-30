@@ -21,5 +21,9 @@ jobs:
         uses: milos-ethernal/cardano-node-action@5a3bce7266cc1500d96e8fa63b3bb97135988482
       - name: Install Dependencies
         run: ./setup-ci.sh
+      - name: Install solcjs
+        run: npm install solc
+      - name: Add solcjs to PATH
+        run: echo "$(npm bin)" >> $GITHUB_PATH
       - name: Run Go Test
         run: make unit-test
