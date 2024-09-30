@@ -66,16 +66,16 @@ func TestExecutableQueue(t *testing.T) {
 	cancel()
 	q.Stop()
 
-	assert.True(t, counter > 10)
+	assert.True(t, atomic.LoadUint64(&counter) > 10)
 
 	time.Sleep(time.Millisecond * 500)
 
-	val := counter
+	val := atomic.LoadUint64(&counter)
 
 	time.Sleep(time.Millisecond * 1000)
 
-	assert.Equal(t, val, counter)
-	assert.Equal(t, counter, uint64(len(items)))
+	assert.Equal(t, val, atomic.LoadUint64(&counter))
+	assert.Equal(t, val, uint64(len(items)))
 
 	exists := map[uint64]bool{}
 
