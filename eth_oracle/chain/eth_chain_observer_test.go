@@ -33,9 +33,6 @@ func TestEthChainObserver(t *testing.T) {
 	defer foldersCleanup()
 
 	ctx := context.Background()
-	txsProcessorMock := &core.EthTxsProcessorMock{}
-	oracleDB := &core.EthTxsProcessorDBMock{}
-	indexerDB := &core.EventStoreMock{}
 	logger := hclog.NewNullLogger()
 
 	config := &oracleCore.EthChainConfig{
@@ -43,6 +40,10 @@ func TestEthChainObserver(t *testing.T) {
 	}
 
 	t.Run("chain observer - initOracleState error", func(t *testing.T) {
+		txsProcessorMock := &core.EthTxsProcessorMock{}
+		oracleDB := &core.EthTxsProcessorDBMock{}
+		indexerDB := &core.EventStoreMock{}
+
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
 		co, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
@@ -51,6 +52,9 @@ func TestEthChainObserver(t *testing.T) {
 	})
 
 	t.Run("chain observer - NewEventTracker error", func(t *testing.T) {
+		txsProcessorMock := &core.EthTxsProcessorMock{}
+		oracleDB := &core.EthTxsProcessorDBMock{}
+		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil).Once()
@@ -64,6 +68,9 @@ func TestEthChainObserver(t *testing.T) {
 	})
 
 	t.Run("chain observer - NewEthChainObserver OK", func(t *testing.T) {
+		txsProcessorMock := &core.EthTxsProcessorMock{}
+		oracleDB := &core.EthTxsProcessorDBMock{}
+		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
@@ -79,6 +86,9 @@ func TestEthChainObserver(t *testing.T) {
 	})
 
 	t.Run("chek start stop", func(t *testing.T) {
+		txsProcessorMock := &core.EthTxsProcessorMock{}
+		oracleDB := &core.EthTxsProcessorDBMock{}
+		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
@@ -96,6 +106,24 @@ func TestEthChainObserver(t *testing.T) {
 
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
 		t.Cleanup(foldersCleanup)
+
+		oracleDB := &core.EthTxsProcessorDBMock{}
+
+		txsProcessorMock := &core.EthTxsProcessorMock{}
+		doneCh := make(chan bool, 1)
+		closed := false
+
+		txsProcessorMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
+			t.Helper()
+
+			if !closed {
+				close(doneCh)
+
+				closed = true
+			}
+
+			return nil
+		}
 
 		testConfig := &oracleCore.EthChainConfig{
 			ChainID:                 "nexus",
@@ -146,21 +174,6 @@ func TestEthChainObserver(t *testing.T) {
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
-
-		doneCh := make(chan bool, 1)
-		closed := false
-
-		txsProcessorMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
-			t.Helper()
-
-			if !closed {
-				close(doneCh)
-
-				closed = true
-			}
-
-			return nil
-		}
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
