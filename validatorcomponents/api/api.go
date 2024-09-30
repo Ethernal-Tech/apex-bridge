@@ -78,11 +78,13 @@ func (api *APIImpl) Start() {
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error after api ListenAndServe", "err", err)
 
+		api.logger.Debug("api.finishDispose <- err", "err", err)
 		api.finishDispose <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
 
 		return
 	}
 
+	api.logger.Debug("api.finishDispose <- nil", "err", err)
 	api.finishDispose <- nil
 
 	api.logger.Debug("Stopped api")
@@ -116,6 +118,8 @@ func (api *APIImpl) Dispose() error {
 		if err != nil {
 			apiErrors = append(apiErrors, err)
 		}
+
+		api.logger.Debug("case <-api.finishDispose:")
 	}
 
 	if len(apiErrors) > 0 {
