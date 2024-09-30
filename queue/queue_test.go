@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,13 +16,13 @@ func TestExecutableQueue(t *testing.T) {
 	t.Parallel()
 
 	type item struct {
-		counter int
-		id      int
+		counter uint64
+		id      uint64
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	counter := 0
+	counter := uint64(0)
 	items := []item{}
 
 	q := NewExecutableQueue(func(err error) bool {
@@ -41,9 +42,9 @@ func TestExecutableQueue(t *testing.T) {
 						return ctx.Err()
 					case <-time.After(time.Millisecond * 25):
 						if id != step {
-							counter++
-							items = append(items, item{counter: counter, id: id})
-							fmt.Printf("from (%d, %d): %d\n", id, step, counter)
+							newValue := atomic.AddUint64(&counter, 1)
+							items = append(items, item{counter: newValue, id: uint64(id)})
+							fmt.Printf("from (%d, %d): %d\n", id, step, newValue)
 						} else {
 							return fmt.Errorf("error from %d", id)
 						}
@@ -74,14 +75,14 @@ func TestExecutableQueue(t *testing.T) {
 	time.Sleep(time.Millisecond * 1000)
 
 	assert.Equal(t, val, counter)
-	assert.Equal(t, counter, len(items))
+	assert.Equal(t, counter, uint64(len(items)))
 
-	exists := map[int]bool{}
+	exists := map[uint64]bool{}
 
 	for i, x := range items {
 		key := x.counter<<16 + x.id
 
-		assert.Equal(t, i+1, x.counter)
+		assert.Equal(t, uint64(i+1), x.counter)
 		assert.False(t, exists[key])
 
 		exists[key] = true
