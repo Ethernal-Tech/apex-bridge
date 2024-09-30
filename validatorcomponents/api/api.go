@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,8 +20,7 @@ type APIImpl struct {
 	server    *http.Server
 	logger    hclog.Logger
 
-	serverClosed  chan bool
-	finishDispose chan bool
+	finishDispose chan error
 }
 
 var _ core.API = (*APIImpl)(nil)
@@ -72,18 +72,18 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	api.serverClosed = make(chan bool)
-	api.finishDispose = make(chan bool)
+	api.finishDispose = make(chan error)
 
 	err := api.server.ListenAndServe()
-
-	api.serverClosed <- true
-
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error after api ListenAndServe", "err", err)
 
+		api.finishDispose <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
+
 		return
 	}
+
+	api.finishDispose <- nil
 
 	api.logger.Debug("Stopped api")
 }
@@ -91,23 +91,31 @@ func (api *APIImpl) Start() {
 func (api *APIImpl) Dispose() error {
 	api.logger.Debug("Stopping api")
 
+	var apiErrors []error
+
 	err := api.server.Shutdown(context.Background())
+	if err != nil {
+		apiErrors = append(apiErrors, fmt.Errorf("error while trying to shutdown api server. err %w", err))
+	}
 
 	api.logger.Debug("Called api shutdown")
 
-	go func() {
-		select {
-		case <-time.After(time.Second * 5):
-			api.logger.Debug("api not closed after a timeout. calling Close")
+	select {
+	case <-time.After(time.Second * 5):
+		api.logger.Debug("api not closed after a timeout. calling Close")
 
-			// if graceful shutdown didn't succeed after 5 seconds, shutdown forcibly
-			if err := api.server.Close(); err != nil {
-				api.logger.Error("error while trying to close api server", "err", err)
+		// if graceful shutdown didn't succeed after 5 seconds, shutdown forcibly
+		if err := api.server.Close(); err != nil {
+			api.logger.Error("error while trying to close api server", "err", err)
 
-				break
-			}
+			break
+		}
 
-			api.logger.Debug("Successfully closed api")
+		api.logger.Debug("Successfully closed api")
+	case err := <-api.finishDispose:
+		if err != nil {
+			apiErrors = append(apiErrors, err)
+		}
 		case <-api.serverClosed:
 		}
 
@@ -120,6 +128,10 @@ func (api *APIImpl) Dispose() error {
 		api.logger.Error("error while trying to shutdown api server", "err", err)
 
 		return fmt.Errorf("error while trying to shutdown api server. err %w", err)
+	}
+
+	if len(apiErrors) > 0 {
+		return errors.Join(apiErrors...)
 	}
 
 	return nil
