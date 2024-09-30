@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,13 +16,14 @@ func TestExecutableQueue(t *testing.T) {
 	t.Parallel()
 
 	type item struct {
-		counter int
-		id      int
+		counter uint64
+		id      uint64
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	counter := 0
+	lock := sync.Mutex{}
+	counter := uint64(0)
 	items := []item{}
 
 	q := NewExecutableQueue(func(err error) bool {
@@ -41,9 +43,13 @@ func TestExecutableQueue(t *testing.T) {
 						return ctx.Err()
 					case <-time.After(time.Millisecond * 25):
 						if id != step {
+							lock.Lock()
 							counter++
-							items = append(items, item{counter: counter, id: id})
-							fmt.Printf("from (%d, %d): %d\n", id, step, counter)
+							newValue := counter
+							items = append(items, item{counter: newValue, id: uint64(id)})
+							lock.Unlock()
+
+							fmt.Printf("from (%d, %d): %d\n", id, step, newValue)
 						} else {
 							return fmt.Errorf("error from %d", id)
 						}
@@ -65,23 +71,30 @@ func TestExecutableQueue(t *testing.T) {
 	cancel()
 	q.Stop()
 
+	lock.Lock()
 	assert.True(t, counter > 10)
+	lock.Unlock()
 
 	time.Sleep(time.Millisecond * 500)
 
+	lock.Lock()
 	val := counter
+	lock.Unlock()
 
 	time.Sleep(time.Millisecond * 1000)
 
-	assert.Equal(t, val, counter)
-	assert.Equal(t, counter, len(items))
+	lock.Lock()
+	defer lock.Unlock()
 
-	exists := map[int]bool{}
+	assert.Equal(t, val, counter)
+	assert.Equal(t, val, uint64(len(items)))
+
+	exists := map[uint64]bool{}
 
 	for i, x := range items {
 		key := x.counter<<16 + x.id
 
-		assert.Equal(t, i+1, x.counter)
+		assert.Equal(t, uint64(i+1), x.counter)
 		assert.False(t, exists[key])
 
 		exists[key] = true

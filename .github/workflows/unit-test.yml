@@ -1,0 +1,27 @@
+---
+name: Unit Tests
+on: # yamllint disable-line rule:truthy
+  workflow_call:
+
+jobs:
+  unit_test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.1.1
+        with:
+          submodules: recursive
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Setup Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: 1.21.6
+      - name: Install Cardano tools
+        uses: milos-ethernal/cardano-node-action@5a3bce7266cc1500d96e8fa63b3bb97135988482
+      - name: Install Dependencies
+        run: ./setup-ci.sh
+      - name: Install solcjs
+        run: npm install -g solc
+      - name: Run Go Test
+        run: make unit-test
