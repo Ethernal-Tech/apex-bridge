@@ -116,18 +116,6 @@ func (api *APIImpl) Dispose() error {
 		if err != nil {
 			apiErrors = append(apiErrors, err)
 		}
-		case <-api.serverClosed:
-		}
-
-		api.finishDispose <- true
-	}()
-
-	<-api.finishDispose
-
-	if err != nil {
-		api.logger.Error("error while trying to shutdown api server", "err", err)
-
-		return fmt.Errorf("error while trying to shutdown api server. err %w", err)
 	}
 
 	if len(apiErrors) > 0 {
