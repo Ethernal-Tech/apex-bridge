@@ -182,7 +182,7 @@ func NewValidatorComponents(
 				cardanoIndexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 		}
 
-		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
+		apiObj, err = api.NewAPI(appConfig.APIConfig, apiControllers, logger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
 		}

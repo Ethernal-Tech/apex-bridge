@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/gorilla/handlers"
@@ -15,17 +14,19 @@ import (
 )
 
 type APIImpl struct {
-	ctx       context.Context
 	apiConfig core.APIConfig
 	handler   http.Handler
 	server    *http.Server
 	logger    hclog.Logger
+
+	serverClosed  chan bool
+	finishDispose chan bool
 }
 
 var _ core.API = (*APIImpl)(nil)
 
 func NewAPI(
-	ctx context.Context, apiConfig core.APIConfig,
+	apiConfig core.APIConfig,
 	controllers []core.APIController, logger hclog.Logger,
 ) (
 	*APIImpl, error,
@@ -57,7 +58,6 @@ func NewAPI(
 	handler := handlers.CORS(originsOk, headersOk, methodsOk)(router)
 
 	return &APIImpl{
-		ctx:       ctx,
 		apiConfig: apiConfig,
 		handler:   handler,
 		logger:    logger,
@@ -72,14 +72,15 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	err := common.ExecuteWithRetry(api.ctx, 5, time.Second, func(context.Context) (bool, error) {
-		err := api.server.ListenAndServe()
+	api.serverClosed = make(chan bool)
+	api.finishDispose = make(chan bool)
 
-		return (err == nil || err == http.ErrServerClosed), err
-	})
+	err := api.server.ListenAndServe()
+
+	api.serverClosed <- true
 
 	if err != nil && err != http.ErrServerClosed {
-		api.logger.Error("error while trying to start api server", "err", err)
+		api.logger.Error("error after api ListenAndServe", "err", err)
 
 		return
 	}
@@ -93,6 +94,27 @@ func (api *APIImpl) Dispose() error {
 	err := api.server.Shutdown(context.Background())
 
 	api.logger.Debug("Called api shutdown")
+
+	go func() {
+		select {
+		case <-time.After(time.Second * 5):
+			api.logger.Debug("api not closed after a timeout. calling Close")
+
+			// if graceful shutdown didn't succeed after 5 seconds, shutdown forcibly
+			if err := api.server.Close(); err != nil {
+				api.logger.Error("error while trying to close api server", "err", err)
+
+				return
+			}
+
+			api.logger.Debug("Successfully closed api")
+		case <-api.serverClosed:
+		}
+
+		api.finishDispose <- true
+	}()
+
+	<-api.finishDispose
 
 	if err != nil {
 		api.logger.Error("error while trying to shutdown api server", "err", err)
