@@ -22,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: ./setup-ci.sh
       - name: Install solcjs
-        run: npm install solc
+        run: npm install -g solc
       - name: Add solcjs to PATH
         run: echo "$(npm bin)" >> $GITHUB_PATH
       - name: Run Go Test
