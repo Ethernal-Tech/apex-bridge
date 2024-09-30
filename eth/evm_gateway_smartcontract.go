@@ -88,9 +88,9 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = estimatedGas
-		opts.GasPrice = gasLimit
-		opts.GasFeeCap = gasFeeCap
-		opts.GasTipCap = gasTipCap
+		opts.GasPrice = bsc.gasPrice
+		opts.GasFeeCap = bsc.gasFeeCap
+		opts.GasTipCap = bsc.gasTipCap
 
 		return contract.Deposit(opts, signature, bitmap, data)
 	})
