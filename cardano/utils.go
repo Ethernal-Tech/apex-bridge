@@ -1,16 +1,13 @@
 package cardanotx
 
 import (
-	"encoding/hex"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/hashicorp/go-hclog"
 )
 
 func GetPolicyScripts(
-	validatorsData []eth.ValidatorChainData, logger hclog.Logger,
+	validatorsData []eth.ValidatorChainData,
 ) (multisigPolicyScript *wallet.PolicyScript, feePolicyScript *wallet.PolicyScript, err error) {
 	multisigKeyHashes := make([]string, len(validatorsData))
 	multisigFeeKeyHashes := make([]string, len(validatorsData))
@@ -27,19 +24,6 @@ func GetPolicyScripts(
 		if err != nil {
 			return nil, nil, err
 		}
-	}
-
-	if logger != nil {
-		pubKeys := make([]string, len(validatorsData))
-		feePubKeys := make([]string, len(validatorsData))
-
-		for i, x := range validatorsData {
-			pubKeys[i] = hex.EncodeToString(x.Key[0].Bytes())
-			feePubKeys[i] = hex.EncodeToString(x.Key[1].Bytes())
-		}
-
-		logger.Debug("Validator public keys/hashes multisig", "pubs", pubKeys, "hashes", multisigKeyHashes)
-		logger.Debug("Validator public keys/hashes fee", "pubs", feePubKeys, "hashes", multisigFeeKeyHashes)
 	}
 
 	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData))))

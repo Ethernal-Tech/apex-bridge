@@ -217,7 +217,7 @@ func getKeyHashesFromBridge(
 	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(chainID, validatorsData)))
 	outputter.WriteOutput()
 
-	return cardanotx.GetPolicyScripts(validatorsData, hclog.NewNullLogger())
+	return cardanotx.GetPolicyScripts(validatorsData)
 }
 
 func getKeyHashesFromInput(keys []string) ([]string, error) {
