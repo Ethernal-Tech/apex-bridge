@@ -104,7 +104,7 @@ func (api *APIImpl) Dispose() error {
 			if err := api.server.Close(); err != nil {
 				api.logger.Error("error while trying to close api server", "err", err)
 
-				return
+				break
 			}
 
 			api.logger.Debug("Successfully closed api")
