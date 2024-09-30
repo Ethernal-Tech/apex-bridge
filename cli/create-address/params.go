@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -101,14 +102,19 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(chainIDFlag, keyFlag)
 }
 
-func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
+func (ip *createAddressParams) Execute(
+	outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	if len(ip.keys) > 0 {
 		keys, err := getKeyHashesFromInput(ip.keys)
 		if err != nil {
 			return nil, err
 		}
 
-		addr, err := getAddress(ip.networkID, keys)
+		atLeast := common.GetRequiredSignaturesForConsensus(uint64(len(keys)))
+		policyScript := wallet.NewPolicyScript(keys, int(atLeast))
+
+		addr, err := getAddress(ip.networkID, policyScript)
 		if err != nil {
 			return nil, err
 		}
@@ -118,18 +124,18 @@ func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
 		}, nil
 	}
 
-	multisigHashes, feeHashes, err := getKeyHashesFromBridge(
-		context.Background(), ip.bridgeNodeURL, ip.bridgeSCAddr, ip.chainID)
+	multisigPolicyScript, feePolicyScript, err := getKeyHashesFromBridge(
+		context.Background(), ip.bridgeNodeURL, ip.bridgeSCAddr, ip.chainID, outputter)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigAddr, err := getAddress(ip.networkID, multisigHashes)
+	multisigAddr, err := getAddress(ip.networkID, multisigPolicyScript)
 	if err != nil {
 		return nil, err
 	}
 
-	feeAddr, err := getAddress(ip.networkID, feeHashes)
+	feeAddr, err := getAddress(ip.networkID, feePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -140,13 +146,11 @@ func (ip *createAddressParams) Execute() (common.ICommandResult, error) {
 	}, nil
 }
 
-func getAddress(networkIDInt uint, keys []string) (string, error) {
+func getAddress(networkIDInt uint, ps *wallet.PolicyScript) (string, error) {
 	networkID := wallet.CardanoNetworkType(networkIDInt)
-	atLeast := common.GetRequiredSignaturesForConsensus(uint64(len(keys)))
-	script := wallet.NewPolicyScript(keys, int(atLeast))
 	cliUtils := wallet.NewCliUtils(wallet.ResolveCardanoCliBinary(networkID))
 
-	policyID, err := cliUtils.GetPolicyID(script)
+	policyID, err := cliUtils.GetPolicyID(ps)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate policy id: %w", err)
 	}
@@ -160,8 +164,8 @@ func getAddress(networkIDInt uint, keys []string) (string, error) {
 }
 
 func getKeyHashesFromBridge(
-	ctx context.Context, nodeURL, addr, chainID string,
-) ([]string, []string, error) {
+	ctx context.Context, nodeURL, addr, chainID string, outputter common.OutputFormatter,
+) (*wallet.PolicyScript, *wallet.PolicyScript, error) {
 	bridgeSC := eth.NewBridgeSmartContract(nodeURL, addr, false, hclog.NewNullLogger())
 
 	validatorsData, err := bridgeSC.GetValidatorsChainData(ctx, chainID)
@@ -169,25 +173,11 @@ func getKeyHashesFromBridge(
 		return nil, nil, err
 	}
 
-	multisigHashes := make([]string, len(validatorsData))
-	feeHashes := make([]string, len(validatorsData))
+	_, _ = outputter.Write([]byte("Validators chain data retrieved"))
+	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(chainID, validatorsData)))
+	outputter.WriteOutput()
 
-	for i, x := range validatorsData {
-		keyHashMultisig, err := wallet.GetKeyHash(x.Key[0].Bytes())
-		if err != nil {
-			return nil, nil, err
-		}
-
-		keyHashFee, err := wallet.GetKeyHash(x.Key[1].Bytes())
-		if err != nil {
-			return nil, nil, err
-		}
-
-		multisigHashes[i] = keyHashMultisig
-		feeHashes[i] = keyHashFee
-	}
-
-	return multisigHashes, feeHashes, nil
+	return cardanotx.GetPolicyScripts(validatorsData, hclog.NewNullLogger())
 }
 
 func getKeyHashesFromInput(keys []string) ([]string, error) {

@@ -1,13 +1,16 @@
 package eth
 
 import (
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/Ethernal-Tech/ethgo"
 )
 
@@ -106,6 +109,36 @@ func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
 
 func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 	return GetEventSignatures([]string{"Deposit", "Withdraw"})
+}
+
+func GetChainValidatorsDataInfoString(
+	chainID string, data []ValidatorChainData,
+) string {
+	var sb strings.Builder
+
+	for i, x := range data {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		switch chainID {
+		case common.ChainIDStrNexus:
+			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
+			if err != nil {
+				return fmt.Sprintf("failed to unmarshal bls key for %s, error: %s", chainID, err)
+			}
+
+			sb.WriteString(hex.EncodeToString(pub.Marshal()))
+		default:
+			sb.WriteRune('(')
+			sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())))
+			sb.WriteRune(',')
+			sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(x.Key[1].Bytes())))
+			sb.WriteRune(')')
+		}
+	}
+
+	return sb.String()
 }
 
 func getBLSKeyName(chainID string) string {

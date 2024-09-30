@@ -36,7 +36,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
-	results, err := params.Execute()
+	results, err := params.Execute(outputter)
 	if err != nil {
 		outputter.SetError(err)
 

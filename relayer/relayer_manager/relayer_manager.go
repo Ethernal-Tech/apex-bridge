@@ -2,7 +2,6 @@ package relayermanager
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
-	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -59,8 +57,12 @@ func NewRelayerManager(
 	}
 
 	if logger.IsDebug() {
-		logger.Debug("Validators data per chain",
-			"data", getChainValidatorsDataInfoString(ctx, bridgeSmartContract, config.Chains))
+		for chainID := range config.Chains {
+			data, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
+
+			logger.Debug("Validators data per chain", "chain", chainID, "data",
+				"data", eth.GetChainValidatorsDataInfoString(chainID, data), "err", err)
+		}
 	}
 
 	return &RelayerManagerImpl{
@@ -152,48 +154,4 @@ func getRelayersAndConfigurations(
 	}
 
 	return relayers, newChainsConfigs, nil
-}
-
-func getChainValidatorsDataInfoString(
-	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainsConfig map[string]core.ChainConfig,
-) string {
-	var sb strings.Builder
-
-	for chainID := range chainsConfig {
-		data, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
-		if err != nil {
-			return fmt.Sprintf("failed to retrieve validators data for %s, error: %s", chainID, err)
-		}
-
-		if sb.Len() > 0 {
-			sb.WriteRune('\n')
-		}
-
-		sb.WriteString(chainID)
-		sb.WriteString(" = ")
-
-		for i, x := range data {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-
-			switch chainID {
-			case common.ChainIDStrNexus:
-				pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
-				if err != nil {
-					return fmt.Sprintf("failed to unmarshal bls key for %s, error: %s", chainID, err)
-				}
-
-				sb.WriteString(hex.EncodeToString(pub.Marshal()))
-			default:
-				sb.WriteRune('(')
-				sb.WriteString(hex.EncodeToString(x.Key[0].Bytes()))
-				sb.WriteRune(',')
-				sb.WriteString(hex.EncodeToString(x.Key[1].Bytes()))
-				sb.WriteRune(')')
-			}
-		}
-	}
-
-	return sb.String()
 }
