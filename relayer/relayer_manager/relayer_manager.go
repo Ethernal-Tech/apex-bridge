@@ -60,7 +60,7 @@ func NewRelayerManager(
 		for chainID := range config.Chains {
 			data, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
 
-			logger.Debug("Validators data per chain", "chain", chainID, "data",
+			logger.Debug("Validators data per chain", "chain", chainID,
 				"data", eth.GetChainValidatorsDataInfoString(chainID, data), "err", err)
 		}
 	}
