@@ -3,7 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +22,7 @@ func TestExecutableQueue(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	lock := sync.Mutex{}
 	counter := uint64(0)
 	items := []item{}
 
@@ -42,8 +43,12 @@ func TestExecutableQueue(t *testing.T) {
 						return ctx.Err()
 					case <-time.After(time.Millisecond * 25):
 						if id != step {
-							newValue := atomic.AddUint64(&counter, 1)
+							lock.Lock()
+							counter++
+							newValue := counter
 							items = append(items, item{counter: newValue, id: uint64(id)})
+							lock.Unlock()
+
 							fmt.Printf("from (%d, %d): %d\n", id, step, newValue)
 						} else {
 							return fmt.Errorf("error from %d", id)
@@ -66,15 +71,22 @@ func TestExecutableQueue(t *testing.T) {
 	cancel()
 	q.Stop()
 
-	assert.True(t, atomic.LoadUint64(&counter) > 10)
+	lock.Lock()
+	assert.True(t, counter > 10)
+	lock.Unlock()
 
 	time.Sleep(time.Millisecond * 500)
 
-	val := atomic.LoadUint64(&counter)
+	lock.Lock()
+	val := counter
+	lock.Unlock()
 
 	time.Sleep(time.Millisecond * 1000)
 
-	assert.Equal(t, val, atomic.LoadUint64(&counter))
+	lock.Lock()
+	defer lock.Unlock()
+
+	assert.Equal(t, val, counter)
 	assert.Equal(t, val, uint64(len(items)))
 
 	exists := map[uint64]bool{}
