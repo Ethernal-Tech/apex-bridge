@@ -1,0 +1,23 @@
+---
+name: Unit Tests
+on: # yamllint disable-line rule:truthy
+  workflow_call:
+
+jobs:
+  unit_test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.1.1
+        with:
+          submodules: recursive
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Setup Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: 1.21.6
+      - name: Install Dependencies
+        run: ./setup-ci.sh
+      - name: Run Go Test
+        run: make unit-test
