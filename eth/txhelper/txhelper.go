@@ -188,8 +188,6 @@ func (t *EthTxHelperImpl) SendTx(
 		return nil, err
 	}
 
-	fmt.Printf("opts: price:%v feeCap:%v tipCap:%v", txOptsParam.GasPrice, txOptsParam.GasFeeCap, txOptsParam.GasTipCap)
-
 	return sendTxHandler(txOptsRes)
 }
 

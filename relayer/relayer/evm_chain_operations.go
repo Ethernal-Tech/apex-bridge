@@ -63,12 +63,10 @@ func NewEVMChainOperations(
 		gasTipCap = nil
 	}
 
-	logger.Error("SASA RELAYER: ", gasPrice, gasFeeCap, gasTipCap)
-
 	if config.DynamicTx && gasPrice != nil {
-		return nil, fmt.Errorf("SASA RELAYER: dynamic tx, wrong gasPrice %w", err)
+		return nil, fmt.Errorf("gasPrice cannot be set while dynamicTx is true %w", err)
 	} else if !config.DynamicTx && (gasTipCap != nil || gasFeeCap != nil) {
-		return nil, fmt.Errorf("SASA RELAYER: NOT dynamic tx, wrong gasFeeCap and gasTipCap %w", err)
+		return nil, fmt.Errorf("gasFeeCap and gasTipCap cannot be set while dynamicTx is false %w", err)
 	}
 
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
