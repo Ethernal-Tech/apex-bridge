@@ -112,7 +112,7 @@ func (ip *createAddressParams) Execute(
 		}
 
 		atLeast := common.GetRequiredSignaturesForConsensus(uint64(len(keys)))
-		policyScript := wallet.NewPolicyScript(keys, int(atLeast))
+		policyScript := wallet.NewPolicyScript(keys, int(atLeast)) //nolint:gosec
 
 		addr, err := getAddress(ip.networkID, policyScript)
 		if err != nil {
