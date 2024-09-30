@@ -13,25 +13,25 @@ import (
 )
 
 const (
-	splitStringLength = 40
-	potentialFee      = 250_000
+	DefaultPotentialFee = 250_000
+	splitStringLength   = 40
 
 	retryWait       = time.Millisecond * 1000
 	retriesMaxCount = 10
 
-	retriesTxHashInUtxosCount = 60
-	retriesTxHashInUtxosWait  = time.Millisecond * 4000
+	retriesTxHashInUtxosCount = 144
+	retriesTxHashInUtxosWait  = time.Second * 5
 )
 
 type BridgingTxSender struct {
 	cardanoCliBinary   string
-	TxProviderSrc      cardanowallet.ITxProvider
-	TxUtxoRetrieverDst cardanowallet.IUTxORetriever
-	MultiSigAddrSrc    string
-	TestNetMagicSrc    uint
-	PotentialFee       uint64
-	TTLSlotNumberInc   uint64
-	ProtocolParameters []byte
+	txProviderSrc      cardanowallet.ITxProvider
+	txUtxoRetrieverDst cardanowallet.IUTxORetriever
+	multiSigAddrSrc    string
+	testNetMagicSrc    uint
+	potentialFee       uint64
+	ttlSlotNumberInc   uint64
+	protocolParameters []byte
 }
 
 func NewBridgingTxSender(
@@ -41,15 +41,16 @@ func NewBridgingTxSender(
 	testNetMagic uint,
 	multiSigAddr string,
 	ttlSlotNumberInc uint64,
+	potentionalFee uint64,
 ) *BridgingTxSender {
 	return &BridgingTxSender{
 		cardanoCliBinary:   cardanoCliBinary,
-		TxProviderSrc:      txProvider,
-		TxUtxoRetrieverDst: txUtxoRetriever,
-		TestNetMagicSrc:    testNetMagic,
-		MultiSigAddrSrc:    multiSigAddr,
-		PotentialFee:       potentialFee,
-		TTLSlotNumberInc:   ttlSlotNumberInc,
+		txProviderSrc:      txProvider,
+		txUtxoRetrieverDst: txUtxoRetriever,
+		testNetMagicSrc:    testNetMagic,
+		multiSigAddrSrc:    multiSigAddr,
+		potentialFee:       potentionalFee,
+		ttlSlotNumberInc:   ttlSlotNumberInc,
 	}
 }
 
@@ -61,14 +62,14 @@ func (bts *BridgingTxSender) CreateTx(
 	receivers []cardanowallet.TxOutput,
 	feeAmount uint64,
 ) ([]byte, string, error) {
-	qtd, err := bts.TxProviderSrc.GetTip(ctx)
+	qtd, err := bts.txProviderSrc.GetTip(ctx)
 	if err != nil {
 		return nil, "", err
 	}
 
-	protocolParams := bts.ProtocolParameters
+	protocolParams := bts.protocolParameters
 	if protocolParams == nil {
-		protocolParams, err = bts.TxProviderSrc.GetProtocolParameters(ctx)
+		protocolParams, err = bts.txProviderSrc.GetProtocolParameters(ctx)
 		if err != nil {
 			return nil, "", err
 		}
@@ -82,7 +83,7 @@ func (bts *BridgingTxSender) CreateTx(
 	outputsSum := cardanowallet.GetOutputsSum(receivers) + feeAmount
 	outputs := []cardanowallet.TxOutput{
 		{
-			Addr:   bts.MultiSigAddrSrc,
+			Addr:   bts.multiSigAddrSrc,
 			Amount: outputsSum,
 		},
 		{
@@ -90,9 +91,9 @@ func (bts *BridgingTxSender) CreateTx(
 		},
 	}
 
-	desiredSum := outputsSum + bts.PotentialFee + cardanowallet.MinUTxODefaultValue
+	desiredSum := outputsSum + bts.potentialFee + cardanowallet.MinUTxODefaultValue
 
-	inputs, err := cardanowallet.GetUTXOsForAmount(ctx, bts.TxProviderSrc, senderAddr, desiredSum, desiredSum)
+	inputs, err := cardanowallet.GetUTXOsForAmount(ctx, bts.txProviderSrc, senderAddr, desiredSum, desiredSum)
 	if err != nil {
 		return nil, "", err
 	}
@@ -106,8 +107,8 @@ func (bts *BridgingTxSender) CreateTx(
 
 	builder.SetMetaData(metadata).
 		SetProtocolParameters(protocolParams).
-		SetTimeToLive(qtd.Slot + bts.TTLSlotNumberInc).
-		SetTestNetMagic(bts.TestNetMagicSrc).
+		SetTimeToLive(qtd.Slot + bts.ttlSlotNumberInc).
+		SetTestNetMagic(bts.testNetMagicSrc).
 		AddInputs(inputs.Inputs...).
 		AddOutputs(outputs...)
 
@@ -155,7 +156,7 @@ func (bts *BridgingTxSender) SendTx(
 	}
 
 	return cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
-		err := bts.TxProviderSrc.SubmitTx(ctx, txSigned)
+		err := bts.txProviderSrc.SubmitTx(ctx, txSigned)
 
 		return err == nil, err
 	}, isRecoverableError)
@@ -164,7 +165,7 @@ func (bts *BridgingTxSender) SendTx(
 func (bts *BridgingTxSender) WaitForTx(
 	ctx context.Context, receivers []cardanowallet.TxOutput,
 ) error {
-	return WaitForTx(ctx, bts.TxUtxoRetrieverDst, receivers)
+	return WaitForTx(ctx, bts.txUtxoRetrieverDst, receivers)
 }
 
 func (bts *BridgingTxSender) createMetadata(
@@ -224,7 +225,6 @@ func WaitForTx(
 
 				return err == nil, err
 			}, isRecoverableError)
-
 			if errs[idx] != nil {
 				return
 			}
