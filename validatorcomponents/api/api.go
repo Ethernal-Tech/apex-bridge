@@ -91,9 +91,9 @@ func (api *APIImpl) Start() {
 }
 
 func (api *APIImpl) Dispose() error {
-	api.logger.Debug("Stopping api")
-
 	var apiErrors []error
+
+	api.logger.Debug("Calling api shutdown")
 
 	err := api.server.Shutdown(context.Background())
 	if err != nil {
@@ -104,16 +104,13 @@ func (api *APIImpl) Dispose() error {
 
 	select {
 	case <-time.After(time.Second * 5):
-		api.logger.Debug("api not closed after a timeout. calling Close")
+		api.logger.Debug("api not closed after a timeout. Calling forceful Close")
 
-		// if graceful shutdown didn't succeed after 5 seconds, shutdown forcibly
 		if err := api.server.Close(); err != nil {
-			api.logger.Error("error while trying to close api server", "err", err)
-
-			break
+			apiErrors = append(apiErrors, fmt.Errorf("error while trying to close api server. err: %w", err))
 		}
 
-		api.logger.Debug("Successfully closed api")
+		api.logger.Debug("Called forceful Close")
 	case err := <-api.finishDispose:
 		if err != nil {
 			apiErrors = append(apiErrors, err)
