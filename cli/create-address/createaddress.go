@@ -1,6 +1,7 @@
 package clicreateaddress
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -36,7 +37,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
-	results, err := params.Execute(outputter)
+	results, err := params.Execute(context.Background(), outputter)
 	if err != nil {
 		outputter.SetError(err)
 

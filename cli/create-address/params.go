@@ -8,6 +8,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
@@ -15,26 +16,29 @@ import (
 )
 
 const (
-	keyFlag           = "key"
-	networkIDFlag     = "network-id"
-	chainIDFlag       = "chain"
-	bridgeNodeURLFlag = "bridge-url"
-	bridgeSCAddrFlag  = "bridge-addr"
+	keyFlag              = "key"
+	networkIDFlag        = "network-id"
+	chainIDFlag          = "chain"
+	bridgeNodeURLFlag    = "bridge-url"
+	bridgeSCAddrFlag     = "bridge-addr"
+	bridgePrivateKeyFlag = "bridge-key"
 
-	keyFlagDesc           = "cardano verification key for validator"
-	networkIDFlagDesc     = "network ID"
-	bridgeNodeURLFlagDesc = "bridge node url"
-	bridgeSCAddrFlagDesc  = "bridge smart contract address"
-	chainIDFlagDesc       = "cardano chain ID (prime, vector, etc)"
+	keyFlagDesc              = "cardano verification key for validator"
+	networkIDFlagDesc        = "network ID"
+	bridgeNodeURLFlagDesc    = "bridge node url"
+	bridgeSCAddrFlagDesc     = "bridge smart contract address"
+	chainIDFlagDesc          = "cardano chain ID (prime, vector, etc)"
+	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
 )
 
 type createAddressParams struct {
 	keys      []string
 	networkID uint
 
-	bridgeNodeURL string
-	bridgeSCAddr  string
-	chainID       string
+	bridgeNodeURL    string
+	bridgeSCAddr     string
+	chainID          string
+	bridgePrivateKey string
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -97,13 +101,21 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.bridgePrivateKey,
+		bridgePrivateKeyFlag,
+		"",
+		bridgePrivateKeyFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, keyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, keyFlag)
 	cmd.MarkFlagsMutuallyExclusive(chainIDFlag, keyFlag)
+	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, keyFlag)
 }
 
 func (ip *createAddressParams) Execute(
-	outputter common.OutputFormatter,
+	ctx context.Context, outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	if len(ip.keys) > 0 {
 		keys, err := getKeyHashesFromInput(ip.keys)
@@ -125,7 +137,7 @@ func (ip *createAddressParams) Execute(
 	}
 
 	multisigPolicyScript, feePolicyScript, err := getKeyHashesFromBridge(
-		context.Background(), ip.bridgeNodeURL, ip.bridgeSCAddr, ip.chainID, outputter)
+		ctx, ip.bridgeNodeURL, ip.bridgeSCAddr, ip.chainID, outputter)
 	if err != nil {
 		return nil, err
 	}
@@ -140,10 +152,38 @@ func (ip *createAddressParams) Execute(
 		return nil, err
 	}
 
+	if err := ip.trySetChainAdditionalData(ctx, outputter, multisigAddr, feeAddr); err != nil {
+		return nil, err
+	}
+
 	return &CmdResult{
 		multisigAddress: multisigAddr,
 		address:         feeAddr,
 	}, nil
+}
+
+func (ip *createAddressParams) trySetChainAdditionalData(
+	ctx context.Context, outputter common.OutputFormatter, multisigAddr, feeAddr string,
+) error {
+	if ip.bridgePrivateKey == "" {
+		return nil
+	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
+	outputter.WriteOutput()
+
+	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
+	if err != nil {
+		return err
+	}
+
+	bridgeSC, err := eth.NewBridgeSmartContractWithWallet(
+		ip.bridgeNodeURL, ip.bridgeSCAddr, wallet, false, hclog.NewNullLogger())
+	if err != nil {
+		return err
+	}
+
+	return bridgeSC.SetChainAdditionalData(ctx, ip.chainID, multisigAddr, feeAddr)
 }
 
 func getAddress(networkIDInt uint, ps *wallet.PolicyScript) (string, error) {
