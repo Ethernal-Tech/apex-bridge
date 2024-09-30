@@ -365,10 +365,13 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
 			}
 
-			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData, logger)
+			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData)
 			if err != nil {
 				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
 			}
+
+			logger.Debug("Validators chain data retrieved",
+				"data", eth.GetChainValidatorsDataInfoString(chainID, validatorsData))
 
 			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
 				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),

@@ -332,7 +332,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		cardanoCliBinary,
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc)
+		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc, cardanotx.DefaultPotentialFee)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
 	if err != nil {
@@ -501,7 +501,7 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 
 			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
 
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 15, time.Second*10, func() (bool, error) {
+			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 144, time.Second*5, func() (bool, error) {
 				balance, err := client.BalanceAt(context.Background(), addr, nil)
 
 				return err == nil && balance.Cmp(expectedBalance) >= 0, err

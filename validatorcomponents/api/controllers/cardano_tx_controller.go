@@ -270,10 +270,8 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
 		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
 		sourceChainConfig.BridgingAddresses.BridgingAddress,
-		cardanoConfig.TTLSlotNumberInc,
+		cardanoConfig.TTLSlotNumberInc, cardanoConfig.PotentialFee,
 	)
-
-	bridgingTxSender.PotentialFee = cardanoConfig.PotentialFee
 
 	receivers := make([]wallet.TxOutput, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {

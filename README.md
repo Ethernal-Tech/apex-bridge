@@ -91,6 +91,7 @@ $ go run ./main.go create-address \
         --network-id network_ID \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
+        --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
         --chain prime
 ```
 
@@ -156,43 +157,58 @@ $ go run ./main.go generate-configs \
         --api-keys test_api_key_1
 ```
 
-# How to Send a Bridging Transaction from Prime to Vector (and Vice Versa)
+# Example of sending a transaction from the prime to the vector
 ```shell
-$ go run ./main.go sendtx \
-        --key 58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0 \
-        --ogmios-src http://localhost:1337 \
-        --addr-multisig-src addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx \
+apex-bridge sendtx \
+        --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
+        --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --ogmios-dst http://ogmios.vector.testnet.apexfusion.org:1337 \
         --chain-dst vector \
-        --receiver vector_test1vgxk3ha6hmftgjzrjlrxrndmqrg43y862pu909r87q8kpas0c0mzc:1_000_010 \
-        --fee 1_100_000 \
-        --ogmios-dst http://localhost:1338 
+        --receiver vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
+        --fee 1_100_000
 ```
 
-# How to Send a Bridging Transaction from Nexus to Prime
+# Example of sending a transaction from the vector to the prime
 ```shell
-$ go run ./main.go sendtx \
-        --tx-type evm \
-        --key a7dc97a721e4ef7503bfc120fdf343030c2070d0cc0db8d1d9384ecf0bcd0aaf \
-        --nexus-url http://127.0.0.1:12001 \
-        --gateway-addr 0x1BBe094400C854934e46ce53E1f4Dd94f04F9376 \
+apex-bridge sendtx \
+        --key VECTOR_WALLET_PRIVATE_KEY \
+        --testnet-src 1127 \
+        --addr-multisig-src vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg \
+        --ogmios-src http://ogmios.vector.testnet.apexfusion.org:1337 \
+        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --chain-dst prime \
-        --receiver addr_test1wq8vxyeq8waqx8cw8p400psmy0x2jd6jt78kffkrs670ctgfnasnk:1000000000000000000 \
-        --fee 1000010000000000000 \
-        --ogmios-dst http://localhost:1337
+        --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
+        --fee 1_100_000 \
+        --network-id-src 2
 ```
 
-# How to Send a Bridging Transaction from Prime to Nexus
+# Example of sending a transaction from the prime to the nexus
 ```shell
-$ go run ./main.go sendtx \
-        --key 58201825bce09711e1563fc1702587da6892d1d869894386323bd4378ea5e3d6cba0 \
-        --ogmios-src http://localhost:1337 \
-        --addr-multisig-src addr_test1vzkcuz4e9c07hl90gjyf66xr4eutt8wfchafupdzwgs5cyc7996zx \
+apex-bridge sendtx \
+        --key PRIME_WALLET_PRIVATE_KEY \
+        --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --testnet-src 3311 \
         --chain-dst nexus \
-        --receiver 0x71C7656EC7ab88b098defB751B7401B5f6d8976F:1_000_000 \
+        --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
-        --nexus-url http://127.0.0.1:12001
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c
+
+```
+
+# Example of sending a transaction from the nexus to the prime
+```shell
+apex-bridge sendtx \
+        --tx-type evm \
+        --key NEXUS_WALLET_PRIVATE_KEY \
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --gateway-addr GATEWAY_PROXY_ADDRESS \
+        --chain-dst prime \
+        --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
+        --fee 1000010000000000000 \
+        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
 
 # How to Deploy Nexus Smart Contracts
@@ -205,7 +221,8 @@ $ go run ./main.go deploy-evm \
         --clone \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
-        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY     
+        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
+        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
 -- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
 Example with explicit bls keys:

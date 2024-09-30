@@ -7,7 +7,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +39,7 @@ func Test_GetPolicyScripts_And_GetMultisigAddresses(t *testing.T) {
 		}
 	}
 
-	ps, psFee, err := GetPolicyScripts(validatorsData, hclog.NewNullLogger())
+	ps, psFee, err := GetPolicyScripts(validatorsData)
 	require.NoError(t, err)
 
 	addr, feeAddr, err := GetMultisigAddresses(
