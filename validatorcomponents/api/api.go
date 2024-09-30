@@ -20,7 +20,7 @@ type APIImpl struct {
 	server    *http.Server
 	logger    hclog.Logger
 
-	finishDispose chan error
+	serverClosed chan error
 }
 
 var _ core.API = (*APIImpl)(nil)
@@ -72,28 +72,23 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	api.finishDispose = make(chan error)
+	api.serverClosed = make(chan error)
 
 	err := api.server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error after api ListenAndServe", "err", err)
 
-		api.logger.Debug("api.finishDispose <- err", "err", err)
-		api.finishDispose <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
+		api.serverClosed <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
 
 		return
 	}
 
-	api.logger.Debug("api.finishDispose <- nil", "err", err)
-	api.finishDispose <- nil
-
 	api.logger.Debug("Stopped api")
+	api.serverClosed <- nil
 }
 
 func (api *APIImpl) Dispose() error {
 	var apiErrors []error
-
-	api.logger.Debug("Calling api shutdown")
 
 	err := api.server.Shutdown(context.Background())
 	if err != nil {
@@ -104,20 +99,20 @@ func (api *APIImpl) Dispose() error {
 
 	select {
 	case <-time.After(time.Second * 5):
-		api.logger.Debug("api not closed after a timeout. Calling forceful Close")
+		api.logger.Debug("api not closed after a timeout")
 
 		if err := api.server.Close(); err != nil {
 			apiErrors = append(apiErrors, fmt.Errorf("error while trying to close api server. err: %w", err))
 		}
 
 		api.logger.Debug("Called forceful Close")
-	case err := <-api.finishDispose:
+	case err := <-api.serverClosed:
 		if err != nil {
 			apiErrors = append(apiErrors, err)
 		}
-
-		api.logger.Debug("case <-api.finishDispose:")
 	}
+
+	api.logger.Debug("Finished disposing")
 
 	if len(apiErrors) > 0 {
 		return errors.Join(apiErrors...)
