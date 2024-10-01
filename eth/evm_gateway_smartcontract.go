@@ -22,13 +22,16 @@ type EVMGatewaySmartContractImpl struct {
 	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
 	depositGasLimit      uint64
+	gasPrice             *big.Int
+	gasFeeCap            *big.Int
+	gasTipCap            *big.Int
 }
 
 var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractImpl)(nil)
 
 func NewEVMGatewaySmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool,
-	depositGasLimit uint64, logger hclog.Logger,
+	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, depositGasLimit uint64,
+	gasPrice, gasFeeCap, gasTipCap *big.Int, logger hclog.Logger,
 ) (*EVMGatewaySmartContractImpl, error) {
 	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
 	if err != nil {
@@ -39,6 +42,9 @@ func NewEVMGatewaySmartContractWithWallet(
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 		depositGasLimit:      depositGasLimit,
+		gasPrice:             gasPrice,
+		gasFeeCap:            gasFeeCap,
+		gasTipCap:            gasTipCap,
 	}, nil
 }
 
@@ -82,6 +88,9 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = estimatedGas
+		opts.GasPrice = bsc.gasPrice
+		opts.GasFeeCap = bsc.gasFeeCap
+		opts.GasTipCap = bsc.gasTipCap
 
 		return contract.Deposit(opts, signature, bitmap, data)
 	})

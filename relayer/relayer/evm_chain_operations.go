@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -45,8 +46,23 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
 
+	var gasPrice, gasFeeCap, gasTipCap *big.Int
+
+	if config.GasPrice > 0 {
+		gasPrice = new(big.Int).SetUint64(config.GasPrice)
+	}
+
+	if config.GasFeeCap > 0 {
+		gasFeeCap = new(big.Int).SetUint64(config.GasFeeCap)
+	}
+
+	if config.GasTipCap > 0 {
+		gasTipCap = new(big.Int).SetUint64(config.GasTipCap)
+	}
+
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
-		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit, logger)
+		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit,
+		gasPrice, gasFeeCap, gasTipCap, logger)
 	if err != nil {
 		return nil, err
 	}
