@@ -22,7 +22,7 @@ type APIImpl struct {
 	server    *http.Server
 	logger    hclog.Logger
 
-	serverClosedCh chan error
+	serverClosedCh chan bool
 }
 
 var _ core.API = (*APIImpl)(nil)
@@ -68,35 +68,32 @@ func NewAPI(
 }
 
 func (api *APIImpl) Start() {
-	api.logger.Debug("Starting api")
 	api.server = &http.Server{
 		Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
 		Handler:           api.handler,
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	api.serverClosedCh = make(chan error)
+	api.serverClosedCh = make(chan bool)
 
 	err := common.RetryForever(api.ctx, 2*time.Second, func(context.Context) error {
+		api.logger.Debug("Trying to start api")
+
 		err := api.server.ListenAndServe()
 		if err == nil || err == http.ErrServerClosed {
 			return nil
 		}
 
+		api.logger.Error("Error while trying to start api. Retrying...", "err", err)
+
 		return err
 	})
-	if err != nil && err != http.ErrServerClosed {
+	if err != nil {
 		api.logger.Error("error after api ListenAndServe", "err", err)
-
-		api.logger.Debug("api.finishDispose <- err", "err", err) //temp
-		api.serverClosedCh <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
-
-		return
 	}
 
-	api.logger.Debug("api.finishDispose <- err", "err", err) //temp
 	api.logger.Debug("Stopped api")
-	api.serverClosedCh <- nil
+	api.serverClosedCh <- true
 }
 
 func (api *APIImpl) Dispose() error {
@@ -118,10 +115,7 @@ func (api *APIImpl) Dispose() error {
 		}
 
 		api.logger.Debug("Called forceful Close")
-	case err := <-api.serverClosedCh:
-		if err != nil {
-			apiErrors = append(apiErrors, err)
-		}
+	case <-api.serverClosedCh:
 	}
 
 	api.logger.Debug("Finished disposing")
