@@ -27,6 +27,11 @@ const (
 	defaultGasFeeMultiplier = 170 // 170%
 )
 
+var (
+	errGasPriceSetWhileDynamicTx   = errors.New("gasPrice cannot be set while dynamicTx is true")
+	errGasCapsSetWhileNotDynamicTx = errors.New("gasFeeCap and gasTipCap cannot be set while dynamicTx is false")
+)
+
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
@@ -235,6 +240,10 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 
 	// Gas price
 	if !t.isDynamic {
+		if txOpts.GasFeeCap != nil || txOpts.GasTipCap != nil {
+			return errGasCapsSetWhileNotDynamicTx
+		}
+
 		if txOpts.GasPrice == nil {
 			if t.zeroGasPrice {
 				txOpts.GasPrice = big.NewInt(0)
@@ -248,6 +257,10 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 			}
 		}
 	} else if txOpts.GasFeeCap == nil || txOpts.GasTipCap == nil {
+		if txOpts.GasPrice != nil {
+			return errGasPriceSetWhileDynamicTx
+		}
+
 		gasTipCap, err := t.client.SuggestGasTipCap(ctx)
 		if err != nil {
 			return err

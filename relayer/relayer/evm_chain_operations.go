@@ -46,27 +46,18 @@ func NewEVMChainOperations(
 		return nil, fmt.Errorf("failed to load wallet for relayer: %w", err)
 	}
 
-	bigIntZero := new(big.Int).SetUint64(0)
+	var gasPrice, gasFeeCap, gasTipCap *big.Int
 
-	gasPrice := new(big.Int).SetUint64(config.GasPrice)
-	if gasPrice.Cmp(bigIntZero) <= 0 {
-		gasPrice = nil
+	if config.GasPrice > 0 {
+		gasPrice = new(big.Int).SetUint64(config.GasPrice)
 	}
 
-	gasFeeCap := new(big.Int).SetUint64(config.GasFeeCap)
-	if gasFeeCap.Cmp(bigIntZero) <= 0 {
-		gasFeeCap = nil
+	if config.GasFeeCap > 0 {
+		gasFeeCap = new(big.Int).SetUint64(config.GasFeeCap)
 	}
 
-	gasTipCap := new(big.Int).SetUint64(config.GasTipCap)
-	if gasTipCap.Cmp(bigIntZero) <= 0 {
-		gasTipCap = nil
-	}
-
-	if config.DynamicTx && gasPrice != nil {
-		return nil, fmt.Errorf("gasPrice cannot be set while dynamicTx is true %w", err)
-	} else if !config.DynamicTx && (gasTipCap != nil || gasFeeCap != nil) {
-		return nil, fmt.Errorf("gasFeeCap and gasTipCap cannot be set while dynamicTx is false %w", err)
+	if config.GasTipCap > 0 {
+		gasTipCap = new(big.Int).SetUint64(config.GasTipCap)
 	}
 
 	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
