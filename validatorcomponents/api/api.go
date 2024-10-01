@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/gorilla/handlers"
@@ -15,18 +16,19 @@ import (
 )
 
 type APIImpl struct {
+	ctx       context.Context
 	apiConfig core.APIConfig
 	handler   http.Handler
 	server    *http.Server
 	logger    hclog.Logger
 
-	serverClosed chan error
+	serverClosedCh chan error
 }
 
 var _ core.API = (*APIImpl)(nil)
 
 func NewAPI(
-	apiConfig core.APIConfig,
+	ctx context.Context, apiConfig core.APIConfig,
 	controllers []core.APIController, logger hclog.Logger,
 ) (
 	*APIImpl, error,
@@ -58,6 +60,7 @@ func NewAPI(
 	handler := handlers.CORS(originsOk, headersOk, methodsOk)(router)
 
 	return &APIImpl{
+		ctx:       ctx,
 		apiConfig: apiConfig,
 		handler:   handler,
 		logger:    logger,
@@ -72,19 +75,28 @@ func (api *APIImpl) Start() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	api.serverClosed = make(chan error)
+	api.serverClosedCh = make(chan error)
 
-	err := api.server.ListenAndServe()
+	err := common.RetryForever(api.ctx, 2*time.Second, func(context.Context) error {
+		err := api.server.ListenAndServe()
+		if err == nil || err == http.ErrServerClosed {
+			return nil
+		}
+
+		return err
+	})
 	if err != nil && err != http.ErrServerClosed {
 		api.logger.Error("error after api ListenAndServe", "err", err)
 
-		api.serverClosed <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
+		api.logger.Debug("api.finishDispose <- err", "err", err) //temp
+		api.serverClosedCh <- fmt.Errorf("error after api ListenAndServe. err: %w", err)
 
 		return
 	}
 
+	api.logger.Debug("api.finishDispose <- err", "err", err) //temp
 	api.logger.Debug("Stopped api")
-	api.serverClosed <- nil
+	api.serverClosedCh <- nil
 }
 
 func (api *APIImpl) Dispose() error {
@@ -106,7 +118,7 @@ func (api *APIImpl) Dispose() error {
 		}
 
 		api.logger.Debug("Called forceful Close")
-	case err := <-api.serverClosed:
+	case err := <-api.serverClosedCh:
 		if err != nil {
 			apiErrors = append(apiErrors, err)
 		}
@@ -114,11 +126,7 @@ func (api *APIImpl) Dispose() error {
 
 	api.logger.Debug("Finished disposing")
 
-	if len(apiErrors) > 0 {
-		return errors.Join(apiErrors...)
-	}
-
-	return nil
+	return errors.Join(apiErrors...)
 }
 
 func withAPIKeyAuth(
