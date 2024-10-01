@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -20,6 +21,8 @@ type APIImpl struct {
 	handler   http.Handler
 	server    *http.Server
 	logger    hclog.Logger
+
+	serverClosedCh chan bool
 }
 
 var _ core.API = (*APIImpl)(nil)
@@ -65,42 +68,59 @@ func NewAPI(
 }
 
 func (api *APIImpl) Start() {
-	api.logger.Debug("Starting api")
 	api.server = &http.Server{
 		Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
 		Handler:           api.handler,
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	err := common.ExecuteWithRetry(api.ctx, 5, time.Second, func(context.Context) (bool, error) {
+	api.serverClosedCh = make(chan bool)
+
+	err := common.RetryForever(api.ctx, 2*time.Second, func(context.Context) error {
+		api.logger.Debug("Trying to start api")
+
 		err := api.server.ListenAndServe()
+		if err == nil || err == http.ErrServerClosed {
+			return nil
+		}
 
-		return (err == nil || err == http.ErrServerClosed), err
+		api.logger.Error("Error while trying to start api. Retrying...", "err", err)
+
+		return err
 	})
-
-	if err != nil && err != http.ErrServerClosed {
-		api.logger.Error("error while trying to start api server", "err", err)
-
-		return
+	if err != nil {
+		api.logger.Error("error after api ListenAndServe", "err", err)
 	}
 
 	api.logger.Debug("Stopped api")
+	api.serverClosedCh <- true
 }
 
 func (api *APIImpl) Dispose() error {
-	api.logger.Debug("Stopping api")
+	var apiErrors []error
 
 	err := api.server.Shutdown(context.Background())
+	if err != nil {
+		apiErrors = append(apiErrors, fmt.Errorf("error while trying to shutdown api server. err %w", err))
+	}
 
 	api.logger.Debug("Called api shutdown")
 
-	if err != nil {
-		api.logger.Error("error while trying to shutdown api server", "err", err)
+	select {
+	case <-time.After(time.Second * 5):
+		api.logger.Debug("api not closed after a timeout")
 
-		return fmt.Errorf("error while trying to shutdown api server. err %w", err)
+		if err := api.server.Close(); err != nil {
+			apiErrors = append(apiErrors, fmt.Errorf("error while trying to close api server. err: %w", err))
+		}
+
+		api.logger.Debug("Called forceful Close")
+	case <-api.serverClosedCh:
 	}
 
-	return nil
+	api.logger.Debug("Finished disposing")
+
+	return errors.Join(apiErrors...)
 }
 
 func withAPIKeyAuth(
