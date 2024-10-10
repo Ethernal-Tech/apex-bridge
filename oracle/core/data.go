@@ -41,6 +41,12 @@ type BridgeExpectedCardanoDBTx struct {
 	IsInvalid   bool `json:"is_invalid"`
 }
 
+type ChainBalance struct {
+	ChainID string `json:"chain_id"`
+	Height  uint64 `json:"height"` // Block Number/Slot
+	Amount  string `json:"amount"`
+}
+
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{
 		BlockSlot:     tx.BlockSlot,
@@ -106,4 +112,15 @@ func (tx BridgeExpectedCardanoTx) Key() []byte {
 
 func (tx BridgeExpectedCardanoDBTx) Key() []byte {
 	return tx.ToExpectedTxKey()
+}
+
+func (bl ChainBalance) Key() []byte {
+	bytes := []byte(bl.ChainID)
+
+	heightBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBytes, bl.Height)
+
+	bytes = append(bytes, heightBytes...)
+
+	return bytes
 }

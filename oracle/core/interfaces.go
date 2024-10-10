@@ -25,6 +25,13 @@ type CardanoTxsDB interface {
 	GetProcessedTx(chainID string, txHash indexer.Hash) (*ProcessedCardanoTx, error)
 }
 
+type BalanceStatesDB interface {
+	AddChainBalance(chainID string, balance *ChainBalance) error
+	GetChainBalance(chainID string, height uint64) (*ChainBalance, error)
+	GetAllChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
+	GetLastChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
+}
+
 type CardanoTxsProcessorDB interface {
 	CardanoTxsDB
 	BridgeExpectedCardanoTxsDB
@@ -32,6 +39,7 @@ type CardanoTxsProcessorDB interface {
 
 type Database interface {
 	CardanoTxsProcessorDB
+	BalanceStatesDB
 	Init(filePath string) error
 	Close() error
 }

@@ -17,6 +17,7 @@ var (
 	unprocessedTxsBucket = []byte("UnprocessedTxs")
 	processedTxsBucket   = []byte("ProcessedTxs")
 	expectedTxsBucket    = []byte("ExpectedTxs")
+	chainBalancesBucket  = []byte("ChainBalances")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -371,4 +372,111 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 
 		return nil
 	})
+}
+
+func (bd *BBoltDatabase) AddChainBalance(chainID string, balance *core.ChainBalance) error {
+	return bd.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(chainBalancesBucket)
+		key := balance.Key()
+
+		if data := bucket.Get(key); len(data) == 0 {
+			bytes, err := json.Marshal(balance)
+			if err != nil {
+				return fmt.Errorf("could not marshal chain balance: %w", err)
+			}
+
+			if err = bucket.Put(key, bytes); err != nil {
+				return fmt.Errorf("expected tx write error: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (bd *BBoltDatabase) GetChainBalance(chainID string, height uint64) (*core.ChainBalance, error) {
+	var result *core.ChainBalance
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(chainBalancesBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var balance *core.ChainBalance
+
+			if err := json.Unmarshal(v, &balance); err != nil {
+				return err
+			}
+
+			if balance.ChainID == chainID && balance.Height == height {
+				result = balance
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BBoltDatabase) GetAllChainBalances(chainID string, threshold int) ([]*core.ChainBalance, error) {
+	var result []*core.ChainBalance
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(chainBalancesBucket).Cursor()
+
+		for k, v := cursor.Last(); k != nil; k, v = cursor.Prev() {
+			var balance *core.ChainBalance
+
+			if err := json.Unmarshal(v, &balance); err != nil {
+				return err
+			}
+
+			if balance.ChainID == chainID {
+				result = append(result, balance)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BBoltDatabase) GetLastChainBalances(chainID string, threshold int) ([]*core.ChainBalance, error) {
+	var result []*core.ChainBalance
+
+	err := bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(chainBalancesBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var balance *core.ChainBalance
+
+			if err := json.Unmarshal(v, &balance); err != nil {
+				return err
+			}
+
+			if balance.ChainID == chainID {
+				result = append(result, balance)
+				if threshold > 0 && len(result) == threshold {
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
