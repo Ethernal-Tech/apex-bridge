@@ -274,8 +274,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		h := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, h)
+		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.NotNil(t, processedTx)
 		require.True(t, processedTx.IsInvalid)
 	})

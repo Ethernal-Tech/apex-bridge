@@ -151,6 +151,19 @@ func (m *EthTxsProcessorDBMock) MarkUnprocessedTxsAsProcessed(processedTxs []*Pr
 	return args.Error(0)
 }
 
+func (m *EthTxsProcessorDBMock) GetProcessedTxByInnerActionTxHash(
+	chainID string, innerActionTxHash ethgo.Hash,
+) (*ProcessedEthTx, error) {
+	args := m.Called(chainID, innerActionTxHash)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(*ProcessedEthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 func (m *EthTxsProcessorDBMock) GetProcessedTx(
 	chainID string, txHash ethgo.Hash,
 ) (*ProcessedEthTx, error) {

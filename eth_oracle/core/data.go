@@ -11,24 +11,26 @@ type EthTx struct {
 	OriginChainID string `json:"origin_chain_id"`
 	Priority      uint8  `json:"priority"`
 
-	BlockNumber uint64        `json:"block_number"`
-	BlockHash   ethgo.Hash    `json:"block_hash"`
-	Hash        ethgo.Hash    `json:"hash"`
-	TxIndex     uint64        `json:"tx_index"`
-	Value       *big.Int      `json:"value"`
-	Removed     bool          `json:"removed"`
-	LogIndex    uint64        `json:"log_index"`
-	Address     ethgo.Address `json:"addr"`
-	Metadata    []byte        `json:"metadata"`
+	BlockNumber     uint64        `json:"block_number"`
+	BlockHash       ethgo.Hash    `json:"block_hash"`
+	Hash            ethgo.Hash    `json:"hash"`
+	TxIndex         uint64        `json:"tx_index"`
+	Value           *big.Int      `json:"value"`
+	Removed         bool          `json:"removed"`
+	LogIndex        uint64        `json:"log_index"`
+	Address         ethgo.Address `json:"addr"`
+	Metadata        []byte        `json:"metadata"`
+	InnerActionHash ethgo.Hash    `json:"ia_hash"`
 }
 
 type ProcessedEthTx struct {
-	BlockNumber   uint64     `json:"block_number"`
-	BlockHash     ethgo.Hash `json:"block_hash"`
-	OriginChainID string     `json:"origin_chain_id"`
-	Hash          ethgo.Hash `json:"hash"`
-	Priority      uint8      `json:"priority"`
-	IsInvalid     bool       `json:"is_invalid"`
+	BlockNumber     uint64     `json:"block_number"`
+	BlockHash       ethgo.Hash `json:"block_hash"`
+	OriginChainID   string     `json:"origin_chain_id"`
+	Hash            ethgo.Hash `json:"hash"`
+	Priority        uint8      `json:"priority"`
+	IsInvalid       bool       `json:"is_invalid"`
+	InnerActionHash ethgo.Hash `json:"ia_hash"`
 }
 
 type BridgeExpectedEthTx struct {
@@ -65,12 +67,13 @@ func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedEthTx, bloc
 
 func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
 	return &ProcessedEthTx{
-		BlockNumber:   tx.BlockNumber,
-		BlockHash:     tx.BlockHash,
-		OriginChainID: tx.OriginChainID,
-		Hash:          tx.Hash,
-		Priority:      tx.Priority,
-		IsInvalid:     isInvalid,
+		BlockNumber:     tx.BlockNumber,
+		BlockHash:       tx.BlockHash,
+		OriginChainID:   tx.OriginChainID,
+		Hash:            tx.Hash,
+		Priority:        tx.Priority,
+		InnerActionHash: tx.InnerActionHash,
+		IsInvalid:       isInvalid,
 	}
 }
 
@@ -96,6 +99,10 @@ func ToEthTxKey(originChainID string, txHash ethgo.Hash) []byte {
 
 func (tx EthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.OriginChainID, tx.Hash)
+}
+
+func (tx EthTx) ToExpectedEthTxKey() []byte {
+	return ToEthTxKey(tx.OriginChainID, tx.InnerActionHash)
 }
 
 func (tx ProcessedEthTx) ToEthTxKey() []byte {

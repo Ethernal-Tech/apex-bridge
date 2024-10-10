@@ -1,6 +1,7 @@
 package databaseaccess
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -192,6 +193,33 @@ func (bd *BBoltDatabase) GetProcessedTx(
 	err = bd.db.View(func(tx *bbolt.Tx) error {
 		if data := tx.Bucket(processedTxsBucket).Get(core.ToEthTxKey(chainID, txHash)); len(data) > 0 {
 			return json.Unmarshal(data, &result)
+		}
+
+		return nil
+	})
+
+	return result, err
+}
+
+func (bd *BBoltDatabase) GetProcessedTxByInnerActionTxHash(
+	chainID string, innerActionTxHash ethgo.Hash,
+) (result *core.ProcessedEthTx, err error) {
+	err = bd.db.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(processedTxsBucket).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var processedTx *core.ProcessedEthTx
+
+			if err := json.Unmarshal(v, &processedTx); err != nil {
+				return err
+			}
+
+			if processedTx.OriginChainID == chainID && len(processedTx.InnerActionHash) > 0 &&
+				bytes.Equal(processedTx.InnerActionHash[:], innerActionTxHash[:]) {
+				result = processedTx
+
+				return nil
+			}
 		}
 
 		return nil
