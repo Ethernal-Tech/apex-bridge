@@ -33,6 +33,12 @@ type ProcessedEthTx struct {
 	InnerActionHash ethgo.Hash `json:"ia_hash"`
 }
 
+type ProcessedEthTxByInnerAction struct {
+	OriginChainID   string     `json:"origin_chain_id"`
+	Hash            ethgo.Hash `json:"hash"`
+	InnerActionHash ethgo.Hash `json:"ia_hash"`
+}
+
 type BridgeExpectedEthTx struct {
 	ChainID  string     `json:"chain_id"`
 	Hash     ethgo.Hash `json:"hash"`
@@ -77,6 +83,14 @@ func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
 	}
 }
 
+func (tx *ProcessedEthTx) ToProcessedTxByInnerAction() *ProcessedEthTxByInnerAction {
+	return &ProcessedEthTxByInnerAction{
+		OriginChainID:   tx.OriginChainID,
+		Hash:            tx.Hash,
+		InnerActionHash: tx.InnerActionHash,
+	}
+}
+
 func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, originChainID string, txHash ethgo.Hash) []byte {
 	bytes := [9]byte{priority}
 
@@ -115,6 +129,10 @@ func (tx EthTx) Key() []byte {
 
 func (tx ProcessedEthTx) Key() []byte {
 	return tx.ToEthTxKey()
+}
+
+func (tx ProcessedEthTx) KeyByInnerAction() []byte {
+	return ToEthTxKey(tx.OriginChainID, tx.InnerActionHash)
 }
 
 func (tx BridgeExpectedEthTx) ToEthTxKey() []byte {

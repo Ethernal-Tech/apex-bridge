@@ -713,19 +713,22 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
-			var txHash common.Hash
+			var (
+				txHash common.Hash
+				found  bool
+			)
 
 			for _, processedTx := range processedTxs {
 				if processedTx.OriginChainID == common.ToStrChainID(beClaim.ChainId) &&
-					len(processedTx.InnerActionHash) > 0 &&
-					bytes.Equal(processedTx.InnerActionHash[:], beClaim.ObservedTransactionHash[:]) {
+					processedTx.InnerActionHash == beClaim.ObservedTransactionHash {
 					txHash = common.Hash(processedTx.Hash)
+					found = true
 
 					break
 				}
 			}
 
-			if len(txHash) == 0 {
+			if !found {
 				bp.logger.Error(
 					"Failed to get txHash of a processed tx, based on BatchExecutedClaim.ObservedTransactionHash",
 					"bec", beClaim)
