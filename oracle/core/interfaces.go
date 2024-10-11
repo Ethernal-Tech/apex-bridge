@@ -26,7 +26,7 @@ type CardanoTxsDB interface {
 }
 
 type BalanceStatesDB interface {
-	AddChainBalance(chainID string, balance *ChainBalance) error
+	AddChainBalance(chainID string, height uint64, balance string) error
 	GetChainBalance(chainID string, height uint64) (*ChainBalance, error)
 	GetAllChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
 	GetLastChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
@@ -89,4 +89,10 @@ type BridgeSubmitter interface {
 type ConfirmedBlocksSubmitter interface {
 	StartSubmit()
 	GetChainID() string
+}
+
+type ChainBalanceFetcher interface {
+	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
+	// NewUnprocessedEvmTxs(originChainID string, txs []*indexer.Tx) error
+	Start()
 }

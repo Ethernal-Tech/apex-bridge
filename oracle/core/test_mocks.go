@@ -29,6 +29,26 @@ func (m *CardanoTxsProcessorMock) Start() {
 
 var _ CardanoTxsProcessor = (*CardanoTxsProcessorMock)(nil)
 
+type ChainBalanceFetcherMock struct {
+	mock.Mock
+	NewUnprocessedTxsFn func(originChainId string, txs []*indexer.Tx) error
+}
+
+func (m *ChainBalanceFetcherMock) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
+	if m.NewUnprocessedTxsFn != nil {
+		return m.NewUnprocessedTxsFn(originChainID, txs)
+	}
+
+	args := m.Called(originChainID, txs)
+
+	return args.Error(0)
+}
+
+func (m *ChainBalanceFetcherMock) Start() {
+}
+
+var _ ChainBalanceFetcher = (*ChainBalanceFetcherMock)(nil)
+
 type BridgeDataFetcherMock struct {
 	mock.Mock
 }

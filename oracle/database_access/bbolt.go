@@ -374,13 +374,18 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 	})
 }
 
-func (bd *BBoltDatabase) AddChainBalance(chainID string, balance *core.ChainBalance) error {
+func (bd *BBoltDatabase) AddChainBalance(chainID string, height uint64, balance string) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(chainBalancesBucket)
-		key := balance.Key()
+		chainBalance := core.ChainBalance{
+			ChainID: chainID,
+			Height:  height,
+			Amount:  balance,
+		}
+		key := chainBalance.Key()
 
 		if data := bucket.Get(key); len(data) == 0 {
-			bytes, err := json.Marshal(balance)
+			bytes, err := json.Marshal(chainBalance)
 			if err != nil {
 				return fmt.Errorf("could not marshal chain balance: %w", err)
 			}

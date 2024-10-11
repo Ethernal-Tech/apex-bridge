@@ -28,7 +28,9 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 func NewCardanoChainObserver(
 	ctx context.Context,
 	config *core.CardanoChainConfig,
-	txsProcessor core.CardanoTxsProcessor, oracleDB core.CardanoTxsProcessorDB,
+	txsProcessor core.CardanoTxsProcessor,
+	balanceFetcher core.ChainBalanceFetcher,
+	oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
@@ -53,6 +55,11 @@ func NewCardanoChainObserver(
 
 		// Process confirmed Txs
 		err = txsProcessor.NewUnprocessedTxs(config.ChainID, txs)
+		if err != nil {
+			return err
+		}
+
+		err = balanceFetcher.NewUnprocessedTxs(config.ChainID, txs)
 		if err != nil {
 			return err
 		}
