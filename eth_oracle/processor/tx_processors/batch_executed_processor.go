@@ -45,7 +45,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 	}
 
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oracleCore.BatchExecutedClaim{
-		ObservedTransactionHash: tx.Hash,
+		ObservedTransactionHash: tx.InnerActionHash,
 		ChainId:                 common.ToNumChainID(tx.OriginChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 	})

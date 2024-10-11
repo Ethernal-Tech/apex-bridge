@@ -24,6 +24,7 @@ type EthTxsDB interface {
 	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedEthTx) error
 	AddProcessedTxs(processedTxs []*ProcessedEthTx) error
 	GetProcessedTx(chainID string, txHash ethgo.Hash) (*ProcessedEthTx, error)
+	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash ethgo.Hash) (*ProcessedEthTx, error)
 }
 
 type EthTxsProcessorDB interface {

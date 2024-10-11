@@ -14,9 +14,10 @@ type BBoltDatabase struct {
 }
 
 var (
-	unprocessedTxsBucket = []byte("UnprocessedTxs")
-	processedTxsBucket   = []byte("ProcessedTxs")
-	expectedTxsBucket    = []byte("ExpectedTxs")
+	unprocessedTxsBucket            = []byte("UnprocessedTxs")
+	processedTxsBucket              = []byte("ProcessedTxs")
+	processedTxsByInnerActionBucket = []byte("ProcessedTxsByInnerAction")
+	expectedTxsBucket               = []byte("ExpectedTxs")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -30,7 +31,10 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
+		for _, bn := range [][]byte{
+			unprocessedTxsBucket, processedTxsBucket,
+			expectedTxsBucket, processedTxsByInnerActionBucket,
+		} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -160,6 +164,16 @@ func (bd *BBoltDatabase) MarkUnprocessedTxsAsProcessed(processedTxs []*core.Proc
 				return fmt.Errorf("processed tx write error: %w", err)
 			}
 
+			innerActionTxBytes, err := json.Marshal(processedTx.ToProcessedTxByInnerAction())
+			if err != nil {
+				return fmt.Errorf("could not marshal processed tx by inner action: %w", err)
+			}
+
+			if err = tx.Bucket(processedTxsByInnerActionBucket).Put(
+				processedTx.KeyByInnerAction(), innerActionTxBytes); err != nil {
+				return fmt.Errorf("processed tx by inner action write error: %w", err)
+			}
+
 			if err := tx.Bucket(unprocessedTxsBucket).Delete(processedTx.ToUnprocessedTxKey()); err != nil {
 				return fmt.Errorf("could not remove from unprocessed txs: %w", err)
 			}
@@ -192,6 +206,29 @@ func (bd *BBoltDatabase) GetProcessedTx(
 	err = bd.db.View(func(tx *bbolt.Tx) error {
 		if data := tx.Bucket(processedTxsBucket).Get(core.ToEthTxKey(chainID, txHash)); len(data) > 0 {
 			return json.Unmarshal(data, &result)
+		}
+
+		return nil
+	})
+
+	return result, err
+}
+
+func (bd *BBoltDatabase) GetProcessedTxByInnerActionTxHash(
+	chainID string, innerActionTxHash ethgo.Hash,
+) (result *core.ProcessedEthTx, err error) {
+	err = bd.db.View(func(tx *bbolt.Tx) error {
+		var processedTxByInnerAction *core.ProcessedEthTxByInnerAction
+		if data := tx.Bucket(processedTxsByInnerActionBucket).Get(
+			core.ToEthTxKey(chainID, innerActionTxHash)); len(data) > 0 {
+			if err := json.Unmarshal(data, &processedTxByInnerAction); err != nil {
+				return err
+			}
+
+			if data := tx.Bucket(processedTxsBucket).Get(
+				core.ToEthTxKey(chainID, processedTxByInnerAction.Hash)); len(data) > 0 {
+				return json.Unmarshal(data, &result)
+			}
 		}
 
 		return nil

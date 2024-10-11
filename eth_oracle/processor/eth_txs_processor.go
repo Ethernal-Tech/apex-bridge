@@ -198,7 +198,7 @@ func (bp *EthTxsProcessorImpl) Start() {
 func (bp *EthTxsProcessorImpl) getTxProcessor(metadataJSON []byte) (
 	core.EthTxProcessor, error,
 ) {
-	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](
 		metadataJSON)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (bp *EthTxsProcessorImpl) getTxProcessor(metadataJSON []byte) (
 func (bp *EthTxsProcessorImpl) getFailedTxProcessor(metadataJSON []byte) (
 	core.EthTxFailedProcessor, error,
 ) {
-	metadata, err := core.UnmarshalEthMetadata[core.BatchExecutedEthMetadata](
+	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](
 		metadataJSON)
 	if err != nil {
 		return nil, err
@@ -564,12 +564,14 @@ func (bp *EthTxsProcessorImpl) checkUnprocessedTxs(
 			continue
 		}
 
-		key := string(unprocessedTx.ToEthTxKey())
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+			key := string(unprocessedTx.ToExpectedEthTxKey())
 
-		if expectedTx, exists := expectedTxsMap[key]; exists {
-			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+			if expectedTx, exists := expectedTxsMap[key]; exists {
+				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-			delete(expectedTxsMap, key)
+				delete(expectedTxsMap, key)
+			}
 		}
 
 		processedTxs = append(processedTxs, unprocessedTx.ToProcessedEthTx(false))
@@ -646,7 +648,7 @@ func (bp *EthTxsProcessorImpl) checkExpectedTxs(
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := bp.db.GetProcessedTx(expiredTx.ChainID, expiredTx.Hash)
+		processedTx, _ := bp.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash)
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
@@ -711,16 +713,37 @@ func (bp *EthTxsProcessorImpl) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
+			var (
+				txHash common.Hash
+				found  bool
+			)
+
+			for _, processedTx := range processedTxs {
+				if processedTx.OriginChainID == common.ToStrChainID(beClaim.ChainId) &&
+					processedTx.InnerActionHash == beClaim.ObservedTransactionHash {
+					txHash = common.Hash(processedTx.Hash)
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				bp.logger.Error(
+					"Failed to get txHash of a processed tx, based on BatchExecutedClaim.ObservedTransactionHash",
+					"bec", beClaim)
+			}
+
 			err := bp.bridgingRequestStateUpdater.ExecutedOnDestination(
 				common.ToStrChainID(beClaim.ChainId),
 				beClaim.BatchNonceId,
-				beClaim.ObservedTransactionHash)
+				txHash)
 
 			if err != nil {
 				bp.logger.Error(
 					"error while updating bridging request states to ExecutedOnDestination",
 					"destinationChainId", common.ToStrChainID(beClaim.ChainId), "batchId", beClaim.BatchNonceId,
-					"destinationTxHash", beClaim.ObservedTransactionHash, "err", err)
+					"destinationTxHash", txHash, "err", err)
 			}
 		}
 	}
@@ -824,9 +847,9 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 	}
 
 	var (
-		metadata []byte
-		txHash   = log.TransactionHash
-		txValue  *big.Int
+		metadata          []byte
+		innerActionTxHash ethgo.Hash
+		txValue           *big.Int
 	)
 
 	logEventType := log.Topics[0]
@@ -864,7 +887,7 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 				return nil, fmt.Errorf("failed to create txHash. err: %w", err)
 			}
 
-			txHash = ethgo.BytesToHash(evmTxHash)
+			innerActionTxHash = ethgo.BytesToHash(evmTxHash)
 		}
 	case withdrawEventSig:
 		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
@@ -908,14 +931,15 @@ func (bp *EthTxsProcessorImpl) logToTx(originChainID string, log *ethgo.Log) (*c
 		OriginChainID: originChainID,
 		Priority:      1,
 
-		BlockNumber: log.BlockNumber,
-		BlockHash:   log.BlockHash,
-		Hash:        txHash,
-		TxIndex:     log.TransactionIndex,
-		Removed:     log.Removed,
-		LogIndex:    log.LogIndex,
-		Address:     log.Address,
-		Metadata:    metadata,
-		Value:       txValue,
+		BlockNumber:     log.BlockNumber,
+		BlockHash:       log.BlockHash,
+		Hash:            log.TransactionHash,
+		TxIndex:         log.TransactionIndex,
+		Removed:         log.Removed,
+		LogIndex:        log.LogIndex,
+		Address:         log.Address,
+		Metadata:        metadata,
+		Value:           txValue,
+		InnerActionHash: innerActionTxHash,
 	}, nil
 }
