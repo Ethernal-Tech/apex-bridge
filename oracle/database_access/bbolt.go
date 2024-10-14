@@ -31,7 +31,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket} {
+		for _, bn := range [][]byte{unprocessedTxsBucket, processedTxsBucket, expectedTxsBucket, chainBalancesBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -374,14 +374,9 @@ func (bd *BBoltDatabase) MarkExpectedTxsAsInvalid(expectedTxs []*core.BridgeExpe
 	})
 }
 
-func (bd *BBoltDatabase) AddChainBalance(chainID string, height uint64, balance string) error {
+func (bd *BBoltDatabase) AddChainBalance(chainBalance *core.ChainBalance) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(chainBalancesBucket)
-		chainBalance := core.ChainBalance{
-			ChainID: chainID,
-			Height:  height,
-			Amount:  balance,
-		}
 		key := chainBalance.Key()
 
 		if data := bucket.Get(key); len(data) == 0 {
@@ -432,7 +427,7 @@ func (bd *BBoltDatabase) GetAllChainBalances(chainID string, threshold int) ([]*
 	err := bd.db.View(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(chainBalancesBucket).Cursor()
 
-		for k, v := cursor.Last(); k != nil; k, v = cursor.Prev() {
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			var balance *core.ChainBalance
 
 			if err := json.Unmarshal(v, &balance); err != nil {
@@ -462,7 +457,7 @@ func (bd *BBoltDatabase) GetLastChainBalances(chainID string, threshold int) ([]
 	err := bd.db.View(func(tx *bbolt.Tx) error {
 		cursor := tx.Bucket(chainBalancesBucket).Cursor()
 
-		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+		for k, v := cursor.Last(); k != nil; k, v = cursor.Prev() {
 			var balance *core.ChainBalance
 
 			if err := json.Unmarshal(v, &balance); err != nil {

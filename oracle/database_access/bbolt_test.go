@@ -462,4 +462,133 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, txs)
 	})
+
+	t.Run("AddChainBalance", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		err = db.AddChainBalance(&core.ChainBalance{})
+		require.NoError(t, err)
+
+		err = db.AddChainBalance(&core.ChainBalance{
+			ChainID: "prime",
+			Height:  uint64(1000),
+			Amount:  "19999999999",
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("GetChainBalance", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const (
+			primeChainID  = common.ChainIDStrPrime
+			vectorChainID = common.ChainIDStrVector
+		)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		primeBalanceUpdate := &core.ChainBalance{
+			ChainID: primeChainID,
+			Height:  1,
+			Amount:  "1",
+		}
+
+		vectorBalanceUpdate := &core.ChainBalance{
+			ChainID: vectorChainID,
+			Height:  2,
+			Amount:  "2",
+		}
+
+		err = db.AddChainBalance(primeBalanceUpdate)
+		require.NoError(t, err)
+
+		err = db.AddChainBalance(vectorBalanceUpdate)
+		require.NoError(t, err)
+
+		balance, err := db.GetChainBalance(primeChainID, 1)
+		require.NoError(t, err)
+		require.Equal(t, balance, primeBalanceUpdate)
+
+		balance, err = db.GetChainBalance(vectorChainID, 2)
+		require.NoError(t, err)
+		require.Equal(t, balance, vectorBalanceUpdate)
+	})
+
+	t.Run("GetAllChainBalances", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const (
+			primeChainID = common.ChainIDStrPrime
+		)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		primeBalanceUpdate := &core.ChainBalance{
+			ChainID: primeChainID,
+			Height:  1,
+			Amount:  "1",
+		}
+
+		primeBalanceUpdate2 := &core.ChainBalance{
+			ChainID: primeChainID,
+			Height:  2,
+			Amount:  "2",
+		}
+
+		err = db.AddChainBalance(primeBalanceUpdate)
+		require.NoError(t, err)
+
+		err = db.AddChainBalance(primeBalanceUpdate2)
+		require.NoError(t, err)
+
+		balances, err := db.GetAllChainBalances(primeChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, balances, 2)
+		require.Equal(t, balances[0], primeBalanceUpdate)
+		require.Equal(t, balances[1], primeBalanceUpdate2)
+	})
+
+	t.Run("GetLastChainBalances", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const (
+			primeChainID = common.ChainIDStrPrime
+		)
+
+		db := &BBoltDatabase{}
+		err := db.Init(filePath)
+		require.NoError(t, err)
+
+		primeBalanceUpdate := &core.ChainBalance{
+			ChainID: primeChainID,
+			Height:  1,
+			Amount:  "1",
+		}
+
+		primeBalanceUpdate2 := &core.ChainBalance{
+			ChainID: primeChainID,
+			Height:  2,
+			Amount:  "2",
+		}
+
+		err = db.AddChainBalance(primeBalanceUpdate)
+		require.NoError(t, err)
+
+		err = db.AddChainBalance(primeBalanceUpdate2)
+		require.NoError(t, err)
+
+		balances, err := db.GetLastChainBalances(primeChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, balances, 2)
+		require.Equal(t, balances[1], primeBalanceUpdate)
+		require.Equal(t, balances[0], primeBalanceUpdate2)
+	})
 }

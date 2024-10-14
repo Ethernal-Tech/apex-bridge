@@ -75,7 +75,11 @@ func (cb *ChainBalanceFetcherImpl) NewUnprocessedTxs(originChainID string, txs [
 		balance, _ := new(big.Int).SetString(chainBalance[0].Amount, 0)
 		balance.Add(balance, supplyDelta)
 
-		if err = cb.balancesDB.AddChainBalance(originChainID, tx.BlockSlot, balance.String()); err != nil {
+		if err = cb.balancesDB.AddChainBalance(&core.ChainBalance{
+			ChainID: originChainID,
+			Height:  tx.BlockSlot,
+			Amount:  balance.String(),
+		}); err != nil {
 			return err
 		}
 

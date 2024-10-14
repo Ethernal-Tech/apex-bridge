@@ -26,7 +26,7 @@ type CardanoTxsDB interface {
 }
 
 type BalanceStatesDB interface {
-	AddChainBalance(chainID string, height uint64, balance string) error
+	AddChainBalance(chainBalance *ChainBalance) error
 	GetChainBalance(chainID string, height uint64) (*ChainBalance, error)
 	GetAllChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
 	GetLastChainBalances(chainID string, threshold int) ([]*ChainBalance, error)
