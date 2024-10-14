@@ -10,22 +10,22 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type ChainBalanceFetcherImpl struct {
+type CardanoBalanceTrackingImpl struct {
 	ctx        context.Context
 	appConfig  *core.AppConfig
 	balancesDB core.BalanceStatesDB
 	logger     hclog.Logger
 }
 
-var _ core.ChainBalanceFetcher = (*ChainBalanceFetcherImpl)(nil)
+var _ core.CardanoBalanceTracking = (*CardanoBalanceTrackingImpl)(nil)
 
-func NewChainBalanceFetcher(
+func NewCardanoBalanceTracking(
 	ctx context.Context,
 	config *core.AppConfig,
 	balancesDB core.BalanceStatesDB,
 	logger hclog.Logger,
-) *ChainBalanceFetcherImpl {
-	return &ChainBalanceFetcherImpl{
+) *CardanoBalanceTrackingImpl {
+	return &CardanoBalanceTrackingImpl{
 		ctx:        ctx,
 		appConfig:  config,
 		balancesDB: balancesDB,
@@ -33,10 +33,12 @@ func NewChainBalanceFetcher(
 	}
 }
 
-func (cb *ChainBalanceFetcherImpl) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
+func (cb *CardanoBalanceTrackingImpl) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
 	var (
+		balance      *big.Int
 		supplyDelta  = new(big.Int).SetUint64(0)
 		multisigAddr = cb.appConfig.CardanoChains[originChainID].BridgingAddresses.BridgingAddress
+		success      bool
 	)
 
 	for _, tx := range txs {
@@ -62,7 +64,7 @@ func (cb *ChainBalanceFetcherImpl) NewUnprocessedTxs(originChainID string, txs [
 			supplyDelta.Sub(supplyDelta, new(big.Int).SetUint64(txIn.Output.Amount))
 		}
 
-		// No new changes to supply
+		// No new changes to balance supply
 		if supplyDelta.Int64() == 0 {
 			continue
 		}
@@ -72,7 +74,9 @@ func (cb *ChainBalanceFetcherImpl) NewUnprocessedTxs(originChainID string, txs [
 			return err
 		}
 
-		balance, _ := new(big.Int).SetString(chainBalance[0].Amount, 0)
+		if balance, success = new(big.Int).SetString(chainBalance[0].Amount, 0); !success {
+			balance = new(big.Int).SetUint64(0)
+		}
 		balance.Add(balance, supplyDelta)
 
 		if err = cb.balancesDB.AddChainBalance(&core.ChainBalance{
@@ -89,6 +93,6 @@ func (cb *ChainBalanceFetcherImpl) NewUnprocessedTxs(originChainID string, txs [
 	return nil
 }
 
-func (cb *ChainBalanceFetcherImpl) Start() {
+func (cb *CardanoBalanceTrackingImpl) Start() {
 	cb.logger.Debug("Starting ChainBalanceFetcher")
 }

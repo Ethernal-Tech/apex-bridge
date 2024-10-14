@@ -77,7 +77,7 @@ func NewOracle(
 		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
 		indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
 
-	chainBalanceFetcher := chain.NewChainBalanceFetcher(ctx, appConfig, db, logger)
+	chainBalanceFetcher := chain.NewCardanoBalanceTracking(ctx, appConfig, db, logger)
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))

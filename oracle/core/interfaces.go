@@ -91,7 +91,7 @@ type ConfirmedBlocksSubmitter interface {
 	GetChainID() string
 }
 
-type ChainBalanceFetcher interface {
+type CardanoBalanceTracking interface {
 	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
 	// NewUnprocessedEvmTxs(originChainID string, txs []*indexer.Tx) error
 	Start()

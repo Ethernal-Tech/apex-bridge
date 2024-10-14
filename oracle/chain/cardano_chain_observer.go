@@ -29,7 +29,7 @@ func NewCardanoChainObserver(
 	ctx context.Context,
 	config *core.CardanoChainConfig,
 	txsProcessor core.CardanoTxsProcessor,
-	balanceFetcher core.ChainBalanceFetcher,
+	balanceFetcher core.CardanoBalanceTracking,
 	oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
 	logger hclog.Logger,

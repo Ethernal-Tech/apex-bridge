@@ -47,7 +47,7 @@ func (m *ChainBalanceFetcherMock) NewUnprocessedTxs(originChainID string, txs []
 func (m *ChainBalanceFetcherMock) Start() {
 }
 
-var _ ChainBalanceFetcher = (*ChainBalanceFetcherMock)(nil)
+var _ CardanoBalanceTracking = (*ChainBalanceFetcherMock)(nil)
 
 type BridgeDataFetcherMock struct {
 	mock.Mock
