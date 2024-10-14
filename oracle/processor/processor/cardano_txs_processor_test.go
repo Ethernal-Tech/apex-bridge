@@ -309,7 +309,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 1)
-		require.Equal(t, indexer.Hash(txHash), unprocessedTxs[0].Hash)
+		require.Equal(t, txHash, unprocessedTxs[0].Hash)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.Nil(t, processedTx)

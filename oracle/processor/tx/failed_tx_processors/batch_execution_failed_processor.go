@@ -63,7 +63,7 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(
-	tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig,
+	_ *core.BridgeExpectedCardanoTx, _ *common.BatchExecutedMetadata, _ *core.AppConfig,
 ) error {
 	// no validation needed
 	return nil

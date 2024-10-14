@@ -13,9 +13,9 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/processor"
-	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/failed_tx_processors"
-	txprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors"
+	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/processor"
+	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx/failed_tx_processors"
+	txprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx/tx_processors"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
