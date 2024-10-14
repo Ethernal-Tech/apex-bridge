@@ -1,4 +1,4 @@
-package processor
+package cardanotxsprocessor
 
 import (
 	"fmt"
@@ -6,6 +6,18 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 )
+
+type perTickState struct {
+	invalidRelevantExpired []*core.BridgeExpectedCardanoTx
+	processedExpected      []*core.BridgeExpectedCardanoTx
+	processed              []*core.ProcessedCardanoTx
+	unprocessed            []*core.CardanoTx
+
+	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx
+	expectedTxs    []*core.BridgeExpectedCardanoTx
+	unprocessedTxs []*core.CardanoTx
+	blockInfo      *core.BridgeClaimsBlockInfo
+}
 
 type txProcessorsCollection struct {
 	successTxProcessors map[string]core.CardanoTxProcessor

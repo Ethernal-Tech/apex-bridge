@@ -49,9 +49,20 @@ type CardanoChainObserver interface {
 	ErrorCh() <-chan error
 }
 
-type CardanoTxsProcessor interface {
-	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
+type TxsProcessor interface {
 	Start()
+}
+
+type SpecificChainTxsProcessorState interface {
+	Reset()
+	PrepareFirstCheck(chainID string, priority uint8) bool
+	RunCheck(bridgeClaims *BridgeClaims, maxClaimsToGroup int)
+	NextBlockInfo() bool
+	PersistNew(bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)
+}
+
+type CardanoTxsReceiver interface {
+	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
 }
 
 type CardanoTxProcessor interface {

@@ -48,8 +48,8 @@ func TestCardanoChainObserver(t *testing.T) {
 		},
 	}
 
-	txsProcessorMock := &core.CardanoTxsProcessorMock{}
-	txsProcessorMock.On("NewUnprocessedTxs", mock.Anything, mock.Anything).Return(error(nil))
+	txsReceiverMock := &core.CardanoTxsReceiverMock{}
+	txsReceiverMock.On("NewUnprocessedTxs", mock.Anything, mock.Anything).Return(error(nil))
 
 	initDB := func(t *testing.T) indexer.Database {
 		t.Helper()
@@ -71,7 +71,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -90,7 +90,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -111,7 +111,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -131,14 +131,14 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsProcessorMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
 		closed := false
 
-		txsProcessorMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
+		txsReceiverMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
 			t.Helper()
 
 			if !closed {

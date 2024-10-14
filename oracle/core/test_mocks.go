@@ -7,13 +7,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type CardanoTxsProcessorMock struct {
+type CardanoTxsReceiverMock struct {
 	mock.Mock
 	NewUnprocessedTxsFn func(originChainId string, txs []*indexer.Tx) error
 }
 
+var _ CardanoTxsReceiver = (*CardanoTxsReceiverMock)(nil)
+
 // NewUnprocessedTxs implements CardanoTxsProcessor.
-func (m *CardanoTxsProcessorMock) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
+func (m *CardanoTxsReceiverMock) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
 	if m.NewUnprocessedTxsFn != nil {
 		return m.NewUnprocessedTxsFn(originChainID, txs)
 	}
@@ -23,11 +25,15 @@ func (m *CardanoTxsProcessorMock) NewUnprocessedTxs(originChainID string, txs []
 	return args.Error(0)
 }
 
-// Start implements CardanoTxsProcessor.
-func (m *CardanoTxsProcessorMock) Start() {
+type TxsProcessorMock struct {
+	mock.Mock
 }
 
-var _ CardanoTxsProcessor = (*CardanoTxsProcessorMock)(nil)
+// Start implements CardanoTxsProcessor.
+func (m *TxsProcessorMock) Start() {
+}
+
+var _ TxsProcessor = (*TxsProcessorMock)(nil)
 
 type BridgeDataFetcherMock struct {
 	mock.Mock

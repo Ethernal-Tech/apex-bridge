@@ -13,9 +13,10 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/processor/processor"
-	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx/failed_tx_processors"
-	txprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx/tx_processors"
+	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/failed_tx_processors"
+	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/success_tx_processors"
+	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor"
+	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor/cardano"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 )
@@ -31,7 +32,7 @@ var (
 type OracleImpl struct {
 	ctx                      context.Context
 	appConfig                *core.AppConfig
-	cardanoTxsProcessor      core.CardanoTxsProcessor
+	cardanoTxsProcessor      core.TxsProcessor
 	cardanoChainObservers    []core.CardanoChainObserver
 	db                       core.Database
 	expectedTxsFetcher       core.ExpectedTxsFetcher
@@ -62,20 +63,31 @@ func NewOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
-	txProcessors := []core.CardanoTxProcessor{
-		txprocessors.NewBatchExecutedProcessor(logger),
-		txprocessors.NewBridgingRequestedProcessor(logger),
-		// tx_processors.NewRefundExecutedProcessor(logger),
-	}
+	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
+		[]core.CardanoTxProcessor{
+			successtxprocessors.NewBatchExecutedProcessor(logger),
+			successtxprocessors.NewBridgingRequestedProcessor(logger),
+			// tx_processors.NewRefundExecutedProcessor(logger),
+		},
+		[]core.CardanoTxFailedProcessor{
+			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
+			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
+		},
+	)
 
-	failedTxProcessors := []core.CardanoTxFailedProcessor{
-		failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
-		// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
-	}
+	txsProcessorLogger := logger.Named("cardano_txs_processor")
 
-	cardanoTxsProcessor := processor.NewCardanoTxsProcessor(
-		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
-		indexerDbs, bridgingRequestStateUpdater, logger.Named("cardano_txs_processor"))
+	cardanoTxsReceiver := cardanotxsprocessor.NewCardanoTxsReceiverImpl(
+		db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
+
+	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
+		ctx, appConfig, db, txProcessors,
+		indexerDbs, txsProcessorLogger,
+	)
+
+	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
+		ctx, appConfig, common.ChainTypeCardanoStr, cardanoStateProcessor, bridgeSubmitter,
+		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]core.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
@@ -92,7 +104,7 @@ func NewOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		cco, err := chain.NewCardanoChainObserver(
-			ctx, cardanoChainConfig, cardanoTxsProcessor, db, indexerDB,
+			ctx, cardanoChainConfig, cardanoTxsReceiver, db, indexerDB,
 			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)

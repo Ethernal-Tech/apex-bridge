@@ -1,38 +1,14 @@
-package processor
+package txsprocessor
 
 import "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 
 const (
 	TickTimeMs                  = 2000
-	TTLInsuranceOffset          = 2
 	MinBridgingClaimsToGroup    = 1
 	GasLimitMultiplierDefault   = float32(1)
 	GasLimitMultiplierIncrement = float32(0.5)
 	GasLimitMultiplierMax       = float32(3)
 )
-
-type cardanoTxsState struct {
-	invalidRelevantExpired []*core.BridgeExpectedCardanoTx
-	processedExpected      []*core.BridgeExpectedCardanoTx
-	processed              []*core.ProcessedCardanoTx
-	unprocessed            []*core.CardanoTx
-}
-
-func (s *cardanoTxsState) addToInvalidRelevantExpired(newTxs []*core.BridgeExpectedCardanoTx) {
-	s.invalidRelevantExpired = append(s.invalidRelevantExpired, newTxs...)
-}
-
-func (s *cardanoTxsState) addToProcessedExpected(newTxs []*core.BridgeExpectedCardanoTx) {
-	s.processedExpected = append(s.processedExpected, newTxs...)
-}
-
-func (s *cardanoTxsState) addToProcessed(newTxs []*core.ProcessedCardanoTx) {
-	s.processed = append(s.processed, newTxs...)
-}
-
-func (s *cardanoTxsState) addToUnprocessed(newTxs []*core.CardanoTx) {
-	s.unprocessed = append(s.unprocessed, newTxs...)
-}
 
 type txsProcessorSettings struct {
 	appConfig                *core.AppConfig
@@ -41,14 +17,25 @@ type txsProcessorSettings struct {
 }
 
 func NewTxsProcessorSettings(appConfig *core.AppConfig) *txsProcessorSettings {
-	maxBridgingClaimsToGroup := make(map[string]int, len(appConfig.CardanoChains))
+	defaultMaxClaimsToGroup := appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+	defaultGasLimitMultiplier := float32(1)
+
+	maxBridgingClaimsToGroup := make(map[string]int, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 	for _, chain := range appConfig.CardanoChains {
-		maxBridgingClaimsToGroup[chain.ChainID] = appConfig.BridgingSettings.MaxBridgingClaimsToGroup
+		maxBridgingClaimsToGroup[chain.ChainID] = defaultMaxClaimsToGroup
 	}
 
-	gasLimitMultiplier := make(map[string]float32, len(appConfig.CardanoChains))
+	for _, chain := range appConfig.EthChains {
+		maxBridgingClaimsToGroup[chain.ChainID] = defaultMaxClaimsToGroup
+	}
+
+	gasLimitMultiplier := make(map[string]float32, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 	for _, chain := range appConfig.CardanoChains {
-		gasLimitMultiplier[chain.ChainID] = 1
+		gasLimitMultiplier[chain.ChainID] = defaultGasLimitMultiplier
+	}
+
+	for _, chain := range appConfig.EthChains {
+		gasLimitMultiplier[chain.ChainID] = defaultGasLimitMultiplier
 	}
 
 	return &txsProcessorSettings{
