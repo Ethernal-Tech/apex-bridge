@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxProcessor = (*RefundExecutedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessProcessor = (*RefundExecutedProcessorImpl)(nil)
 
 type RefundExecutedProcessorImpl struct {
 	logger hclog.Logger

@@ -15,10 +15,9 @@ import (
 type TxsProcessorImpl struct {
 	ctx                         context.Context
 	appConfig                   *core.AppConfig
-	chainType                   string
 	stateProcessor              core.SpecificChainTxsProcessorState
 	settings                    *txsProcessorSettings
-	bridgeSubmitter             core.BridgeSubmitter
+	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
 	TickTime                    time.Duration
@@ -29,18 +28,16 @@ var _ core.TxsProcessor = (*TxsProcessorImpl)(nil)
 func NewTxsProcessorImpl(
 	ctx context.Context,
 	appConfig *core.AppConfig,
-	chainType string,
 	stateProcessor core.SpecificChainTxsProcessorState,
-	bridgeSubmitter core.BridgeSubmitter,
+	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) *TxsProcessorImpl {
 	return &TxsProcessorImpl{
 		ctx:                         ctx,
-		chainType:                   chainType,
 		stateProcessor:              stateProcessor,
 		appConfig:                   appConfig,
-		settings:                    NewTxsProcessorSettings(appConfig),
+		settings:                    NewTxsProcessorSettings(appConfig, stateProcessor.GetChainType()),
 		bridgeSubmitter:             bridgeSubmitter,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		logger:                      logger,
@@ -49,7 +46,7 @@ func NewTxsProcessorImpl(
 }
 
 func (p *TxsProcessorImpl) Start() {
-	p.logger.Debug("Starting TxsProcessor", "chainType", p.chainType)
+	p.logger.Debug("Starting TxsProcessor", "chainType", p.stateProcessor.GetChainType())
 
 	for {
 		if !p.CheckShouldGenerateClaims() {
@@ -78,7 +75,7 @@ func (p *TxsProcessorImpl) CheckShouldGenerateClaims() bool {
 func (p *TxsProcessorImpl) getSortedChainIDs() []string {
 	keys := make([]string, 0)
 
-	switch p.chainType {
+	switch p.stateProcessor.GetChainType() {
 	case common.ChainTypeCardanoStr:
 		for k := range p.appConfig.CardanoChains {
 			keys = append(keys, k)
@@ -88,7 +85,7 @@ func (p *TxsProcessorImpl) getSortedChainIDs() []string {
 			keys = append(keys, k)
 		}
 	default:
-		p.logger.Error("Invalid chainType", "chainType", p.chainType)
+		p.logger.Error("Invalid chainType", "chainType", p.stateProcessor.GetChainType())
 	}
 
 	sort.Strings(keys)

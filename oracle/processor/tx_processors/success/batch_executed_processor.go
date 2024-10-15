@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxProcessor = (*BatchExecutedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessProcessor = (*BatchExecutedProcessorImpl)(nil)
 
 type BatchExecutedProcessorImpl struct {
 	logger hclog.Logger

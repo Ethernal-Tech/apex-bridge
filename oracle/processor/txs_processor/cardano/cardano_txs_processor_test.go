@@ -20,7 +20,7 @@ func newCardanoTxsProcessor(
 	ctx context.Context,
 	appConfig *core.AppConfig,
 	db core.CardanoTxsProcessorDB,
-	successTxProcessors []core.CardanoTxProcessor,
+	successTxProcessors []core.CardanoTxSuccessProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
@@ -38,8 +38,7 @@ func newCardanoTxsProcessor(
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, common.ChainTypeCardanoStr,
-		cardanoStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
+		ctx, appConfig, cardanoStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
 		hclog.NewNullLogger(),
 	)
 
@@ -49,13 +48,13 @@ func newCardanoTxsProcessor(
 func newValidProcessor(
 	appConfig *core.AppConfig,
 	oracleDB core.Database,
-	successTxProcessor core.CardanoTxProcessor,
+	successTxProcessor core.CardanoTxSuccessProcessor,
 	failedTxProcessor core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
-	var successTxProcessors []core.CardanoTxProcessor
+	var successTxProcessors []core.CardanoTxSuccessProcessor
 	if successTxProcessor != nil {
 		successTxProcessors = append(successTxProcessors, successTxProcessor)
 	}
@@ -122,7 +121,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			context.Background(),
 			appConfig,
 			oracleDB,
-			[]core.CardanoTxProcessor{},
+			[]core.CardanoTxSuccessProcessor{},
 			[]core.CardanoTxFailedProcessor{},
 			&core.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
@@ -136,7 +135,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{}
 		failedTxProc := &core.CardanoTxFailedProcessorMock{}
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 
@@ -182,7 +181,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "relevant"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "relevant"}
 
 		proc, rec := newValidProcessor(
 			appConfig, oracleDB,
@@ -207,7 +206,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "test"}
 
 		proc, rec := newValidProcessor(
 			appConfig, oracleDB,
@@ -244,7 +243,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -295,7 +294,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -347,7 +346,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -408,7 +407,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc, _ := newValidProcessor(
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -460,7 +459,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc, _ := newValidProcessor(
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -517,7 +516,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc, _ := newValidProcessor(
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -573,7 +572,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		proc, _ := newValidProcessor(
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -619,7 +618,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -698,7 +697,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -777,7 +776,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
@@ -862,7 +861,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -943,7 +942,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -1035,7 +1034,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}

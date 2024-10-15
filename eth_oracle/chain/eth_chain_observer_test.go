@@ -40,19 +40,19 @@ func TestEthChainObserver(t *testing.T) {
 	}
 
 	t.Run("chain observer - initOracleState error", func(t *testing.T) {
-		txsProcessorMock := &core.EthTxsProcessorMock{}
+		txsReceiverMock := &core.EthTxsReceiverMock{}
 		oracleDB := &core.EthTxsProcessorDBMock{}
 		indexerDB := &core.EventStoreMock{}
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(ctx, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
 
 	t.Run("chain observer - NewEventTracker error", func(t *testing.T) {
-		txsProcessorMock := &core.EthTxsProcessorMock{}
+		txsReceiverMock := &core.EthTxsReceiverMock{}
 		oracleDB := &core.EthTxsProcessorDBMock{}
 		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
@@ -62,20 +62,20 @@ func TestEthChainObserver(t *testing.T) {
 		// this will error out new event tracker
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(ctx, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
 
 	t.Run("chain observer - NewEthChainObserver OK", func(t *testing.T) {
-		txsProcessorMock := &core.EthTxsProcessorMock{}
+		txsReceiverMock := &core.EthTxsReceiverMock{}
 		oracleDB := &core.EthTxsProcessorDBMock{}
 		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
 
-		co, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(ctx, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, co)
 
@@ -86,7 +86,7 @@ func TestEthChainObserver(t *testing.T) {
 	})
 
 	t.Run("chek start stop", func(t *testing.T) {
-		txsProcessorMock := &core.EthTxsProcessorMock{}
+		txsReceiverMock := &core.EthTxsReceiverMock{}
 		oracleDB := &core.EthTxsProcessorDBMock{}
 		indexerDB := &core.EventStoreMock{}
 		dbBlockNumber := uint64(1)
@@ -96,7 +96,7 @@ func TestEthChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewEthChainObserver(ctx, config, txsProcessorMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(ctx, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -109,11 +109,11 @@ func TestEthChainObserver(t *testing.T) {
 
 		oracleDB := &core.EthTxsProcessorDBMock{}
 
-		txsProcessorMock := &core.EthTxsProcessorMock{}
+		txsReceiverMock := &core.EthTxsReceiverMock{}
 		doneCh := make(chan bool, 1)
 		closed := false
 
-		txsProcessorMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
+		txsReceiverMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
 			t.Helper()
 
 			if !closed {
@@ -143,7 +143,7 @@ func TestEthChainObserver(t *testing.T) {
 		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
 		require.NoError(t, err)
 
-		chainObserver, err := NewEthChainObserver(ctx, testConfig, txsProcessorMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(ctx, testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -159,9 +159,9 @@ func TestEthChainObserver(t *testing.T) {
 			NumBlockConfirmations:  testConfig.NumBlockConfirmations,
 			NumOfBlocksToReconcile: uint64(0),
 			EventSubscriber: &confirmedEventHandler{
-				ChainID:      testConfig.ChainID,
-				TxsProcessor: txsProcessorMock,
-				Logger:       logger,
+				ChainID:     testConfig.ChainID,
+				TxsReceiver: txsReceiverMock,
+				Logger:      logger,
 			},
 			Logger: logger,
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
@@ -274,23 +274,23 @@ func Test_InitOracleState(t *testing.T) {
 }
 
 func Test_AddLog(t *testing.T) {
-	txProcessorMock := &core.EthTxsProcessorMock{}
+	txsReceiverMock := &core.EthTxsReceiverMock{}
 	mockEventHandler := &confirmedEventHandler{
-		TxsProcessor: txProcessorMock,
-		ChainID:      "nexus",
-		Logger:       hclog.NewNullLogger(),
+		TxsReceiver: txsReceiverMock,
+		ChainID:     "nexus",
+		Logger:      hclog.NewNullLogger(),
 	}
 
 	mockLog := &ethgo.Log{}
 
 	t.Run("log processed successfully", func(t *testing.T) {
-		txProcessorMock.On("NewUnprocessedLog", "nexus", mockLog).Return(nil).Once()
+		txsReceiverMock.On("NewUnprocessedLog", "nexus", mockLog).Return(nil).Once()
 
 		require.NoError(t, mockEventHandler.AddLog(mockLog))
 	})
 
 	t.Run("NewUnprocessedLog errors", func(t *testing.T) {
-		txProcessorMock.On("NewUnprocessedLog", "nexus", mockLog).Return(errors.New("test error")).Once()
+		txsReceiverMock.On("NewUnprocessedLog", "nexus", mockLog).Return(errors.New("test error")).Once()
 
 		require.Error(t, mockEventHandler.AddLog(mockLog))
 	})
@@ -298,7 +298,7 @@ func Test_AddLog(t *testing.T) {
 
 func Test_LoadTrackerConfig(t *testing.T) {
 	logger := hclog.NewNullLogger()
-	txsProcessorMock := &core.EthTxsProcessorMock{}
+	txsReceiverMock := &core.EthTxsReceiverMock{}
 
 	scAddress := ethgo.HexToAddress("0x00")
 
@@ -316,9 +316,9 @@ func Test_LoadTrackerConfig(t *testing.T) {
 		NumBlockConfirmations:  0,
 		NumOfBlocksToReconcile: uint64(0),
 		EventSubscriber: &confirmedEventHandler{
-			ChainID:      "",
-			TxsProcessor: txsProcessorMock,
-			Logger:       logger,
+			ChainID:     "",
+			TxsReceiver: txsReceiverMock,
+			Logger:      logger,
 		},
 		Logger:    logger,
 		LogFilter: logFilter,
@@ -327,6 +327,6 @@ func Test_LoadTrackerConfig(t *testing.T) {
 	config := &oracleCore.EthChainConfig{}
 
 	t.Run("loadTrackerConfigs successful", func(t *testing.T) {
-		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsProcessorMock, logger))
+		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsReceiverMock, logger))
 	})
 }

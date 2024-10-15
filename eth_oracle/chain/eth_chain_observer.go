@@ -26,12 +26,12 @@ var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
 func NewEthChainObserver(
 	ctx context.Context,
 	config *oracleCore.EthChainConfig,
-	txsProcessor ethOracleCore.EthTxsProcessor,
+	txsReceiver ethOracleCore.EthTxsReceiver,
 	oracleDB ethOracleCore.EthTxsProcessorDB,
 	indexerDB eventTrackerStore.EventTrackerStore,
 	logger hclog.Logger,
 ) (*EthChainObserverImpl, error) {
-	trackerConfig := loadTrackerConfigs(config, txsProcessor, logger)
+	trackerConfig := loadTrackerConfigs(config, txsReceiver, logger)
 
 	err := initOracleState(indexerDB, oracleDB, config.StartBlockNumber, config.ChainID, logger)
 	if err != nil {
@@ -69,7 +69,7 @@ func (co *EthChainObserverImpl) GetConfig() *oracleCore.EthChainConfig {
 	return co.config
 }
 
-func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracleCore.EthTxsProcessor,
+func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	bridgingAddress := config.BridgingAddresses.BridgingAddress
@@ -93,9 +93,9 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 		NumBlockConfirmations:  config.NumBlockConfirmations,
 		NumOfBlocksToReconcile: uint64(0),
 		EventSubscriber: &confirmedEventHandler{
-			ChainID:      config.ChainID,
-			TxsProcessor: txsProcessor,
-			Logger:       logger,
+			ChainID:     config.ChainID,
+			TxsReceiver: txsReceiver,
+			Logger:      logger,
 		},
 		Logger:    logger,
 		LogFilter: logFilter,
@@ -103,16 +103,16 @@ func loadTrackerConfigs(config *oracleCore.EthChainConfig, txsProcessor ethOracl
 }
 
 type confirmedEventHandler struct {
-	TxsProcessor ethOracleCore.EthTxsProcessor
-	ChainID      string
-	Logger       hclog.Logger
+	TxsReceiver ethOracleCore.EthTxsReceiver
+	ChainID     string
+	Logger      hclog.Logger
 }
 
 func (handler confirmedEventHandler) AddLog(log *ethgo.Log) error {
 	handler.Logger.Info("Confirmed Event Handler invoked",
 		"block hash", log.BlockHash, "block number", log.BlockNumber, "tx hash", log.TransactionHash)
 
-	err := handler.TxsProcessor.NewUnprocessedLog(handler.ChainID, log)
+	err := handler.TxsReceiver.NewUnprocessedLog(handler.ChainID, log)
 	if err != nil {
 		handler.Logger.Error("Failed to process new log", "err", err, "log", log)
 

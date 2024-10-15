@@ -13,8 +13,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
-	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/failed_tx_processors"
-	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/success_tx_processors"
+	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/failed"
+	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle/processor/tx_processors/success"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor"
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor/cardano"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -64,7 +64,7 @@ func NewOracle(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
-		[]core.CardanoTxProcessor{
+		[]core.CardanoTxSuccessProcessor{
 			successtxprocessors.NewBatchExecutedProcessor(logger),
 			successtxprocessors.NewBridgingRequestedProcessor(logger),
 			// tx_processors.NewRefundExecutedProcessor(logger),
@@ -86,7 +86,7 @@ func NewOracle(
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, common.ChainTypeCardanoStr, cardanoStateProcessor, bridgeSubmitter,
+		ctx, appConfig, cardanoStateProcessor, bridgeSubmitter,
 		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))

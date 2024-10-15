@@ -65,7 +65,7 @@ func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(
-	tx *core.BridgeExpectedEthTx, metadata *core.BatchExecutedEthMetadata, appConfig *oracleCore.AppConfig,
+	_ *core.BridgeExpectedEthTx, _ *core.BatchExecutedEthMetadata, _ *oracleCore.AppConfig,
 ) error {
 	// no validation needed
 	return nil

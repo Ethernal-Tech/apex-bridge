@@ -1,4 +1,4 @@
-package cardanotxsprocessor
+package processor
 
 import (
 	"bytes"
@@ -7,9 +7,10 @@ import (
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -17,28 +18,28 @@ const (
 	TTLInsuranceOffset = 2
 )
 
-var _ core.SpecificChainTxsProcessorState = (*CardanoStateProcessor)(nil)
+var _ oracleCore.SpecificChainTxsProcessorState = (*EthStateProcessor)(nil)
 
-type CardanoStateProcessor struct {
+type EthStateProcessor struct {
 	ctx          context.Context
-	appConfig    *core.AppConfig
-	db           core.CardanoTxsProcessorDB
+	appConfig    *oracleCore.AppConfig
+	db           core.EthTxsProcessorDB
 	txProcessors *txProcessorsCollection
-	indexerDbs   map[string]indexer.Database
+	indexerDbs   map[string]eventTrackerStore.EventTrackerStore
 	logger       hclog.Logger
 
 	state *perTickState
 }
 
-func NewCardanoStateProcessor(
+func NewEthStateProcessor(
 	ctx context.Context,
-	appConfig *core.AppConfig,
-	db core.CardanoTxsProcessorDB,
+	appConfig *oracleCore.AppConfig,
+	db core.EthTxsProcessorDB,
 	txProcessors *txProcessorsCollection,
-	indexerDbs map[string]indexer.Database,
+	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	logger hclog.Logger,
-) *CardanoStateProcessor {
-	return &CardanoStateProcessor{
+) *EthStateProcessor {
+	return &EthStateProcessor{
 		ctx:          ctx,
 		appConfig:    appConfig,
 		db:           db,
@@ -48,16 +49,16 @@ func NewCardanoStateProcessor(
 	}
 }
 
-func (sp *CardanoStateProcessor) GetChainType() string {
-	return common.ChainTypeCardanoStr
+func (sp *EthStateProcessor) GetChainType() string {
+	return common.ChainTypeEVMStr
 }
 
-func (sp *CardanoStateProcessor) Reset() {
+func (sp *EthStateProcessor) Reset() {
 	sp.state = &perTickState{}
 }
 
-func (sp *CardanoStateProcessor) RunChecks(
-	bridgeClaims *core.BridgeClaims,
+func (sp *EthStateProcessor) RunChecks(
+	bridgeClaims *oracleCore.BridgeClaims,
 	chainID string,
 	maxClaimsToGroup int,
 	priority uint8,
@@ -89,9 +90,9 @@ func (sp *CardanoStateProcessor) RunChecks(
 		return
 	}
 
-	sp.state.expectedTxsMap = make(map[string]*core.BridgeExpectedCardanoTx, len(sp.state.expectedTxs))
+	sp.state.expectedTxsMap = make(map[string]*core.BridgeExpectedEthTx, len(sp.state.expectedTxs))
 	for _, expectedTx := range sp.state.expectedTxs {
-		sp.state.expectedTxsMap[string(expectedTx.ToCardanoTxKey())] = expectedTx
+		sp.state.expectedTxsMap[string(expectedTx.ToEthTxKey())] = expectedTx
 	}
 
 	for {
@@ -125,8 +126,8 @@ func (sp *CardanoStateProcessor) RunChecks(
 	}
 }
 
-func (sp *CardanoStateProcessor) PersistNew(
-	bridgeClaims *core.BridgeClaims,
+func (sp *EthStateProcessor) PersistNew(
+	bridgeClaims *oracleCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) {
 	err := sp.notifyBridgingRequestStateUpdater(bridgeClaims, bridgingRequestStateUpdater)
@@ -165,23 +166,20 @@ func (sp *CardanoStateProcessor) PersistNew(
 	}
 }
 
-func (sp *CardanoStateProcessor) constructBridgeClaimsBlockInfo(
+func (sp *EthStateProcessor) constructBridgeClaimsBlockInfo(
 	chainID string,
-	unprocessedTxs []*core.CardanoTx,
-	expectedTxs []*core.BridgeExpectedCardanoTx,
+	unprocessedTxs []*core.EthTx,
+	expectedTxs []*core.BridgeExpectedEthTx,
 	prevBlockInfo *core.BridgeClaimsBlockInfo,
 ) *core.BridgeClaimsBlockInfo {
 	found := false
-	minSlot := uint64(math.MaxUint64)
-
-	var blockHash indexer.Hash
+	minBlockNumber := uint64(math.MaxUint64)
 
 	if len(unprocessedTxs) > 0 {
-		// unprocessed are ordered by slot, so first in collection is min
+		// unprocessed are ordered by block number, so first in collection is min
 		for _, tx := range unprocessedTxs {
-			if prevBlockInfo == nil || prevBlockInfo.Slot < tx.BlockSlot {
-				minSlot = tx.BlockSlot
-				blockHash = tx.BlockHash
+			if prevBlockInfo == nil || prevBlockInfo.Number < tx.BlockNumber {
+				minBlockNumber = tx.BlockNumber
 				found = true
 
 				break
@@ -190,21 +188,21 @@ func (sp *CardanoStateProcessor) constructBridgeClaimsBlockInfo(
 	}
 
 	if len(expectedTxs) > 0 {
-		ccoDB := sp.indexerDbs[chainID]
-		if ccoDB == nil {
-			sp.logger.Error("Failed to get cardano chain observer db", "chainId", chainID)
+		ecoDB := sp.indexerDbs[chainID]
+		if ecoDB == nil {
+			sp.logger.Error("Failed to get eth chain observer db", "chainId", chainID)
 		} else {
 			// expected are ordered by ttl, so first in collection is min
 			for _, tx := range expectedTxs {
-				fromSlot := tx.TTL + TTLInsuranceOffset
+				fromBlockNumber := tx.TTL + TTLInsuranceOffset
 
-				blocks, err := ccoDB.GetConfirmedBlocksFrom(fromSlot, 1)
+				lastProcessedBlock, err := ecoDB.GetLastProcessedBlock()
 				if err != nil {
-					sp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", chainID, "err", err)
-				} else if len(blocks) > 0 && blocks[0].Slot < minSlot &&
-					(prevBlockInfo == nil || prevBlockInfo.Slot < blocks[0].Slot) {
-					minSlot = blocks[0].Slot
-					blockHash = blocks[0].Hash
+					sp.logger.Error("Failed to get last processed block",
+						"chainId", chainID, "err", err)
+				} else if lastProcessedBlock >= fromBlockNumber && fromBlockNumber < minBlockNumber &&
+					(prevBlockInfo == nil || prevBlockInfo.Number < fromBlockNumber) {
+					minBlockNumber = fromBlockNumber
 					found = true
 
 					break
@@ -216,23 +214,22 @@ func (sp *CardanoStateProcessor) constructBridgeClaimsBlockInfo(
 	if found {
 		return &core.BridgeClaimsBlockInfo{
 			ChainID: chainID,
-			Slot:    minSlot,
-			Hash:    blockHash,
+			Number:  minBlockNumber,
 		}
 	}
 
 	return nil
 }
 
-func (sp *CardanoStateProcessor) checkUnprocessedTxs(
-	bridgeClaims *core.BridgeClaims,
+func (sp *EthStateProcessor) checkUnprocessedTxs(
+	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
 ) (
-	[]*core.CardanoTx,
-	[]*core.ProcessedCardanoTx,
-	[]*core.BridgeExpectedCardanoTx,
+	[]*core.EthTx,
+	[]*core.ProcessedEthTx,
+	[]*core.BridgeExpectedEthTx,
 ) {
-	var relevantUnprocessedTxs []*core.CardanoTx
+	var relevantUnprocessedTxs []*core.EthTx
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
 		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) {
@@ -240,9 +237,10 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 		}
 	}
 
+	//nolint:prealloc
 	var (
-		processedTxs         = make([]*core.ProcessedCardanoTx, 0)
-		processedExpectedTxs = make([]*core.BridgeExpectedCardanoTx, 0)
+		processedTxs         []*core.ProcessedEthTx
+		processedExpectedTxs []*core.BridgeExpectedEthTx
 		invalidTxsCounter    int
 	)
 
@@ -250,8 +248,8 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 		return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
 	}
 
-	onInvalidTx := func(tx *core.CardanoTx) {
-		processedTxs = append(processedTxs, tx.ToProcessedCardanoTx(true))
+	onInvalidTx := func(tx *core.EthTx) {
+		processedTxs = append(processedTxs, tx.ToProcessedEthTx(true))
 		invalidTxsCounter++
 	}
 
@@ -277,15 +275,17 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		key := string(unprocessedTx.ToCardanoTxKey())
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+			key := string(unprocessedTx.ToExpectedEthTxKey())
 
-		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-			delete(sp.state.expectedTxsMap, key)
+				delete(sp.state.expectedTxsMap, key)
+			}
 		}
 
-		processedTxs = append(processedTxs, unprocessedTx.ToProcessedCardanoTx(false))
+		processedTxs = append(processedTxs, unprocessedTx.ToProcessedEthTx(false))
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -299,19 +299,19 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
 }
 
-func (sp *CardanoStateProcessor) checkExpectedTxs(
-	bridgeClaims *core.BridgeClaims,
+func (sp *EthStateProcessor) checkExpectedTxs(
+	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
 ) (
-	[]*core.BridgeExpectedCardanoTx,
-	[]*core.BridgeExpectedCardanoTx,
-	[]*core.BridgeExpectedCardanoTx,
+	[]*core.BridgeExpectedEthTx,
+	[]*core.BridgeExpectedEthTx,
+	[]*core.BridgeExpectedEthTx,
 ) {
-	var relevantExpiredTxs []*core.BridgeExpectedCardanoTx
+	var relevantExpiredTxs []*core.BridgeExpectedEthTx
 
-	ccoDB := sp.indexerDbs[sp.state.blockInfo.ChainID]
-	if ccoDB == nil {
-		sp.logger.Error("Failed to get cardano chain observer db", "chainId", sp.state.blockInfo.ChainID)
+	ecoDB := sp.indexerDbs[sp.state.blockInfo.ChainID]
+	if ecoDB == nil {
+		sp.logger.Error("Failed to get eth chain observer db", "chainId", sp.state.blockInfo.ChainID)
 	} else {
 		// ensure always same order of iterating through expectedTxsMap
 		keys := make([]string, 0, len(sp.state.expectedTxsMap))
@@ -324,24 +324,27 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 		for _, key := range keys {
 			expectedTx := sp.state.expectedTxsMap[key]
 
-			fromSlot := expectedTx.TTL + TTLInsuranceOffset
+			fromBlockNumber := expectedTx.TTL + TTLInsuranceOffset
 
-			blocks, err := ccoDB.GetConfirmedBlocksFrom(fromSlot, 1)
+			lastBlockProcessed, err := ecoDB.GetLastProcessedBlock()
 			if err != nil {
-				sp.logger.Error("Failed to get confirmed blocks", "fromSlot", fromSlot, "chainId", expectedTx.ChainID, "err", err)
+				sp.logger.Error("Failed to get last processed block",
+					"chainId", expectedTx.ChainID, "err", err)
 
 				break
 			}
 
-			if len(blocks) == 1 && sp.state.blockInfo.EqualWithExpected(expectedTx, blocks[0]) {
+			if lastBlockProcessed >= fromBlockNumber && sp.state.blockInfo.EqualWithExpected(
+				expectedTx, fromBlockNumber) {
 				relevantExpiredTxs = append(relevantExpiredTxs, expectedTx)
 			}
 		}
 	}
 
+	//nolint:prealloc
 	var (
-		invalidRelevantExpiredTxs   []*core.BridgeExpectedCardanoTx
-		processedRelevantExpiredTxs = make([]*core.BridgeExpectedCardanoTx, 0)
+		invalidRelevantExpiredTxs   []*core.BridgeExpectedEthTx
+		processedRelevantExpiredTxs []*core.BridgeExpectedEthTx
 	)
 
 	if !bridgeClaims.CanAddMore(maxClaimsToGroup) ||
@@ -349,13 +352,13 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 	}
 
-	onInvalidTx := func(tx *core.BridgeExpectedCardanoTx) {
+	onInvalidTx := func(tx *core.BridgeExpectedEthTx) {
 		// expired, but can not process, so we mark it as invalid
 		invalidRelevantExpiredTxs = append(invalidRelevantExpiredTxs, tx)
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := sp.db.GetProcessedTx(expiredTx.ChainID, expiredTx.Hash)
+		processedTx, _ := sp.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash)
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)
@@ -398,8 +401,8 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 }
 
-func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
-	bridgeClaims *core.BridgeClaims,
+func (sp *EthStateProcessor) notifyBridgingRequestStateUpdater(
+	bridgeClaims *oracleCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) error {
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
@@ -420,16 +423,37 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
+			var (
+				txHash common.Hash
+				found  bool
+			)
+
+			for _, processedTx := range sp.state.allProcessed {
+				if processedTx.OriginChainID == common.ToStrChainID(beClaim.ChainId) &&
+					processedTx.InnerActionHash == beClaim.ObservedTransactionHash {
+					txHash = common.Hash(processedTx.Hash)
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				sp.logger.Error(
+					"Failed to get txHash of a processed tx, based on BatchExecutedClaim.ObservedTransactionHash",
+					"bec", beClaim)
+			}
+
 			err := bridgingRequestStateUpdater.ExecutedOnDestination(
 				common.ToStrChainID(beClaim.ChainId),
 				beClaim.BatchNonceId,
-				beClaim.ObservedTransactionHash)
+				txHash)
 
 			if err != nil {
 				sp.logger.Error(
 					"error while updating bridging request states to ExecutedOnDestination",
 					"destinationChainId", common.ToStrChainID(beClaim.ChainId), "batchId", beClaim.BatchNonceId,
-					"destinationTxHash", beClaim.ObservedTransactionHash, "err", err)
+					"destinationTxHash", txHash, "err", err)
 			}
 		}
 	}
@@ -452,7 +476,7 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 	for _, tx := range sp.state.allProcessed {
 		if tx.IsInvalid {
 			for _, unprocessedTx := range sp.state.allUnprocessed {
-				if bytes.Equal(unprocessedTx.ToCardanoTxKey(), tx.ToCardanoTxKey()) {
+				if bytes.Equal(unprocessedTx.ToEthTxKey(), tx.ToEthTxKey()) {
 					txProcessor, err := sp.txProcessors.getSuccess(unprocessedTx.Metadata)
 					if err != nil {
 						sp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)

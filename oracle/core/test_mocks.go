@@ -230,14 +230,14 @@ func (m *BridgeSubmitterMock) Dispose() error {
 
 var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
 
-type CardanoTxProcessorMock struct {
+type CardanoTxSuccessProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
 }
 
 // GetType implements CardanoTxProcessor.
-func (m *CardanoTxProcessorMock) GetType() common.BridgingTxType {
+func (m *CardanoTxSuccessProcessorMock) GetType() common.BridgingTxType {
 	if m.Type != "" {
 		return m.Type
 	}
@@ -246,7 +246,8 @@ func (m *CardanoTxProcessorMock) GetType() common.BridgingTxType {
 }
 
 // ValidateAndAddClaim implements CardanoTxProcessor.
-func (m *CardanoTxProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error {
+func (m *CardanoTxSuccessProcessorMock) ValidateAndAddClaim(
+	claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error {
 	if m.ShouldAddClaim {
 		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, BridgingRequestClaim{})
 	}
@@ -256,7 +257,7 @@ func (m *CardanoTxProcessorMock) ValidateAndAddClaim(claims *BridgeClaims, tx *C
 	return args.Error(0)
 }
 
-var _ CardanoTxProcessor = (*CardanoTxProcessorMock)(nil)
+var _ CardanoTxSuccessProcessor = (*CardanoTxSuccessProcessorMock)(nil)
 
 type CardanoTxFailedProcessorMock struct {
 	mock.Mock

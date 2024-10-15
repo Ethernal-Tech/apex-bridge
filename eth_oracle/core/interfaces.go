@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	"github.com/Ethernal-Tech/ethgo"
 )
@@ -43,12 +42,11 @@ type Oracle interface {
 	Dispose() error
 }
 
-type EthTxsProcessor interface {
+type EthTxsReceiver interface {
 	NewUnprocessedLog(originChainID string, log *ethgo.Log) error
-	Start()
 }
 
-type EthTxProcessor interface {
+type EthTxSuccessProcessor interface {
 	GetType() common.BridgingTxType
 	ValidateAndAddClaim(claims *oracleCore.BridgeClaims, tx *EthTx, appConfig *oracleCore.AppConfig) error
 }
@@ -69,7 +67,7 @@ type EthBridgeDataFetcher interface {
 }
 
 type BridgeSubmitter interface {
-	SubmitClaims(claims *oracleCore.BridgeClaims, submitOpts *eth.SubmitOpts) error
+	oracleCore.BridgeClaimsSubmitter
 	SubmitConfirmedBlocks(chainID string, blocks uint64, lastBlock uint64) error
 }
 

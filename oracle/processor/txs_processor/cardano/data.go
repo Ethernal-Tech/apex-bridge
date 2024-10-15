@@ -20,15 +20,15 @@ type perTickState struct {
 }
 
 type txProcessorsCollection struct {
-	successTxProcessors map[string]core.CardanoTxProcessor
+	successTxProcessors map[string]core.CardanoTxSuccessProcessor
 	failedTxProcessors  map[string]core.CardanoTxFailedProcessor
 }
 
 func NewTxProcessorsCollection(
-	successTxProcessors []core.CardanoTxProcessor,
+	successTxProcessors []core.CardanoTxSuccessProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
 ) *txProcessorsCollection {
-	successTxProcessorsMap := make(map[string]core.CardanoTxProcessor, len(successTxProcessors))
+	successTxProcessorsMap := make(map[string]core.CardanoTxSuccessProcessor, len(successTxProcessors))
 	for _, txProcessor := range successTxProcessors {
 		successTxProcessorsMap[string(txProcessor.GetType())] = txProcessor
 	}
@@ -45,7 +45,7 @@ func NewTxProcessorsCollection(
 }
 
 func (pc *txProcessorsCollection) getSuccess(metadataBytes []byte) (
-	core.CardanoTxProcessor, error,
+	core.CardanoTxSuccessProcessor, error,
 ) {
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
 	if err != nil {
