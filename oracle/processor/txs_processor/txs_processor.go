@@ -48,28 +48,20 @@ func NewTxsProcessorImpl(
 func (p *TxsProcessorImpl) Start() {
 	p.logger.Debug("Starting TxsProcessor", "chainType", p.stateProcessor.GetChainType())
 
-	for {
-		if !p.CheckShouldGenerateClaims() {
-			return
-		}
-	}
-}
-
-func (p *TxsProcessorImpl) CheckShouldGenerateClaims() bool {
-	// ensure always same order of iterating through bp.appConfig.CardanoChains
+	// ensure always same order of iterating through bp.appConfig.CardanoChains or .EthChains
 	keys := p.getSortedChainIDs()
 
-	for _, key := range keys {
-		select {
-		case <-p.ctx.Done():
-			return false
-		case <-time.After(p.TickTime * time.Millisecond):
+	for {
+		for _, key := range keys {
+			select {
+			case <-p.ctx.Done():
+				return
+			case <-time.After(p.TickTime * time.Millisecond):
+			}
+
+			p.processAllStartingWithChain(key)
 		}
-
-		p.processAllStartingWithChain(key)
 	}
-
-	return true
 }
 
 func (p *TxsProcessorImpl) getSortedChainIDs() []string {

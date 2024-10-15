@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -50,6 +51,7 @@ func newEthTxsProcessor(
 }
 
 func newValidProcessor(
+	ctx context.Context,
 	appConfig *core.AppConfig,
 	oracleDB ethcore.Database,
 	successTxProcessor ethcore.EthTxSuccessProcessor,
@@ -67,8 +69,6 @@ func newValidProcessor(
 	if failedTxProcessor != nil {
 		failedTxProcessors = append(failedTxProcessors, failedTxProcessor)
 	}
-
-	ctx := context.Background()
 
 	return newEthTxsProcessor(
 		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
@@ -91,6 +91,8 @@ func TestEthTxsProcessor(t *testing.T) {
 	const (
 		dbFilePath      = "temp_test_oracle.db"
 		nexusDBFilePath = "temp_test_nexus.db"
+
+		processingWaitTimeMs = 300
 	)
 
 	dbCleanup := func() {
@@ -135,6 +137,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -159,6 +162,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			nil, nil, nil,
 			indexerDbs,
@@ -185,6 +189,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{Type: "relevant"}
 
 		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			indexerDbs,
@@ -215,6 +220,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.Hash{1}
 
 		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			indexerDbs,
@@ -267,7 +273,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.Hash{1}
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -292,10 +300,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -326,7 +337,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -351,10 +364,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 1)
@@ -385,7 +401,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -410,10 +428,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -451,7 +472,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -484,10 +507,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.Nil(t, expectedTxs)
@@ -521,7 +547,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -554,10 +582,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -596,7 +627,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -613,10 +646,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -656,7 +692,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -673,10 +711,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.Nil(t, expectedTxs)
@@ -720,7 +761,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -756,10 +799,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -812,7 +858,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -848,10 +896,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -904,7 +955,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
+		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -945,10 +998,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
 		proc.TickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.CheckShouldGenerateClaims()
-		}
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
