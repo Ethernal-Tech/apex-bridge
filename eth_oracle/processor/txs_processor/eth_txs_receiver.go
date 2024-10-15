@@ -199,33 +199,31 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 			return nil, err
 		}
 
-		if deposit != nil {
-			evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
-			if err != nil {
-				r.logger.Error("failed to create new evm smart contract tx", "err", err)
+		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
+		if err != nil {
+			r.logger.Error("failed to create new evm smart contract tx", "err", err)
 
-				return nil, err
-			}
-
-			batchExecutedMetadata := core.BatchExecutedEthMetadata{
-				BridgingTxType: common.BridgingTxTypeBatchExecution,
-				BatchNonceID:   evmTx.BatchNonceID,
-			}
-
-			metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
-			if err != nil {
-				r.logger.Error("failed to marshal metadata", "err", err)
-
-				return nil, err
-			}
-
-			evmTxHash, err := common.Keccak256(deposit.Data)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create txHash. err: %w", err)
-			}
-
-			innerActionTxHash = ethgo.BytesToHash(evmTxHash)
+			return nil, err
 		}
+
+		batchExecutedMetadata := core.BatchExecutedEthMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+			BatchNonceID:   evmTx.BatchNonceID,
+		}
+
+		metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
+		if err != nil {
+			r.logger.Error("failed to marshal metadata", "err", err)
+
+			return nil, err
+		}
+
+		evmTxHash, err := common.Keccak256(deposit.Data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create txHash. err: %w", err)
+		}
+
+		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
 	case withdrawEventSig:
 		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
 		if err != nil {
