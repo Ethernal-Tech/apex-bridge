@@ -8,10 +8,10 @@ import (
 )
 
 type perTickState struct {
-	invalidRelevantExpired []*core.BridgeExpectedCardanoTx
-	processedExpected      []*core.BridgeExpectedCardanoTx
-	processed              []*core.ProcessedCardanoTx
-	unprocessed            []*core.CardanoTx
+	allInvalidRelevantExpired []*core.BridgeExpectedCardanoTx
+	allProcessedExpected      []*core.BridgeExpectedCardanoTx
+	allProcessed              []*core.ProcessedCardanoTx
+	allUnprocessed            []*core.CardanoTx
 
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx
 	expectedTxs    []*core.BridgeExpectedCardanoTx

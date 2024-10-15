@@ -55,9 +55,7 @@ type TxsProcessor interface {
 
 type SpecificChainTxsProcessorState interface {
 	Reset()
-	PrepareFirstCheck(chainID string, priority uint8) bool
-	RunCheck(bridgeClaims *BridgeClaims, maxClaimsToGroup int)
-	NextBlockInfo() bool
+	RunChecks(bridgeClaims *BridgeClaims, chainID string, maxClaimsToGroup int, priority uint8)
 	PersistNew(bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)
 }
 

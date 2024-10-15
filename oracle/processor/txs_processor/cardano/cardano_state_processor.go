@@ -52,25 +52,29 @@ func (c *CardanoStateProcessor) Reset() {
 	c.state = &perTickState{}
 }
 
-// PrepareRun implements new_processor.SpecificChainStateProcessor.
-func (c *CardanoStateProcessor) PrepareFirstCheck(chainID string, priority uint8) bool {
+func (c *CardanoStateProcessor) RunChecks(
+	bridgeClaims *core.BridgeClaims,
+	chainID string,
+	maxClaimsToGroup int,
+	priority uint8,
+) {
 	var err error
 
 	c.state.expectedTxs, err = c.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
 		c.logger.Error("Failed to get expected txs", "err", err)
 
-		return false
+		return
 	}
 
 	c.state.unprocessedTxs, err = c.db.GetUnprocessedTxs(chainID, priority, 0)
 	if err != nil {
 		c.logger.Error("Failed to get unprocessed txs", "err", err)
 
-		return false
+		return
 	}
 
-	c.state.unprocessed = append(c.state.unprocessed, c.state.unprocessedTxs...)
+	c.state.allUnprocessed = append(c.state.allUnprocessed, c.state.unprocessedTxs...)
 
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
 	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
@@ -78,7 +82,7 @@ func (c *CardanoStateProcessor) PrepareFirstCheck(chainID string, priority uint8
 	c.state.blockInfo = c.constructBridgeClaimsBlockInfo(
 		chainID, c.state.unprocessedTxs, c.state.expectedTxs, nil)
 	if c.state.blockInfo == nil {
-		return false
+		return
 	}
 
 	c.state.expectedTxsMap = make(map[string]*core.BridgeExpectedCardanoTx, len(c.state.expectedTxs))
@@ -86,34 +90,35 @@ func (c *CardanoStateProcessor) PrepareFirstCheck(chainID string, priority uint8
 		c.state.expectedTxsMap[string(expectedTx.ToCardanoTxKey())] = expectedTx
 	}
 
-	return true
-}
+	for {
+		c.logger.Debug("Processing",
+			"for chainID", c.state.blockInfo.ChainID,
+			"blockInfo", c.state.blockInfo)
 
-func (c *CardanoStateProcessor) RunCheck(
-	bridgeClaims *core.BridgeClaims,
-	maxClaimsToGroup int,
-) {
-	c.logger.Debug("Processing",
-		"for chainID", c.state.blockInfo.ChainID,
-		"blockInfo", c.state.blockInfo)
+		_, processedTxs, processedExpectedTxs := c.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
 
-	_, processedTxs, processedExpectedTxs := c.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
+		_, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := c.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
 
-	_, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := c.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
+		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
 
-	processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
+		c.logger.Debug("Checked all", "for chainID", c.state.blockInfo.ChainID,
+			"processedTxs", processedTxs, "processedExpectedTxs", processedExpectedTxs,
+			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 
-	c.logger.Debug("Checked all", "for chainID", c.state.blockInfo.ChainID,
-		"processedTxs", processedTxs, "processedExpectedTxs", processedExpectedTxs,
-		"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
-}
+		c.state.allProcessed = append(c.state.allProcessed, processedTxs...)
+		c.state.allProcessedExpected = append(c.state.allProcessedExpected, processedExpectedTxs...)
+		c.state.allInvalidRelevantExpired = append(c.state.allInvalidRelevantExpired, invalidRelevantExpiredTxs...)
 
-func (c *CardanoStateProcessor) NextBlockInfo() bool {
-	c.state.blockInfo = c.constructBridgeClaimsBlockInfo(
-		c.state.blockInfo.ChainID, c.state.unprocessedTxs,
-		c.state.expectedTxs, c.state.blockInfo)
+		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
+			break
+		}
 
-	return c.state.blockInfo != nil
+		c.state.blockInfo = c.constructBridgeClaimsBlockInfo(
+			chainID, c.state.unprocessedTxs, c.state.expectedTxs, c.state.blockInfo)
+		if c.state.blockInfo == nil {
+			break
+		}
+	}
 }
 
 func (c *CardanoStateProcessor) PersistNew(
@@ -126,30 +131,30 @@ func (c *CardanoStateProcessor) PersistNew(
 	}
 
 	// we should only change this in db if submit succeeded (not really, but for convenience)
-	if len(c.state.invalidRelevantExpired) > 0 {
-		c.logger.Info("Marking expected txs as invalid", "txs", c.state.invalidRelevantExpired)
+	if len(c.state.allInvalidRelevantExpired) > 0 {
+		c.logger.Info("Marking expected txs as invalid", "txs", c.state.allInvalidRelevantExpired)
 
-		err := c.db.MarkExpectedTxsAsInvalid(c.state.invalidRelevantExpired)
+		err := c.db.MarkExpectedTxsAsInvalid(c.state.allInvalidRelevantExpired)
 		if err != nil {
 			c.logger.Error("Failed to mark expected txs as invalid", "err", err)
 		}
 	}
 
 	// we should only change this in db if submit succeeded
-	if len(c.state.processedExpected) > 0 {
-		c.logger.Info("Marking expected txs as processed", "txs", c.state.processedExpected)
+	if len(c.state.allProcessedExpected) > 0 {
+		c.logger.Info("Marking expected txs as processed", "txs", c.state.allProcessedExpected)
 
-		err := c.db.MarkExpectedTxsAsProcessed(c.state.processedExpected)
+		err := c.db.MarkExpectedTxsAsProcessed(c.state.allProcessedExpected)
 		if err != nil {
 			c.logger.Error("Failed to mark expected txs as processed", "err", err)
 		}
 	}
 
 	// we should only change this in db if submit succeeded
-	if len(c.state.processed) > 0 {
-		c.logger.Info("Marking txs as processed", "txs", c.state.processed)
+	if len(c.state.allProcessed) > 0 {
+		c.logger.Info("Marking txs as processed", "txs", c.state.allProcessed)
 
-		err := c.db.MarkUnprocessedTxsAsProcessed(c.state.processed)
+		err := c.db.MarkUnprocessedTxsAsProcessed(c.state.allProcessed)
 		if err != nil {
 			c.logger.Error("Failed to mark txs as processed", "err", err)
 		}
@@ -287,9 +292,6 @@ func (c *CardanoStateProcessor) checkUnprocessedTxs(
 		telemetry.UpdateOracleClaimsInvalidCounter(c.state.blockInfo.ChainID, invalidTxsCounter) // update telemetry
 	}
 
-	c.state.processed = append(c.state.processed, processedTxs...)
-	c.state.processedExpected = append(c.state.processedExpected, processedExpectedTxs...)
-
 	return relevantUnprocessedTxs, processedTxs, processedExpectedTxs
 }
 
@@ -389,9 +391,6 @@ func (c *CardanoStateProcessor) checkExpectedTxs(
 			c.state.blockInfo.ChainID, len(invalidRelevantExpiredTxs)) // update telemetry
 	}
 
-	c.state.processedExpected = append(c.state.processedExpected, processedRelevantExpiredTxs...)
-	c.state.invalidRelevantExpired = append(c.state.invalidRelevantExpired, invalidRelevantExpiredTxs...)
-
 	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
 }
 
@@ -446,9 +445,9 @@ func (c *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 		}
 	}
 
-	for _, tx := range c.state.processed {
+	for _, tx := range c.state.allProcessed {
 		if tx.IsInvalid {
-			for _, unprocessedTx := range c.state.unprocessed {
+			for _, unprocessedTx := range c.state.allUnprocessed {
 				if bytes.Equal(unprocessedTx.ToCardanoTxKey(), tx.ToCardanoTxKey()) {
 					txProcessor, err := c.txProcessors.getSuccess(unprocessedTx.Metadata)
 					if err != nil {

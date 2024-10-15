@@ -135,31 +135,8 @@ func (p *TxsProcessorImpl) processAllForChain(
 			break
 		}
 
-		p.processAllForChainAndPriority(
+		p.stateProcessor.RunChecks(
 			bridgeClaims, chainID, maxClaimsToGroup, priority)
-	}
-}
-
-func (p *TxsProcessorImpl) processAllForChainAndPriority(
-	bridgeClaims *core.BridgeClaims,
-	chainID string,
-	maxClaimsToGroup int,
-	priority uint8,
-) {
-	if !p.stateProcessor.PrepareFirstCheck(chainID, priority) {
-		return
-	}
-
-	for {
-		p.stateProcessor.RunCheck(bridgeClaims, maxClaimsToGroup)
-
-		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
-			return
-		}
-
-		if !p.stateProcessor.NextBlockInfo() {
-			return
-		}
 	}
 }
 
