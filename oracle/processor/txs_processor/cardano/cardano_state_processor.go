@@ -62,9 +62,7 @@ func (sp *CardanoStateProcessor) RunChecks(
 	maxClaimsToGroup int,
 	priority uint8,
 ) {
-	var err error
-
-	sp.state.expectedTxs, err = sp.db.GetExpectedTxs(chainID, priority, 0)
+	expectedTxs, err := sp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
 		sp.logger.Error("Failed to get expected txs", "err", err)
 
@@ -84,13 +82,13 @@ func (sp *CardanoStateProcessor) RunChecks(
 	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
 	// that all claims are filled only from unprocessedTxs and never from expectedTxs
 	sp.state.blockInfo = sp.constructBridgeClaimsBlockInfo(
-		chainID, sp.state.unprocessedTxs, sp.state.expectedTxs, nil)
+		chainID, sp.state.unprocessedTxs, expectedTxs, nil)
 	if sp.state.blockInfo == nil {
 		return
 	}
 
-	sp.state.expectedTxsMap = make(map[string]*core.BridgeExpectedCardanoTx, len(sp.state.expectedTxs))
-	for _, expectedTx := range sp.state.expectedTxs {
+	sp.state.expectedTxsMap = make(map[string]*core.BridgeExpectedCardanoTx, len(expectedTxs))
+	for _, expectedTx := range expectedTxs {
 		sp.state.expectedTxsMap[string(expectedTx.ToCardanoTxKey())] = expectedTx
 	}
 
@@ -118,7 +116,7 @@ func (sp *CardanoStateProcessor) RunChecks(
 		}
 
 		sp.state.blockInfo = sp.constructBridgeClaimsBlockInfo(
-			chainID, sp.state.unprocessedTxs, sp.state.expectedTxs, sp.state.blockInfo)
+			chainID, sp.state.unprocessedTxs, expectedTxs, sp.state.blockInfo)
 		if sp.state.blockInfo == nil {
 			break
 		}

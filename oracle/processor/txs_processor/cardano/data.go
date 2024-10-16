@@ -14,7 +14,6 @@ type perTickState struct {
 	allUnprocessed            []*core.CardanoTx
 
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx
-	expectedTxs    []*core.BridgeExpectedCardanoTx
 	unprocessedTxs []*core.CardanoTx
 	blockInfo      *core.BridgeClaimsBlockInfo
 }

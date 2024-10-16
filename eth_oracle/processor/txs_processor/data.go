@@ -13,7 +13,6 @@ type perTickState struct {
 	allUnprocessed            []*core.EthTx
 
 	expectedTxsMap map[string]*core.BridgeExpectedEthTx
-	expectedTxs    []*core.BridgeExpectedEthTx
 	unprocessedTxs []*core.EthTx
 	blockInfo      *core.BridgeClaimsBlockInfo
 }
