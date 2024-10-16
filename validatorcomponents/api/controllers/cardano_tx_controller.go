@@ -10,8 +10,8 @@ import (
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	oracleUtils "github.com/Ethernal-Tech/apex-bridge/oracle/utils"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
@@ -22,7 +22,7 @@ import (
 )
 
 type CardanoTxControllerImpl struct {
-	oracleConfig  *oracleCore.AppConfig
+	oracleConfig  *oCore.AppConfig
 	batcherConfig *batcherCore.BatcherManagerConfiguration
 	logger        hclog.Logger
 }
@@ -30,7 +30,7 @@ type CardanoTxControllerImpl struct {
 var _ core.APIController = (*CardanoTxControllerImpl)(nil)
 
 func NewCardanoTxController(
-	oracleConfig *oracleCore.AppConfig,
+	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,
 ) *CardanoTxControllerImpl {
@@ -161,12 +161,12 @@ func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.
 func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
-	cardanoSrcConfig, _ := oracleUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
+	cardanoSrcConfig, _ := oUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
 	if cardanoSrcConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", requestBody.SourceChainID)
 	}
 
-	cardanoDestConfig, ethDestConfig := oracleUtils.GetChainConfig(c.oracleConfig, requestBody.DestinationChainID)
+	cardanoDestConfig, ethDestConfig := oUtils.GetChainConfig(c.oracleConfig, requestBody.DestinationChainID)
 	if cardanoDestConfig == nil && ethDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}

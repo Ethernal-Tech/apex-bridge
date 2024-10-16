@@ -13,14 +13,13 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	eth_bridge "github.com/Ethernal-Tech/apex-bridge/eth_oracle/bridge"
-	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
-	ethOracle "github.com/Ethernal-Tech/apex-bridge/eth_oracle/oracle"
-	"github.com/Ethernal-Tech/apex-bridge/oracle/bridge"
-	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
-	"github.com/Ethernal-Tech/apex-bridge/oracle/oracle"
+	cardanoOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/bridge"
+	cardanoOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cardanoOracle "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/oracle"
+	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	ethOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
+	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
@@ -30,6 +29,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -43,7 +43,7 @@ type ValidatorComponentsImpl struct {
 	shouldRunAPI      bool
 	db                core.Database
 	cardanoIndexerDbs map[string]indexer.Database
-	oracle            oracleCore.Oracle
+	oracle            cardanoOracleCore.Oracle
 	ethOracle         ethOracleCore.Oracle
 	batcherManager    batcherCore.BatcherManager
 	relayerImitator   core.RelayerImitator
@@ -135,22 +135,24 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
 	}
 
-	bridgeSubmitter := bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
+		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
-	oracle, err := oracle.NewOracle(
+	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
-		bridgingRequestStateManager, logger.Named("oracle"))
+		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle. err %w", err)
+		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
 
-	ethBridgeSubmitter := eth_bridge.NewBridgeSubmitter(ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+	ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
+		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	ethOracle, err := ethOracle.NewEthOracle(
 		ctx, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
-		bridgingRequestStateManager, logger.Named("eth_oracle"))
+		bridgingRequestStateManager, logger.Named("oracle_eth"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create eth_oracle. err %w", err)
+		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
 	}
 
 	batcherManager, err := batchermanager.NewBatcherManager(
@@ -193,7 +195,7 @@ func NewValidatorComponents(
 		shouldRunAPI:      shouldRunAPI,
 		db:                db,
 		cardanoIndexerDbs: cardanoIndexerDbs,
-		oracle:            oracle,
+		oracle:            cardanoOracle,
 		ethOracle:         ethOracle,
 		batcherManager:    batcherManager,
 		relayerImitator:   relayerImitator,
@@ -213,12 +215,12 @@ func (v *ValidatorComponentsImpl) Start() error {
 
 	err = v.oracle.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start oracle. error: %w", err)
+		return fmt.Errorf("failed to start oracle_cardano. error: %w", err)
 	}
 
 	err = v.ethOracle.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start eth_oracle. error: %w", err)
+		return fmt.Errorf("failed to start oracle_eth. error: %w", err)
 	}
 
 	v.batcherManager.Start()
@@ -257,8 +259,8 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	}
 
 	if err := v.ethOracle.Dispose(); err != nil {
-		v.logger.Error("error while disposing eth_oracle", "err", err)
-		errs = append(errs, fmt.Errorf("error while disposing eth_oracle. err: %w", err))
+		v.logger.Error("error while disposing oracle_eth", "err", err)
+		errs = append(errs, fmt.Errorf("error while disposing oracle_eth. err: %w", err))
 	}
 
 	if v.shouldRunAPI {
@@ -310,7 +312,7 @@ outsideloop:
 
 func fixChainsAndAddresses(
 	ctx context.Context,
-	config *oracleCore.AppConfig,
+	config *oracleCommonCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
@@ -336,8 +338,8 @@ func fixChainsAndAddresses(
 
 	logger.Debug("done GetAllRegisteredChains", "allRegisteredChains", allRegisteredChains)
 
-	cardanoChains := make(map[string]*oracleCore.CardanoChainConfig)
-	ethChains := make(map[string]*oracleCore.EthChainConfig)
+	cardanoChains := make(map[string]*oracleCommonCore.CardanoChainConfig)
+	ethChains := make(map[string]*oracleCommonCore.EthChainConfig)
 
 	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
@@ -388,7 +390,7 @@ func fixChainsAndAddresses(
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
 
-			chainConfig.BridgingAddresses = oracleCore.BridgingAddresses{
+			chainConfig.BridgingAddresses = oracleCommonCore.BridgingAddresses{
 				BridgingAddress: multisigAddr,
 				FeeAddress:      feeAddr,
 			}
@@ -403,7 +405,7 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("invalid gateway address for chain %s: %s", chainID, regChain.AddressMultisig)
 			}
 
-			ethChainConfig.BridgingAddresses = oracleCore.EthBridgingAddresses{
+			ethChainConfig.BridgingAddresses = oracleCommonCore.EthBridgingAddresses{
 				BridgingAddress: regChain.AddressMultisig,
 			}
 
@@ -435,7 +437,7 @@ func fixChainsAndAddresses(
 	return nil
 }
 
-func getAddressesMap(cardanoChainConfig map[string]*oracleCore.CardanoChainConfig) map[string][]string {
+func getAddressesMap(cardanoChainConfig map[string]*oracleCommonCore.CardanoChainConfig) map[string][]string {
 	result := make(map[string][]string, len(cardanoChainConfig))
 
 	for key, config := range cardanoChainConfig {

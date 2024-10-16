@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -92,11 +92,11 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		count += len(utxos)
 	}
 
-	outputUtxos := make([]oracleCore.CardanoChainConfigUtxo, 0, count)
+	outputUtxos := make([]oCore.CardanoChainConfigUtxo, 0, count)
 
 	for _, utxos := range addressesUtxos {
 		for _, inp := range utxos {
-			outputUtxos = append(outputUtxos, oracleCore.CardanoChainConfigUtxo{
+			outputUtxos = append(outputUtxos, oCore.CardanoChainConfigUtxo{
 				Hash:    inp.Input.Hash,
 				Index:   inp.Input.Index,
 				Address: inp.Output.Address,

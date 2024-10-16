@@ -10,7 +10,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	oCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
