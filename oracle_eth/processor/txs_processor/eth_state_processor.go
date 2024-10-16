@@ -133,33 +133,16 @@ func (sp *EthStateProcessor) PersistNew(
 		sp.logger.Error("Error while updating bridging request states", "err", err)
 	}
 
-	// we should only change this in db if submit succeeded (not really, but for convenience)
-	if len(sp.state.allInvalidRelevantExpired) > 0 {
-		sp.logger.Info("Marking expected txs as invalid", "txs", sp.state.allInvalidRelevantExpired)
+	expectedInvalid := sp.state.allInvalidRelevantExpired
+	expectedProcessed := sp.state.allProcessedExpected
+	allProcessed := sp.state.allProcessed
+	// we should update db only if there are some changes needed
+	if len(expectedInvalid)+len(expectedProcessed)+len(allProcessed) > 0 {
+		sp.logger.Info("Marking expected txs", "invalid", expectedInvalid,
+			"expected", expectedProcessed, "processed", allProcessed)
 
-		err := sp.db.MarkExpectedTxsAsInvalid(sp.state.allInvalidRelevantExpired)
-		if err != nil {
+		if err := sp.db.MarkTxs(expectedInvalid, expectedProcessed, allProcessed); err != nil {
 			sp.logger.Error("Failed to mark expected txs as invalid", "err", err)
-		}
-	}
-
-	// we should only change this in db if submit succeeded
-	if len(sp.state.allProcessedExpected) > 0 {
-		sp.logger.Info("Marking expected txs as processed", "txs", sp.state.allProcessedExpected)
-
-		err := sp.db.MarkExpectedTxsAsProcessed(sp.state.allProcessedExpected)
-		if err != nil {
-			sp.logger.Error("Failed to mark expected txs as processed", "err", err)
-		}
-	}
-
-	// we should only change this in db if submit succeeded
-	if len(sp.state.allProcessed) > 0 {
-		sp.logger.Info("Marking txs as processed", "txs", sp.state.allProcessed)
-
-		err := sp.db.MarkUnprocessedTxsAsProcessed(sp.state.allProcessed)
-		if err != nil {
-			sp.logger.Error("Failed to mark txs as processed", "err", err)
 		}
 	}
 }

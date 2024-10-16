@@ -91,23 +91,12 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		}
 	}
 
-	if len(processedTxs) > 0 {
-		r.logger.Debug("Adding already processed txs to db", "txs", processedTxs)
+	// we should update db only if there are some changes needed
+	if len(processedTxs)+len(relevantTxs) > 0 {
+		r.logger.Debug("Adding txs to db", "processed", processedTxs, "unprocessed", relevantTxs)
 
-		err := r.db.AddProcessedTxs(processedTxs)
-		if err != nil {
-			r.logger.Error("Failed to add already processed txs", "err", err)
-
-			return err
-		}
-	}
-
-	if len(relevantTxs) > 0 {
-		r.logger.Debug("Adding relevant txs to db", "txs", relevantTxs)
-
-		err := r.db.AddUnprocessedTxs(relevantTxs)
-		if err != nil {
-			r.logger.Error("Failed to add unprocessed txs", "err", err)
+		if err := r.db.AddTxs(processedTxs, relevantTxs); err != nil {
+			r.logger.Error("Failed to add processed and unprocessed txs", "err", err)
 
 			return err
 		}
