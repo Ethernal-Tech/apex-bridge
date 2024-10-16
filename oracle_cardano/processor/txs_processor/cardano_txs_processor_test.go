@@ -255,7 +255,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -311,7 +311,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -367,7 +367,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -423,7 +423,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -479,7 +479,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -540,7 +540,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -600,7 +600,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -667,7 +667,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -750,7 +750,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -833,7 +833,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -922,7 +922,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1007,7 +1007,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1103,7 +1103,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(

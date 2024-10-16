@@ -5,6 +5,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -221,14 +222,20 @@ type BridgeSubmitterMock struct {
 }
 
 // SubmitClaims implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitClaims(claims *oCore.BridgeClaims, submitOpts *eth.SubmitOpts) error {
+func (m *BridgeSubmitterMock) SubmitClaims(
+	claims *oCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
 	if m.OnSubmitClaims != nil {
 		m.OnSubmitClaims(claims)
 	}
 
 	args := m.Called(claims, submitOpts)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(*types.Receipt)
 
-	return args.Error(0)
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 // SubmitConfirmedBlocks implements BridgeSubmitter.

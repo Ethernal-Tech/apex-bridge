@@ -269,7 +269,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.Hash{1}
 
@@ -333,7 +333,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -397,7 +397,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -468,7 +468,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -543,7 +543,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -623,7 +623,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -688,7 +688,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -756,7 +756,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -853,7 +853,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -950,7 +950,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")

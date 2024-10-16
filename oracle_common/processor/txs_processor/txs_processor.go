@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -107,8 +108,13 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 		}
 	}
 
-	if bridgeClaims.Count() > 0 && !p.submitClaims(startChainID, bridgeClaims) {
-		return
+	if bridgeClaims.Count() > 0 {
+		receipt, ok := p.submitClaims(startChainID, bridgeClaims)
+		if !ok {
+			return
+		}
+
+		p.stateProcessor.ProcessSubmitClaimsReceipt(receipt, bridgeClaims)
 	}
 
 	p.stateProcessor.PersistNew(bridgeClaims, p.bridgingRequestStateUpdater)
@@ -129,10 +135,11 @@ func (p *TxsProcessorImpl) processAllForChain(
 	}
 }
 
-func (p *TxsProcessorImpl) submitClaims(startChainID string, bridgeClaims *core.BridgeClaims) bool {
+func (p *TxsProcessorImpl) submitClaims(
+	startChainID string, bridgeClaims *core.BridgeClaims) (*types.Receipt, bool) {
 	p.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
-	err := p.bridgeSubmitter.SubmitClaims(
+	receipt, err := p.bridgeSubmitter.SubmitClaims(
 		bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})
 	if err != nil {
 		p.logger.Error("Failed to submit claims", "err", err)
@@ -145,12 +152,12 @@ func (p *TxsProcessorImpl) submitClaims(startChainID string, bridgeClaims *core.
 			"gasLimitMultiplier", p.settings.gasLimitMultiplier[startChainID],
 		)
 
-		return false
+		return nil, false
 	}
 
 	p.settings.ResetSubmitClaimsSettings(startChainID)
 
 	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 
-	return true
+	return receipt, true
 }
