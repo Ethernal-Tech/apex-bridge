@@ -7,22 +7,19 @@ import (
 )
 
 type BridgeExpectedCardanoTxsDB interface {
-	AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error
 	GetExpectedTxs(chainID string, priority uint8, threshold int) ([]*BridgeExpectedCardanoTx, error)
 	GetAllExpectedTxs(chainID string, threshold int) ([]*BridgeExpectedCardanoTx, error)
 	ClearExpectedTxs(chainID string) error
-	MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error
-	MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error
+	AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error
+	MarkTxs(expectedInvalid, expectedProcessed []*BridgeExpectedCardanoTx, allProcessed []*ProcessedCardanoTx) error
 }
 
 type CardanoTxsDB interface {
-	AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*CardanoTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error)
 	ClearUnprocessedTxs(chainID string) error
-	MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error
-	AddProcessedTxs(processedTxs []*ProcessedCardanoTx) error
 	GetProcessedTx(chainID string, txHash indexer.Hash) (*ProcessedCardanoTx, error)
+	AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error
 }
 
 type CardanoTxsProcessorDB interface {

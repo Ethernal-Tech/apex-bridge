@@ -97,31 +97,6 @@ func (m *CardanoTxsProcessorDBMock) ClearExpectedTxs(chainID string) error {
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) MarkExpectedTxsAsProcessed(expectedTxs []*BridgeExpectedCardanoTx) error {
-	args := m.Called(expectedTxs)
-
-	return args.Error(0)
-}
-
-// AddProcessedTxs implements CardanoTxsProcessorDB.
-func (m *CardanoTxsProcessorDBMock) AddProcessedTxs(processedTxs []*ProcessedCardanoTx) error {
-	args := m.Called(processedTxs)
-
-	return args.Error(0)
-}
-
-func (m *CardanoTxsProcessorDBMock) MarkExpectedTxsAsInvalid(expectedTxs []*BridgeExpectedCardanoTx) error {
-	args := m.Called(expectedTxs)
-
-	return args.Error(0)
-}
-
-func (m *CardanoTxsProcessorDBMock) AddUnprocessedTxs(unprocessedTxs []*CardanoTx) error {
-	args := m.Called(unprocessedTxs)
-
-	return args.Error(0)
-}
-
 func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(
 	chainID string, priority uint8, threshold int) (
 	[]*CardanoTx, error,
@@ -153,8 +128,16 @@ func (m *CardanoTxsProcessorDBMock) ClearUnprocessedTxs(chainID string) error {
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) MarkUnprocessedTxsAsProcessed(processedTxs []*ProcessedCardanoTx) error {
-	args := m.Called(processedTxs)
+func (m *CardanoTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error {
+	args := m.Called(processedTxs, unprocessedTxs)
+
+	return args.Error(0)
+}
+
+func (m *CardanoTxsProcessorDBMock) MarkTxs(
+	expectedInvalid, expectedProcessed []*BridgeExpectedCardanoTx, allProcessed []*ProcessedCardanoTx,
+) error {
+	args := m.Called(expectedInvalid, expectedProcessed, allProcessed)
 
 	return args.Error(0)
 }
