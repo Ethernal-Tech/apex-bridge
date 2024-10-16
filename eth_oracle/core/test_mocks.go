@@ -8,13 +8,12 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type EthTxsProcessorMock struct {
+type EthTxsReceiverMock struct {
 	mock.Mock
 	NewUnprocessedLogFn func(originChainId string, log *ethgo.Log) error
 }
 
-// NewUnprocessedTxs implements CardanoTxsProcessor.
-func (m *EthTxsProcessorMock) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
+func (m *EthTxsReceiverMock) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
 	if m.NewUnprocessedLogFn != nil {
 		return m.NewUnprocessedLogFn(originChainID, log)
 	}
@@ -24,11 +23,7 @@ func (m *EthTxsProcessorMock) NewUnprocessedLog(originChainID string, log *ethgo
 	return args.Error(0)
 }
 
-// Start implements CardanoTxsProcessor.
-func (m *EthTxsProcessorMock) Start() {
-}
-
-var _ EthTxsProcessor = (*EthTxsProcessorMock)(nil)
+var _ EthTxsReceiver = (*EthTxsReceiverMock)(nil)
 
 type BridgeDataFetcherMock struct {
 	mock.Mock
@@ -179,13 +174,13 @@ func (m *EthTxsProcessorDBMock) GetProcessedTx(
 
 var _ EthTxsProcessorDB = (*EthTxsProcessorDBMock)(nil)
 
-type EthTxProcessorMock struct {
+type EthTxSuccessProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
 }
 
-func (m *EthTxProcessorMock) GetType() common.BridgingTxType {
+func (m *EthTxSuccessProcessorMock) GetType() common.BridgingTxType {
 	if m.Type != "" {
 		return m.Type
 	}
@@ -193,7 +188,7 @@ func (m *EthTxProcessorMock) GetType() common.BridgingTxType {
 	return "unspecified"
 }
 
-func (m *EthTxProcessorMock) ValidateAndAddClaim(
+func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
 	claims *oracleCore.BridgeClaims, tx *EthTx, appConfig *oracleCore.AppConfig) error {
 	if m.ShouldAddClaim {
 		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oracleCore.BridgingRequestClaim{})
@@ -204,7 +199,7 @@ func (m *EthTxProcessorMock) ValidateAndAddClaim(
 	return args.Error(0)
 }
 
-var _ EthTxProcessor = (*EthTxProcessorMock)(nil)
+var _ EthTxSuccessProcessor = (*EthTxSuccessProcessorMock)(nil)
 
 type EthTxFailedProcessorMock struct {
 	mock.Mock

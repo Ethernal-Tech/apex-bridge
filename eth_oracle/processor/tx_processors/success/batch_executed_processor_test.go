@@ -1,4 +1,4 @@
-package txprocessors
+package successtxprocessors
 
 import (
 	"testing"

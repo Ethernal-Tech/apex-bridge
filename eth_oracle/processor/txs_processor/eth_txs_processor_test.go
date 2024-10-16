@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -12,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/ethgo"
 
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/eth_oracle/database_access"
+	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,18 +21,48 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func newValidProcessor(
+func newEthTxsProcessor(
+	ctx context.Context,
 	appConfig *core.AppConfig,
-	oracleDB ethcore.EthTxsProcessorDB,
-	txProcessor ethcore.EthTxProcessor,
+	db ethcore.EthTxsProcessorDB,
+	successTxProcessors []ethcore.EthTxSuccessProcessor,
+	failedTxProcessors []ethcore.EthTxFailedProcessor,
+	bridgeSubmitter ethcore.BridgeSubmitter,
+	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {
+	txProcessors := NewTxProcessorsCollection(
+		successTxProcessors, failedTxProcessors,
+	)
+
+	ethTxsReceiver := NewEthTxsReceiverImpl(appConfig, db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
+
+	ethStateProcessor := NewEthStateProcessor(
+		ctx, appConfig, db, txProcessors,
+		indexerDbs, hclog.NewNullLogger(),
+	)
+
+	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
+		ctx, appConfig, ethStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
+		hclog.NewNullLogger(),
+	)
+
+	return ethTxsProcessor, ethTxsReceiver
+}
+
+func newValidProcessor(
+	ctx context.Context,
+	appConfig *core.AppConfig,
+	oracleDB ethcore.Database,
+	successTxProcessor ethcore.EthTxSuccessProcessor,
 	failedTxProcessor ethcore.EthTxFailedProcessor,
 	bridgeSubmitter ethcore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) *EthTxsProcessorImpl {
-	var txProcessors []ethcore.EthTxProcessor
-	if txProcessor != nil {
-		txProcessors = append(txProcessors, txProcessor)
+) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {
+	var successTxProcessors []ethcore.EthTxSuccessProcessor
+	if successTxProcessor != nil {
+		successTxProcessors = append(successTxProcessors, successTxProcessor)
 	}
 
 	var failedTxProcessors []ethcore.EthTxFailedProcessor
@@ -38,16 +70,9 @@ func newValidProcessor(
 		failedTxProcessors = append(failedTxProcessors, failedTxProcessor)
 	}
 
-	ethTxsProcessor := NewEthTxsProcessor(
-		context.Background(),
-		appConfig, oracleDB,
-		txProcessors, failedTxProcessors,
-		bridgeSubmitter, indexerDbs,
-		bridgingRequestStateUpdater,
-		hclog.NewNullLogger(),
-	)
-
-	return ethTxsProcessor
+	return newEthTxsProcessor(
+		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
+		bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
 }
 
 func TestEthTxsProcessor(t *testing.T) {
@@ -66,6 +91,8 @@ func TestEthTxsProcessor(t *testing.T) {
 	const (
 		dbFilePath      = "temp_test_oracle.db"
 		nexusDBFilePath = "temp_test_nexus.db"
+
+		processingWaitTimeMs = 300
 	)
 
 	dbCleanup := func() {
@@ -78,28 +105,29 @@ func TestEthTxsProcessor(t *testing.T) {
 	t.Run("TestEthTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		proc := NewEthTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
+		proc, rec := newEthTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
+		require.NotNil(t, rec)
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}}
 
-		proc = NewEthTxsProcessor(
+		proc, rec = newEthTxsProcessor(
 			context.Background(),
 			appConfig,
 			&ethcore.EthTxsProcessorDBMock{},
-			[]ethcore.EthTxProcessor{},
+			[]ethcore.EthTxSuccessProcessor{},
 			[]ethcore.EthTxFailedProcessor{},
 			&ethcore.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			hclog.NewNullLogger(),
 		)
 		require.NotNil(t, proc)
+		require.NotNil(t, rec)
 	})
 
 	t.Run("NewUnprocessedTxs nil txs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		validTxProc := &ethcore.EthTxProcessorMock{}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{}
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{}
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 
@@ -108,7 +136,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -117,7 +146,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, nil))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, nil))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
@@ -132,7 +161,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			nil, nil, nil,
 			indexerDbs,
@@ -141,7 +171,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, &ethgo.Log{}))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, &ethgo.Log{}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
@@ -156,9 +186,10 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{Type: "relevant"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{Type: "relevant"}
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			indexerDbs,
@@ -167,7 +198,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, &ethgo.Log{
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, &ethgo.Log{
 			BlockHash: ethgo.Hash{1},
 		}))
 
@@ -184,11 +215,12 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 
 		txHash := ethgo.Hash{1}
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			indexerDbs,
@@ -212,7 +244,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, log))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
 		require.NoError(t, err)
@@ -232,7 +264,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
@@ -241,7 +273,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.Hash{1}
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -264,12 +298,15 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, log))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -291,7 +328,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
@@ -300,7 +337,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -323,12 +362,15 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, log))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 1)
@@ -350,7 +392,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
@@ -359,7 +401,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			indexerDbs,
@@ -382,12 +426,15 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(common.ChainIDStrNexus, log))
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -413,7 +460,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{Type: "test"}
@@ -425,7 +472,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -448,7 +497,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(originChainID, log))
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
@@ -458,10 +507,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.Nil(t, expectedTxs)
@@ -483,7 +535,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{Type: "test"}
@@ -495,7 +547,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -518,7 +572,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(originChainID, log))
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
@@ -528,10 +582,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -553,7 +610,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -570,7 +627,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -587,10 +646,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(originChainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -613,7 +675,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -630,7 +692,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -647,10 +711,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.Nil(t, expectedTxs)
@@ -676,7 +743,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -694,7 +761,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -718,7 +787,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
+		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
 		require.NoError(t, err)
@@ -730,10 +799,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -768,7 +840,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: "batch"}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -786,7 +858,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -810,7 +884,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
+		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
 		require.NoError(t, err)
@@ -822,10 +896,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -860,7 +937,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
@@ -878,7 +955,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			indexerDbs,
@@ -902,7 +981,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
-		require.NoError(t, proc.NewUnprocessedLog(chainID, log))
+		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
 		require.NoError(t, err)
@@ -919,10 +998,13 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)

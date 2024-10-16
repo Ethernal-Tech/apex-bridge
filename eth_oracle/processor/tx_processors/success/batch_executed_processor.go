@@ -1,4 +1,4 @@
-package txprocessors
+package successtxprocessors
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.EthTxProcessor = (*BatchExecutedProcessorImpl)(nil)
+var _ core.EthTxSuccessProcessor = (*BatchExecutedProcessorImpl)(nil)
 
 type BatchExecutedProcessorImpl struct {
 	logger hclog.Logger
@@ -57,7 +57,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (*BatchExecutedProcessorImpl) validate(
-	tx *core.EthTx, metadata *core.BatchExecutedEthMetadata, appConfig *oracleCore.AppConfig,
+	_ *core.EthTx, _ *core.BatchExecutedEthMetadata, _ *oracleCore.AppConfig,
 ) error {
 	return nil
 }

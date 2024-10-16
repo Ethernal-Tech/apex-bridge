@@ -1,4 +1,4 @@
-package txprocessors
+package successtxprocessors
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.EthTxProcessor = (*BridgingRequestedProcessorImpl)(nil)
+var _ core.EthTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
 	logger hclog.Logger

@@ -49,12 +49,22 @@ type CardanoChainObserver interface {
 	ErrorCh() <-chan error
 }
 
-type CardanoTxsProcessor interface {
-	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
+type TxsProcessor interface {
 	Start()
 }
 
-type CardanoTxProcessor interface {
+type SpecificChainTxsProcessorState interface {
+	GetChainType() string
+	Reset()
+	RunChecks(bridgeClaims *BridgeClaims, chainID string, maxClaimsToGroup int, priority uint8)
+	PersistNew(bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)
+}
+
+type CardanoTxsReceiver interface {
+	NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error
+}
+
+type CardanoTxSuccessProcessor interface {
 	GetType() common.BridgingTxType
 	ValidateAndAddClaim(claims *BridgeClaims, tx *CardanoTx, appConfig *AppConfig) error
 }
@@ -73,8 +83,12 @@ type BridgeDataFetcher interface {
 	FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error)
 }
 
-type BridgeSubmitter interface {
+type BridgeClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) error
+}
+
+type BridgeSubmitter interface {
+	BridgeClaimsSubmitter
 	SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error
 }
 

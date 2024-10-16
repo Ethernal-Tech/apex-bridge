@@ -64,7 +64,7 @@ func (*RefundExecutionFailedProcessorImpl) addRefundRequestClaim(
 }
 
 func (*RefundExecutionFailedProcessorImpl) validate(
-	tx *core.BridgeExpectedCardanoTx, metadata *common.RefundExecutedMetadata, appConfig *core.AppConfig,
+	_ *core.BridgeExpectedCardanoTx, _ *common.RefundExecutedMetadata, _ *core.AppConfig,
 ) error {
 	// implement validating the tx for this specific claim if it is needed
 	// once we figure out the structure of metadata and how the refund is applied

@@ -12,10 +12,11 @@ import (
 	eth_chain "github.com/Ethernal-Tech/apex-bridge/eth_oracle/chain"
 	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/eth_oracle/database_access"
-	"github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor"
-	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/failed_tx_processors"
-	txprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/tx_processors"
+	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/tx_processors/failed"
+	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/tx_processors/success"
+	ethtxsprocessor "github.com/Ethernal-Tech/apex-bridge/eth_oracle/processor/txs_processor"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle/core"
+	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
 )
@@ -27,7 +28,7 @@ const (
 type OracleImpl struct {
 	ctx                      context.Context
 	appConfig                *oracleCore.AppConfig
-	ethTxsProcessor          core.EthTxsProcessor
+	ethTxsProcessor          oracleCore.TxsProcessor
 	expectedTxsFetcher       oracleCore.ExpectedTxsFetcher
 	ethChainObservers        []core.EthChainObserver
 	confirmedBlockSubmitters []core.EthConfirmedBlocksSubmitter
@@ -57,23 +58,34 @@ func NewEthOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("eth_expected_txs_fetcher"))
 
-	txProcessors := []core.EthTxProcessor{
-		txprocessors.NewEthBatchExecutedProcessor(logger),
-		txprocessors.NewEthBridgingRequestedProcessor(logger),
-		// tx_processors.NewRefundExecutedProcessor(logger),
-	}
+	txProcessors := ethtxsprocessor.NewTxProcessorsCollection(
+		[]core.EthTxSuccessProcessor{
+			successtxprocessors.NewEthBatchExecutedProcessor(logger),
+			successtxprocessors.NewEthBridgingRequestedProcessor(logger),
+			// tx_processors.NewRefundExecutedProcessor(logger),
+		},
+		[]core.EthTxFailedProcessor{
+			failedtxprocessors.NewEthBatchExecutionFailedProcessor(logger),
+			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
+		},
+	)
 
-	failedTxProcessors := []core.EthTxFailedProcessor{
-		failedtxprocessors.NewEthBatchExecutionFailedProcessor(logger),
-		// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
-	}
+	txsProcessorLogger := logger.Named("eth_txs_processor")
 
-	ethTxsProcessor := processor.NewEthTxsProcessor(
-		ctx, appConfig, db, txProcessors, failedTxProcessors, bridgeSubmitter,
-		indexerDbs, bridgingRequestStateUpdater, logger.Named("eth_txs_processor"))
+	ethTxsReceiver := ethtxsprocessor.NewEthTxsReceiverImpl(
+		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
+
+	ethStateProcessor := ethtxsprocessor.NewEthStateProcessor(
+		ctx, appConfig, db, txProcessors,
+		indexerDbs, txsProcessorLogger,
+	)
+
+	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
+		ctx, appConfig, ethStateProcessor, bridgeSubmitter,
+		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))
-	confirmedBlockSubmitters := make([]core.EthConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
+	confirmedBlockSubmitters := make([]core.EthConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
 
 	for _, ethChainConfig := range appConfig.EthChains {
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
@@ -87,7 +99,7 @@ func NewEthOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		eco, err := eth_chain.NewEthChainObserver(
-			ctx, ethChainConfig, ethTxsProcessor, db, indexerDB,
+			ctx, ethChainConfig, ethTxsReceiver, db, indexerDB,
 			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create eth chain observer for `%s`: %w", ethChainConfig.ChainID, err)

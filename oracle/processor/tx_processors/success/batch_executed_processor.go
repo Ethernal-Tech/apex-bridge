@@ -1,4 +1,4 @@
-package txprocessors
+package successtxprocessors
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxProcessor = (*BatchExecutedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessProcessor = (*BatchExecutedProcessorImpl)(nil)
 
 type BatchExecutedProcessorImpl struct {
 	logger hclog.Logger
@@ -56,7 +56,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (*BatchExecutedProcessorImpl) validate(
-	tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *core.AppConfig,
+	tx *core.CardanoTx, _ *common.BatchExecutedMetadata, appConfig *core.AppConfig,
 ) error {
 	// after BridgingTxType and inputs are validated, no further validation needed
 	return utils.ValidateTxInputs(tx, appConfig)

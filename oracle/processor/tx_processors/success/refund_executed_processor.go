@@ -1,4 +1,4 @@
-package txprocessors
+package successtxprocessors
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxProcessor = (*RefundExecutedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessProcessor = (*RefundExecutedProcessorImpl)(nil)
 
 type RefundExecutedProcessorImpl struct {
 	logger hclog.Logger
@@ -64,7 +64,7 @@ func (*RefundExecutedProcessorImpl) addRefundExecutedClaim(
 }
 
 func (*RefundExecutedProcessorImpl) validate(
-	tx *core.CardanoTx, metadata *common.RefundExecutedMetadata, appConfig *core.AppConfig,
+	_ *core.CardanoTx, _ *common.RefundExecutedMetadata, _ *core.AppConfig,
 ) error {
 	// implement validating the tx for this specific claim if it is needed
 	// once we figure out the structure of metadata and how the refund is applied

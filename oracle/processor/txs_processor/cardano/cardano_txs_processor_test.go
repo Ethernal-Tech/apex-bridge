@@ -1,13 +1,15 @@
-package processor
+package cardanotxsprocessor
 
 import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle/database_access"
+	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle/processor/txs_processor"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/hashicorp/go-hclog"
@@ -15,18 +17,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newCardanoTxsProcessor(
+	ctx context.Context,
+	appConfig *core.AppConfig,
+	db core.CardanoTxsProcessorDB,
+	successTxProcessors []core.CardanoTxSuccessProcessor,
+	failedTxProcessors []core.CardanoTxFailedProcessor,
+	bridgeSubmitter core.BridgeSubmitter,
+	indexerDbs map[string]indexer.Database,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
+	txProcessors := NewTxProcessorsCollection(
+		successTxProcessors, failedTxProcessors,
+	)
+
+	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
+
+	cardanoStateProcessor := NewCardanoStateProcessor(
+		ctx, appConfig, db, txProcessors,
+		indexerDbs, hclog.NewNullLogger(),
+	)
+
+	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
+		ctx, appConfig, cardanoStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
+		hclog.NewNullLogger(),
+	)
+
+	return cardanoTxsProcessor, cardanoTxsReceiver
+}
+
 func newValidProcessor(
+	ctx context.Context,
 	appConfig *core.AppConfig,
 	oracleDB core.Database,
-	txProcessor core.CardanoTxProcessor,
+	successTxProcessor core.CardanoTxSuccessProcessor,
 	failedTxProcessor core.CardanoTxFailedProcessor,
 	bridgeSubmitter core.BridgeSubmitter,
-	ccoDbs map[string]indexer.Database,
+	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) *CardanoTxsProcessorImpl {
-	var txProcessors []core.CardanoTxProcessor
-	if txProcessor != nil {
-		txProcessors = append(txProcessors, txProcessor)
+) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
+	var successTxProcessors []core.CardanoTxSuccessProcessor
+	if successTxProcessor != nil {
+		successTxProcessors = append(successTxProcessors, successTxProcessor)
 	}
 
 	var failedTxProcessors []core.CardanoTxFailedProcessor
@@ -34,16 +66,9 @@ func newValidProcessor(
 		failedTxProcessors = append(failedTxProcessors, failedTxProcessor)
 	}
 
-	cardanoTxsProcessor := NewCardanoTxsProcessor(
-		context.Background(),
-		appConfig, oracleDB,
-		txProcessors, failedTxProcessors,
-		bridgeSubmitter, ccoDbs,
-		bridgingRequestStateUpdater,
-		hclog.NewNullLogger(),
-	)
-
-	return cardanoTxsProcessor
+	return newCardanoTxsProcessor(
+		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
+		bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
 }
 
 func TestCardanoTxsProcessor(t *testing.T) {
@@ -63,6 +88,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		dbFilePath       = "temp_test_oracle.db"
 		primeDBFilePath  = "temp_test_prime.db"
 		vectorDBFilePath = "temp_test_vector.db"
+
+		processingWaitTimeMs = 300
 	)
 
 	createDbs := func() (core.Database, indexer.Database, indexer.Database) {
@@ -86,22 +113,23 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		proc := NewCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
+		proc, rec := newCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
+		require.NotNil(t, rec)
 
 		indexerDbs := map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB}
 
-		proc = NewCardanoTxsProcessor(
+		proc, rec = newCardanoTxsProcessor(
 			context.Background(),
 			appConfig,
 			oracleDB,
-			[]core.CardanoTxProcessor{},
+			[]core.CardanoTxSuccessProcessor{},
 			[]core.CardanoTxFailedProcessor{},
 			&core.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			hclog.NewNullLogger(),
 		)
 		require.NotNil(t, proc)
+		require.NotNil(t, rec)
 	})
 
 	t.Run("NewUnprocessedTxs nil txs", func(t *testing.T) {
@@ -109,11 +137,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{}
 		failedTxProc := &core.CardanoTxFailedProcessorMock{}
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -122,7 +151,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedTxs(common.ChainIDStrPrime, nil))
+		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, nil))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
@@ -134,7 +163,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -143,7 +173,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{}))
+		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
@@ -155,9 +185,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "relevant"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "relevant"}
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -166,7 +197,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, proc.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
 			{Hash: indexer.Hash{1}},
 		}))
 
@@ -180,9 +211,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "test"}
 
-		proc := newValidProcessor(
+		proc, rec := newValidProcessor(
+			context.Background(),
 			appConfig, oracleDB,
 			validTxProc, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -201,7 +233,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
 			{Hash: txHash, Metadata: metadata},
 		}))
 
@@ -217,14 +249,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -243,17 +277,20 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
 			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -268,14 +305,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -294,22 +333,24 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
 			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 1)
-		require.Equal(t, indexer.Hash(txHash), unprocessedTxs[0].Hash)
+		require.Equal(t, txHash, unprocessedTxs[0].Hash)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.Nil(t, processedTx)
@@ -320,14 +361,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -346,18 +389,20 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(originChainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
 			{Hash: txHash, Metadata: metadata},
 		}))
 
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -379,9 +424,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -409,11 +456,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.Nil(t, expectedTxs)
@@ -431,9 +480,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -461,11 +512,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -488,9 +541,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -516,11 +571,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.NotNil(t, expectedTxs)
@@ -544,9 +601,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, _ := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -574,11 +633,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
 		require.Nil(t, expectedTxs)
@@ -592,7 +653,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -607,7 +668,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -630,7 +693,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -644,11 +707,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(5 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -671,7 +736,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -686,7 +751,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -709,7 +776,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -723,11 +790,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -750,7 +819,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
@@ -765,7 +834,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -788,7 +859,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -807,11 +878,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
@@ -835,7 +908,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -850,7 +923,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -874,7 +949,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -888,11 +963,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
 		require.Nil(t, unprocessedTxs)
@@ -916,7 +993,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -931,7 +1008,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -955,11 +1034,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
 			{Hash: txHash2, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -979,11 +1058,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
 		require.Nil(t, unprocessedTxs)
@@ -1008,7 +1089,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		oracleDB, primeDB, vectorDB := createDbs()
 
-		validTxProc := &core.CardanoTxProcessorMock{ShouldAddClaim: true, Type: "test"}
+		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
@@ -1023,7 +1104,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil)
 
-		proc := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
@@ -1049,11 +1132,11 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
 			{Hash: txHash1, BlockSlot: blockSlot1 - 1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
-		require.NoError(t, proc.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
 			{Hash: txHash2, BlockSlot: blockSlot1, BlockHash: blockHash, Metadata: metadata},
 		}))
 
@@ -1075,11 +1158,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		// go proc.Start()
 		// defer proc.Stop()
 		// time.Sleep(12 * time.Second)
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
 
-		proc.tickTime = 1
-		for i := 0; i < 5; i++ {
-			proc.checkShouldGenerateClaims()
-		}
+		proc.TickTime = 1
+		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
 		require.Nil(t, unprocessedTxs)
