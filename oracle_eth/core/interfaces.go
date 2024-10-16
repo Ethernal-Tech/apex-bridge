@@ -11,7 +11,6 @@ type BridgeExpectedEthTxsDB interface {
 	GetAllExpectedTxs(chainID string, threshold int) ([]*BridgeExpectedEthTx, error)
 	ClearExpectedTxs(chainID string) error
 	AddExpectedTxs(expectedTxs []*BridgeExpectedEthTx) error
-	MarkTxs(expectedInvalid, expectedProcessed []*BridgeExpectedEthTx, allProcessed []*ProcessedEthTx) error
 }
 
 type EthTxsDB interface {
@@ -21,6 +20,7 @@ type EthTxsDB interface {
 	GetProcessedTx(chainID string, txHash ethgo.Hash) (*ProcessedEthTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash ethgo.Hash) (*ProcessedEthTx, error)
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
+	MarkTxs(expectedInvalid, expectedProcessed []*BridgeExpectedEthTx, allProcessed []*ProcessedEthTx) error
 }
 
 type EthTxsProcessorDB interface {
