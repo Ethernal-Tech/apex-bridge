@@ -114,7 +114,7 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 			return
 		}
 
-		events := p.processSubmitClaimsReceipt(receipt)
+		events := p.extractEventsFromReceipt(receipt)
 		p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
 	}
 
@@ -163,7 +163,7 @@ func (p *TxsProcessorImpl) submitClaims(
 	return receipt, true
 }
 
-func (p *TxsProcessorImpl) processSubmitClaimsReceipt(_ *types.Receipt) *core.SubmitClaimsEvents {
+func (p *TxsProcessorImpl) extractEventsFromReceipt(_ *types.Receipt) *core.SubmitClaimsEvents {
 	// parse receipt for events, and put them in SubmitClaimsEvents structure
 	// events: emit NotEnoughFunds(_type, _index, _chainTokenQuantity); where type="BRC"
 	// BatchExecutionInfo(
