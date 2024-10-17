@@ -15,12 +15,12 @@ import (
 func TestBridgeSubmitter(t *testing.T) {
 	t.Run("submit claims", func(t *testing.T) {
 		bridgeSC := eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("SubmitClaims").Return(nil)
+		bridgeSC.On("SubmitClaims").Return(nil, nil)
 
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
-		err := bridgeSubmitter.SubmitClaims(&cCore.BridgeClaims{
+		_, err := bridgeSubmitter.SubmitClaims(&cCore.BridgeClaims{
 			ContractClaims: cCore.ContractClaims{
 				BridgingRequestClaims: []cCore.BridgingRequestClaim{
 					{

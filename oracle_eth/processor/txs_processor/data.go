@@ -9,7 +9,8 @@ import (
 type perTickState struct {
 	allInvalidRelevantExpired []*core.BridgeExpectedEthTx
 	allProcessedExpected      []*core.BridgeExpectedEthTx
-	allProcessed              []*core.ProcessedEthTx
+	allProcessedInvalid       []*core.EthTx
+	allProcessedValid         []*core.EthTx
 	allUnprocessed            []*core.EthTx
 
 	expectedTxsMap map[string]*core.BridgeExpectedEthTx

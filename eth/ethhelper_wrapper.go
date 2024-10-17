@@ -92,27 +92,27 @@ func (e *EthHelperWrapper) ProcessError(err error) error {
 }
 
 // sendTx should be called by all public methods that sends tx to the bridge
-func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendTxFunc) (string, error) {
+func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendTxFunc) (*types.Receipt, error) {
 	ethTxHelper, err := e.GetEthHelper()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	tx, err := ethTxHelper.SendTx(ctx, e.wallet, bind.TransactOpts{}, handler)
 	if err != nil {
-		return "", e.ProcessError(err) // tx is not available here to pick hash/gas/gasprice
+		return nil, e.ProcessError(err) // tx is not available here to pick hash/gas/gasprice
 	}
 
 	e.logger.Info("tx has been sent", "hash", tx.Hash(), "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
-		return "", fmt.Errorf("failed to receive receipt for tx %s, gas limit = %d, gas price = %s: %w",
+		return nil, fmt.Errorf("failed to receive receipt for tx %s, gas limit = %d, gas price = %s: %w",
 			tx.Hash(), tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
-		return receipt.BlockHash.String(),
+		return receipt,
 			fmt.Errorf("tx receipt status is unsuccessful for %s, gas limit = %d, gas price = %s",
 				tx.Hash(), tx.Gas(), tx.GasPrice())
 	}
@@ -120,5 +120,5 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 	e.logger.Info("tx has been included in block", "hash", tx.Hash(),
 		"block", receipt.BlockNumber, "block hash", receipt.BlockHash, "gas used", receipt.GasUsed)
 
-	return receipt.BlockHash.String(), nil
+	return receipt, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -31,17 +32,18 @@ func NewBridgeSubmitter(
 	}
 }
 
-func (bs *BridgeSubmitterImpl) SubmitClaims(claims *cCore.BridgeClaims, submitOpts *eth.SubmitOpts) error {
-	err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims, submitOpts)
+func (bs *BridgeSubmitterImpl) SubmitClaims(
+	claims *cCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
+	receipt, err := bs.bridgeSC.SubmitClaims(bs.ctx, claims.ContractClaims, submitOpts)
 	if err != nil {
 		bs.logger.Error("Failed to submit claims", "claims", claims, "err", err)
 
-		return err
+		return nil, err
 	}
 
 	bs.logger.Info("Claims submitted successfully", "claims", claims)
 
-	return nil
+	return receipt, nil
 }
 
 func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error {

@@ -24,7 +24,7 @@ type SubmitOpts struct {
 type IOracleBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, sourceChain string) (CardanoBlock, error)
 	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
-	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) error
+	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) (*types.Receipt, error)
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
 }
 
@@ -110,20 +110,20 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 	ctx context.Context, claims Claims, submitOpts *SubmitOpts,
-) error {
+) (*types.Receipt, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return nil, bsc.ethHelper.ProcessError(err)
 	}
 
-	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+	receipt, err := bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		opts.GasLimit = submitClaimsGasLimit
 		if submitOpts != nil && submitOpts.GasLimitMultiplier != 0 {
 			opts.GasLimit = uint64(float32(opts.GasLimit) * submitOpts.GasLimitMultiplier)
@@ -132,7 +132,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 		return contract.SubmitClaims(opts, claims)
 	})
 
-	return bsc.ethHelper.ProcessError(err)
+	return receipt, bsc.ethHelper.ProcessError(err)
 }
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
