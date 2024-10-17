@@ -114,7 +114,8 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 			return
 		}
 
-		p.stateProcessor.ProcessSubmitClaimsReceipt(receipt, bridgeClaims)
+		events := p.processSubmitClaimsReceipt(receipt)
+		p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
 	}
 
 	p.stateProcessor.PersistNew(bridgeClaims, p.bridgingRequestStateUpdater)
@@ -160,4 +161,13 @@ func (p *TxsProcessorImpl) submitClaims(
 	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 
 	return receipt, true
+}
+
+func (p *TxsProcessorImpl) processSubmitClaimsReceipt(_ *types.Receipt) *core.SubmitClaimsEvents {
+	// parse receipt for events, and put them in SubmitClaimsEvents structure
+	// events: emit NotEnoughFunds(_type, _index, _chainTokenQuantity); where type="BRC"
+	// BatchExecutionInfo(
+	// 		batchID uint64, claimIdx int, isFailedClaim bool,
+	//		txHashes []tuple(bytes32 txSourceHash, txSourceChainID byte))
+	return &core.SubmitClaimsEvents{}
 }

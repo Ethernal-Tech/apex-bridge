@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -130,12 +129,9 @@ func (sp *EthStateProcessor) RunChecks(
 	}
 }
 
-func (sp *EthStateProcessor) ProcessSubmitClaimsReceipt(receipt *types.Receipt, claims *oracleCore.BridgeClaims) {
+func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
+	events *oracleCore.SubmitClaimsEvents, claims *oracleCore.BridgeClaims) {
 	// a TODO: implement this
-	// events: emit NotEnoughFunds(_type, _index, _chainTokenQuantity); where type="BRC"
-	// BatchExecutionInfo(
-	// 		batchID uint64, claimIdx int, isFailedClaim bool,
-	//		txHashes []tuple(bytes32 txSourceHash, txSourceChainID byte))
 }
 
 func (sp *EthStateProcessor) PersistNew(

@@ -10,7 +10,6 @@ import (
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -130,12 +129,9 @@ func (sp *CardanoStateProcessor) RunChecks(
 	}
 }
 
-func (sp *CardanoStateProcessor) ProcessSubmitClaimsReceipt(receipt *types.Receipt, claims *cCore.BridgeClaims) {
+func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
+	events *cCore.SubmitClaimsEvents, claims *cCore.BridgeClaims) {
 	// a TODO: implement this
-	// events: emit NotEnoughFunds(_type, _index, _chainTokenQuantity); where type="BRC"
-	// BatchExecutionInfo(
-	// 		batchID uint64, claimIdx int, isFailedClaim bool,
-	//		txHashes []tuple(bytes32 txSourceHash, txSourceChainID byte))
 }
 
 func (sp *CardanoStateProcessor) PersistNew(
