@@ -204,7 +204,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) MarkTxs(
 			return err
 		}
 
-		if err := bd.markUnprocessedTxsAsProcessed(tx, allProcessed); err != nil {
+		if err := bd.markAsProcessed(tx, allProcessed); err != nil {
 			return err
 		}
 
@@ -328,7 +328,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearExpectedTxs(chainID 
 	})
 }
 
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markUnprocessedTxsAsProcessed(
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markAsProcessed(
 	tx *bbolt.Tx, processedTxs []TProcessedTx,
 ) error {
 	processedBucket, unprocessedBucket := tx.Bucket(ProcessedTxsBucket), tx.Bucket(UnprocessedTxsBucket)
