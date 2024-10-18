@@ -33,18 +33,12 @@ type BridgeExpectedCardanoTx struct {
 	Metadata []byte       `json:"metadata"`
 	TTL      uint64       `json:"ttl"`
 	Priority uint8        `json:"priority"`
-}
-
-var _ cCore.BaseExpectedTx = (*BridgeExpectedCardanoTx)(nil)
-
-type BridgeExpectedCardanoDBTx struct {
-	BridgeExpectedCardanoTx
 
 	IsProcessed bool `json:"is_processed"`
 	IsInvalid   bool `json:"is_invalid"`
 }
 
-var _ cCore.BaseExpectedDBTx = (*BridgeExpectedCardanoDBTx)(nil)
+var _ cCore.BaseExpectedTx = (*BridgeExpectedCardanoTx)(nil)
 
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{
@@ -87,56 +81,34 @@ func (tx BridgeExpectedCardanoTx) Key() []byte {
 	return tx.ToExpectedTxKey()
 }
 
-// NewExpectedDBTx implements core.BaseExpectedTx.
-func (tx BridgeExpectedCardanoTx) NewExpectedDBTx() cCore.BaseExpectedDBTx {
-	return BridgeExpectedCardanoDBTx{
-		BridgeExpectedCardanoTx: tx,
-		IsProcessed:             false,
-		IsInvalid:               false,
-	}
-}
-
-// GetChainID implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) GetChainID() string {
+// GetChainID implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetChainID() string {
 	return tx.ChainID
 }
 
-// GetPriority implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) GetPriority() uint8 {
+// GetPriority implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetPriority() uint8 {
 	return tx.Priority
 }
 
-// GetIsInvalid implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) GetIsInvalid() bool {
+// GetIsInvalid implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetIsInvalid() bool {
 	return tx.IsInvalid
 }
 
-// GetIsProcessed implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) GetIsProcessed() bool {
+// GetIsProcessed implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetIsProcessed() bool {
 	return tx.IsProcessed
 }
 
-// GetInnerTx implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) GetInnerTx() cCore.BaseExpectedTx {
-	return tx.BridgeExpectedCardanoTx
+// SetProcessed implements core.BaseExpectedTx.
+func (tx *BridgeExpectedCardanoTx) SetProcessed() {
+	tx.IsProcessed = true
 }
 
-// SetProcessed implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) SetProcessed() cCore.BaseExpectedDBTx {
-	return BridgeExpectedCardanoDBTx{
-		BridgeExpectedCardanoTx: tx.BridgeExpectedCardanoTx,
-		IsProcessed:             true,
-		IsInvalid:               tx.IsInvalid,
-	}
-}
-
-// SetInvalid implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedCardanoDBTx) SetInvalid() cCore.BaseExpectedDBTx {
-	return BridgeExpectedCardanoDBTx{
-		BridgeExpectedCardanoTx: tx.BridgeExpectedCardanoTx,
-		IsProcessed:             tx.IsProcessed,
-		IsInvalid:               true,
-	}
+// SetInvalid implements core.BaseExpectedTx.
+func (tx *BridgeExpectedCardanoTx) SetInvalid() {
+	tx.IsInvalid = true
 }
 
 func ToUnprocessedTxKey(priority uint8, blockSlot uint64, originChainID string, txHash indexer.Hash) []byte {

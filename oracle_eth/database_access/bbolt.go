@@ -12,10 +12,9 @@ import (
 
 type BBoltDatabase struct {
 	cDatabaseaccess.BBoltDBBase[
-		core.EthTx,
-		core.ProcessedEthTx,
-		core.BridgeExpectedEthTx,
-		core.BridgeExpectedEthDBTx,
+		*core.EthTx,
+		*core.ProcessedEthTx,
+		*core.BridgeExpectedEthTx,
 	]
 }
 

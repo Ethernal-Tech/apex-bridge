@@ -50,18 +50,12 @@ type BridgeExpectedEthTx struct {
 	Metadata []byte     `json:"metadata"`
 	TTL      uint64     `json:"ttl"`
 	Priority uint8      `json:"priority"`
-}
-
-var _ cCore.BaseExpectedTx = (*BridgeExpectedEthTx)(nil)
-
-type BridgeExpectedEthDBTx struct {
-	BridgeExpectedEthTx
 
 	IsProcessed bool `json:"is_processed"`
 	IsInvalid   bool `json:"is_invalid"`
 }
 
-var _ cCore.BaseExpectedDBTx = (*BridgeExpectedEthDBTx)(nil)
+var _ cCore.BaseExpectedTx = (*BridgeExpectedEthTx)(nil)
 
 type BridgeClaimsBlockInfo struct {
 	ChainID string
@@ -110,56 +104,34 @@ func (tx BridgeExpectedEthTx) Key() []byte {
 	return tx.ToExpectedTxKey()
 }
 
-// NewExpectedDBTx implements core.BaseExpectedTx.
-func (tx BridgeExpectedEthTx) NewExpectedDBTx() cCore.BaseExpectedDBTx {
-	return BridgeExpectedEthDBTx{
-		BridgeExpectedEthTx: tx,
-		IsProcessed:         false,
-		IsInvalid:           false,
-	}
-}
-
-// GetChainID implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) GetChainID() string {
+// GetChainID implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetChainID() string {
 	return tx.ChainID
 }
 
-// GetPriority implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) GetPriority() uint8 {
+// GetPriority implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetPriority() uint8 {
 	return tx.Priority
 }
 
-// GetIsInvalid implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) GetIsInvalid() bool {
+// GetIsInvalid implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetIsInvalid() bool {
 	return tx.IsInvalid
 }
 
-// GetIsProcessed implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) GetIsProcessed() bool {
+// GetIsProcessed implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetIsProcessed() bool {
 	return tx.IsProcessed
 }
 
-// GetInnerTx implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) GetInnerTx() cCore.BaseExpectedTx {
-	return tx.BridgeExpectedEthTx
+// SetProcessed implements core.BaseExpectedTx.
+func (tx *BridgeExpectedEthTx) SetProcessed() {
+	tx.IsProcessed = true
 }
 
-// SetProcessed implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) SetProcessed() cCore.BaseExpectedDBTx {
-	return BridgeExpectedEthDBTx{
-		BridgeExpectedEthTx: tx.BridgeExpectedEthTx,
-		IsProcessed:         true,
-		IsInvalid:           tx.IsInvalid,
-	}
-}
-
-// SetInvalid implements core.BaseExpectedDbTx.
-func (tx BridgeExpectedEthDBTx) SetInvalid() cCore.BaseExpectedDBTx {
-	return BridgeExpectedEthDBTx{
-		BridgeExpectedEthTx: tx.BridgeExpectedEthTx,
-		IsProcessed:         tx.IsProcessed,
-		IsInvalid:           true,
-	}
+// SetInvalid implements core.BaseExpectedTx.
+func (tx *BridgeExpectedEthTx) SetInvalid() {
+	tx.IsInvalid = true
 }
 
 func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {

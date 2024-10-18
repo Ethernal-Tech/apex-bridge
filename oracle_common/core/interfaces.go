@@ -20,20 +20,13 @@ type BaseProcessedTx interface {
 
 type BaseExpectedTx interface {
 	Key() []byte
-	NewExpectedDBTx() BaseExpectedDBTx
-}
-
-type BaseExpectedDBTx interface {
-	Key() []byte
-
 	GetChainID() string
 	GetPriority() uint8
 	GetIsProcessed() bool
 	GetIsInvalid() bool
-	GetInnerTx() BaseExpectedTx
 
-	SetProcessed() BaseExpectedDBTx
-	SetInvalid() BaseExpectedDBTx
+	SetProcessed()
+	SetInvalid()
 }
 
 type TxsProcessor interface {

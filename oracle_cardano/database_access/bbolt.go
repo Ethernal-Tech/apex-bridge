@@ -8,10 +8,9 @@ import (
 
 type BBoltDatabase struct {
 	cDatabaseaccess.BBoltDBBase[
-		core.CardanoTx,
-		core.ProcessedCardanoTx,
-		core.BridgeExpectedCardanoTx,
-		core.BridgeExpectedCardanoDBTx,
+		*core.CardanoTx,
+		*core.ProcessedCardanoTx,
+		*core.BridgeExpectedCardanoTx,
 	]
 }
 
