@@ -190,11 +190,17 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) MarkTxs(
 	additionalCallback func(tx *bbolt.Tx) error,
 ) error {
 	return bd.DB.Update(func(tx *bbolt.Tx) error {
-		if err := bd.markExpectedTxsAsInvalid(tx, expectedInvalid); err != nil {
+		err := bd.markExpectedTxs(tx, expectedInvalid, func(expectedTx TExpectedTx) {
+			expectedTx.SetInvalid()
+		})
+		if err != nil {
 			return err
 		}
 
-		if err := bd.markExpectedTxsAsProcessed(tx, expectedProcessed); err != nil {
+		err = bd.markExpectedTxs(tx, expectedProcessed, func(expectedTx TExpectedTx) {
+			expectedTx.SetProcessed()
+		})
+		if err != nil {
 			return err
 		}
 
@@ -343,22 +349,6 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markUnprocessedTxsAsProce
 	}
 
 	return nil
-}
-
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxsAsProcessed(
-	tx *bbolt.Tx, expectedTxs []TExpectedTx,
-) error {
-	return bd.markExpectedTxs(tx, expectedTxs, func(expectedTx TExpectedTx) {
-		expectedTx.SetProcessed()
-	})
-}
-
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxsAsInvalid(
-	tx *bbolt.Tx, expectedTxs []TExpectedTx,
-) error {
-	return bd.markExpectedTxs(tx, expectedTxs, func(expectedTx TExpectedTx) {
-		expectedTx.SetInvalid()
-	})
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
