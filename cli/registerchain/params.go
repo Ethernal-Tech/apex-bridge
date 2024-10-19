@@ -215,6 +215,8 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	receipt, err := ip.ethTxHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
 	if err != nil {
 		return nil, err
+	} else if receipt.Status != types.ReceiptStatusSuccessful {
+		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
 	return &CmdResult{
