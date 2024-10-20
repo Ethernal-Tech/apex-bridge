@@ -68,6 +68,7 @@ func NewCardanoOracle(
 		[]core.CardanoTxSuccessProcessor{
 			successtxprocessors.NewBatchExecutedProcessor(logger),
 			successtxprocessors.NewBridgingRequestedProcessor(logger),
+			successtxprocessors.NewHotWalletIncrementProcessor(logger),
 			// tx_processors.NewRefundExecutedProcessor(logger),
 		},
 		[]core.CardanoTxFailedProcessor{

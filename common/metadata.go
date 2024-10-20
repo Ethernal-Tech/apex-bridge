@@ -13,6 +13,7 @@ type MetadataEncodingType string
 const (
 	BridgingTxTypeBridgingRequest BridgingTxType = "bridge"
 	BridgingTxTypeBatchExecution  BridgingTxType = "batch"
+	BridgingTxTypeHotWalletFund   BridgingTxType = "fund"
 	BridgingTxTypeRefundExecution BridgingTxType = "refund"
 
 	MetadataEncodingTypeJSON MetadataEncodingType = "json"

@@ -65,13 +65,15 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+		txProcessorType := txProcessor.GetType()
+		if txProcessorType == common.BridgingTxTypeBatchExecution ||
+			txProcessorType == common.BridgingTxTypeHotWalletFund {
 			cardanoTx.Priority = 0
 		}
 
 		relevantTxs = append(relevantTxs, cardanoTx)
 
-		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+		if txProcessorType == common.BridgingTxTypeBridgingRequest {
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{

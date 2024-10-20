@@ -47,6 +47,11 @@ func NewTxProcessorsCollection(
 func (pc *txProcessorsCollection) getSuccess(metadataBytes []byte) (
 	core.CardanoTxSuccessProcessor, error,
 ) {
+	// return HotWallet fund processor if no metadata is found, address validation will be done later
+	if len(metadataBytes) == 0 {
+		return pc.successTxProcessors[string(common.BridgingTxTypeHotWalletFund)], nil
+	}
+
 	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
 	if err != nil {
 		return nil, err
