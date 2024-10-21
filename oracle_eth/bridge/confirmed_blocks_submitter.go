@@ -81,22 +81,20 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
-	lastBlockToSubmit := lastProcessedBlock
+	to := lastProcessedBlock
 	//nolint:gosec
-	maxLastBlockToSubmit := from + uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
-	if lastBlockToSubmit > maxLastBlockToSubmit {
-		lastBlockToSubmit = maxLastBlockToSubmit
+	maxBlock := from + uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
+	if to > maxBlock {
+		to = maxBlock
 	}
 
-	blockCount := lastBlockToSubmit - from
-
-	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, from, blockCount); err != nil {
+	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, from, to); err != nil {
 		bs.logger.Error("error submitting confirmed blocks", "err", err)
 
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
 
-	bs.latestBlockNumber = from + blockCount - 1
+	bs.latestBlockNumber = to
 	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestBlockNumber", bs.latestBlockNumber)
 
 	return nil

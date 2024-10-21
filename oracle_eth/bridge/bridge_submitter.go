@@ -45,10 +45,10 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(
 	return receipt, nil
 }
 
-func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, firstBlock uint64, blockCount uint64,
+func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, from uint64, to uint64,
 ) error {
-	contractBlocks := make([]eth.CardanoBlock, 0, blockCount)
-	for blockNumber := firstBlock; blockNumber < firstBlock+blockCount; blockNumber++ {
+	contractBlocks := make([]eth.CardanoBlock, 0, to-from+1)
+	for blockNumber := from; blockNumber <= to; blockNumber++ {
 		contractBlocks = append(contractBlocks, eth.CardanoBlock{
 			BlockSlot: new(big.Int).SetUint64(blockNumber),
 		})
@@ -56,14 +56,14 @@ func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, firstBlock 
 
 	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, contractBlocks)
 	if err != nil {
-		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", "chainID", chainID, "from block", firstBlock,
-			"blockCount", blockCount, "err", err)
+		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", "chainID", chainID, "from block", from,
+			"to block", to, "err", err)
 
 		return err
 	}
 
-	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "from block", firstBlock,
-		"blockCount", blockCount)
+	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "from block", from,
+		"to block", to)
 
 	return nil
 }
