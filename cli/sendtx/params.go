@@ -441,8 +441,10 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	outputter.WriteOutput()
 
 	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
-	if types.ReceiptStatusSuccessful != receipt.Status {
+	if err != nil {
 		return nil, err
+	} else if receipt.Status != types.ReceiptStatusSuccessful {
+		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
 	if ip.ogmiosURLDst != "" {

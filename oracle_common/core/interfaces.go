@@ -6,6 +6,29 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type BaseTx interface {
+	GetOriginChainID() string
+	GetPriority() uint8
+
+	ToUnprocessedTxKey() []byte
+}
+
+type BaseProcessedTx interface {
+	Key() []byte
+	ToUnprocessedTxKey() []byte
+}
+
+type BaseExpectedTx interface {
+	Key() []byte
+	GetChainID() string
+	GetPriority() uint8
+	GetIsProcessed() bool
+	GetIsInvalid() bool
+
+	SetProcessed()
+	SetInvalid()
+}
+
 type TxsProcessor interface {
 	Start()
 }

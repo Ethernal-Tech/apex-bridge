@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math/big"
 
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
 )
 
@@ -23,6 +24,8 @@ type EthTx struct {
 	InnerActionHash ethgo.Hash    `json:"ia_hash"`
 }
 
+var _ cCore.BaseTx = (*EthTx)(nil)
+
 type ProcessedEthTx struct {
 	BlockNumber     uint64     `json:"block_number"`
 	BlockHash       ethgo.Hash `json:"block_hash"`
@@ -32,6 +35,8 @@ type ProcessedEthTx struct {
 	IsInvalid       bool       `json:"is_invalid"`
 	InnerActionHash ethgo.Hash `json:"ia_hash"`
 }
+
+var _ cCore.BaseProcessedTx = (*ProcessedEthTx)(nil)
 
 type ProcessedEthTxByInnerAction struct {
 	OriginChainID   string     `json:"origin_chain_id"`
@@ -45,14 +50,12 @@ type BridgeExpectedEthTx struct {
 	Metadata []byte     `json:"metadata"`
 	TTL      uint64     `json:"ttl"`
 	Priority uint8      `json:"priority"`
-}
-
-type BridgeExpectedEthDBTx struct {
-	BridgeExpectedEthTx
 
 	IsProcessed bool `json:"is_processed"`
 	IsInvalid   bool `json:"is_invalid"`
 }
+
+var _ cCore.BaseExpectedTx = (*BridgeExpectedEthTx)(nil)
 
 type BridgeClaimsBlockInfo struct {
 	ChainID string
@@ -69,6 +72,66 @@ func (bi *BridgeClaimsBlockInfo) EqualWithProcessed(tx *ProcessedEthTx) bool {
 
 func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedEthTx, blockNumber uint64) bool {
 	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
+}
+
+// GetOriginChainID implements core.BaseTx.
+func (tx EthTx) GetOriginChainID() string {
+	return tx.OriginChainID
+}
+
+// GetPriority implements core.BaseTx.
+func (tx EthTx) GetPriority() uint8 {
+	return tx.Priority
+}
+
+// ToUnprocessedTxKey implements core.BaseTx.
+func (tx EthTx) ToUnprocessedTxKey() []byte {
+	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
+}
+
+// Key implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) Key() []byte {
+	return tx.ToEthTxKey()
+}
+
+// ToUnprocessedTxKey implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) ToUnprocessedTxKey() []byte {
+	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
+}
+
+// Key implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) Key() []byte {
+	return tx.ToExpectedTxKey()
+}
+
+// GetChainID implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetChainID() string {
+	return tx.ChainID
+}
+
+// GetPriority implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetPriority() uint8 {
+	return tx.Priority
+}
+
+// GetIsInvalid implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetIsInvalid() bool {
+	return tx.IsInvalid
+}
+
+// GetIsProcessed implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetIsProcessed() bool {
+	return tx.IsProcessed
+}
+
+// SetProcessed implements core.BaseExpectedTx.
+func (tx *BridgeExpectedEthTx) SetProcessed() {
+	tx.IsProcessed = true
+}
+
+// SetInvalid implements core.BaseExpectedTx.
+func (tx *BridgeExpectedEthTx) SetInvalid() {
+	tx.IsInvalid = true
 }
 
 func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
@@ -99,14 +162,6 @@ func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, originChainID str
 	return append(append(bytes[:], []byte(originChainID)...), txHash[:]...)
 }
 
-func (tx EthTx) ToUnprocessedTxKey() []byte {
-	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
-}
-
-func (tx ProcessedEthTx) ToUnprocessedTxKey() []byte {
-	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
-}
-
 func ToEthTxKey(originChainID string, txHash ethgo.Hash) []byte {
 	return append([]byte(originChainID), txHash[:]...)
 }
@@ -127,10 +182,6 @@ func (tx EthTx) Key() []byte {
 	return tx.ToEthTxKey()
 }
 
-func (tx ProcessedEthTx) Key() []byte {
-	return tx.ToEthTxKey()
-}
-
 func (tx ProcessedEthTx) KeyByInnerAction() []byte {
 	return ToEthTxKey(tx.OriginChainID, tx.InnerActionHash)
 }
@@ -145,12 +196,4 @@ func (tx BridgeExpectedEthTx) ToExpectedTxKey() []byte {
 	binary.BigEndian.PutUint64(bytes[1:], tx.TTL)
 
 	return append(append(bytes[:], []byte(tx.ChainID)...), tx.Hash[:]...)
-}
-
-func (tx BridgeExpectedEthTx) Key() []byte {
-	return tx.ToExpectedTxKey()
-}
-
-func (tx BridgeExpectedEthDBTx) Key() []byte {
-	return tx.ToExpectedTxKey()
 }
