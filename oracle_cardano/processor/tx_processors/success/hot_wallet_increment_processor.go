@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -57,6 +58,11 @@ func (p *HotWalletIncrementProcessor) validate(
 ) error {
 	if _, err := utils.ValidateTxOutputs(tx, appConfig); err != nil {
 		return err
+	}
+
+	cardanoSrcConfig, _ := cUtils.GetChainConfig(appConfig, tx.OriginChainID)
+	if cardanoSrcConfig == nil {
+		return fmt.Errorf("chain not registered: %v", tx.OriginChainID)
 	}
 
 	return nil
