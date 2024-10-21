@@ -3,6 +3,7 @@ package processor
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 )
 
@@ -46,6 +47,11 @@ func NewTxProcessorsCollection(
 func (pc *txProcessorsCollection) getSuccess(metadataJSON []byte) (
 	core.EthTxSuccessProcessor, error,
 ) {
+	// return HotWallet fund processor if no metadata is found, address validation will be done later
+	if len(metadataJSON) == 0 {
+		return pc.successTxProcessors[string(common.BridgingTxTypeHotWalletFund)], nil
+	}
+
 	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](
 		metadataJSON)
 	if err != nil {

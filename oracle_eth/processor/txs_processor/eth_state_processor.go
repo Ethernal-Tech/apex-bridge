@@ -265,6 +265,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		sp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
 
+		// SASA
 		txProcessor, err := sp.txProcessors.getSuccess(unprocessedTx.Metadata)
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for unprocessed tx", "tx", unprocessedTx, "err", err)

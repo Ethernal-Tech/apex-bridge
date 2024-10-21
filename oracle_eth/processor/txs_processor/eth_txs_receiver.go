@@ -75,13 +75,15 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		processedTxs = append(processedTxs, tx.ToProcessedEthTx(false))
 		invalidTxsCounter++
 	} else {
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+		txProcessorType := txProcessor.GetType()
+		if txProcessorType == common.BridgingTxTypeBatchExecution ||
+			txProcessorType == common.BridgingTxTypeHotWalletFund {
 			tx.Priority = 0
 		}
 
 		relevantTxs = append(relevantTxs, tx)
 
-		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+		if txProcessorType == common.BridgingTxTypeBridgingRequest {
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
@@ -129,6 +131,7 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 
 	depositEventSig := events[0]
 	withdrawEventSig := events[1]
+	fundedEventSig := events[2]
 
 	ethConfig, exists := r.appConfig.EthChains[originChainID]
 	if !exists {
@@ -245,6 +248,16 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		}
 
 		txValue = withdraw.Value
+	case fundedEventSig:
+		funded, err := contract.GatewayFilterer.ParseFundsDeposited(parsedLog)
+		if err != nil {
+			r.logger.Error("failed to parse funds deposited event", "err", err)
+
+			return nil, err
+		}
+
+		txValue = funded.Value
+
 	default:
 		r.logger.Error("unknown event type in log", "log", log)
 
