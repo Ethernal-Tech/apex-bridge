@@ -535,7 +535,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	vcConfig := &vcCore.AppConfig{
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
-		CardanoChains: map[string]*vcCore.CardanoChainConfig{
+		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				NetworkAddress:           p.primeNetworkAddress,
 				NetworkMagic:             p.primeNetworkMagic,
