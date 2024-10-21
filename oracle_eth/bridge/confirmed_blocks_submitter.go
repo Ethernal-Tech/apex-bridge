@@ -82,6 +82,10 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 	}
 
 	to := lastProcessedBlock
+	if from > to {
+		return nil
+	}
+
 	//nolint:gosec
 	maxBlock := from + uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
 	if to > maxBlock {

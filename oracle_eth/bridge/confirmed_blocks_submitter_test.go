@@ -71,7 +71,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil)
+		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
 
 		err := bs.execute()
 		require.Error(t, err)
@@ -87,7 +87,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil)
+		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
 
 		err := bs.execute()
 		require.NoError(t, err)

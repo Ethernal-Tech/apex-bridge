@@ -86,6 +86,10 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
+	if len(blocksToSubmit) == 0 {
+		return nil
+	}
+
 	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
 
 	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, blocksToSubmit); err != nil {
