@@ -45,11 +45,13 @@ type EthTxsReceiver interface {
 
 type EthTxSuccessProcessor interface {
 	GetType() common.BridgingTxType
+	PreValidate(tx *EthTx, appConfig *oCore.AppConfig) error
 	ValidateAndAddClaim(claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig) error
 }
 
 type EthTxFailedProcessor interface {
 	GetType() common.BridgingTxType
+	PreValidate(tx *BridgeExpectedEthTx, appConfig *oCore.AppConfig) error
 	ValidateAndAddClaim(claims *oCore.BridgeClaims, tx *BridgeExpectedEthTx, appConfig *oCore.AppConfig) error
 }
 

@@ -56,7 +56,7 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 		r.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-		txProcessor, err := r.txProcessors.getSuccess(tx.Metadata)
+		txProcessor, err := r.txProcessors.getSuccess(cardanoTx, nil)
 		if err != nil {
 			r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
@@ -67,7 +67,7 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 		txProcessorType := txProcessor.GetType()
 		if txProcessorType == common.BridgingTxTypeBatchExecution ||
-			txProcessorType == common.BridgingTxTypeHotWalletFund {
+			txProcessorType == common.TxTypeHotWalletFund {
 			cardanoTx.Priority = 0
 		}
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 )
 
 type perTickState struct {
@@ -44,31 +45,39 @@ func NewTxProcessorsCollection(
 	}
 }
 
-func (pc *txProcessorsCollection) getSuccess(metadataBytes []byte) (
+func (pc *txProcessorsCollection) getSuccess(tx *core.CardanoTx, appConfig *cCore.AppConfig) (
 	core.CardanoTxSuccessProcessor, error,
 ) {
-	// return HotWallet fund processor if no metadata is found, address validation will be done later
-	if len(metadataBytes) == 0 {
-		return pc.successTxProcessors[string(common.BridgingTxTypeHotWalletFund)], nil
+	var (
+		txProcessor core.CardanoTxSuccessProcessor
+		relevant    bool
+	)
+
+	if len(tx.Metadata) != 0 {
+		metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+		if err != nil {
+			return nil, err
+		}
+
+		txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
+		if !relevant {
+			return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+		}
+	} else {
+		txProcessor = pc.successTxProcessors[string(common.TxTypeHotWalletFund)]
 	}
 
-	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
-	if err != nil {
+	if err := txProcessor.PreValidate(tx, appConfig); err != nil {
 		return nil, err
-	}
-
-	txProcessor, relevant := pc.successTxProcessors[string(metadata.BridgingTxType)]
-	if !relevant {
-		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
 	}
 
 	return txProcessor, nil
 }
 
-func (pc *txProcessorsCollection) getFailed(metadataBytes []byte) (
+func (pc *txProcessorsCollection) getFailed(tx *core.BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) (
 	core.CardanoTxFailedProcessor, error,
 ) {
-	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, metadataBytes)
+	metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +86,8 @@ func (pc *txProcessorsCollection) getFailed(metadataBytes []byte) (
 	if !relevant {
 		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
 	}
+
+	txProcessor.PreValidate(tx, appConfig)
 
 	return txProcessor, nil
 }

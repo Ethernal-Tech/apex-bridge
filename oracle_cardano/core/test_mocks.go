@@ -208,6 +208,7 @@ type CardanoTxSuccessProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
+	ValidateError  error
 }
 
 // GetType implements CardanoTxProcessor.
@@ -217,6 +218,14 @@ func (m *CardanoTxSuccessProcessorMock) GetType() common.BridgingTxType {
 	}
 
 	return "unspecified"
+}
+
+func (m *CardanoTxSuccessProcessorMock) PreValidate(tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	if m.ValidateError != nil {
+		return m.ValidateError
+	}
+
+	return nil
 }
 
 // ValidateAndAddClaim implements CardanoTxProcessor.
@@ -237,6 +246,7 @@ type CardanoTxFailedProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
+	ValidateError  error
 }
 
 // GetType implements CardanoTxProcessor.
@@ -246,6 +256,14 @@ func (m *CardanoTxFailedProcessorMock) GetType() common.BridgingTxType {
 	}
 
 	return "unspecified"
+}
+
+func (m *CardanoTxFailedProcessorMock) PreValidate(tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error {
+	if m.ValidateError != nil {
+		return m.ValidateError
+	}
+
+	return nil
 }
 
 // ValidateAndAddClaim implements CardanoTxFailedProcessor.

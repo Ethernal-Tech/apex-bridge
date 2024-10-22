@@ -68,7 +68,7 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 
 	r.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-	txProcessor, err := r.txProcessors.getSuccess(tx.Metadata)
+	txProcessor, err := r.txProcessors.getSuccess(tx, r.appConfig)
 	if err != nil {
 		r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
@@ -77,7 +77,7 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 	} else {
 		txProcessorType := txProcessor.GetType()
 		if txProcessorType == common.BridgingTxTypeBatchExecution ||
-			txProcessorType == common.BridgingTxTypeHotWalletFund {
+			txProcessorType == common.TxTypeHotWalletFund {
 			tx.Priority = 0
 		}
 

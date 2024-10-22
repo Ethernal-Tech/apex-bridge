@@ -25,16 +25,16 @@ func NewHotWalletIncrementProcessor(logger hclog.Logger) *HotWalletIncrementProc
 }
 
 func (*HotWalletIncrementProcessor) GetType() common.BridgingTxType {
-	return common.BridgingTxTypeHotWalletFund
+	return common.TxTypeHotWalletFund
+}
+
+func (p *HotWalletIncrementProcessor) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	return p.validate(tx, appConfig)
 }
 
 func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	if err := p.validate(tx, appConfig); err != nil {
-		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
-	}
-
 	totalAmount := big.NewInt(0)
 
 	for _, output := range tx.Outputs {
