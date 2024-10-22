@@ -39,18 +39,19 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	appConfig.FillOut()
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
-
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		err := proc.PreValidate(&core.CardanoTx{}, appConfig)
 		require.Error(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim random metadata", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1},
+		}
 
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.PreValidate(&core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: []byte{1, 2, 3},
+				Outputs:  txOutputs,
 			},
 		}, appConfig)
 		require.Error(t, err)
@@ -58,8 +59,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim no outputs", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.PreValidate(&core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: []byte{},
 				Outputs:  []*indexer.TxOutput{},
@@ -71,28 +71,11 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim wrong hot wallet address", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: vectorBridgingAddr, Amount: 1},
 		}
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: []byte{},
-				Outputs:  txOutputs,
-			},
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "validation failed for tx")
-	})
 
-	t.Run("ValidateAndAddClaim multiple utxos", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
-		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: 1},
-			{Address: primeBridgingAddr, Amount: 2},
-		}
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		err := proc.PreValidate(&core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: []byte{},
 				Outputs:  txOutputs,
@@ -105,16 +88,40 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
-		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: 1},
-		}
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		tx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: []byte{},
-				Outputs:  txOutputs,
+				Outputs: []*indexer.TxOutput{
+					{Address: primeBridgingAddr, Amount: 1},
+				},
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		err := proc.PreValidate(tx, appConfig)
+		require.NoError(t, err)
+
+		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("ValidateAndAddClaim multiple utxos valid", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+		tx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: []byte{},
+				Outputs: []*indexer.TxOutput{
+					{Address: primeBridgingAddr, Amount: 1},
+					{Address: primeBridgingAddr, Amount: 2},
+				},
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		err := proc.PreValidate(tx, appConfig)
+		require.NoError(t, err)
+
+		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
 	})
 }

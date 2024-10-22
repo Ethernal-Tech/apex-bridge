@@ -6,7 +6,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/hashicorp/go-hclog"
@@ -29,7 +28,11 @@ func (*HotWalletIncrementProcessor) GetType() common.BridgingTxType {
 }
 
 func (p *HotWalletIncrementProcessor) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
-	return p.validate(tx, appConfig)
+	if err := p.validate(tx, appConfig); err != nil {
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+	}
+
+	return nil
 }
 
 func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
@@ -56,8 +59,23 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 func (p *HotWalletIncrementProcessor) validate(
 	tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	if _, err := utils.ValidateTxOutputs(tx, appConfig); err != nil {
-		return err
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	if len(tx.Tx.Outputs) == 0 {
+		return fmt.Errorf("no outputs found in tx")
+	}
+
+	for _, utxo := range tx.Tx.Outputs {
+		if utxo.Address != chainConfig.BridgingAddresses.BridgingAddress {
+			return fmt.Errorf("bridging address on origin not found in utxos")
+		}
+	}
+
+	if len(tx.Metadata) != 0 {
+		return fmt.Errorf("metadata should be empty")
 	}
 
 	cardanoSrcConfig, _ := cUtils.GetChainConfig(appConfig, tx.OriginChainID)

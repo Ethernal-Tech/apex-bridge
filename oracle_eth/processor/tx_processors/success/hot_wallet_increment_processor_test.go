@@ -29,26 +29,24 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	}
 	appConfig.FillOut()
 
-	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
-		claims := &oCore.BridgeClaims{}
-
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
+	t.Run("PreValidate empty tx", func(t *testing.T) {
+		err := proc.PreValidate(&core.EthTx{}, appConfig)
 		require.Error(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim random metadata", func(t *testing.T) {
-		claims := &oCore.BridgeClaims{}
-
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{
-			Metadata: []byte{1, 2, 3},
+		err := proc.PreValidate(&core.EthTx{
+			Address:       ethgo.HexToAddress("0xA4d1233A67776575425Ab185f6a9251aa00fEA25"),
+			Metadata:      []byte{1, 2, 3},
+			OriginChainID: common.ChainIDStrNexus,
+			Value:         new(big.Int).SetUint64(1),
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
 	t.Run("ValidateAndAddClaim wrong hot wallet address", func(t *testing.T) {
-		claims := &oCore.BridgeClaims{}
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{
+		err := proc.PreValidate(&core.EthTx{
 			Address:       ethgo.HexToAddress("0xBadBadBad7776575425Ab185f6a9251aa00fEA25"),
 			Metadata:      []byte{},
 			OriginChainID: common.ToStrChainID(common.ChainIDIntNexus),
@@ -59,8 +57,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim wrong origin chain", func(t *testing.T) {
-		claims := &oCore.BridgeClaims{}
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{
+		err := proc.PreValidate(&core.EthTx{
 			Address:       ethgo.HexToAddress("0xA4d1233A67776575425Ab185f6a9251aa00fEA25"),
 			Metadata:      []byte{},
 			OriginChainID: common.ChainIDStrPrime,
@@ -72,12 +69,17 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{
+		tx := &core.EthTx{
 			Address:       ethgo.HexToAddress("0xA4d1233A67776575425Ab185f6a9251aa00fEA25"),
 			Metadata:      []byte{},
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         new(big.Int).SetUint64(1),
-		}, appConfig)
+		}
+
+		err := proc.PreValidate(tx, appConfig)
+		require.NoError(t, err)
+
+		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
 		require.NoError(t, err)
 	})
 }

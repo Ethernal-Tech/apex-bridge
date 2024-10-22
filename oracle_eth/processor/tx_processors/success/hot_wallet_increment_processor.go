@@ -27,7 +27,11 @@ func (*HotWalletIncrementProcessor) GetType() common.BridgingTxType {
 }
 
 func (p *HotWalletIncrementProcessor) PreValidate(tx *core.EthTx, appConfig *oCore.AppConfig) error {
-	return p.validate(tx, appConfig)
+	if err := p.validate(tx, appConfig); err != nil {
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+	}
+
+	return nil
 }
 
 func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
@@ -55,12 +59,16 @@ func (p *HotWalletIncrementProcessor) validate(
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
 	}
 
+	if len(tx.Metadata) != 0 {
+		return fmt.Errorf("metadata should be empty")
+	}
+
 	if tx.Value == nil {
 		return fmt.Errorf("tx value is nil")
 	}
 
 	if tx.Address.String() != chainConfig.BridgingAddresses.BridgingAddress {
-		return fmt.Errorf("wrong address")
+		return fmt.Errorf("wrong hotwallet address")
 	}
 
 	return nil
