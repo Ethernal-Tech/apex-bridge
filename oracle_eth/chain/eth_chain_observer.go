@@ -140,11 +140,7 @@ func initOracleState(
 		return nil
 	}
 
-	if err := oracleDB.ClearUnprocessedTxs(chainID); err != nil {
-		return err
-	}
-
-	if err := oracleDB.ClearExpectedTxs(chainID); err != nil {
+	if err := oracleDB.ClearAllTxs(chainID); err != nil {
 		return err
 	}
 

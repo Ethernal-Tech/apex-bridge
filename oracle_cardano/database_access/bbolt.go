@@ -26,10 +26,6 @@ func (bd *BBoltDatabase) GetProcessedTx(
 	return bd.BBoltDBBase.GetProcessedTx(chainID, core.ToCardanoTxKey(chainID, txHash))
 }
 
-func (bd *BBoltDatabase) MarkTxs(
-	expectedInvalid []*core.BridgeExpectedCardanoTx, expectedProcessed []*core.BridgeExpectedCardanoTx,
-	allProcessed []*core.ProcessedCardanoTx) error {
-	return bd.BBoltDBBase.MarkTxs(
-		expectedInvalid, expectedProcessed, allProcessed, nil,
-	)
+func (bd *BBoltDatabase) UpdateTxs(data *core.CardanoUpdateTxsData) error {
+	return bd.BBoltDBBase.UpdateTxs(data, nil)
 }

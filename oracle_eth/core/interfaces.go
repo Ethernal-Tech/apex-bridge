@@ -9,18 +9,18 @@ import (
 type BridgeExpectedEthTxsDB interface {
 	GetExpectedTxs(chainID string, priority uint8, threshold int) ([]*BridgeExpectedEthTx, error)
 	GetAllExpectedTxs(chainID string, threshold int) ([]*BridgeExpectedEthTx, error)
-	ClearExpectedTxs(chainID string) error
 	AddExpectedTxs(expectedTxs []*BridgeExpectedEthTx) error
 }
 
 type EthTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*EthTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error)
-	ClearUnprocessedTxs(chainID string) error
 	GetProcessedTx(chainID string, txHash ethgo.Hash) (*ProcessedEthTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash ethgo.Hash) (*ProcessedEthTx, error)
+	GetPendingTxs(keys [][]byte) ([]*EthTx, error)
+	ClearAllTxs(chainID string) error
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
-	MarkTxs(expectedInvalid, expectedProcessed []*BridgeExpectedEthTx, allProcessed []*ProcessedEthTx) error
+	UpdateTxs(data *EthUpdateTxsData) error
 }
 
 type EthTxsProcessorDB interface {

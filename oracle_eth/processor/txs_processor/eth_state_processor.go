@@ -161,7 +161,12 @@ func (sp *EthStateProcessor) PersistNew(
 		sp.logger.Info("Marking expected txs", "invalid", expectedInvalid,
 			"expected", expectedProcessed, "processed", allProcessed)
 
-		if err := sp.db.MarkTxs(expectedInvalid, expectedProcessed, allProcessed); err != nil {
+		// see EthUpdateTxsData struct for comments
+		if err := sp.db.UpdateTxs(&core.EthUpdateTxsData{
+			ExpectedInvalid:            expectedInvalid,
+			ExpectedProcessed:          expectedProcessed,
+			MoveUnprocessedToProcessed: allProcessed,
+		}); err != nil {
 			sp.logger.Error("Failed to mark expected txs as invalid", "err", err)
 		}
 	}

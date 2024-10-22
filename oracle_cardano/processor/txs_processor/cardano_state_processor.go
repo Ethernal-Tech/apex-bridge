@@ -161,7 +161,12 @@ func (sp *CardanoStateProcessor) PersistNew(
 		sp.logger.Info("Marking expected txs", "invalid", expectedInvalid,
 			"expected", expectedProcessed, "processed", allProcessed)
 
-		if err := sp.db.MarkTxs(expectedInvalid, expectedProcessed, allProcessed); err != nil {
+		// see CardanoUpdateTxsData struct for comments
+		if err := sp.db.UpdateTxs(&core.CardanoUpdateTxsData{
+			ExpectedInvalid:            expectedInvalid,
+			ExpectedProcessed:          expectedProcessed,
+			MoveUnprocessedToProcessed: allProcessed,
+		}); err != nil {
 			sp.logger.Error("Failed to mark expected txs as invalid", "err", err)
 		}
 	}

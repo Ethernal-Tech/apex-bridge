@@ -134,8 +134,7 @@ func TestEthChainObserver(t *testing.T) {
 			StartBlockNumber:        uint64(20588829),
 		}
 
-		oracleDB.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
-		oracleDB.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+		oracleDB.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
@@ -210,8 +209,7 @@ func Test_InitOracleState(t *testing.T) {
 		dbMock.On("GetLastProcessedBlock").Return(dbBlockNumber, nil).Once()
 		dbMock.On("InsertLastProcessedBlock", newBlockNumber).Return(nil).Once()
 
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(nil).Once()
-		oracleDBMock.On("ClearExpectedTxs", chainID).Return(nil).Once()
+		oracleDBMock.On("ClearAllTxs", chainID).Return(nil).Once()
 
 		require.NoError(t, initOracleState(dbMock, oracleDBMock, newBlockNumber, chainID, hclog.NewNullLogger()))
 	})
@@ -236,25 +234,13 @@ func Test_InitOracleState(t *testing.T) {
 		require.NoError(t, initOracleState(dbMock, oracleDBMock, newBlockNumber, chainID, hclog.NewNullLogger()))
 	})
 
-	t.Run("ClearUnprocessedTxs errors", func(t *testing.T) {
+	t.Run("ClearAllTxs errors", func(t *testing.T) {
 		newBlockNumber := uint64(2)
 		dbBlockNumber := uint64(1)
 
 		dbMock.On("GetLastProcessedBlock").Return(dbBlockNumber, nil).Once()
 
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(errors.New("test error")).Once()
-
-		require.Error(t, initOracleState(dbMock, oracleDBMock, newBlockNumber, chainID, hclog.NewNullLogger()))
-	})
-
-	t.Run("ClearExpectedTxs errors", func(t *testing.T) {
-		newBlockNumber := uint64(2)
-		dbBlockNumber := uint64(1)
-
-		dbMock.On("GetLastProcessedBlock").Return(dbBlockNumber, nil).Once()
-
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(nil).Once()
-		oracleDBMock.On("ClearExpectedTxs", chainID).Return(errors.New("test error")).Once()
+		oracleDBMock.On("ClearAllTxs", chainID).Return(errors.New("test error")).Once()
 
 		require.Error(t, initOracleState(dbMock, oracleDBMock, newBlockNumber, chainID, hclog.NewNullLogger()))
 	})
@@ -266,8 +252,7 @@ func Test_InitOracleState(t *testing.T) {
 		dbMock.On("GetLastProcessedBlock").Return(dbBlockNumber, nil).Once()
 		dbMock.On("InsertLastProcessedBlock", newBlockNumber).Return(errors.New("test error")).Once()
 
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(nil).Once()
-		oracleDBMock.On("ClearExpectedTxs", chainID).Return(nil).Once()
+		oracleDBMock.On("ClearAllTxs", chainID).Return(nil).Once()
 
 		require.Error(t, initOracleState(dbMock, oracleDBMock, newBlockNumber, chainID, hclog.NewNullLogger()))
 	})

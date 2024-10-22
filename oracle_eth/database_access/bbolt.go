@@ -57,13 +57,15 @@ func (bd *BBoltDatabase) GetProcessedTxByInnerActionTxHash(
 	return result, err
 }
 
-func (bd *BBoltDatabase) MarkTxs(
-	expectedInvalid []*core.BridgeExpectedEthTx, expectedProcessed []*core.BridgeExpectedEthTx,
-	allProcessed []*core.ProcessedEthTx) error {
-	return bd.BBoltDBBase.MarkTxs(
-		expectedInvalid, expectedProcessed, allProcessed,
+func (bd *BBoltDatabase) UpdateTxs(data *core.EthUpdateTxsData) error {
+	return bd.BBoltDBBase.UpdateTxs(
+		data,
 		func(tx *bbolt.Tx) error {
-			for _, processedTx := range allProcessed {
+			var newProcessed []*core.ProcessedEthTx
+			newProcessed = append(newProcessed, data.MoveUnprocessedToProcessed...)
+			newProcessed = append(newProcessed, data.MovePendingToProcessed...)
+
+			for _, processedTx := range newProcessed {
 				innerActionTxBytes, err := json.Marshal(processedTx.ToProcessedTxByInnerAction())
 				if err != nil {
 					return fmt.Errorf("could not marshal processed tx by inner action: %w", err)

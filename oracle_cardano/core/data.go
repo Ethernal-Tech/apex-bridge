@@ -2,14 +2,17 @@ package core
 
 import (
 	"encoding/binary"
+	"time"
 
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
 type CardanoTx struct {
-	OriginChainID string `json:"origin_chain_id"`
-	Priority      uint8  `json:"priority"`
+	OriginChainID string    `json:"origin_chain_id"`
+	Priority      uint8     `json:"priority"`
+	TryCount      uint32    `json:"try_count"`
+	LastTimeTried time.Time `json:"last_time_tried"`
 
 	indexer.Tx
 }
@@ -39,6 +42,8 @@ type BridgeExpectedCardanoTx struct {
 }
 
 var _ cCore.BaseExpectedTx = (*BridgeExpectedCardanoTx)(nil)
+
+type CardanoUpdateTxsData = cCore.UpdateTxsData[*CardanoTx, *ProcessedCardanoTx, *BridgeExpectedCardanoTx]
 
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{

@@ -67,8 +67,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
-		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
@@ -86,8 +85,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
-		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
@@ -104,8 +102,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
-		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
@@ -124,8 +121,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		t.Cleanup(foldersCleanup)
 
 		db := &core.CardanoTxsProcessorDBMock{}
-		db.On("ClearUnprocessedTxs", mock.Anything).Return(error(nil))
-		db.On("ClearExpectedTxs", mock.Anything).Return(error(nil))
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		indexerDB := initDB(t)
 
@@ -211,8 +207,7 @@ func Test_initOracleState(t *testing.T) {
 			BlockHash: indexer.NewHashFromHexString(blockHash),
 		}).Return(dbMock).Twice()
 		dbWriterMock.On("Execute").Return(error(nil)).Twice()
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Twice()
-		oracleDBMock.On("ClearExpectedTxs", chainID).Return(error(nil)).Twice()
+		oracleDBMock.On("ClearAllTxs", chainID).Return(error(nil)).Twice()
 
 		// empty
 		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
@@ -236,17 +231,9 @@ func Test_initOracleState(t *testing.T) {
 		require.NoError(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})
 
-	t.Run("ClearUnprocessedTxs error", func(t *testing.T) {
+	t.Run("ClearAllTxs error", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(errors.New("test error")).Once()
-
-		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
-	})
-
-	t.Run("ClearExpectedTxs error", func(t *testing.T) {
-		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), error(nil)).Once()
-		oracleDBMock.On("ClearUnprocessedTxs", chainID).Return(error(nil)).Once()
-		oracleDBMock.On("ClearExpectedTxs", chainID).Return(errors.New("test error")).Once()
+		oracleDBMock.On("ClearAllTxs", chainID).Return(errors.New("test error")).Once()
 
 		require.Error(t, initOracleState(dbMock, oracleDBMock, blockHash, blockSlot, utxos, chainID, hclog.NewNullLogger()))
 	})

@@ -80,12 +80,6 @@ func (m *EthTxsProcessorDBMock) GetAllExpectedTxs(
 	return nil, args.Error(1)
 }
 
-func (m *EthTxsProcessorDBMock) ClearExpectedTxs(chainID string) error {
-	args := m.Called(chainID)
-
-	return args.Error(0)
-}
-
 func (m *EthTxsProcessorDBMock) GetUnprocessedTxs(
 	chainID string, priority uint8, threshold int) (
 	[]*EthTx, error,
@@ -111,7 +105,18 @@ func (m *EthTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold i
 	return nil, args.Error(1)
 }
 
-func (m *EthTxsProcessorDBMock) ClearUnprocessedTxs(chainID string) error {
+func (m *EthTxsProcessorDBMock) GetPendingTxs(keys [][]byte) ([]*EthTx, error) {
+	args := m.Called(keys)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*EthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *EthTxsProcessorDBMock) ClearAllTxs(chainID string) error {
 	args := m.Called(chainID)
 
 	return args.Error(0)
@@ -123,10 +128,8 @@ func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocess
 	return args.Error(0)
 }
 
-func (m *EthTxsProcessorDBMock) MarkTxs(
-	expectedInvalid, expectedProcessed []*BridgeExpectedEthTx, allProcessed []*ProcessedEthTx,
-) error {
-	args := m.Called(expectedInvalid, expectedProcessed, allProcessed)
+func (m *EthTxsProcessorDBMock) UpdateTxs(data *EthUpdateTxsData) error {
+	args := m.Called(data)
 
 	return args.Error(0)
 }
