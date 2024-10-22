@@ -5,7 +5,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -54,8 +53,7 @@ func (p *HotWalletIncrementProcessor) validate(
 ) error {
 	chainConfig := appConfig.EthChains[tx.OriginChainID]
 
-	_, ethSrcConfig := oUtils.GetChainConfig(appConfig, tx.OriginChainID)
-	if ethSrcConfig == nil {
+	if chainConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
 	}
 
