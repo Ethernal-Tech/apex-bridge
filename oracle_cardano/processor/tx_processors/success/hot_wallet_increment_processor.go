@@ -41,6 +41,12 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	totalAmount := big.NewInt(0)
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 
+	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash)
+
+	if err := p.validate(tx, appConfig); err != nil {
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+	}
+
 	for _, output := range tx.Outputs {
 		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
@@ -65,10 +71,6 @@ func (p *HotWalletIncrementProcessor) validate(
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
-	}
-
-	if len(tx.Tx.Outputs) == 0 {
-		return fmt.Errorf("no outputs found in tx")
 	}
 
 	if _, err := utils.ValidateTxOutputs(tx, appConfig, true); err != nil {

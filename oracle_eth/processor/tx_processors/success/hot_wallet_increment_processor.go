@@ -36,6 +36,12 @@ func (p *HotWalletIncrementProcessor) PreValidate(tx *core.EthTx, appConfig *oCo
 func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	claims *oCore.BridgeClaims, tx *core.EthTx, appConfig *oCore.AppConfig,
 ) error {
+	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", tx.Metadata)
+
+	if err := p.validate(tx, appConfig); err != nil {
+		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+	}
+
 	claims.HotWalletIncrementClaims = append(claims.HotWalletIncrementClaims, oCore.HotWalletIncrementClaim{
 		ChainId:     common.ToNumChainID(tx.OriginChainID),
 		Amount:      tx.Value,
