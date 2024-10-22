@@ -62,7 +62,7 @@ func (p *HotWalletIncrementProcessor) validate(
 
 	cardanoSrcConfig, _ := cUtils.GetChainConfig(appConfig, tx.OriginChainID)
 	if cardanoSrcConfig == nil {
-		return fmt.Errorf("chain not registered: %v", tx.OriginChainID)
+		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
 	}
 
 	return nil
