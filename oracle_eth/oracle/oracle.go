@@ -91,7 +91,7 @@ func NewEthOracle(
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID, logger)
+			ctx, bridgeSubmitter, appConfig, indexerDB, ethChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create evm block submitter for `%s`: %w", ethChainConfig.ChainID, err)
 		}

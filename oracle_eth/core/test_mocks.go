@@ -218,7 +218,7 @@ var _ EthTxFailedProcessor = (*EthTxFailedProcessorMock)(nil)
 type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *oCore.BridgeClaims)
-	OnSubmitConfirmedBlocks func(chainID string, firstBlock uint64, lastBlock uint64)
+	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
 }
 
 // SubmitClaims implements BridgeSubmitter.
@@ -239,12 +239,12 @@ func (m *BridgeSubmitterMock) SubmitClaims(
 }
 
 // SubmitConfirmedBlocks implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, firstBlock uint64, lastBlock uint64) error {
+func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, from uint64, to uint64) error {
 	if m.OnSubmitConfirmedBlocks != nil {
-		m.OnSubmitConfirmedBlocks(chainID, firstBlock, lastBlock)
+		m.OnSubmitConfirmedBlocks(chainID, from, to)
 	}
 
-	args := m.Called(chainID, firstBlock, lastBlock)
+	args := m.Called(chainID, from, to)
 
 	return args.Error(0)
 }

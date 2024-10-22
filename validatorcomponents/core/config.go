@@ -6,28 +6,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
-
-type CardanoChainConfig struct {
-	NetworkAddress           string                              `json:"networkAddress"`
-	NetworkID                wallet.CardanoNetworkType           `json:"networkID"`
-	NetworkMagic             uint32                              `json:"networkMagic"`
-	StartBlockHash           string                              `json:"startBlockHash"`
-	StartSlot                uint64                              `json:"startSlot"`
-	InitialUtxos             []oracleCore.CardanoChainConfigUtxo `json:"initialUtxos"`
-	TTLSlotNumberInc         uint64                              `json:"ttlSlotNumberIncrement"`
-	ConfirmationBlockCount   uint                                `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                            `json:"otherAddressesOfInterest"`
-	OgmiosURL                string                              `json:"ogmiosUrl"`
-	BlockfrostURL            string                              `json:"blockfrostUrl"`
-	BlockfrostAPIKey         string                              `json:"blockfrostApiKey"`
-	SocketPath               string                              `json:"socketPath"`
-	PotentialFee             uint64                              `json:"potentialFee"`
-	SlotRoundingThreshold    uint64                              `json:"slotRoundingThreshold"`
-	NoBatchPeriodPercent     float64                             `json:"noBatchPeriodPercent"`
-	TakeAtLeastUtxoCount     int                                 `json:"takeAtLeastUtxoCount"`
-}
 
 type APIConfig struct {
 	Port           uint32   `json:"port"`
@@ -40,17 +19,17 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
-	ValidatorDataDir             string                                `json:"validatorDataDir"`
-	ValidatorConfigPath          string                                `json:"validatorConfigPath"`
-	CardanoChains                map[string]*CardanoChainConfig        `json:"cardanoChains"`
-	EthChains                    map[string]*oracleCore.EthChainConfig `json:"ethChains"`
-	Bridge                       oracleCore.BridgeConfig               `json:"bridge"`
-	BridgingSettings             oracleCore.BridgingSettings           `json:"bridgingSettings"`
-	Settings                     oracleCore.AppSettings                `json:"appSettings"`
-	RelayerImitatorPullTimeMilis uint64                                `json:"relayerImitatorPullTime"`
-	BatcherPullTimeMilis         uint64                                `json:"batcherPullTime"`
-	APIConfig                    APIConfig                             `json:"api"`
-	Telemetry                    telemetry.TelemetryConfig             `json:"telemetry"`
+	ValidatorDataDir             string                                    `json:"validatorDataDir"`
+	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
+	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
+	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
+	Bridge                       oracleCore.BridgeConfig                   `json:"bridge"`
+	BridgingSettings             oracleCore.BridgingSettings               `json:"bridgingSettings"`
+	Settings                     oracleCore.AppSettings                    `json:"appSettings"`
+	RelayerImitatorPullTimeMilis uint64                                    `json:"relayerImitatorPullTime"`
+	BatcherPullTimeMilis         uint64                                    `json:"batcherPullTime"`
+	APIConfig                    APIConfig                                 `json:"api"`
+	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
@@ -60,18 +39,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	batcherChains := make([]batcherCore.ChainConfig, 0, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 	oracleEthChains := make(map[string]*oracleCore.EthChainConfig, len(appConfig.EthChains))
 
-	for chainID, ccConfig := range appConfig.CardanoChains {
-		oracleCardanoChains[chainID] = &oracleCore.CardanoChainConfig{
-			ChainID:                  chainID,
-			NetworkAddress:           ccConfig.NetworkAddress,
-			NetworkMagic:             ccConfig.NetworkMagic,
-			NetworkID:                ccConfig.NetworkID,
-			StartBlockHash:           ccConfig.StartBlockHash,
-			StartSlot:                ccConfig.StartSlot,
-			InitialUtxos:             ccConfig.InitialUtxos,
-			ConfirmationBlockCount:   ccConfig.ConfirmationBlockCount,
-			OtherAddressesOfInterest: ccConfig.OtherAddressesOfInterest,
-		}
+	for _, ccConfig := range appConfig.CardanoChains {
+		oracleCardanoChains[ccConfig.ChainID] = ccConfig
 
 		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
 			NetworkID:             ccConfig.NetworkID,
@@ -88,22 +57,14 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
-			ChainID:       chainID,
+			ChainID:       ccConfig.ChainID,
 			ChainType:     common.ChainTypeCardanoStr,
 			ChainSpecific: chainSpecificJSONRaw,
 		})
 	}
 
-	for chainID, ecConfig := range appConfig.EthChains {
-		oracleEthChains[chainID] = &oracleCore.EthChainConfig{
-			ChainID:                 chainID,
-			NodeURL:                 ecConfig.NodeURL,
-			SyncBatchSize:           ecConfig.SyncBatchSize,
-			NumBlockConfirmations:   ecConfig.NumBlockConfirmations,
-			StartBlockNumber:        ecConfig.StartBlockNumber,
-			PoolIntervalMiliseconds: ecConfig.PoolIntervalMiliseconds,
-			DynamicTx:               ecConfig.DynamicTx,
-		}
+	for _, ecConfig := range appConfig.EthChains {
+		oracleEthChains[ecConfig.ChainID] = ecConfig
 
 		chainSpecificJSONRaw, _ := (cardanotx.BatcherEVMChainConfig{
 			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
@@ -113,7 +74,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
-			ChainID:       chainID,
+			ChainID:       ecConfig.ChainID,
 			ChainType:     common.ChainTypeEVMStr,
 			ChainSpecific: chainSpecificJSONRaw,
 		})

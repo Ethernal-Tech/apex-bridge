@@ -40,16 +40,26 @@ type EthChainConfig struct {
 }
 
 type CardanoChainConfig struct {
-	ChainID                  string
+	ChainID                  string                           `json:"-"`
+	BridgingAddresses        BridgingAddresses                `json:"-"`
 	NetworkAddress           string                           `json:"networkAddress"`
 	NetworkMagic             uint32                           `json:"networkMagic"`
 	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
 	StartBlockHash           string                           `json:"startBlockHash"`
 	StartSlot                uint64                           `json:"startSlot"`
 	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
-	BridgingAddresses        BridgingAddresses                `json:"bridgingAddresses"`
 	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
 	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
+
+	OgmiosURL             string  `json:"ogmiosUrl"`
+	BlockfrostURL         string  `json:"blockfrostUrl"`
+	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
+	SocketPath            string  `json:"socketPath"`
+	PotentialFee          uint64  `json:"potentialFee"`
+	SlotRoundingThreshold uint64  `json:"slotRoundingThreshold"`
+	TTLSlotNumberInc      uint64  `json:"ttlSlotNumberIncrement"`
+	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
+	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
 }
 
 type SubmitConfig struct {

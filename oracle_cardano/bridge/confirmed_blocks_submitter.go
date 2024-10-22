@@ -17,7 +17,6 @@ type ConfirmedBlocksSubmitterImpl struct {
 	appConfig           *cCore.AppConfig
 	chainID             string
 	indexerDB           indexer.Database
-	oracleDB            core.CardanoTxsDB
 	logger              hclog.Logger
 	latestConfirmedSlot uint64
 }
@@ -28,7 +27,6 @@ func NewConfirmedBlocksSubmitter(
 	ctx context.Context,
 	bridgeSubmitter core.BridgeSubmitter,
 	appConfig *cCore.AppConfig,
-	oracleDB core.CardanoTxsDB,
 	indexerDB indexer.Database,
 	chainID string,
 	logger hclog.Logger,
@@ -48,7 +46,6 @@ func NewConfirmedBlocksSubmitter(
 		appConfig:           appConfig,
 		chainID:             chainID,
 		indexerDB:           indexerDB,
-		oracleDB:            oracleDB,
 		logger:              logger.Named("confirmed_blocks_submitter_" + chainID),
 		latestConfirmedSlot: latestBlockPoint.BlockSlot,
 	}, nil
@@ -80,7 +77,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 
 	bs.logger.Debug("Executing ConfirmedBlocksSubmitterImpl", "chainID", bs.chainID, "from slot", from)
 
-	blocks, err := bs.indexerDB.GetConfirmedBlocksFrom(
+	blocksToSubmit, err := bs.indexerDB.GetConfirmedBlocksFrom(
 		from,
 		bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
 	if err != nil {
@@ -89,25 +86,9 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
-	var blockCounter = 0
-
-	bs.logger.Debug("Checking if blocks processed", "chainID", bs.chainID, "blocks", blocks)
-
-	for _, block := range blocks {
-		if !bs.checkIfBlockIsProcessed(block) {
-			break
-		}
-
-		blockCounter++
-	}
-
-	if blockCounter == 0 {
-		bs.logger.Debug("No new processed blocks", "chainID", bs.chainID)
-
+	if len(blocksToSubmit) == 0 {
 		return nil
 	}
-
-	blocksToSubmit := blocks[:blockCounter]
 
 	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
 
@@ -117,7 +98,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
 
-	bs.latestConfirmedSlot = blocks[blockCounter-1].Slot
+	bs.latestConfirmedSlot = blocksToSubmit[len(blocksToSubmit)-1].Slot
 	bs.logger.Info("Submitted confirmed blocks", "chainID", bs.chainID, "latestConfirmedSlot", bs.latestConfirmedSlot)
 
 	return nil
@@ -125,19 +106,4 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 
 func (bs *ConfirmedBlocksSubmitterImpl) GetChainID() string {
 	return bs.chainID
-}
-
-func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(block *indexer.CardanoBlock) bool {
-	for _, tx := range block.Txs {
-		prTx, err := bs.oracleDB.GetProcessedTx(bs.chainID, tx)
-		if err != nil {
-			bs.logger.Error("error getting processed tx for block", "err", err)
-		}
-
-		if prTx == nil {
-			return false
-		}
-	}
-
-	return true
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	eth_core "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-	"github.com/Ethernal-Tech/ethgo"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
@@ -28,12 +27,11 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("NewConfirmedBlocksSubmitter 1", func(t *testing.T) {
 		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), fmt.Errorf("test err"))
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
+		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 		require.Nil(t, bs)
@@ -41,23 +39,21 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("NewConfirmedBlocksSubmitter 2", func(t *testing.T) {
 		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil)
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
+		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, bs)
 	})
 
 	t.Run("execute 1", func(t *testing.T) {
 		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), fmt.Errorf("test err"))
 
@@ -68,46 +64,28 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 	t.Run("execute 2", func(t *testing.T) {
 		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		db := &eth_core.EthTxsProcessorDBMock{}
-		indexerDB := &eth_core.EventStoreMock{}
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
-
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
-
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil)
-
-		err := bs.execute()
-		require.NoError(t, err)
-	})
-
-	t.Run("execute 3", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
-		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
-		indexerDB.On("GetLogsByBlockNumber", mock.Anything).Return([]*ethgo.Log{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
 
 		err := bs.execute()
 		require.Error(t, err)
-		require.ErrorContains(t, err, "error submitting confirmed blocks")
+		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("execute 4", func(t *testing.T) {
+	t.Run("execute 3", func(t *testing.T) {
 		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		db := &eth_core.EthTxsProcessorDBMock{}
 		indexerDB := &eth_core.EventStoreMock{}
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
-		indexerDB.On("GetLogsByBlockNumber", mock.Anything).Return([]*ethgo.Log{}, nil)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, db, indexerDB, chainID, hclog.NewNullLogger())
+		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
 

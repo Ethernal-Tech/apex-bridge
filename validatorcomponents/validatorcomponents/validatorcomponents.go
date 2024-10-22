@@ -76,18 +76,18 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
-
 	err = fixChainsAndAddresses(
-		ctx, oracleConfig, batcherConfig,
+		ctx, appConfig,
 		eth.NewBridgeSmartContract(
-			oracleConfig.Bridge.NodeURL, oracleConfig.Bridge.SmartContractAddress,
-			oracleConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
+			appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
+			appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
 		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
+
+	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
 
@@ -312,8 +312,7 @@ outsideloop:
 
 func fixChainsAndAddresses(
 	ctx context.Context,
-	config *oracleCommonCore.AppConfig,
-	batcherConfig *batcherCore.BatcherManagerConfiguration,
+	config *core.AppConfig,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
@@ -390,6 +389,7 @@ func fixChainsAndAddresses(
 				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
 			}
 
+			chainConfig.ChainID = chainID
 			chainConfig.BridgingAddresses = oracleCommonCore.BridgingAddresses{
 				BridgingAddress: multisigAddr,
 				FeeAddress:      feeAddr,
@@ -405,6 +405,7 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("invalid gateway address for chain %s: %s", chainID, regChain.AddressMultisig)
 			}
 
+			ethChainConfig.ChainID = chainID
 			ethChainConfig.BridgingAddresses = oracleCommonCore.EthBridgingAddresses{
 				BridgingAddress: regChain.AddressMultisig,
 			}
@@ -417,22 +418,6 @@ func fixChainsAndAddresses(
 
 	config.CardanoChains = cardanoChains
 	config.EthChains = ethChains
-
-	batcherChainConfigs := make([]batcherCore.ChainConfig, 0, len(batcherConfig.Chains))
-	// handle config for batchers
-	for _, regChain := range allRegisteredChains {
-		chainID := common.ToStrChainID(regChain.Id)
-
-		for _, chain := range batcherConfig.Chains {
-			if chain.ChainID == chainID {
-				batcherChainConfigs = append(batcherChainConfigs, chain)
-
-				break
-			}
-		}
-	}
-
-	batcherConfig.Chains = batcherChainConfigs
 
 	return nil
 }

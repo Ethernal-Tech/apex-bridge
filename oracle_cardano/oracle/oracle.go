@@ -97,7 +97,7 @@ func NewCardanoOracle(
 		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, db, indexerDB, cardanoChainConfig.ChainID, logger)
+			ctx, bridgeSubmitter, appConfig, indexerDB, cardanoChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}

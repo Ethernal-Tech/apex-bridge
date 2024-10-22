@@ -65,7 +65,7 @@ type EthBridgeDataFetcher interface {
 
 type BridgeSubmitter interface {
 	oCore.BridgeClaimsSubmitter
-	SubmitConfirmedBlocks(chainID string, blocks uint64, lastBlock uint64) error
+	SubmitConfirmedBlocks(chainID string, from uint64, to uint64) error
 }
 
 type EthConfirmedBlocksSubmitter interface {
