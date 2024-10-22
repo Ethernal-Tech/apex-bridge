@@ -3,6 +3,7 @@ package processor
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 
@@ -10,6 +11,7 @@ import (
 )
 
 type CardanoTxsReceiverImpl struct {
+	appConfig                   *cCore.AppConfig
 	db                          core.CardanoTxsProcessorDB
 	txProcessors                *txProcessorsCollection
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
@@ -19,6 +21,7 @@ type CardanoTxsReceiverImpl struct {
 var _ core.CardanoTxsReceiver = (*CardanoTxsReceiverImpl)(nil)
 
 func NewCardanoTxsReceiverImpl(
+	appConfig *cCore.AppConfig,
 	db core.CardanoTxsProcessorDB,
 	txProcessors *txProcessorsCollection,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -56,7 +59,7 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 		r.logger.Debug("Checking if tx is relevant", "tx", tx)
 
-		txProcessor, err := r.txProcessors.getSuccess(cardanoTx, nil)
+		txProcessor, err := r.txProcessors.getSuccess(cardanoTx, r.appConfig)
 		if err != nil {
 			r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 

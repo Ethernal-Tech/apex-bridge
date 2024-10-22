@@ -80,7 +80,8 @@ func NewCardanoOracle(
 	txsProcessorLogger := logger.Named("cardano_txs_processor")
 
 	cardanoTxsReceiver := cardanotxsprocessor.NewCardanoTxsReceiverImpl(
-		db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
+		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger,
+	)
 
 	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,

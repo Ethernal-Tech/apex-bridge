@@ -178,11 +178,7 @@ func (m *EthTxSuccessProcessorMock) GetType() common.BridgingTxType {
 }
 
 func (m *EthTxSuccessProcessorMock) PreValidate(tx *EthTx, appConfig *oCore.AppConfig) error {
-	if m.ValidateError != nil {
-		return m.ValidateError
-	}
-
-	return nil
+	return m.ValidateError
 }
 
 func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
@@ -214,11 +210,7 @@ func (m *EthTxFailedProcessorMock) GetType() common.BridgingTxType {
 }
 
 func (m *EthTxFailedProcessorMock) PreValidate(tx *BridgeExpectedEthTx, appConfig *oCore.AppConfig) error {
-	if m.ValidateError != nil {
-		return m.ValidateError
-	}
-
-	return nil
+	return m.ValidateError
 }
 
 func (m *EthTxFailedProcessorMock) ValidateAndAddClaim(

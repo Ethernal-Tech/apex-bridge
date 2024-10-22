@@ -32,7 +32,7 @@ func newCardanoTxsProcessor(
 		successTxProcessors, failedTxProcessors,
 	)
 
-	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
+	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(appConfig, db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
 
 	cardanoStateProcessor := NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,

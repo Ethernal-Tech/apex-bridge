@@ -158,7 +158,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
 	if err != nil {
 		return err
 	}

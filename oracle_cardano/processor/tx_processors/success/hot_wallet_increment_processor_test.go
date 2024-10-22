@@ -17,6 +17,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
 		vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
+		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
 
 	proc := NewHotWalletIncrementProcessor(hclog.NewNullLogger())
@@ -113,6 +114,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 				Outputs: []*indexer.TxOutput{
 					{Address: primeBridgingAddr, Amount: 1},
 					{Address: primeBridgingAddr, Amount: 2},
+					{Address: validTestAddress, Amount: 3},
 				},
 			},
 			OriginChainID: common.ChainIDStrPrime,

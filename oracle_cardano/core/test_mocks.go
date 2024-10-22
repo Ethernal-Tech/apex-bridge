@@ -221,11 +221,7 @@ func (m *CardanoTxSuccessProcessorMock) GetType() common.BridgingTxType {
 }
 
 func (m *CardanoTxSuccessProcessorMock) PreValidate(tx *CardanoTx, appConfig *cCore.AppConfig) error {
-	if m.ValidateError != nil {
-		return m.ValidateError
-	}
-
-	return nil
+	return m.ValidateError
 }
 
 // ValidateAndAddClaim implements CardanoTxProcessor.
@@ -259,11 +255,7 @@ func (m *CardanoTxFailedProcessorMock) GetType() common.BridgingTxType {
 }
 
 func (m *CardanoTxFailedProcessorMock) PreValidate(tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error {
-	if m.ValidateError != nil {
-		return m.ValidateError
-	}
-
-	return nil
+	return m.ValidateError
 }
 
 // ValidateAndAddClaim implements CardanoTxFailedProcessor.
