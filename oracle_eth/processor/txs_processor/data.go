@@ -87,7 +87,7 @@ func (pc *txProcessorsCollection) getFailed(tx *core.BridgeExpectedEthTx, appCon
 		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
 	}
 
-	if err := txProcessor.PreValidate(tx, appConfig); err != nil {
+	if err = txProcessor.PreValidate(tx, appConfig); err != nil {
 		return nil, err
 	}
 
