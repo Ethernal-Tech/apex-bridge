@@ -25,6 +25,12 @@ func (*BatchExecutionFailedProcessorImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeBatchExecution
 }
 
+func (*BatchExecutionFailedProcessorImpl) PreValidate(
+	tx *core.BridgeExpectedCardanoTx, appConfig *cCore.AppConfig,
+) error {
+	return nil
+}
+
 func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.BridgeExpectedCardanoTx, appConfig *cCore.AppConfig,
 ) error {

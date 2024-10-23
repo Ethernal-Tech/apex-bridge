@@ -269,7 +269,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		sp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
 
-		txProcessor, err := sp.txProcessors.getSuccess(unprocessedTx.Metadata)
+		txProcessor, err := sp.txProcessors.getSuccess(unprocessedTx, sp.appConfig)
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for unprocessed tx", "tx", unprocessedTx, "err", err)
 
@@ -375,7 +375,7 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 
 		sp.logger.Debug("Checking if expired tx is relevant", "expiredTx", expiredTx)
 
-		txProcessor, err := sp.txProcessors.getFailed(expiredTx.Metadata)
+		txProcessor, err := sp.txProcessors.getFailed(expiredTx, sp.appConfig)
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for expired tx", "tx", expiredTx, "err", err)
 
@@ -460,7 +460,7 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 	}
 
 	for _, tx := range sp.state.allProcessedInvalid {
-		txProcessor, err := sp.txProcessors.getSuccess(tx.Metadata)
+		txProcessor, err := sp.txProcessors.getSuccess(tx, sp.appConfig)
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
 		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {

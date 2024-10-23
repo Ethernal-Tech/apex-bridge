@@ -32,7 +32,7 @@ func newCardanoTxsProcessor(
 		successTxProcessors, failedTxProcessors,
 	)
 
-	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
+	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(appConfig, db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
 
 	cardanoStateProcessor := NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
@@ -199,7 +199,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, proc)
 
 		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
-			{Hash: indexer.Hash{1}},
+			{
+				Hash:     indexer.Hash{1},
+				Metadata: []byte{1, 2, 3},
+			},
 		}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)

@@ -3,6 +3,8 @@ package processor
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 )
 
@@ -43,28 +45,39 @@ func NewTxProcessorsCollection(
 	}
 }
 
-func (pc *txProcessorsCollection) getSuccess(metadataJSON []byte) (
+func (pc *txProcessorsCollection) getSuccess(tx *core.EthTx, appConfig *cCore.AppConfig) (
 	core.EthTxSuccessProcessor, error,
 ) {
-	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](
-		metadataJSON)
-	if err != nil {
-		return nil, err
+	var (
+		txProcessor core.EthTxSuccessProcessor
+		relevant    bool
+	)
+
+	if len(tx.Metadata) != 0 {
+		metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](tx.Metadata)
+		if err != nil {
+			return nil, err
+		}
+
+		txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
+		if !relevant {
+			return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+		}
+	} else {
+		txProcessor = pc.successTxProcessors[string(common.TxTypeHotWalletFund)]
 	}
 
-	txProcessor, relevant := pc.successTxProcessors[string(metadata.BridgingTxType)]
-	if !relevant {
-		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+	if err := txProcessor.PreValidate(tx, appConfig); err != nil {
+		return nil, err
 	}
 
 	return txProcessor, nil
 }
 
-func (pc *txProcessorsCollection) getFailed(metadataJSON []byte) (
+func (pc *txProcessorsCollection) getFailed(tx *core.BridgeExpectedEthTx, appConfig *cCore.AppConfig) (
 	core.EthTxFailedProcessor, error,
 ) {
-	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](
-		metadataJSON)
+	metadata, err := core.UnmarshalEthMetadata[core.BaseEthMetadata](tx.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +85,10 @@ func (pc *txProcessorsCollection) getFailed(metadataJSON []byte) (
 	txProcessor, relevant := pc.failedTxProcessors[string(metadata.BridgingTxType)]
 	if !relevant {
 		return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+	}
+
+	if err = txProcessor.PreValidate(tx, appConfig); err != nil {
+		return nil, err
 	}
 
 	return txProcessor, nil

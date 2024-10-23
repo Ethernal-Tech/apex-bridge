@@ -25,6 +25,10 @@ func (*BatchExecutedProcessorImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeBatchExecution
 }
 
+func (*BatchExecutedProcessorImpl) PreValidate(tx *core.EthTx, appConfig *oCore.AppConfig) error {
+	return nil
+}
+
 func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 	claims *oCore.BridgeClaims, tx *core.EthTx, appConfig *oCore.AppConfig,
 ) error {
