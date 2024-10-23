@@ -68,6 +68,7 @@ func NewCardanoOracle(
 		[]core.CardanoTxSuccessProcessor{
 			successtxprocessors.NewBatchExecutedProcessor(logger),
 			successtxprocessors.NewBridgingRequestedProcessor(logger),
+			successtxprocessors.NewHotWalletIncrementProcessor(logger),
 			// tx_processors.NewRefundExecutedProcessor(logger),
 		},
 		[]core.CardanoTxFailedProcessor{
@@ -79,7 +80,8 @@ func NewCardanoOracle(
 	txsProcessorLogger := logger.Named("cardano_txs_processor")
 
 	cardanoTxsReceiver := cardanotxsprocessor.NewCardanoTxsReceiverImpl(
-		db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
+		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger,
+	)
 
 	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,

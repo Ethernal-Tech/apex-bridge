@@ -52,11 +52,13 @@ type CardanoTxsReceiver interface {
 
 type CardanoTxSuccessProcessor interface {
 	GetType() common.BridgingTxType
+	PreValidate(tx *CardanoTx, appConfig *cCore.AppConfig) error
 	ValidateAndAddClaim(claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig) error
 }
 
 type CardanoTxFailedProcessor interface {
 	GetType() common.BridgingTxType
+	PreValidate(tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error
 	ValidateAndAddClaim(claims *cCore.BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error
 }
 

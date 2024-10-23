@@ -166,6 +166,7 @@ type EthTxSuccessProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
+	ValidateError  error
 }
 
 func (m *EthTxSuccessProcessorMock) GetType() common.BridgingTxType {
@@ -174,6 +175,10 @@ func (m *EthTxSuccessProcessorMock) GetType() common.BridgingTxType {
 	}
 
 	return "unspecified"
+}
+
+func (m *EthTxSuccessProcessorMock) PreValidate(tx *EthTx, appConfig *oCore.AppConfig) error {
+	return m.ValidateError
 }
 
 func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
@@ -193,6 +198,7 @@ type EthTxFailedProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
 	Type           common.BridgingTxType
+	ValidateError  error
 }
 
 func (m *EthTxFailedProcessorMock) GetType() common.BridgingTxType {
@@ -201,6 +207,10 @@ func (m *EthTxFailedProcessorMock) GetType() common.BridgingTxType {
 	}
 
 	return "unspecified"
+}
+
+func (m *EthTxFailedProcessorMock) PreValidate(tx *BridgeExpectedEthTx, appConfig *oCore.AppConfig) error {
+	return m.ValidateError
 }
 
 func (m *EthTxFailedProcessorMock) ValidateAndAddClaim(

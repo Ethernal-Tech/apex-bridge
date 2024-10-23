@@ -42,7 +42,7 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 
 // Validate if there is one and only one tx output that belongs to the multisig address
 // Returns found multisig output utxo
-func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) (*indexer.TxOutput, error) {
+func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool) (*indexer.TxOutput, error) {
 	var multisigUtxoOutput *indexer.TxOutput = nil
 
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
@@ -54,7 +54,7 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) (*indexer
 		if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = utxo
-			} else {
+			} else if !allowMultiple {
 				return nil, fmt.Errorf("found multiple utxos to the bridging address on origin")
 			}
 		}

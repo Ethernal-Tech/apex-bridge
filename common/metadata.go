@@ -15,6 +15,8 @@ const (
 	BridgingTxTypeBatchExecution  BridgingTxType = "batch"
 	BridgingTxTypeRefundExecution BridgingTxType = "refund"
 
+	TxTypeHotWalletFund BridgingTxType = "fund"
+
 	MetadataEncodingTypeJSON MetadataEncodingType = "json"
 	MetadataEncodingTypeCbor MetadataEncodingType = "cbor"
 

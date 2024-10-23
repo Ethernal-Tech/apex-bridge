@@ -47,6 +47,8 @@ func (sub es) AddLog(log *ethgo.Log) error {
 		fmt.Println("Deposit")
 	case events[1]:
 		fmt.Println("Withdraw")
+	case events[2]:
+		fmt.Println("FundsDeposited")
 	default:
 		fmt.Println("undefined event")
 	}
