@@ -94,13 +94,6 @@ type IBridgeStructsHotWalletIncrementClaim struct {
 	IsIncrement bool
 }
 
-// IBridgeStructsHotWalletIncrementClaim is an auto generated low-level Go binding around an user-defined struct.
-type IBridgeStructsHotWalletIncrementClaim struct {
-	ChainId     uint8
-	Amount      *big.Int
-	IsIncrement bool
-}
-
 // IBridgeStructsReceiver is an auto generated low-level Go binding around an user-defined struct.
 type IBridgeStructsReceiver struct {
 	Amount             *big.Int
