@@ -31,6 +31,10 @@ func (*BridgingRequestedProcessorImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeBridgingRequest
 }
 
+func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	return nil
+}
+
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
@@ -154,7 +158,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig)
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
 	if err != nil {
 		return err
 	}

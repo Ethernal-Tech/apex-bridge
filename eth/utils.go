@@ -108,7 +108,7 @@ func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
 }
 
 func GetNexusEventSignatures() ([]ethgo.Hash, error) {
-	return GetEventSignatures([]string{"Deposit", "Withdraw"})
+	return GetEventSignatures([]string{"Deposit", "Withdraw", "FundsDeposited"})
 }
 
 func GetChainValidatorsDataInfoString(

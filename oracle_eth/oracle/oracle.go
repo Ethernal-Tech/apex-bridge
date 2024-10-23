@@ -62,6 +62,7 @@ func NewEthOracle(
 		[]core.EthTxSuccessProcessor{
 			successtxprocessors.NewEthBatchExecutedProcessor(logger),
 			successtxprocessors.NewEthBridgingRequestedProcessor(logger),
+			successtxprocessors.NewHotWalletIncrementProcessor(logger),
 			// tx_processors.NewRefundExecutedProcessor(logger),
 		},
 		[]core.EthTxFailedProcessor{

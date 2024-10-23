@@ -25,6 +25,10 @@ func (*RefundExecutedProcessorImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeRefundExecution
 }
 
+func (*RefundExecutedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	return nil
+}
+
 func (p *RefundExecutedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {

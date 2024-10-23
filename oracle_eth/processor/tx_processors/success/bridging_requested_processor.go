@@ -28,6 +28,10 @@ func (*BridgingRequestedProcessorImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeBridgingRequest
 }
 
+func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.EthTx, appConfig *oCore.AppConfig) error {
+	return nil
+}
+
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *oCore.BridgeClaims, tx *core.EthTx, appConfig *oCore.AppConfig,
 ) error {
