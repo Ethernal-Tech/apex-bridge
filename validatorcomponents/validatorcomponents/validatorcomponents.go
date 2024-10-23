@@ -181,7 +181,8 @@ func NewValidatorComponents(
 			controllers.NewCardanoTxController(
 				oracleConfig, batcherConfig, logger.Named("cardano_tx_controller")),
 			controllers.NewOracleStateController(
-				cardanoIndexerDbs, getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
+				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
+				getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
