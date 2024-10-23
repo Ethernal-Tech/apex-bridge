@@ -144,8 +144,52 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[1], txs[0])
 	})
 
-	//nolint:dupl
-	t.Run("ClearUnprocessedTxs", func(t *testing.T) {
+	t.Run("ClearAllTxs", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		require.NoError(t, db.Init(filePath))
+
+		unprocessedTxs := []*core.EthTx{
+			{OriginChainID: common.ChainIDStrPrime},
+			{OriginChainID: common.ChainIDStrVector},
+		}
+
+		expectedTxs := []*core.BridgeExpectedEthTx{
+			{ChainID: common.ChainIDStrPrime},
+			{ChainID: common.ChainIDStrVector},
+		}
+
+		err = db.AddTxs(nil, unprocessedTxs)
+		require.NoError(t, err)
+
+		err = db.AddExpectedTxs(expectedTxs)
+		require.NoError(t, err)
+
+		err = db.ClearAllTxs(common.ChainIDStrPrime)
+		require.NoError(t, err)
+
+		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		exTxs, err := db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
+		require.NoError(t, err)
+		require.Nil(t, exTxs)
+
+		err = db.ClearAllTxs(common.ChainIDStrVector)
+		require.NoError(t, err)
+
+		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrVector, 0)
+		require.NoError(t, err)
+		require.Nil(t, txs)
+
+		exTxs, err = db.GetAllExpectedTxs(common.ChainIDStrVector, 0)
+		require.NoError(t, err)
+		require.Nil(t, exTxs)
+	})
+
+	t.Run("UpdateTxs - UpdateUnprocessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}
@@ -153,28 +197,72 @@ func TestBoltDatabase(t *testing.T) {
 
 		expectedTxs := []*core.EthTx{
 			{OriginChainID: common.ChainIDStrPrime},
-			{OriginChainID: common.ChainIDStrVector},
 		}
 
 		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
-		err = db.ClearUnprocessedTxs(common.ChainIDStrPrime)
+		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
+		require.NoError(t, err)
+		require.NotNil(t, txs)
+
+		for _, tx := range txs {
+			tx.TryCount++
+		}
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{UpdateUnprocessed: txs})
+		require.NoError(t, err)
+
+		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
+		require.NoError(t, err)
+		require.Len(t, txs, 1)
+		require.Equal(t, uint32(1), txs[0].TryCount)
+	})
+
+	t.Run("GetPendingTxs and UpdateTxs - MoveUnprocessedToPending", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		require.NoError(t, db.Init(filePath))
+
+		expectedTxs := []*core.EthTx{
+			{
+				Priority:      1,
+				OriginChainID: common.ChainIDStrPrime,
+				BlockNumber:   1,
+				Hash:          ethgo.Hash{1, 2},
+			},
+		}
+
+		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
 		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
-		require.Nil(t, txs)
+		require.NotNil(t, txs)
 
-		err = db.ClearUnprocessedTxs(common.ChainIDStrVector)
+		keys := make([][]byte, len(expectedTxs))
+		for i, tx := range expectedTxs {
+			keys[i] = tx.ToUnprocessedTxKey()
+		}
+
+		_, err = db.GetPendingTxs(keys)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "couldn't get pending tx for key")
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: txs})
 		require.NoError(t, err)
 
-		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrVector, 0)
+		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
-		require.Nil(t, txs)
+		require.Len(t, txs, 0)
+
+		pendingTxs, err := db.GetPendingTxs(keys)
+		require.NoError(t, err)
+		require.Len(t, pendingTxs, 1)
 	})
 
-	t.Run("MarkUnprocessedTxsAsProcessed", func(t *testing.T) {
+	t.Run("UpdateTxs - MoveUnprocessedToProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		db := &BBoltDatabase{}
@@ -206,10 +294,10 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedEthTx(false))
 		}
 
-		err = db.MarkTxs(nil, nil, []*core.ProcessedEthTx{})
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: []*core.ProcessedEthTx{}})
 		require.NoError(t, err)
 
-		err = db.MarkTxs(nil, nil, expectedProcessedTxs)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
@@ -219,6 +307,95 @@ func TestBoltDatabase(t *testing.T) {
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrVector, 0)
 		require.NoError(t, err)
 		require.Nil(t, txs)
+
+		for _, tx := range expectedProcessedTxs {
+			pTx, err := db.GetProcessedTx(tx.OriginChainID, tx.Hash)
+			require.NoError(t, err)
+			require.NotNil(t, pTx)
+		}
+	})
+
+	t.Run("UpdateTxs - MovePendingToUnprocessed", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		require.NoError(t, db.Init(filePath))
+
+		expectedTxs := []*core.EthTx{
+			{
+				Priority:      1,
+				OriginChainID: common.ChainIDStrPrime,
+				BlockNumber:   1,
+				Hash:          ethgo.Hash{1, 2},
+			},
+		}
+
+		err = db.AddTxs(nil, expectedTxs)
+		require.NoError(t, err)
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		require.NoError(t, err)
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToUnprocessed: expectedTxs})
+		require.NoError(t, err)
+
+		keys := make([][]byte, len(expectedTxs))
+		for i, tx := range expectedTxs {
+			keys[i] = tx.ToUnprocessedTxKey()
+		}
+
+		_, err := db.GetPendingTxs(keys)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "couldn't get pending tx for key")
+
+		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
+		require.NoError(t, err)
+		require.Len(t, txs, 1)
+	})
+
+	t.Run("UpdateTxs - MovePendingToProcessed", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		db := &BBoltDatabase{}
+		require.NoError(t, db.Init(filePath))
+
+		expectedTxs := []*core.EthTx{
+			{
+				Priority:      1,
+				OriginChainID: common.ChainIDStrPrime,
+				BlockNumber:   1,
+				Hash:          ethgo.Hash{1, 2},
+			},
+		}
+
+		err = db.AddTxs(nil, expectedTxs)
+		require.NoError(t, err)
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		require.NoError(t, err)
+
+		processedTxs := make([]*core.ProcessedEthTx, len(expectedTxs))
+		for i, tx := range expectedTxs {
+			processedTxs[i] = tx.ToProcessedEthTx(false)
+		}
+
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MovePendingToProcessed: processedTxs})
+		require.NoError(t, err)
+
+		keys := make([][]byte, len(expectedTxs))
+		for i, tx := range expectedTxs {
+			keys[i] = tx.ToUnprocessedTxKey()
+		}
+
+		_, err := db.GetPendingTxs(keys)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "couldn't get pending tx for key")
+
+		for _, tx := range processedTxs {
+			pTx, err := db.GetProcessedTx(tx.OriginChainID, tx.Hash)
+			require.NoError(t, err)
+			require.NotNil(t, pTx)
+		}
 	})
 
 	t.Run("GetProcessedTx", func(t *testing.T) {
@@ -253,7 +430,7 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedEthTx(false))
 		}
 
-		err = db.MarkTxs(nil, nil, expectedProcessedTxs)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
 		require.NoError(t, err)
 
 		tx, err := db.GetProcessedTx("", ethgo.Hash{})
@@ -354,36 +531,6 @@ func TestBoltDatabase(t *testing.T) {
 		require.Equal(t, expectedTxs[1], txs[0])
 	})
 
-	//nolint:dupl
-	t.Run("ClearExpectedTxs", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
-
-		expectedTxs := []*core.BridgeExpectedEthTx{
-			{ChainID: common.ChainIDStrPrime},
-			{ChainID: common.ChainIDStrVector},
-		}
-
-		err = db.AddExpectedTxs(expectedTxs)
-		require.NoError(t, err)
-
-		err = db.ClearExpectedTxs(common.ChainIDStrPrime)
-		require.NoError(t, err)
-
-		txs, err := db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
-		require.NoError(t, err)
-		require.Nil(t, txs)
-
-		err = db.ClearExpectedTxs(common.ChainIDStrVector)
-		require.NoError(t, err)
-
-		txs, err = db.GetAllExpectedTxs(common.ChainIDStrVector, 0)
-		require.NoError(t, err)
-		require.Nil(t, txs)
-	})
-
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
@@ -398,21 +545,21 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.MarkTxs(nil, []*core.BridgeExpectedEthTx{}, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: []*core.BridgeExpectedEthTx{}})
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.MarkTxs(nil, txs, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: txs})
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrVector, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.MarkTxs(nil, txs, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedProcessed: txs})
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
@@ -443,21 +590,21 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.MarkTxs([]*core.BridgeExpectedEthTx{}, nil, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: []*core.BridgeExpectedEthTx{}})
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(primeChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.MarkTxs(txs, nil, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: txs})
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.MarkTxs(txs, nil, nil)
+		err = db.UpdateTxs(&core.EthUpdateTxsData{ExpectedInvalid: txs})
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(primeChainID, 0)

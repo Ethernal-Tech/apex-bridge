@@ -3,14 +3,17 @@ package core
 import (
 	"encoding/binary"
 	"math/big"
+	"time"
 
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
 )
 
 type EthTx struct {
-	OriginChainID string `json:"origin_chain_id"`
-	Priority      uint8  `json:"priority"`
+	OriginChainID string    `json:"origin_chain_id"`
+	Priority      uint8     `json:"priority"`
+	TryCount      uint32    `json:"try_count"`
+	LastTimeTried time.Time `json:"last_time_tried"`
 
 	BlockNumber     uint64        `json:"block_number"`
 	BlockHash       ethgo.Hash    `json:"block_hash"`
@@ -56,6 +59,8 @@ type BridgeExpectedEthTx struct {
 }
 
 var _ cCore.BaseExpectedTx = (*BridgeExpectedEthTx)(nil)
+
+type EthUpdateTxsData = cCore.UpdateTxsData[*EthTx, *ProcessedEthTx, *BridgeExpectedEthTx]
 
 type BridgeClaimsBlockInfo struct {
 	ChainID string
