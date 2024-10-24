@@ -237,6 +237,10 @@ func (c *OracleStateControllerImpl) findEthTx(chainID string, txHash string) (bo
 		return false, fmt.Errorf("failed to decode txHash string. err: %w", err)
 	}
 
+	if len(hashBytes) != common.HashSize {
+		return false, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
+	}
+
 	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
 	if err != nil {
 		return false, fmt.Errorf("failed to get bridging request state. err: %w", err)
@@ -280,6 +284,10 @@ func (c *OracleStateControllerImpl) findCardanoTx(chainID string, txHash string)
 	hashBytes, err := hex.DecodeString(txHash)
 	if err != nil {
 		return false, fmt.Errorf("failed to decode txHash string. err: %w", err)
+	}
+
+	if len(hashBytes) != common.HashSize {
+		return false, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
 	}
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
