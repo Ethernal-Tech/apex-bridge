@@ -166,14 +166,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 		return
 	}
 
-	cardanoConfig, ethConfig := vcUtils.GetChainConfig(c.appConfig, chainID)
-	if cardanoConfig == nil && ethConfig == nil {
-		c.setError(w, r, "getHasTxFailed", fmt.Sprintf("invalid chainID: %s", chainID))
-
-		return
-	}
-
-	hasFailed, err := c.hasTxFailed(ethConfig != nil, chainID, txHash, ttl)
+	hasFailed, err := c.hasTxFailed(chainID, txHash, ttl)
 	if err != nil {
 		c.setError(w, r, "getHasTxFailed", fmt.Errorf("hasTxFailed err: %w", err).Error())
 
@@ -187,12 +180,17 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 }
 
 func (c *OracleStateControllerImpl) hasTxFailed(
-	isEth bool, chainID string, txHash string, ttl *big.Int,
+	chainID string, txHash string, ttl *big.Int,
 ) (bool, error) {
+	cardanoConfig, ethConfig := vcUtils.GetChainConfig(c.appConfig, chainID)
+	if cardanoConfig == nil && ethConfig == nil {
+		return false, fmt.Errorf("invalid chainID: %s", chainID)
+	}
+
 	findTxFunc := c.findCardanoTx
 	passedTTLFunc := c.passedCardanoTTL
 
-	if isEth {
+	if ethConfig != nil {
 		findTxFunc = c.findEthTx
 		passedTTLFunc = c.passedEthTTL
 	}
