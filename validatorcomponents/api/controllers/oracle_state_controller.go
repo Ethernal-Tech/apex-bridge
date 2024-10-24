@@ -173,9 +173,14 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 		return
 	}
 
-	hasFailed := c.hasTxFailed(ethConfig != nil, chainID, txHash, ttl)
+	hasFailed, err := c.hasTxFailed(ethConfig != nil, chainID, txHash, ttl)
+	if err != nil {
+		c.setError(w, r, "getHasTxFailed", fmt.Errorf("hasTxFailed err: %w", err).Error())
 
-	err := json.NewEncoder(w).Encode(response.HasTxFailedResponse{Failed: hasFailed})
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(response.HasTxFailedResponse{Failed: hasFailed})
 	if err != nil {
 		c.logger.Error("error while writing response", "err", err)
 	}
@@ -183,7 +188,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 func (c *OracleStateControllerImpl) hasTxFailed(
 	isEth bool, chainID string, txHash string, ttl *big.Int,
-) bool {
+) (bool, error) {
 	findTxFunc := c.findCardanoTx
 	passedTTLFunc := c.passedCardanoTTL
 
@@ -199,17 +204,17 @@ func (c *OracleStateControllerImpl) hasTxFailed(
 
 	foundTx, err = findTxFunc(chainID, txHash)
 	if err != nil {
-		c.logger.Error("getHasTxFailed - findTxFunc", "chainID", chainID, "txHash", txHash, "err", err)
+		return false, err
 	}
 
 	if !foundTx {
 		passedTTL, err = passedTTLFunc(chainID, ttl)
 		if err != nil {
-			c.logger.Error("getHasTxFailed - passedTTLFunc", "chainID", chainID, "TTL", ttl, "err", err)
+			return false, err
 		}
 	}
 
-	return !foundTx && passedTTL
+	return !foundTx && passedTTL, nil
 }
 
 func (c *OracleStateControllerImpl) passedEthTTL(chainID string, ttl *big.Int) (bool, error) {
