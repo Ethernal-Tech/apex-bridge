@@ -230,18 +230,9 @@ func (c *OracleStateControllerImpl) passedEthTTL(chainID string, ttl *big.Int) (
 }
 
 func (c *OracleStateControllerImpl) findEthTx(chainID string, txHash string) (bool, error) {
-	hashBytes, err := hex.DecodeString(txHash)
+	state, err := c.findBridgingRequestState(chainID, txHash)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode txHash string. err: %w", err)
-	}
-
-	if len(hashBytes) != common.HashSize {
-		return false, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
-	}
-
-	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
-	if err != nil {
-		return false, fmt.Errorf("failed to get bridging request state. err: %w", err)
+		return false, fmt.Errorf("failed to find bridging request state. err: %w", err)
 	}
 
 	return state != nil, nil
@@ -279,21 +270,32 @@ func (c *OracleStateControllerImpl) findCardanoTx(chainID string, txHash string)
 		}
 	}
 
+	state, err := c.findBridgingRequestState(chainID, txHash)
+	if err != nil {
+		return false, fmt.Errorf("failed to find bridging request state. err: %w", err)
+	}
+
+	return state != nil, nil
+}
+
+func (c *OracleStateControllerImpl) findBridgingRequestState(
+	chainID string, txHash string,
+) (*core.BridgingRequestState, error) {
 	hashBytes, err := hex.DecodeString(txHash)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode txHash string. err: %w", err)
+		return nil, fmt.Errorf("failed to decode txHash string. err: %w", err)
 	}
 
 	if len(hashBytes) != common.HashSize {
-		return false, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
+		return nil, fmt.Errorf("txHash invalid length. len: %d", len(hashBytes))
 	}
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, common.Hash(hashBytes))
 	if err != nil {
-		return false, fmt.Errorf("failed to get bridging request state. err: %w", err)
+		return nil, fmt.Errorf("failed to get bridging request state. err: %w", err)
 	}
 
-	return state != nil, nil
+	return state, nil
 }
 
 func (c *OracleStateControllerImpl) setError(
