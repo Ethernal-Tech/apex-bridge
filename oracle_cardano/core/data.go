@@ -116,6 +116,11 @@ func (tx *BridgeExpectedCardanoTx) SetInvalid() {
 	tx.IsInvalid = true
 }
 
+func (tx CardanoTx) ShouldSkipForNow() bool {
+	return !tx.LastTimeTried.IsZero() &&
+		tx.LastTimeTried.Add(cCore.RetryUnprocessedAfterSec*time.Second).After(time.Now().UTC())
+}
+
 func ToUnprocessedTxKey(priority uint8, blockSlot uint64, originChainID string, txHash indexer.Hash) []byte {
 	bytes := [9]byte{priority}
 

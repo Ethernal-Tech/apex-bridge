@@ -206,9 +206,10 @@ var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
 
 type CardanoTxSuccessProcessorMock struct {
 	mock.Mock
-	ShouldAddClaim bool
-	Type           common.BridgingTxType
-	ValidateError  error
+	ShouldAddClaim   bool
+	Type             common.BridgingTxType
+	ValidateError    error
+	AddClaimCallback func(claims *cCore.BridgeClaims)
 }
 
 // GetType implements CardanoTxProcessor.
@@ -227,7 +228,9 @@ func (m *CardanoTxSuccessProcessorMock) PreValidate(tx *CardanoTx, appConfig *cC
 // ValidateAndAddClaim implements CardanoTxProcessor.
 func (m *CardanoTxSuccessProcessorMock) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig) error {
-	if m.ShouldAddClaim {
+	if m.AddClaimCallback != nil {
+		m.AddClaimCallback(claims)
+	} else if m.ShouldAddClaim {
 		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{})
 	}
 
