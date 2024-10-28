@@ -127,6 +127,7 @@ func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(
 		allPendingMap[string(tx.ToCardanoTxKey())] = tx
 	}
 
+	now := time.Now().UTC()
 	unprocessedToUpdate := make([]*core.CardanoTx, 0, len(events))
 
 	for _, event := range events {
@@ -140,7 +141,7 @@ func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(
 		delete(allPendingMap, string(txToUpdate.ToCardanoTxKey()))
 
 		txToUpdate.TryCount++
-		txToUpdate.LastTimeTried = time.Now().UTC()
+		txToUpdate.LastTimeTried = now
 		unprocessedToUpdate = append(unprocessedToUpdate, txToUpdate)
 
 		sp.logger.Debug("updated unprocessedTx TryCount and LastTimeTried", "tx", txToUpdate)

@@ -130,6 +130,7 @@ func (sp *EthStateProcessor) processNotEnoughFundsEvents(
 		allPendingMap[string(tx.ToEthTxKey())] = tx
 	}
 
+	now := time.Now().UTC()
 	unprocessedToUpdate := make([]*core.EthTx, 0, len(events))
 
 	for _, event := range events {
@@ -143,7 +144,7 @@ func (sp *EthStateProcessor) processNotEnoughFundsEvents(
 		delete(allPendingMap, string(txToUpdate.ToEthTxKey()))
 
 		txToUpdate.TryCount++
-		txToUpdate.LastTimeTried = time.Now().UTC()
+		txToUpdate.LastTimeTried = now
 		unprocessedToUpdate = append(unprocessedToUpdate, txToUpdate)
 
 		sp.logger.Debug("updated unprocessedTx TryCount and LastTimeTried", "tx", txToUpdate)
