@@ -120,6 +120,68 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.NotEnoughFunds) > 0 {
 		sp.processNotEnoughFundsEvents(events.NotEnoughFunds, claims)
 	}
+
+	if len(events.BatchExecutionInfo) > 0 {
+		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+	}
+}
+
+func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
+	events []*oracleCore.BatchExecutionInfoEvent,
+) {
+	timeNow := time.Now().UTC()
+
+	newProcessedTxs := make([]*core.ProcessedEthTx, 0)
+	newUnprocessedTxs := make([]*core.EthTx, 0)
+
+	for _, event := range events {
+		txs, err := sp.getTxsFromBatchEvent(event)
+		if err != nil {
+			sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+
+			continue
+		}
+
+		if event.IsFailedClaim {
+			for _, tx := range txs {
+				tx.TryCount++
+				tx.LastTimeTried = timeNow
+			}
+
+			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
+		} else {
+			processedTxs := make([]*core.ProcessedEthTx, 0)
+
+			for _, tx := range txs {
+				processedTx := tx.ToProcessedEthTx(false)
+				processedTxs = append(processedTxs, processedTx)
+			}
+
+			newProcessedTxs = append(newProcessedTxs, processedTxs...)
+		}
+	}
+
+	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
+	sp.state.updateData.MovePendingToUnprocessed = newUnprocessedTxs
+}
+
+func (sp *EthStateProcessor) getTxsFromBatchEvent(
+	event *oracleCore.BatchExecutionInfoEvent,
+) ([]*core.EthTx, error) {
+	keys := make([][]byte, len(event.TxHashes))
+	chainID := common.ToStrChainID(event.ChainId)
+
+	for idx, hash := range event.TxHashes {
+		key := core.ToEthTxKey(chainID, hash.ObservedTransactionHash)
+		keys[idx] = key
+	}
+
+	txs, err := sp.db.GetPendingTxs(keys)
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 func (sp *EthStateProcessor) processNotEnoughFundsEvents(

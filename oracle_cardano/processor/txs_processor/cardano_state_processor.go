@@ -117,6 +117,68 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.NotEnoughFunds) > 0 {
 		sp.processNotEnoughFundsEvents(events.NotEnoughFunds, claims)
 	}
+
+	if len(events.BatchExecutionInfo) > 0 {
+		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+	}
+}
+
+func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
+	events []*cCore.BatchExecutionInfoEvent,
+) {
+	timeNow := time.Now().UTC()
+
+	newProcessedTxs := make([]*core.ProcessedCardanoTx, 0)
+	newUnprocessedTxs := make([]*core.CardanoTx, 0)
+
+	for _, event := range events {
+		txs, err := sp.getTxsFromBatchEvent(event)
+		if err != nil {
+			sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+
+			continue
+		}
+
+		if event.IsFailedClaim {
+			for _, tx := range txs {
+				tx.TryCount++
+				tx.LastTimeTried = timeNow
+			}
+
+			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
+		} else {
+			processedTxs := make([]*core.ProcessedCardanoTx, 0)
+
+			for _, tx := range txs {
+				processedTx := tx.ToProcessedCardanoTx(false)
+				processedTxs = append(processedTxs, processedTx)
+			}
+
+			newProcessedTxs = append(newProcessedTxs, processedTxs...)
+		}
+	}
+
+	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
+	sp.state.updateData.MovePendingToUnprocessed = newUnprocessedTxs
+}
+
+func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
+	event *cCore.BatchExecutionInfoEvent,
+) ([]*core.CardanoTx, error) {
+	keys := make([][]byte, len(event.TxHashes))
+	chainID := common.ToStrChainID(event.ChainId)
+
+	for idx, hash := range event.TxHashes {
+		key := core.ToCardanoTxKey(chainID, hash.ObservedTransactionHash)
+		keys[idx] = key
+	}
+
+	txs, err := sp.db.GetPendingTxs(keys)
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(

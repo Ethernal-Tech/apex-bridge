@@ -55,7 +55,8 @@ func (s *BridgingRequestState) ToInvalidRequest() error {
 }
 
 func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) error {
-	if s.Status != BridgingRequestStatusDiscoveredOnSource {
+	if s.Status != BridgingRequestStatusDiscoveredOnSource &&
+		s.Status != BridgingRequestStatusFailedToExecuteOnDestination {
 		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
 			s.SourceChainID, s.SourceTxHash, s.Status, BridgingRequestStatusSubmittedToBridge)
 	}
