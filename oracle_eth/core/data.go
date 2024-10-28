@@ -94,6 +94,11 @@ func (tx EthTx) ToUnprocessedTxKey() []byte {
 	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
 }
 
+// Key implements core.BaseTx.
+func (tx EthTx) Key() []byte {
+	return tx.ToEthTxKey()
+}
+
 // Key implements core.BaseProcessedTx.
 func (tx ProcessedEthTx) Key() []byte {
 	return tx.ToEthTxKey()
@@ -186,10 +191,6 @@ func (tx EthTx) ToExpectedEthTxKey() []byte {
 
 func (tx ProcessedEthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.OriginChainID, tx.Hash)
-}
-
-func (tx EthTx) Key() []byte {
-	return tx.ToEthTxKey()
 }
 
 func (tx ProcessedEthTx) KeyByInnerAction() []byte {

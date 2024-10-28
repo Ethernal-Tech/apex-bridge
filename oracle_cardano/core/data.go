@@ -71,6 +71,11 @@ func (tx CardanoTx) ToUnprocessedTxKey() []byte {
 	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.OriginChainID, tx.Hash)
 }
 
+// Key implements core.BaseTx.
+func (tx CardanoTx) Key() []byte {
+	return tx.ToCardanoTxKey()
+}
+
 // Key implements core.BaseProcessedTx.
 func (tx ProcessedCardanoTx) Key() []byte {
 	return tx.ToCardanoTxKey()
@@ -139,10 +144,6 @@ func (tx CardanoTx) ToCardanoTxKey() []byte {
 
 func (tx ProcessedCardanoTx) ToCardanoTxKey() []byte {
 	return ToCardanoTxKey(tx.OriginChainID, tx.Hash)
-}
-
-func (tx CardanoTx) Key() []byte {
-	return tx.ToCardanoTxKey()
 }
 
 func (tx BridgeExpectedCardanoTx) ToCardanoTxKey() []byte {

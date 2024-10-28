@@ -243,7 +243,7 @@ func TestBoltDatabase(t *testing.T) {
 
 		keys := make([][]byte, len(expectedTxs))
 		for i, tx := range expectedTxs {
-			keys[i] = tx.ToUnprocessedTxKey()
+			keys[i] = tx.Key()
 		}
 
 		_, err = db.GetPendingTxs(keys)

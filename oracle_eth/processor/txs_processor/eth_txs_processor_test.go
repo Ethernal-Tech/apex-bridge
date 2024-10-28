@@ -1139,7 +1139,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.Nil(t, processedTx)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.ToUnprocessedTxKey()})
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
 		require.NotNil(t, pendingTxs)
 		require.Len(t, pendingTxs, 1)
 		require.Equal(t, originChainID, pendingTxs[0].OriginChainID)
@@ -1253,7 +1253,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
 		require.Nil(t, processedTx)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.ToUnprocessedTxKey()})
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
 		require.Nil(t, pendingTxs)
 
 		// rejected
