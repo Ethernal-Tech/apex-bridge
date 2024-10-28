@@ -160,8 +160,6 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 	event *cCore.NotEnoughFundsEvent, claims *cCore.BridgeClaims,
 	allPendingMap map[string]*core.CardanoTx,
 ) (*core.CardanoTx, error) {
-	var rejectedTx *core.CardanoTx
-
 	switch event.ClaimeType {
 	case cCore.BRCClaimType:
 		brcIndex := event.Index.Uint64()
@@ -179,13 +177,11 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
 		}
 
-		rejectedTx = tx
+		return tx, nil
 	default:
 		return nil, fmt.Errorf(
 			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 	}
-
-	return rejectedTx, nil
 }
 
 func (sp *CardanoStateProcessor) PersistNew(

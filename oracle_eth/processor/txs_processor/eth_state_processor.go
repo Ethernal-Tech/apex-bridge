@@ -163,8 +163,6 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 	event *oracleCore.NotEnoughFundsEvent, claims *oracleCore.BridgeClaims,
 	allPendingMap map[string]*core.EthTx,
 ) (*core.EthTx, error) {
-	var rejectedTx *core.EthTx
-
 	switch event.ClaimeType {
 	case oracleCore.BRCClaimType:
 		brcIndex := event.Index.Uint64()
@@ -182,13 +180,11 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
 		}
 
-		rejectedTx = tx
+		return tx, nil
 	default:
 		return nil, fmt.Errorf(
 			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 	}
-
-	return rejectedTx, nil
 }
 
 func (sp *EthStateProcessor) PersistNew(
