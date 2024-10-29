@@ -1448,6 +1448,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, unprocessedTxs)
 		require.Len(t, unprocessedTxs, 1)
 
+		unprocessedTx := unprocessedTxs[0]
+
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
 			canceFunc()
@@ -1462,7 +1464,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
 		require.Len(t, pendingTxs, 0)
 
-		processedTx, err := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, err := oracleDB.GetProcessedTx(originChainID, unprocessedTx.Hash)
 		require.NoError(t, err)
 		require.NotNil(t, processedTx)
 		require.Equal(t, processedTx.Hash, tx.Hash)
@@ -1535,6 +1537,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, unprocessedTxs)
 		require.Len(t, unprocessedTxs, 1)
 
+		unprocessedTx := unprocessedTxs[0]
+
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
 			canceFunc()
@@ -1547,7 +1551,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Len(t, unprocessedTxs, 0)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{unprocessedTx.Key()})
 		require.Len(t, pendingTxs, 0)
 
 		processedTx, err := oracleDB.GetProcessedTx(originChainID, txHash)

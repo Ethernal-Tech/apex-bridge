@@ -129,8 +129,6 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 	events []*oracleCore.BatchExecutionInfoEvent,
 ) {
-	timeNow := time.Now().UTC()
-
 	newProcessedTxs := make([]*core.ProcessedEthTx, 0)
 	newUnprocessedTxs := make([]*core.EthTx, 0)
 
@@ -145,7 +143,7 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 		if event.IsFailedClaim {
 			for _, tx := range txs {
 				tx.TryCount++
-				tx.LastTimeTried = timeNow
+				tx.LastTimeTried = time.Time{}
 			}
 
 			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
@@ -169,10 +167,9 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.BatchExecutionInfoEvent,
 ) ([]*core.EthTx, error) {
 	keys := make([][]byte, len(event.TxHashes))
-	chainID := common.ToStrChainID(event.ChainId)
 
 	for idx, hash := range event.TxHashes {
-		key := core.ToEthTxKey(chainID, hash.ObservedTransactionHash)
+		key := core.ToEthTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
 		keys[idx] = key
 	}
 

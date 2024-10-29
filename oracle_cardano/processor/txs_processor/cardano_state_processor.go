@@ -126,8 +126,6 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
 	events []*cCore.BatchExecutionInfoEvent,
 ) {
-	timeNow := time.Now().UTC()
-
 	newProcessedTxs := make([]*core.ProcessedCardanoTx, 0)
 	newUnprocessedTxs := make([]*core.CardanoTx, 0)
 
@@ -142,7 +140,7 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
 		if event.IsFailedClaim {
 			for _, tx := range txs {
 				tx.TryCount++
-				tx.LastTimeTried = timeNow
+				tx.LastTimeTried = time.Time{}
 			}
 
 			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
@@ -166,10 +164,9 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	event *cCore.BatchExecutionInfoEvent,
 ) ([]*core.CardanoTx, error) {
 	keys := make([][]byte, len(event.TxHashes))
-	chainID := common.ToStrChainID(event.ChainId)
 
 	for idx, hash := range event.TxHashes {
-		key := core.ToCardanoTxKey(chainID, hash.ObservedTransactionHash)
+		key := core.ToCardanoTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
 		keys[idx] = key
 	}
 
