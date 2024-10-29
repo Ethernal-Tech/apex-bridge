@@ -9,11 +9,10 @@ import (
 )
 
 type perTickState struct {
-	allInvalidRelevantExpired []*core.BridgeExpectedCardanoTx
-	allProcessedExpected      []*core.BridgeExpectedCardanoTx
-	allProcessedInvalid       []*core.CardanoTx
-	allProcessedValid         []*core.CardanoTx
-	allUnprocessed            []*core.CardanoTx
+	updateData *core.CardanoUpdateTxsData
+
+	// duplicated data, used for easier marking of invalid state for bridging request history
+	allProcessedInvalid []*core.CardanoTx
 
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx
 	unprocessedTxs []*core.CardanoTx

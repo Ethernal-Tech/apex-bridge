@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 const (
@@ -93,12 +94,7 @@ func CreateAndSaveRelayerEVMPrivateKey(
 	return ethWallet, ethWallet.Save(secretsManager, keyName)
 }
 
-func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
-	if err != nil {
-		return nil, err
-	}
-
+func GetEventSignatures(abi *abi.ABI, events []string) ([]ethgo.Hash, error) {
 	hashes := make([]ethgo.Hash, len(events))
 	for i, ev := range events {
 		hashes[i] = ethgo.Hash(abi.Events[ev].ID)
@@ -108,7 +104,21 @@ func GetEventSignatures(events []string) ([]ethgo.Hash, error) {
 }
 
 func GetNexusEventSignatures() ([]ethgo.Hash, error) {
-	return GetEventSignatures([]string{"Deposit", "Withdraw", "FundsDeposited"})
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited"})
+}
+
+func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {
+	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetEventSignatures(abi, []string{"NotEnoughFunds", "BatchExecutionInfo"})
 }
 
 func GetChainValidatorsDataInfoString(

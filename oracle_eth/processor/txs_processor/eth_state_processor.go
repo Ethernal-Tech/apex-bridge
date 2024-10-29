@@ -2,8 +2,10 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -53,7 +55,10 @@ func (sp *EthStateProcessor) GetChainType() string {
 }
 
 func (sp *EthStateProcessor) Reset() {
-	sp.state = &perTickState{}
+	sp.state = &perTickState{
+		updateData:                    &core.EthUpdateTxsData{},
+		innerActionHashToActualTxHash: make(map[string]common.Hash),
+	}
 }
 
 func (sp *EthStateProcessor) RunChecks(
@@ -76,8 +81,6 @@ func (sp *EthStateProcessor) RunChecks(
 		return
 	}
 
-	sp.state.allUnprocessed = append(sp.state.allUnprocessed, sp.state.unprocessedTxs...)
-
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
 	// and prevent the situation when there are always enough unprocessedTxs to fill out claims,
 	// that all claims are filled only from unprocessedTxs and never from expectedTxs
@@ -97,25 +100,8 @@ func (sp *EthStateProcessor) RunChecks(
 			"for chainID", sp.state.blockInfo.ChainID,
 			"blockInfo", sp.state.blockInfo)
 
-		_, processedValidTxs, processedInvalidTxs, processedExpectedTxs := sp.checkUnprocessedTxs(
-			bridgeClaims, maxClaimsToGroup)
-
-		_, processedRelevantExpiredTxs, invalidRelevantExpiredTxs := sp.checkExpectedTxs(
-			bridgeClaims, maxClaimsToGroup)
-
-		processedExpectedTxs = append(processedExpectedTxs, processedRelevantExpiredTxs...)
-
-		sp.logger.Debug("Checked all",
-			"for chainID", sp.state.blockInfo.ChainID,
-			"processedValidTxs", processedValidTxs,
-			"processedInvalidTxs", processedInvalidTxs,
-			"processedExpectedTxs", processedExpectedTxs,
-			"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
-
-		sp.state.allProcessedValid = append(sp.state.allProcessedValid, processedValidTxs...)
-		sp.state.allProcessedInvalid = append(sp.state.allProcessedInvalid, processedInvalidTxs...)
-		sp.state.allProcessedExpected = append(sp.state.allProcessedExpected, processedExpectedTxs...)
-		sp.state.allInvalidRelevantExpired = append(sp.state.allInvalidRelevantExpired, invalidRelevantExpiredTxs...)
+		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
+		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -131,7 +117,74 @@ func (sp *EthStateProcessor) RunChecks(
 
 func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 	events *oracleCore.SubmitClaimsEvents, claims *oracleCore.BridgeClaims) {
-	// a TODO: implement this
+	if len(events.NotEnoughFunds) > 0 {
+		sp.processNotEnoughFundsEvents(events.NotEnoughFunds, claims)
+	}
+}
+
+func (sp *EthStateProcessor) processNotEnoughFundsEvents(
+	events []*oracleCore.NotEnoughFundsEvent, claims *oracleCore.BridgeClaims,
+) {
+	allPendingMap := make(map[string]*core.EthTx, len(sp.state.updateData.MoveUnprocessedToPending))
+	for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
+		allPendingMap[string(tx.ToEthTxKey())] = tx
+	}
+
+	now := time.Now().UTC()
+	unprocessedToUpdate := make([]*core.EthTx, 0, len(events))
+
+	for _, event := range events {
+		txToUpdate, err := sp.findRejectedTxInPending(event, claims, allPendingMap)
+		if err != nil {
+			sp.logger.Error("couldn't find tx for NotEnoughFunds event", "event", event, "err", err)
+
+			continue
+		}
+
+		delete(allPendingMap, string(txToUpdate.ToEthTxKey()))
+
+		txToUpdate.TryCount++
+		txToUpdate.LastTimeTried = now
+		unprocessedToUpdate = append(unprocessedToUpdate, txToUpdate)
+
+		sp.logger.Debug("updated unprocessedTx TryCount and LastTimeTried", "tx", txToUpdate)
+	}
+
+	filteredAllPending := make([]*core.EthTx, 0, len(allPendingMap))
+	for _, tx := range allPendingMap {
+		filteredAllPending = append(filteredAllPending, tx)
+	}
+
+	sp.state.updateData.MoveUnprocessedToPending = filteredAllPending
+	sp.state.updateData.UpdateUnprocessed = append(sp.state.updateData.UpdateUnprocessed, unprocessedToUpdate...)
+}
+
+func (sp *EthStateProcessor) findRejectedTxInPending(
+	event *oracleCore.NotEnoughFundsEvent, claims *oracleCore.BridgeClaims,
+	allPendingMap map[string]*core.EthTx,
+) (*core.EthTx, error) {
+	switch event.ClaimeType {
+	case oracleCore.BRCClaimType:
+		brcIndex := event.Index.Uint64()
+		if brcIndex >= uint64(len(claims.BridgingRequestClaims)) {
+			return nil, fmt.Errorf(
+				"invalid NotEnoughFundsEvent.Index: %d. BRCs len: %d", brcIndex, len(claims.BridgingRequestClaims))
+		}
+
+		brc := claims.BridgingRequestClaims[brcIndex]
+
+		tx, exists := allPendingMap[string(
+			core.ToEthTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash))]
+		if !exists {
+			return nil, fmt.Errorf(
+				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
+		}
+
+		return tx, nil
+	default:
+		return nil, fmt.Errorf(
+			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
+	}
 }
 
 func (sp *EthStateProcessor) PersistNew(
@@ -143,31 +196,13 @@ func (sp *EthStateProcessor) PersistNew(
 		sp.logger.Error("Error while updating bridging request states", "err", err)
 	}
 
-	expectedInvalid := sp.state.allInvalidRelevantExpired
-	expectedProcessed := sp.state.allProcessedExpected
-	allProcessed := make(
-		[]*core.ProcessedEthTx, 0, len(sp.state.allProcessedValid)+len(sp.state.allProcessedInvalid))
-
-	for _, tx := range sp.state.allProcessedInvalid {
-		allProcessed = append(allProcessed, tx.ToProcessedEthTx(true))
-	}
-
-	for _, tx := range sp.state.allProcessedValid {
-		allProcessed = append(allProcessed, tx.ToProcessedEthTx(false))
-	}
-
 	// we should update db only if there are some changes needed
-	if len(expectedInvalid)+len(expectedProcessed)+len(allProcessed) > 0 {
-		sp.logger.Info("Marking expected txs", "invalid", expectedInvalid,
-			"expected", expectedProcessed, "processed", allProcessed)
+	if sp.state.updateData.Count() > 0 {
+		sp.logger.Info("Updating txs", "data", sp.state.updateData)
 
 		// see EthUpdateTxsData struct for comments
-		if err := sp.db.UpdateTxs(&core.EthUpdateTxsData{
-			ExpectedInvalid:            expectedInvalid,
-			ExpectedProcessed:          expectedProcessed,
-			MoveUnprocessedToProcessed: allProcessed,
-		}); err != nil {
-			sp.logger.Error("Failed to mark expected txs as invalid", "err", err)
+		if err := sp.db.UpdateTxs(sp.state.updateData); err != nil {
+			sp.logger.Error("Failed to update txs", "err", err)
 		}
 	}
 }
@@ -230,31 +265,28 @@ func (sp *EthStateProcessor) constructBridgeClaimsBlockInfo(
 func (sp *EthStateProcessor) checkUnprocessedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
-) (
-	[]*core.EthTx,
-	[]*core.EthTx,
-	[]*core.EthTx,
-	[]*core.BridgeExpectedEthTx,
 ) {
 	var relevantUnprocessedTxs []*core.EthTx
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
-		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) {
+		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) &&
+			!unprocessedTx.ShouldSkipForNow() {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
+	}
+
+	if len(relevantUnprocessedTxs) == 0 {
+		return
 	}
 
 	//nolint:prealloc
 	var (
 		processedInvalidTxs  []*core.EthTx
 		processedValidTxs    []*core.EthTx
+		pendingTxs           []*core.EthTx
 		processedExpectedTxs []*core.BridgeExpectedEthTx
 		invalidTxsCounter    int
 	)
-
-	if len(relevantUnprocessedTxs) == 0 {
-		return relevantUnprocessedTxs, processedValidTxs, processedInvalidTxs, processedExpectedTxs
-	}
 
 	onInvalidTx := func(tx *core.EthTx) {
 		processedInvalidTxs = append(processedInvalidTxs, tx)
@@ -283,17 +315,25 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-			key := string(unprocessedTx.ToExpectedEthTxKey())
+		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+			pendingTxs = append(pendingTxs, unprocessedTx)
+		} else {
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				key := string(unprocessedTx.ToExpectedEthTxKey())
 
-			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+				if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-				delete(sp.state.expectedTxsMap, key)
+					delete(sp.state.expectedTxsMap, key)
+				}
+
+				sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+					unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
+				))] = common.Hash(unprocessedTx.Hash)
 			}
-		}
 
-		processedValidTxs = append(processedValidTxs, unprocessedTx)
+			processedValidTxs = append(processedValidTxs, unprocessedTx)
+		}
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -304,16 +344,32 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 		telemetry.UpdateOracleClaimsInvalidCounter(sp.state.blockInfo.ChainID, invalidTxsCounter) // update telemetry
 	}
 
-	return relevantUnprocessedTxs, processedValidTxs, processedInvalidTxs, processedExpectedTxs
+	for _, tx := range processedValidTxs {
+		sp.state.updateData.MoveUnprocessedToProcessed = append(
+			sp.state.updateData.MoveUnprocessedToProcessed, tx.ToProcessedEthTx(false))
+	}
+
+	for _, tx := range processedInvalidTxs {
+		sp.state.updateData.MoveUnprocessedToProcessed = append(
+			sp.state.updateData.MoveUnprocessedToProcessed, tx.ToProcessedEthTx(true))
+
+		sp.state.allProcessedInvalid = append(sp.state.allProcessedInvalid, tx)
+	}
+
+	sp.state.updateData.MoveUnprocessedToPending = append(sp.state.updateData.MoveUnprocessedToPending, pendingTxs...)
+	sp.state.updateData.ExpectedProcessed = append(sp.state.updateData.ExpectedProcessed, processedExpectedTxs...)
+
+	sp.logger.Debug("Checked all unprocessed",
+		"for chainID", sp.state.blockInfo.ChainID,
+		"processedValidTxs", processedValidTxs,
+		"processedInvalidTxs", processedInvalidTxs,
+		"pendingTxs", pendingTxs,
+		"processedExpectedTxs", processedExpectedTxs)
 }
 
 func (sp *EthStateProcessor) checkExpectedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
-) (
-	[]*core.BridgeExpectedEthTx,
-	[]*core.BridgeExpectedEthTx,
-	[]*core.BridgeExpectedEthTx,
 ) {
 	var relevantExpiredTxs []*core.BridgeExpectedEthTx
 
@@ -349,16 +405,15 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 		}
 	}
 
+	if !bridgeClaims.CanAddMore(maxClaimsToGroup) || len(relevantExpiredTxs) == 0 {
+		return
+	}
+
 	//nolint:prealloc
 	var (
 		invalidRelevantExpiredTxs   []*core.BridgeExpectedEthTx
 		processedRelevantExpiredTxs []*core.BridgeExpectedEthTx
 	)
-
-	if !bridgeClaims.CanAddMore(maxClaimsToGroup) ||
-		len(relevantExpiredTxs) == 0 {
-		return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
-	}
 
 	onInvalidTx := func(tx *core.BridgeExpectedEthTx) {
 		// expired, but can not process, so we mark it as invalid
@@ -406,7 +461,13 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 			sp.state.blockInfo.ChainID, len(invalidRelevantExpiredTxs)) // update telemetry
 	}
 
-	return relevantExpiredTxs, processedRelevantExpiredTxs, invalidRelevantExpiredTxs
+	sp.state.updateData.ExpectedProcessed = append(sp.state.updateData.ExpectedProcessed, processedRelevantExpiredTxs...)
+	sp.state.updateData.ExpectedInvalid = append(sp.state.updateData.ExpectedInvalid, invalidRelevantExpiredTxs...)
+
+	sp.logger.Debug("Checked all expected",
+		"for chainID", sp.state.blockInfo.ChainID,
+		"processedExpectedTxs", processedRelevantExpiredTxs,
+		"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 }
 
 func (sp *EthStateProcessor) notifyBridgingRequestStateUpdater(
@@ -431,22 +492,9 @@ func (sp *EthStateProcessor) notifyBridgingRequestStateUpdater(
 
 	if len(bridgeClaims.BatchExecutedClaims) > 0 {
 		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
-			var (
-				txHash common.Hash
-				found  bool
-			)
-
-			for _, processedTx := range sp.state.allProcessedValid {
-				if processedTx.OriginChainID == common.ToStrChainID(beClaim.ChainId) &&
-					processedTx.InnerActionHash == beClaim.ObservedTransactionHash {
-					txHash = common.Hash(processedTx.Hash)
-					found = true
-
-					break
-				}
-			}
-
-			if !found {
+			txHash, exists := sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+				common.ToStrChainID(beClaim.ChainId), beClaim.ObservedTransactionHash))]
+			if !exists {
 				sp.logger.Error(
 					"Failed to get txHash of a processed tx, based on BatchExecutedClaim.ObservedTransactionHash",
 					"bec", beClaim)

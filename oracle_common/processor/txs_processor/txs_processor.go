@@ -2,13 +2,17 @@ package txsprocessor
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	"github.com/Ethernal-Tech/ethgo"
+	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -114,8 +118,12 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 			return
 		}
 
-		events := p.extractEventsFromReceipt(receipt)
-		p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
+		events, err := p.extractEventsFromReceipt(receipt)
+		if err != nil {
+			p.logger.Error("extracting events from submit claims receipt", "err", err)
+		} else {
+			p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
+		}
 	}
 
 	p.stateProcessor.PersistNew(bridgeClaims, p.bridgingRequestStateUpdater)
@@ -163,11 +171,57 @@ func (p *TxsProcessorImpl) submitClaims(
 	return receipt, true
 }
 
-func (p *TxsProcessorImpl) extractEventsFromReceipt(_ *types.Receipt) *core.SubmitClaimsEvents {
+func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*core.SubmitClaimsEvents, error) {
 	// parse receipt for events, and put them in SubmitClaimsEvents structure
-	// events: emit NotEnoughFunds(_type, _index, _chainTokenQuantity); where type="BRC"
 	// BatchExecutionInfo(
 	// 		batchID uint64, claimIdx int, isFailedClaim bool,
 	//		txHashes []tuple(bytes32 txSourceHash, txSourceChainID byte))
-	return &core.SubmitClaimsEvents{}
+	eventSigs, err := eth.GetSubmitClaimsEventSignatures()
+	if err != nil {
+		p.logger.Error("failed to get submit claims event signatures", "err", err)
+
+		return nil, err
+	}
+
+	notEnoughFundsEventSig := eventSigs[0]
+	batchExecutionInfoEventSig := eventSigs[1]
+
+	contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
+	if err != nil {
+		p.logger.Error("failed to get contractbinding brdge contract", "err", err)
+
+		return nil, err
+	}
+
+	events := &core.SubmitClaimsEvents{}
+
+	for _, log := range receipt.Logs {
+		if len(log.Topics) == 0 {
+			continue
+		}
+
+		eventSig := ethgo.Hash(log.Topics[0])
+		switch eventSig {
+		case notEnoughFundsEventSig:
+			notEnoughFunds, err := contract.BridgeContractFilterer.ParseNotEnoughFunds(*log)
+			if err != nil {
+				return nil, fmt.Errorf("failed parsing notEnoughFunds log. err: %w", err)
+			}
+
+			events.NotEnoughFunds = append(events.NotEnoughFunds, notEnoughFunds)
+
+			p.logger.Info("NotEnoughFunds event found in submit claims receipt", "event", notEnoughFunds)
+		case batchExecutionInfoEventSig:
+			batchExecutionInfo, err := contract.BridgeContractFilterer.ParseBatchExecutionInfo(*log)
+			if err != nil {
+				return nil, fmt.Errorf("failed parsing batchExecutionInfo log. err: %w", err)
+			}
+
+			events.BatchExecutionInfo = append(events.BatchExecutionInfo, batchExecutionInfo)
+		default:
+			p.logger.Debug("unsupported event signature", "eventSig", eventSig)
+		}
+	}
+
+	return events, nil
 }

@@ -164,9 +164,10 @@ var _ EthTxsProcessorDB = (*EthTxsProcessorDBMock)(nil)
 
 type EthTxSuccessProcessorMock struct {
 	mock.Mock
-	ShouldAddClaim bool
-	Type           common.BridgingTxType
-	ValidateError  error
+	ShouldAddClaim   bool
+	Type             common.BridgingTxType
+	ValidateError    error
+	AddClaimCallback func(claims *oCore.BridgeClaims)
 }
 
 func (m *EthTxSuccessProcessorMock) GetType() common.BridgingTxType {
@@ -183,7 +184,9 @@ func (m *EthTxSuccessProcessorMock) PreValidate(tx *EthTx, appConfig *oCore.AppC
 
 func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
 	claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig) error {
-	if m.ShouldAddClaim {
+	if m.AddClaimCallback != nil {
+		m.AddClaimCallback(claims)
+	} else if m.ShouldAddClaim {
 		claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{})
 	}
 
