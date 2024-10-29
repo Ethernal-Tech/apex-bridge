@@ -46,6 +46,13 @@ func NewEthTxsReceiverImpl(
 func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
 	r.logger.Info("NewUnprocessedLog", "log", log)
 
+	_, exists := r.appConfig.EthChains[originChainID]
+	if !exists {
+		r.logger.Error("originChainID not registered", "originChainID", originChainID)
+
+		return fmt.Errorf("originChainID not registered. originChainID: %s", originChainID)
+	}
+
 	var (
 		bridgingRequests  []*common.NewBridgingRequestStateModel
 		relevantTxs       []*core.EthTx
@@ -133,25 +140,7 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 	withdrawEventSig := events[1]
 	fundedEventSig := events[2]
 
-	ethConfig, exists := r.appConfig.EthChains[originChainID]
-	if !exists {
-		r.logger.Error("originChainID not registered", "originChainID", originChainID)
-
-		return nil, fmt.Errorf("originChainID not registered. originChainID: %s", originChainID)
-	}
-
-	ethTxHelper := eth.NewEthHelperWrapper(ethConfig.NodeURL, ethConfig.DynamicTx, r.logger)
-
-	ethHelper, err := ethTxHelper.GetEthHelper()
-	if err != nil {
-		r.logger.Error("failed to get eth helper", "err", err)
-
-		return nil, err
-	}
-
-	contract, err := contractbinding.NewGateway(
-		common.HexToAddress(ethConfig.BridgingAddresses.BridgingAddress),
-		ethHelper.GetClient())
+	contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
 	if err != nil {
 		r.logger.Error("failed to get contractbinding gateway", "err", err)
 

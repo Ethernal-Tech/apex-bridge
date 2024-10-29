@@ -3,14 +3,19 @@ package processor
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	ethcore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethereum_common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_eth/database_access"
@@ -86,7 +91,6 @@ func TestEthTxsProcessor(t *testing.T) {
 	}
 
 	appConfig.FillOut()
-	appConfig.EthChains[common.ChainIDStrNexus].NodeURL = "http://127.0.0.1"
 
 	const (
 		dbFilePath      = "temp_test_oracle.db"
@@ -269,7 +273,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.Hash{1}
 
@@ -397,7 +401,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -468,7 +472,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -623,7 +627,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -688,7 +692,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -756,7 +760,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -853,7 +857,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -950,7 +954,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			submittedClaims = append(submittedClaims, claims)
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -1021,6 +1025,311 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Len(t, submittedClaims[0].BridgingRequestClaims, 1)
 		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
+
+	t.Run("verify abi pack for withdraw", func(t *testing.T) {
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
+
+		require.NoError(t, err)
+		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		receiptData, err := eventAbi.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		gethLog := types.Log{
+			Data:   receiptData,
+			Topics: []ethereum_common.Hash{ethereum_common.Hash(withdrawEventSig)},
+		}
+
+		contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
+		require.NoError(t, err)
+
+		event, err := contract.ParseWithdraw(gethLog)
+		require.NoError(t, err)
+		require.NotNil(t, event)
+	})
+
+	t.Run("Start - unprocessedTxs - valid brc goes to pending", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const (
+			originChainID = common.ChainIDStrNexus
+		)
+
+		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
+
+		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		require.NoError(t, err)
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBridgingRequest}
+		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
+
+		require.NoError(t, err)
+		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		receiptData, err := eventAbi.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		log := &ethgo.Log{
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHash,
+			Data:            receiptData,
+			Topics:          []ethgo.Hash{withdrawEventSig},
+		}
+
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
+
+		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+
+		tx := unprocessedTxs[0]
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.Nil(t, unprocessedTxs)
+
+		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		require.Nil(t, processedTx)
+
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
+		require.NotNil(t, pendingTxs)
+		require.Len(t, pendingTxs, 1)
+		require.Equal(t, originChainID, pendingTxs[0].OriginChainID)
+		require.Equal(t, tx.Hash, pendingTxs[0].Hash)
+	})
+
+	t.Run("Start - unprocessedTxs - valid brc rejected and retry", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		const (
+			originChainID = common.ChainIDStrNexus
+		)
+
+		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+
+		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
+
+		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		require.NoError(t, err)
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{
+			AddClaimCallback: func(claims *oCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
+					ObservedTransactionHash: txHash,
+					SourceChainId:           common.ToNumChainID(originChainID),
+				})
+			},
+			Type: common.BridgingTxTypeBridgingRequest,
+		}
+		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
+		require.NoError(t, err)
+
+		receiptData, err := notEnoughFundsEventArguments.Pack("BRC", big.NewInt(0), big.NewInt(0))
+		require.NoError(t, err)
+
+		receipt := &types.Receipt{
+			Logs: []*types.Log{
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[0])},
+					Data:   receiptData,
+				},
+			},
+		}
+
+		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(receipt, nil)
+
+		contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
+		require.NoError(t, err)
+
+		event, err := contract.ParseNotEnoughFunds(*receipt.Logs[0])
+		require.NoError(t, err)
+		require.NotNil(t, event)
+
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
+
+		require.NoError(t, err)
+		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		withdrawReceiptData, err := eventAbi.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		log := &ethgo.Log{
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHash,
+			Data:            withdrawReceiptData,
+			Topics:          []ethgo.Hash{withdrawEventSig},
+		}
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
+
+		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+
+		tx := unprocessedTxs[0]
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		require.Nil(t, processedTx)
+
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
+		require.Nil(t, pendingTxs)
+
+		// rejected
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
+		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
+		require.Equal(t, uint32(1), unprocessedTxs[0].TryCount)
+		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
+
+		// reset ctx to run again, and confirm by TryCount that this tx was skipped because of LastTimeTried
+		ctx, cancelFunc = context.WithCancel(context.Background())
+		proc, _ = newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
+		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
+		require.Equal(t, uint32(1), unprocessedTxs[0].TryCount)
+		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
+
+		newTx := unprocessedTxs[0]
+		// set LastTimeTried to simulate time passing
+		newTx.LastTimeTried = newTx.LastTimeTried.Add(-oCore.RetryUnprocessedAfterSec * time.Second)
+
+		err = oracleDB.UpdateTxs(&ethcore.EthUpdateTxsData{
+			UpdateUnprocessed: []*ethcore.EthTx{newTx},
+		})
+		require.NoError(t, err)
+
+		// reset ctx to run again, and confirm by TryCount that this tx was tried again because we simulated time passing
+		ctx, cancelFunc = context.WithCancel(context.Background())
+		proc, _ = newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
+		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
+		require.Equal(t, uint32(2), unprocessedTxs[0].TryCount)
+		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
+	})
 }
 
 func simulateRealData() []byte {
@@ -1076,3 +1385,16 @@ func simulateRealData() []byte {
 		13, 224, 182, 179, 167, 100, 0, 0,
 	}
 }
+
+type ReceiverWithdraw struct {
+	Receiver string   `json:"receiver" abi:"receiver"`
+	Amount   *big.Int `json:"amount" abi:"amount"`
+}
+
+var (
+	notEnoughFundsEventArguments = abi.Arguments{
+		{Name: "claimeType", Type: abi.Type{T: abi.StringTy}},
+		{Name: "index", Type: abi.Type{T: abi.UintTy, Size: 256}},
+		{Name: "availableAmount", Type: abi.Type{T: abi.UintTy, Size: 256}},
+	}
+)
