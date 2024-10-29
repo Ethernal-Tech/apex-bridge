@@ -1330,6 +1330,199 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Equal(t, uint32(2), unprocessedTxs[0].TryCount)
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 	})
+
+	t.Run("Start - BatchExecutionInfoEvent - valid tx goes to processed", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		originChainID := common.ChainIDStrNexus
+		txHash := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
+
+		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
+
+		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		require.NoError(t, err)
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBridgingRequest}
+		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+
+		ctx, canceFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
+		require.NoError(t, err)
+
+		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		receiptData, err := eventAbi.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		log := &ethgo.Log{
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHash,
+			Data:            receiptData,
+			Topics:          []ethgo.Hash{withdrawEventSig},
+		}
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+
+		tx := unprocessedTxs[0]
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			canceFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.Len(t, unprocessedTxs, 0)
+
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
+		require.Len(t, pendingTxs, 0)
+
+		processedTx, err := oracleDB.GetProcessedTx(originChainID, txHash)
+		require.NoError(t, err)
+		require.NotNil(t, processedTx)
+		require.Equal(t, processedTx.Hash, tx.Hash)
+		require.Equal(t, processedTx.OriginChainID, originChainID)
+	})
+
+	t.Run("Start - BatchExecutionInfoEvent - invalid tx goes to unprocessed/pending", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		originChainID := common.ChainIDStrNexus
+		txHash := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
+
+		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
+
+		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		require.NoError(t, err)
+
+		validTxProc := &ethcore.EthTxSuccessProcessorMock{
+			AddClaimCallback: func(claims *oCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
+					ObservedTransactionHash: txHash,
+					SourceChainId:           common.ToNumChainID(originChainID),
+				})
+			},
+			Type: common.BridgingTxTypeBridgingRequest,
+		}
+		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
+		require.NoError(t, err)
+
+		batchExecFailed := getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
+			[]*contractbinding.IBridgeStructsTxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntPrime,
+					ObservedTransactionHash: txHash,
+				},
+			})
+
+		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
+			Logs: []*types.Log{
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+					Data:   batchExecFailed,
+				},
+			},
+		}, nil)
+
+		ctx, canceFunc := context.WithCancel(context.Background())
+		proc, rec := newValidProcessor(
+			ctx,
+			appConfig, oracleDB,
+			validTxProc, nil, bridgeSubmitter,
+			indexerDbs,
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		events, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
+
+		withdrawEventSig := events[1]
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
+		require.NoError(t, err)
+
+		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
+		require.NoError(t, err)
+
+		receiptData, err := eventAbi.Inputs.Pack(
+			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
+				Receiver: "123",
+				Amount:   big.NewInt(1),
+			}},
+			big.NewInt(1), big.NewInt(1),
+		)
+		require.NoError(t, err)
+
+		log := &ethgo.Log{
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHash,
+			Data:            receiptData,
+			Topics:          []ethgo.Hash{withdrawEventSig},
+		}
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+
+		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NotNil(t, unprocessedTxs)
+		require.Len(t, unprocessedTxs, 1)
+
+		tx := unprocessedTxs[0]
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			canceFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		// find pending/unprocessed, check trycount
+		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.Len(t, unprocessedTxs, 0)
+
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
+		require.Len(t, pendingTxs, 0)
+
+		processedTx, err := oracleDB.GetProcessedTx(originChainID, txHash)
+		require.NoError(t, err)
+		require.Nil(t, processedTx)
+	})
 }
 
 func simulateRealData() []byte {
@@ -1384,6 +1577,50 @@ func simulateRealData() []byte {
 		0, 0, 0, 0, 0, 0, 0, 0,
 		13, 224, 182, 179, 167, 100, 0, 0,
 	}
+}
+
+func getBatchExecutionReceipt(
+	t *testing.T,
+	batchID uint64,
+	isFailedTx bool,
+	chainID uint8,
+	txHashes []*contractbinding.IBridgeStructsTxDataInfo,
+) []byte {
+	t.Helper()
+
+	events, err := eth.GetSubmitClaimsEventSignatures()
+	require.NoError(t, err)
+
+	batchExecInfo := events[1]
+	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	require.NoError(t, err)
+
+	eventAbi, err := abi.EventByID(ethereum_common.Hash(batchExecInfo))
+	require.NoError(t, err)
+
+	type TxDataInfo struct {
+		SourceChainID           uint8    `json:"sourceChainId" abi:"sourceChainId"`
+		ObservedTransactionHash [32]byte `json:"observedTransactionHash" abi:"observedTransactionHash"`
+	}
+
+	txDataInfo := make([]TxDataInfo, len(txHashes))
+
+	for idx, info := range txHashes {
+		txDataInfo[idx] = TxDataInfo{
+			SourceChainID:           info.SourceChainId,
+			ObservedTransactionHash: info.ObservedTransactionHash,
+		}
+	}
+
+	receiptData, err := eventAbi.Inputs.Pack(
+		batchID,
+		chainID,
+		isFailedTx,
+		txDataInfo,
+	)
+	require.NoError(t, err)
+
+	return receiptData
 }
 
 type ReceiverWithdraw struct {

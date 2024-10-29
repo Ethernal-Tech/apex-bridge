@@ -63,6 +63,7 @@ func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) er
 
 	s.Status = BridgingRequestStatusSubmittedToBridge
 	s.DestinationChainID = destinationChainID
+	s.BatchID = 0
 
 	return nil
 }
