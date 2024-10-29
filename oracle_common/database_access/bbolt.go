@@ -224,7 +224,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 			}
 
 			if pendingTx.GetOriginChainID() == chainID {
-				err := cursor.Bucket().Delete(pendingTx.ToUnprocessedTxKey())
+				err := cursor.Bucket().Delete(pendingTx.Key())
 				if err != nil {
 					return err
 				}
@@ -449,13 +449,11 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) moveUnprocessedToPending(
 			return fmt.Errorf("could not marshal pending tx: %w", err)
 		}
 
-		key := unprocessedTx.ToUnprocessedTxKey()
-
-		if err = pendingBucket.Put(key, bytes); err != nil {
+		if err = pendingBucket.Put(unprocessedTx.Key(), bytes); err != nil {
 			return fmt.Errorf("pending tx write error: %w", err)
 		}
 
-		if err := unprocessedBucket.Delete(key); err != nil {
+		if err := unprocessedBucket.Delete(unprocessedTx.ToUnprocessedTxKey()); err != nil {
 			return fmt.Errorf("could not remove from unprocessed txs: %w", err)
 		}
 	}
@@ -497,13 +495,11 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) movePendingToUnprocessed(
 			return fmt.Errorf("could not marshal unprocessed tx: %w", err)
 		}
 
-		key := pendingTx.ToUnprocessedTxKey()
-
-		if err = unprocessedBucket.Put(key, bytes); err != nil {
+		if err = unprocessedBucket.Put(pendingTx.ToUnprocessedTxKey(), bytes); err != nil {
 			return fmt.Errorf("unprocessed tx write error: %w", err)
 		}
 
-		if err := pendingBucket.Delete(key); err != nil {
+		if err := pendingBucket.Delete(pendingTx.Key()); err != nil {
 			return fmt.Errorf("could not remove from pending txs: %w", err)
 		}
 	}
@@ -526,7 +522,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) movePendingToProcessed(
 			return fmt.Errorf("processed tx write error: %w", err)
 		}
 
-		if err := pendingBucket.Delete(pendingTx.ToUnprocessedTxKey()); err != nil {
+		if err := pendingBucket.Delete(pendingTx.Key()); err != nil {
 			return fmt.Errorf("could not remove from pending txs: %w", err)
 		}
 	}

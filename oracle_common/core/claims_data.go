@@ -9,6 +9,12 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
+type ClaimType = string
+
+const (
+	BRCClaimType ClaimType = "BRC"
+)
+
 type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
 type BridgingRequestClaim = contractbinding.IBridgeStructsBridgingRequestClaim
 type BatchExecutedClaim = contractbinding.IBridgeStructsBatchExecutedClaim

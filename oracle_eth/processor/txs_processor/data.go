@@ -9,11 +9,11 @@ import (
 )
 
 type perTickState struct {
-	allInvalidRelevantExpired []*core.BridgeExpectedEthTx
-	allProcessedExpected      []*core.BridgeExpectedEthTx
-	allProcessedInvalid       []*core.EthTx
-	allProcessedValid         []*core.EthTx
-	allUnprocessed            []*core.EthTx
+	updateData *core.EthUpdateTxsData
+
+	// duplicated data, used for easier marking of invalid state for bridging request history
+	allProcessedInvalid           []*core.EthTx
+	innerActionHashToActualTxHash map[string]common.Hash
 
 	expectedTxsMap map[string]*core.BridgeExpectedEthTx
 	unprocessedTxs []*core.EthTx

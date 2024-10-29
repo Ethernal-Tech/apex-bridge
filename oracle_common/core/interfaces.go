@@ -11,6 +11,7 @@ type BaseTx interface {
 	GetPriority() uint8
 
 	ToUnprocessedTxKey() []byte
+	Key() []byte
 }
 
 type BaseProcessedTx interface {
