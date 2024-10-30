@@ -110,7 +110,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs := getOutputs(confirmedTransactions)
+	txOutputs := getOutputs(confirmedTransactions, cco.config.NetworkID, cco.logger)
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOs(
 		multisigAddress, multisigFeeAddress, txOutputs)
@@ -377,7 +377,9 @@ func findMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
 	return min, idx
 }
 
-func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
+func getOutputs(
+	txs []eth.ConfirmedTransaction, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
+) cardano.TxOutputs {
 	receiversMap := map[string]uint64{}
 
 	for _, transaction := range txs {
@@ -393,7 +395,13 @@ func getOutputs(txs []eth.ConfirmedTransaction) cardano.TxOutputs {
 
 	for addr, amount := range receiversMap {
 		if amount == 0 {
-			// this should be logged once
+			logger.Warn("skipped output with zero amount", "addr", addr)
+
+			continue
+		} else if !cardano.IsValidOutputAddress(addr, networkID) {
+			// apex-361 fix
+			logger.Warn("skipped output because it is invalid", "addr", addr)
+
 			continue
 		}
 

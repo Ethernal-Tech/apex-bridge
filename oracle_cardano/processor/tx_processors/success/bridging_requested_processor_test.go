@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -18,21 +19,23 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		minFeeForBridging     = 10000010
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		vectorBridgingAddr    = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
-		vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
-		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
+		vectorBridgingFeeAddr = "vector_test1wtyslvqxffyppmzhs7ecwunsnpq6g2p6kf9r4aa8ntfzc4qj925fr"
+		validTestAddress      = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
 	)
 
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
+				NetworkID: wallet.TestNetNetwork,
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
 			},
 			common.ChainIDStrVector: {
+				NetworkID: wallet.VectorTestNetNetwork,
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
@@ -309,7 +312,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
-	t.Run("ValidateAndAddClaim invalid receiver addr in metadata", func(t *testing.T) {
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
@@ -318,6 +322,37 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
 				{Address: []string{
 					"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661",
+				}, Amount: utxoMinValue},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: invalidAddrInReceiversMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrVector,
+			SenderAddr:         []string{"addr1"},
+			Transactions: []common.BridgingRequestMetadataTransaction{
+				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
+				{Address: []string{
+					"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d",
 				}, Amount: utxoMinValue},
 			},
 		})

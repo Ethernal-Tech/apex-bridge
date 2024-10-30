@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +26,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	appConfig := &oCore.AppConfig{
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
-				NetworkID: 0,
+				NetworkID: wallet.TestNetNetwork,
 				BridgingAddresses: oCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
@@ -216,7 +217,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
-	t.Run("ValidateAndAddClaim invalid receiver addr in metadata", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrPrime,
@@ -224,6 +225,29 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
 				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
 				{Address: nexusBridgingAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+			},
+			FeeAmount: big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Metadata:      invalidAddrInReceiversMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+	})
+
+	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrPrime,
+			SenderAddr:         "addr1",
+			Transactions: []core.BridgingRequestEthMetadataTransaction{
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: "stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d", Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
 			},
 			FeeAmount: big.NewInt(0),
 		})

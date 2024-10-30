@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math/big"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-	wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -165,8 +165,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			break
 		}
 
-		addr, err := wallet.NewAddress(receiver.Address)
-		if err != nil || addr.GetNetwork() != cardanoDestConfig.NetworkID {
+		if !cardanotx.IsValidOutputAddress(receiver.Address, cardanoDestConfig.NetworkID) {
 			foundAnInvalidReceiverAddr = true
 
 			break
