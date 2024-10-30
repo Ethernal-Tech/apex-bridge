@@ -72,11 +72,12 @@ func Test_IsValidOutputAddress(t *testing.T) {
 		"addr_test1vz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzerspjrlsz",
 		"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 	}
-	listInvalidStake := []string{
+	listInvalid := []string{
 		"stake1uyehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gh6ffgw",
 		"stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
 		"stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn",
 		"stake_test17rphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcljw6kf",
+		"addr1dummy",
 	}
 
 	// mainnet
@@ -88,7 +89,7 @@ func Test_IsValidOutputAddress(t *testing.T) {
 		assert.False(t, IsValidOutputAddress(x, wallet.MainNetNetwork))
 	}
 
-	for _, x := range listInvalidStake {
+	for _, x := range listInvalid {
 		assert.False(t, IsValidOutputAddress(x, wallet.MainNetNetwork))
 	}
 
@@ -101,7 +102,7 @@ func Test_IsValidOutputAddress(t *testing.T) {
 		assert.True(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
 	}
 
-	for _, x := range listInvalidStake {
+	for _, x := range listInvalid {
 		assert.False(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
 	}
 }
