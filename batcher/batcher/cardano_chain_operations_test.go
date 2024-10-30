@@ -358,15 +358,15 @@ func Test_getOutputs(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					DestinationAddress: "0x1",
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(100),
 				},
 				{
-					DestinationAddress: "0x2",
+					DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
 					Amount:             big.NewInt(200),
 				},
 				{
-					DestinationAddress: "0x3",
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(400),
 				},
 			},
@@ -374,15 +374,15 @@ func Test_getOutputs(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					DestinationAddress: "0x4",
+					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(50),
 				},
 				{
-					DestinationAddress: "0x3",
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(900),
 				},
 				{
-					DestinationAddress: "0x11",
+					DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
 					Amount:             big.NewInt(0),
 				},
 			},
@@ -390,7 +390,12 @@ func Test_getOutputs(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					DestinationAddress: "0x5",
+					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+					Amount:             big.NewInt(3000),
+				},
+				{
+					// this one will be skipped
+					DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
 					Amount:             big.NewInt(3000),
 				},
 			},
@@ -398,44 +403,44 @@ func Test_getOutputs(t *testing.T) {
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
-					DestinationAddress: "0x1",
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(2000),
 				},
 				{
-					DestinationAddress: "0x4",
+					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(170),
 				},
 				{
-					DestinationAddress: "0x3",
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(10),
 				},
 			},
 		},
 	}
 
-	res := getOutputs(txs)
+	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum)
 	assert.Equal(t, []cardanowallet.TxOutput{
 		{
-			Addr:   "0x1",
-			Amount: 2100,
-		},
-		{
-			Addr:   "0x2",
+			Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
 			Amount: 200,
 		},
 		{
-			Addr:   "0x3",
+			Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+			Amount: 2100,
+		},
+		{
+			Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+			Amount: 3000,
+		},
+		{
+			Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 			Amount: 1310,
 		},
 		{
-			Addr:   "0x4",
+			Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 			Amount: 220,
-		},
-		{
-			Addr:   "0x5",
-			Amount: 3000,
 		},
 	}, res.Outputs)
 }
