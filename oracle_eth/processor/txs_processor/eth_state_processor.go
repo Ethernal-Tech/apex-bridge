@@ -131,8 +131,8 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 ) {
 	newProcessedTxsMap := make(map[string]*core.ProcessedEthTx, 0)
 	newUnprocessedTxs := make([]*core.EthTx, 0)
-
 	keys := make([][]byte, 0)
+
 	for _, brc := range claims.BridgingRequestClaims {
 		key := core.ToEthTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash)
 		keys = append(keys, key)

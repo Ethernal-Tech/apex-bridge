@@ -128,8 +128,8 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
 ) {
 	newProcessedTxsMap := make(map[string]*core.ProcessedCardanoTx, 0)
 	newUnprocessedTxs := make([]*core.CardanoTx, 0)
-
 	keys := make([][]byte, 0)
+
 	for _, brc := range claims.BridgingRequestClaims {
 		key := core.ToCardanoTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash)
 		keys = append(keys, key)

@@ -1435,10 +1435,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		tx2 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223342")), Metadata: metadata2}
 		cardanoTx2 := core.CardanoTx{OriginChainID: originChainID, Tx: *tx2}
 
-		oracleDB.AddTxs([]*core.ProcessedCardanoTx{}, []*core.CardanoTx{&cardanoTx1, &cardanoTx2})
-		oracleDB.UpdateTxs(&cCore.UpdateTxsData[*core.CardanoTx, *core.ProcessedCardanoTx, *core.BridgeExpectedCardanoTx]{
+		err = oracleDB.AddTxs([]*core.ProcessedCardanoTx{}, []*core.CardanoTx{&cardanoTx1, &cardanoTx2})
+		require.NoError(t, err)
+
+		err = oracleDB.UpdateTxs(&cCore.UpdateTxsData[*core.CardanoTx, *core.ProcessedCardanoTx, *core.BridgeExpectedCardanoTx]{
 			MoveUnprocessedToPending: []*core.CardanoTx{&cardanoTx1, &cardanoTx2},
 		})
+		require.NoError(t, err)
 
 		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key(), cardanoTx2.Key()})
 		require.Len(t, pendingTxs, 2)

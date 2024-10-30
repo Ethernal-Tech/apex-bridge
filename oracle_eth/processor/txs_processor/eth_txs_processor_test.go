@@ -1347,10 +1347,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
 		require.NoError(t, err)
 
-		oracleDB.AddTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
-		oracleDB.UpdateTxs(&oCore.UpdateTxsData[*ethcore.EthTx, *ethcore.ProcessedEthTx, *ethcore.BridgeExpectedEthTx]{
+		err = oracleDB.AddTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
+		require.NoError(t, err)
+
+		err = oracleDB.UpdateTxs(&oCore.UpdateTxsData[*ethcore.EthTx, *ethcore.ProcessedEthTx, *ethcore.BridgeExpectedEthTx]{
 			MoveUnprocessedToPending: []*ethcore.EthTx{ethTx1, ethTx2},
 		})
+		require.NoError(t, err)
 
 		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{ethTx1.Key(), ethTx2.Key()})
 		require.Len(t, pendingTxs, 2)
