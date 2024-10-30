@@ -1464,21 +1464,29 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
 		require.NoError(t, err)
 
-		batchExecFailed := getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
-			[]*contractbinding.IBridgeStructsTxDataInfo{
-				{
-					SourceChainId:           common.ChainIDIntPrime,
-					ObservedTransactionHash: tx1.Hash,
-				},
-			})
-
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
 			Logs: []*types.Log{
 				{
 					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data:   batchExecFailed,
+					Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntPrime,
+								ObservedTransactionHash: tx1.Hash,
+							},
+						}),
+				},
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+					Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntPrime,
+								ObservedTransactionHash: tx2.Hash,
+							},
+						}),
 				},
 			},
 		}, nil)

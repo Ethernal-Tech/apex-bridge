@@ -1376,21 +1376,29 @@ func TestEthTxsProcessor(t *testing.T) {
 		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
 		require.NoError(t, err)
 
-		batchExecFailed := getBatchExecutionReceipt(t, 1, true, common.ChainIDIntNexus,
-			[]*contractbinding.IBridgeStructsTxDataInfo{
-				{
-					SourceChainId:           common.ChainIDIntNexus,
-					ObservedTransactionHash: txHash1,
-				},
-			})
-
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
 			Logs: []*types.Log{
 				{
 					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data:   batchExecFailed,
+					Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntNexus,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntNexus,
+								ObservedTransactionHash: txHash1,
+							},
+						}),
+				},
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+					Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntNexus,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntNexus,
+								ObservedTransactionHash: txHash2,
+							},
+						}),
 				},
 			},
 		}, nil)

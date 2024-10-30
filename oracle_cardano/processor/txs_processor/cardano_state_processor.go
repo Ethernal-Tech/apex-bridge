@@ -119,31 +119,15 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	}
 
 	if len(events.BatchExecutionInfo) > 0 {
-		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo, claims)
+		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
 	}
 }
 
 func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
-	events []*cCore.BatchExecutionInfoEvent, claims *cCore.BridgeClaims,
+	events []*cCore.BatchExecutionInfoEvent,
 ) {
-	newProcessedTxsMap := make(map[string]*core.ProcessedCardanoTx, 0)
+	newProcessedTxs := make([]*core.ProcessedCardanoTx, 0)
 	newUnprocessedTxs := make([]*core.CardanoTx, 0)
-	keys := make([][]byte, 0)
-
-	for _, brc := range claims.BridgingRequestClaims {
-		key := core.ToCardanoTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash)
-		keys = append(keys, key)
-	}
-
-	txs, err := sp.db.GetPendingTxs(keys)
-	if err != nil {
-		sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "err", err)
-	}
-
-	for _, tx := range txs {
-		processedTx := tx.ToProcessedCardanoTx(false)
-		newProcessedTxsMap[string(processedTx.Key())] = processedTx
-	}
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
@@ -157,17 +141,14 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
 			for _, tx := range txs {
 				tx.TryCount++
 				tx.LastTimeTried = time.Time{}
-				failedProcessedTx := tx.ToProcessedCardanoTx(false)
-				delete(newProcessedTxsMap, string(failedProcessedTx.Key()))
+				newUnprocessedTxs = append(newUnprocessedTxs, tx)
 			}
-
-			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
+		} else {
+			for _, tx := range txs {
+				processedTx := tx.ToProcessedCardanoTx(false)
+				newProcessedTxs = append(newProcessedTxs, processedTx)
+			}
 		}
-	}
-
-	newProcessedTxs := make([]*core.ProcessedCardanoTx, 0)
-	for _, tx := range newProcessedTxsMap {
-		newProcessedTxs = append(newProcessedTxs, tx)
 	}
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
