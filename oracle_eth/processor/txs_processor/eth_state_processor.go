@@ -122,15 +122,31 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 	}
 
 	if len(events.BatchExecutionInfo) > 0 {
-		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo, claims)
 	}
 }
 
 func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
-	events []*oracleCore.BatchExecutionInfoEvent,
+	events []*oracleCore.BatchExecutionInfoEvent, claims *oracleCore.BridgeClaims,
 ) {
-	newProcessedTxs := make([]*core.ProcessedEthTx, 0)
+	newProcessedTxsMap := make(map[string]*core.ProcessedEthTx, 0)
 	newUnprocessedTxs := make([]*core.EthTx, 0)
+
+	keys := make([][]byte, 0)
+	for _, brc := range claims.BridgingRequestClaims {
+		key := core.ToEthTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash)
+		keys = append(keys, key)
+	}
+
+	txs, err := sp.db.GetPendingTxs(keys)
+	if err != nil {
+		sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "err", err)
+	}
+
+	for _, tx := range txs {
+		processedTx := tx.ToProcessedEthTx(false)
+		newProcessedTxsMap[string(processedTx.Key())] = processedTx
+	}
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
@@ -144,19 +160,17 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 			for _, tx := range txs {
 				tx.TryCount++
 				tx.LastTimeTried = time.Time{}
+				failedProcessedTx := tx.ToProcessedEthTx(false)
+				delete(newProcessedTxsMap, string(failedProcessedTx.Key()))
 			}
 
 			newUnprocessedTxs = append(newUnprocessedTxs, txs...)
-		} else {
-			processedTxs := make([]*core.ProcessedEthTx, 0)
-
-			for _, tx := range txs {
-				processedTx := tx.ToProcessedEthTx(false)
-				processedTxs = append(processedTxs, processedTx)
-			}
-
-			newProcessedTxs = append(newProcessedTxs, processedTxs...)
 		}
+	}
+
+	newProcessedTxs := make([]*core.ProcessedEthTx, 0)
+	for _, tx := range newProcessedTxsMap {
+		newProcessedTxs = append(newProcessedTxs, tx)
 	}
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
