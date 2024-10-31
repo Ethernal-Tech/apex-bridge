@@ -73,7 +73,7 @@ func (p *HotWalletIncrementProcessor) validate(
 	tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
 	if _, err := utils.ValidateTxOutputs(tx, appConfig, true); err != nil {
-		return fmt.Errorf("bridging address on origin not found in utxos")
+		return err
 	}
 
 	if len(tx.Metadata) != 0 {
