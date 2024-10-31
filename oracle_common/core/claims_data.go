@@ -120,6 +120,15 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
+	sb.WriteString("\nRetryCounter = ")
+
+	if c.RetryCounter == nil {
+		sb.WriteString("nil")
+	} else {
+		sb.WriteString(c.RetryCounter.String())
+	}
+
+	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nReceivers = [")
 	sb.WriteString(sbReceivers.String())
 	sb.WriteString("]")
