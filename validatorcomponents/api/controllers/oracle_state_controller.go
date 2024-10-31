@@ -150,7 +150,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txHash := strings.TrimLeft(txHashArr[0], "0x")
+	txHash := strings.TrimPrefix(txHashArr[0], "0x")
 
 	ttlArr, exists := queryValues["ttl"]
 	if !exists || len(ttlArr) == 0 {
