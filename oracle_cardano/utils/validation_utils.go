@@ -50,19 +50,19 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 		return nil, fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	for _, utxo := range tx.Tx.Outputs {
-		if utxo.Address == chainConfig.BridgingAddresses.BridgingAddress {
+	for _, output := range tx.Tx.Outputs {
+		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			if multisigUtxoOutput == nil {
-				multisigUtxoOutput = utxo
+				multisigUtxoOutput = output
 			} else if !allowMultiple {
-				return nil, fmt.Errorf("found multiple utxos to the bridging address %s on %s",
+				return nil, fmt.Errorf("found multiple tx outputs to the bridging address %s on %s",
 					chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
 			}
 		}
 	}
 
 	if multisigUtxoOutput == nil {
-		return nil, fmt.Errorf("bridging address %s on %s not found in utxos",
+		return nil, fmt.Errorf("bridging address %s on %s not found in tx outputs",
 			chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
 	}
 

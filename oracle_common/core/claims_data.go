@@ -31,7 +31,8 @@ type BridgeClaims struct {
 func (bc *BridgeClaims) Count() int {
 	return len(bc.BridgingRequestClaims) +
 		len(bc.BatchExecutedClaims) +
-		len(bc.BatchExecutionFailedClaims) /* + len(bc.RefundRequest) + len(bc.RefundExecuted)*/
+		len(bc.BatchExecutionFailedClaims) +
+		len(bc.HotWalletIncrementClaims) /* + len(bc.RefundRequest) + len(bc.RefundExecuted)*/
 }
 
 func (bc *BridgeClaims) Any() bool {
@@ -229,7 +230,7 @@ func (bc BridgeClaims) String() string {
 	sb.WriteString(sbREC.String())
 	sb.WriteString("]")
 
-	sb.WriteString("\nHotWalletIncrementClaims = \n[")
+	sb.WriteString("\nHotWalletIncrementClaims = [")
 	sb.WriteString(sbHWIC.String())
 	sb.WriteString("]")
 
