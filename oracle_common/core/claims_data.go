@@ -132,6 +132,14 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	return sb.String()
 }
 
+func HotWalletIncrementClaimsString(c HotWalletIncrementClaim) string {
+	if !c.IsIncrement {
+		return fmt.Sprintf("(%s, -%s)", common.ToStrChainID(c.ChainId), c.Amount)
+	}
+
+	return fmt.Sprintf("(%s, %s)", common.ToStrChainID(c.ChainId), c.Amount)
+}
+
 func (bc BridgeClaims) String() string {
 	var (
 		sb     strings.Builder
@@ -140,6 +148,7 @@ func (bc BridgeClaims) String() string {
 		sbBEFC strings.Builder
 		sbRRC  strings.Builder
 		sbREC  strings.Builder
+		sbHWIC strings.Builder
 	)
 
 	for _, brc := range bc.BridgingRequestClaims {
@@ -192,6 +201,14 @@ func (bc BridgeClaims) String() string {
 		sbREC.WriteString(" }")
 	}
 
+	for _, rec := range bc.HotWalletIncrementClaims {
+		if sbHWIC.Len() > 0 {
+			sbHWIC.WriteString(", ")
+		}
+
+		sbHWIC.WriteString(HotWalletIncrementClaimsString(rec))
+	}
+
 	sb.WriteString("BridgingRequestClaims = \n[")
 	sb.WriteString(sbBRC.String())
 	sb.WriteString("]")
@@ -210,6 +227,10 @@ func (bc BridgeClaims) String() string {
 
 	sb.WriteString("\nRefundExecutedClaims = \n[")
 	sb.WriteString(sbREC.String())
+	sb.WriteString("]")
+
+	sb.WriteString("\nHotWalletIncrementClaims = \n[")
+	sb.WriteString(sbHWIC.String())
 	sb.WriteString("]")
 
 	return sb.String()
