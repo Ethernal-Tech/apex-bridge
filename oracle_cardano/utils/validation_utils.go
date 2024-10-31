@@ -55,13 +55,15 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = utxo
 			} else if !allowMultiple {
-				return nil, fmt.Errorf("found multiple utxos to the bridging address on origin")
+				return nil, fmt.Errorf("found multiple utxos to the bridging address %s on %s",
+					chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
 			}
 		}
 	}
 
 	if multisigUtxoOutput == nil {
-		return nil, fmt.Errorf("bridging address on origin not found in utxos")
+		return nil, fmt.Errorf("bridging address %s on %s not found in utxos",
+			chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
 	}
 
 	return multisigUtxoOutput, nil
