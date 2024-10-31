@@ -38,14 +38,18 @@ func (p *HotWalletIncrementProcessor) PreValidate(tx *core.CardanoTx, appConfig 
 func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	totalAmount := big.NewInt(0)
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
+	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash)
 
 	if err := p.validate(tx, appConfig); err != nil {
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
+
+	totalAmount := big.NewInt(0)
 
 	for _, output := range tx.Outputs {
 		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
@@ -68,11 +72,6 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 func (p *HotWalletIncrementProcessor) validate(
 	tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-	if chainConfig == nil {
-		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
-	}
-
 	if _, err := utils.ValidateTxOutputs(tx, appConfig, true); err != nil {
 		return fmt.Errorf("bridging address on origin not found in utxos")
 	}
