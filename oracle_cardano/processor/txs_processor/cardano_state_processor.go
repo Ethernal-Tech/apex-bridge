@@ -520,17 +520,26 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) error {
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
-		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
-			err := bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
-				SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
-				SourceTxHash:  brClaim.ObservedTransactionHash,
-			}, common.ToStrChainID(brClaim.DestinationChainId))
+		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
+		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
+			notRejectedMap[string(tx.ToCardanoTxKey())] = true
+		}
 
-			if err != nil {
-				sp.logger.Error(
-					"error while updating a bridging request state to SubmittedToBridge",
-					"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
-					"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
+		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
+			notRejected := notRejectedMap[string(core.ToCardanoTxKey(
+				common.ToStrChainID(brClaim.SourceChainId), brClaim.ObservedTransactionHash))]
+			if notRejected {
+				err := bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
+					SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
+					SourceTxHash:  brClaim.ObservedTransactionHash,
+				}, common.ToStrChainID(brClaim.DestinationChainId))
+
+				if err != nil {
+					sp.logger.Error(
+						"error while updating a bridging request state to SubmittedToBridge",
+						"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
+						"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
+				}
 			}
 		}
 	}
