@@ -55,6 +55,8 @@ type CardanoChainConfig struct {
 	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
 
 	OgmiosURL             string  `json:"ogmiosUrl"`
+	CatsURL               string  `json:"catsURL,omitempty"`
+	CatsAPIKey            string  `json:"catsAPIKey,omitempty"`
 	BlockfrostURL         string  `json:"blockfrostUrl"`
 	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
 	SocketPath            string  `json:"socketPath"`

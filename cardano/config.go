@@ -14,6 +14,8 @@ type CardanoChainConfig struct {
 	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
 	TestNetMagic          uint32                           `json:"testnetMagic"`
 	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
+	CatsURL               string                           `json:"catsURL,omitempty"`
+	CatsAPIKey            string                           `json:"catsAPIKey,omitempty"`
 	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
 	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
 	SocketPath            string                           `json:"socketPath,omitempty"`
@@ -45,6 +47,10 @@ func (config CardanoChainConfig) Serialize() ([]byte, error) {
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
 	if config.OgmiosURL != "" {
 		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
+	}
+
+	if config.CatsURL != "" {
+		return cardanowallet.NewTxProviderCats(config.CatsURL, config.CatsAPIKey, ""), nil
 	}
 
 	if config.SocketPath != "" {

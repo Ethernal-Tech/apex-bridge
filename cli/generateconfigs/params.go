@@ -28,6 +28,8 @@ const (
 	primeNetworkMagicFlag          = "prime-network-magic"
 	primeNetworkIDFlag             = "prime-network-id"
 	primeOgmiosURLFlag             = "prime-ogmios-url"
+	primeCatsURLFlag               = "prime-cats-url"
+	primeCatsAPIKeyFlag            = "prime-cats-api-key" //nolint:gosec
 	primeBlockfrostURLFlag         = "prime-blockfrost-url"
 	primeBlockfrostAPIKeyFlag      = "prime-blockfrost-api-key"
 	primeSocketPathFlag            = "prime-socket-path"
@@ -39,6 +41,8 @@ const (
 	vectorNetworkMagicFlag          = "vector-network-magic"
 	vectorNetworkIDFlag             = "vector-network-id"
 	vectorOgmiosURLFlag             = "vector-ogmios-url"
+	vectorCatsURLFlag               = "vector-cats-url"
+	vectorCatsAPIKeyFlag            = "vector-cats-api-key" //nolint:gosec
 	vectorBlockfrostURLFlag         = "vector-blockfrost-url"
 	vectorBlockfrostAPIKeyFlag      = "vector-blockfrost-api-key"
 	vectorSocketPathFlag            = "vector-socket-path"
@@ -76,6 +80,8 @@ const (
 	primeNetworkMagicFlagDesc          = "prime network magic (default 0)"
 	primeNetworkIDFlagDesc             = "prime network id"
 	primeOgmiosURLFlagDesc             = "ogmios URL for prime network"
+	primeCatsURLFlagDesc               = "cats URL for prime network"
+	primeCatsAPIKeyFlagDesc            = "cats API key for prime network" //nolint:gosec
 	primeBlockfrostURLFlagDesc         = "blockfrost URL for prime network"
 	primeBlockfrostAPIKeyFlagDesc      = "blockfrost API key for prime network" //nolint:gosec
 	primeSocketPathFlagDesc            = "socket path for prime network"
@@ -87,6 +93,8 @@ const (
 	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
 	vectorNetworkIDFlagDesc             = "vector network id"
 	vectorOgmiosURLFlagDesc             = "ogmios URL for vector network"
+	vectorCatsURLFlagDesc               = "cats URL for vector network"
+	vectorCatsAPIKeyFlagDesc            = "cats API key for vector network" //nolint:gosec
 	vectorBlockfrostURLFlagDesc         = "blockfrost URL for vector network"
 	vectorBlockfrostAPIKeyFlagDesc      = "blockfrost API key for vector network" //nolint:gosec
 	vectorSocketPathFlagDesc            = "socket path for vector network"
@@ -153,6 +161,8 @@ type generateConfigsParams struct {
 	primeNetworkMagic          uint32
 	primeNetworkID             uint32
 	primeOgmiosURL             string
+	primeCatsURL               string
+	primeCatsAPIKey            string
 	primeBlockfrostURL         string
 	primeBlockfrostAPIKey      string
 	primeSocketPath            string
@@ -164,6 +174,8 @@ type generateConfigsParams struct {
 	vectorNetworkMagic          uint32
 	vectorNetworkID             uint32
 	vectorOgmiosURL             string
+	vectorCatsURL               string
+	vectorCatsAPIKey            string
 	vectorBlockfrostURL         string
 	vectorBlockfrostAPIKey      string
 	vectorSocketPath            string
@@ -204,7 +216,7 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
-	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" && p.primeOgmiosURL == "" {
+	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" && p.primeOgmiosURL == "" && p.primeCatsURL == "" {
 		return fmt.Errorf("specify at least one of: %s, %s, %s",
 			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	}
@@ -217,11 +229,15 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
 
+	if p.primeCatsURL != "" && !common.IsValidHTTPURL(p.primeCatsURL) {
+		return fmt.Errorf("invalid prime cats url: %s", p.primeCatsURL)
+	}
+
 	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
 		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
 	}
 
-	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
+	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" && p.vectorCatsURL == "" {
 		return fmt.Errorf("specify at least one of: %s, %s, %s",
 			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 	}
@@ -232,6 +248,10 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
 		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
+	}
+
+	if p.vectorCatsURL != "" && !common.IsValidHTTPURL(p.vectorCatsURL) {
+		return fmt.Errorf("invalid vector cats url: %s", p.vectorCatsURL)
 	}
 
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
@@ -305,6 +325,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeOgmiosURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
+		&p.primeCatsURL,
+		primeCatsURLFlag,
+		"",
+		primeCatsURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.primeCatsAPIKey,
+		primeCatsAPIKeyFlag,
+		"",
+		primeCatsAPIKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&p.primeBlockfrostURL,
 		primeBlockfrostURLFlag,
 		"",
@@ -364,6 +396,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorOgmiosURLFlag,
 		"",
 		vectorOgmiosURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorCatsURL,
+		vectorCatsURLFlag,
+		"",
+		vectorCatsURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorCatsAPIKey,
+		vectorCatsAPIKeyFlag,
+		"",
+		vectorCatsAPIKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.vectorBlockfrostURL,
@@ -526,8 +570,10 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
-	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
-	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag,
+		primeOgmiosURLFlag, primeCatsURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag,
+		vectorOgmiosURLFlag, vectorCatsURLFlag)
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
@@ -564,6 +610,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				OgmiosURL:                p.primeOgmiosURL,
+				CatsURL:                  p.primeCatsURL,
+				CatsAPIKey:               p.primeCatsAPIKey,
 				BlockfrostURL:            p.primeBlockfrostURL,
 				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
 				SocketPath:               p.primeSocketPath,
@@ -582,6 +630,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
 				OgmiosURL:                p.vectorOgmiosURL,
+				CatsURL:                  p.vectorCatsURL,
+				CatsAPIKey:               p.vectorCatsAPIKey,
 				BlockfrostURL:            p.vectorBlockfrostURL,
 				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
 				SocketPath:               p.vectorSocketPath,
@@ -664,6 +714,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		NetworkID:        wallet.CardanoNetworkType(p.primeNetworkID),
 		TestNetMagic:     p.primeNetworkMagic,
 		OgmiosURL:        p.primeOgmiosURL,
+		CatsURL:          p.primeCatsURL,
+		CatsAPIKey:       p.primeCatsAPIKey,
 		BlockfrostURL:    p.primeBlockfrostURL,
 		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
 		SocketPath:       p.primeSocketPath,
@@ -674,6 +726,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		NetworkID:        wallet.CardanoNetworkType(p.vectorNetworkID),
 		TestNetMagic:     p.vectorNetworkMagic,
 		OgmiosURL:        p.vectorOgmiosURL,
+		CatsURL:          p.vectorCatsURL,
+		CatsAPIKey:       p.vectorCatsAPIKey,
 		BlockfrostURL:    p.vectorBlockfrostURL,
 		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
 		SocketPath:       p.vectorSocketPath,
