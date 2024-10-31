@@ -1408,7 +1408,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 	})
 
-	t.Run("Start - BatchExecutionInfoEvent - invalid tx goes to unprocessed/pending", func(t *testing.T) {
+	t.Run("Start - BatchExecutionInfoEvent", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		oracleDB, primeDB, vectorDB := createDbs()
@@ -1446,20 +1446,37 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key(), cardanoTx2.Key()})
 		require.Len(t, pendingTxs, 2)
 
-		validTxProc := &core.CardanoTxSuccessProcessorMock{
+		metadataBatch, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
+			},
+		)
+		require.NoError(t, err)
+
+		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch}
+
+		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
 					ObservedTransactionHash: tx1.Hash,
 					SourceChainId:           common.ToNumChainID(originChainID),
 				})
-				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
-					ObservedTransactionHash: tx2.Hash,
-					SourceChainId:           common.ToNumChainID(originChainID),
-				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
 		}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		brcProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		becProc := &core.CardanoTxSuccessProcessorMock{
+			AddClaimCallback: func(claims *cCore.BridgeClaims) {
+				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, cCore.BatchExecutedClaim{
+					ObservedTransactionHash: txBatch.Hash,
+					BatchNonceId:            2,
+					ChainId:                 common.ChainIDIntVector,
+				})
+			},
+			Type: common.BridgingTxTypeBatchExecution,
+		}
+		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
 		require.NoError(t, err)
@@ -1491,29 +1508,37 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			},
 		}, nil)
 
-		ctx, canceFunc := context.WithCancel(context.Background())
-		proc, rec := newValidProcessor(
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newCardanoTxsProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			[]core.CardanoTxSuccessProcessor{brcProc, becProc}, nil, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{tx1}))
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch}))
 
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
-			canceFunc()
+			cancelFunc()
 		}()
 
 		proc.TickTime = 1
 		proc.Start()
 
-		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key(), cardanoTx2.Key()})
+		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{cardanoTx2.Key()})
 		require.Len(t, pendingTxs, 0)
+
+		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key()})
+		require.Len(t, pendingTxs, 1)
+		require.Equal(t, pendingTxs[0].TryCount, uint32(1))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 0)
 
 		processedTx1, err := oracleDB.GetProcessedTx(originChainID, cardanoTx1.Hash)
 		require.NoError(t, err)
@@ -1523,10 +1548,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, processedTx2)
 		require.Equal(t, processedTx2.Hash, cardanoTx2.Hash)
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
-		require.Len(t, unprocessedTxs, 1)
-		require.Equal(t, unprocessedTxs[0].TryCount, uint32(1))
 	})
 }
 
