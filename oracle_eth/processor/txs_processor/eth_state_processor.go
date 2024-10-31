@@ -164,8 +164,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	keys := make([][]byte, len(event.TxHashes))
 
 	for idx, hash := range event.TxHashes {
-		key := core.ToEthTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
-		keys[idx] = key
+		keys[idx] = core.ToEthTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
 	}
 
 	txs, err := sp.db.GetPendingTxs(keys)

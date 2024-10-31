@@ -161,8 +161,7 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	keys := make([][]byte, len(event.TxHashes))
 
 	for idx, hash := range event.TxHashes {
-		key := core.ToCardanoTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
-		keys[idx] = key
+		keys[idx] = core.ToCardanoTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
 	}
 
 	txs, err := sp.db.GetPendingTxs(keys)
