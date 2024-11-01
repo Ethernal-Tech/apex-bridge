@@ -86,14 +86,20 @@ type BridgingSettings struct {
 	MaxBridgingClaimsToGroup       int    `json:"maxBridgingClaimsToGroup"`
 }
 
+type RetryUnprocessedSettings struct {
+	BaseTimeout time.Duration `json:"baseTimeout"`
+	MaxTimeout  time.Duration `json:"maxTimeout"`
+}
+
 type AppConfig struct {
-	ValidatorDataDir    string                         `json:"validatorDataDir"`
-	ValidatorConfigPath string                         `json:"validatorConfigPath"`
-	CardanoChains       map[string]*CardanoChainConfig `json:"cardanoChains"`
-	EthChains           map[string]*EthChainConfig     `json:"ethChains"`
-	Bridge              BridgeConfig                   `json:"bridge"`
-	Settings            AppSettings                    `json:"appSettings"`
-	BridgingSettings    BridgingSettings               `json:"bridgingSettings"`
+	ValidatorDataDir         string                         `json:"validatorDataDir"`
+	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
+	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`
+	EthChains                map[string]*EthChainConfig     `json:"ethChains"`
+	Bridge                   BridgeConfig                   `json:"bridge"`
+	Settings                 AppSettings                    `json:"appSettings"`
+	BridgingSettings         BridgingSettings               `json:"bridgingSettings"`
+	RetryUnprocessedSettings RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
 }
 
 func (appConfig *AppConfig) FillOut() {

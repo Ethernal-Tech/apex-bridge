@@ -89,6 +89,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		BridgingSettings: cCore.BridgingSettings{
 			MaxBridgingClaimsToGroup: 10,
 		},
+		RetryUnprocessedSettings: cCore.RetryUnprocessedSettings{
+			BaseTimeout: time.Second * 60,
+			MaxTimeout:  time.Second * 60,
+		},
 	}
 
 	appConfig.FillOut()
@@ -1402,7 +1406,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		newTx := unprocessedTxs[0]
 		// set LastTimeTried to simulate time passing
-		newTx.LastTimeTried = newTx.LastTimeTried.Add(-cCore.RetryUnprocessedAfterSec * time.Second)
+		newTx.LastTimeTried = newTx.LastTimeTried.Add(-time.Second * 60)
 
 		err = oracleDB.UpdateTxs(&core.CardanoUpdateTxsData{
 			UpdateUnprocessed: []*core.CardanoTx{newTx},

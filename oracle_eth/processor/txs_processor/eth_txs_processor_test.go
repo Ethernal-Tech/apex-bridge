@@ -90,6 +90,10 @@ func TestEthTxsProcessor(t *testing.T) {
 		BridgingSettings: oCore.BridgingSettings{
 			MaxBridgingClaimsToGroup: 10,
 		},
+		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
+			BaseTimeout: time.Second * 60,
+			MaxTimeout:  time.Second * 60,
+		},
 	}
 
 	appConfig.FillOut()
@@ -1310,7 +1314,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		newTx := unprocessedTxs[0]
 		// set LastTimeTried to simulate time passing
-		newTx.LastTimeTried = newTx.LastTimeTried.Add(-oCore.RetryUnprocessedAfterSec * time.Second)
+		newTx.LastTimeTried = newTx.LastTimeTried.Add(-time.Second * 60)
 
 		err = oracleDB.UpdateTxs(&ethcore.EthUpdateTxsData{
 			UpdateUnprocessed: []*ethcore.EthTx{newTx},

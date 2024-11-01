@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -600,6 +601,10 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			UtxoMinValue:                   1000000,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+		},
+		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
+			BaseTimeout: time.Second * 60,
+			MaxTimeout:  time.Second * 60 * 2048,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
