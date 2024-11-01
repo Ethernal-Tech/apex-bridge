@@ -60,25 +60,28 @@ type CardanoTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// AddExpectedTxs implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error {
 	args := m.Called(expectedTxs)
 
 	return args.Error(0)
 }
 
-func (m *CardanoTxsProcessorDBMock) GetExpectedTxs(
-	chainID string, priority uint8, threshold int,
-) ([]*BridgeExpectedCardanoTx, error) {
-	args := m.Called(chainID, priority, threshold)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*BridgeExpectedCardanoTx)
+// AddTxs implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error {
+	args := m.Called(processedTxs, unprocessedTxs)
 
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
+	return args.Error(0)
 }
 
+// ClearAllTxs implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) ClearAllTxs(chainID string) error {
+	args := m.Called(chainID)
+
+	return args.Error(0)
+}
+
+// GetAllExpectedTxs implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) GetAllExpectedTxs(
 	chainID string, threshold int,
 ) ([]*BridgeExpectedCardanoTx, error) {
@@ -92,6 +95,59 @@ func (m *CardanoTxsProcessorDBMock) GetAllExpectedTxs(
 	return nil, args.Error(1)
 }
 
+// GetAllUnprocessedTxs implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error) {
+	args := m.Called(chainID, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*CardanoTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetExpectedTxs implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetExpectedTxs(
+	chainID string, priority uint8, threshold int,
+) ([]*BridgeExpectedCardanoTx, error) {
+	args := m.Called(chainID, priority, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*BridgeExpectedCardanoTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetPendingTx implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetPendingTx(entityID cCore.DBTxID) (cCore.BaseTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(cCore.BaseTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetProcessedTx implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetProcessedTx(
+	entityID cCore.DBTxID,
+) (*ProcessedCardanoTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(*ProcessedCardanoTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetUnprocessedTxs implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(
 	chainID string, priority uint8, threshold int) (
 	[]*CardanoTx, error,
@@ -106,57 +162,11 @@ func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(
 	return nil, args.Error(1)
 }
 
-func (m *CardanoTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error) {
-	args := m.Called(chainID, threshold)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*CardanoTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *CardanoTxsProcessorDBMock) GetPendingTxs(keys [][]byte) ([]*CardanoTx, error) {
-	args := m.Called(keys)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*CardanoTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *CardanoTxsProcessorDBMock) ClearAllTxs(chainID string) error {
-	args := m.Called(chainID)
-
-	return args.Error(0)
-}
-
-func (m *CardanoTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error {
-	args := m.Called(processedTxs, unprocessedTxs)
-
-	return args.Error(0)
-}
-
+// UpdateTxs implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) UpdateTxs(data *CardanoUpdateTxsData) error {
 	args := m.Called(data)
 
 	return args.Error(0)
-}
-
-func (m *CardanoTxsProcessorDBMock) GetProcessedTx(
-	chainID string, txHash indexer.Hash,
-) (*ProcessedCardanoTx, error) {
-	args := m.Called(chainID, txHash)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).(*ProcessedCardanoTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
 }
 
 var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)

@@ -41,12 +41,6 @@ type ProcessedEthTx struct {
 
 var _ cCore.BaseProcessedTx = (*ProcessedEthTx)(nil)
 
-type ProcessedEthTxByInnerAction struct {
-	OriginChainID   string     `json:"origin_chain_id"`
-	Hash            ethgo.Hash `json:"hash"`
-	InnerActionHash ethgo.Hash `json:"ia_hash"`
-}
-
 type BridgeExpectedEthTx struct {
 	ChainID  string     `json:"chain_id"`
 	Hash     ethgo.Hash `json:"hash"`
@@ -79,9 +73,39 @@ func (bi *BridgeClaimsBlockInfo) EqualWithExpected(tx *BridgeExpectedEthTx, bloc
 	return bi.ChainID == tx.ChainID && bi.Number == blockNumber
 }
 
-// GetOriginChainID implements core.BaseTx.
-func (tx EthTx) GetOriginChainID() string {
+// ChainID implements core.BaseTx.
+func (tx EthTx) GetChainID() string {
 	return tx.OriginChainID
+}
+
+// TxHash implements core.BaseTx.
+func (tx EthTx) GetTxHash() []byte {
+	return tx.Hash[:]
+}
+
+// UnprocessedDBKey implements core.BaseTx.
+func (tx EthTx) UnprocessedDBKey() []byte {
+	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.Hash)
+}
+
+// SetLastTimeTried implements core.BaseTx.
+func (tx *EthTx) SetLastTimeTried(lastTimeTried time.Time) {
+	tx.LastTimeTried = lastTimeTried
+}
+
+// IncrementTryCount implements core.BaseTx.
+func (tx *EthTx) IncrementTryCount() {
+	tx.TryCount++
+}
+
+// PendingDBKey implements core.BaseTx.
+func (tx EthTx) ToProcessed(isInvalid bool) cCore.BaseProcessedTx {
+	return tx.ToProcessedEthTx(isInvalid)
+}
+
+// GetTryCount implements core.BaseTx.
+func (tx EthTx) GetTryCount() uint32 {
+	return tx.TryCount
 }
 
 // GetPriority implements core.BaseTx.
@@ -89,34 +113,44 @@ func (tx EthTx) GetPriority() uint8 {
 	return tx.Priority
 }
 
-// ToUnprocessedTxKey implements core.BaseTx.
-func (tx EthTx) ToUnprocessedTxKey() []byte {
-	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
+// ChainID implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) GetChainID() string {
+	return tx.OriginChainID
 }
 
-// Key implements core.BaseTx.
-func (tx EthTx) Key() []byte {
-	return tx.ToEthTxKey()
+// TxHash implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) GetTxHash() []byte {
+	return tx.Hash[:]
 }
 
-// Key implements core.BaseProcessedTx.
-func (tx ProcessedEthTx) Key() []byte {
-	return tx.ToEthTxKey()
+// HasInnerActionTxHash implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) HasInnerActionTxHash() bool {
+	return tx.InnerActionHash != ethgo.Hash{}
 }
 
-// ToUnprocessedTxKey implements core.BaseProcessedTx.
-func (tx ProcessedEthTx) ToUnprocessedTxKey() []byte {
-	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.OriginChainID, tx.Hash)
+// GetInnerActionTxHash implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) GetInnerActionTxHash() []byte {
+	return tx.InnerActionHash[:]
+}
+
+// UnprocessedDBKey implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) UnprocessedDBKey() []byte {
+	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.Hash)
+}
+
+// ChainID implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetChainID() string {
+	return tx.ChainID
+}
+
+// TxHash implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetTxHash() []byte {
+	return tx.Hash[:]
 }
 
 // Key implements core.BaseExpectedTx.
-func (tx BridgeExpectedEthTx) Key() []byte {
+func (tx BridgeExpectedEthTx) DBKey() []byte {
 	return tx.ToExpectedTxKey()
-}
-
-// GetChainID implements core.BaseExpectedTx.
-func (tx BridgeExpectedEthTx) GetChainID() string {
-	return tx.ChainID
 }
 
 // GetPriority implements core.BaseExpectedTx.
@@ -161,20 +195,12 @@ func (tx *EthTx) ToProcessedEthTx(isInvalid bool) *ProcessedEthTx {
 	}
 }
 
-func (tx *ProcessedEthTx) ToProcessedTxByInnerAction() *ProcessedEthTxByInnerAction {
-	return &ProcessedEthTxByInnerAction{
-		OriginChainID:   tx.OriginChainID,
-		Hash:            tx.Hash,
-		InnerActionHash: tx.InnerActionHash,
-	}
-}
-
-func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, originChainID string, txHash ethgo.Hash) []byte {
+func toUnprocessedEthTxKey(priority uint8, blockNumber uint64, txHash ethgo.Hash) []byte {
 	bytes := [9]byte{priority}
 
 	binary.BigEndian.PutUint64(bytes[1:], blockNumber)
 
-	return append(append(bytes[:], []byte(originChainID)...), txHash[:]...)
+	return append(bytes[:], txHash[:]...)
 }
 
 func ToEthTxKey(originChainID string, txHash ethgo.Hash) []byte {
@@ -193,10 +219,6 @@ func (tx ProcessedEthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.OriginChainID, tx.Hash)
 }
 
-func (tx ProcessedEthTx) KeyByInnerAction() []byte {
-	return ToEthTxKey(tx.OriginChainID, tx.InnerActionHash)
-}
-
 func (tx BridgeExpectedEthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.ChainID, tx.Hash)
 }
@@ -206,5 +228,5 @@ func (tx BridgeExpectedEthTx) ToExpectedTxKey() []byte {
 
 	binary.BigEndian.PutUint64(bytes[1:], tx.TTL)
 
-	return append(append(bytes[:], []byte(tx.ChainID)...), tx.Hash[:]...)
+	return append(bytes[:], tx.Hash[:]...)
 }

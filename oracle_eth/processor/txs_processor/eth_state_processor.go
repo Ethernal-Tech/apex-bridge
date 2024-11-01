@@ -129,8 +129,8 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 	events []*oracleCore.BatchExecutionInfoEvent,
 ) {
-	newProcessedTxs := make([]*core.ProcessedEthTx, 0)
-	newUnprocessedTxs := make([]*core.EthTx, 0)
+	newProcessedTxs := make([]oracleCore.BaseProcessedTx, 0)
+	newUnprocessedTxs := make([]oracleCore.BaseTx, 0)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
@@ -142,13 +142,13 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 
 		if event.IsFailedClaim {
 			for _, tx := range txs {
-				tx.TryCount++
-				tx.LastTimeTried = time.Time{}
+				tx.IncrementTryCount()
+				tx.SetLastTimeTried(time.Time{})
 				newUnprocessedTxs = append(newUnprocessedTxs, tx)
 			}
 		} else {
 			for _, tx := range txs {
-				processedTx := tx.ToProcessedEthTx(false)
+				processedTx := tx.ToProcessed(false)
 				newProcessedTxs = append(newProcessedTxs, processedTx)
 			}
 		}
@@ -160,19 +160,24 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.BatchExecutionInfoEvent,
-) ([]*core.EthTx, error) {
-	keys := make([][]byte, len(event.TxHashes))
+) ([]oracleCore.BaseTx, error) {
+	result := make([]oracleCore.BaseTx, len(event.TxHashes))
 
 	for idx, hash := range event.TxHashes {
-		keys[idx] = core.ToEthTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
+		tx, err := sp.db.GetPendingTx(
+			oracleCore.DBTxID{
+				ChainID: common.ToStrChainID(hash.SourceChainId),
+				DBKey:   hash.ObservedTransactionHash[:],
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[idx] = tx
 	}
 
-	txs, err := sp.db.GetPendingTxs(keys)
-	if err != nil {
-		return nil, err
-	}
-
-	return txs, nil
+	return result, nil
 }
 
 func (sp *EthStateProcessor) processNotEnoughFundsEvents(
@@ -474,7 +479,7 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 	}
 
 	for _, expiredTx := range relevantExpiredTxs {
-		processedTx, _ := sp.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash)
+		processedTx, _ := sp.db.GetProcessedTxByInnerActionTxHash(expiredTx.ChainID, expiredTx.Hash[:])
 		if processedTx != nil && !processedTx.IsInvalid {
 			// already sent the success claim
 			processedRelevantExpiredTxs = append(processedRelevantExpiredTxs, expiredTx)

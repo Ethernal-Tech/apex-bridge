@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
@@ -17,6 +18,7 @@ import (
 	cardanoOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cardanoOracle "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/oracle"
 	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	ethOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
@@ -31,6 +33,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
+	"go.etcd.io/bbolt"
 )
 
 const (
@@ -41,6 +44,7 @@ const (
 type ValidatorComponentsImpl struct {
 	ctx               context.Context
 	shouldRunAPI      bool
+	oracleDB          *bbolt.DB
 	db                core.Database
 	cardanoIndexerDbs map[string]indexer.Database
 	oracle            cardanoOracleCore.Oracle
@@ -113,6 +117,12 @@ func NewValidatorComponents(
 		ethIndexerDbs[ethChainConfig.ChainID] = indexerDB
 	}
 
+	oracleDB, err := oracleCommonDA.NewDatabase(
+		filepath.Join(appConfig.Settings.DbsPath, "oracle.db"), oracleConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open oracle database: %w", err)
+	}
+
 	secretsManager, err := common.GetSecretsManager(
 		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
 	if err != nil {
@@ -138,8 +148,11 @@ func NewValidatorComponents(
 	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
+	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
+		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
+
 	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
-		ctx, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
@@ -149,7 +162,7 @@ func NewValidatorComponents(
 		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_eth"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
@@ -194,6 +207,7 @@ func NewValidatorComponents(
 	return &ValidatorComponentsImpl{
 		ctx:               ctx,
 		shouldRunAPI:      shouldRunAPI,
+		oracleDB:          oracleDB,
 		db:                db,
 		cardanoIndexerDbs: cardanoIndexerDbs,
 		oracle:            cardanoOracle,
@@ -262,6 +276,12 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	if err := v.ethOracle.Dispose(); err != nil {
 		v.logger.Error("error while disposing oracle_eth", "err", err)
 		errs = append(errs, fmt.Errorf("error while disposing oracle_eth. err: %w", err))
+	}
+
+	err := v.oracleDB.Close()
+	if err != nil {
+		v.logger.Error("Failed to close oracle db", "err", err)
+		errs = append(errs, fmt.Errorf("failed to close oracle db. err %w", err))
 	}
 
 	if v.shouldRunAPI {

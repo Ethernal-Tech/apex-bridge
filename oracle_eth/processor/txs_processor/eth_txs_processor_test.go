@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	oDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	ethcore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -104,6 +106,20 @@ func TestEthTxsProcessor(t *testing.T) {
 		common.RemoveDirOrFilePathIfExists(nexusDBFilePath) //nolint:errcheck
 	}
 
+	createOracleDB := func(filePath string) (*databaseaccess.BBoltDatabase, error) {
+		boltDB, err := oDatabaseaccess.NewDatabase(filePath, appConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		typeRegister := oCore.NewTypeRegisterWithChains(appConfig, nil, reflect.TypeOf(ethcore.EthTx{}))
+
+		oracleDB := &databaseaccess.BBoltDatabase{}
+		oracleDB.Init(boltDB, appConfig, typeRegister)
+
+		return oracleDB, nil
+	}
+
 	t.Cleanup(dbCleanup)
 
 	t.Run("TestEthTxsProcessor", func(t *testing.T) {
@@ -137,7 +153,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		proc, rec := newValidProcessor(
@@ -162,7 +178,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		proc, rec := newValidProcessor(
@@ -187,7 +203,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{Type: "relevant"}
@@ -216,7 +232,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{common.ChainIDStrNexus: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -265,7 +281,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -315,7 +331,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.NotNil(t, processedTx)
 		require.True(t, processedTx.IsInvalid)
 	})
@@ -329,7 +345,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -380,7 +396,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, txHash, unprocessedTxs[0].Hash)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.Nil(t, processedTx)
 	})
 
@@ -393,7 +409,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -443,7 +459,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 	})
@@ -461,7 +477,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -536,7 +552,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -611,7 +627,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -676,7 +692,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{}
@@ -744,7 +760,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -814,7 +830,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(chainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
@@ -841,7 +857,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
@@ -911,7 +927,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(chainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
@@ -938,7 +954,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
@@ -1013,7 +1029,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(chainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
@@ -1068,7 +1084,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBridgingRequest}
@@ -1136,14 +1152,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.Nil(t, processedTx)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
-		require.NotNil(t, pendingTxs)
-		require.Len(t, pendingTxs, 1)
-		require.Equal(t, originChainID, pendingTxs[0].OriginChainID)
-		require.Equal(t, tx.Hash, pendingTxs[0].Hash)
+		pendingTx, _ := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: tx.GetChainID(), DBKey: tx.GetTxHash()})
+		require.NotNil(t, pendingTx)
+		require.Equal(t, originChainID, pendingTx.GetChainID())
+		require.Equal(t, tx.Hash[:], pendingTx.GetTxHash())
 	})
 
 	t.Run("Start - unprocessedTxs - valid brc rejected and retry", func(t *testing.T) {
@@ -1157,7 +1172,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{
@@ -1250,11 +1265,11 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc.TickTime = 1
 		proc.Start()
 
-		processedTx, _ := oracleDB.GetProcessedTx(originChainID, txHash)
+		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.Nil(t, processedTx)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{tx.Key()})
-		require.Nil(t, pendingTxs)
+		pendingTx, _ := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: tx.GetChainID(), DBKey: tx.GetTxHash()})
+		require.Nil(t, pendingTx)
 
 		// rejected
 		unprocessedTxs, _ = oracleDB.GetAllUnprocessedTxs(originChainID, 0)
@@ -1354,7 +1369,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
-		oracleDB, err := databaseaccess.NewDatabase(dbFilePath)
+		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
 		err = oracleDB.AddTxs([]*ethcore.ProcessedEthTx{}, []*ethcore.EthTx{ethTx1, ethTx2})
@@ -1365,8 +1380,11 @@ func TestEthTxsProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{ethTx1.Key(), ethTx2.Key()})
-		require.Len(t, pendingTxs, 2)
+		pendingTx1, _ := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx1.GetChainID(), DBKey: ethTx1.GetTxHash()})
+		require.NotNil(t, pendingTx1)
+
+		pendingTx2, _ := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx2.GetChainID(), DBKey: ethTx2.GetTxHash()})
+		require.NotNil(t, pendingTx2)
 
 		brcProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
@@ -1457,22 +1475,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc.TickTime = 1
 		proc.Start()
 
-		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{ethTx2.Key()})
-		require.Len(t, pendingTxs, 0)
+		pendingTx2, _ = oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx2.GetChainID(), DBKey: ethTx2.GetTxHash()})
+		require.Nil(t, pendingTx2)
 
-		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{ethTx1.Key()})
-		require.Len(t, pendingTxs, 1)
-		require.Equal(t, pendingTxs[0].TryCount, uint32(1))
+		pendingTx1, _ = oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx1.GetChainID(), DBKey: ethTx1.GetTxHash()})
+		require.NotNil(t, pendingTx1)
+		require.Equal(t, pendingTx1.GetTryCount(), uint32(1))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.NoError(t, err)
 		require.Len(t, unprocessedTxs, 0)
 
-		processedTx1, err := oracleDB.GetProcessedTx(originChainID, ethTx1.Hash)
+		processedTx1, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: ethTx1.Hash[:]})
 		require.NoError(t, err)
 		require.Nil(t, processedTx1)
 
-		processedTx2, err := oracleDB.GetProcessedTx(originChainID, ethTx2.Hash)
+		processedTx2, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: ethTx2.Hash[:]})
 		require.NoError(t, err)
 		require.NotNil(t, processedTx2)
 		require.Equal(t, processedTx2.Hash, ethTx2.Hash)

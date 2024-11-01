@@ -1,31 +1,39 @@
 package core
 
 import (
+	"time"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type BaseTx interface {
-	GetOriginChainID() string
+	GetChainID() string
+	GetTxHash() []byte
+	UnprocessedDBKey() []byte
+	SetLastTimeTried(lastTimeTried time.Time)
+	IncrementTryCount()
+	ToProcessed(isInvalid bool) BaseProcessedTx
+	GetTryCount() uint32
 	GetPriority() uint8
-
-	ToUnprocessedTxKey() []byte
-	Key() []byte
 }
 
 type BaseProcessedTx interface {
-	Key() []byte
-	ToUnprocessedTxKey() []byte
+	GetChainID() string
+	GetTxHash() []byte
+	HasInnerActionTxHash() bool
+	GetInnerActionTxHash() []byte
+	UnprocessedDBKey() []byte
 }
 
 type BaseExpectedTx interface {
-	Key() []byte
 	GetChainID() string
+	GetTxHash() []byte
+	DBKey() []byte
 	GetPriority() uint8
-	GetIsProcessed() bool
 	GetIsInvalid() bool
-
+	GetIsProcessed() bool
 	SetProcessed()
 	SetInvalid()
 }

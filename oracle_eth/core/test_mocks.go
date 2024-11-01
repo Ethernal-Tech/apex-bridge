@@ -48,25 +48,28 @@ type EthTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// AddExpectedTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpectedEthTx) error {
 	args := m.Called(expectedTxs)
 
 	return args.Error(0)
 }
 
-func (m *EthTxsProcessorDBMock) GetExpectedTxs(
-	chainID string, priority uint8, threshold int,
-) ([]*BridgeExpectedEthTx, error) {
-	args := m.Called(chainID, priority, threshold)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*BridgeExpectedEthTx)
+// AddTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error {
+	args := m.Called(processedTxs, unprocessedTxs)
 
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
+	return args.Error(0)
 }
 
+// ClearAllTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) ClearAllTxs(chainID string) error {
+	args := m.Called(chainID)
+
+	return args.Error(0)
+}
+
+// GetAllExpectedTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) GetAllExpectedTxs(
 	chainID string, threshold int,
 ) ([]*BridgeExpectedEthTx, error) {
@@ -80,6 +83,73 @@ func (m *EthTxsProcessorDBMock) GetAllExpectedTxs(
 	return nil, args.Error(1)
 }
 
+// GetAllUnprocessedTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error) {
+	args := m.Called(chainID, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*EthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetExpectedTxs implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetExpectedTxs(
+	chainID string, priority uint8, threshold int,
+) ([]*BridgeExpectedEthTx, error) {
+	args := m.Called(chainID, priority, threshold)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*BridgeExpectedEthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetPendingTx implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetPendingTx(entityID oCore.DBTxID) (oCore.BaseTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(oCore.BaseTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetProcessedTx implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetProcessedTx(
+	entityID oCore.DBTxID,
+) (*ProcessedEthTx, error) {
+	args := m.Called(entityID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(*ProcessedEthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetProcessedTxByInnerActionTxHash implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetProcessedTxByInnerActionTxHash(
+	chainID string, innerActionTxHash []byte,
+) (*ProcessedEthTx, error) {
+	args := m.Called(chainID, innerActionTxHash)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(*ProcessedEthTx)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+// GetUnprocessedTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) GetUnprocessedTxs(
 	chainID string, priority uint8, threshold int) (
 	[]*EthTx, error,
@@ -94,70 +164,11 @@ func (m *EthTxsProcessorDBMock) GetUnprocessedTxs(
 	return nil, args.Error(1)
 }
 
-func (m *EthTxsProcessorDBMock) GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error) {
-	args := m.Called(chainID, threshold)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*EthTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *EthTxsProcessorDBMock) GetPendingTxs(keys [][]byte) ([]*EthTx, error) {
-	args := m.Called(keys)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).([]*EthTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *EthTxsProcessorDBMock) ClearAllTxs(chainID string) error {
-	args := m.Called(chainID)
-
-	return args.Error(0)
-}
-
-func (m *EthTxsProcessorDBMock) AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error {
-	args := m.Called(processedTxs, unprocessedTxs)
-
-	return args.Error(0)
-}
-
+// UpdateTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) UpdateTxs(data *EthUpdateTxsData) error {
 	args := m.Called(data)
 
 	return args.Error(0)
-}
-
-func (m *EthTxsProcessorDBMock) GetProcessedTxByInnerActionTxHash(
-	chainID string, innerActionTxHash ethgo.Hash,
-) (*ProcessedEthTx, error) {
-	args := m.Called(chainID, innerActionTxHash)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).(*ProcessedEthTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *EthTxsProcessorDBMock) GetProcessedTx(
-	chainID string, txHash ethgo.Hash,
-) (*ProcessedEthTx, error) {
-	args := m.Called(chainID, txHash)
-	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).(*ProcessedEthTx)
-
-		return arg0, args.Error(1)
-	}
-
-	return nil, args.Error(1)
 }
 
 var _ EthTxsProcessorDB = (*EthTxsProcessorDBMock)(nil)
