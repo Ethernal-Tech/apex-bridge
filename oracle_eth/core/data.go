@@ -219,10 +219,6 @@ func (tx ProcessedEthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.OriginChainID, tx.Hash)
 }
 
-func (tx ProcessedEthTx) KeyByInnerAction() []byte {
-	return ToEthTxKey(tx.OriginChainID, tx.InnerActionHash)
-}
-
 func (tx BridgeExpectedEthTx) ToEthTxKey() []byte {
 	return ToEthTxKey(tx.ChainID, tx.Hash)
 }
