@@ -3,15 +3,27 @@ package databaseaccess
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	cDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBoltDatabase(t *testing.T) {
+	appConfig := &cCore.AppConfig{
+		CardanoChains: map[string]*cCore.CardanoChainConfig{
+			common.ChainIDStrPrime:  {},
+			common.ChainIDStrVector: {},
+		},
+	}
+
+	appConfig.FillOut()
+
 	testDir, err := os.MkdirTemp("", "boltdb-test")
 	require.NoError(t, err)
 
@@ -28,28 +40,42 @@ func TestBoltDatabase(t *testing.T) {
 		}
 	}
 
+	createDB := func(dbFilePath string) (*BBoltDatabase, error) {
+		boltDB, err := cDatabaseaccess.NewDatabase(dbFilePath, appConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		typeRegister := &cCore.TxTypeRegister{}
+		typeRegister.SetTTxTypes(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
+
+		oracleDB := &BBoltDatabase{}
+		oracleDB.Init(boltDB, appConfig, typeRegister)
+
+		return oracleDB, nil
+	}
+
 	t.Run("Init", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		_, err := createDB(filePath)
+		require.NoError(t, err)
 	})
 
 	t.Run("Init should fail", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		err := db.Init("")
+		_, err := createDB("")
 		require.Error(t, err)
 	})
 
 	t.Run("Close", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
-		err = db.Close()
+		err = db.DB.Close()
 		require.NoError(t, err)
 	})
 
@@ -58,8 +84,8 @@ func TestBoltDatabase(t *testing.T) {
 
 		tx := &core.CardanoTx{OriginChainID: common.ChainIDStrPrime}
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		require.NoError(t, db.AddTxs(nil, []*core.CardanoTx{}))
 
@@ -77,14 +103,14 @@ func TestBoltDatabase(t *testing.T) {
 
 		tx := &core.ProcessedCardanoTx{OriginChainID: common.ChainIDStrPrime}
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		require.NoError(t, db.AddTxs([]*core.ProcessedCardanoTx{}, nil))
 
 		require.NoError(t, db.AddTxs([]*core.ProcessedCardanoTx{tx}, nil))
 
-		resTx, err := db.GetProcessedTx(tx.OriginChainID, tx.Hash)
+		resTx, err := db.GetProcessedTx(cCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]})
 
 		require.NoError(t, err)
 		require.Equal(t, tx, resTx)
@@ -93,8 +119,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetUnprocessedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime, Priority: 0},
@@ -120,8 +146,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetAllUnprocessedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime},
@@ -147,8 +173,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("ClearAllTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		unprocessedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime},
@@ -192,8 +218,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("UpdateTxs - UpdateUnprocessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime},
@@ -222,8 +248,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetPendingTxs and UpdateTxs - MoveUnprocessedToPending", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{
@@ -243,14 +269,9 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		keys := make([][]byte, len(expectedTxs))
-		for i, tx := range expectedTxs {
-			keys[i] = tx.Key()
-		}
-
-		_, err = db.GetPendingTxs(keys)
+		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "couldn't get pending tx for key")
+		require.ErrorContains(t, err, "couldn't get pending tx for entityID")
 
 		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: txs})
 		require.NoError(t, err)
@@ -259,16 +280,16 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, txs, 0)
 
-		pendingTxs, err := db.GetPendingTxs(keys)
+		pendingTx, err := db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
 		require.NoError(t, err)
-		require.Len(t, pendingTxs, 1)
+		require.NotNil(t, pendingTx)
 	})
 
 	t.Run("UpdateTxs - MoveUnprocessedToProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime},
@@ -311,7 +332,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Nil(t, txs)
 
 		for _, tx := range expectedProcessedTxs {
-			pTx, err := db.GetProcessedTx(tx.OriginChainID, tx.Hash)
+			pTx, err := db.GetProcessedTx(cCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]})
 			require.NoError(t, err)
 			require.NotNil(t, pTx)
 		}
@@ -320,8 +341,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("UpdateTxs - MovePendingToUnprocessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{
@@ -340,17 +361,17 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToUnprocessed: expectedTxs})
-		require.NoError(t, err)
-
-		keys := make([][]byte, len(expectedTxs))
+		iExpectedTxs := make([]cCore.BaseTx, len(expectedTxs))
 		for i, tx := range expectedTxs {
-			keys[i] = tx.ToUnprocessedTxKey()
+			iExpectedTxs[i] = tx
 		}
 
-		_, err := db.GetPendingTxs(keys)
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToUnprocessed: iExpectedTxs})
+		require.NoError(t, err)
+
+		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "couldn't get pending tx for key")
+		require.ErrorContains(t, err, "couldn't get pending tx for entityID")
 
 		txs, err := db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
@@ -360,8 +381,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("UpdateTxs - MovePendingToProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{
@@ -385,20 +406,20 @@ func TestBoltDatabase(t *testing.T) {
 			processedTxs[i] = tx.ToProcessedCardanoTx(false)
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToProcessed: processedTxs})
-		require.NoError(t, err)
-
-		keys := make([][]byte, len(expectedTxs))
-		for i, tx := range expectedTxs {
-			keys[i] = tx.ToUnprocessedTxKey()
+		iProcessedTxs := make([]cCore.BaseProcessedTx, len(processedTxs))
+		for i, tx := range processedTxs {
+			iProcessedTxs[i] = tx
 		}
 
-		_, err := db.GetPendingTxs(keys)
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToProcessed: iProcessedTxs})
+		require.NoError(t, err)
+
+		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "couldn't get pending tx for key")
+		require.ErrorContains(t, err, "couldn't get pending tx for entityID")
 
 		for _, tx := range processedTxs {
-			pTx, err := db.GetProcessedTx(tx.OriginChainID, tx.Hash)
+			pTx, err := db.GetProcessedTx(cCore.DBTxID{ChainID: tx.OriginChainID, DBKey: tx.Hash[:]})
 			require.NoError(t, err)
 			require.NotNil(t, pTx)
 		}
@@ -407,8 +428,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("GetProcessedTx", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.CardanoTx{
 			{OriginChainID: common.ChainIDStrPrime},
@@ -439,16 +460,20 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
 		require.NoError(t, err)
 
-		tx, err := db.GetProcessedTx("", indexer.Hash{})
+		_, err = db.GetProcessedTx(cCore.DBTxID{ChainID: "", DBKey: []byte{}})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain")
+
+		tx, err := db.GetProcessedTx(cCore.DBTxID{ChainID: common.ChainIDStrPrime, DBKey: []byte{}})
 		require.NoError(t, err)
 		require.Nil(t, tx)
 
-		tx, err = db.GetProcessedTx(expectedProcessedTxs[0].OriginChainID, expectedProcessedTxs[0].Hash)
+		tx, err = db.GetProcessedTx(cCore.DBTxID{ChainID: expectedProcessedTxs[0].OriginChainID, DBKey: expectedProcessedTxs[0].Hash[:]})
 		require.NoError(t, err)
 		require.NotNil(t, tx)
 		require.Equal(t, expectedProcessedTxs[0], tx)
 
-		tx, err = db.GetProcessedTx(expectedProcessedTxs[1].OriginChainID, expectedProcessedTxs[1].Hash)
+		tx, err = db.GetProcessedTx(cCore.DBTxID{ChainID: expectedProcessedTxs[1].OriginChainID, DBKey: expectedProcessedTxs[1].Hash[:]})
 		require.NoError(t, err)
 		require.NotNil(t, tx)
 		require.Equal(t, expectedProcessedTxs[1], tx)
@@ -457,8 +482,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("AddExpectedTxs", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		err = db.AddExpectedTxs(nil)
 		require.NoError(t, err)
@@ -481,8 +506,8 @@ func TestBoltDatabase(t *testing.T) {
 			vectorChainID = common.ChainIDStrVector
 		)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
 			{ChainID: primeChainID, Priority: 0},
@@ -513,8 +538,8 @@ func TestBoltDatabase(t *testing.T) {
 			vectorChainID = common.ChainIDStrVector
 		)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
 			{ChainID: primeChainID},
@@ -540,8 +565,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("MarkExpectedTxsAsProcessed", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		expectedTxs := []*core.BridgeExpectedCardanoTx{
 			{ChainID: common.ChainIDStrPrime},
@@ -580,8 +605,8 @@ func TestBoltDatabase(t *testing.T) {
 	t.Run("MarkExpectedTxsAsInvalid", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		db := &BBoltDatabase{}
-		require.NoError(t, db.Init(filePath))
+		db, err := createDB(filePath)
+		require.NoError(t, err)
 
 		const (
 			primeChainID  = common.ChainIDStrPrime

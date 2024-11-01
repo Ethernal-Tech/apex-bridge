@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -19,6 +18,7 @@ import (
 	ethtxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/txs_processor"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
+	"go.etcd.io/bbolt"
 )
 
 const (
@@ -40,6 +40,8 @@ var _ core.Oracle = (*OracleImpl)(nil)
 
 func NewEthOracle(
 	ctx context.Context,
+	boltDB *bbolt.DB,
+	typeRegister *oCore.TxTypeRegister,
 	appConfig *oCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter core.BridgeSubmitter,
@@ -47,10 +49,8 @@ func NewEthOracle(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
-	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to open oracle_eth database: %w", err)
-	}
+	db := &databaseaccess.BBoltDatabase{}
+	db.Init(boltDB, appConfig, typeRegister)
 
 	bridgeDataFetcher := bridge.NewEthBridgeDataFetcher(
 		ctx, oracleBridgeSC, logger.Named("eth_bridge_data_fetcher"))
@@ -153,12 +153,6 @@ func (o *OracleImpl) Dispose() error {
 			errs = append(errs, fmt.Errorf("error while disposing eth chain observer. chainId: %v, err: %w",
 				eco.GetConfig().ChainID, err))
 		}
-	}
-
-	err := o.db.Close()
-	if err != nil {
-		o.logger.Error("Failed to close oracle_eth db", "err", err)
-		errs = append(errs, fmt.Errorf("failed to close oracle_eth db. err %w", err))
 	}
 
 	if len(errs) > 0 {

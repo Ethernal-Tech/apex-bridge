@@ -4,6 +4,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
+	"go.etcd.io/bbolt"
 )
 
 type BridgeExpectedEthTxsDB interface {
@@ -15,9 +16,9 @@ type BridgeExpectedEthTxsDB interface {
 type EthTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*EthTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*EthTx, error)
-	GetProcessedTx(chainID string, txHash ethgo.Hash) (*ProcessedEthTx, error)
-	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash ethgo.Hash) (*ProcessedEthTx, error)
-	GetPendingTxs(keys [][]byte) ([]*EthTx, error)
+	GetPendingTx(entityID oCore.DBTxID) (oCore.BaseTx, error)
+	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedEthTx, error)
+	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedEthTx, error)
 	ClearAllTxs(chainID string) error
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
 	UpdateTxs(data *EthUpdateTxsData) error
@@ -30,8 +31,7 @@ type EthTxsProcessorDB interface {
 
 type Database interface {
 	EthTxsProcessorDB
-	Init(filePath string) error
-	Close() error
+	Init(db *bbolt.DB, appConfig *oCore.AppConfig, typeRegister *oCore.TxTypeRegister)
 }
 
 type Oracle interface {

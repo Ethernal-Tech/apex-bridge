@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -20,10 +19,7 @@ import (
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
-)
-
-const (
-	MainComponentName = "oracle"
+	"go.etcd.io/bbolt"
 )
 
 var (
@@ -47,6 +43,8 @@ var _ core.Oracle = (*OracleImpl)(nil)
 
 func NewCardanoOracle(
 	ctx context.Context,
+	boltDB *bbolt.DB,
+	typeRegister *cCore.TxTypeRegister,
 	appConfig *cCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter core.BridgeSubmitter,
@@ -54,10 +52,8 @@ func NewCardanoOracle(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
-	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to open oracle_cardano database: %w", err)
-	}
+	db := &databaseaccess.BBoltDatabase{}
+	db.Init(boltDB, appConfig, typeRegister)
 
 	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
 
@@ -163,12 +159,6 @@ func (o *OracleImpl) Dispose() error {
 			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err: %w",
 				cco.GetConfig().ChainID, err))
 		}
-	}
-
-	err := o.db.Close()
-	if err != nil {
-		o.logger.Error("Failed to close oracle_cardano db", "err", err)
-		errs = append(errs, fmt.Errorf("failed to close oracle_cardano db. err %w", err))
 	}
 
 	if len(errs) > 0 {

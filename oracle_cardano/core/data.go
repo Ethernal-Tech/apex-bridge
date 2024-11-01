@@ -45,20 +45,39 @@ var _ cCore.BaseExpectedTx = (*BridgeExpectedCardanoTx)(nil)
 
 type CardanoUpdateTxsData = cCore.UpdateTxsData[*CardanoTx, *ProcessedCardanoTx, *BridgeExpectedCardanoTx]
 
-func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
-	return &ProcessedCardanoTx{
-		BlockSlot:     tx.BlockSlot,
-		BlockHash:     tx.BlockHash,
-		OriginChainID: tx.OriginChainID,
-		Hash:          tx.Hash,
-		Priority:      tx.Priority,
-		IsInvalid:     isInvalid,
-	}
+// ChainID implements core.BaseTx.
+func (tx CardanoTx) GetChainID() string {
+	return tx.OriginChainID
 }
 
-// GetOriginChainID implements core.BaseTx.
-func (tx CardanoTx) GetOriginChainID() string {
-	return tx.OriginChainID
+// TxHash implements core.BaseTx.
+func (tx CardanoTx) GetTxHash() []byte {
+	return tx.Hash[:]
+}
+
+// UnprocessedDBKey implements core.BaseTx.
+func (tx CardanoTx) UnprocessedDBKey() []byte {
+	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.Hash)
+}
+
+// SetLastTimeTried implements core.BaseTx.
+func (tx *CardanoTx) SetLastTimeTried(lastTimeTried time.Time) {
+	tx.LastTimeTried = lastTimeTried
+}
+
+// IncrementTryCount implements core.BaseTx.
+func (tx *CardanoTx) IncrementTryCount() {
+	tx.TryCount++
+}
+
+// PendingDBKey implements core.BaseTx.
+func (tx CardanoTx) ToProcessed(isInvalid bool) cCore.BaseProcessedTx {
+	return tx.ToProcessedCardanoTx(isInvalid)
+}
+
+// GetTryCount implements core.BaseTx.
+func (tx CardanoTx) GetTryCount() uint32 {
+	return tx.TryCount
 }
 
 // GetPriority implements core.BaseTx.
@@ -66,34 +85,44 @@ func (tx CardanoTx) GetPriority() uint8 {
 	return tx.Priority
 }
 
-// ToUnprocessedTxKey implements core.BaseTx.
-func (tx CardanoTx) ToUnprocessedTxKey() []byte {
-	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.OriginChainID, tx.Hash)
+// ChainID implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) GetChainID() string {
+	return tx.OriginChainID
 }
 
-// Key implements core.BaseTx.
-func (tx CardanoTx) Key() []byte {
-	return tx.ToCardanoTxKey()
+// TxHash implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) GetTxHash() []byte {
+	return tx.Hash[:]
 }
 
-// Key implements core.BaseProcessedTx.
-func (tx ProcessedCardanoTx) Key() []byte {
-	return tx.ToCardanoTxKey()
+// HasInnerActionTxHash implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) HasInnerActionTxHash() bool {
+	return false
 }
 
-// ToUnprocessedTxKey implements core.BaseProcessedTx.
-func (tx ProcessedCardanoTx) ToUnprocessedTxKey() []byte {
-	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.OriginChainID, tx.Hash)
+// GetInnerActionTxHash implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) GetInnerActionTxHash() []byte {
+	return nil
+}
+
+// UnprocessedDBKey implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) UnprocessedDBKey() []byte {
+	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.Hash)
+}
+
+// ChainID implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetChainID() string {
+	return tx.ChainID
+}
+
+// TxHash implements core.BaseExpectedTx.
+func (tx BridgeExpectedCardanoTx) GetTxHash() []byte {
+	return tx.Hash[:]
 }
 
 // Key implements core.BaseExpectedTx.
-func (tx BridgeExpectedCardanoTx) Key() []byte {
+func (tx BridgeExpectedCardanoTx) DBKey() []byte {
 	return tx.ToExpectedTxKey()
-}
-
-// GetChainID implements core.BaseExpectedTx.
-func (tx BridgeExpectedCardanoTx) GetChainID() string {
-	return tx.ChainID
 }
 
 // GetPriority implements core.BaseExpectedTx.
@@ -126,12 +155,23 @@ func (tx CardanoTx) ShouldSkipForNow() bool {
 		tx.LastTimeTried.Add(cCore.RetryUnprocessedAfterSec*time.Second).After(time.Now().UTC())
 }
 
-func ToUnprocessedTxKey(priority uint8, blockSlot uint64, originChainID string, txHash indexer.Hash) []byte {
+func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
+	return &ProcessedCardanoTx{
+		BlockSlot:     tx.BlockSlot,
+		BlockHash:     tx.BlockHash,
+		OriginChainID: tx.OriginChainID,
+		Hash:          tx.Hash,
+		Priority:      tx.Priority,
+		IsInvalid:     isInvalid,
+	}
+}
+
+func ToUnprocessedTxKey(priority uint8, blockSlot uint64, txHash indexer.Hash) []byte {
 	bytes := [9]byte{priority}
 
 	binary.BigEndian.PutUint64(bytes[1:], blockSlot)
 
-	return append(append(bytes[:], []byte(originChainID)...), txHash[:]...)
+	return append(bytes[:], txHash[:]...)
 }
 
 func ToCardanoTxKey(originChainID string, txHash indexer.Hash) []byte {
@@ -155,5 +195,5 @@ func (tx BridgeExpectedCardanoTx) ToExpectedTxKey() []byte {
 
 	binary.BigEndian.PutUint64(bytes[1:], tx.TTL)
 
-	return append(append(bytes[:], []byte(tx.ChainID)...), tx.Hash[:]...)
+	return append(bytes[:], tx.Hash[:]...)
 }
