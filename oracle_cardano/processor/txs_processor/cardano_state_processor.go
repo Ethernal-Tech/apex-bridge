@@ -328,8 +328,8 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	var relevantUnprocessedTxs []*core.CardanoTx
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
-		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) &&
-			!unprocessedTx.ShouldSkipForNow() {
+		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && cCore.IsTxReady(
+			unprocessedTx.TryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
 	}
