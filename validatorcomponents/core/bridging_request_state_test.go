@@ -215,8 +215,13 @@ func TestBridgingRequestState(t *testing.T) {
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
 		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+		require.NoError(t, err)
+		err = state.ToIncludedInBatch(1)
+		require.NoError(t, err)
+		err = state.ToSubmittedToDestination()
+		require.NoError(t, err)
+		err = state.ToFailedToExecuteOnDestination()
+		require.NoError(t, err)
 
 		err = state.ToIncludedInBatch(1)
 		require.NoError(t, err)

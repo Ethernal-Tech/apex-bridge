@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -169,7 +170,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging address on origin not found in utxos")
+		require.ErrorContains(t, err, fmt.Sprintf("bridging address %s on %s", primeBridgingAddr, common.ChainIDStrPrime))
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
@@ -195,7 +196,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "found multiple utxos to the bridging address on origin")
+		require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
 	})
 
 	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {

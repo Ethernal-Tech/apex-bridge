@@ -172,10 +172,6 @@ func (p *TxsProcessorImpl) submitClaims(
 }
 
 func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*core.SubmitClaimsEvents, error) {
-	// parse receipt for events, and put them in SubmitClaimsEvents structure
-	// BatchExecutionInfo(
-	// 		batchID uint64, claimIdx int, isFailedClaim bool,
-	//		txHashes []tuple(bytes32 txSourceHash, txSourceChainID byte))
 	eventSigs, err := eth.GetSubmitClaimsEventSignatures()
 	if err != nil {
 		p.logger.Error("failed to get submit claims event signatures", "err", err)
