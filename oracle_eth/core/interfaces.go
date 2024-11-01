@@ -31,7 +31,7 @@ type EthTxsProcessorDB interface {
 
 type Database interface {
 	EthTxsProcessorDB
-	Init(db *bbolt.DB, appConfig *oCore.AppConfig, typeRegister *oCore.TxTypeRegister)
+	Init(db *bbolt.DB, appConfig *oCore.AppConfig, typeRegister common.TypeRegister)
 }
 
 type Oracle interface {

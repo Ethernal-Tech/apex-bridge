@@ -30,7 +30,7 @@ type CardanoTxsProcessorDB interface {
 
 type Database interface {
 	CardanoTxsProcessorDB
-	Init(db *bbolt.DB, appConfig *cCore.AppConfig, typeRegister *cCore.TxTypeRegister)
+	Init(db *bbolt.DB, appConfig *cCore.AppConfig, typeRegister common.TypeRegister)
 }
 
 type Oracle interface {

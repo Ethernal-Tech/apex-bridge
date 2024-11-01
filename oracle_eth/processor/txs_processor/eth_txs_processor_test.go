@@ -112,8 +112,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			return nil, err
 		}
 
-		typeRegister := &oCore.TxTypeRegister{}
-		typeRegister.SetTTxTypes(appConfig, nil, reflect.TypeOf(ethcore.EthTx{}))
+		typeRegister := oCore.NewTypeRegisterWithChains(appConfig, nil, reflect.TypeOf(ethcore.EthTx{}))
 
 		oracleDB := &databaseaccess.BBoltDatabase{}
 		oracleDB.Init(boltDB, appConfig, typeRegister)

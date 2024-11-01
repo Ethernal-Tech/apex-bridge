@@ -46,8 +46,7 @@ func TestBoltDatabase(t *testing.T) {
 			return nil, err
 		}
 
-		typeRegister := &cCore.TxTypeRegister{}
-		typeRegister.SetTTxTypes(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
+		typeRegister := cCore.NewTypeRegisterWithChains(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
 
 		oracleDB := &BBoltDatabase{}
 		oracleDB.Init(boltDB, appConfig, typeRegister)

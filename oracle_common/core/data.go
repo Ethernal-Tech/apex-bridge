@@ -3,6 +3,7 @@ package core
 import (
 	"reflect"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/ethgo"
 )
@@ -18,24 +19,24 @@ type DBTxID struct {
 	DBKey   []byte
 }
 
-type TxTypeRegister struct {
-	TTxTypes map[string]reflect.Type
-}
-
-func (r *TxTypeRegister) SetTTxTypes(appConfig *AppConfig, cardanoType reflect.Type, ethType reflect.Type) {
-	r.TTxTypes = make(map[string]reflect.Type)
+func NewTypeRegisterWithChains(
+	appConfig *AppConfig, cardanoType reflect.Type, ethType reflect.Type,
+) common.TypeRegister {
+	reg := common.NewTypeRegister()
 
 	if cardanoType != nil {
 		for _, chain := range appConfig.CardanoChains {
-			r.TTxTypes[chain.ChainID] = cardanoType
+			reg.SetType(chain.ChainID, cardanoType)
 		}
 	}
 
 	if ethType != nil {
 		for _, chain := range appConfig.EthChains {
-			r.TTxTypes[chain.ChainID] = ethType
+			reg.SetType(chain.ChainID, ethType)
 		}
 	}
+
+	return reg
 }
 
 type NotEnoughFundsEvent = contractbinding.BridgeContractNotEnoughFunds

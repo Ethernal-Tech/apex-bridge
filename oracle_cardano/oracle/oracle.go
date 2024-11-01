@@ -44,7 +44,7 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewCardanoOracle(
 	ctx context.Context,
 	boltDB *bbolt.DB,
-	typeRegister *cCore.TxTypeRegister,
+	typeRegister common.TypeRegister,
 	appConfig *cCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter core.BridgeSubmitter,

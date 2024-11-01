@@ -3,8 +3,8 @@ package databaseaccess
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
 	"go.etcd.io/bbolt"
@@ -17,7 +17,7 @@ type BBoltDBBase[
 ] struct {
 	DB              *bbolt.DB
 	SupportedChains map[string]bool
-	TypeRegister    *core.TxTypeRegister
+	TypeRegister    common.TypeRegister
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetUnprocessedTxs(
@@ -93,31 +93,18 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetAllUnprocessedTxs(
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetPendingTx(
 	entityID core.DBTxID,
 ) (result core.BaseTx, err error) {
-	err = bd.DB.View(func(tx *bbolt.Tx) error {
+	err = bd.DB.View(func(tx *bbolt.Tx) (err error) {
 		data := tx.Bucket(ChainBucket(PendingTxsBucket, entityID.ChainID)).Get(entityID.DBKey)
 		if len(data) == 0 {
 			return fmt.Errorf("couldn't get pending tx for entityID: %v", entityID)
 		}
 
-		t, exists := bd.TypeRegister.TTxTypes[entityID.ChainID]
-		if !exists {
-			return fmt.Errorf("type not registered")
-		}
-
-		val := reflect.New(t).Interface()
-
-		if err := json.Unmarshal(data, &val); err != nil {
+		result, err = common.GetRegisteredTypeInstance[core.BaseTx](bd.TypeRegister, entityID.ChainID)
+		if err != nil {
 			return err
 		}
 
-		var ok bool
-
-		result, ok = val.(core.BaseTx)
-		if !ok {
-			return fmt.Errorf("failed to convert")
-		}
-
-		return nil
+		return json.Unmarshal(data, &result)
 	})
 
 	return result, err

@@ -107,8 +107,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			return nil, nil, nil, err
 		}
 
-		typeRegister := &cCore.TxTypeRegister{}
-		typeRegister.SetTTxTypes(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
+		typeRegister := cCore.NewTypeRegisterWithChains(appConfig, reflect.TypeOf(core.CardanoTx{}), nil)
 
 		oracleDB := &databaseaccess.BBoltDatabase{}
 		oracleDB.Init(boltDB, appConfig, typeRegister)

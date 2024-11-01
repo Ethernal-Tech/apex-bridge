@@ -148,12 +148,8 @@ func NewValidatorComponents(
 	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
-	typeRegister := &oracleCommonCore.TxTypeRegister{}
-	typeRegister.SetTTxTypes(
-		oracleConfig,
-		reflect.TypeOf(cardanoOracleCore.CardanoTx{}),
-		reflect.TypeOf(ethOracleCore.EthTx{}),
-	)
+	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
+		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
 
 	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,

@@ -41,7 +41,7 @@ var _ core.Oracle = (*OracleImpl)(nil)
 func NewEthOracle(
 	ctx context.Context,
 	boltDB *bbolt.DB,
-	typeRegister *oCore.TxTypeRegister,
+	typeRegister common.TypeRegister,
 	appConfig *oCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter core.BridgeSubmitter,
