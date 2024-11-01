@@ -4,6 +4,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"go.etcd.io/bbolt"
 )
 
 type BridgeExpectedCardanoTxsDB interface {
@@ -15,8 +16,8 @@ type BridgeExpectedCardanoTxsDB interface {
 type CardanoTxsDB interface {
 	GetUnprocessedTxs(chainID string, priority uint8, threshold int) ([]*CardanoTx, error)
 	GetAllUnprocessedTxs(chainID string, threshold int) ([]*CardanoTx, error)
-	GetPendingTxs(keys [][]byte) ([]*CardanoTx, error)
-	GetProcessedTx(chainID string, txHash indexer.Hash) (*ProcessedCardanoTx, error)
+	GetPendingTx(entityID cCore.DBTxID) (cCore.BaseTx, error)
+	GetProcessedTx(entityID cCore.DBTxID) (*ProcessedCardanoTx, error)
 	AddTxs(processedTxs []*ProcessedCardanoTx, unprocessedTxs []*CardanoTx) error
 	ClearAllTxs(chainID string) error
 	UpdateTxs(data *CardanoUpdateTxsData) error
@@ -29,8 +30,7 @@ type CardanoTxsProcessorDB interface {
 
 type Database interface {
 	CardanoTxsProcessorDB
-	Init(filePath string) error
-	Close() error
+	Init(db *bbolt.DB, appConfig *cCore.AppConfig, typeRegister common.TypeRegister)
 }
 
 type Oracle interface {

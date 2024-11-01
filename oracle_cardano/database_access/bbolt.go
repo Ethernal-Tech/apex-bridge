@@ -1,9 +1,11 @@
 package databaseaccess
 
 import (
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"go.etcd.io/bbolt"
 )
 
 type BBoltDatabase struct {
@@ -16,16 +18,12 @@ type BBoltDatabase struct {
 
 var _ core.Database = (*BBoltDatabase)(nil)
 
-func (bd *BBoltDatabase) Init(filePath string) error {
-	return bd.BBoltDBBase.Init(filePath, nil)
-}
+func (bd *BBoltDatabase) Init(db *bbolt.DB, appConfig *cCore.AppConfig, typeRegister common.TypeRegister) {
+	bd.BBoltDBBase.DB = db
+	bd.SupportedChains = make(map[string]bool, len(appConfig.CardanoChains))
+	bd.TypeRegister = typeRegister
 
-func (bd *BBoltDatabase) GetProcessedTx(
-	chainID string, txHash indexer.Hash,
-) (result *core.ProcessedCardanoTx, err error) {
-	return bd.BBoltDBBase.GetProcessedTx(chainID, core.ToCardanoTxKey(chainID, txHash))
-}
-
-func (bd *BBoltDatabase) UpdateTxs(data *core.CardanoUpdateTxsData) error {
-	return bd.BBoltDBBase.UpdateTxs(data, nil)
+	for _, chain := range appConfig.CardanoChains {
+		bd.SupportedChains[chain.ChainID] = true
+	}
 }
