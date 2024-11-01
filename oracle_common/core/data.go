@@ -4,12 +4,13 @@ import (
 	"reflect"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 const (
 	LastProcessingPriority = uint8(1)
 
-	RetryUnprocessedAfterSec = 15 * 60 // 15 min
+	RetryUnprocessedAfterSec = 1 * 60 // 1 min
 )
 
 type DBTxID struct {
@@ -71,7 +72,7 @@ func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
 }
 
 type ProcessedTxByInnerAction struct {
-	ChainID         string `json:"chain_id"`
-	Hash            []byte `json:"hash"`
-	InnerActionHash []byte `json:"ia_hash"`
+	ChainID         string     `json:"chain_id"`
+	Hash            ethgo.Hash `json:"hash"`
+	InnerActionHash ethgo.Hash `json:"ia_hash"`
 }

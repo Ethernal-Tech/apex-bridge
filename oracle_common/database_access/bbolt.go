@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/ethgo"
 	"go.etcd.io/bbolt"
 )
 
@@ -158,7 +159,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetProcessedTxByInnerActi
 			}
 
 			bucket := tx.Bucket(ChainBucket(ProcessedTxsBucket, chainID))
-			if data := bucket.Get(processedTxByInnerAction.Hash); len(data) > 0 {
+			if data := bucket.Get(processedTxByInnerAction.Hash[:]); len(data) > 0 {
 				return json.Unmarshal(data, &result)
 			}
 		}
@@ -583,8 +584,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 		if tx.HasInnerActionTxHash() {
 			links = append(links, &core.ProcessedTxByInnerAction{
 				ChainID:         tx.GetChainID(),
-				Hash:            tx.GetTxHash(),
-				InnerActionHash: tx.GetInnerActionTxHash(),
+				Hash:            ethgo.Hash(tx.GetTxHash()),
+				InnerActionHash: ethgo.Hash(tx.GetInnerActionTxHash()),
 			})
 		}
 	}
@@ -593,8 +594,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 		if tx.HasInnerActionTxHash() {
 			links = append(links, &core.ProcessedTxByInnerAction{
 				ChainID:         tx.GetChainID(),
-				Hash:            tx.GetTxHash(),
-				InnerActionHash: tx.GetInnerActionTxHash(),
+				Hash:            ethgo.Hash(tx.GetTxHash()),
+				InnerActionHash: ethgo.Hash(tx.GetInnerActionTxHash()),
 			})
 		}
 	}
@@ -606,7 +607,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) handleInnerActionLink(
 		}
 
 		bucket := tx.Bucket(ChainBucket(ProcessedTxsByInnerActionBucket, link.ChainID))
-		if err = bucket.Put(link.InnerActionHash, innerActionTxBytes); err != nil {
+		if err = bucket.Put(link.InnerActionHash[:], innerActionTxBytes); err != nil {
 			return fmt.Errorf("processed tx by inner action write error: %w", err)
 		}
 	}
