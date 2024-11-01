@@ -30,6 +30,7 @@ type AppConfig struct {
 	BatcherPullTimeMilis         uint64                                    `json:"batcherPullTime"`
 	APIConfig                    APIConfig                                 `json:"api"`
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
+	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
@@ -81,13 +82,14 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	oracleConfig := &oracleCore.AppConfig{
-		ValidatorDataDir:    appConfig.ValidatorDataDir,
-		ValidatorConfigPath: appConfig.ValidatorConfigPath,
-		Bridge:              appConfig.Bridge,
-		Settings:            appConfig.Settings,
-		BridgingSettings:    appConfig.BridgingSettings,
-		CardanoChains:       oracleCardanoChains,
-		EthChains:           oracleEthChains,
+		ValidatorDataDir:         appConfig.ValidatorDataDir,
+		ValidatorConfigPath:      appConfig.ValidatorConfigPath,
+		Bridge:                   appConfig.Bridge,
+		Settings:                 appConfig.Settings,
+		BridgingSettings:         appConfig.BridgingSettings,
+		RetryUnprocessedSettings: appConfig.RetryUnprocessedSettings,
+		CardanoChains:            oracleCardanoChains,
+		EthChains:                oracleEthChains,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{

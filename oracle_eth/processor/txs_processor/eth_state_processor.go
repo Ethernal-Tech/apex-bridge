@@ -327,8 +327,8 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 	var relevantUnprocessedTxs []*core.EthTx
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
-		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) &&
-			!unprocessedTx.ShouldSkipForNow() {
+		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && oracleCore.IsTxReady(
+			unprocessedTx.TryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
 	}

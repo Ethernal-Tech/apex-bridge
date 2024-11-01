@@ -1,7 +1,9 @@
 package core
 
 import (
+	"math"
 	"reflect"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -10,8 +12,6 @@ import (
 
 const (
 	LastProcessingPriority = uint8(1)
-
-	RetryUnprocessedAfterSec = 1 * 60 // 1 min
 )
 
 type DBTxID struct {
@@ -76,4 +76,15 @@ type ProcessedTxByInnerAction struct {
 	ChainID         string     `json:"chain_id"`
 	Hash            ethgo.Hash `json:"hash"`
 	InnerActionHash ethgo.Hash `json:"ia_hash"`
+}
+
+func IsTxReady(triesCount uint32, lastTimeTried time.Time, settings RetryUnprocessedSettings) bool {
+	if lastTimeTried.IsZero() || triesCount == 0 {
+		return true
+	}
+
+	timeout := min(settings.BaseTimeout*time.Duration(math.Pow(2, float64(triesCount-1))),
+		settings.MaxTimeout)
+
+	return lastTimeTried.Add(timeout).Before(time.Now().UTC())
 }

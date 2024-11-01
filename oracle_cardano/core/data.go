@@ -150,11 +150,6 @@ func (tx *BridgeExpectedCardanoTx) SetInvalid() {
 	tx.IsInvalid = true
 }
 
-func (tx CardanoTx) ShouldSkipForNow() bool {
-	return !tx.LastTimeTried.IsZero() &&
-		tx.LastTimeTried.Add(cCore.RetryUnprocessedAfterSec*time.Second).After(time.Now().UTC())
-}
-
 func (tx *CardanoTx) ToProcessedCardanoTx(isInvalid bool) *ProcessedCardanoTx {
 	return &ProcessedCardanoTx{
 		BlockSlot:     tx.BlockSlot,
