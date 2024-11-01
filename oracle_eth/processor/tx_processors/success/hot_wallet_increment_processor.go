@@ -58,7 +58,6 @@ func (p *HotWalletIncrementProcessor) validate(
 	tx *core.EthTx, appConfig *oCore.AppConfig,
 ) error {
 	chainConfig := appConfig.EthChains[tx.OriginChainID]
-
 	if chainConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
 	}
@@ -67,12 +66,12 @@ func (p *HotWalletIncrementProcessor) validate(
 		return fmt.Errorf("metadata should be empty")
 	}
 
-	if tx.Value == nil {
-		return fmt.Errorf("tx value is nil")
+	if tx.Value == nil || tx.Value.BitLen() == 0 {
+		return fmt.Errorf("tx value is zero or not set")
 	}
 
-	if tx.Address.String() != chainConfig.BridgingAddresses.BridgingAddress {
-		return fmt.Errorf("wrong hotwallet address")
+	if addr := tx.Address.String(); addr != chainConfig.BridgingAddresses.BridgingAddress {
+		return fmt.Errorf("wrong hotwallet address: %s vs %s", chainConfig.BridgingAddresses.BridgingAddress, addr)
 	}
 
 	return nil

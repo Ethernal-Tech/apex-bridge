@@ -117,6 +117,59 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.NotEnoughFunds) > 0 {
 		sp.processNotEnoughFundsEvents(events.NotEnoughFunds, claims)
 	}
+
+	if len(events.BatchExecutionInfo) > 0 {
+		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+	}
+}
+
+func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
+	events []*cCore.BatchExecutionInfoEvent,
+) {
+	newProcessedTxs := make([]*core.ProcessedCardanoTx, 0)
+	newUnprocessedTxs := make([]*core.CardanoTx, 0)
+
+	for _, event := range events {
+		txs, err := sp.getTxsFromBatchEvent(event)
+		if err != nil {
+			sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+
+			continue
+		}
+
+		if event.IsFailedClaim {
+			for _, tx := range txs {
+				tx.TryCount++
+				tx.LastTimeTried = time.Time{}
+				newUnprocessedTxs = append(newUnprocessedTxs, tx)
+			}
+		} else {
+			for _, tx := range txs {
+				processedTx := tx.ToProcessedCardanoTx(false)
+				newProcessedTxs = append(newProcessedTxs, processedTx)
+			}
+		}
+	}
+
+	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
+	sp.state.updateData.MovePendingToUnprocessed = newUnprocessedTxs
+}
+
+func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
+	event *cCore.BatchExecutionInfoEvent,
+) ([]*core.CardanoTx, error) {
+	keys := make([][]byte, len(event.TxHashes))
+
+	for idx, hash := range event.TxHashes {
+		keys[idx] = core.ToCardanoTxKey(common.ToStrChainID(hash.SourceChainId), hash.ObservedTransactionHash)
+	}
+
+	txs, err := sp.db.GetPendingTxs(keys)
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(
@@ -467,17 +520,26 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) error {
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
-		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
-			err := bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
-				SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
-				SourceTxHash:  brClaim.ObservedTransactionHash,
-			}, common.ToStrChainID(brClaim.DestinationChainId))
+		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
+		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
+			notRejectedMap[string(tx.ToCardanoTxKey())] = true
+		}
 
-			if err != nil {
-				sp.logger.Error(
-					"error while updating a bridging request state to SubmittedToBridge",
-					"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
-					"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
+		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
+			notRejected := notRejectedMap[string(core.ToCardanoTxKey(
+				common.ToStrChainID(brClaim.SourceChainId), brClaim.ObservedTransactionHash))]
+			if notRejected {
+				err := bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
+					SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
+					SourceTxHash:  brClaim.ObservedTransactionHash,
+				}, common.ToStrChainID(brClaim.DestinationChainId))
+
+				if err != nil {
+					sp.logger.Error(
+						"error while updating a bridging request state to SubmittedToBridge",
+						"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
+						"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
+				}
 			}
 		}
 	}

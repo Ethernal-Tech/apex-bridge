@@ -1407,6 +1407,192 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Equal(t, uint32(2), unprocessedTxs[0].TryCount)
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 	})
+
+	t.Run("Start - BatchExecutionInfoEvent", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+
+		oracleDB, primeDB, vectorDB := createDbs()
+
+		originChainID := common.ChainIDStrPrime
+
+		metadata1, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+			},
+		)
+		require.NoError(t, err)
+
+		tx1 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223341")), Metadata: metadata1}
+		cardanoTx1 := core.CardanoTx{OriginChainID: originChainID, Tx: *tx1}
+
+		metadata2, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+			},
+		)
+		require.NoError(t, err)
+
+		tx2 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223342")), Metadata: metadata2}
+		cardanoTx2 := core.CardanoTx{OriginChainID: originChainID, Tx: *tx2}
+
+		err = oracleDB.AddTxs([]*core.ProcessedCardanoTx{}, []*core.CardanoTx{&cardanoTx1, &cardanoTx2})
+		require.NoError(t, err)
+
+		err = oracleDB.UpdateTxs(&cCore.UpdateTxsData[*core.CardanoTx, *core.ProcessedCardanoTx, *core.BridgeExpectedCardanoTx]{
+			MoveUnprocessedToPending: []*core.CardanoTx{&cardanoTx1, &cardanoTx2},
+		})
+		require.NoError(t, err)
+
+		pendingTxs, _ := oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key(), cardanoTx2.Key()})
+		require.Len(t, pendingTxs, 2)
+
+		metadataBatch, err := common.SimulateRealMetadata(
+			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType: common.BridgingTxTypeBatchExecution,
+			},
+		)
+		require.NoError(t, err)
+
+		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch}
+
+		brcProc := &core.CardanoTxSuccessProcessorMock{
+			AddClaimCallback: func(claims *cCore.BridgeClaims) {
+				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
+					ObservedTransactionHash: tx1.Hash,
+					SourceChainId:           common.ToNumChainID(originChainID),
+				})
+			},
+			Type: common.BridgingTxTypeBridgingRequest,
+		}
+		brcProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		becProc := &core.CardanoTxSuccessProcessorMock{
+			AddClaimCallback: func(claims *cCore.BridgeClaims) {
+				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, cCore.BatchExecutedClaim{
+					ObservedTransactionHash: txBatch.Hash,
+					BatchNonceId:            2,
+					ChainId:                 common.ChainIDIntVector,
+				})
+			},
+			Type: common.BridgingTxTypeBatchExecution,
+		}
+		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
+		require.NoError(t, err)
+
+		bridgeSubmitter := &core.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
+			Logs: []*types.Log{
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+					Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntPrime,
+								ObservedTransactionHash: tx1.Hash,
+							},
+						}),
+				},
+				{
+					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+					Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
+						[]*contractbinding.IBridgeStructsTxDataInfo{
+							{
+								SourceChainId:           common.ChainIDIntPrime,
+								ObservedTransactionHash: tx2.Hash,
+							},
+						}),
+				},
+			},
+		}, nil)
+
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		proc, rec := newCardanoTxsProcessor(
+			ctx,
+			appConfig, oracleDB,
+			[]core.CardanoTxSuccessProcessor{brcProc, becProc}, nil, bridgeSubmitter,
+			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, proc)
+
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch}))
+
+		go func() {
+			<-time.After(time.Millisecond * processingWaitTimeMs)
+			cancelFunc()
+		}()
+
+		proc.TickTime = 1
+		proc.Start()
+
+		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{cardanoTx2.Key()})
+		require.Len(t, pendingTxs, 0)
+
+		pendingTxs, _ = oracleDB.GetPendingTxs([][]byte{cardanoTx1.Key()})
+		require.Len(t, pendingTxs, 1)
+		require.Equal(t, pendingTxs[0].TryCount, uint32(1))
+
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
+		require.NoError(t, err)
+		require.Len(t, unprocessedTxs, 0)
+
+		processedTx1, err := oracleDB.GetProcessedTx(originChainID, cardanoTx1.Hash)
+		require.NoError(t, err)
+		require.Nil(t, processedTx1)
+
+		processedTx2, err := oracleDB.GetProcessedTx(originChainID, cardanoTx2.Hash)
+		require.NoError(t, err)
+		require.NotNil(t, processedTx2)
+		require.Equal(t, processedTx2.Hash, cardanoTx2.Hash)
+	})
+}
+
+func getBatchExecutionReceipt(
+	t *testing.T,
+	batchID uint64,
+	isFailedTx bool,
+	chainID uint8,
+	txHashes []*contractbinding.IBridgeStructsTxDataInfo,
+) []byte {
+	t.Helper()
+
+	events, err := eth.GetSubmitClaimsEventSignatures()
+	require.NoError(t, err)
+
+	batchExecInfo := events[1]
+	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	require.NoError(t, err)
+
+	eventAbi, err := abi.EventByID(ethereum_common.Hash(batchExecInfo))
+	require.NoError(t, err)
+
+	type TxDataInfo struct {
+		SourceChainID           uint8    `json:"sourceChainId" abi:"sourceChainId"`
+		ObservedTransactionHash [32]byte `json:"observedTransactionHash" abi:"observedTransactionHash"`
+	}
+
+	txDataInfo := make([]TxDataInfo, len(txHashes))
+
+	for idx, info := range txHashes {
+		txDataInfo[idx] = TxDataInfo{
+			SourceChainID:           info.SourceChainId,
+			ObservedTransactionHash: info.ObservedTransactionHash,
+		}
+	}
+
+	receiptData, err := eventAbi.Inputs.Pack(
+		batchID,
+		chainID,
+		isFailedTx,
+		txDataInfo,
+	)
+	require.NoError(t, err)
+
+	return receiptData
 }
 
 var (

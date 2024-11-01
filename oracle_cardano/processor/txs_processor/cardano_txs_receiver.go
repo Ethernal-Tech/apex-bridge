@@ -28,6 +28,7 @@ func NewCardanoTxsReceiverImpl(
 	logger hclog.Logger,
 ) *CardanoTxsReceiverImpl {
 	return &CardanoTxsReceiverImpl{
+		appConfig:                   appConfig,
 		db:                          db,
 		txProcessors:                txProcessors,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
