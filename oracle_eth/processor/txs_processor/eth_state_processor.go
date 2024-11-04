@@ -61,6 +61,29 @@ func (sp *EthStateProcessor) Reset() {
 	}
 }
 
+func (sp *EthStateProcessor) ProcessSavedEvents() {
+	var batchEvents []*oracleCore.DBBatchInfoEvent
+
+	for _, chain := range sp.appConfig.EthChains {
+		chainBatchEvents, err := sp.db.GetUnprocessedBatchEvents(chain.ChainID)
+		if err != nil {
+			sp.logger.Error("Failed to get unprocessed batch events", "err", err)
+
+			continue
+		}
+
+		batchEvents = append(batchEvents, chainBatchEvents...)
+	}
+
+	if len(batchEvents) > 0 {
+		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
+
+		if len(processedBatchEvents) > 0 {
+			sp.state.updateData.RemoveBatchInfoEvents = processedBatchEvents
+		}
+	}
+}
+
 func (sp *EthStateProcessor) RunChecks(
 	bridgeClaims *oracleCore.BridgeClaims,
 	chainID string,
@@ -122,23 +145,29 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 	}
 
 	if len(events.BatchExecutionInfo) > 0 {
-		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+		_, skippedEvents := sp.processBatchExecutionInfoEvents(events.BatchExecutionInfo)
+		if len(skippedEvents) > 0 {
+			sp.state.updateData.AddBatchInfoEvents = skippedEvents
+		}
 	}
 }
 
-func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
-	events []*oracleCore.BatchExecutionInfoEvent,
-) {
+func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
+	events []*oracleCore.DBBatchInfoEvent,
+) (processedEvents []*oracleCore.DBBatchInfoEvent, skippedEvents []*oracleCore.DBBatchInfoEvent) {
 	newProcessedTxs := make([]oracleCore.BaseProcessedTx, 0)
 	newUnprocessedTxs := make([]oracleCore.BaseTx, 0)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
-			sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+			skippedEvents = append(skippedEvents, event)
+			sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
 
 			continue
 		}
+
+		processedEvents = append(processedEvents, event)
 
 		if event.IsFailedClaim {
 			for _, tx := range txs {
@@ -156,17 +185,19 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvent(
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
 	sp.state.updateData.MovePendingToUnprocessed = newUnprocessedTxs
+
+	return processedEvents, skippedEvents
 }
 
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
-	event *oracleCore.BatchExecutionInfoEvent,
+	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
 	result := make([]oracleCore.BaseTx, len(event.TxHashes))
 
 	for idx, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
-				ChainID: common.ToStrChainID(hash.SourceChainId),
+				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
@@ -245,20 +276,10 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 	}
 }
 
-func (sp *EthStateProcessor) PersistNew(
-	bridgeClaims *oracleCore.BridgeClaims,
-	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) {
-	err := sp.notifyBridgingRequestStateUpdater(bridgeClaims, bridgingRequestStateUpdater)
-	if err != nil {
-		sp.logger.Error("Error while updating bridging request states", "err", err)
-	}
-
-	// we should update db only if there are some changes needed
+func (sp *EthStateProcessor) PersistNew() {
 	if sp.state.updateData.Count() > 0 {
 		sp.logger.Info("Updating txs", "data", sp.state.updateData)
 
-		// see EthUpdateTxsData struct for comments
 		if err := sp.db.UpdateTxs(sp.state.updateData); err != nil {
 			sp.logger.Error("Failed to update txs", "err", err)
 		}
@@ -528,10 +549,10 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 		"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 }
 
-func (sp *EthStateProcessor) notifyBridgingRequestStateUpdater(
+func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 	bridgeClaims *oracleCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) error {
+) {
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
 		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
 		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
@@ -614,6 +635,4 @@ func (sp *EthStateProcessor) notifyBridgingRequestStateUpdater(
 			}
 		}
 	}
-
-	return nil
 }

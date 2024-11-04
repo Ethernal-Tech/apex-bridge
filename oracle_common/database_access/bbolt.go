@@ -254,53 +254,6 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 	})
 }
 
-func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
-	data *core.UpdateTxsData[TTx, TProcessedTx, TExpectedTx],
-) error {
-	return bd.DB.Update(func(tx *bbolt.Tx) error {
-		err := bd.markExpectedTxs(tx, data.ExpectedInvalid, func(expectedTx TExpectedTx) {
-			expectedTx.SetInvalid()
-		})
-		if err != nil {
-			return err
-		}
-
-		err = bd.markExpectedTxs(tx, data.ExpectedProcessed, func(expectedTx TExpectedTx) {
-			expectedTx.SetProcessed()
-		})
-		if err != nil {
-			return err
-		}
-
-		if err := bd.updateUnprocessed(tx, data.UpdateUnprocessed); err != nil {
-			return err
-		}
-
-		if err := bd.moveUnprocessedToPending(tx, data.MoveUnprocessedToPending); err != nil {
-			return err
-		}
-
-		if err := bd.moveUnprocessedToProcessed(tx, data.MoveUnprocessedToProcessed); err != nil {
-			return err
-		}
-
-		if err := bd.movePendingToUnprocessed(tx, data.MovePendingToUnprocessed); err != nil {
-			return err
-		}
-
-		if err := bd.movePendingToProcessed(tx, data.MovePendingToProcessed); err != nil {
-			return err
-		}
-
-		err = bd.handleInnerActionLink(tx, data.MoveUnprocessedToProcessed, data.MovePendingToProcessed)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-}
-
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) AddExpectedTxs(expectedTxs []TExpectedTx) error {
 	return bd.DB.Update(func(tx *bbolt.Tx) error {
 		for _, expectedTx := range expectedTxs {
@@ -398,6 +351,92 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetAllExpectedTxs(
 	}
 
 	return result, nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetUnprocessedBatchEvents(
+	chainID string,
+) ([]*core.DBBatchInfoEvent, error) {
+	if supported := bd.SupportedChains[chainID]; !supported {
+		return nil, fmt.Errorf("unsupported chain: %s", chainID)
+	}
+
+	var result []*core.DBBatchInfoEvent
+
+	err := bd.DB.View(func(tx *bbolt.Tx) error {
+		cursor := tx.Bucket(ChainBucket(UnprocessedBatchEventsBucket, chainID)).Cursor()
+
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			var batchInfo *core.DBBatchInfoEvent
+
+			if err := json.Unmarshal(v, &batchInfo); err != nil {
+				return err
+			}
+
+			result = append(result, batchInfo)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(
+	data *core.UpdateTxsData[TTx, TProcessedTx, TExpectedTx],
+) error {
+	return bd.DB.Update(func(tx *bbolt.Tx) error {
+		err := bd.markExpectedTxs(tx, data.ExpectedInvalid, func(expectedTx TExpectedTx) {
+			expectedTx.SetInvalid()
+		})
+		if err != nil {
+			return err
+		}
+
+		err = bd.markExpectedTxs(tx, data.ExpectedProcessed, func(expectedTx TExpectedTx) {
+			expectedTx.SetProcessed()
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := bd.updateUnprocessed(tx, data.UpdateUnprocessed); err != nil {
+			return err
+		}
+
+		if err := bd.moveUnprocessedToPending(tx, data.MoveUnprocessedToPending); err != nil {
+			return err
+		}
+
+		if err := bd.moveUnprocessedToProcessed(tx, data.MoveUnprocessedToProcessed); err != nil {
+			return err
+		}
+
+		if err := bd.movePendingToUnprocessed(tx, data.MovePendingToUnprocessed); err != nil {
+			return err
+		}
+
+		if err := bd.movePendingToProcessed(tx, data.MovePendingToProcessed); err != nil {
+			return err
+		}
+
+		if err := bd.removeBatchInfoEvents(tx, data.RemoveBatchInfoEvents); err != nil {
+			return err
+		}
+
+		if err := bd.addBatchInfoEvents(tx, data.AddBatchInfoEvents); err != nil {
+			return err
+		}
+
+		err = bd.handleInnerActionLink(tx, data.MoveUnprocessedToProcessed, data.MovePendingToProcessed)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markExpectedTxs(
@@ -555,6 +594,51 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) movePendingToProcessed(
 
 		if err := pendingBucket.Delete(pendingTx.GetTxHash()); err != nil {
 			return fmt.Errorf("could not remove from pending txs: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) addBatchInfoEvents(
+	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
+) error {
+	for _, evt := range batchInfoEvents {
+		chainID := common.ToStrChainID(evt.ChainID)
+		if supported := bd.SupportedChains[chainID]; !supported {
+			return fmt.Errorf("unsupported chain: %s", chainID)
+		}
+
+		unprocessedBatchEventsBucket := tx.Bucket(ChainBucket(
+			UnprocessedBatchEventsBucket, chainID))
+
+		if err := unprocessedBatchEventsBucket.Delete(evt.DBKey()); err != nil {
+			return fmt.Errorf("could not remove unprocessed batch event: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) removeBatchInfoEvents(
+	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
+) error {
+	for _, evt := range batchInfoEvents {
+		chainID := common.ToStrChainID(evt.ChainID)
+		if supported := bd.SupportedChains[chainID]; !supported {
+			return fmt.Errorf("unsupported chain: %s", chainID)
+		}
+
+		unprocessedBatchEventsBucket := tx.Bucket(ChainBucket(
+			UnprocessedBatchEventsBucket, chainID))
+
+		bytes, err := json.Marshal(evt)
+		if err != nil {
+			return fmt.Errorf("could not marshal unprocessed batch event: %w", err)
+		}
+
+		if err = unprocessedBatchEventsBucket.Put(evt.DBKey(), bytes); err != nil {
+			return fmt.Errorf("unprocessed batch event write error: %w", err)
 		}
 	}
 

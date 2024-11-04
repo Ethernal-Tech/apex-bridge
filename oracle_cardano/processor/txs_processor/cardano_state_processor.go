@@ -58,6 +58,29 @@ func (sp *CardanoStateProcessor) Reset() {
 	sp.state = &perTickState{updateData: &core.CardanoUpdateTxsData{}}
 }
 
+func (sp *CardanoStateProcessor) ProcessSavedEvents() {
+	var batchEvents []*cCore.DBBatchInfoEvent
+
+	for _, chain := range sp.appConfig.CardanoChains {
+		chainBatchEvents, err := sp.db.GetUnprocessedBatchEvents(chain.ChainID)
+		if err != nil {
+			sp.logger.Error("Failed to get unprocessed batch events", "err", err)
+
+			continue
+		}
+
+		batchEvents = append(batchEvents, chainBatchEvents...)
+	}
+
+	if len(batchEvents) > 0 {
+		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
+
+		if len(processedBatchEvents) > 0 {
+			sp.state.updateData.RemoveBatchInfoEvents = processedBatchEvents
+		}
+	}
+}
+
 func (sp *CardanoStateProcessor) RunChecks(
 	bridgeClaims *cCore.BridgeClaims,
 	chainID string,
@@ -119,23 +142,29 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	}
 
 	if len(events.BatchExecutionInfo) > 0 {
-		sp.processBatchExecutionInfoEvent(events.BatchExecutionInfo)
+		_, skippedEvents := sp.processBatchExecutionInfoEvents(events.BatchExecutionInfo)
+		if len(skippedEvents) > 0 {
+			sp.state.updateData.AddBatchInfoEvents = skippedEvents
+		}
 	}
 }
 
-func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
-	events []*cCore.BatchExecutionInfoEvent,
-) {
+func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
+	events []*cCore.DBBatchInfoEvent,
+) (processedEvents []*cCore.DBBatchInfoEvent, skippedEvents []*cCore.DBBatchInfoEvent) {
 	newProcessedTxs := make([]cCore.BaseProcessedTx, 0)
 	newUnprocessedTxs := make([]cCore.BaseTx, 0)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
-			sp.logger.Error("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+			skippedEvents = append(skippedEvents, event)
+			sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
 
 			continue
 		}
+
+		processedEvents = append(processedEvents, event)
 
 		if event.IsFailedClaim {
 			for _, tx := range txs {
@@ -153,17 +182,19 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvent(
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
 	sp.state.updateData.MovePendingToUnprocessed = newUnprocessedTxs
+
+	return processedEvents, skippedEvents
 }
 
 func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
-	event *cCore.BatchExecutionInfoEvent,
+	event *cCore.DBBatchInfoEvent,
 ) ([]cCore.BaseTx, error) {
 	result := make([]cCore.BaseTx, len(event.TxHashes))
 
 	for idx, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			cCore.DBTxID{
-				ChainID: common.ToStrChainID(hash.SourceChainId),
+				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
@@ -242,20 +273,10 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 	}
 }
 
-func (sp *CardanoStateProcessor) PersistNew(
-	bridgeClaims *cCore.BridgeClaims,
-	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) {
-	err := sp.notifyBridgingRequestStateUpdater(bridgeClaims, bridgingRequestStateUpdater)
-	if err != nil {
-		sp.logger.Error("Error while updating bridging request states", "err", err)
-	}
-
-	// we should update db only if there are some changes needed
+func (sp *CardanoStateProcessor) PersistNew() {
 	if sp.state.updateData.Count() > 0 {
 		sp.logger.Info("Updating txs", "data", sp.state.updateData)
 
-		// see CardanoUpdateTxsData struct for comments
 		if err := sp.db.UpdateTxs(sp.state.updateData); err != nil {
 			sp.logger.Error("Failed to update txs", "err", err)
 		}
@@ -525,10 +546,10 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 		"invalidRelevantExpiredTxs", invalidRelevantExpiredTxs)
 }
 
-func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
+func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 	bridgeClaims *cCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-) error {
+) {
 	if len(bridgeClaims.BridgingRequestClaims) > 0 {
 		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
 		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
@@ -603,6 +624,4 @@ func (sp *CardanoStateProcessor) notifyBridgingRequestStateUpdater(
 			}
 		}
 	}
-
-	return nil
 }
