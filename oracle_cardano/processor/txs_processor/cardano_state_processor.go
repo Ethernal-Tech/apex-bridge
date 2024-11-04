@@ -73,9 +73,12 @@ func (sp *CardanoStateProcessor) ProcessSavedEvents() {
 	}
 
 	if len(batchEvents) > 0 {
+		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "events", batchEvents)
+
 		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
 
 		if len(processedBatchEvents) > 0 {
+			sp.logger.Debug("Removing BatchExecutionInfoEvent events from db", "events", processedBatchEvents)
 			sp.state.updateData.RemoveBatchInfoEvents = processedBatchEvents
 		}
 	}
@@ -144,6 +147,7 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.BatchExecutionInfo) > 0 {
 		_, skippedEvents := sp.processBatchExecutionInfoEvents(events.BatchExecutionInfo)
 		if len(skippedEvents) > 0 {
+			sp.logger.Debug("Storing BatchExecutionInfoEvent events", "events", skippedEvents)
 			sp.state.updateData.AddBatchInfoEvents = skippedEvents
 		}
 	}

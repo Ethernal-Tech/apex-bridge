@@ -612,8 +612,13 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) addBatchInfoEvents(
 		unprocessedBatchEventsBucket := tx.Bucket(ChainBucket(
 			UnprocessedBatchEventsBucket, chainID))
 
-		if err := unprocessedBatchEventsBucket.Delete(evt.DBKey()); err != nil {
-			return fmt.Errorf("could not remove unprocessed batch event: %w", err)
+		bytes, err := json.Marshal(evt)
+		if err != nil {
+			return fmt.Errorf("could not marshal unprocessed batch event: %w", err)
+		}
+
+		if err = unprocessedBatchEventsBucket.Put(evt.DBKey(), bytes); err != nil {
+			return fmt.Errorf("unprocessed batch event write error: %w", err)
 		}
 	}
 
@@ -632,13 +637,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) removeBatchInfoEvents(
 		unprocessedBatchEventsBucket := tx.Bucket(ChainBucket(
 			UnprocessedBatchEventsBucket, chainID))
 
-		bytes, err := json.Marshal(evt)
-		if err != nil {
-			return fmt.Errorf("could not marshal unprocessed batch event: %w", err)
-		}
-
-		if err = unprocessedBatchEventsBucket.Put(evt.DBKey(), bytes); err != nil {
-			return fmt.Errorf("unprocessed batch event write error: %w", err)
+		if err := unprocessedBatchEventsBucket.Delete(evt.DBKey()); err != nil {
+			return fmt.Errorf("could not remove unprocessed batch event: %w", err)
 		}
 	}
 
