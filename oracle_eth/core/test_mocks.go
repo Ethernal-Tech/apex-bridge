@@ -256,7 +256,7 @@ var _ EthTxFailedProcessor = (*EthTxFailedProcessorMock)(nil)
 
 type BridgeSubmitterMock struct {
 	mock.Mock
-	OnSubmitClaims          func(claims *oCore.BridgeClaims)
+	OnSubmitClaims          func(claims *oCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
 }
 
@@ -264,7 +264,7 @@ type BridgeSubmitterMock struct {
 func (m *BridgeSubmitterMock) SubmitClaims(
 	claims *oCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
 	if m.OnSubmitClaims != nil {
-		m.OnSubmitClaims(claims)
+		return m.OnSubmitClaims(claims)
 	}
 
 	args := m.Called(claims, submitOpts)

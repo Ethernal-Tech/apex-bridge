@@ -643,11 +643,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -708,11 +710,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -776,11 +780,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -873,11 +879,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -970,11 +978,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -1418,30 +1428,37 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
-			Logs: []*types.Log{
-				{
-					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntNexus,
-						[]*contractbinding.IBridgeStructsTxDataInfo{
-							{
-								SourceChainId:           common.ChainIDIntNexus,
-								ObservedTransactionHash: txHash1,
-							},
-						}),
+		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
+			if len(claims.BatchExecutedClaims) == 0 && len(claims.BatchExecutionFailedClaims) == 0 {
+				return &types.Receipt{}, nil
+			}
+
+			return &types.Receipt{
+				Logs: []*types.Log{
+					{
+						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+						Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntNexus,
+							[]*contractbinding.IBridgeStructsTxDataInfo{
+								{
+									SourceChainId:           common.ChainIDIntNexus,
+									ObservedTransactionHash: txHash1,
+								},
+							}),
+					},
+					{
+						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+						Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntNexus,
+							[]*contractbinding.IBridgeStructsTxDataInfo{
+								{
+									SourceChainId:           common.ChainIDIntNexus,
+									ObservedTransactionHash: txHash2,
+								},
+							}),
+					},
 				},
-				{
-					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntNexus,
-						[]*contractbinding.IBridgeStructsTxDataInfo{
-							{
-								SourceChainId:           common.ChainIDIntNexus,
-								ObservedTransactionHash: txHash2,
-							},
-						}),
-				},
-			},
-		}, nil)
+			}, nil
+		}
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newEthTxsProcessor(

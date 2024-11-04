@@ -185,7 +185,7 @@ var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
 
 type BridgeSubmitterMock struct {
 	mock.Mock
-	OnSubmitClaims          func(claims *cCore.BridgeClaims)
+	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
 }
 
@@ -193,7 +193,7 @@ type BridgeSubmitterMock struct {
 func (m *BridgeSubmitterMock) SubmitClaims(
 	claims *cCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
 	if m.OnSubmitClaims != nil {
-		m.OnSubmitClaims(claims)
+		return m.OnSubmitClaims(claims)
 	}
 
 	args := m.Called(claims, submitOpts)

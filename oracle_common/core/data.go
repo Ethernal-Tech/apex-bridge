@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"encoding/binary"
 	"math"
 	"reflect"
 	"time"
@@ -107,7 +107,10 @@ func ToDBBatchInfo(event *BatchExecutionInfoEvent) *DBBatchInfoEvent {
 }
 
 func (e *DBBatchInfoEvent) DBKey() []byte {
-	return []byte(fmt.Sprintf("%v", e.BatchID))
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, e.BatchID)
+
+	return key
 }
 
 type ProcessedTxByInnerAction struct {
