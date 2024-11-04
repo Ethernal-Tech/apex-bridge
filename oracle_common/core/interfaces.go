@@ -14,6 +14,7 @@ type BaseTx interface {
 	UnprocessedDBKey() []byte
 	SetLastTimeTried(lastTimeTried time.Time)
 	IncrementTryCount()
+	IncrementBatchFailedCount()
 	ToProcessed(isInvalid bool) BaseProcessedTx
 	GetTryCount() uint32
 	GetPriority() uint8

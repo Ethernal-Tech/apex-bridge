@@ -171,6 +171,7 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 
 		if event.IsFailedClaim {
 			for _, tx := range txs {
+				tx.IncrementBatchFailedCount()
 				tx.IncrementTryCount()
 				tx.SetLastTimeTried(time.Time{})
 				newUnprocessedTxs = append(newUnprocessedTxs, tx)

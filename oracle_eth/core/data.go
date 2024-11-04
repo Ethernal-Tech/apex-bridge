@@ -10,10 +10,11 @@ import (
 )
 
 type EthTx struct {
-	OriginChainID string    `json:"origin_chain_id"`
-	Priority      uint8     `json:"priority"`
-	TryCount      uint32    `json:"try_count"`
-	LastTimeTried time.Time `json:"last_time_tried"`
+	OriginChainID    string    `json:"origin_chain_id"`
+	Priority         uint8     `json:"priority"`
+	TryCount         uint32    `json:"try_count"`
+	BatchFailedCount uint32    `json:"bf_count"`
+	LastTimeTried    time.Time `json:"last_time_tried"`
 
 	BlockNumber     uint64        `json:"block_number"`
 	BlockHash       ethgo.Hash    `json:"block_hash"`
@@ -96,6 +97,11 @@ func (tx *EthTx) SetLastTimeTried(lastTimeTried time.Time) {
 // IncrementTryCount implements core.BaseTx.
 func (tx *EthTx) IncrementTryCount() {
 	tx.TryCount++
+}
+
+// IncrementBatchFailedCount implements core.BaseTx.
+func (tx *EthTx) IncrementBatchFailedCount() {
+	tx.BatchFailedCount++
 }
 
 // PendingDBKey implements core.BaseTx.
