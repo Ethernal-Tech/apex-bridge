@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/ethgo"
@@ -258,6 +259,15 @@ type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *oCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
+}
+
+// GetBatchTransactions implements BridgeSubmitter.
+func (m *BridgeSubmitterMock) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]contractbinding.IBridgeStructsTxDataInfo, error) {
+	args := m.Called(chainID, batchID)
+
+	return args.Get(0).([]contractbinding.IBridgeStructsTxDataInfo), args.Error(1) //nolint
 }
 
 // SubmitClaims implements BridgeSubmitter.

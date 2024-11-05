@@ -55,6 +55,7 @@ type SpecificChainTxsProcessorState interface {
 
 type BridgeClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error)
+	GetBatchTransactions(chainID string, batchID uint64) ([]eth.TxDataInfo, error)
 }
 
 type ExpectedTxsFetcher interface {

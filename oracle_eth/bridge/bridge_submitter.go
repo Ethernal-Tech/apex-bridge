@@ -45,6 +45,21 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(
 	return receipt, nil
 }
 
+func (bs *BridgeSubmitterImpl) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]eth.TxDataInfo, error) {
+	txs, err := bs.bridgeSC.GetBatchTransactions(bs.ctx, chainID, batchID)
+	if err != nil {
+		bs.logger.Error("Failed to retrieve batch transactions", "chainID", chainID, "batchID", batchID, "err", err)
+
+		return nil, err
+	}
+
+	bs.logger.Info("Batch transactions retrieved", "chainID", chainID, "batchID", batchID, "txs", len(txs))
+
+	return txs, nil
+}
+
 func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, from uint64, to uint64,
 ) error {
 	contractBlocks := make([]eth.CardanoBlock, 0, to-from+1)

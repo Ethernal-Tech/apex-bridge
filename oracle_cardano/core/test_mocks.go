@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -187,6 +188,15 @@ type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
+}
+
+// GetBatchTransactions implements BridgeSubmitter.
+func (m *BridgeSubmitterMock) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]contractbinding.IBridgeStructsTxDataInfo, error) {
+	args := m.Called(chainID, batchID)
+
+	return args.Get(0).([]contractbinding.IBridgeStructsTxDataInfo), args.Error(1) //nolint
 }
 
 // SubmitClaims implements BridgeSubmitter.
