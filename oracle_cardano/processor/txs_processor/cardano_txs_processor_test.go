@@ -514,6 +514,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(

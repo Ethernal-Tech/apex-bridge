@@ -117,15 +117,15 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 	}
 
 	if bridgeClaims.Count() > 0 {
-		receipt, ok := p.submitClaims(startChainID, bridgeClaims)
-		if !ok {
-			return
-		}
-
 		batchTxs, err := p.retrieveTxsForEachBatchFromClaims(bridgeClaims)
 		if err != nil {
 			p.logger.Error("retrieving txs for submitted batches", "err", err)
 
+			return
+		}
+
+		receipt, ok := p.submitClaims(startChainID, bridgeClaims)
+		if !ok {
 			return
 		}
 
