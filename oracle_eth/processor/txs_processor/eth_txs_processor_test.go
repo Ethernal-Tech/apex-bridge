@@ -85,6 +85,7 @@ func newValidProcessor(
 func TestEthTxsProcessor(t *testing.T) {
 	appConfig := &oCore.AppConfig{
 		EthChains: map[string]*oCore.EthChainConfig{
+			common.ChainIDStrPrime: {},
 			common.ChainIDStrNexus: {},
 		},
 		BridgingSettings: oCore.BridgingSettings{
@@ -1375,7 +1376,7 @@ func TestEthTxsProcessor(t *testing.T) {
 	t.Run("Start - BatchExecutionInfoEvent", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		originChainID := common.ChainIDStrNexus
+		originChainID := common.ChainIDStrPrime
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BridgingRequestEthMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
@@ -1391,7 +1392,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash2 := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
 		ethTx2 := &ethcore.EthTx{Hash: txHash2, OriginChainID: originChainID, Address: ethgo.Address{}}
 
-		txHashBatch := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f63")
+		txHashBatch1 := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f63")
+		txHashBatch2 := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f64")
 
 		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
 
@@ -1425,10 +1427,15 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		becProc := &ethcore.EthTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
+				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, oCore.BatchExecutionFailedClaim{
+					ObservedTransactionHash: txHashBatch1,
+					BatchNonceId:            1,
+					ChainId:                 common.ChainIDIntPrime,
+				})
 				claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oCore.BatchExecutedClaim{
-					ObservedTransactionHash: txHashBatch,
+					ObservedTransactionHash: txHashBatch2,
 					BatchNonceId:            2,
-					ChainId:                 common.ChainIDIntVector,
+					ChainId:                 common.ChainIDIntPrime,
 				})
 			},
 			Type: common.BridgingTxTypeBatchExecution,
@@ -1445,17 +1452,17 @@ func TestEthTxsProcessor(t *testing.T) {
 			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
-		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x1)).
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x1)).
 			Return([]eth.TxDataInfo{
 				{
-					SourceChainId:           common.ChainIDIntNexus,
+					SourceChainId:           common.ChainIDIntPrime,
 					ObservedTransactionHash: txHash1,
 				},
 			}, error(nil))
-		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
-					SourceChainId:           common.ChainIDIntNexus,
+					SourceChainId:           common.ChainIDIntPrime,
 					ObservedTransactionHash: txHash2,
 				},
 			}, error(nil))
@@ -1476,17 +1483,26 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		depositEventSig := events[0]
 
-		data := simulateRealData()
-		log := &ethgo.Log{
+		log1 := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
-			TransactionHash: txHashBatch,
-			Data:            data,
+			TransactionHash: txHashBatch1,
+			Data:            simulateRealData(),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
 		}
 
-		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
+		log2 := &ethgo.Log{
+			BlockHash:       ethgo.Hash{1},
+			TransactionHash: txHashBatch2,
+			Data:            simulateRealData(),
+			Topics: []ethgo.Hash{
+				depositEventSig,
+			},
+		}
+
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log1))
+		require.NoError(t, rec.NewUnprocessedLog(originChainID, log2))
 
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
