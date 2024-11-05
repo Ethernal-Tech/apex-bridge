@@ -102,6 +102,10 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 
 		oldStatus := state.Status
 
+		if state.DestinationChainID == "" {
+			state.DestinationChainID = destinationChainID
+		}
+
 		if state.DestinationChainID != destinationChainID {
 			errs = append(errs,
 				fmt.Errorf(
