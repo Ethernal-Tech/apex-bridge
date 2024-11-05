@@ -122,15 +122,17 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 			return
 		}
 
+		batchTxs, err := p.retrieveTxsForEachBatchFromClaims(bridgeClaims)
+		if err != nil {
+			p.logger.Error("retrieving txs for submitted batches", "err", err)
+
+			return
+		}
+
 		events, err := p.extractEventsFromReceipt(receipt)
 		if err != nil {
 			p.logger.Error("extracting events from submit claims receipt", "err", err)
 		} else {
-			batchTxs, err := p.retrieveTxsForEachBatchFromClaims(bridgeClaims)
-			if err != nil {
-				p.logger.Error("retrieving txs for submitted batches", "err", err)
-			}
-
 			events.BatchExecutionInfo = batchTxs
 			p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
 		}
