@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -28,11 +27,21 @@ func (m *CardanoTxsReceiverMock) NewUnprocessedTxs(originChainID string, txs []*
 	return args.Error(0)
 }
 
-type BridgeDataFetcherMock struct {
+type CardanoBridgeDataFetcherMock struct {
 	mock.Mock
 }
 
-func (m *BridgeDataFetcherMock) FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error) {
+// GetBatchTransactions implements CardanoBridgeDataFetcher.
+func (m *CardanoBridgeDataFetcherMock) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]eth.TxDataInfo, error) {
+	args := m.Called(chainID, batchID)
+
+	return args.Get(0).([]eth.TxDataInfo), args.Error(1) //nolint
+}
+
+// FetchLatestBlockPoint implements CardanoBridgeDataFetcher.
+func (m *CardanoBridgeDataFetcherMock) FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error) {
 	args := m.Called(chainID)
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).(*indexer.BlockPoint)
@@ -43,8 +52,8 @@ func (m *BridgeDataFetcherMock) FetchLatestBlockPoint(chainID string) (*indexer.
 	return nil, args.Error(1)
 }
 
-// FetchExpectedTxs implements BridgeDataFetcher.
-func (m *BridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error) {
+// FetchExpectedTxs implements CardanoBridgeDataFetcher.
+func (m *CardanoBridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error) {
 	args := m.Called(chainID)
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).(*BridgeExpectedCardanoTx)
@@ -55,7 +64,7 @@ func (m *BridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpected
 	return nil, args.Error(1)
 }
 
-var _ BridgeDataFetcher = (*BridgeDataFetcherMock)(nil)
+var _ CardanoBridgeDataFetcher = (*CardanoBridgeDataFetcherMock)(nil)
 
 type CardanoTxsProcessorDBMock struct {
 	mock.Mock
@@ -188,15 +197,6 @@ type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
-}
-
-// GetBatchTransactions implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) GetBatchTransactions(
-	chainID string, batchID uint64,
-) ([]contractbinding.IBridgeStructsTxDataInfo, error) {
-	args := m.Called(chainID, batchID)
-
-	return args.Get(0).([]contractbinding.IBridgeStructsTxDataInfo), args.Error(1) //nolint
 }
 
 // SubmitClaims implements BridgeSubmitter.

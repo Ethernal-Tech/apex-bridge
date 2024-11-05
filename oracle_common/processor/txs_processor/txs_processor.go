@@ -22,6 +22,7 @@ type TxsProcessorImpl struct {
 	appConfig                   *core.AppConfig
 	stateProcessor              core.SpecificChainTxsProcessorState
 	settings                    *txsProcessorSettings
+	bridgeDataFetcher           core.BridgeDataFetcher
 	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
@@ -34,6 +35,7 @@ func NewTxsProcessorImpl(
 	ctx context.Context,
 	appConfig *core.AppConfig,
 	stateProcessor core.SpecificChainTxsProcessorState,
+	bridgeDataFetcher core.BridgeDataFetcher,
 	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -43,6 +45,7 @@ func NewTxsProcessorImpl(
 		stateProcessor:              stateProcessor,
 		appConfig:                   appConfig,
 		settings:                    NewTxsProcessorSettings(appConfig, stateProcessor.GetChainType()),
+		bridgeDataFetcher:           bridgeDataFetcher,
 		bridgeSubmitter:             bridgeSubmitter,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		logger:                      logger,
@@ -148,7 +151,7 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	addInfo := func(chainIDInt uint8, batchID uint64, isFailedClaim bool) error {
 		chainID := common.ToStrChainID(chainIDInt)
 
-		txs, err := p.bridgeSubmitter.GetBatchTransactions(chainID, batchID)
+		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve txs for batch: chainID = %s, batchID = %d, failed = %v, err = %w",
 				chainID, batchID, isFailedClaim, err)

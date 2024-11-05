@@ -34,6 +34,7 @@ func newEthTxsProcessor(
 	db ethcore.EthTxsProcessorDB,
 	successTxProcessors []ethcore.EthTxSuccessProcessor,
 	failedTxProcessors []ethcore.EthTxFailedProcessor,
+	bridgeDataFetcher ethcore.EthBridgeDataFetcher,
 	bridgeSubmitter ethcore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -50,7 +51,7 @@ func newEthTxsProcessor(
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, ethStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
+		ctx, appConfig, ethStateProcessor, bridgeDataFetcher, bridgeSubmitter, bridgingRequestStateUpdater,
 		hclog.NewNullLogger(),
 	)
 
@@ -63,6 +64,7 @@ func newValidProcessor(
 	oracleDB ethcore.Database,
 	successTxProcessor ethcore.EthTxSuccessProcessor,
 	failedTxProcessor ethcore.EthTxFailedProcessor,
+	bridgeDataFetcher ethcore.EthBridgeDataFetcher,
 	bridgeSubmitter ethcore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -79,7 +81,7 @@ func newValidProcessor(
 
 	return newEthTxsProcessor(
 		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
-		bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
+		bridgeDataFetcher, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
 }
 
 func TestEthTxsProcessor(t *testing.T) {
@@ -130,7 +132,7 @@ func TestEthTxsProcessor(t *testing.T) {
 	t.Run("TestEthTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
-		proc, rec := newEthTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil)
+		proc, rec := newEthTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 		require.NotNil(t, rec)
 
@@ -142,6 +144,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			&ethcore.EthTxsProcessorDBMock{},
 			[]ethcore.EthTxSuccessProcessor{},
 			[]ethcore.EthTxFailedProcessor{},
+			&ethcore.EthBridgeDataFetcherMock{},
 			&ethcore.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -164,7 +167,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, &ethcore.EthBridgeDataFetcherMock{}, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -189,7 +192,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			nil, nil, nil,
+			nil, nil, nil, nil,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -216,7 +219,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, nil, nil,
+			validTxProc, nil, nil, nil,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -247,7 +250,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, nil, nil,
+			validTxProc, nil, nil, nil,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -292,6 +295,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -302,7 +308,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -356,6 +362,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
@@ -366,7 +375,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -420,6 +429,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -430,7 +442,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -491,6 +503,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -501,7 +516,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -566,6 +581,9 @@ func TestEthTxsProcessor(t *testing.T) {
 		failedTxProc := &ethcore.EthTxFailedProcessorMock{Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
@@ -576,7 +594,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -643,6 +661,9 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*oCore.BridgeClaims
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -658,7 +679,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -710,6 +731,10 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*oCore.BridgeClaims
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -718,8 +743,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -727,7 +750,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -782,6 +805,10 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*oCore.BridgeClaims
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -790,8 +817,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -800,7 +825,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -883,6 +908,10 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*oCore.BridgeClaims
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -891,8 +920,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -901,7 +928,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -984,6 +1011,10 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*oCore.BridgeClaims
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -992,8 +1023,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -1002,7 +1031,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1113,11 +1142,13 @@ func TestEthTxsProcessor(t *testing.T) {
 		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBridgingRequest}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -1125,7 +1156,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1226,11 +1257,13 @@ func TestEthTxsProcessor(t *testing.T) {
 			},
 		}
 
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(receipt, nil)
-		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
 
 		contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
 		require.NoError(t, err)
@@ -1269,7 +1302,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1312,7 +1345,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, _ = newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1349,7 +1382,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc, _ = newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1442,18 +1475,15 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).
-			Return(&types.Receipt{}, nil)
-		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x1)).
+		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x1)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
 					ObservedTransactionHash: txHash1,
 				},
 			}, error(nil))
-		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x2)).
+		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x2)).
 			Return([]eth.TxDataInfo{
 				{
 					SourceChainId:           common.ChainIDIntPrime,
@@ -1461,11 +1491,16 @@ func TestEthTxsProcessor(t *testing.T) {
 				},
 			}, error(nil))
 
+		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+		bridgeSubmitter.On("Dispose").Return(nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.Receipt{}, nil)
+
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newEthTxsProcessor(
 			ctx,
 			appConfig, oracleDB,
-			[]ethcore.EthTxSuccessProcessor{brcProc, becProc}, nil, bridgeSubmitter,
+			[]ethcore.EthTxSuccessProcessor{brcProc, becProc}, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
