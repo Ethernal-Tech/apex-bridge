@@ -641,6 +641,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -711,6 +713,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -797,6 +801,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything)
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -880,6 +886,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -969,6 +977,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1054,6 +1064,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1150,6 +1162,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1239,6 +1253,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1334,6 +1350,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(receipt, nil)
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
 		require.NoError(t, err)
@@ -1508,6 +1526,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch}
+		txBatchFailed := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFFBBAA")), Metadata: metadataBatch}
 
 		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
@@ -1527,13 +1546,15 @@ func TestCardanoTxsProcessor(t *testing.T) {
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntVector,
 				})
+				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{
+					ObservedTransactionHash: txBatchFailed.Hash,
+					BatchNonceId:            1,
+					ChainId:                 common.ChainIDIntVector,
+				})
 			},
 			Type: common.BridgingTxTypeBatchExecution,
 		}
 		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
-		require.NoError(t, err)
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
@@ -1542,33 +1563,24 @@ func TestCardanoTxsProcessor(t *testing.T) {
 				return &types.Receipt{}, nil
 			}
 
-			return &types.Receipt{
-				Logs: []*types.Log{
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntPrime,
-									ObservedTransactionHash: tx1.Hash,
-								},
-							}),
-					},
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntPrime,
-									ObservedTransactionHash: tx2.Hash,
-								},
-							}),
-					},
-				},
-			}, nil
+			return &types.Receipt{}, nil
 		}
 
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x1)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntPrime,
+					ObservedTransactionHash: tx1.Hash,
+				},
+			}, error(nil))
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntPrime,
+					ObservedTransactionHash: tx2.Hash,
+				},
+			}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newCardanoTxsProcessor(
@@ -1581,7 +1593,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch}))
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch, txBatchFailed}))
 
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
@@ -1611,50 +1623,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, processedTx2)
 		require.Equal(t, processedTx2.Hash, cardanoTx2.Hash)
 	})
-}
-
-func getBatchExecutionReceipt(
-	t *testing.T,
-	batchID uint64,
-	isFailedTx bool,
-	chainID uint8,
-	txHashes []*contractbinding.IBridgeStructsTxDataInfo,
-) []byte {
-	t.Helper()
-
-	events, err := eth.GetSubmitClaimsEventSignatures()
-	require.NoError(t, err)
-
-	batchExecInfo := events[1]
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
-	require.NoError(t, err)
-
-	eventAbi, err := abi.EventByID(ethereum_common.Hash(batchExecInfo))
-	require.NoError(t, err)
-
-	type TxDataInfo struct {
-		SourceChainID           uint8    `json:"sourceChainId" abi:"sourceChainId"`
-		ObservedTransactionHash [32]byte `json:"observedTransactionHash" abi:"observedTransactionHash"`
-	}
-
-	txDataInfo := make([]TxDataInfo, len(txHashes))
-
-	for idx, info := range txHashes {
-		txDataInfo[idx] = TxDataInfo{
-			SourceChainID:           info.SourceChainId,
-			ObservedTransactionHash: info.ObservedTransactionHash,
-		}
-	}
-
-	receiptData, err := eventAbi.Inputs.Pack(
-		batchID,
-		chainID,
-		isFailedTx,
-		txDataInfo,
-	)
-	require.NoError(t, err)
-
-	return receiptData
 }
 
 var (
