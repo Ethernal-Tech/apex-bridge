@@ -717,6 +717,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -787,6 +789,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -886,6 +890,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -985,6 +991,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
@@ -1107,6 +1115,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
@@ -1218,6 +1228,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(receipt, nil)
+		bridgeSubmitter.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
 
 		contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
 		require.NoError(t, err)
@@ -1423,9 +1435,6 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
-		require.NoError(t, err)
-
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
@@ -1433,32 +1442,23 @@ func TestEthTxsProcessor(t *testing.T) {
 				return &types.Receipt{}, nil
 			}
 
-			return &types.Receipt{
-				Logs: []*types.Log{
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntNexus,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntNexus,
-									ObservedTransactionHash: txHash1,
-								},
-							}),
-					},
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntNexus,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntNexus,
-									ObservedTransactionHash: txHash2,
-								},
-							}),
-					},
-				},
-			}, nil
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x1)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntNexus,
+					ObservedTransactionHash: txHash1,
+				},
+			}, error(nil))
+		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntNexus,
+					ObservedTransactionHash: txHash2,
+				},
+			}, error(nil))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newEthTxsProcessor(
@@ -1570,50 +1570,6 @@ func simulateRealData() []byte {
 		0, 0, 0, 0, 0, 0, 0, 0,
 		13, 224, 182, 179, 167, 100, 0, 0,
 	}
-}
-
-func getBatchExecutionReceipt(
-	t *testing.T,
-	batchID uint64,
-	isFailedTx bool,
-	chainID uint8,
-	txHashes []*contractbinding.IBridgeStructsTxDataInfo,
-) []byte {
-	t.Helper()
-
-	events, err := eth.GetSubmitClaimsEventSignatures()
-	require.NoError(t, err)
-
-	batchExecInfo := events[1]
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
-	require.NoError(t, err)
-
-	eventAbi, err := abi.EventByID(ethereum_common.Hash(batchExecInfo))
-	require.NoError(t, err)
-
-	type TxDataInfo struct {
-		SourceChainID           uint8    `json:"sourceChainId" abi:"sourceChainId"`
-		ObservedTransactionHash [32]byte `json:"observedTransactionHash" abi:"observedTransactionHash"`
-	}
-
-	txDataInfo := make([]TxDataInfo, len(txHashes))
-
-	for idx, info := range txHashes {
-		txDataInfo[idx] = TxDataInfo{
-			SourceChainID:           info.SourceChainId,
-			ObservedTransactionHash: info.ObservedTransactionHash,
-		}
-	}
-
-	receiptData, err := eventAbi.Inputs.Pack(
-		batchID,
-		chainID,
-		isFailedTx,
-		txDataInfo,
-	)
-	require.NoError(t, err)
-
-	return receiptData
 }
 
 type ReceiverWithdraw struct {
