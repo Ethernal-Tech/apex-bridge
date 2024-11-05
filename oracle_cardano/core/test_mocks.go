@@ -60,6 +60,18 @@ type CardanoTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// GetUnprocessedBatchEvents implements EthTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetUnprocessedBatchEvents(chainID string) ([]*cCore.DBBatchInfoEvent, error) {
+	args := m.Called(chainID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*cCore.DBBatchInfoEvent)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 // AddExpectedTxs implements CardanoTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpectedCardanoTx) error {
 	args := m.Called(expectedTxs)
@@ -173,7 +185,7 @@ var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
 
 type BridgeSubmitterMock struct {
 	mock.Mock
-	OnSubmitClaims          func(claims *cCore.BridgeClaims)
+	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
 }
 
@@ -181,7 +193,7 @@ type BridgeSubmitterMock struct {
 func (m *BridgeSubmitterMock) SubmitClaims(
 	claims *cCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
 	if m.OnSubmitClaims != nil {
-		m.OnSubmitClaims(claims)
+		return m.OnSubmitClaims(claims)
 	}
 
 	args := m.Called(claims, submitOpts)

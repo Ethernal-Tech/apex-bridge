@@ -571,11 +571,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -632,11 +634,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, _ := newValidProcessor(
@@ -700,11 +704,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -784,11 +790,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -865,11 +873,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -952,11 +962,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1035,11 +1047,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1129,11 +1143,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) {
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
+
+			return &types.Receipt{}, nil
 		}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
@@ -1521,30 +1537,38 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return(&types.Receipt{
-			Logs: []*types.Log{
-				{
-					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
-						[]*contractbinding.IBridgeStructsTxDataInfo{
-							{
-								SourceChainId:           common.ChainIDIntPrime,
-								ObservedTransactionHash: tx1.Hash,
-							},
-						}),
+		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
+			if len(claims.BatchExecutedClaims) == 0 && len(claims.BatchExecutionFailedClaims) == 0 {
+				return &types.Receipt{}, nil
+			}
+
+			return &types.Receipt{
+				Logs: []*types.Log{
+					{
+						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+						Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
+							[]*contractbinding.IBridgeStructsTxDataInfo{
+								{
+									SourceChainId:           common.ChainIDIntPrime,
+									ObservedTransactionHash: tx1.Hash,
+								},
+							}),
+					},
+					{
+						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
+						Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
+							[]*contractbinding.IBridgeStructsTxDataInfo{
+								{
+									SourceChainId:           common.ChainIDIntPrime,
+									ObservedTransactionHash: tx2.Hash,
+								},
+							}),
+					},
 				},
-				{
-					Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-					Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
-						[]*contractbinding.IBridgeStructsTxDataInfo{
-							{
-								SourceChainId:           common.ChainIDIntPrime,
-								ObservedTransactionHash: tx2.Hash,
-							},
-						}),
-				},
-			},
-		}, nil)
+			}, nil
+		}
+
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newCardanoTxsProcessor(

@@ -96,11 +96,15 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 	startChainID string,
 ) {
 	p.stateProcessor.Reset()
+	p.stateProcessor.ProcessSavedEvents()
+	p.stateProcessor.PersistNew()
 
 	var (
 		bridgeClaims     = &core.BridgeClaims{}
 		maxClaimsToGroup = p.settings.maxBridgingClaimsToGroup[startChainID]
 	)
+
+	p.stateProcessor.Reset()
 
 	p.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup)
 
@@ -126,7 +130,8 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 		}
 	}
 
-	p.stateProcessor.PersistNew(bridgeClaims, p.bridgingRequestStateUpdater)
+	p.stateProcessor.UpdateBridgingRequestStates(bridgeClaims, p.bridgingRequestStateUpdater)
+	p.stateProcessor.PersistNew()
 }
 
 func (p *TxsProcessorImpl) processAllForChain(
@@ -213,7 +218,10 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 				return nil, fmt.Errorf("failed parsing batchExecutionInfo log. err: %w", err)
 			}
 
-			events.BatchExecutionInfo = append(events.BatchExecutionInfo, batchExecutionInfo)
+			events.BatchExecutionInfo = append(
+				events.BatchExecutionInfo,
+				core.ToDBBatchInfo(batchExecutionInfo),
+			)
 		default:
 			p.logger.Debug("unsupported event signature", "eventSig", eventSig)
 		}

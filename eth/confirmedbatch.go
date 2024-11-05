@@ -35,27 +35,6 @@ func NewConfirmedBatch(
 	}, nil
 }
 
-func BatchToString(b SignedBatch) string {
-	var sb strings.Builder
-
-	sb.WriteString("id = ")
-	sb.WriteString(fmt.Sprint(b.Id))
-	sb.WriteString("\ndestination chain id = ")
-	sb.WriteString(common.ToStrChainID(b.DestinationChainId))
-	sb.WriteString("\nraw tx = ")
-	sb.WriteString(hex.EncodeToString(b.RawTransaction))
-	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(hex.EncodeToString(b.Signature))
-	sb.WriteString("\nfee payer multisig signature = ")
-	sb.WriteString(hex.EncodeToString(b.FeeSignature))
-	sb.WriteString("\nfirst tx nonce id = ")
-	sb.WriteString(fmt.Sprint(b.FirstTxNonceId))
-	sb.WriteString("\nlast tx nonce id = ")
-	sb.WriteString(fmt.Sprint(b.LastTxNonceId))
-
-	return sb.String()
-}
-
 func (b ConfirmedBatch) String() string {
 	var sb strings.Builder
 
@@ -87,6 +66,66 @@ func (b ConfirmedBatch) String() string {
 	}
 
 	sb.WriteString("]")
+
+	return sb.String()
+}
+
+type ConfirmedTransactionsWrapper struct {
+	Txs []ConfirmedTransaction
+}
+
+func (ct ConfirmedTransactionsWrapper) String() string {
+	var sb strings.Builder
+
+	for i, tx := range ct.Txs {
+		if i > 0 {
+			sb.WriteString("\n")
+		}
+
+		sb.WriteString(fmt.Sprintf("Chain ID = %s, ", common.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Tx Hash = %s, ", hex.EncodeToString(tx.ObservedTransactionHash[:])))
+		sb.WriteString(fmt.Sprintf("Block = %s, ", tx.BlockHeight))
+		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
+		sb.WriteString(fmt.Sprintf("Total = %s, ", tx.TotalAmount))
+		sb.WriteString("Receivers = [")
+
+		for j, recv := range tx.Receivers {
+			if j > 0 {
+				sb.WriteString(", ")
+			}
+
+			sb.WriteString("(")
+			sb.WriteString(recv.DestinationAddress)
+			sb.WriteString(fmt.Sprintf(", %d)", recv.Amount))
+		}
+
+		sb.WriteString("]")
+	}
+
+	return sb.String()
+}
+
+type SignedBatchWrapper struct {
+	*SignedBatch
+}
+
+func (sbw SignedBatchWrapper) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(fmt.Sprint(sbw.Id))
+	sb.WriteString("\ndestination chain id = ")
+	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
+	sb.WriteString("\nraw tx = ")
+	sb.WriteString(hex.EncodeToString(sbw.RawTransaction))
+	sb.WriteString("\nmultisig signature = ")
+	sb.WriteString(hex.EncodeToString(sbw.Signature))
+	sb.WriteString("\nfee payer multisig signature = ")
+	sb.WriteString(hex.EncodeToString(sbw.FeeSignature))
+	sb.WriteString("\nfirst tx nonce id = ")
+	sb.WriteString(fmt.Sprint(sbw.FirstTxNonceId))
+	sb.WriteString("\nlast tx nonce id = ")
+	sb.WriteString(fmt.Sprint(sbw.LastTxNonceId))
 
 	return sb.String()
 }

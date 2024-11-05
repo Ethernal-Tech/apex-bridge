@@ -14,6 +14,7 @@ var (
 	PendingTxsBucket                = "PendingTxs"
 	ProcessedTxsBucket              = "ProcessedTxs"
 	ExpectedTxsBucket               = "ExpectedTxs"
+	UnprocessedBatchEventsBucket    = "UnprocessedBatchEvents"
 	ProcessedTxsByInnerActionBucket = "ProcessedTxsByInnerAction"
 )
 
@@ -71,5 +72,6 @@ func defaultChainBuckets(chainID string) [][]byte {
 		ChainBucket(PendingTxsBucket, chainID),
 		ChainBucket(ProcessedTxsBucket, chainID),
 		ChainBucket(ExpectedTxsBucket, chainID),
+		ChainBucket(UnprocessedBatchEventsBucket, chainID),
 	}
 }
