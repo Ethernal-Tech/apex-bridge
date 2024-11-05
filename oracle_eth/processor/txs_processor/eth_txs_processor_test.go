@@ -1444,14 +1444,8 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
-			if len(claims.BatchExecutedClaims) == 0 && len(claims.BatchExecutionFailedClaims) == 0 {
-				return &types.Receipt{}, nil
-			}
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.Receipt{}, nil)
 		bridgeSubmitter.On("GetBatchTransactions", common.ChainIDStrPrime, uint64(0x1)).
 			Return([]eth.TxDataInfo{
 				{
