@@ -14,6 +14,7 @@ type BaseTx interface {
 	UnprocessedDBKey() []byte
 	SetLastTimeTried(lastTimeTried time.Time)
 	IncrementTryCount()
+	IncrementBatchFailedCount()
 	ToProcessed(isInvalid bool) BaseProcessedTx
 	GetTryCount() uint32
 	GetPriority() uint8
@@ -45,9 +46,11 @@ type TxsProcessor interface {
 type SpecificChainTxsProcessorState interface {
 	GetChainType() string
 	Reset()
+	ProcessSavedEvents()
 	RunChecks(bridgeClaims *BridgeClaims, chainID string, maxClaimsToGroup int, priority uint8)
 	ProcessSubmitClaimsEvents(events *SubmitClaimsEvents, claims *BridgeClaims)
-	PersistNew(bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)
+	UpdateBridgingRequestStates(bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)
+	PersistNew()
 }
 
 type BridgeClaimsSubmitter interface {

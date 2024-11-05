@@ -119,7 +119,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	}
 
 	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"batchID", batchID, "txs", len(confirmedTransactions))
+		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
@@ -162,7 +162,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	}
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
-		"signedBatch", eth.BatchToString(signedBatch))
+		"signedBatch", eth.SignedBatchWrapper{SignedBatch: &signedBatch})
 
 	err = b.operations.Submit(ctx, b.bridgeSmartContract, signedBatch)
 	if err != nil {

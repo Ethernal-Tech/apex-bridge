@@ -48,6 +48,18 @@ type EthTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// GetUnprocessedBatchEvents implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error) {
+	args := m.Called(chainID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).([]*oCore.DBBatchInfoEvent)
+
+		return arg0, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 // AddExpectedTxs implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) AddExpectedTxs(expectedTxs []*BridgeExpectedEthTx) error {
 	args := m.Called(expectedTxs)
@@ -244,7 +256,7 @@ var _ EthTxFailedProcessor = (*EthTxFailedProcessorMock)(nil)
 
 type BridgeSubmitterMock struct {
 	mock.Mock
-	OnSubmitClaims          func(claims *oCore.BridgeClaims)
+	OnSubmitClaims          func(claims *oCore.BridgeClaims) (*types.Receipt, error)
 	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
 }
 
@@ -252,7 +264,7 @@ type BridgeSubmitterMock struct {
 func (m *BridgeSubmitterMock) SubmitClaims(
 	claims *oCore.BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error) {
 	if m.OnSubmitClaims != nil {
-		m.OnSubmitClaims(claims)
+		return m.OnSubmitClaims(claims)
 	}
 
 	args := m.Called(claims, submitOpts)

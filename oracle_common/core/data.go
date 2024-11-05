@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/binary"
 	"math"
 	"reflect"
 	"time"
@@ -44,7 +45,7 @@ type BatchExecutionInfoEvent = contractbinding.BridgeContractBatchExecutionInfo
 
 type SubmitClaimsEvents struct {
 	NotEnoughFunds     []*NotEnoughFundsEvent
-	BatchExecutionInfo []*BatchExecutionInfoEvent
+	BatchExecutionInfo []*DBBatchInfoEvent
 }
 
 type UpdateTxsData[
@@ -60,6 +61,8 @@ type UpdateTxsData[
 	MoveUnprocessedToProcessed []TProcessedTx    // if its bec or brc that is invalid
 	MovePendingToUnprocessed   []BaseTx          // for befc txs, also update tryCount and set lastTryTime to nil
 	MovePendingToProcessed     []BaseProcessedTx // for bec txs
+	AddBatchInfoEvents         []*DBBatchInfoEvent
+	RemoveBatchInfoEvents      []*DBBatchInfoEvent
 }
 
 func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
@@ -69,7 +72,45 @@ func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
 		len(d.MoveUnprocessedToPending) +
 		len(d.MoveUnprocessedToProcessed) +
 		len(d.MovePendingToUnprocessed) +
-		len(d.MovePendingToProcessed)
+		len(d.MovePendingToProcessed) +
+		len(d.AddBatchInfoEvents) +
+		len(d.RemoveBatchInfoEvents)
+}
+
+type DBBatchTx struct {
+	SourceChainID           uint8    `json:"s_chain"`
+	ObservedTransactionHash [32]byte `json:"s_tx_hash"`
+}
+
+type DBBatchInfoEvent struct {
+	BatchID       uint64      `json:"batch"`
+	ChainID       uint8       `json:"chain"`
+	IsFailedClaim bool        `json:"failed"`
+	TxHashes      []DBBatchTx `json:"txs"`
+}
+
+func ToDBBatchInfo(event *BatchExecutionInfoEvent) *DBBatchInfoEvent {
+	txs := make([]DBBatchTx, len(event.TxHashes))
+	for i, tx := range event.TxHashes {
+		txs[i] = DBBatchTx{
+			SourceChainID:           tx.SourceChainId,
+			ObservedTransactionHash: tx.ObservedTransactionHash,
+		}
+	}
+
+	return &DBBatchInfoEvent{
+		BatchID:       event.BatchID,
+		ChainID:       event.ChainId,
+		IsFailedClaim: event.IsFailedClaim,
+		TxHashes:      txs,
+	}
+}
+
+func (e *DBBatchInfoEvent) DBKey() []byte {
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, e.BatchID)
+
+	return key
 }
 
 type ProcessedTxByInnerAction struct {

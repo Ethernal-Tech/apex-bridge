@@ -20,6 +20,7 @@ type EthTxsDB interface {
 	GetProcessedTx(entityID oCore.DBTxID) (*ProcessedEthTx, error)
 	GetProcessedTxByInnerActionTxHash(chainID string, innerActionTxHash []byte) (*ProcessedEthTx, error)
 	ClearAllTxs(chainID string) error
+	GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error)
 	AddTxs(processedTxs []*ProcessedEthTx, unprocessedTxs []*EthTx) error
 	UpdateTxs(data *EthUpdateTxsData) error
 }
