@@ -92,9 +92,9 @@ type DBBatchInfoEvent struct {
 func NewDBBatchInfoEvent(
 	chainID uint8, batchID uint64, isFailedClaim bool, txs []eth.TxDataInfo,
 ) *DBBatchInfoEvent {
-	result := make([]DBBatchTx, len(txs))
+	dbBatchTxs := make([]DBBatchTx, len(txs))
 	for i, tx := range txs {
-		result[i] = DBBatchTx{
+		dbBatchTxs[i] = DBBatchTx{
 			SourceChainID:           tx.SourceChainId,
 			ObservedTransactionHash: tx.ObservedTransactionHash,
 		}
@@ -104,7 +104,7 @@ func NewDBBatchInfoEvent(
 		BatchID:       batchID,
 		ChainID:       chainID,
 		IsFailedClaim: isFailedClaim,
-		TxHashes:      result,
+		TxHashes:      dbBatchTxs,
 	}
 }
 
