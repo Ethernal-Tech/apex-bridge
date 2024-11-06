@@ -16,27 +16,42 @@ const (
 	MaxRetries = 5
 )
 
-type BridgeDataFetcherImpl struct {
+type CardanoBridgeDataFetcherImpl struct {
 	ctx      context.Context
 	bridgeSC eth.IOracleBridgeSmartContract
 	logger   hclog.Logger
 }
 
-var _ core.BridgeDataFetcher = (*BridgeDataFetcherImpl)(nil)
+var _ core.CardanoBridgeDataFetcher = (*CardanoBridgeDataFetcherImpl)(nil)
 
-func NewBridgeDataFetcher(
+func NewCardanoBridgeDataFetcher(
 	ctx context.Context,
 	bridgeSC eth.IOracleBridgeSmartContract,
 	logger hclog.Logger,
-) *BridgeDataFetcherImpl {
-	return &BridgeDataFetcherImpl{
+) *CardanoBridgeDataFetcherImpl {
+	return &CardanoBridgeDataFetcherImpl{
 		ctx:      ctx,
 		bridgeSC: bridgeSC,
 		logger:   logger,
 	}
 }
 
-func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error) {
+func (df *CardanoBridgeDataFetcherImpl) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]eth.TxDataInfo, error) {
+	txs, err := df.bridgeSC.GetBatchTransactions(df.ctx, chainID, batchID)
+	if err != nil {
+		df.logger.Error("Failed to retrieve batch transactions", "chainID", chainID, "batchID", batchID, "err", err)
+
+		return nil, err
+	}
+
+	df.logger.Info("Batch transactions retrieved", "chainID", chainID, "batchID", batchID, "txs", len(txs))
+
+	return txs, nil
+}
+
+func (df *CardanoBridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
 		block, err := df.bridgeSC.GetLastObservedBlock(df.ctx, chainID)
 		if err == nil {
@@ -68,7 +83,7 @@ func (df *BridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*indexer
 	return nil, fmt.Errorf("failed to FetchLatestBlockPoint from Bridge SC")
 }
 
-func (df *BridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeExpectedCardanoTx, error) {
+func (df *CardanoBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeExpectedCardanoTx, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
 		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainID)
 		if err == nil {

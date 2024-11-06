@@ -16,6 +16,7 @@ const submitClaimsGasLimit = uint64(10_000_000)
 
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
+type TxDataInfo = contractbinding.IBridgeStructsTxDataInfo
 
 type SubmitOpts struct {
 	GasLimitMultiplier float32
@@ -26,6 +27,7 @@ type IOracleBridgeSmartContract interface {
 	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
 	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) (*types.Receipt, error)
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
+	GetBatchTransactions(ctx context.Context, chainID string, batchID uint64) ([]TxDataInfo, error)
 }
 
 type OracleBridgeSmartContractImpl struct {
@@ -155,4 +157,29 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	})
 
 	return bsc.ethHelper.ProcessError(err)
+}
+
+func (bsc *OracleBridgeSmartContractImpl) GetBatchTransactions(
+	ctx context.Context, chainID string, batchID uint64,
+) ([]TxDataInfo, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	result, err := contract.GetBatchTransactions(&bind.CallOpts{
+		Context: ctx,
+	}, common.ToNumChainID(chainID), batchID)
+	if err != nil {
+		return nil, bsc.ethHelper.ProcessError(err)
+	}
+
+	return result, nil
 }

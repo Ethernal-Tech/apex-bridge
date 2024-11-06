@@ -63,7 +63,8 @@ type CardanoTxFailedProcessor interface {
 	ValidateAndAddClaim(claims *cCore.BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error
 }
 
-type BridgeDataFetcher interface {
+type CardanoBridgeDataFetcher interface {
+	cCore.BridgeDataFetcher
 	FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error)
 	FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error)
 }

@@ -21,14 +21,14 @@ func TestExpectedTxsFetcher(t *testing.T) {
 	}
 
 	t.Run("NewBridgeDataFetcher", func(t *testing.T) {
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher := &core.EthBridgeDataFetcherMock{}
 		expectedTxsFetcher := NewExpectedTxsFetcher(context.Background(), bridgeDataFetcher, appConfig, &core.EthTxsProcessorDBMock{}, hclog.NewNullLogger())
 
 		require.NotNil(t, expectedTxsFetcher)
 	})
 
 	t.Run("fetchData nil", func(t *testing.T) {
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher := &core.EthBridgeDataFetcherMock{}
 		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(nil, nil)
 
 		db := &core.EthTxsProcessorDBMock{}
@@ -43,7 +43,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 	})
 
 	t.Run("fetchData err", func(t *testing.T) {
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher := &core.EthBridgeDataFetcherMock{}
 		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(&core.BridgeExpectedEthTx{}, nil)
 
 		db := &core.EthTxsProcessorDBMock{}
@@ -59,7 +59,7 @@ func TestExpectedTxsFetcher(t *testing.T) {
 	})
 
 	t.Run("fetchData success", func(t *testing.T) {
-		bridgeDataFetcher := &core.BridgeDataFetcherMock{}
+		bridgeDataFetcher := &core.EthBridgeDataFetcherMock{}
 		bridgeDataFetcher.On("FetchExpectedTx", mock.Anything).Return(&core.BridgeExpectedEthTx{}, nil)
 
 		db := &core.EthTxsProcessorDBMock{}

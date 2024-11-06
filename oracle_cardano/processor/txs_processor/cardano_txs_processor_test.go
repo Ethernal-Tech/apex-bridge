@@ -32,6 +32,7 @@ func newCardanoTxsProcessor(
 	db core.CardanoTxsProcessorDB,
 	successTxProcessors []core.CardanoTxSuccessProcessor,
 	failedTxProcessors []core.CardanoTxFailedProcessor,
+	bridgeDataFetcher core.CardanoBridgeDataFetcher,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -48,7 +49,8 @@ func newCardanoTxsProcessor(
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, cardanoStateProcessor, bridgeSubmitter, bridgingRequestStateUpdater,
+		ctx, appConfig, cardanoStateProcessor,
+		bridgeDataFetcher, bridgeSubmitter, bridgingRequestStateUpdater,
 		hclog.NewNullLogger(),
 	)
 
@@ -61,6 +63,7 @@ func newValidProcessor(
 	oracleDB core.Database,
 	successTxProcessor core.CardanoTxSuccessProcessor,
 	failedTxProcessor core.CardanoTxFailedProcessor,
+	bridgeDataFetcher core.CardanoBridgeDataFetcher,
 	bridgeSubmitter core.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
@@ -77,7 +80,7 @@ func newValidProcessor(
 
 	return newCardanoTxsProcessor(
 		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
-		bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
+		bridgeDataFetcher, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
 }
 
 func TestCardanoTxsProcessor(t *testing.T) {
@@ -136,7 +139,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		oracleDB, primeDB, vectorDB, err := createDbs()
 		require.NoError(t, err)
 
-		proc, rec := newCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil)
+		proc, rec := newCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 		require.NotNil(t, rec)
 
@@ -148,6 +151,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			oracleDB,
 			[]core.CardanoTxSuccessProcessor{},
 			[]core.CardanoTxFailedProcessor{},
+			&core.CardanoBridgeDataFetcherMock{},
 			&core.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -168,7 +172,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc,
+			&core.CardanoBridgeDataFetcherMock{}, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -191,7 +196,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			nil, nil, nil,
+			nil, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -216,7 +221,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, nil, nil,
+			validTxProc, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -246,7 +251,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			context.Background(),
 			appConfig, oracleDB,
-			validTxProc, nil, nil,
+			validTxProc, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -283,6 +288,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -291,7 +299,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -340,6 +348,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
@@ -348,7 +359,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -397,6 +408,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -405,7 +419,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -454,6 +468,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc := &core.CardanoTxFailedProcessorMock{Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -462,7 +479,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -511,6 +528,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
@@ -519,7 +540,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -570,6 +591,9 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -583,7 +607,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -633,6 +657,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -646,7 +674,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeSubmitter,
+			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -703,6 +731,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -716,7 +748,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -789,6 +821,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -802,7 +838,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -872,6 +908,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -885,7 +925,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -961,6 +1001,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -974,7 +1018,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1046,6 +1090,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -1059,7 +1107,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1142,6 +1190,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		var submittedClaims []*cCore.BridgeClaims
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
 			submittedClaims = append(submittedClaims, claims)
@@ -1155,7 +1207,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeSubmitter,
+			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1236,6 +1288,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBridgingRequest}
 		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
@@ -1244,7 +1300,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1331,6 +1387,10 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			},
 		}
 
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+			Return([]eth.TxDataInfo{}, error(nil))
+
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(receipt, nil)
@@ -1354,7 +1414,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1397,7 +1457,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ = newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1434,7 +1494,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		proc, _ = newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
-			validTxProc, nil, bridgeSubmitter,
+			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
@@ -1508,6 +1568,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch}
+		txBatchFailed := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFFBBAA")), Metadata: metadataBatch}
 
 		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
@@ -1527,61 +1588,49 @@ func TestCardanoTxsProcessor(t *testing.T) {
 					BatchNonceId:            2,
 					ChainId:                 common.ChainIDIntVector,
 				})
+				claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, cCore.BatchExecutionFailedClaim{
+					ObservedTransactionHash: txBatchFailed.Hash,
+					BatchNonceId:            1,
+					ChainId:                 common.ChainIDIntVector,
+				})
 			},
 			Type: common.BridgingTxTypeBatchExecution,
 		}
 		becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		eventSigs, err := eth.GetSubmitClaimsEventSignatures()
-		require.NoError(t, err)
+		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x1)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntPrime,
+					ObservedTransactionHash: tx1.Hash,
+				},
+			}, error(nil))
+		bridgeDataFetcher.On("GetBatchTransactions", common.ChainIDStrVector, uint64(0x2)).
+			Return([]eth.TxDataInfo{
+				{
+					SourceChainId:           common.ChainIDIntPrime,
+					ObservedTransactionHash: tx2.Hash,
+				},
+			}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
 		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			if len(claims.BatchExecutedClaims) == 0 && len(claims.BatchExecutionFailedClaims) == 0 {
-				return &types.Receipt{}, nil
-			}
-
-			return &types.Receipt{
-				Logs: []*types.Log{
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 1, true, common.ChainIDIntPrime,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntPrime,
-									ObservedTransactionHash: tx1.Hash,
-								},
-							}),
-					},
-					{
-						Topics: []ethereum_common.Hash{ethereum_common.Hash(eventSigs[1])},
-						Data: getBatchExecutionReceipt(t, 2, false, common.ChainIDIntPrime,
-							[]*contractbinding.IBridgeStructsTxDataInfo{
-								{
-									SourceChainId:           common.ChainIDIntPrime,
-									ObservedTransactionHash: tx2.Hash,
-								},
-							}),
-					},
-				},
-			}, nil
-		}
-
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).Return()
+		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.Receipt{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newCardanoTxsProcessor(
 			ctx,
 			appConfig, oracleDB,
-			[]core.CardanoTxSuccessProcessor{brcProc, becProc}, nil, bridgeSubmitter,
+			[]core.CardanoTxSuccessProcessor{brcProc, becProc}, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
 		)
 
 		require.NotNil(t, proc)
 
-		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch}))
+		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{txBatch, txBatchFailed}))
 
 		go func() {
 			<-time.After(time.Millisecond * processingWaitTimeMs)
@@ -1611,50 +1660,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NotNil(t, processedTx2)
 		require.Equal(t, processedTx2.Hash, cardanoTx2.Hash)
 	})
-}
-
-func getBatchExecutionReceipt(
-	t *testing.T,
-	batchID uint64,
-	isFailedTx bool,
-	chainID uint8,
-	txHashes []*contractbinding.IBridgeStructsTxDataInfo,
-) []byte {
-	t.Helper()
-
-	events, err := eth.GetSubmitClaimsEventSignatures()
-	require.NoError(t, err)
-
-	batchExecInfo := events[1]
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
-	require.NoError(t, err)
-
-	eventAbi, err := abi.EventByID(ethereum_common.Hash(batchExecInfo))
-	require.NoError(t, err)
-
-	type TxDataInfo struct {
-		SourceChainID           uint8    `json:"sourceChainId" abi:"sourceChainId"`
-		ObservedTransactionHash [32]byte `json:"observedTransactionHash" abi:"observedTransactionHash"`
-	}
-
-	txDataInfo := make([]TxDataInfo, len(txHashes))
-
-	for idx, info := range txHashes {
-		txDataInfo[idx] = TxDataInfo{
-			SourceChainID:           info.SourceChainId,
-			ObservedTransactionHash: info.ObservedTransactionHash,
-		}
-	}
-
-	receiptData, err := eventAbi.Inputs.Pack(
-		batchID,
-		chainID,
-		isFailedTx,
-		txDataInfo,
-	)
-	require.NoError(t, err)
-
-	return receiptData
 }
 
 var (

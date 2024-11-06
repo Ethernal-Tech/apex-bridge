@@ -3,12 +3,23 @@ package eth
 import (
 	"context"
 
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
 )
 
 type OracleBridgeSmartContractMock struct {
 	mock.Mock
+}
+
+// GetBatchTransactions implements IOracleBridgeSmartContract.
+func (m *OracleBridgeSmartContractMock) GetBatchTransactions(
+	ctx context.Context, chainID string, batchID uint64,
+) ([]contractbinding.IBridgeStructsTxDataInfo, error) {
+	args := m.Called(ctx, chainID, batchID)
+	result, _ := args.Get(0).([]contractbinding.IBridgeStructsTxDataInfo)
+
+	return result, args.Error(1)
 }
 
 // GetLastObservedBlock implements IOracleBridgeSmartContract.

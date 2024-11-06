@@ -26,12 +26,21 @@ func (m *EthTxsReceiverMock) NewUnprocessedLog(originChainID string, log *ethgo.
 
 var _ EthTxsReceiver = (*EthTxsReceiverMock)(nil)
 
-type BridgeDataFetcherMock struct {
+type EthBridgeDataFetcherMock struct {
 	mock.Mock
 }
 
-// FetchExpectedTxs implements BridgeDataFetcher.
-func (m *BridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error) {
+// GetBatchTransactions implements EthBridgeDataFetcher.
+func (m *EthBridgeDataFetcherMock) GetBatchTransactions(
+	chainID string, batchID uint64,
+) ([]eth.TxDataInfo, error) {
+	args := m.Called(chainID, batchID)
+
+	return args.Get(0).([]eth.TxDataInfo), args.Error(1) //nolint
+}
+
+// FetchExpectedTxs implements EthBridgeDataFetcher.
+func (m *EthBridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error) {
 	args := m.Called(chainID)
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).(*BridgeExpectedEthTx)
@@ -42,7 +51,7 @@ func (m *BridgeDataFetcherMock) FetchExpectedTx(chainID string) (*BridgeExpected
 	return nil, args.Error(1)
 }
 
-var _ EthBridgeDataFetcher = (*BridgeDataFetcherMock)(nil)
+var _ EthBridgeDataFetcher = (*EthBridgeDataFetcherMock)(nil)
 
 type EthTxsProcessorDBMock struct {
 	mock.Mock

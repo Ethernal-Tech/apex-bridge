@@ -26,8 +26,11 @@ func TestBridgingRequestState(t *testing.T) {
 		require.NotNil(t, state)
 
 		err := state.ToIncludedInBatch(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+		require.NoError(t, err)
+		require.Equal(t, BridgingRequestStatusIncludedInBatch, state.Status)
+
+		state = NewBridgingRequestState(chainID, txHash)
+		require.NotNil(t, state)
 
 		err = state.ToSubmittedToDestination()
 		require.Error(t, err)

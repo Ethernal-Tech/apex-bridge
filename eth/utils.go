@@ -118,7 +118,7 @@ func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {
 		return nil, err
 	}
 
-	return GetEventSignatures(abi, []string{"NotEnoughFunds", "BatchExecutionInfo"})
+	return GetEventSignatures(abi, []string{"NotEnoughFunds"})
 }
 
 func GetChainValidatorsDataInfoString(
