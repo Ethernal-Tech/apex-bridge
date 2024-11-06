@@ -131,19 +131,19 @@ func NewValidatorComponents(
 
 	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create blade wallet for oracle: %w", err)
+		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
 	}
 
 	oracleBridgeSC := eth.NewOracleBridgeSmartContract(
 		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
+		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
 
-	oracleBridgeSCWithWallet, err := eth.NewOracleBridgeSmartContractWithWallet(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		wallet, appConfig.Bridge.DynamicTx, logger.Named("oracle_bridge_smart_contract"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle bridge smart contract: %w", err)
-	}
+	ethHelper := eth.NewEthHelperWrapperWithWallet(
+		appConfig.Bridge.NodeURL, wallet,
+		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
+
+	oracleBridgeSCWithWallet := eth.NewOracleBridgeSmartContractWithWallet(
+		appConfig.Bridge.SmartContractAddress, ethHelper)
 
 	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
@@ -168,8 +168,15 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
 	}
 
+	batcherBridgeSCWithWallet := eth.NewBridgeSmartContractWithWallet(
+		appConfig.Bridge.SmartContractAddress, ethHelper)
+
+	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
+		"contract", appConfig.Bridge.SmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
+
 	batcherManager, err := batchermanager.NewBatcherManager(
-		ctx, batcherConfig, cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		ctx, batcherConfig, secretsManager, batcherBridgeSCWithWallet,
+		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}

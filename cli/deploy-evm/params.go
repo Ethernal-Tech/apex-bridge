@@ -348,11 +348,10 @@ func (ip *deployEVMParams) setChainAdditionalData(
 		return err
 	}
 
-	bridgeSC, err := eth.NewBridgeSmartContractWithWallet(
-		ip.bridgeNodeURL, ip.bridgeSCAddr, wallet, false, hclog.NewNullLogger())
-	if err != nil {
-		return err
-	}
+	ethHelper := eth.NewEthHelperWrapperWithWallet(
+		ip.bridgeNodeURL, wallet, false, hclog.NewNullLogger())
+
+	bridgeSC := eth.NewBridgeSmartContractWithWallet(ip.bridgeSCAddr, ethHelper)
 
 	return bridgeSC.SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
 }

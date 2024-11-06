@@ -33,14 +33,9 @@ func NewEVMGatewaySmartContractWithWallet(
 	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, depositGasLimit uint64,
 	gasPrice, gasFeeCap, gasTipCap *big.Int, logger hclog.Logger,
 ) (*EVMGatewaySmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
-	if err != nil {
-		return nil, err
-	}
-
 	return &EVMGatewaySmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
-		ethHelper:            ethHelper,
+		ethHelper:            NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger),
 		depositGasLimit:      depositGasLimit,
 		gasPrice:             gasPrice,
 		gasFeeCap:            gasFeeCap,

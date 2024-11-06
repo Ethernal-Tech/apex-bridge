@@ -5,7 +5,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -51,17 +50,12 @@ func NewBridgeSmartContract(
 }
 
 func NewBridgeSmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
-) (*BridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
-	if err != nil {
-		return nil, err
-	}
-
+	smartContractAddress string, ethHelper *EthHelperWrapper,
+) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
 		smartContractAddress: common.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
-	}, nil
+	}
 }
 
 func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(

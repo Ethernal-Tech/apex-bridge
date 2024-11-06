@@ -38,14 +38,14 @@ func NewEthHelperWrapper(
 func NewEthHelperWrapperWithWallet(
 	nodeURL string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
 	opts ...ethtxhelper.TxRelayerOption,
-) (*EthHelperWrapper, error) {
+) *EthHelperWrapper {
 	return &EthHelperWrapper{
 		nodeURL:   nodeURL,
 		wallet:    wallet,
 		isDynamic: isDynamic,
 		opts:      append([]ethtxhelper.TxRelayerOption(nil), opts...),
 		logger:    logger,
-	}, nil
+	}
 }
 
 func (e *EthHelperWrapper) GetEthHelper() (ethtxhelper.IEthTxHelper, error) {
