@@ -22,6 +22,7 @@ type TxsProcessorImpl struct {
 	appConfig                   *core.AppConfig
 	stateProcessor              core.SpecificChainTxsProcessorState
 	settings                    *txsProcessorSettings
+	bridgeDataFetcher           core.BridgeDataFetcher
 	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	logger                      hclog.Logger
@@ -34,6 +35,7 @@ func NewTxsProcessorImpl(
 	ctx context.Context,
 	appConfig *core.AppConfig,
 	stateProcessor core.SpecificChainTxsProcessorState,
+	bridgeDataFetcher core.BridgeDataFetcher,
 	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -43,6 +45,7 @@ func NewTxsProcessorImpl(
 		stateProcessor:              stateProcessor,
 		appConfig:                   appConfig,
 		settings:                    NewTxsProcessorSettings(appConfig, stateProcessor.GetChainType()),
+		bridgeDataFetcher:           bridgeDataFetcher,
 		bridgeSubmitter:             bridgeSubmitter,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		logger:                      logger,
@@ -117,6 +120,13 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 	}
 
 	if bridgeClaims.Count() > 0 {
+		batchTxs, err := p.retrieveTxsForEachBatchFromClaims(bridgeClaims)
+		if err != nil {
+			p.logger.Error("retrieving txs for submitted batches", "err", err)
+
+			return
+		}
+
 		receipt, ok := p.submitClaims(startChainID, bridgeClaims)
 		if !ok {
 			return
@@ -126,12 +136,45 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 		if err != nil {
 			p.logger.Error("extracting events from submit claims receipt", "err", err)
 		} else {
+			events.BatchExecutionInfo = batchTxs
 			p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
 		}
 	}
 
 	p.stateProcessor.UpdateBridgingRequestStates(bridgeClaims, p.bridgingRequestStateUpdater)
 	p.stateProcessor.PersistNew()
+}
+
+func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
+	claims *core.BridgeClaims,
+) (result []*core.DBBatchInfoEvent, err error) {
+	addInfo := func(chainIDInt uint8, batchID uint64, isFailedClaim bool) error {
+		chainID := common.ToStrChainID(chainIDInt)
+
+		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve txs for batch: chainID = %s, batchID = %d, failed = %v, err = %w",
+				chainID, batchID, isFailedClaim, err)
+		}
+
+		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, txs))
+
+		return nil
+	}
+
+	for _, x := range claims.BatchExecutedClaims {
+		if err := addInfo(x.ChainId, x.BatchNonceId, false); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, x := range claims.BatchExecutionFailedClaims {
+		if err := addInfo(x.ChainId, x.BatchNonceId, true); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }
 
 func (p *TxsProcessorImpl) processAllForChain(
@@ -185,7 +228,6 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 	}
 
 	notEnoughFundsEventSig := eventSigs[0]
-	batchExecutionInfoEventSig := eventSigs[1]
 
 	contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
 	if err != nil {
@@ -201,8 +243,7 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 			continue
 		}
 
-		eventSig := ethgo.Hash(log.Topics[0])
-		switch eventSig {
+		switch eventSig := ethgo.Hash(log.Topics[0]); eventSig {
 		case notEnoughFundsEventSig:
 			notEnoughFunds, err := contract.BridgeContractFilterer.ParseNotEnoughFunds(*log)
 			if err != nil {
@@ -212,16 +253,6 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 			events.NotEnoughFunds = append(events.NotEnoughFunds, notEnoughFunds)
 
 			p.logger.Info("NotEnoughFunds event found in submit claims receipt", "event", notEnoughFunds)
-		case batchExecutionInfoEventSig:
-			batchExecutionInfo, err := contract.BridgeContractFilterer.ParseBatchExecutionInfo(*log)
-			if err != nil {
-				return nil, fmt.Errorf("failed parsing batchExecutionInfo log. err: %w", err)
-			}
-
-			events.BatchExecutionInfo = append(
-				events.BatchExecutionInfo,
-				core.ToDBBatchInfo(batchExecutionInfo),
-			)
 		default:
 			p.logger.Debug("unsupported event signature", "eventSig", eventSig)
 		}

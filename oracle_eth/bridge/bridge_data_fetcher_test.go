@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/ethgo"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,6 +22,32 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
+	})
+
+	t.Run("GetBatchTransactions err", func(t *testing.T) {
+		bridgeSC := &eth.OracleBridgeSmartContractMock{}
+		bridgeSC.On("GetBatchTransactions", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("test err"))
+
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		require.NotNil(t, bridgeDataFetcher)
+
+		_, err := bridgeDataFetcher.GetBatchTransactions(common.ChainIDStrPrime, 1)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetBatchTransactions valid", func(t *testing.T) {
+		bridgeSC := &eth.OracleBridgeSmartContractMock{}
+		bridgeSC.On("GetBatchTransactions", mock.Anything, mock.Anything, mock.Anything).
+			Return([]eth.TxDataInfo{{}}, nil)
+
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
+		require.NotNil(t, bridgeDataFetcher)
+
+		batchTxs, err := bridgeDataFetcher.GetBatchTransactions(common.ChainIDStrPrime, 1)
+		require.NoError(t, err)
+		require.Len(t, batchTxs, 1)
 	})
 
 	t.Run("FetchExpectedTx nil", func(t *testing.T) {

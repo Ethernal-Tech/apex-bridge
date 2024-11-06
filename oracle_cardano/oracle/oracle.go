@@ -55,7 +55,7 @@ func NewCardanoOracle(
 	db := &databaseaccess.BBoltDatabase{}
 	db.Init(boltDB, appConfig, typeRegister)
 
-	bridgeDataFetcher := bridge.NewBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
+	bridgeDataFetcher := bridge.NewCardanoBridgeDataFetcher(ctx, oracleBridgeSC, logger.Named("bridge_data_fetcher"))
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
@@ -85,7 +85,7 @@ func NewCardanoOracle(
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, cardanoStateProcessor, bridgeSubmitter,
+		ctx, appConfig, cardanoStateProcessor, bridgeDataFetcher, bridgeSubmitter,
 		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))

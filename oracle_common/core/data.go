@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/ethgo"
 )
 
@@ -41,7 +42,6 @@ func NewTypeRegisterWithChains(
 }
 
 type NotEnoughFundsEvent = contractbinding.BridgeContractNotEnoughFunds
-type BatchExecutionInfoEvent = contractbinding.BridgeContractBatchExecutionInfo
 
 type SubmitClaimsEvents struct {
 	NotEnoughFunds     []*NotEnoughFundsEvent
@@ -89,20 +89,22 @@ type DBBatchInfoEvent struct {
 	TxHashes      []DBBatchTx `json:"txs"`
 }
 
-func ToDBBatchInfo(event *BatchExecutionInfoEvent) *DBBatchInfoEvent {
-	txs := make([]DBBatchTx, len(event.TxHashes))
-	for i, tx := range event.TxHashes {
-		txs[i] = DBBatchTx{
+func NewDBBatchInfoEvent(
+	chainID uint8, batchID uint64, isFailedClaim bool, txs []eth.TxDataInfo,
+) *DBBatchInfoEvent {
+	dbBatchTxs := make([]DBBatchTx, len(txs))
+	for i, tx := range txs {
+		dbBatchTxs[i] = DBBatchTx{
 			SourceChainID:           tx.SourceChainId,
 			ObservedTransactionHash: tx.ObservedTransactionHash,
 		}
 	}
 
 	return &DBBatchInfoEvent{
-		BatchID:       event.BatchID,
-		ChainID:       event.ChainId,
-		IsFailedClaim: event.IsFailedClaim,
-		TxHashes:      txs,
+		BatchID:       batchID,
+		ChainID:       chainID,
+		IsFailedClaim: isFailedClaim,
+		TxHashes:      dbBatchTxs,
 	}
 }
 

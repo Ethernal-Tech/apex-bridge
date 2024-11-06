@@ -82,7 +82,7 @@ func NewEthOracle(
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
-		ctx, appConfig, ethStateProcessor, bridgeSubmitter,
+		ctx, appConfig, ethStateProcessor, bridgeDataFetcher, bridgeSubmitter,
 		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))

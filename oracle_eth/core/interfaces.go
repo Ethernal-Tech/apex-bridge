@@ -63,6 +63,7 @@ type EthChainObserver interface {
 }
 
 type EthBridgeDataFetcher interface {
+	oCore.BridgeDataFetcher
 	FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error)
 }
 

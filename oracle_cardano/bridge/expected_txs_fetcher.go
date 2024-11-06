@@ -16,7 +16,7 @@ const (
 
 type ExpectedTxsFetcherImpl struct {
 	ctx               context.Context
-	bridgeDataFetcher core.BridgeDataFetcher
+	bridgeDataFetcher core.CardanoBridgeDataFetcher
 	appConfig         *cCore.AppConfig
 	db                core.BridgeExpectedCardanoTxsDB
 	logger            hclog.Logger
@@ -26,7 +26,7 @@ var _ cCore.ExpectedTxsFetcher = (*ExpectedTxsFetcherImpl)(nil)
 
 func NewExpectedTxsFetcher(
 	ctx context.Context,
-	bridgeDataFetcher core.BridgeDataFetcher,
+	bridgeDataFetcher core.CardanoBridgeDataFetcher,
 	appConfig *cCore.AppConfig,
 	db core.BridgeExpectedCardanoTxsDB,
 	logger hclog.Logger,

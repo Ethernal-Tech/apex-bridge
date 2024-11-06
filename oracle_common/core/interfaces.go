@@ -57,6 +57,10 @@ type BridgeClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error)
 }
 
+type BridgeDataFetcher interface {
+	GetBatchTransactions(chainID string, batchID uint64) ([]eth.TxDataInfo, error)
+}
+
 type ExpectedTxsFetcher interface {
 	Start()
 }
