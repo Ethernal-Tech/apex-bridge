@@ -25,7 +25,7 @@ const (
 	defaultGasLimit          = uint64(5_242_880) // 0x500000
 	defaultGasFeeMultiplier  = 170               // 170%
 	defaultReceiptRetriesCnt = 1000
-	defaultReceiptWaitTime   = 150 * time.Millisecond
+	defaultReceiptWaitTime   = 300 * time.Millisecond
 )
 
 var (
