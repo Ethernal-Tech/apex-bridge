@@ -22,9 +22,10 @@ type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
 
 const (
-	defaultGasLimit         = uint64(5_242_880) // 0x500000
-	defaultNumRetries       = 1000
-	defaultGasFeeMultiplier = 170 // 170%
+	defaultGasLimit          = uint64(5_242_880) // 0x500000
+	defaultGasFeeMultiplier  = 170               // 170%
+	defaultReceiptRetriesCnt = 1000
+	defaultReceiptWaitTime   = 150 * time.Millisecond
 )
 
 var (
@@ -48,44 +49,51 @@ type IEthTxHelper interface {
 }
 
 type EthTxHelperImpl struct {
-	client           *ethclient.Client
-	nodeURL          string
-	writer           io.Writer
-	numRetries       int
-	receiptWaitTime  time.Duration
-	gasFeeMultiplier uint64
-	isDynamic        bool
-	zeroGasPrice     bool
-	defaultGasLimit  uint64
-	chainID          *big.Int
-	nonceRetrieveFn  NonceRetrieveFunc
-	mutex            sync.Mutex
+	client            *ethclient.Client
+	nodeURL           string
+	writer            io.Writer
+	receiptRetriesCnt int
+	receiptWaitTime   time.Duration
+	gasFeeMultiplier  uint64
+	isDynamic         bool
+	zeroGasPrice      bool
+	defaultGasLimit   uint64
+	chainID           *big.Int
+	initFn            func(*EthTxHelperImpl) error
+	nonceRetrieveFn   NonceRetrieveFunc
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
 
 func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	t := &EthTxHelperImpl{
-		receiptWaitTime:  50 * time.Millisecond,
-		numRetries:       defaultNumRetries,
-		gasFeeMultiplier: defaultGasFeeMultiplier,
-		zeroGasPrice:     true,
-		defaultGasLimit:  defaultGasLimit,
+		receiptWaitTime:   defaultReceiptWaitTime,
+		receiptRetriesCnt: defaultReceiptRetriesCnt,
+		gasFeeMultiplier:  defaultGasFeeMultiplier,
+		zeroGasPrice:      true,
+		defaultGasLimit:   defaultGasLimit,
 		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
 			return client.PendingNonceAt(ctx, addr)
+		},
+		initFn: func(t *EthTxHelperImpl) error {
+			if t.client == nil {
+				client, err := ethclient.Dial(t.nodeURL)
+				if err != nil {
+					return err
+				}
+
+				t.client = client
+			}
+
+			return nil
 		},
 	}
 	for _, opt := range opts {
 		opt(t)
 	}
 
-	if t.client == nil {
-		client, err := ethclient.Dial(t.nodeURL)
-		if err != nil {
-			return nil, err
-		}
-
-		t.client = client
+	if err := t.initFn(t); err != nil {
+		return nil, err
 	}
 
 	return t, nil
@@ -107,9 +115,6 @@ func (t *EthTxHelperImpl) Deploy(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
 	abiData abi.ABI, bytecode []byte, params ...interface{},
 ) (string, string, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
 	chainID := t.chainID
 	if chainID == nil {
 		// chainID retrieval
@@ -145,7 +150,7 @@ func (t *EthTxHelperImpl) Deploy(
 func (t *EthTxHelperImpl) WaitForReceipt(
 	ctx context.Context, hash string, skipNotFound bool,
 ) (*types.Receipt, error) {
-	for count := 0; count < t.numRetries; count++ {
+	for count := 0; count < t.receiptRetriesCnt; count++ {
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
 			if !skipNotFound && errors.Is(err, ethereum.NotFound) {
@@ -168,9 +173,6 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 func (t *EthTxHelperImpl) SendTx(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, sendTxHandler SendTxFunc,
 ) (*types.Transaction, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
 	chainID := t.chainID
 	if chainID == nil {
 		// chainID retrieval
@@ -314,12 +316,11 @@ func WithWriter(writer io.Writer) TxRelayerOption {
 	}
 }
 
-// WithNumRetries sets the maximum number of eth_getTransactionReceipt retries
-// before considering the transaction sending as timed out. Set to -1 to disable
-// waitForReceipt and not wait for the transaction receipt
-func WithNumRetries(numRetries int) TxRelayerOption {
+// WithReceiptRetriesCnt sets the maximum number of eth_getTransactionReceipt retries
+// before considering the transaction sending as timed out.
+func WithReceiptRetriesCnt(receiptRetriesCnt int) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
-		t.numRetries = numRetries
+		t.receiptRetriesCnt = receiptRetriesCnt
 	}
 }
 
@@ -347,6 +348,33 @@ func WithChainID(chainID *big.Int) TxRelayerOption {
 	}
 }
 
+func WithInitFn(fn func(*EthTxHelperImpl) error) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.initFn = fn
+	}
+}
+
+func WithInitClientAndChainIDFn(ctx context.Context) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.initFn = func(ethi *EthTxHelperImpl) error {
+			client, err := ethclient.DialContext(ctx, t.nodeURL)
+			if err != nil {
+				return err
+			}
+
+			chainID, err := client.ChainID(ctx)
+			if err != nil {
+				return err
+			}
+
+			t.client = client
+			t.chainID = chainID
+
+			return nil
+		}
+	}
+}
+
 func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.nonceRetrieveFn = fn
@@ -356,12 +384,16 @@ func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
 func WithNonceRetrieveCounterFunc() TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		counterMap := map[common.Address]uint64{}
+		lock := sync.Mutex{}
 
 		t.nonceRetrieveFn = func(
 			ctx context.Context, client *ethclient.Client, addr common.Address,
 		) (result uint64, err error) {
+			lock.Lock()
+			defer lock.Unlock()
+
 			if value, exists := counterMap[addr]; !exists {
-				result, err = client.NonceAt(ctx, addr, nil)
+				result, err = client.PendingNonceAt(ctx, addr)
 				if err != nil {
 					return 0, err
 				}

@@ -140,7 +140,9 @@ func NewValidatorComponents(
 
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
 		appConfig.Bridge.NodeURL, wallet,
-		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
+		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"),
+		ethtxhelper.WithNonceRetrieveCounterFunc(),
+		ethtxhelper.WithInitClientAndChainIDFn(ctx))
 
 	oracleBridgeSCWithWallet := eth.NewOracleBridgeSmartContractWithWallet(
 		appConfig.Bridge.SmartContractAddress, ethHelper)
