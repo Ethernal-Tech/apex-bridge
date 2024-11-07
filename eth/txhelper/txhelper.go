@@ -63,6 +63,7 @@ type EthTxHelperImpl struct {
 	initFn            func(*EthTxHelperImpl) error
 	nonceRetrieveFn   NonceRetrieveFunc
 	nonceUpdateFn     NonceUpdateFunc
+	mutex             sync.Mutex
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -118,6 +119,9 @@ func (t *EthTxHelperImpl) Deploy(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
 	abiData abi.ABI, bytecode []byte, params ...interface{},
 ) (string, string, error) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	chainID := t.chainID
 	if chainID == nil {
 		// chainID retrieval
@@ -178,6 +182,9 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 func (t *EthTxHelperImpl) SendTx(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts, sendTxHandler SendTxFunc,
 ) (*types.Transaction, error) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	chainID := t.chainID
 	if chainID == nil {
 		// chainID retrieval
@@ -396,14 +403,10 @@ func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
 func WithNonceRetrieveCounterFunc() TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		counterMap := map[common.Address]uint64{}
-		lock := sync.Mutex{}
 
 		t.nonceRetrieveFn = func(
 			ctx context.Context, client *ethclient.Client, addr common.Address,
 		) (result uint64, err error) {
-			lock.Lock()
-			defer lock.Unlock()
-
 			if value, exists := counterMap[addr]; !exists {
 				result, err = client.PendingNonceAt(ctx, addr)
 				if err != nil {
@@ -416,9 +419,6 @@ func WithNonceRetrieveCounterFunc() TxRelayerOption {
 			return result, nil
 		}
 		t.nonceUpdateFn = func(addr common.Address, nonce uint64) {
-			lock.Lock()
-			defer lock.Unlock()
-
 			counterMap[addr] = nonce
 		}
 	}
