@@ -215,6 +215,7 @@ func (ip *deployEVMParams) Execute(
 		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
+		ethtxhelper.WithInitClientAndChainIDFn(ctx),
 	)
 	if err != nil {
 		return nil, err

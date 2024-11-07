@@ -20,6 +20,7 @@ import (
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
+type NonceUpdateFunc func(addr common.Address, value uint64)
 
 const (
 	defaultGasLimit          = uint64(5_242_880) // 0x500000
@@ -61,6 +62,7 @@ type EthTxHelperImpl struct {
 	chainID           *big.Int
 	initFn            func(*EthTxHelperImpl) error
 	nonceRetrieveFn   NonceRetrieveFunc
+	nonceUpdateFn     NonceUpdateFunc
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -75,6 +77,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
 			return client.PendingNonceAt(ctx, addr)
 		},
+		nonceUpdateFn: func(addr common.Address, value uint64) {},
 		initFn: func(t *EthTxHelperImpl) error {
 			if t.client == nil {
 				client, err := ethclient.Dial(t.nodeURL)
@@ -144,6 +147,8 @@ func (t *EthTxHelperImpl) Deploy(
 		return "", "", err
 	}
 
+	t.nonceUpdateFn(wallet.GetAddress(), txOptsRes.Nonce.Uint64())
+
 	return contractAddress.String(), tx.Hash().String(), nil
 }
 
@@ -195,7 +200,14 @@ func (t *EthTxHelperImpl) SendTx(
 		return nil, err
 	}
 
-	return sendTxHandler(txOptsRes)
+	tx, err := sendTxHandler(txOptsRes)
+	if err != nil {
+		return nil, err
+	}
+
+	t.nonceUpdateFn(wallet.GetAddress(), txOptsRes.Nonce.Uint64())
+
+	return tx, nil
 }
 
 func (t *EthTxHelperImpl) EstimateGas(
@@ -401,9 +413,13 @@ func WithNonceRetrieveCounterFunc() TxRelayerOption {
 				result = value + 1
 			}
 
-			counterMap[addr] = result
-
 			return result, nil
+		}
+		t.nonceUpdateFn = func(addr common.Address, nonce uint64) {
+			lock.Lock()
+			defer lock.Unlock()
+
+			counterMap[addr] = nonce
 		}
 	}
 }
