@@ -231,7 +231,7 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 
 	contract, err := contractbinding.NewBridgeContract(ethereum_common.Address{}, nil)
 	if err != nil {
-		p.logger.Error("failed to get contractbinding brdge contract", "err", err)
+		p.logger.Error("failed to get contractbinding bridge contract", "err", err)
 
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 
 			events.NotEnoughFunds = append(events.NotEnoughFunds, notEnoughFunds)
 
-			p.logger.Info("NotEnoughFunds event found in submit claims receipt", "event", notEnoughFunds)
+			p.logger.Warn("NotEnoughFunds event found in submit claims receipt", "event", notEnoughFunds)
 		default:
 			p.logger.Debug("unsupported event signature", "eventSig", eventSig)
 		}
