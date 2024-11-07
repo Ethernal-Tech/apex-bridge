@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -49,17 +50,17 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 ) error {
 	parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GatewayMetaData.GetAbi(): %w", err)
 	}
 
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return fmt.Errorf("error while NewGateway: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	var estimatedGas, estimatedGasOriginal uint64
@@ -75,7 +76,7 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 			ctx, bsc.ethHelper.wallet.GetAddress(), bsc.smartContractAddress, nil, depositGasLimitMultiplier,
 			parsedABI, "deposit", signature, bitmap, data)
 		if err != nil {
-			return bsc.ethHelper.ProcessError(err)
+			return fmt.Errorf("error while EstimateGas: %w", bsc.ethHelper.ProcessError(err))
 		}
 	}
 
@@ -90,6 +91,9 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 
 		return contract.Deposit(opts, signature, bitmap, data)
 	})
+	if err != nil {
+		return fmt.Errorf("error while SendTx Deposit: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return bsc.ethHelper.ProcessError(err)
+	return nil
 }

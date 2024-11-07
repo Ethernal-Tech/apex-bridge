@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -65,37 +66,37 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 ) (*ConfirmedBatch, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	result, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(destinationChain))
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while GetConfirmedBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	return NewConfirmedBatch(result)
+	return NewConfirmedBatch(result), nil
 }
 
 func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -103,21 +104,24 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 
 		return contract.SubmitSignedBatch(opts, signedBatch)
 	})
+	if err != nil {
+		return fmt.Errorf("error while SendTx SubmitSignedBatch: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return bsc.ethHelper.ProcessError(err)
+	return nil
 }
 
 func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -125,21 +129,24 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, si
 
 		return contract.SubmitSignedBatchEVM(opts, signedBatch)
 	})
+	if err != nil {
+		return fmt.Errorf("error while SendTx SubmitSignedBatchEVM: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return bsc.ethHelper.ProcessError(err)
+	return nil
 }
 
 func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return false, bsc.ethHelper.ProcessError(err)
+		return false, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return contract.ShouldCreateBatch(&bind.CallOpts{
@@ -152,14 +159,14 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 ) ([]ConfirmedTransaction, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return contract.GetConfirmedTransactions(&bind.CallOpts{
@@ -173,21 +180,21 @@ func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(
 ) (CardanoBlock, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return CardanoBlock{}, err
+		return CardanoBlock{}, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	cardanoBlock, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(destinationChain))
 	if err != nil {
-		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, fmt.Errorf("error while GetLastObservedBlock: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return cardanoBlock, nil
@@ -198,14 +205,14 @@ func (bsc *BridgeSmartContractImpl) GetValidatorsChainData(
 ) ([]ValidatorChainData, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return contract.GetValidatorsChainData(&bind.CallOpts{
@@ -216,14 +223,14 @@ func (bsc *BridgeSmartContractImpl) GetValidatorsChainData(
 func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return 0, bsc.ethHelper.ProcessError(err)
+		return 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return contract.GetNextBatchId(&bind.CallOpts{
@@ -234,21 +241,21 @@ func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinat
 func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	result, err := contract.GetAllRegisteredChains(&bind.CallOpts{
 		Context: ctx,
 	})
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while GetAllRegisteredChains: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return result, nil
@@ -257,7 +264,7 @@ func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) 
 func (bsc *BridgeSmartContractImpl) GetBlockNumber(ctx context.Context) (uint64, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	return ethTxHelper.GetClient().BlockNumber(ctx)
@@ -273,14 +280,14 @@ func (bsc *BridgeSmartContractImpl) SetChainAdditionalData(
 
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	chainIDNum := common.ToNumChainID(chainID)
@@ -298,6 +305,9 @@ func (bsc *BridgeSmartContractImpl) SetChainAdditionalData(
 
 		return contract.SetChainAdditionalData(opts, chainIDNum, multisigAddr, feeAddr)
 	})
+	if err != nil {
+		return fmt.Errorf("error while SendTx SetChainAdditionalData: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return bsc.ethHelper.ProcessError(err)
+	return nil
 }

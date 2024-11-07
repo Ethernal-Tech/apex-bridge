@@ -85,7 +85,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 			if t.client == nil {
 				client, err := ethclient.Dial(t.nodeURL)
 				if err != nil {
-					return err
+					return fmt.Errorf("error while dialing node: %w", err)
 				}
 
 				t.client = client
@@ -100,7 +100,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	}
 
 	if err := t.initFn(t); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while initializing txHelper: %w", err)
 	}
 
 	return t, nil
@@ -110,12 +110,18 @@ func (t *EthTxHelperImpl) GetClient() *ethclient.Client {
 	return t.client
 }
 
-func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
+func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (nonce uint64, err error) {
 	if pending {
-		return t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
+		nonce, err = t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
+	} else {
+		nonce, err = t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
 	}
 
-	return t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
+	if err != nil {
+		err = fmt.Errorf("error while GetNonce: %w", err)
+	}
+
+	return nonce, err
 }
 
 func (t *EthTxHelperImpl) Deploy(
@@ -130,7 +136,7 @@ func (t *EthTxHelperImpl) Deploy(
 		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error while getting ChainID: %w", err)
 		}
 
 		chainID = retChainID
@@ -139,7 +145,7 @@ func (t *EthTxHelperImpl) Deploy(
 	// Create contract deployment transaction
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error while getting TransactOpts: %w", err)
 	}
 
 	copyTxOpts(txOptsRes, &txOptsParam)
@@ -147,7 +153,7 @@ func (t *EthTxHelperImpl) Deploy(
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
 		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
 
-		return "", "", err
+		return "", "", fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
 	t.logger.Debug("Deploying contract...", "addr", wallet.GetAddress(),
@@ -158,7 +164,7 @@ func (t *EthTxHelperImpl) Deploy(
 	if err != nil {
 		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
 
-		return "", "", err
+		return "", "", fmt.Errorf("error while DeployContract: %w", err)
 	}
 
 	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
@@ -200,7 +206,7 @@ func (t *EthTxHelperImpl) SendTx(
 		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error while getting ChainID: %w", err)
 		}
 
 		chainID = retChainID
@@ -208,7 +214,7 @@ func (t *EthTxHelperImpl) SendTx(
 
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while getting TransactOpts: %w", err)
 	}
 
 	copyTxOpts(txOptsRes, &txOptsParam)
@@ -216,7 +222,7 @@ func (t *EthTxHelperImpl) SendTx(
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
 		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
 
-		return nil, err
+		return nil, fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
 	t.logger.Debug("Sending transaction...", "addr", wallet.GetAddress(),
@@ -226,7 +232,7 @@ func (t *EthTxHelperImpl) SendTx(
 	if err != nil {
 		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
 
-		return nil, err
+		return nil, fmt.Errorf("error while sendTxHandler: %w", err)
 	}
 
 	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
@@ -240,7 +246,7 @@ func (t *EthTxHelperImpl) EstimateGas(
 ) (uint64, uint64, error) {
 	input, err := abi.Pack(method, args...)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("error while abi.Pack: %w", err)
 	}
 
 	estimatedGas, err := t.GetClient().EstimateGas(ctx, ethereum.CallMsg{
@@ -250,7 +256,7 @@ func (t *EthTxHelperImpl) EstimateGas(
 		Data:  input,
 	})
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("error while EstimateGas: %w", err)
 	}
 
 	return uint64(float64(estimatedGas) * gasLimitMultiplier), estimatedGas, nil
@@ -266,7 +272,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 	if txOpts.Nonce == nil {
 		nonce, err := t.nonceRetrieveFn(ctx, t.client, from)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while retrieving nonce: %w", err)
 		}
 
 		txOpts.Nonce = new(big.Int).SetUint64(nonce)
@@ -288,7 +294,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 			} else {
 				gasPrice, err := t.client.SuggestGasPrice(ctx)
 				if err != nil {
-					return err
+					return fmt.Errorf("error while SuggestGasPrice: %w", err)
 				}
 
 				txOpts.GasPrice = apexCommon.MulPercentage(gasPrice, t.gasFeeMultiplier)
@@ -301,14 +307,14 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 
 		gasTipCap, err := t.client.SuggestGasTipCap(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while SuggestGasTipCap: %w", err)
 		}
 
 		txOpts.GasTipCap = apexCommon.MulPercentage(gasTipCap, t.gasFeeMultiplier)
 
 		hs, err := t.client.FeeHistory(ctx, 1, nil, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while FeeHistory: %w", err)
 		}
 
 		gasFeeCap := hs.BaseFee[len(hs.BaseFee)-1]
@@ -395,12 +401,12 @@ func WithInitClientAndChainIDFn(ctx context.Context) TxRelayerOption {
 		t.initFn = func(ethi *EthTxHelperImpl) error {
 			client, err := ethclient.DialContext(ctx, t.nodeURL)
 			if err != nil {
-				return err
+				return fmt.Errorf("error while DialContext: %w", err)
 			}
 
 			chainID, err := client.ChainID(ctx)
 			if err != nil {
-				return err
+				return fmt.Errorf("error while ChainID: %w", err)
 			}
 
 			t.client = client
@@ -433,7 +439,7 @@ func WithNonceRetrieveCounterFunc() TxRelayerOption {
 			if value, exists := counterMap[addr]; !exists {
 				result, err = client.PendingNonceAt(ctx, addr)
 				if err != nil {
-					return 0, err
+					return 0, fmt.Errorf("error while PendingNonceAt: %w", err)
 				}
 			} else {
 				result = value + 1

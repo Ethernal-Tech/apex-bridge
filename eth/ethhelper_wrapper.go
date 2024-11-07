@@ -52,7 +52,7 @@ func (e *EthHelperWrapper) GetEthHelper() (ethtxhelper.IEthTxHelper, error) {
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(e.opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while NewEThTxHelper: %w", err)
 	}
 
 	e.ethTxHelper = ethTxHelper
@@ -82,12 +82,13 @@ func (e *EthHelperWrapper) ProcessError(err error) error {
 func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendTxFunc) (*types.Receipt, error) {
 	ethTxHelper, err := e.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	tx, err := ethTxHelper.SendTx(ctx, e.wallet, bind.TransactOpts{}, handler)
 	if err != nil {
-		return nil, e.ProcessError(err) // tx is not available here to pick hash/gas/gasprice
+		// tx is not available here to pick hash/gas/gasprice
+		return nil, fmt.Errorf("error while SendTx: %w", e.ProcessError(err))
 	}
 
 	e.logger.Info("tx has been sent", "hash", tx.Hash(), "gas limit", tx.Gas(), "gas price", tx.GasPrice())
