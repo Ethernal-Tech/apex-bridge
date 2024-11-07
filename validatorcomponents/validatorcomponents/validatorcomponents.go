@@ -139,8 +139,9 @@ func NewValidatorComponents(
 		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
 
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
-		appConfig.Bridge.NodeURL, wallet,
-		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"),
+		wallet, logger.Named("bridge_smart_contract"),
+		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
+		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
 		ethtxhelper.WithNonceRetrieveCounterFunc(),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx))
 

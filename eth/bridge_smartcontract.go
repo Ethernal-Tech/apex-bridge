@@ -5,6 +5,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -45,7 +46,8 @@ func NewBridgeSmartContract(
 ) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
 		smartContractAddress: common.HexToAddress(smartContractAddress),
-		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
+		ethHelper: NewEthHelperWrapper(logger,
+			ethtxhelper.WithNodeURL(nodeURL), ethtxhelper.WithDynamicTx(isDynamic)),
 	}
 }
 

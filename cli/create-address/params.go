@@ -178,7 +178,8 @@ func (ip *createAddressParams) trySetChainAdditionalData(
 	}
 
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
-		ip.bridgeNodeURL, wallet, false, hclog.NewNullLogger())
+		wallet, hclog.NewNullLogger(),
+		ethtxhelper.WithNodeURL(ip.bridgeNodeURL), ethtxhelper.WithDynamicTx(false))
 
 	bridgeSC := eth.NewBridgeSmartContractWithWallet(ip.bridgeSCAddr, ethHelper)
 
