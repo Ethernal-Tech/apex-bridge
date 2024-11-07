@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hashicorp/go-hclog"
 )
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
@@ -64,6 +65,7 @@ type EthTxHelperImpl struct {
 	nonceRetrieveFn   NonceRetrieveFunc
 	nonceUpdateFn     NonceUpdateFunc
 	mutex             sync.Mutex
+	logger            hclog.Logger
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
@@ -91,6 +93,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 
 			return nil
 		},
+		logger: hclog.NewNullLogger(),
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -146,6 +149,9 @@ func (t *EthTxHelperImpl) Deploy(
 
 		return "", "", err
 	}
+
+	t.logger.Debug("Deploying contract...", "addr", wallet.GetAddress(),
+		"nonce", txOptsRes.Nonce, "chainID", chainID, "gasLimit", txOptsRes.GasLimit)
 
 	// Deploy the contract
 	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
@@ -212,6 +218,9 @@ func (t *EthTxHelperImpl) SendTx(
 
 		return nil, err
 	}
+
+	t.logger.Debug("Sending transaction...", "addr", wallet.GetAddress(),
+		"nonce", txOptsRes.Nonce, "chainID", chainID, "gasLimit", txOptsRes.GasLimit)
 
 	tx, err := sendTxHandler(txOptsRes)
 	if err != nil {
@@ -399,6 +408,12 @@ func WithInitClientAndChainIDFn(ctx context.Context) TxRelayerOption {
 
 			return nil
 		}
+	}
+}
+
+func WithLogger(logger hclog.Logger) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.logger = logger
 	}
 }
 
