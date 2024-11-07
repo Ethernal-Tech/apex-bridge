@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
@@ -19,6 +21,9 @@ import (
 
 const (
 	defaultGasLimit        = 5_242_880
+	defaultNumRetries      = 10
+	defaultRetriesWaitTime = time.Second * 4
+
 	validatorDataDirFlag   = "validator-data-dir"
 	validatorConfigFlag    = "validator-config"
 	bridgeURLFlag          = "bridge-url"
@@ -145,7 +150,11 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	var validatorChainData eth.ValidatorChainData
+	var (
+		validatorChainData eth.ValidatorChainData
+		transaction        *types.Transaction
+		ctx                = context.Background()
+	)
 
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
@@ -183,36 +192,41 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		return nil, fmt.Errorf("failed to load blade wallet: %w", err)
 	}
 
-	contract, err := contractbinding.NewBridgeContract(common.HexToAddress(ip.bridgeSCAddr), ip.ethTxHelper.GetClient())
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to bridge smart contract: %w", err)
-	}
-
 	initialTokenSupply, _ := new(big.Int).SetString(ip.initialTokenSupply, 0)
 
 	// create and send register chain tx
-	tx, err := ip.ethTxHelper.SendTx(
-		context.Background(),
-		walletEth,
-		bind.TransactOpts{
-			GasLimit: defaultGasLimit,
-		},
-		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-			return contract.RegisterChainGovernance(
-				txOpts,
-				common.ToNumChainID(ip.chainID),
-				ip.chainType,
-				initialTokenSupply,
-				validatorChainData)
-		})
+	err = wallet.ExecuteWithRetry(ctx, defaultNumRetries, defaultRetriesWaitTime, func() (bool, error) {
+		contract, err := contractbinding.NewBridgeContract(
+			common.HexToAddress(ip.bridgeSCAddr), ip.ethTxHelper.GetClient())
+		if err != nil {
+			return false, fmt.Errorf("failed to connect to bridge smart contract: %w", err)
+		}
+
+		transaction, err = ip.ethTxHelper.SendTx(
+			ctx,
+			walletEth,
+			bind.TransactOpts{
+				GasLimit: defaultGasLimit,
+			},
+			func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+				return contract.RegisterChainGovernance(
+					txOpts,
+					common.ToNumChainID(ip.chainID),
+					ip.chainType,
+					initialTokenSupply,
+					validatorChainData)
+			})
+
+		return err == nil, err
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", transaction.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := ip.ethTxHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
+	receipt, err := ip.ethTxHelper.WaitForReceipt(context.Background(), transaction.Hash().String(), true)
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {

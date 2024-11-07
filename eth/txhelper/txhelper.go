@@ -20,7 +20,7 @@ import (
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
-type NonceUpdateFunc func(addr common.Address, value uint64)
+type NonceUpdateFunc func(addr common.Address, value uint64, success bool)
 
 const (
 	defaultGasLimit          = uint64(5_242_880) // 0x500000
@@ -78,7 +78,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
 			return client.PendingNonceAt(ctx, addr)
 		},
-		nonceUpdateFn: func(addr common.Address, value uint64) {},
+		nonceUpdateFn: func(_ common.Address, _ uint64, _ bool) {},
 		initFn: func(t *EthTxHelperImpl) error {
 			if t.client == nil {
 				client, err := ethclient.Dial(t.nodeURL)
@@ -142,16 +142,20 @@ func (t *EthTxHelperImpl) Deploy(
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
 		return "", "", err
 	}
 
 	// Deploy the contract
 	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
 	if err != nil {
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
 		return "", "", err
 	}
 
-	t.nonceUpdateFn(wallet.GetAddress(), txOptsRes.Nonce.Uint64())
+	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
 
 	return contractAddress.String(), tx.Hash().String(), nil
 }
@@ -204,15 +208,19 @@ func (t *EthTxHelperImpl) SendTx(
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
 		return nil, err
 	}
 
 	tx, err := sendTxHandler(txOptsRes)
 	if err != nil {
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
 		return nil, err
 	}
 
-	t.nonceUpdateFn(wallet.GetAddress(), txOptsRes.Nonce.Uint64())
+	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
 
 	return tx, nil
 }
@@ -418,8 +426,12 @@ func WithNonceRetrieveCounterFunc() TxRelayerOption {
 
 			return result, nil
 		}
-		t.nonceUpdateFn = func(addr common.Address, nonce uint64) {
-			counterMap[addr] = nonce
+		t.nonceUpdateFn = func(addr common.Address, nonce uint64, success bool) {
+			if success {
+				counterMap[addr] = nonce
+			} else {
+				delete(counterMap, addr)
+			}
 		}
 	}
 }
