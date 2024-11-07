@@ -6,7 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125458-8837f3837cc0
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241028094359-f52184b2474c
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241107104837-4bec009ec640
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d
 	github.com/armon/go-metrics v0.4.1
 	github.com/ethereum/go-ethereum v1.13.14
@@ -123,7 +123,7 @@ require (
 	github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
-	github.com/blinklabs-io/gouroboros v0.102.0 // indirect
+	github.com/blinklabs-io/gouroboros v0.103.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect

@@ -37,8 +37,8 @@ github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125458-8837f383
 github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125458-8837f3837cc0/go.mod h1:csuByxgtqkcFqtzU650asqwZIg+gBHBtLjr1BikQLSc=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19 h1:a96KsZz67W/Nn6Kx55A4eaMngFNsm5A5A6MRYF2xu8U=
 github.com/Ethernal-Tech/bn256 v0.0.0-20240711150404-47c82e53dd19/go.mod h1:ikj6EuZ/ISPyR1DYKnqoE5F2geyI3KzVllndxg7vFs8=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241028094359-f52184b2474c h1:XnwQSA1MMnLTTH0JJolFXnYT8tuK+iM9lpfZCSSj9yc=
-github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241028094359-f52184b2474c/go.mod h1:ZaHhVZBQyUN4kjLDB8IEsKnbhkVApAopHAuTcih6BLQ=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241107104837-4bec009ec640 h1:ARFOgSkYEMeqsO97ysIknLUNOxZVu1PdiOceV0aJqKU=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241107104837-4bec009ec640/go.mod h1:m4KVQGs10zoSEGpL5pEdRElQFAwettiZMJhpeshqMsI=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d h1:RsquCZ2+xzaC3PqIuO4FnxEE119RWisUBjYXtJHWdGY=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d/go.mod h1:qarG4b9mBqIHBEUwUZQBokCWB634DeoRfUy6XV43Pag=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
@@ -66,10 +66,10 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bits-and-blooms/bitset v1.13.0 h1:bAQ9OPNFYbGHV6Nez0tmNI0RiEu7/hxlYJRUA0wFAVE=
 github.com/bits-and-blooms/bitset v1.13.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
-github.com/blinklabs-io/gouroboros v0.102.0 h1:SSw1SW5a/eunPJdwJHARur/dlGdTrLEq5ScRFZjhen0=
-github.com/blinklabs-io/gouroboros v0.102.0/go.mod h1:okgJskD4KXG5itGM95gUl6J+rKbURzaP++HTeCokgkM=
-github.com/blinklabs-io/ouroboros-mock v0.3.4 h1:codPfiI5vLeD6YdhKL5VwYSzy2N3Dsgx6xjcLsqFaJQ=
-github.com/blinklabs-io/ouroboros-mock v0.3.4/go.mod h1:e/wgG1ZYVenroN2XEMXy7DgEfdmP7KXVRHIQKuh8E/0=
+github.com/blinklabs-io/gouroboros v0.103.1 h1:D/3Hlr09kw/cYM8gt6t7jVlTfDCXjb25nHL5V2l/3kc=
+github.com/blinklabs-io/gouroboros v0.103.1/go.mod h1:wjiNCbZ2uQy9DGfLCgEgqagHxNBAv5UYsOdRBgoi3SU=
+github.com/blinklabs-io/ouroboros-mock v0.3.5 h1:/KWbSoH8Pjrd9uxOH7mVbI7XFsDCNW/O9FtLlvJDUpQ=
+github.com/blinklabs-io/ouroboros-mock v0.3.5/go.mod h1:JtUQ3Luo22hCnGBxuxNp6JaUx63VxidxWwmcaVMremw=
 github.com/btcsuite/btcd v0.24.2 h1:aLmxPguqxza+4ag8R1I2nnJjSu2iFn/kqtHTIImswcY=
 github.com/btcsuite/btcd/btcec/v2 v2.3.3 h1:6+iXlDKE8RMtKsvK0gshlXIuPbyWM/h84Ensb7o3sC0=
 github.com/btcsuite/btcd/btcec/v2 v2.3.3/go.mod h1:zYzJ8etWJQIv1Ogk7OzpWjowwOdXY1W/17j2MW85J04=
