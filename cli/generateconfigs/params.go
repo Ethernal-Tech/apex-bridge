@@ -140,7 +140,7 @@ const (
 	defaultTakeAtLeastUtxoCount              = 6
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
-	defaultEVMNonceStrategy                  = ethtxhelper.NonceCombinedStrategy
+	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
 )
 
 type generateConfigsParams struct {
