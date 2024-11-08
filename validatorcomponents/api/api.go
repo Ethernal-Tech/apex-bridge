@@ -110,6 +110,10 @@ func (api *APIImpl) Start() {
 func (api *APIImpl) Dispose() error {
 	var apiErrors []error
 
+	if api.server == nil {
+		return nil
+	}
+
 	err := api.server.Shutdown(context.Background())
 	if err != nil {
 		apiErrors = append(apiErrors, fmt.Errorf("error while trying to shutdown api server. err %w", err))
