@@ -6,11 +6,9 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/hashicorp/go-hclog"
 )
 
 const submitClaimsGasLimit = uint64(10_000_000)
@@ -39,16 +37,6 @@ type OracleBridgeSmartContractImpl struct {
 var _ IOracleBridgeSmartContract = (*OracleBridgeSmartContractImpl)(nil)
 
 func NewOracleBridgeSmartContract(
-	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
-) *OracleBridgeSmartContractImpl {
-	return &OracleBridgeSmartContractImpl{
-		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
-		ethHelper: NewEthHelperWrapper(logger,
-			ethtxhelper.WithNodeURL(nodeURL), ethtxhelper.WithDynamicTx(isDynamic)),
-	}
-}
-
-func NewOracleBridgeSmartContractWithWallet(
 	smartContractAddress string, ethHelper *EthHelperWrapper,
 ) *OracleBridgeSmartContractImpl {
 	return &OracleBridgeSmartContractImpl{

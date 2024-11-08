@@ -134,10 +134,6 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
 	}
 
-	oracleBridgeSC := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
-
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
 		wallet, logger.Named("tx_helper_wrapper"),
 		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
@@ -146,7 +142,7 @@ func NewValidatorComponents(
 		ethtxhelper.WithLogger(logger.Named("tx_helper")),
 	)
 
-	oracleBridgeSCWithWallet := eth.NewOracleBridgeSmartContractWithWallet(
+	oracleBridgeSCWithWallet := eth.NewOracleBridgeSmartContract(
 		appConfig.Bridge.SmartContractAddress, ethHelper)
 
 	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
@@ -156,7 +152,7 @@ func NewValidatorComponents(
 		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
 
 	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSC, bridgeSubmitter, cardanoIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSCWithWallet, bridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
@@ -166,7 +162,7 @@ func NewValidatorComponents(
 		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
 
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSC, ethBridgeSubmitter, ethIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSCWithWallet, ethBridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_eth"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
