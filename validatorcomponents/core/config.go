@@ -93,13 +93,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
-		ValidatorDataDir:    appConfig.ValidatorDataDir,
-		ValidatorConfigPath: appConfig.ValidatorConfigPath,
-		Bridge: batcherCore.BridgeConfig{
-			NodeURL:              appConfig.Bridge.NodeURL,
-			DynamicTx:            appConfig.Bridge.DynamicTx,
-			SmartContractAddress: appConfig.Bridge.SmartContractAddress,
-		},
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,
 	}

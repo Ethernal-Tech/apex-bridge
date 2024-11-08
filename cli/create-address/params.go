@@ -136,8 +136,13 @@ func (ip *createAddressParams) Execute(
 		}, nil
 	}
 
+	txHelperBridge, err := ip.getTxHelperBridge()
+	if err != nil {
+		return nil, err
+	}
+
 	multisigPolicyScript, feePolicyScript, err := getKeyHashesFromBridge(
-		ctx, ip.bridgeNodeURL, ip.bridgeSCAddr, ip.chainID, outputter)
+		ctx, ip.bridgeSCAddr, ip.chainID, txHelperBridge, outputter)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +157,7 @@ func (ip *createAddressParams) Execute(
 		return nil, err
 	}
 
-	if err := ip.trySetChainAdditionalData(ctx, outputter, multisigAddr, feeAddr); err != nil {
+	if err := ip.trySetChainAdditionalData(ctx, multisigAddr, feeAddr, txHelperBridge, outputter); err != nil {
 		return nil, err
 	}
 
@@ -163,7 +168,8 @@ func (ip *createAddressParams) Execute(
 }
 
 func (ip *createAddressParams) trySetChainAdditionalData(
-	ctx context.Context, outputter common.OutputFormatter, multisigAddr, feeAddr string,
+	ctx context.Context, multisigAddr, feeAddr string,
+	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) error {
 	if ip.bridgePrivateKey == "" {
 		return nil
@@ -172,18 +178,33 @@ func (ip *createAddressParams) trySetChainAdditionalData(
 	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
 	outputter.WriteOutput()
 
+	return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).
+		SetChainAdditionalData(ctx, ip.chainID, multisigAddr, feeAddr)
+}
+
+func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
+	if ip.bridgeNodeURL == "" {
+		return nil, nil
+	}
+
+	if ip.bridgePrivateKey == "" {
+		return eth.NewEthHelperWrapper(
+			hclog.NewNullLogger(),
+			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
+			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+			ethtxhelper.WithDynamicTx(false)), nil
+	}
+
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	bridgeSC, err := eth.NewBridgeSmartContractWithWallet(
-		ip.bridgeNodeURL, ip.bridgeSCAddr, wallet, false, hclog.NewNullLogger())
-	if err != nil {
-		return err
-	}
-
-	return bridgeSC.SetChainAdditionalData(ctx, ip.chainID, multisigAddr, feeAddr)
+	return eth.NewEthHelperWrapperWithWallet(
+		wallet, hclog.NewNullLogger(),
+		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
+		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithDynamicTx(false)), nil
 }
 
 func getAddress(networkIDInt uint, ps *wallet.PolicyScript) (string, error) {
@@ -204,11 +225,9 @@ func getAddress(networkIDInt uint, ps *wallet.PolicyScript) (string, error) {
 }
 
 func getKeyHashesFromBridge(
-	ctx context.Context, nodeURL, addr, chainID string, outputter common.OutputFormatter,
+	ctx context.Context, addr, chainID string, txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) (*wallet.PolicyScript, *wallet.PolicyScript, error) {
-	bridgeSC := eth.NewBridgeSmartContract(nodeURL, addr, false, hclog.NewNullLogger())
-
-	validatorsData, err := bridgeSC.GetValidatorsChainData(ctx, chainID)
+	validatorsData, err := eth.NewBridgeSmartContract(addr, txHelper).GetValidatorsChainData(ctx, chainID)
 	if err != nil {
 		return nil, nil, err
 	}

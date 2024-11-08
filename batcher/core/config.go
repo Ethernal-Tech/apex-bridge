@@ -4,16 +4,9 @@ import (
 	"encoding/json"
 )
 
-type BridgeConfig struct {
-	NodeURL              string `json:"nodeUrl"`
-	DynamicTx            bool   `json:"dynamicTx"`
-	SmartContractAddress string `json:"scAddress"`
-}
-
 type BatcherConfiguration struct {
-	Bridge        BridgeConfig `json:"bridge"`
-	Chain         ChainConfig  `json:"chain"`
-	PullTimeMilis uint64       `json:"pullTime"`
+	Chain         ChainConfig `json:"chain"`
+	PullTimeMilis uint64      `json:"pullTime"`
 }
 
 type ChainConfig struct {
@@ -23,9 +16,6 @@ type ChainConfig struct {
 }
 
 type BatcherManagerConfiguration struct {
-	ValidatorDataDir    string        `json:"validatorDataDir"`
-	ValidatorConfigPath string        `json:"validatorConfigPath"`
-	Bridge              BridgeConfig  `json:"bridge"`
-	Chains              []ChainConfig `json:"chains"`
-	PullTimeMilis       uint64        `json:"pullTime"`
+	Chains        []ChainConfig `json:"chains"`
+	PullTimeMilis uint64        `json:"pullTime"`
 }

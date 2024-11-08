@@ -16,15 +16,18 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hashicorp/go-hclog"
 )
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
 type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
+type NonceUpdateFunc func(addr common.Address, value uint64, success bool)
 
 const (
-	defaultGasLimit         = uint64(5_242_880) // 0x500000
-	defaultNumRetries       = 1000
-	defaultGasFeeMultiplier = 170 // 170%
+	defaultGasLimit          = uint64(5_242_880) // 0x500000
+	defaultGasFeeMultiplier  = 170               // 170%
+	defaultReceiptRetriesCnt = 1000
+	defaultReceiptWaitTime   = 300 * time.Millisecond
 )
 
 var (
@@ -48,44 +51,56 @@ type IEthTxHelper interface {
 }
 
 type EthTxHelperImpl struct {
-	client           *ethclient.Client
-	nodeURL          string
-	writer           io.Writer
-	numRetries       int
-	receiptWaitTime  time.Duration
-	gasFeeMultiplier uint64
-	isDynamic        bool
-	zeroGasPrice     bool
-	defaultGasLimit  uint64
-	chainID          *big.Int
-	nonceRetrieveFn  NonceRetrieveFunc
-	mutex            sync.Mutex
+	client            *ethclient.Client
+	nodeURL           string
+	writer            io.Writer
+	receiptRetriesCnt int
+	receiptWaitTime   time.Duration
+	gasFeeMultiplier  uint64
+	isDynamic         bool
+	zeroGasPrice      bool
+	defaultGasLimit   uint64
+	chainID           *big.Int
+	initFn            func(*EthTxHelperImpl) error
+	nonceRetrieveFn   NonceRetrieveFunc
+	nonceUpdateFn     NonceUpdateFunc
+	mutex             sync.Mutex
+	logger            hclog.Logger
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
 
 func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	t := &EthTxHelperImpl{
-		receiptWaitTime:  50 * time.Millisecond,
-		numRetries:       defaultNumRetries,
-		gasFeeMultiplier: defaultGasFeeMultiplier,
-		zeroGasPrice:     true,
-		defaultGasLimit:  defaultGasLimit,
+		receiptWaitTime:   defaultReceiptWaitTime,
+		receiptRetriesCnt: defaultReceiptRetriesCnt,
+		gasFeeMultiplier:  defaultGasFeeMultiplier,
+		zeroGasPrice:      true,
+		defaultGasLimit:   defaultGasLimit,
 		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
 			return client.PendingNonceAt(ctx, addr)
 		},
+		nonceUpdateFn: func(_ common.Address, _ uint64, _ bool) {},
+		initFn: func(t *EthTxHelperImpl) error {
+			if t.client == nil {
+				client, err := ethclient.Dial(t.nodeURL)
+				if err != nil {
+					return fmt.Errorf("error while dialing node: %w", err)
+				}
+
+				t.client = client
+			}
+
+			return nil
+		},
+		logger: hclog.NewNullLogger(),
 	}
 	for _, opt := range opts {
 		opt(t)
 	}
 
-	if t.client == nil {
-		client, err := ethclient.Dial(t.nodeURL)
-		if err != nil {
-			return nil, err
-		}
-
-		t.client = client
+	if err := t.initFn(t); err != nil {
+		return nil, fmt.Errorf("error while initializing txHelper: %w", err)
 	}
 
 	return t, nil
@@ -95,12 +110,18 @@ func (t *EthTxHelperImpl) GetClient() *ethclient.Client {
 	return t.client
 }
 
-func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (uint64, error) {
+func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending bool) (nonce uint64, err error) {
 	if pending {
-		return t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
+		nonce, err = t.client.PendingNonceAt(ctx, common.HexToAddress(addr))
+	} else {
+		nonce, err = t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
 	}
 
-	return t.client.NonceAt(ctx, common.HexToAddress(addr), nil)
+	if err != nil {
+		err = fmt.Errorf("error while GetNonce: %w", err)
+	}
+
+	return nonce, err
 }
 
 func (t *EthTxHelperImpl) Deploy(
@@ -115,7 +136,7 @@ func (t *EthTxHelperImpl) Deploy(
 		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error while getting ChainID: %w", err)
 		}
 
 		chainID = retChainID
@@ -124,20 +145,29 @@ func (t *EthTxHelperImpl) Deploy(
 	// Create contract deployment transaction
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error while getting TransactOpts: %w", err)
 	}
 
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
-		return "", "", err
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
+		return "", "", fmt.Errorf("error while populating tx opts: %w", err)
 	}
+
+	t.logger.Debug("Deploying contract...", "addr", wallet.GetAddress(),
+		"nonce", txOptsRes.Nonce, "chainID", chainID, "gasLimit", txOptsRes.GasLimit)
 
 	// Deploy the contract
 	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
 	if err != nil {
-		return "", "", err
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
+		return "", "", fmt.Errorf("error while DeployContract: %w", err)
 	}
+
+	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
 
 	return contractAddress.String(), tx.Hash().String(), nil
 }
@@ -145,7 +175,7 @@ func (t *EthTxHelperImpl) Deploy(
 func (t *EthTxHelperImpl) WaitForReceipt(
 	ctx context.Context, hash string, skipNotFound bool,
 ) (*types.Receipt, error) {
-	for count := 0; count < t.numRetries; count++ {
+	for count := 0; count < t.receiptRetriesCnt; count++ {
 		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
 		if err != nil {
 			if !skipNotFound && errors.Is(err, ethereum.NotFound) {
@@ -176,7 +206,7 @@ func (t *EthTxHelperImpl) SendTx(
 		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error while getting ChainID: %w", err)
 		}
 
 		chainID = retChainID
@@ -184,16 +214,30 @@ func (t *EthTxHelperImpl) SendTx(
 
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while getting TransactOpts: %w", err)
 	}
 
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
-		return nil, err
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
+		return nil, fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
-	return sendTxHandler(txOptsRes)
+	t.logger.Debug("Sending transaction...", "addr", wallet.GetAddress(),
+		"nonce", txOptsRes.Nonce, "chainID", chainID, "gasLimit", txOptsRes.GasLimit)
+
+	tx, err := sendTxHandler(txOptsRes)
+	if err != nil {
+		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+
+		return nil, fmt.Errorf("error while sendTxHandler: %w", err)
+	}
+
+	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
+
+	return tx, nil
 }
 
 func (t *EthTxHelperImpl) EstimateGas(
@@ -202,7 +246,7 @@ func (t *EthTxHelperImpl) EstimateGas(
 ) (uint64, uint64, error) {
 	input, err := abi.Pack(method, args...)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("error while abi.Pack: %w", err)
 	}
 
 	estimatedGas, err := t.GetClient().EstimateGas(ctx, ethereum.CallMsg{
@@ -212,7 +256,7 @@ func (t *EthTxHelperImpl) EstimateGas(
 		Data:  input,
 	})
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("error while EstimateGas: %w", err)
 	}
 
 	return uint64(float64(estimatedGas) * gasLimitMultiplier), estimatedGas, nil
@@ -228,7 +272,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 	if txOpts.Nonce == nil {
 		nonce, err := t.nonceRetrieveFn(ctx, t.client, from)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while retrieving nonce: %w", err)
 		}
 
 		txOpts.Nonce = new(big.Int).SetUint64(nonce)
@@ -250,7 +294,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 			} else {
 				gasPrice, err := t.client.SuggestGasPrice(ctx)
 				if err != nil {
-					return err
+					return fmt.Errorf("error while SuggestGasPrice: %w", err)
 				}
 
 				txOpts.GasPrice = apexCommon.MulPercentage(gasPrice, t.gasFeeMultiplier)
@@ -263,14 +307,14 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 
 		gasTipCap, err := t.client.SuggestGasTipCap(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while SuggestGasTipCap: %w", err)
 		}
 
 		txOpts.GasTipCap = apexCommon.MulPercentage(gasTipCap, t.gasFeeMultiplier)
 
 		hs, err := t.client.FeeHistory(ctx, 1, nil, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while FeeHistory: %w", err)
 		}
 
 		gasFeeCap := hs.BaseFee[len(hs.BaseFee)-1]
@@ -314,12 +358,11 @@ func WithWriter(writer io.Writer) TxRelayerOption {
 	}
 }
 
-// WithNumRetries sets the maximum number of eth_getTransactionReceipt retries
-// before considering the transaction sending as timed out. Set to -1 to disable
-// waitForReceipt and not wait for the transaction receipt
-func WithNumRetries(numRetries int) TxRelayerOption {
+// WithReceiptRetriesCnt sets the maximum number of eth_getTransactionReceipt retries
+// before considering the transaction sending as timed out.
+func WithReceiptRetriesCnt(receiptRetriesCnt int) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
-		t.numRetries = numRetries
+		t.receiptRetriesCnt = receiptRetriesCnt
 	}
 }
 
@@ -347,6 +390,39 @@ func WithChainID(chainID *big.Int) TxRelayerOption {
 	}
 }
 
+func WithInitFn(fn func(*EthTxHelperImpl) error) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.initFn = fn
+	}
+}
+
+func WithInitClientAndChainIDFn(ctx context.Context) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.initFn = func(ethi *EthTxHelperImpl) error {
+			client, err := ethclient.DialContext(ctx, t.nodeURL)
+			if err != nil {
+				return fmt.Errorf("error while DialContext: %w", err)
+			}
+
+			chainID, err := client.ChainID(ctx)
+			if err != nil {
+				return fmt.Errorf("error while ChainID: %w", err)
+			}
+
+			t.client = client
+			t.chainID = chainID
+
+			return nil
+		}
+	}
+}
+
+func WithLogger(logger hclog.Logger) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.logger = logger
+	}
+}
+
 func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.nonceRetrieveFn = fn
@@ -361,17 +437,22 @@ func WithNonceRetrieveCounterFunc() TxRelayerOption {
 			ctx context.Context, client *ethclient.Client, addr common.Address,
 		) (result uint64, err error) {
 			if value, exists := counterMap[addr]; !exists {
-				result, err = client.NonceAt(ctx, addr, nil)
+				result, err = client.PendingNonceAt(ctx, addr)
 				if err != nil {
-					return 0, err
+					return 0, fmt.Errorf("error while PendingNonceAt: %w", err)
 				}
 			} else {
 				result = value + 1
 			}
 
-			counterMap[addr] = result
-
 			return result, nil
+		}
+		t.nonceUpdateFn = func(addr common.Address, nonce uint64, success bool) {
+			if success {
+				counterMap[addr] = nonce
+			} else {
+				delete(counterMap, addr)
+			}
 		}
 	}
 }
