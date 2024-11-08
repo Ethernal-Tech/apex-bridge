@@ -25,14 +25,14 @@ type ConfirmedBatch struct {
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
-) (*ConfirmedBatch, error) {
+) *ConfirmedBatch {
 	return &ConfirmedBatch{
 		ID:             contractConfirmedBatch.Id,
 		RawTransaction: contractConfirmedBatch.RawTransaction,
 		Signatures:     contractConfirmedBatch.Signatures,
 		FeeSignatures:  contractConfirmedBatch.FeeSignatures,
 		Bitmap:         contractConfirmedBatch.Bitmap,
-	}, nil
+	}
 }
 
 func (b ConfirmedBatch) String() string {

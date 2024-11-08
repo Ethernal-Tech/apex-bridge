@@ -11,6 +11,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/relayer"
@@ -33,9 +34,12 @@ func NewRelayerManager(
 	var (
 		allRegisteredChains []eth.Chain
 		relayers            []core.Relayer
-		bridgeSmartContract = eth.NewBridgeSmartContract(
-			config.Bridge.NodeURL, config.Bridge.SmartContractAddress,
-			config.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
+		txHelper            = eth.NewEthHelperWrapper(
+			logger.Named("bridge_smart_contract"),
+			ethtxhelper.WithNodeURL(config.Bridge.NodeURL),
+			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+			ethtxhelper.WithDynamicTx(config.Bridge.DynamicTx))
+		bridgeSmartContract = eth.NewBridgeSmartContract(config.Bridge.SmartContractAddress, txHelper)
 	)
 
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {

@@ -87,6 +87,16 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 		}
 	}
 
+	if len(bridgingRequests) > 0 {
+		r.logger.Debug("Adding multiple new bridging request states to db",
+			"chainID", originChainID, "states", bridgingRequests)
+
+		err := r.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
+		if err != nil {
+			r.logger.Error("error while adding new bridging request states", "err", err)
+		}
+	}
+
 	// we should update db only if there are some changes needed
 	if len(processedTxs)+len(relevantTxs) > 0 {
 		r.logger.Debug("Adding txs to db", "processed", processedTxs, "unprocessed", relevantTxs)
@@ -100,16 +110,6 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 	if invalidTxsCounter > 0 {
 		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
-	}
-
-	if len(bridgingRequests) > 0 {
-		r.logger.Debug("Adding multiple new bridging request states to db",
-			"chainID", originChainID, "states", bridgingRequests)
-
-		err := r.bridgingRequestStateUpdater.NewMultiple(originChainID, bridgingRequests)
-		if err != nil {
-			r.logger.Error("error while adding new bridging request states", "err", err)
-		}
 	}
 
 	return nil

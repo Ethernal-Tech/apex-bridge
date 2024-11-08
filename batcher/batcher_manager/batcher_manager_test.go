@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -37,25 +38,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", true, true)
 	require.NoError(t, err)
 
-	t.Run("creation fails - secrets manager", func(t *testing.T) {
-		invalidConfig := &core.BatcherManagerConfiguration{
-			Chains: []core.ChainConfig{
-				{
-					ChainID:       common.ChainIDStrPrime,
-					ChainType:     "Cardano",
-					ChainSpecific: json.RawMessage(""),
-				},
-			},
-		}
-
-		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, nil, nil, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
-		require.ErrorContains(t, err, "failed to create secrets manager")
-	})
-
 	t.Run("creation fails - invalid operations", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			ValidatorDataDir: secretsPath,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,
@@ -66,7 +50,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 		}
 
 		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, map[string]indexer.Database{
+			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
+			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
 			}, map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
@@ -76,7 +61,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	t.Run("creation fails - database for chain not exists", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			ValidatorDataDir: secretsPath,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,
@@ -87,14 +71,14 @@ func TestBatcherManagerCreation(t *testing.T) {
 		}
 
 		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, map[string]indexer.Database{}, map[string]eventTrackerStore.EventTrackerStore{},
+			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
+			map[string]indexer.Database{}, map[string]eventTrackerStore.EventTrackerStore{},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "database not exists")
 	})
 
 	t.Run("pass", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			ValidatorDataDir: secretsPath,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,
@@ -105,7 +89,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 		}
 
 		_, err := NewBatcherManager(context.Background(),
-			invalidConfig, map[string]indexer.Database{
+			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
+			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
 			}, map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),

@@ -2,14 +2,13 @@ package eth
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/hashicorp/go-hclog"
 )
 
 const submitClaimsGasLimit = uint64(10_000_000)
@@ -38,26 +37,12 @@ type OracleBridgeSmartContractImpl struct {
 var _ IOracleBridgeSmartContract = (*OracleBridgeSmartContractImpl)(nil)
 
 func NewOracleBridgeSmartContract(
-	nodeURL, smartContractAddress string, isDynamic bool, logger hclog.Logger,
+	smartContractAddress string, ethHelper *EthHelperWrapper,
 ) *OracleBridgeSmartContractImpl {
 	return &OracleBridgeSmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
-		ethHelper:            NewEthHelperWrapper(nodeURL, isDynamic, logger),
-	}
-}
-
-func NewOracleBridgeSmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, logger hclog.Logger,
-) (*OracleBridgeSmartContractImpl, error) {
-	ethHelper, err := NewEthHelperWrapperWithWallet(nodeURL, wallet, isDynamic, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return &OracleBridgeSmartContractImpl{
-		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
-	}, nil
+	}
 }
 
 func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
@@ -65,21 +50,21 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 ) (CardanoBlock, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return CardanoBlock{}, err
+		return CardanoBlock{}, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	result, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(sourceChain))
 	if err != nil {
-		return CardanoBlock{}, bsc.ethHelper.ProcessError(err)
+		return CardanoBlock{}, fmt.Errorf("error while GetLastObservedBlock: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return result, nil
@@ -90,21 +75,21 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 ) ([]byte, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(chainID))
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while GetRawTransactionFromLastBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return result, nil
@@ -115,14 +100,14 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 ) (*types.Receipt, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	receipt, err := bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
@@ -133,8 +118,11 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
 
 		return contract.SubmitClaims(opts, claims)
 	})
+	if err != nil {
+		return nil, fmt.Errorf("error while SendTx SubmitClaims: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return receipt, bsc.ethHelper.ProcessError(err)
+	return receipt, nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
@@ -142,21 +130,24 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 ) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return err
+		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return bsc.ethHelper.ProcessError(err)
+		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		return contract.SubmitLastObservedBlocks(opts, common.ToNumChainID(chainID), blocks)
 	})
+	if err != nil {
+		return fmt.Errorf("error while SendTx SubmitLastObservedBlocks: %w", bsc.ethHelper.ProcessError(err))
+	}
 
-	return bsc.ethHelper.ProcessError(err)
+	return nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) GetBatchTransactions(
@@ -164,21 +155,21 @@ func (bsc *OracleBridgeSmartContractImpl) GetBatchTransactions(
 ) ([]TxDataInfo, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	result, err := contract.GetBatchTransactions(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(chainID), batchID)
 	if err != nil {
-		return nil, bsc.ethHelper.ProcessError(err)
+		return nil, fmt.Errorf("error while GetBatchTransactions: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return result, nil

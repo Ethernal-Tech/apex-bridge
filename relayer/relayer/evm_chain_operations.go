@@ -10,6 +10,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/hashicorp/go-hclog"
@@ -60,8 +61,14 @@ func NewEVMChainOperations(
 		gasTipCap = new(big.Int).SetUint64(config.GasTipCap)
 	}
 
-	evmSmartContract, err := eth.NewEVMGatewaySmartContractWithWallet(
-		config.NodeURL, gatewayAddress, wallet, config.DynamicTx, config.DepositGasLimit,
+	txHelper := eth.NewEthHelperWrapperWithWallet(wallet, logger.Named("tx_helper_wrapper"),
+		ethtxhelper.WithNodeURL(config.NodeURL),
+		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithDynamicTx(config.DynamicTx),
+		ethtxhelper.WithLogger(logger.Named("tx_helper")))
+
+	evmSmartContract, err := eth.NewEVMGatewaySmartContract(
+		gatewayAddress, txHelper, config.DepositGasLimit,
 		gasPrice, gasFeeCap, gasTipCap, logger)
 	if err != nil {
 		return nil, err
