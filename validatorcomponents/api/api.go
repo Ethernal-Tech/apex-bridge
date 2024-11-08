@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -68,16 +69,24 @@ func NewAPI(
 }
 
 func (api *APIImpl) Start() {
-	api.server = &http.Server{
-		Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
-		Handler:           api.handler,
-		ReadHeaderTimeout: 3 * time.Second,
-	}
+	// delay api start a bit, in case OS has not released port yet from a previous run
+	time.Sleep(5 * time.Second)
 
 	api.serverClosedCh = make(chan bool)
 
-	err := common.RetryForever(api.ctx, 2*time.Second, func(context.Context) error {
+	err := common.RetryForever(api.ctx, 5*time.Second, func(ctx context.Context) error {
 		api.logger.Debug("Trying to start api")
+
+		srvCtx, cancelFunc := context.WithCancel(ctx)
+		defer cancelFunc()
+
+		api.server = &http.Server{
+			Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
+			Handler:           api.handler,
+			ReadHeaderTimeout: 3 * time.Second,
+			ConnContext:       func(ctx context.Context, c net.Conn) context.Context { return srvCtx },
+			BaseContext:       func(l net.Listener) context.Context { return srvCtx },
+		}
 
 		err := api.server.ListenAndServe()
 		if err == nil || err == http.ErrServerClosed {
@@ -85,6 +94,8 @@ func (api *APIImpl) Start() {
 		}
 
 		api.logger.Error("Error while trying to start api. Retrying...", "err", err)
+
+		api.server.Close()
 
 		return err
 	})
