@@ -94,8 +94,9 @@ func NewValidatorComponents(
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
 		wallet, logger.Named("tx_helper_wrapper"),
 		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
-		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
+		ethtxhelper.WithNonceStrategyType(appConfig.Bridge.NonceStrategy),
+		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")),
 	)
 

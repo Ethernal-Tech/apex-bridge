@@ -29,7 +29,7 @@ func (*HotWalletIncrementProcessor) GetType() common.BridgingTxType {
 
 func (p *HotWalletIncrementProcessor) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	if err := p.validate(tx, appConfig); err != nil {
-		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+		return fmt.Errorf("validation failed for tx: %s, err: %w", tx.Hash, err)
 	}
 
 	return nil

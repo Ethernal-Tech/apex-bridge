@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -64,10 +65,11 @@ var (
 )
 
 type BatcherEVMChainConfig struct {
-	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
-	TestMode               uint8   `json:"testMode"`
+	TTLBlockNumberInc      uint64                        `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold uint64                        `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent   float64                       `json:"noBatchPeriodPercent"`
+	TestMode               uint8                         `json:"testMode"`
+	NonceStrategy          ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
 }
 
 func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {
@@ -89,14 +91,15 @@ func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
 }
 
 type RelayerEVMChainConfig struct {
-	NodeURL         string `json:"nodeUrl"`
-	DynamicTx       bool   `json:"dynamicTx"`
-	DataDir         string `json:"dataDir,omitempty"`
-	ConfigPath      string `json:"configPath,omitempty"`
-	DepositGasLimit uint64 `json:"depositGasLimit"`
-	GasPrice        uint64 `json:"gasPrice"`
-	GasFeeCap       uint64 `json:"gasFeeCap"`
-	GasTipCap       uint64 `json:"gasTipCap"`
+	NodeURL         string                        `json:"nodeUrl"`
+	DynamicTx       bool                          `json:"dynamicTx"`
+	DataDir         string                        `json:"dataDir,omitempty"`
+	ConfigPath      string                        `json:"configPath,omitempty"`
+	DepositGasLimit uint64                        `json:"depositGasLimit"`
+	GasPrice        uint64                        `json:"gasPrice"`
+	GasFeeCap       uint64                        `json:"gasFeeCap"`
+	GasTipCap       uint64                        `json:"gasTipCap"`
+	NonceStrategy   ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
 }
 
 func NewRelayerEVMChainConfig(rawMessage json.RawMessage) (*RelayerEVMChainConfig, error) {

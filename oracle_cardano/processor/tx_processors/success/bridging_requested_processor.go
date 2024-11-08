@@ -56,7 +56,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 		//nolint:godox
 		// TODO: Refund
 		// p.addRefundRequestClaim(claims, tx, metadata)
-		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+		return fmt.Errorf("validation failed for tx: %s, err: %w", tx.Hash, err)
 	}
 
 	return nil

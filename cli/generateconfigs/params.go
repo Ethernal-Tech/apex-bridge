@@ -11,6 +11,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -137,6 +138,7 @@ const (
 	defaultTakeAtLeastUtxoCount              = 6
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
+	defaultNonceStrategy                     = ethtxhelper.NonceCombinedStrategy
 )
 
 type generateConfigsParams struct {
@@ -585,6 +587,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
 				DynamicTx:               true,
+				NonceStrategy:           defaultNonceStrategy,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -595,6 +598,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
 			},
+			NonceStrategy: defaultNonceStrategy,
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MinFeeForBridging:              1000010,
@@ -661,10 +665,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	})
 
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
-		NodeURL:    p.nexusNodeURL,
-		DataDir:    cleanPath(p.relayerDataDir),
-		ConfigPath: cleanPath(p.relayerConfigPath),
-		DynamicTx:  true,
+		NodeURL:       p.nexusNodeURL,
+		DataDir:       cleanPath(p.relayerDataDir),
+		ConfigPath:    cleanPath(p.relayerConfigPath),
+		DynamicTx:     true,
+		NonceStrategy: defaultNonceStrategy,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
@@ -672,6 +677,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
+			NonceStrategy:        defaultNonceStrategy,
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {
