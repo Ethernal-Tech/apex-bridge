@@ -80,13 +80,32 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
 	}
 
-	err = fixChainsAndAddresses(
-		ctx, appConfig,
-		eth.NewBridgeSmartContract(
-			appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-			appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract")),
-		logger,
+	secretsManager, err := common.GetSecretsManager(
+		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
+	}
+
+	ethHelper := eth.NewEthHelperWrapperWithWallet(
+		wallet, logger.Named("tx_helper_wrapper"),
+		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
+		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
+		ethtxhelper.WithInitClientAndChainIDFn(ctx),
+		ethtxhelper.WithLogger(logger.Named("tx_helper")),
 	)
+
+	oracleBridgeSmartContract := eth.NewOracleBridgeSmartContract(
+		appConfig.Bridge.SmartContractAddress, ethHelper)
+
+	bridgeSmartContract := eth.NewBridgeSmartContract(
+		appConfig.Bridge.SmartContractAddress, ethHelper)
+
+	err = fixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
@@ -123,70 +142,41 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
-	secretsManager, err := common.GetSecretsManager(
-		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
-	}
-
-	wallet, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
-	}
-
-	ethHelper := eth.NewEthHelperWrapperWithWallet(
-		wallet, logger.Named("tx_helper_wrapper"),
-		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
-		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
-		ethtxhelper.WithInitClientAndChainIDFn(ctx),
-		ethtxhelper.WithLogger(logger.Named("tx_helper")),
-	)
-
-	oracleBridgeSCWithWallet := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
-
-	bridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
-		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+	cardanoBridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
+		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_cardano"))
 
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
 		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
 
 	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSCWithWallet, bridgeSubmitter, cardanoIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
 
 	ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
-		ctx, oracleBridgeSCWithWallet, logger.Named("bridge_submitter"))
+		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
 
 	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSCWithWallet, ethBridgeSubmitter, ethIndexerDbs,
+		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_eth"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
 	}
 
-	batcherBridgeSCWithWallet := eth.NewBridgeSmartContractWithWallet(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
-
 	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
 		"contract", appConfig.Bridge.SmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
 
 	batcherManager, err := batchermanager.NewBatcherManager(
-		ctx, batcherConfig, secretsManager, batcherBridgeSCWithWallet,
+		ctx, batcherConfig, secretsManager, bridgeSmartContract,
 		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
 
-	relayerBridgeSmartContract := eth.NewBridgeSmartContract(
-		appConfig.Bridge.NodeURL, appConfig.Bridge.SmartContractAddress,
-		appConfig.Bridge.DynamicTx, logger.Named("bridge_smart_contract"))
-
 	relayerImitator, err := NewRelayerImitator(
-		ctx, appConfig, bridgingRequestStateManager, relayerBridgeSmartContract, db,
+		ctx, appConfig, bridgingRequestStateManager, bridgeSmartContract, db,
 		logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)

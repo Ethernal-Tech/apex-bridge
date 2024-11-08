@@ -221,7 +221,12 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	validatorsData, err := ip.getValidatorsChainData(ctx, outputter)
+	txHelperBridge, err := ip.getTxHelperBridge()
+	if err != nil {
+		return nil, err
+	}
+
+	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, outputter)
 	if err != nil {
 		return nil, err
 	}
@@ -320,10 +325,8 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	if ip.bridgePrivateKey != "" {
-		if err := ip.setChainAdditionalData(ctx, gatewayProxyAddr, outputter); err != nil {
-			return nil, err
-		}
+	if err := ip.setChainAdditionalData(ctx, gatewayProxyAddr, txHelperBridge, outputter); err != nil {
+		return nil, err
 	}
 
 	return &CmdResult{
@@ -339,35 +342,28 @@ func (ip *deployEVMParams) Execute(
 }
 
 func (ip *deployEVMParams) setChainAdditionalData(
-	ctx context.Context, gatewayProxyAddr ethcommon.Address, outputter common.OutputFormatter,
+	ctx context.Context, gatewayProxyAddr ethcommon.Address,
+	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) error {
+	if ip.bridgePrivateKey == "" {
+		return nil
+	}
+
 	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
 	outputter.WriteOutput()
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
-	if err != nil {
-		return err
-	}
-
-	ethHelper := eth.NewEthHelperWrapperWithWallet(
-		wallet, hclog.NewNullLogger(),
-		ethtxhelper.WithNodeURL(ip.bridgeNodeURL), ethtxhelper.WithDynamicTx(false))
-
-	bridgeSC := eth.NewBridgeSmartContractWithWallet(ip.bridgeSCAddr, ethHelper)
-
-	return bridgeSC.SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
+	return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).
+		SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
 }
 
 func (ip *deployEVMParams) getValidatorsChainData(
-	ctx context.Context, outputter common.OutputFormatter,
+	ctx context.Context, txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) ([]eth.ValidatorChainData, error) {
 	if ip.bridgeNodeURL != "" {
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Get data from bridge smart contract at %s...", ip.bridgeSCAddr)))
 		outputter.WriteOutput()
 
-		bridgeSC := eth.NewBridgeSmartContract(ip.bridgeNodeURL, ip.bridgeSCAddr, false, hclog.NewNullLogger())
-
-		return bridgeSC.GetValidatorsChainData(ctx, ip.evmChainID)
+		return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).GetValidatorsChainData(ctx, ip.evmChainID)
 	}
 
 	result := make([]eth.ValidatorChainData, len(ip.evmBlsKeys))
@@ -399,4 +395,29 @@ func (ip *deployEVMParams) getValidatorsChainData(
 	}
 
 	return result, nil
+}
+
+func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
+	if ip.bridgeNodeURL == "" {
+		return nil, nil
+	}
+
+	if ip.bridgePrivateKey == "" {
+		return eth.NewEthHelperWrapper(
+			hclog.NewNullLogger(),
+			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
+			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+			ethtxhelper.WithDynamicTx(false)), nil
+	}
+
+	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return eth.NewEthHelperWrapperWithWallet(
+		wallet, hclog.NewNullLogger(),
+		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
+		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithDynamicTx(false)), nil
 }

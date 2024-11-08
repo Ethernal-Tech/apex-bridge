@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,18 +29,17 @@ type EVMGatewaySmartContractImpl struct {
 
 var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractImpl)(nil)
 
-func NewEVMGatewaySmartContractWithWallet(
-	nodeURL, smartContractAddress string, wallet *ethtxhelper.EthTxWallet, isDynamic bool, depositGasLimit uint64,
+func NewEVMGatewaySmartContract(
+	smartContractAddress string, ethHelper *EthHelperWrapper, depositGasLimit uint64,
 	gasPrice, gasFeeCap, gasTipCap *big.Int, logger hclog.Logger,
 ) (*EVMGatewaySmartContractImpl, error) {
 	return &EVMGatewaySmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
-		ethHelper: NewEthHelperWrapperWithWallet(wallet, logger,
-			ethtxhelper.WithNodeURL(nodeURL), ethtxhelper.WithDynamicTx(isDynamic)),
-		depositGasLimit: depositGasLimit,
-		gasPrice:        gasPrice,
-		gasFeeCap:       gasFeeCap,
-		gasTipCap:       gasTipCap,
+		ethHelper:            ethHelper,
+		depositGasLimit:      depositGasLimit,
+		gasPrice:             gasPrice,
+		gasFeeCap:            gasFeeCap,
+		gasTipCap:            gasTipCap,
 	}, nil
 }
 
