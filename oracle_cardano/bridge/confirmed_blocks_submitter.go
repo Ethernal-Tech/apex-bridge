@@ -60,8 +60,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) StartSubmit() {
 			case <-bs.ctx.Done():
 				return
 			case <-time.After(waitTime):
-				err := bs.execute()
-				if err != nil {
+				if err := bs.execute(); err != nil {
 					bs.logger.Error("error while executing", "err", err)
 				}
 			}
@@ -81,8 +80,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		from,
 		bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)
 	if err != nil {
-		bs.logger.Error("error getting latest confirmed blocks", "err", err)
-
 		return fmt.Errorf("error getting latest confirmed blocks. err: %w", err)
 	}
 
@@ -93,8 +90,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
 
 	if err := bs.bridgeSubmitter.SubmitConfirmedBlocks(bs.chainID, blocksToSubmit); err != nil {
-		bs.logger.Error("error submitting confirmed blocks", "err", err)
-
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
 
