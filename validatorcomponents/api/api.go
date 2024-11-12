@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const (
+	apiStartDelay = 5 * time.Second
+)
+
 type APIImpl struct {
 	ctx       context.Context
 	apiConfig core.APIConfig
@@ -70,11 +74,15 @@ func NewAPI(
 
 func (api *APIImpl) Start() {
 	// delay api start a bit, in case OS has not released port yet from a previous run
-	time.Sleep(5 * time.Second)
+	select {
+	case <-api.ctx.Done():
+		return
+	case <-time.After(apiStartDelay):
+	}
 
 	api.serverClosedCh = make(chan bool)
 
-	err := common.RetryForever(api.ctx, 5*time.Second, func(ctx context.Context) error {
+	err := common.RetryForever(api.ctx, apiStartDelay, func(ctx context.Context) error {
 		api.logger.Debug("Trying to start api")
 
 		srvCtx, cancelFunc := context.WithCancel(ctx)
