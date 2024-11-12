@@ -38,6 +38,7 @@ func NewRelayerManager(
 			logger.Named("bridge_smart_contract"),
 			ethtxhelper.WithNodeURL(config.Bridge.NodeURL),
 			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+			ethtxhelper.WithNonceStrategyType(config.Bridge.NonceStrategy),
 			ethtxhelper.WithDynamicTx(config.Bridge.DynamicTx))
 		bridgeSmartContract = eth.NewBridgeSmartContract(config.Bridge.SmartContractAddress, txHelper)
 	)

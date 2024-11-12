@@ -37,8 +37,6 @@ func NewCardanoTxsReceiverImpl(
 }
 
 func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
-	r.logger.Info("NewUnprocessedTxs", "txs", txs)
-
 	var (
 		bridgingRequests  []*common.NewBridgingRequestStateModel
 		relevantTxs       = make([]*core.CardanoTx, 0)
@@ -58,7 +56,7 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 			Priority:      1,
 		}
 
-		r.logger.Debug("Checking if tx is relevant", "tx", tx)
+		r.logger.Info("Checking if tx is relevant", "chain", originChainID, "tx", tx)
 
 		txProcessor, err := r.txProcessors.getSuccess(cardanoTx, r.appConfig)
 		if err != nil {

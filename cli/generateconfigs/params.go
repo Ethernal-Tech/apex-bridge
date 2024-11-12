@@ -11,6 +11,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -60,7 +61,8 @@ const (
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
-	telemetryFlag = "telemetry"
+	telemetryFlag              = "telemetry"
+	evmNonceStrategyGlobalFlag = "evm-nonce-strategy-global"
 
 	nexusNodeURLFlag                = "nexus-node-url"
 	nexusTTLBlockNumberIncFlag      = "nexus-ttl-block-inc"
@@ -107,7 +109,8 @@ const (
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
 	outputRelayerFileNameFlagDesc             = "relayer config json output file name"
 
-	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
+	telemetryFlagDesc              = "prometheus_ip:port,datadog_ip:port"
+	evmNonceStrategyGlobalFlagDesc = "nonce strategy for all evm chains (including bridge)"
 
 	nexusNodeURLFlagDesc                = "nexus node URL"
 	nexusTTLBlockNumberIncFlagDesc      = "TTL block increment for nexus"
@@ -137,6 +140,7 @@ const (
 	defaultTakeAtLeastUtxoCount              = 6
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
+	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
 )
 
 type generateConfigsParams struct {
@@ -178,7 +182,8 @@ type generateConfigsParams struct {
 	outputValidatorComponentsFileName string
 	outputRelayerFileName             string
 
-	telemetry string
+	telemetry              string
+	evmNonceStrategyGlobal int
 
 	nexusNodeURL                string
 	nexusTTLBlockNumberInc      uint64
@@ -470,6 +475,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		telemetryFlagDesc,
 	)
 
+	cmd.Flags().IntVar(
+		&p.evmNonceStrategyGlobal,
+		evmNonceStrategyGlobalFlag,
+		int(defaultEVMNonceStrategy),
+		evmNonceStrategyGlobalFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.nexusNodeURL,
 		nexusNodeURLFlag,
@@ -585,6 +597,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
 				DynamicTx:               true,
+				NonceStrategy:           ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -595,6 +608,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
 			},
+			NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MinFeeForBridging:              1000010,
@@ -661,10 +675,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	})
 
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
-		NodeURL:    p.nexusNodeURL,
-		DataDir:    cleanPath(p.relayerDataDir),
-		ConfigPath: cleanPath(p.relayerConfigPath),
-		DynamicTx:  true,
+		NodeURL:       p.nexusNodeURL,
+		DataDir:       cleanPath(p.relayerDataDir),
+		ConfigPath:    cleanPath(p.relayerConfigPath),
+		DynamicTx:     true,
+		NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
@@ -672,6 +687,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
+			NonceStrategy:        ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {

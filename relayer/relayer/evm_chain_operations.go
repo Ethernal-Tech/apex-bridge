@@ -64,6 +64,7 @@ func NewEVMChainOperations(
 	txHelper := eth.NewEthHelperWrapperWithWallet(wallet, logger.Named("tx_helper_wrapper"),
 		ethtxhelper.WithNodeURL(config.NodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithNonceStrategyType(config.NonceStrategy),
 		ethtxhelper.WithDynamicTx(config.DynamicTx),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")))
 

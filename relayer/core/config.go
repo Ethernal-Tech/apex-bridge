@@ -3,13 +3,15 @@ package core
 import (
 	"encoding/json"
 
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
 type BridgeConfig struct {
-	NodeURL              string `json:"NodeUrl"`
-	DynamicTx            bool   `json:"dynamicTx"`
-	SmartContractAddress string `json:"scAddress"`
+	NodeURL              string                        `json:"NodeUrl"`
+	DynamicTx            bool                          `json:"dynamicTx"`
+	SmartContractAddress string                        `json:"scAddress"`
+	NonceStrategy        ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
 }
 
 type RelayerConfiguration struct {

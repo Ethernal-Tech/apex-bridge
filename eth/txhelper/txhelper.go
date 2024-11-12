@@ -20,8 +20,6 @@ import (
 )
 
 type SendTxFunc func(*bind.TransactOpts) (*types.Transaction, error)
-type NonceRetrieveFunc func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error)
-type NonceUpdateFunc func(addr common.Address, value uint64, success bool)
 
 const (
 	defaultGasLimit          = uint64(5_242_880) // 0x500000
@@ -62,8 +60,7 @@ type EthTxHelperImpl struct {
 	defaultGasLimit   uint64
 	chainID           *big.Int
 	initFn            func(*EthTxHelperImpl) error
-	nonceRetrieveFn   NonceRetrieveFunc
-	nonceUpdateFn     NonceUpdateFunc
+	nonceStrategy     NonceStrategy
 	mutex             sync.Mutex
 	logger            hclog.Logger
 }
@@ -77,10 +74,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		gasFeeMultiplier:  defaultGasFeeMultiplier,
 		zeroGasPrice:      true,
 		defaultGasLimit:   defaultGasLimit,
-		nonceRetrieveFn: func(ctx context.Context, client *ethclient.Client, addr common.Address) (uint64, error) {
-			return client.PendingNonceAt(ctx, addr)
-		},
-		nonceUpdateFn: func(_ common.Address, _ uint64, _ bool) {},
+		nonceStrategy:     NonceStrategyFactory(NonceNodePendingStrategy),
 		initFn: func(t *EthTxHelperImpl) error {
 			if t.client == nil {
 				client, err := ethclient.Dial(t.nodeURL)
@@ -151,8 +145,6 @@ func (t *EthTxHelperImpl) Deploy(
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
-		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
-
 		return "", "", fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
@@ -162,12 +154,12 @@ func (t *EthTxHelperImpl) Deploy(
 	// Deploy the contract
 	contractAddress, tx, _, err := bind.DeployContract(txOptsRes, abiData, bytecode, t.client, params...)
 	if err != nil {
-		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+		t.nonceStrategy.UpdateNonce(wallet.GetAddress(), 0, false) // clear nonce
 
 		return "", "", fmt.Errorf("error while DeployContract: %w", err)
 	}
 
-	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
+	t.nonceStrategy.UpdateNonce(wallet.GetAddress(), tx.Nonce(), true)
 
 	return contractAddress.String(), tx.Hash().String(), nil
 }
@@ -220,8 +212,6 @@ func (t *EthTxHelperImpl) SendTx(
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
-		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
-
 		return nil, fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
@@ -230,12 +220,12 @@ func (t *EthTxHelperImpl) SendTx(
 
 	tx, err := sendTxHandler(txOptsRes)
 	if err != nil {
-		t.nonceUpdateFn(wallet.GetAddress(), 0, false) // clear nonce
+		t.nonceStrategy.UpdateNonce(wallet.GetAddress(), 0, false) // clear nonce
 
 		return nil, fmt.Errorf("error while sendTxHandler: %w", err)
 	}
 
-	t.nonceUpdateFn(wallet.GetAddress(), tx.Nonce(), true)
+	t.nonceStrategy.UpdateNonce(wallet.GetAddress(), tx.Nonce(), true)
 
 	return tx, nil
 }
@@ -270,7 +260,7 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 
 	// Nonce retrieval
 	if txOpts.Nonce == nil {
-		nonce, err := t.nonceRetrieveFn(ctx, t.client, from)
+		nonce, err := t.nonceStrategy.GetNextNonce(ctx, t.client, from)
 		if err != nil {
 			return fmt.Errorf("error while retrieving nonce: %w", err)
 		}
@@ -423,37 +413,15 @@ func WithLogger(logger hclog.Logger) TxRelayerOption {
 	}
 }
 
-func WithNonceRetrieveFunc(fn NonceRetrieveFunc) TxRelayerOption {
+func WithNonceStrategy(strategy NonceStrategy) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
-		t.nonceRetrieveFn = fn
+		t.nonceStrategy = strategy
 	}
 }
 
-func WithNonceRetrieveCounterFunc() TxRelayerOption {
+func WithNonceStrategyType(strategy NonceStrategyType) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
-		counterMap := map[common.Address]uint64{}
-
-		t.nonceRetrieveFn = func(
-			ctx context.Context, client *ethclient.Client, addr common.Address,
-		) (result uint64, err error) {
-			if value, exists := counterMap[addr]; !exists {
-				result, err = client.PendingNonceAt(ctx, addr)
-				if err != nil {
-					return 0, fmt.Errorf("error while PendingNonceAt: %w", err)
-				}
-			} else {
-				result = value + 1
-			}
-
-			return result, nil
-		}
-		t.nonceUpdateFn = func(addr common.Address, nonce uint64, success bool) {
-			if success {
-				counterMap[addr] = nonce
-			} else {
-				delete(counterMap, addr)
-			}
-		}
+		t.nonceStrategy = NonceStrategyFactory(strategy)
 	}
 }
 
@@ -474,9 +442,9 @@ func WaitForTransactions(
 	errs := make([]error, len(txHashes))
 	sg := sync.WaitGroup{}
 
-	for i, txHash := range txHashes {
-		sg.Add(1)
+	sg.Add(len(txHashes))
 
+	for i, txHash := range txHashes {
 		go func(idx int, txHash string) {
 			defer sg.Done()
 

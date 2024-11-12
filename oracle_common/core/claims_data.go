@@ -128,7 +128,6 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 		sb.WriteString(c.RetryCounter.String())
 	}
 
-	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nReceivers = [")
 	sb.WriteString(sbReceivers.String())
 	sb.WriteString("]")
