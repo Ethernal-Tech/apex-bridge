@@ -82,6 +82,9 @@ func (api *APIImpl) Start() {
 	case <-time.After(apiStartDelay):
 	}
 
+	api.logger.Debug("Checking process running on port",
+		"port", api.apiConfig.Port, "process", utils.FormatProcessOnPort(api.apiConfig.Port))
+
 	api.serverClosedCh = make(chan bool)
 
 	err := common.RetryForever(api.ctx, apiStartDelay, func(ctx context.Context) error {
@@ -102,6 +105,9 @@ func (api *APIImpl) Start() {
 		if err == nil || err == http.ErrServerClosed {
 			return nil
 		}
+
+		api.logger.Debug("Checking process running on port",
+			"port", api.apiConfig.Port, "process", utils.FormatProcessOnPort(api.apiConfig.Port))
 
 		api.logger.Error("Error while trying to start api. Retrying...", "err", err)
 
