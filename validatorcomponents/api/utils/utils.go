@@ -54,7 +54,7 @@ func FormatProcessOnPort(port uint32) string {
 }
 
 func ProcessOnPort(port uint32) (string, error) {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ss -tulpn | grep %d", port))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ss -tulpn | grep %d", port)) //nolint:gosec
 
 	// Run the command and capture the output
 	var out bytes.Buffer
