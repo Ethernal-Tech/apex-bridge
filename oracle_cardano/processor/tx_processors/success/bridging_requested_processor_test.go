@@ -2,6 +2,7 @@ package successtxprocessors
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -17,13 +18,15 @@ import (
 func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
 		utxoMinValue          = 1000000
-		minFeeForBridging     = 10000010
+		minFeeForBridging     = 1000010
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "vector_test1wtyslvqxffyppmzhs7ecwunsnpq6g2p6kf9r4aa8ntfzc4qj925fr"
 		validTestAddress      = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
 	)
+
+	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &cCore.AppConfig{
@@ -47,6 +50,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			MinFeeForBridging:              minFeeForBridging,
 			UtxoMinValue:                   utxoMinValue,
 			MaxReceiversPerBridgingRequest: 3,
+			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 		},
 	}
 	appConfig.FillOut()
@@ -456,6 +460,40 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+	})
+
+	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrVector
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
+			{Address: []string{validTestAddress}, Amount: maxAmountAllowedToBridge.Uint64()},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       receivers,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + maxAmountAllowedToBridge.Uint64()},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {

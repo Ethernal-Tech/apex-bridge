@@ -15,12 +15,14 @@ import (
 func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
 		utxoMinValue         = 1000000
-		minFeeForBridging    = 10000010
+		minFeeForBridging    = 1000010
 		primeBridgingAddr    = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		nexusBridgingAddr    = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validTestAddress     = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
+
+	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
 	proc := NewEthBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &oCore.AppConfig{
@@ -44,6 +46,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			MinFeeForBridging:              minFeeForBridging,
 			UtxoMinValue:                   utxoMinValue,
 			MaxReceiversPerBridgingRequest: 3,
+			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 		},
 	}
 	appConfig.FillOut()
@@ -347,6 +350,36 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+	})
+
+	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []core.BridgingRequestEthMetadataTransaction{
+			{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+			{Address: validTestAddress, Amount: common.DfmToWei(maxAmountAllowedToBridge)},
+		}
+
+		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         "addr1",
+			Transactions:       receivers,
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Hash:          txHash,
+			Metadata:      validMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {

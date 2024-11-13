@@ -241,5 +241,12 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			multisigUtxo.Amount, receiverAmountSum)
 	}
 
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Cmp(big.NewInt(0)) == 1 &&
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
+			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+	}
+
 	return nil
 }
