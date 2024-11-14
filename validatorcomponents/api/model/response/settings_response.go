@@ -1,16 +1,14 @@
 package response
 
 import (
-	"math/big"
-
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 )
 
 type SettingsResponse struct {
-	MinFeeForBridging              uint64   `json:"minFeeForBridging"`
-	MinUtxoValue                   uint64   `json:"minUtxoValue"`
-	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
+	MinFeeForBridging              uint64 `json:"minFeeForBridging"`
+	MinUtxoValue                   uint64 `json:"minUtxoValue"`
+	MaxAmountAllowedToBridge       string `json:"maxAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int    `json:"maxReceiversPerBridgingRequest"`
 }
 
 func NewSettingsResponse(
@@ -19,7 +17,7 @@ func NewSettingsResponse(
 	return &SettingsResponse{
 		MinFeeForBridging:              appConfig.BridgingSettings.MinFeeForBridging,
 		MinUtxoValue:                   appConfig.BridgingSettings.UtxoMinValue,
-		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge,
+		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
 	}
 }
