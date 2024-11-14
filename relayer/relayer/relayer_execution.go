@@ -47,7 +47,7 @@ func RelayerExecute(
 				lastSubmittedBatchID, receivedBatchID)
 		}
 	} else {
-		if receivedBatchID.Cmp(big.NewInt(0)) == 0 {
+		if receivedBatchID.Sign() == 0 {
 			logger.Info("Waiting on new signed batch", "chainID", chainID)
 
 			return nil

@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -60,13 +60,13 @@ func (c *OracleStateControllerImpl) GetEndpoints() []*core.APIEndpoint {
 }
 
 func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("getState called", "url", r.URL)
-
 	queryValues := r.URL.Query()
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.setError(w, r, "getState", "chainId missing from query")
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
 
 		return
 	}
@@ -77,18 +77,18 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 	addresses, existsAddrs := c.adressesMap[chainID]
 
 	if !existsDB || !existsAddrs {
-		c.setError(w, r, "getState", fmt.Sprintf("invalid chainID: %s", chainID))
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("invalid chainID: %s", chainID), c.logger)
 
 		return
 	}
 
-	c.logger.Debug("getState success", "url", r.URL)
-
-	w.Header().Set("Content-Type", "application/json")
-
 	latestBlockPoint, err := db.GetLatestBlockPoint()
 	if err != nil {
-		c.setError(w, r, "getState", fmt.Sprintf("get latest point: %v", err))
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("get latest point: %w", err), c.logger)
 
 		return
 	}
@@ -99,7 +99,9 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 	for i, addr := range addresses {
 		utxos, err := db.GetAllTxOutputs(addr, true)
 		if err != nil {
-			c.setError(w, r, "getState", fmt.Sprintf("get all tx outputs: %v", err))
+			utils.WriteErrorResponse(
+				w, r, http.StatusBadRequest,
+				fmt.Errorf("get all tx outputs: %w", err), c.logger)
 
 			return
 		}
@@ -122,21 +124,18 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	err = json.NewEncoder(w).Encode(response.NewOracleStateResponse(
-		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash))
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(w, r, http.StatusOK, response.NewOracleStateResponse(
+		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash), c.logger)
 }
 
 func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("getHasTxFailed called", "url", r.URL)
-
 	queryValues := r.URL.Query()
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.setError(w, r, "getHasTxFailed", "chainId missing from query")
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
 
 		return
 	}
@@ -145,7 +144,9 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		c.setError(w, r, "getHasTxFailed", "txHash missing from query")
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("txHash missing from query"), c.logger)
 
 		return
 	}
@@ -154,29 +155,32 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	ttlArr, exists := queryValues["ttl"]
 	if !exists || len(ttlArr) == 0 {
-		c.setError(w, r, "getHasTxFailed", "ttl missing from query")
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("ttl missing from query"), c.logger)
 
 		return
 	}
 
 	ttl, ok := new(big.Int).SetString(ttlArr[0], 10)
 	if !ok {
-		c.setError(w, r, "getHasTxFailed", "ttl invalid")
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("ttl invalid"), c.logger)
 
 		return
 	}
 
 	hasFailed, err := c.hasTxFailed(chainID, txHash, ttl)
 	if err != nil {
-		c.setError(w, r, "getHasTxFailed", fmt.Errorf("hasTxFailed err: %w", err).Error())
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("hasTxFailed err: %w", err), c.logger)
 
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(response.HasTxFailedResponse{Failed: hasFailed})
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(w, r, http.StatusOK, response.HasTxFailedResponse{Failed: hasFailed}, c.logger)
 }
 
 func (c *OracleStateControllerImpl) hasTxFailed(
@@ -296,15 +300,4 @@ func (c *OracleStateControllerImpl) findBridgingRequestState(
 	}
 
 	return state, nil
-}
-
-func (c *OracleStateControllerImpl) setError(
-	w http.ResponseWriter, r *http.Request, requestName string, errString string,
-) {
-	c.logger.Debug(fmt.Sprintf("%s request", requestName), "err", errString, "url", r.URL)
-
-	err := utils.WriteErrorResponse(w, http.StatusBadRequest, errString)
-	if err != nil {
-		c.logger.Error("error while WriteErrorResponse", "err", err)
-	}
 }

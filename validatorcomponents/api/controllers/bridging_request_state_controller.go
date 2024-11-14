@@ -1,7 +1,8 @@
 package controllers
 
 import (
-	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -39,31 +40,23 @@ func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*core.APIEndpoint 
 }
 
 func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("get called", "url", r.URL)
-
 	queryValues := r.URL.Query()
 	c.logger.Debug("get request", "query values", queryValues, "url", r.URL)
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.logger.Debug("get request", "err", "chainId missing from query", "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
 
 		return
 	}
 
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		c.logger.Debug("get request", "err", "txHash missing from query", "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "txHash missing from query")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("txHash missing from query"), c.logger)
 
 		return
 	}
@@ -73,51 +66,33 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
 	if err != nil {
-		c.logger.Debug("get request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("failed to get bridging request state: %w", err), c.logger)
 
 		return
 	}
 
 	if state == nil {
-		c.logger.Debug("get request - Not found", "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusNotFound, "Not found")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusNotFound,
+			errors.New("not found"), c.logger)
 
 		return
 	}
 
-	c.logger.Debug("get success", "url", r.URL)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	err = json.NewEncoder(w).Encode(response.NewBridgingRequestStateResponse(state))
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(w, r, http.StatusOK, response.NewBridgingRequestStateResponse(state), c.logger)
 }
 
 func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("getMultiple called", "url", r.URL)
-
 	queryValues := r.URL.Query()
 	c.logger.Debug("query values", queryValues, "url", r.URL)
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		c.logger.Debug("getMultiple request", "err", "chainId missing from query", "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "chainId missing from query")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
 
 		return
 	}
@@ -133,12 +108,9 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
 	if err != nil {
-		c.logger.Debug("getMultiple request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("failed to get bridging request states: %w", err), c.logger)
 
 		return
 	}
@@ -148,12 +120,5 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 		statesResponse[state.SourceTxHash.String()] = response.NewBridgingRequestStateResponse(state)
 	}
 
-	c.logger.Debug("getMultiple success", "url", r.URL)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	err = json.NewEncoder(w).Encode(statesResponse)
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)
 }
