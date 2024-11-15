@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os/exec"
+	"regexp"
 
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/hashicorp/go-hclog"
@@ -39,4 +42,35 @@ func DecodeModel[T any](w http.ResponseWriter, r *http.Request, logger hclog.Log
 	}
 
 	return requestBody, true
+}
+
+func FormatProcessOnPort(port uint32) string {
+	process, err := ProcessOnPort(port)
+	if err != nil {
+		return err.Error()
+	}
+
+	return process
+}
+
+func ProcessOnPort(port uint32) (string, error) {
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ss -tulpn | grep %d", port)) //nolint:gosec
+
+	// Run the command and capture the output
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("cmd failed or no results found: %w", err)
+	}
+
+	result := out.String()
+	re := regexp.MustCompile(`users:\(\((.*?)\)\)`)
+	match := re.FindStringSubmatch(result)
+
+	if len(match) > 1 {
+		return match[1], nil
+	}
+
+	return "", nil
 }
