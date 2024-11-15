@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math/big"
 	"time"
 
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -83,10 +84,11 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MinFeeForBridging              uint64 `json:"minFeeForBridging"`
-	UtxoMinValue                   uint64 `json:"utxoMinValue"`
-	MaxReceiversPerBridgingRequest int    `json:"maxReceiversPerBridgingRequest"`
-	MaxBridgingClaimsToGroup       int    `json:"maxBridgingClaimsToGroup"`
+	MinFeeForBridging              uint64   `json:"minFeeForBridging"`
+	UtxoMinValue                   uint64   `json:"utxoMinValue"`
+	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
 }
 
 type RetryUnprocessedSettings struct {

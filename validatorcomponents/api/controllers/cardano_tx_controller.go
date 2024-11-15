@@ -3,8 +3,9 @@ package controllers
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -53,83 +54,43 @@ func (c *CardanoTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
 }
 
 func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("createBridgingTx called", "url", r.URL)
-
-	var requestBody request.CreateBridgingTxRequest
-
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		c.logger.Debug("createBridgingTx request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
-
+	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
+	if !ok {
 		return
 	}
 
 	c.logger.Debug("createBridgingTx request", "body", requestBody, "url", r.URL)
 
-	err = c.validateAndFillOutCreateBridgingTxRequest(&requestBody)
+	err := c.validateAndFillOutCreateBridgingTxRequest(&requestBody)
 	if err != nil {
-		c.logger.Debug("createBridgingTx request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("validation error. err: %w", err), c.logger)
 
 		return
 	}
 
 	txRaw, txHash, err := c.createTx(requestBody)
 	if err != nil {
-		c.logger.Debug("createBridgingTx request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
 		return
 	}
 
-	c.logger.Debug("createBridgingTx success", "url", r.URL)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	err = json.NewEncoder(w).Encode(response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee))
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(
+		w, r, http.StatusOK,
+		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
 }
 
 func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.Request) {
-	c.logger.Debug("signBridgingTx called", "url", r.URL)
-
-	var requestBody request.SignBridgingTxRequest
-
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		c.logger.Debug("signBridgingTx request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
-
+	requestBody, ok := utils.DecodeModel[request.SignBridgingTxRequest](w, r, c.logger)
+	if !ok {
 		return
 	}
 
 	if requestBody.TxRaw == "" || requestBody.SigningKeyHex == "" || requestBody.TxHash == "" {
-		c.logger.Debug("signBridgingTx request", "txRaw", requestBody.TxRaw,
-			"signingKeyHex", requestBody.SigningKeyHex, "txHash", requestBody.TxHash)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid input data")
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest, errors.New("invalid input data"), c.logger)
 
 		return
 	}
@@ -138,24 +99,15 @@ func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.
 
 	signedTx, err := c.signTx(requestBody)
 	if err != nil {
-		c.logger.Debug("signBridgingTx request", "err", err.Error(), "url", r.URL)
-
-		rerr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-		if rerr != nil {
-			c.logger.Error("error while WriteErrorResponse", "err", rerr)
-		}
+		utils.WriteErrorResponse(
+			w, r, http.StatusBadRequest, errors.New("validation error"), c.logger)
 
 		return
 	}
 
-	c.logger.Debug("signBridgingTx success", "url", r.URL)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	err = json.NewEncoder(w).Encode(response.NewBridgingTxResponse(signedTx, requestBody.TxHash))
-	if err != nil {
-		c.logger.Error("error while writing response", "err", err)
-	}
+	utils.WriteResponse(
+		w, r, http.StatusOK,
+		response.NewBridgingTxResponse(signedTx, requestBody.TxHash), c.logger)
 }
 
 func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
@@ -176,6 +128,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			len(requestBody.Transactions), c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
 	}
 
+	receiverAmountSum := big.NewInt(0)
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
@@ -202,6 +155,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 				feeSum += receiver.Amount
 			} else {
 				transactions = append(transactions, receiver)
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		} else if ethDestConfig != nil {
 			if !goEthCommon.IsHexAddress(receiver.Addr) {
@@ -214,16 +168,9 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 				feeSum += receiver.Amount
 			} else {
 				transactions = append(transactions, receiver)
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		}
-	}
-
-	requestBody.BridgingFee += feeSum
-	requestBody.Transactions = transactions
-
-	// this is just convinient way to setup default min fee
-	if requestBody.BridgingFee == 0 {
-		requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
 	}
 
 	if foundAUtxoValueBelowMinimumValue {
@@ -234,8 +181,25 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		return fmt.Errorf("found an invalid receiver addr in request body: %v", requestBody)
 	}
 
+	requestBody.BridgingFee += feeSum
+	requestBody.Transactions = transactions
+
+	// this is just convinient way to setup default min fee
+	if requestBody.BridgingFee == 0 {
+		requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
+	}
+
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
+
 	if requestBody.BridgingFee < c.oracleConfig.BridgingSettings.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
+	}
+
+	if c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
+		receiverAmountSum.Cmp(c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee greater than maximum allowed: %v, for request: %v",
+			c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge, requestBody)
 	}
 
 	return nil

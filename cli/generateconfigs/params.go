@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -141,6 +142,10 @@ const (
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
 	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
+)
+
+var (
+	defaultMaxAmountAllowedToBridge = big.NewInt(0)
 )
 
 type generateConfigsParams struct {
@@ -613,6 +618,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BridgingSettings: oCore.BridgingSettings{
 			MinFeeForBridging:              1000010,
 			UtxoMinValue:                   1000000,
+			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},
