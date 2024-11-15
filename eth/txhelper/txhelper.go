@@ -127,7 +127,6 @@ func (t *EthTxHelperImpl) Deploy(
 
 	chainID := t.chainID
 	if chainID == nil {
-		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
 			return "", "", fmt.Errorf("error while getting ChainID: %w", err)
@@ -178,9 +177,9 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 		}
 
 		select {
-		case <-time.After(t.receiptWaitTime):
 		case <-ctx.Done():
 			return nil, ctx.Err()
+		case <-time.After(t.receiptWaitTime):
 		}
 	}
 
@@ -195,7 +194,6 @@ func (t *EthTxHelperImpl) SendTx(
 
 	chainID := t.chainID
 	if chainID == nil {
-		// chainID retrieval
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error while getting ChainID: %w", err)
@@ -391,12 +389,12 @@ func WithInitClientAndChainIDFn(ctx context.Context) TxRelayerOption {
 		t.initFn = func(ethi *EthTxHelperImpl) error {
 			client, err := ethclient.DialContext(ctx, t.nodeURL)
 			if err != nil {
-				return fmt.Errorf("error while DialContext: %w", err)
+				return fmt.Errorf("error while dialing node %s: %w", t.nodeURL, err)
 			}
 
 			chainID, err := client.ChainID(ctx)
 			if err != nil {
-				return fmt.Errorf("error while ChainID: %w", err)
+				return fmt.Errorf("error while getting ChainID: %w", err)
 			}
 
 			t.client = client
