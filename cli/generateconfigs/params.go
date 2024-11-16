@@ -213,12 +213,12 @@ type generateConfigsParams struct {
 
 func (p *generateConfigsParams) validateFlags() error {
 	if !common.IsValidNetworkAddress(p.primeNetworkAddress) {
-		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
+		return fmt.Errorf("invalid --%s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
 	}
 
 	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" && p.primeOgmiosURL == "" && p.primeCatsURL == "" {
-		return fmt.Errorf("specify at least one of: %s, %s, %s",
-			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
+		return fmt.Errorf("specify at least one of: --%s, --%s, --%s, --%s",
+			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag, primeCatsURLFlag)
 	}
 
 	if p.primeBlockfrostURL != "" && !common.IsValidHTTPURL(p.primeBlockfrostURL) {
@@ -229,17 +229,23 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
 
-	if p.primeCatsURL != "" && !common.IsValidHTTPURL(p.primeCatsURL) {
-		return fmt.Errorf("invalid prime cats url: %s", p.primeCatsURL)
+	if p.primeCatsURL != "" {
+		if !common.IsValidHTTPURL(p.primeCatsURL) {
+			return fmt.Errorf("invalid prime cats url: %s", p.primeCatsURL)
+		}
+
+		if p.primeCatsAPIKey == "" {
+			return fmt.Errorf("missing --%s", primeCatsAPIKeyFlag)
+		}
 	}
 
 	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
-		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
+		return fmt.Errorf("invalid --%s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
 	}
 
 	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" && p.vectorCatsURL == "" {
-		return fmt.Errorf("specify at least one of: %s, %s, %s",
-			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
+		return fmt.Errorf("specify at least one of: --%s, --%s, --%s, --%s",
+			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag, vectorCatsURLFlag)
 	}
 
 	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
@@ -250,24 +256,30 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
 	}
 
-	if p.vectorCatsURL != "" && !common.IsValidHTTPURL(p.vectorCatsURL) {
-		return fmt.Errorf("invalid vector cats url: %s", p.vectorCatsURL)
+	if p.vectorCatsURL != "" {
+		if !common.IsValidHTTPURL(p.vectorCatsURL) {
+			return fmt.Errorf("invalid vector cats url: %s", p.vectorCatsURL)
+		}
+
+		if p.vectorCatsAPIKey == "" {
+			return fmt.Errorf("missing --%s", vectorCatsAPIKeyFlag)
+		}
 	}
 
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
-		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
+		return fmt.Errorf("invalid --%s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
 
 	if p.bridgeSCAddress == "" {
-		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
+		return fmt.Errorf("missing --%s", bridgeSCAddressFlag)
 	}
 
 	if p.validatorDataDir == "" && p.validatorConfig == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
+		return fmt.Errorf("specify at least one of: --%s, --%s", validatorDataDirFlag, validatorConfigFlag)
 	}
 
 	if len(p.apiKeys) == 0 {
-		return fmt.Errorf("specify at least one %s", apiKeysFlag)
+		return fmt.Errorf("specify at least one --%s", apiKeysFlag)
 	}
 
 	if p.telemetry != "" && !common.IsValidNetworkAddress(p.telemetry) {
@@ -289,11 +301,11 @@ func (p *generateConfigsParams) validateFlags() error {
 	}
 
 	if !common.IsValidHTTPURL(p.nexusNodeURL) {
-		return fmt.Errorf("invalid %s: %s", nexusNodeURLFlag, p.nexusNodeURL)
+		return fmt.Errorf("invalid --%s: %s", nexusNodeURLFlag, p.nexusNodeURL)
 	}
 
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+		return fmt.Errorf("specify at least one of: --%s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
 	return nil
