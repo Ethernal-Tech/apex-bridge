@@ -19,14 +19,12 @@ const (
 	bridgeNodeURLFlag = "bridge-url"
 	chainIDFlag       = "chain"
 	amountFlag        = "amount"
-	subtractFlag      = "subtract"
 	privateKeyFlag    = "key"
 
 	bridgeNodeURLFlagDesc = "(mandatory) node URL of bridge chain"
 	chainIDFlagDesc       = "chain ID (prime, vector, etc)"
 	amountFlagDesc        = "amount to add or subtract"
 	privateKeyFlagDesc    = "wallet private signing key"
-	subtractFlagDesc      = "subtract amount"
 
 	incChainTokenQuantityGasLimitMultiplier = 2.0
 )
