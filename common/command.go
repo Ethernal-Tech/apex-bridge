@@ -9,6 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CliCommandExecutor defines the interface for cli command execution
+type CliCommandExecutor interface {
+	Execute(outputter OutputFormatter) (ICommandResult, error)
+}
+
+// ICommandResult defines the interface for command result
 type ICommandResult interface {
 	GetOutput() string
 }
@@ -108,4 +114,26 @@ func (cli *cliOutput) getCommandOutput() string {
 	}
 
 	return cli.commandOutput.GetOutput()
+}
+
+func GetCliRunCommand(cliCommandExecutor CliCommandExecutor) func(*cobra.Command, []string) {
+	return func(cmd *cobra.Command, _ []string) {
+		outputter := InitializeOutputter(cmd)
+		defer outputter.WriteOutput()
+
+		defer func() {
+			if r := recover(); r != nil {
+				outputter.SetError(fmt.Errorf("%v", r))
+			}
+		}()
+
+		results, err := cliCommandExecutor.Execute(outputter)
+		if err != nil {
+			outputter.SetError(err)
+
+			return
+		}
+
+		outputter.SetCommandResult(results)
+	}
 }

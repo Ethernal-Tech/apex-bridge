@@ -237,3 +237,17 @@ $ go run ./main.go deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+
+# Bridge admin commands
+```shell
+$ go run ./main.go bridge-admin get-chain-token-quantity \
+        --bridge-url http://localhost:12013 \
+        --chain prime --chain nexus --chain vector
+```
+
+```shell
+$ go run ./main.go bridge-admin update-chain-token-quantity \
+        --bridge-url http://localhost:12013 \
+        --chain nexus --amount 300 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```

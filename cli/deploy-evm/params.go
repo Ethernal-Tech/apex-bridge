@@ -213,6 +213,7 @@ func (ip *deployEVMParams) Execute(
 		ethtxhelper.WithNodeURL(ip.evmNodeURL),
 		ethtxhelper.WithDynamicTx(ip.evmDynamicTx),
 		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
+		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),

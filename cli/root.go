@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	clibridgeadmin "github.com/Ethernal-Tech/apex-bridge/cli/bridge-admin"
 	clicreateaddress "github.com/Ethernal-Tech/apex-bridge/cli/create-address"
 	clideployevm "github.com/Ethernal-Tech/apex-bridge/cli/deploy-evm"
 	cligenerateconfigs "github.com/Ethernal-Tech/apex-bridge/cli/generateconfigs"
@@ -41,6 +42,7 @@ func (rc *RootCommand) registerSubCommands() {
 		cligenerateconfigs.GetGenerateConfigsCommand(),
 		clisendtx.GetSendTxCommand(),
 		clideployevm.GetDeployEVMCommand(),
+		clibridgeadmin.GetBridgeAdminCommand(),
 	)
 }
 
