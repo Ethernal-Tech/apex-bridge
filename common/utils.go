@@ -14,9 +14,15 @@ import (
 	"strings"
 	"time"
 
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/sha3"
+)
+
+const (
+	waitForAmountRetryCount = 144 // 144 * 5 = 12 min
+	waitForAmountWaitTime   = time.Second * 5
 )
 
 func IsValidHTTPURL(input string) bool {
@@ -217,4 +223,30 @@ func ExecuteCLICommand(binary string, args []string, workingDir string) (string,
 	}
 
 	return stdOutBuffer.String(), nil
+}
+
+func WaitForAmount(
+	ctx context.Context, receivedAmount *big.Int, getBalanceFn func(ctx context.Context) (*big.Int, error),
+) (*big.Int, error) {
+	originalAmount, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
+		return getBalanceFn(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	expectedBalance := originalAmount.Add(originalAmount, receivedAmount)
+
+	return infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
+		balance, err := getBalanceFn(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if balance.Cmp(expectedBalance) < 0 {
+			return balance, infracommon.ErrRetryTryAgain
+		}
+
+		return balance, nil
+	}, infracommon.WithRetryCount(waitForAmountRetryCount), infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 }

@@ -23,7 +23,7 @@ func WriteResponse(w http.ResponseWriter, r *http.Request, status int, response 
 }
 
 func WriteErrorResponse(w http.ResponseWriter, r *http.Request, status int, err error, logger hclog.Logger) {
-	logger.Error("error happened", "url", r.URL, "status", status, "err", err)
+	logger.Info("error happened", "url", r.URL, "status", status, "err", err)
 
 	WriteResponse(w, r, status, response.ErrorResponse{Err: err.Error()}, logger)
 }

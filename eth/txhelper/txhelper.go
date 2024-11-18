@@ -33,11 +33,16 @@ var (
 	errGasCapsSetWhileNotDynamicTx = errors.New("gasFeeCap and gasTipCap cannot be set while dynamicTx is false")
 )
 
+type TxDeployInfo struct {
+	Hash    string
+	Address common.Address
+}
+
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
 	Deploy(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
-		abiData abi.ABI, bytecode []byte, params ...interface{}) (string, string, error)
+		abiData abi.ABI, bytecode []byte, params ...interface{}) (TxDeployInfo, error)
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
 	SendTx(ctx context.Context, wallet IEthTxWallet,
 		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
@@ -121,7 +126,7 @@ func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending boo
 func (t *EthTxHelperImpl) Deploy(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
 	abiData abi.ABI, bytecode []byte, params ...interface{},
-) (string, string, error) {
+) (TxDeployInfo, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -129,7 +134,7 @@ func (t *EthTxHelperImpl) Deploy(
 	if chainID == nil {
 		retChainID, err := t.client.ChainID(ctx)
 		if err != nil {
-			return "", "", fmt.Errorf("error while getting ChainID: %w", err)
+			return TxDeployInfo{}, fmt.Errorf("error while getting ChainID: %w", err)
 		}
 
 		chainID = retChainID
@@ -138,13 +143,13 @@ func (t *EthTxHelperImpl) Deploy(
 	// Create contract deployment transaction
 	txOptsRes, err := wallet.GetTransactOpts(chainID)
 	if err != nil {
-		return "", "", fmt.Errorf("error while getting TransactOpts: %w", err)
+		return TxDeployInfo{}, fmt.Errorf("error while getting TransactOpts: %w", err)
 	}
 
 	copyTxOpts(txOptsRes, &txOptsParam)
 
 	if err := t.PopulateTxOpts(ctx, wallet.GetAddress(), txOptsRes); err != nil {
-		return "", "", fmt.Errorf("error while populating tx opts: %w", err)
+		return TxDeployInfo{}, fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
 	t.logger.Debug("Deploying contract...", "addr", wallet.GetAddress(),
@@ -155,12 +160,15 @@ func (t *EthTxHelperImpl) Deploy(
 	if err != nil {
 		t.nonceStrategy.UpdateNonce(wallet.GetAddress(), 0, false) // clear nonce
 
-		return "", "", fmt.Errorf("error while DeployContract: %w", err)
+		return TxDeployInfo{}, fmt.Errorf("error while DeployContract: %w", err)
 	}
 
 	t.nonceStrategy.UpdateNonce(wallet.GetAddress(), tx.Nonce(), true)
 
-	return contractAddress.String(), tx.Hash().String(), nil
+	return TxDeployInfo{
+		Hash:    tx.Hash().String(),
+		Address: contractAddress,
+	}, nil
 }
 
 func (t *EthTxHelperImpl) WaitForReceipt(

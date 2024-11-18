@@ -237,7 +237,7 @@ func (ip *deployEVMParams) Execute(
 
 	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier)
 
-	gatewayProxyAddr, gatewayProxyTxHash, gatewayAddr, gatewayTxHash, err := ethContractUtils.DeployWithProxy(
+	gatewayProxyTx, gatewayTx, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["Gateway"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("Gateway has been sent"))
 	outputter.WriteOutput()
 
-	predicateProxyAddr, predicateProxyTxHash, predicateAddr, predicateTxHash, err := ethContractUtils.DeployWithProxy(
+	predicateProxyTx, predicateTx, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["NativeTokenPredicate"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("NativeTokenPredicate has been sent"))
 	outputter.WriteOutput()
 
-	walletProxyAddr, walletProxyTxHash, walletAddr, walletTxHash, err := ethContractUtils.DeployWithProxy(
+	walletProxyTx, walletTx, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["NativeTokenWallet"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("NativeTokenWallet has been sent"))
 	outputter.WriteOutput()
 
-	validatorsProxyAddr, validsProxyTxHash, validatorsAddr, validsTxHash, err := ethContractUtils.DeployWithProxy(
+	validatorsProxyTx, validatorsTx, err := ethContractUtils.DeployWithProxy(
 		ctx, artifacts["Validators"], artifacts["ERC1967Proxy"])
 	if err != nil {
 		return nil, err
@@ -274,8 +274,8 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper,
-		gatewayProxyTxHash, gatewayTxHash, predicateProxyTxHash, predicateTxHash,
-		walletProxyTxHash, walletTxHash, validsProxyTxHash, validsTxHash)
+		gatewayProxyTx.Hash, gatewayTx.Hash, predicateProxyTx.Hash, predicateTx.Hash,
+		walletProxyTx.Hash, walletTx.Hash, validatorsProxyTx.Hash, validatorsTx.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -284,8 +284,8 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	txHash1, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["Gateway"], gatewayProxyAddr, "setDependencies",
-		predicateProxyAddr, validatorsProxyAddr)
+		ctx, artifacts["Gateway"], gatewayProxyTx.Address, "setDependencies",
+		predicateProxyTx.Address, validatorsProxyTx.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -294,8 +294,8 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	txHash2, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenPredicate"], predicateProxyAddr, "setDependencies",
-		gatewayProxyAddr, walletProxyAddr)
+		ctx, artifacts["NativeTokenPredicate"], predicateProxyTx.Address, "setDependencies",
+		gatewayProxyTx.Address, walletProxyTx.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	txHash3, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenWallet"], walletProxyAddr, "setDependencies", predicateProxyAddr)
+		ctx, artifacts["NativeTokenWallet"], walletProxyTx.Address, "setDependencies", predicateProxyTx.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	txHash4, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["Validators"], validatorsProxyAddr, "setValidatorsChainData", validatorsData)
+		ctx, artifacts["Validators"], validatorsProxyTx.Address, "setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
 	}
@@ -326,19 +326,19 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	if err := ip.setChainAdditionalData(ctx, gatewayProxyAddr, txHelperBridge, outputter); err != nil {
+	if err := ip.setChainAdditionalData(ctx, gatewayProxyTx.Address, txHelperBridge, outputter); err != nil {
 		return nil, err
 	}
 
 	return &CmdResult{
-		gatewayProxyAddr:              gatewayProxyAddr.String(),
-		gatewayAddr:                   gatewayAddr.String(),
-		nativeTokenPredicateProxyAddr: predicateProxyAddr.String(),
-		nativeTokenPredicateAddr:      predicateAddr.String(),
-		nativeTokenWalletProxyAddr:    walletProxyAddr.String(),
-		nativeTokenWalletAddr:         walletAddr.String(),
-		validatorsProxyAddr:           validatorsProxyAddr.String(),
-		validatorsAddr:                validatorsAddr.String(),
+		gatewayProxyAddr:              gatewayProxyTx.Address.String(),
+		gatewayAddr:                   gatewayTx.Address.String(),
+		nativeTokenPredicateProxyAddr: predicateProxyTx.Address.String(),
+		nativeTokenPredicateAddr:      predicateTx.Address.String(),
+		nativeTokenWalletProxyAddr:    walletProxyTx.Address.String(),
+		nativeTokenWalletAddr:         walletTx.Address.String(),
+		validatorsProxyAddr:           validatorsProxyTx.Address.String(),
+		validatorsAddr:                validatorsTx.Address.String(),
 	}, nil
 }
 

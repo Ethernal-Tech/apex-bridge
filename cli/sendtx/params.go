@@ -51,7 +51,9 @@ const (
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
-	gasLimitMultiplier = 1.6
+	gasLimitMultiplier       = 1.6
+	amountCheckRetryWaitTime = time.Second * 5
+	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -481,33 +483,11 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 		go func(idx int, recv *receiverAmount) {
 			defer wg.Done()
 
-			var (
-				oldBalance *big.Int
-				addr       = common.HexToAddress(recv.ReceiverAddr)
-			)
-
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 3, time.Second*10, func() (bool, error) {
-				balance, err := client.BalanceAt(context.Background(), addr, nil)
-				if err != nil {
-					return false, err
-				}
-
-				oldBalance = balance
-
-				return true, nil
-			}, nil)
-
-			if errs[idx] != nil {
-				return
-			}
-
-			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
-
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 144, time.Second*5, func() (bool, error) {
-				balance, err := client.BalanceAt(context.Background(), addr, nil)
-
-				return err == nil && balance.Cmp(expectedBalance) >= 0, err
-			}, nil)
+			addr := common.HexToAddress(recv.ReceiverAddr)
+			_, errs[idx] = common.WaitForAmount(
+				ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
+					return client.BalanceAt(ctx, addr, nil)
+				})
 		}(i, x)
 	}
 
