@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -51,7 +52,9 @@ const (
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
-	gasLimitMultiplier = 1.6
+	gasLimitMultiplier       = 1.6
+	amountCheckRetryWaitTime = time.Second * 5
+	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -482,32 +485,35 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 			defer wg.Done()
 
 			var (
-				oldBalance *big.Int
-				addr       = common.HexToAddress(recv.ReceiverAddr)
+				addr = common.HexToAddress(recv.ReceiverAddr)
 			)
 
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 3, time.Second*10, func() (bool, error) {
-				balance, err := client.BalanceAt(context.Background(), addr, nil)
-				if err != nil {
-					return false, err
-				}
+			oldBalance, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
+				return client.BalanceAt(ctx, addr, nil)
+			}, infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
+			if err != nil {
+				errs[idx] = err
 
-				oldBalance = balance
-
-				return true, nil
-			}, nil)
-
-			if errs[idx] != nil {
 				return
 			}
 
 			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
 
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, 144, time.Second*5, func() (bool, error) {
-				balance, err := client.BalanceAt(context.Background(), addr, nil)
+			_, errs[idx] = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
+				balance, err := client.BalanceAt(ctx, addr, nil)
+				if err != nil {
+					return false, err
+				}
 
-				return err == nil && balance.Cmp(expectedBalance) >= 0, err
-			}, nil)
+				if balance.Cmp(expectedBalance) < 0 {
+					return false, infracommon.ErrRetryTryAgain
+				}
+
+				return true, nil
+			},
+				infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError),
+				infracommon.WithRetryCount(amountCheckRetryCount),
+				infracommon.WithRetryWaitTime(amountCheckRetryWaitTime))
 		}(i, x)
 	}
 

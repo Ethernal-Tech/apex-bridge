@@ -27,7 +27,7 @@ func TestTxHelper(t *testing.T) {
 	// this test works with real live node, so it should be run only on special occasions
 	t.Skip()
 
-	scAddress := "0xA4B44930686aC7179FC63688749EC60e0C4A96C3"
+	scAddress := common.HexToAddress("0xA4B44930686aC7179FC63688749EC60e0C4A96C3")
 
 	wallet, err := NewEthTxWallet(dummyMumbaiAccPk)
 	require.NoError(t, err)
@@ -49,22 +49,22 @@ func TestTxHelper(t *testing.T) {
 		abiData, err := contractbinding.TestContractMetaData.GetAbi()
 		require.NoError(t, err)
 
-		addr, hash, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *abiData, scBytecode)
+		txInfo, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *abiData, scBytecode)
 		require.NoError(t, err)
-		require.NotEqual(t, common.Address{}, addr)
+		require.NotEqual(t, common.Address{}, txInfo.Address)
 
-		receipt, err := txHelper.WaitForReceipt(ctx, hash, true)
+		receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash, true)
 		require.NoError(t, err)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
-		require.Equal(t, common.HexToAddress(addr), receipt.ContractAddress)
+		require.Equal(t, txInfo.Address, receipt.ContractAddress)
 
-		scAddress = addr
+		scAddress = txInfo.Address
 	})
 
 	t.Run("sending smart contract transaction and query smart contract", func(t *testing.T) {
 		valueToSet := uint64(time.Now().UTC().UnixNano())
 
-		contract, err := contractbinding.NewTestContract(common.HexToAddress(scAddress), txHelper.GetClient())
+		contract, err := contractbinding.NewTestContract(scAddress, txHelper.GetClient())
 		require.NoError(t, err)
 
 		res, err := contract.GetValue(&bind.CallOpts{

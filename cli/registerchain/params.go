@@ -6,23 +6,20 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
 const (
-	defaultGasLimit        = 5_242_880
-	defaultNumRetries      = 10
-	defaultRetriesWaitTime = time.Second * 4
+	defaultGasLimit = 5_242_880
 
 	validatorDataDirFlag   = "validator-data-dir"
 	validatorConfigFlag    = "validator-config"
@@ -152,7 +149,6 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	var (
 		validatorChainData eth.ValidatorChainData
-		transaction        *types.Transaction
 		ctx                = context.Background()
 	)
 
@@ -195,14 +191,14 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	initialTokenSupply, _ := new(big.Int).SetString(ip.initialTokenSupply, 0)
 
 	// create and send register chain tx
-	err = wallet.ExecuteWithRetry(ctx, defaultNumRetries, defaultRetriesWaitTime, func() (bool, error) {
+	transaction, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
 		contract, err := contractbinding.NewBridgeContract(
 			common.HexToAddress(ip.bridgeSCAddr), ip.ethTxHelper.GetClient())
 		if err != nil {
-			return false, fmt.Errorf("failed to connect to bridge smart contract: %w", err)
+			return nil, fmt.Errorf("failed to connect to bridge smart contract: %w", err)
 		}
 
-		transaction, err = ip.ethTxHelper.SendTx(
+		return ip.ethTxHelper.SendTx(
 			ctx,
 			walletEth,
 			bind.TransactOpts{
@@ -216,9 +212,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					initialTokenSupply,
 					validatorChainData)
 			})
-
-		return err == nil, err
-	})
+	}, infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
 	if err != nil {
 		return nil, err
 	}

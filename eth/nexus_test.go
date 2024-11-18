@@ -74,18 +74,16 @@ func TestNexus(t *testing.T) {
 	abiData, err := contractbinding.TestGatewayMetaData.GetAbi()
 	require.NoError(t, err)
 
-	addr, hash, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *abiData, scBytecodeTest)
+	txInfo, err := txHelper.Deploy(ctx, wallet, bind.TransactOpts{}, *abiData, scBytecodeTest)
 	require.NoError(t, err)
-	require.NotEqual(t, common.Address{}, addr)
+	require.NotEqual(t, common.Address{}, txInfo.Address)
 
-	receipt, err := txHelper.WaitForReceipt(ctx, hash, true)
+	receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash, true)
 	require.NoError(t, err)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
-	require.Equal(t, common.HexToAddress(addr), receipt.ContractAddress)
+	require.Equal(t, txInfo.Address, receipt.ContractAddress)
 
-	scAddress := addr
-
-	contract, err := contractbinding.NewTestGateway(common.HexToAddress(scAddress), txHelper.GetClient())
+	contract, err := contractbinding.NewTestGateway(txInfo.Address, txHelper.GetClient())
 	require.NoError(t, err)
 
 	tx, err := txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
@@ -128,7 +126,7 @@ func TestNexus(t *testing.T) {
 	trackerConfig.Logger = hclog.Default().Named("test logger")
 	trackerConfig.NumBlockConfirmations = 10
 	// bridgingAddress := "0xABEF000000000000000000000000000000000000"
-	scAddress2 := ethgo.HexToAddress(scAddress)
+	scAddress2 := ethgo.Address(txInfo.Address)
 
 	eventSigs, err := GetNexusEventSignatures()
 	if err != nil {

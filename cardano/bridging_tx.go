@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -16,11 +16,8 @@ const (
 	DefaultPotentialFee = 250_000
 	splitStringLength   = 40
 
-	retryWait       = time.Millisecond * 1000
-	retriesMaxCount = 10
-
-	retriesTxHashInUtxosCount = 144
-	retriesTxHashInUtxosWait  = time.Second * 5
+	retryCountForAmount    = 144
+	retryWaitTimeForAMount = time.Second * 5
 )
 
 type BridgingTxSender struct {
@@ -155,11 +152,11 @@ func (bts *BridgingTxSender) SendTx(
 		return err
 	}
 
-	return cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
-		err := bts.txProviderSrc.SubmitTx(ctx, txSigned)
+	_, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
+		return true, bts.txProviderSrc.SubmitTx(ctx, txSigned)
+	})
 
-		return err == nil, err
-	}, isRecoverableError)
+	return err
 }
 
 func (bts *BridgingTxSender) WaitForTx(
@@ -201,10 +198,6 @@ func IsAddressInOutputs(
 	return false
 }
 
-func isRecoverableError(err error) bool {
-	return strings.Contains(err.Error(), "status code 500") // retry if error is ogmios "status code 500"
-}
-
 func WaitForTx(
 	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []cardanowallet.TxOutput,
 ) error {
@@ -217,25 +210,32 @@ func WaitForTx(
 		go func(idx int, recv cardanowallet.TxOutput) {
 			defer wg.Done()
 
-			var expectedAmount uint64
-
-			errs[idx] = cardanowallet.ExecuteWithRetry(ctx, retriesMaxCount, retryWait, func() (bool, error) {
+			originalAmount, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (uint64, error) {
 				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
-				expectedAmount = cardanowallet.GetUtxosSum(utxos)
+				if err != nil {
+					return 0, err
+				}
 
-				return err == nil, err
-			}, isRecoverableError)
-			if errs[idx] != nil {
+				return cardanowallet.GetUtxosSum(utxos), nil
+			})
+			if err != nil {
+				errs[idx] = err
+
 				return
 			}
 
-			expectedAmount += recv.Amount
+			_, errs[idx] = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
+				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
+				if err != nil {
+					return false, err
+				}
 
-			errs[idx] = cardanowallet.WaitForAmount(
-				ctx, txUtxoRetriever, recv.Addr, func(newAmount uint64) bool {
-					return newAmount >= expectedAmount
-				},
-				retriesTxHashInUtxosCount, retriesTxHashInUtxosWait, isRecoverableError)
+				if cardanowallet.GetUtxosSum(utxos) < recv.Amount+originalAmount {
+					return false, infracommon.ErrRetryTryAgain
+				}
+
+				return true, nil
+			}, infracommon.WithRetryCount(retryCountForAmount), infracommon.WithRetryWaitTime(retryWaitTimeForAMount))
 		}(i, x)
 	}
 
