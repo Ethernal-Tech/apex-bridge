@@ -13,7 +13,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -484,36 +483,11 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 		go func(idx int, recv *receiverAmount) {
 			defer wg.Done()
 
-			var (
-				addr = common.HexToAddress(recv.ReceiverAddr)
-			)
-
-			oldBalance, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
-				return client.BalanceAt(ctx, addr, nil)
-			}, infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
-			if err != nil {
-				errs[idx] = err
-
-				return
-			}
-
-			expectedBalance := oldBalance.Add(oldBalance, recv.Amount)
-
-			_, errs[idx] = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
-				balance, err := client.BalanceAt(ctx, addr, nil)
-				if err != nil {
-					return false, err
-				}
-
-				if balance.Cmp(expectedBalance) < 0 {
-					return false, infracommon.ErrRetryTryAgain
-				}
-
-				return true, nil
-			},
-				infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError),
-				infracommon.WithRetryCount(amountCheckRetryCount),
-				infracommon.WithRetryWaitTime(amountCheckRetryWaitTime))
+			addr := common.HexToAddress(recv.ReceiverAddr)
+			_, errs[idx] = common.WaitForAmount(
+				ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
+					return client.BalanceAt(ctx, addr, nil)
+				})
 		}(i, x)
 	}
 

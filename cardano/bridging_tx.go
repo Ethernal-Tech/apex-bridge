@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
-	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
@@ -15,9 +15,6 @@ import (
 const (
 	DefaultPotentialFee = 250_000
 	splitStringLength   = 40
-
-	retryCountForAmount    = 144
-	retryWaitTimeForAMount = time.Second * 5
 )
 
 type BridgingTxSender struct {
@@ -210,32 +207,15 @@ func WaitForTx(
 		go func(idx int, recv cardanowallet.TxOutput) {
 			defer wg.Done()
 
-			originalAmount, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (uint64, error) {
-				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
-				if err != nil {
-					return 0, err
-				}
+			_, errs[idx] = common.WaitForAmount(
+				ctx, new(big.Int).SetUint64(recv.Amount), func(ctx context.Context) (*big.Int, error) {
+					utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
+					if err != nil {
+						return nil, err
+					}
 
-				return cardanowallet.GetUtxosSum(utxos), nil
-			})
-			if err != nil {
-				errs[idx] = err
-
-				return
-			}
-
-			_, errs[idx] = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
-				utxos, err := txUtxoRetriever.GetUtxos(ctx, recv.Addr)
-				if err != nil {
-					return false, err
-				}
-
-				if cardanowallet.GetUtxosSum(utxos) < recv.Amount+originalAmount {
-					return false, infracommon.ErrRetryTryAgain
-				}
-
-				return true, nil
-			}, infracommon.WithRetryCount(retryCountForAmount), infracommon.WithRetryWaitTime(retryWaitTimeForAMount))
+					return new(big.Int).SetUint64(cardanowallet.GetUtxosSum(utxos)), nil
+				})
 		}(i, x)
 	}
 

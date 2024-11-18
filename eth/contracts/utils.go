@@ -61,9 +61,7 @@ func (ecu *ethContractUtils) DeployWithProxy(
 	tx, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (ethtxhelper.TxDeployInfo, error) {
 		return ecu.txHelper.Deploy(
 			ctx, ecu.wallet, bind.TransactOpts{}, *artifact.Abi, artifact.Bytecode)
-	}, infracommon.WithRetryCount(ecu.numRetries),
-		infracommon.WithRetryWaitTime(ecu.retriesWaitTime),
-		infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
+	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
 	if err != nil {
 		return proxyTx, tx, err
 	}
@@ -77,9 +75,7 @@ func (ecu *ethContractUtils) DeployWithProxy(
 		return ecu.txHelper.Deploy(
 			ctx, ecu.wallet, bind.TransactOpts{}, *proxyArtifact.Abi, proxyArtifact.Bytecode,
 			tx.Address, initializationData)
-	}, infracommon.WithRetryCount(ecu.numRetries),
-		infracommon.WithRetryWaitTime(ecu.retriesWaitTime),
-		infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
+	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
 
 	return proxyTx, tx, err
 }
@@ -91,10 +87,10 @@ func (ecu *ethContractUtils) ExecuteMethod(
 	method string,
 	args ...interface{},
 ) (string, error) {
-	boundContract := bind.NewBoundContract(
-		address, *artifact.Abi, ecu.txHelper.GetClient(), ecu.txHelper.GetClient(), ecu.txHelper.GetClient())
-
 	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
+		boundContract := bind.NewBoundContract(
+			address, *artifact.Abi, ecu.txHelper.GetClient(), ecu.txHelper.GetClient(), ecu.txHelper.GetClient())
+
 		estimatedGas, _, err := ecu.txHelper.EstimateGas(
 			ctx, ecu.wallet.GetAddress(), address, nil, ecu.gasLimitMultipiler, artifact.Abi, method, args...)
 		if err != nil {
@@ -107,9 +103,7 @@ func (ecu *ethContractUtils) ExecuteMethod(
 
 				return boundContract.Transact(opts, method, args...)
 			})
-	}, infracommon.WithRetryCount(ecu.numRetries),
-		infracommon.WithRetryWaitTime(ecu.retriesWaitTime),
-		infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
+	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
 	if err != nil {
 		return "", err
 	}

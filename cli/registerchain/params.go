@@ -212,7 +212,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					initialTokenSupply,
 					validatorChainData)
 			})
-	}, infracommon.WithIsRetryableError(ethtxhelper.IsRetryableEthError))
+	})
 	if err != nil {
 		return nil, err
 	}
