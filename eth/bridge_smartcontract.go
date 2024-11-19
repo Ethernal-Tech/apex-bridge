@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	submitBatchGasLimit                      = uint64(8_000_000)
+	submitBatchGasLimit                      = uint64(50_000_000)
 	setChainAdditionalDataGasLimitMultipiler = 1.2
 )
 
