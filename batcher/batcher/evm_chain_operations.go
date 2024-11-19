@@ -29,6 +29,7 @@ type EVMChainOperations struct {
 	privateKey   *bn256.PrivateKey
 	db           eventTrackerStore.EventTrackerStore
 	ttlFormatter TTLFormatterFunc
+	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
 }
 
@@ -54,6 +55,7 @@ func NewEVMChainOperations(
 		privateKey:   privateKey,
 		db:           db,
 		ttlFormatter: getTTLFormatter(config.TestMode),
+		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
 	}, nil
 }
@@ -151,7 +153,11 @@ func (cco *EVMChainOperations) IsSynchronized(
 func (cco *EVMChainOperations) Submit(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
 ) error {
-	return bridgeSmartContract.SubmitSignedBatchEVM(ctx, batch)
+	err := bridgeSmartContract.SubmitSignedBatchEVM(ctx, batch, cco.gasLimiter.GetGasLimit())
+
+	cco.gasLimiter.Update(err)
+
+	return err
 }
 
 func newEVMSmartContractTransaction(

@@ -26,7 +26,7 @@ var (
 const (
 	minUtxoAmount   = uint64(1000000)
 	maxFeeUtxoCount = 4
-	maxUtxoCount    = 300
+	maxUtxoCount    = 50
 	maxTxSize       = 16000
 )
 
@@ -35,6 +35,7 @@ type CardanoChainOperations struct {
 	wallet           *cardano.CardanoWallet
 	txProvider       cardanowallet.ITxDataRetriever
 	db               indexer.Database
+	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
 	logger           hclog.Logger
 }
@@ -66,6 +67,7 @@ func NewCardanoChainOperations(
 		config:           cardanoConfig,
 		txProvider:       txProvider,
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
+		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
 		logger:           logger,
 	}, nil
@@ -194,7 +196,11 @@ func (cco *CardanoChainOperations) IsSynchronized(
 func (cco *CardanoChainOperations) Submit(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch,
 ) error {
-	return bridgeSmartContract.SubmitSignedBatch(ctx, batch)
+	err := bridgeSmartContract.SubmitSignedBatch(ctx, batch, cco.gasLimiter.GetGasLimit())
+
+	cco.gasLimiter.Update(err)
+
+	return err
 }
 
 func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {

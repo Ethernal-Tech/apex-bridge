@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	submitBatchGasLimit                      = uint64(8_000_000)
 	setChainAdditionalDataGasLimitMultipiler = 1.2
 )
 
@@ -21,8 +20,8 @@ type Chain = contractbinding.IBridgeStructsChain
 type IBridgeSmartContract interface {
 	GetConfirmedBatch(
 		ctx context.Context, destinationChain string) (*ConfirmedBatch, error)
-	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error
-	SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error
+	SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch, gasLimit uint64) error
+	SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch, gasLimit uint64) error
 	ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error)
 	GetConfirmedTransactions(ctx context.Context, destinationChain string) ([]ConfirmedTransaction, error)
 	GetLastObservedBlock(ctx context.Context, destinationChain string) (CardanoBlock, error)
@@ -74,7 +73,9 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 	return NewConfirmedBatch(result), nil
 }
 
-func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(
+	ctx context.Context, signedBatch SignedBatch, gasLimit uint64,
+) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return fmt.Errorf("error while GetEthHelper: %w", err)
@@ -88,7 +89,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		opts.GasLimit = submitBatchGasLimit
+		opts.GasLimit = gasLimit
 
 		return contract.SubmitSignedBatch(opts, signedBatch)
 	})
@@ -99,7 +100,9 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(ctx context.Context, signe
 	return nil
 }
 
-func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
+func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(
+	ctx context.Context, signedBatch SignedBatch, gasLimit uint64,
+) error {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return fmt.Errorf("error while GetEthHelper: %w", err)
@@ -113,7 +116,7 @@ func (bsc *BridgeSmartContractImpl) SubmitSignedBatchEVM(ctx context.Context, si
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		opts.GasLimit = submitBatchGasLimit
+		opts.GasLimit = gasLimit
 
 		return contract.SubmitSignedBatchEVM(opts, signedBatch)
 	})

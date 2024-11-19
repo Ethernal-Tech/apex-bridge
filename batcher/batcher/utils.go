@@ -7,6 +7,10 @@ import (
 
 var (
 	errNonActiveBatchPeriod = errors.New("non active batch period")
+
+	submitBatchMinGasLimit   = uint64(8_000_000)
+	submitBatchMaxGasLimit   = uint64(60_000_000)
+	submitBatchStepsGasLimit = uint64(5)
 )
 
 func getNumberWithRoundingThreshold(
