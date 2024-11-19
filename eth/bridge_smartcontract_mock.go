@@ -25,12 +25,16 @@ func (m *BridgeSmartContractMock) GetConfirmedBatch(
 	return arg0, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) SubmitSignedBatch(ctx context.Context, signedBatch SignedBatch) error {
-	return m.Called(ctx, signedBatch).Error(0)
+func (m *BridgeSmartContractMock) SubmitSignedBatch(
+	ctx context.Context, signedBatch SignedBatch, gasLimit uint64,
+) error {
+	return m.Called(ctx, signedBatch, gasLimit).Error(0)
 }
 
-func (m *BridgeSmartContractMock) SubmitSignedBatchEVM(ctx context.Context, signedBatch SignedBatch) error {
-	return m.Called(ctx, signedBatch).Error(0)
+func (m *BridgeSmartContractMock) SubmitSignedBatchEVM(
+	ctx context.Context, signedBatch SignedBatch, gasLimit uint64,
+) error {
+	return m.Called(ctx, signedBatch, gasLimit).Error(0)
 }
 
 func (m *BridgeSmartContractMock) ShouldCreateBatch(ctx context.Context, destinationChain string) (bool, error) {
