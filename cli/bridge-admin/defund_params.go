@@ -17,16 +17,20 @@ import (
 )
 
 const (
-	defundAddressFlagDesc = "address where defund amount goes"
-	defundAmountFlagDesc  = "amount to defund from hot wallet"
+	nativeTokenAmountFlag = "native-token-amount"
+
+	defundAddressFlagDesc     = "address where defund amount goes"
+	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM (or in native tokens if the --native-token-amount flag is specified)" //nolint:lll
+	nativeTokenAmountFlagDesc = "use at your own risk (see the --amount flag)"                                                                       //nolint:gosec
 )
 
 type defundParams struct {
-	bridgeNodeURL string
-	chainID       string
-	amountStr     string
-	privateKeyRaw string
-	address       string
+	bridgeNodeURL     string
+	chainID           string
+	amountStr         string
+	privateKeyRaw     string
+	address           string
+	nativeTokenAmount bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -42,8 +46,18 @@ func (g *defundParams) ValidateFlags() error {
 	g.amountStr = strings.TrimSpace(g.amountStr)
 
 	amount, ok := new(big.Int).SetString(g.amountStr, 0)
-	if !ok || amount.Sign() <= 0 || amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
-		return fmt.Errorf("--%s flag must be greater than %d", amountFlag, cardanowallet.MinUTxODefaultValue)
+	if !ok || amount.Sign() <= 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
+			amountFlag, cardanowallet.MinUTxODefaultValue)
+	}
+
+	if g.nativeTokenAmount {
+		amount = common.GetDfmAmount(g.chainID, amount)
+	}
+
+	if amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
+			amountFlag, cardanowallet.MinUTxODefaultValue)
 	}
 
 	if g.privateKeyRaw == "" {
@@ -148,6 +162,12 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		addressFlag,
 		"0",
 		defundAddressFlagDesc,
+	)
+	cmd.Flags().BoolVar(
+		&g.nativeTokenAmount,
+		nativeTokenAmountFlag,
+		false,
+		nativeTokenAmountFlagDesc,
 	)
 }
 

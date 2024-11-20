@@ -262,3 +262,12 @@ func IsValidAddress(chainID string, addr string) bool {
 		return err == nil
 	}
 }
+
+func GetDfmAmount(chainID string, amount *big.Int) *big.Int {
+	switch chainID {
+	case ChainIDStrNexus:
+		return WeiToDfm(amount)
+	default:
+		return amount
+	}
+}

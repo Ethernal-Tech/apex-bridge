@@ -260,3 +260,4 @@ $ apex-bridge bridge-admin defund \
         --amount 100
         --address 0xeefcd00000000000000000000000000000000000
 ```
+- there is optional `--native-token-amount` flag
