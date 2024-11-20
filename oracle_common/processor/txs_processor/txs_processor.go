@@ -2,6 +2,7 @@ package txsprocessor
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"time"
@@ -157,7 +158,16 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 				chainID, batchID, isFailedClaim, err)
 		}
 
-		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, txs))
+		filteredTxs := make([]eth.TxDataInfo, 0, len(txs))
+		for _, tx := range txs {
+			if hex.EncodeToString(tx.ObservedTransactionHash[:]) == core.DefundTxHash {
+				continue
+			}
+
+			filteredTxs = append(filteredTxs, tx)
+		}
+
+		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, filteredTxs))
 
 		return nil
 	}
