@@ -8,6 +8,7 @@ import (
 var (
 	getChainTokenQuantityParamsData    = &getChainTokenQuantityParams{}
 	updateChainTokenQuantityParamsData = &updateChainTokenQuantityParams{}
+	defundParamsData                   = &defundParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -27,16 +28,25 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(updateChainTokenQuantityParamsData),
 	}
+	defundCmd := &cobra.Command{
+		Use:   "defund",
+		Short: "dufund chain hot wallet",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return defundParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(defundParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
+	defundParamsData.RegisterFlags(defundCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
 		Short: "bridge admin functions",
 	}
 
-	cmd.AddCommand(getChainTokenQuantityCmd, updateChainTokenQuantityCmd)
+	cmd.AddCommand(getChainTokenQuantityCmd, updateChainTokenQuantityCmd, defundCmd)
 
 	return cmd
 }

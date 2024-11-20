@@ -15,7 +15,8 @@ import (
 	"time"
 
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
-	"github.com/ethereum/go-ethereum/common"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/sha3"
 )
@@ -58,8 +59,8 @@ func IsValidNetworkAddress(input string) bool {
 	return err == nil
 }
 
-func HexToAddress(s string) common.Address {
-	return common.HexToAddress(s)
+func HexToAddress(s string) ethcommon.Address {
+	return ethcommon.HexToAddress(s)
 }
 
 func DecodeHex(s string) ([]byte, error) {
@@ -249,4 +250,15 @@ func WaitForAmount(
 
 		return balance, nil
 	}, infracommon.WithRetryCount(waitForAmountRetryCount), infracommon.WithRetryWaitTime(waitForAmountWaitTime))
+}
+
+func IsValidAddress(chainID string, addr string) bool {
+	switch chainID {
+	case ChainIDStrNexus:
+		return ethcommon.IsHexAddress(addr)
+	default:
+		_, err := cardanowallet.NewAddress(addr)
+
+		return err == nil
+	}
 }

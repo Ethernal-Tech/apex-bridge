@@ -214,7 +214,7 @@ apex-bridge sendtx \
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
 ```shell
-$ go run ./main.go deploy-evm \
+$ apex-bridge deploy-evm \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -227,7 +227,7 @@ $ go run ./main.go deploy-evm \
 -- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
 Example with explicit bls keys:
 ```shell
-$ go run ./main.go deploy-evm \
+$ apex-bridge deploy-evm \
         --url http://127.0.0.1:12001 \
         --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
         --dir /tmp \
@@ -240,14 +240,23 @@ $ go run ./main.go deploy-evm \
 
 # Bridge admin commands
 ```shell
-$ go run ./main.go bridge-admin get-chain-token-quantity \
+$ apex-bridge bridge-admin get-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain prime --chain nexus --chain vector
 ```
 
 ```shell
-$ go run ./main.go bridge-admin update-chain-token-quantity \
+$ apex-bridge bridge-admin update-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+
+```shell
+$ apex-bridge bridge-admin defund \
+        --bridge-url http://localhost:12013 \
+        --chain nexus --amount 300 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+        --amount 100
+        --address 0xeefcd00000000000000000000000000000000000
 ```
