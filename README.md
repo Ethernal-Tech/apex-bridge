@@ -255,9 +255,9 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
 ```shell
 $ apex-bridge bridge-admin defund \
         --bridge-url http://localhost:12013 \
-        --chain nexus --amount 300 \
+        --chain nexus \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
         --amount 100
-        --address 0xeefcd00000000000000000000000000000000000
+        --addr 0xeefcd00000000000000000000000000000000000
 ```
 - there is optional `--native-token-amount` flag
