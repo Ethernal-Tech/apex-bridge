@@ -11,6 +11,7 @@ import (
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -79,7 +80,7 @@ func (ip *deployEVMParams) validateFlags() error {
 	}
 
 	if ip.evmPrivateKey == "" {
-		return fmt.Errorf("invalid --%s flag", evmChainIDFlag)
+		return fmt.Errorf("invalid --%s flag", evmPrivateKeyFlag)
 	}
 
 	if ip.bridgeNodeURL != "" {
@@ -181,9 +182,10 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *deployEVMParams) Execute(
-	ctx context.Context, outputter common.OutputFormatter,
+	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	dir := filepath.Clean(ip.evmDir)
+	ctx := context.Background()
 
 	if ip.evmClone {
 		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
@@ -330,15 +332,45 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	return &CmdResult{
-		gatewayProxyAddr:              gatewayProxyTx.Address.String(),
-		gatewayAddr:                   gatewayTx.Address.String(),
-		nativeTokenPredicateProxyAddr: predicateProxyTx.Address.String(),
-		nativeTokenPredicateAddr:      predicateTx.Address.String(),
-		nativeTokenWalletProxyAddr:    walletProxyTx.Address.String(),
-		nativeTokenWalletAddr:         walletTx.Address.String(),
-		validatorsProxyAddr:           validatorsProxyTx.Address.String(),
-		validatorsAddr:                validatorsTx.Address.String(),
+	return &cmdResult{
+		Contracts: []contractInfo{
+			{
+				Name:    "Gateway",
+				Addr:    gatewayProxyTx.Address,
+				IsProxy: true,
+			},
+			{
+				Name: "Gateway",
+				Addr: gatewayTx.Address,
+			},
+			{
+				Name:    "NativeTokenPredicate",
+				Addr:    predicateProxyTx.Address,
+				IsProxy: true,
+			},
+			{
+				Name: "NativeTokenPredicate",
+				Addr: predicateTx.Address,
+			},
+			{
+				Name:    "NativeTokenWallet",
+				Addr:    walletProxyTx.Address,
+				IsProxy: true,
+			},
+			{
+				Name: "NativeTokenWallet",
+				Addr: walletTx.Address,
+			},
+			{
+				Name:    "Validators",
+				Addr:    validatorsProxyTx.Address,
+				IsProxy: true,
+			},
+			{
+				Name: "Validators",
+				Addr: validatorsTx.Address,
+			},
+		},
 	}, nil
 }
 
@@ -350,11 +382,16 @@ func (ip *deployEVMParams) setChainAdditionalData(
 		return nil
 	}
 
+	sc := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper)
+
 	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
 	outputter.WriteOutput()
 
-	return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).
-		SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
+	_, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
+		return true, sc.SetChainAdditionalData(ctx, ip.evmChainID, gatewayProxyAddr.String(), "")
+	})
+
+	return err
 }
 
 func (ip *deployEVMParams) getValidatorsChainData(
@@ -407,7 +444,6 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		return eth.NewEthHelperWrapper(
 			hclog.NewNullLogger(),
 			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
-			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 			ethtxhelper.WithDynamicTx(false)), nil
 	}
 
@@ -420,5 +456,6 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		wallet, hclog.NewNullLogger(),
 		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithDynamicTx(false)), nil
 }
