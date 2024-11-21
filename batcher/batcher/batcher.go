@@ -217,7 +217,8 @@ func getBridgingRequestStateKeys(
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID-firstTxNonceID+1)
 
 	for _, confirmedTx := range txs {
-		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID {
+		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
+			confirmedTx.ObservedTransactionHash != [32]byte(common.DefundTxHash) {
 			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
 				SourceChainID: common.ToStrChainID(confirmedTx.SourceChainId),
 				SourceTxHash:  confirmedTx.ObservedTransactionHash,

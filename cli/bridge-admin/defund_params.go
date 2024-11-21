@@ -10,90 +10,31 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
 const (
-	chainTokenQuantityAmountFlagDesc = "amount to add or subtract"
+	nativeTokenAmountFlag = "native-token-amount"
+
+	defundAddressFlagDesc     = "address where defund amount goes"
+	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM (or in native tokens if the --native-token-amount flag is specified)" //nolint:lll
+	nativeTokenAmountFlagDesc = "use at your own risk (see the --amount flag)"                                                                       //nolint:gosec
 )
 
-type getChainTokenQuantityParams struct {
-	bridgeNodeURL string
-	chainIDs      []string
+type defundParams struct {
+	bridgeNodeURL     string
+	chainID           string
+	amountStr         string
+	privateKeyRaw     string
+	address           string
+	nativeTokenAmount bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
-func (g *getChainTokenQuantityParams) ValidateFlags() error {
-	if !common.IsValidHTTPURL(g.bridgeNodeURL) {
-		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
-	}
-
-	if len(g.chainIDs) == 0 {
-		return fmt.Errorf("--%s flag not specified", chainIDFlag)
-	}
-
-	return nil
-}
-
-// Execute implements common.CliCommandExecutor.
-func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.ICommandResult, error) {
-	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(g.bridgeNodeURL))
-	if err != nil {
-		return nil, err
-	}
-
-	contract, err := contractbinding.NewAdminContract(
-		apexBridgeAdminScAddress,
-		txHelper.GetClient())
-	if err != nil {
-		return nil, err
-	}
-
-	results := make([]chainTokenQuantity, len(g.chainIDs))
-
-	for i, chainID := range g.chainIDs {
-		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
-		if err != nil {
-			return nil, err
-		}
-
-		results[i] = chainTokenQuantity{
-			chainID: chainID,
-			amount:  amount,
-		}
-	}
-
-	return &chainTokenQuantityResult{
-		results: results,
-	}, nil
-}
-
-func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(
-		&g.bridgeNodeURL,
-		bridgeNodeURLFlag,
-		"",
-		bridgeNodeURLFlagDesc,
-	)
-	cmd.Flags().StringSliceVar(
-		&g.chainIDs,
-		chainIDFlag,
-		nil,
-		chainIDFlagDesc,
-	)
-}
-
-type updateChainTokenQuantityParams struct {
-	bridgeNodeURL string
-	chainID       string
-	amountStr     string
-	privateKeyRaw string
-}
-
-// ValidateFlags implements common.CliCommandValidator.
-func (g *updateChainTokenQuantityParams) ValidateFlags() error {
+func (g *defundParams) ValidateFlags() error {
 	if !common.IsValidHTTPURL(g.bridgeNodeURL) {
 		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
 	}
@@ -105,24 +46,36 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 	g.amountStr = strings.TrimSpace(g.amountStr)
 
 	amount, ok := new(big.Int).SetString(g.amountStr, 0)
-	if !ok || amount.BitLen() == 0 {
-		return fmt.Errorf("--%s flag must be greater or lower than zero", amountFlag)
+	if !ok || amount.Sign() <= 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
+			amountFlag, cardanowallet.MinUTxODefaultValue)
+	}
+
+	if g.nativeTokenAmount {
+		amount = common.GetDfmAmount(g.chainID, amount)
+	}
+
+	if amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
+			amountFlag, cardanowallet.MinUTxODefaultValue)
 	}
 
 	if g.privateKeyRaw == "" {
 		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
 	}
 
+	if !common.IsValidAddress(g.chainID, g.address) {
+		return fmt.Errorf("invalid address: --%s", addressFlag)
+	}
+
 	return nil
 }
 
 // Execute implements common.CliCommandExecutor.
-func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (g *defundParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(g.chainID)
 	amount, _ := new(big.Int).SetString(g.amountStr, 0)
-	increment := amount.Sign() > 0
-	amount = amount.Abs(amount)
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -151,7 +104,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"updateChainTokenQuantity", chainIDInt, increment, amount)
+		"defund", chainIDInt, g.address, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +113,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.UpdateChainTokenQuantity(opts, chainIDInt, increment, amount)
+			return contract.Defund(opts, chainIDInt, g.address, amount)
 		})
 	if err != nil {
 		return nil, err
@@ -179,7 +132,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 	return &chainTokenQuantityResult{}, err
 }
 
-func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
+func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&g.bridgeNodeURL,
 		bridgeNodeURLFlag,
@@ -202,11 +155,22 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		&g.amountStr,
 		amountFlag,
 		"0",
-		chainTokenQuantityAmountFlagDesc,
+		defundAmountFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.address,
+		addressFlag,
+		"0",
+		defundAddressFlagDesc,
+	)
+	cmd.Flags().BoolVar(
+		&g.nativeTokenAmount,
+		nativeTokenAmountFlag,
+		false,
+		nativeTokenAmountFlagDesc,
 	)
 }
 
 var (
-	_ common.CliCommandExecutor = (*getChainTokenQuantityParams)(nil)
-	_ common.CliCommandExecutor = (*updateChainTokenQuantityParams)(nil)
+	_ common.CliCommandExecutor = (*defundParams)(nil)
 )

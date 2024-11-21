@@ -15,7 +15,6 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
@@ -198,20 +197,13 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		switch ip.chainIDDst {
-		case common.ChainIDStrNexus:
-			if !ethcommon.IsHexAddress(vals[0]) {
-				return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
-			}
-		default:
-			if amount.Uint64() < cardanowallet.MinUTxODefaultValue {
-				return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
-			}
+		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
+			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
+		}
 
-			_, err := cardanowallet.NewAddress(vals[0])
-			if err != nil {
-				return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
-			}
+		if ip.chainIDDst != common.ChainIDStrNexus &&
+			amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
+			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
 		receivers = append(receivers, &receiverAmount{

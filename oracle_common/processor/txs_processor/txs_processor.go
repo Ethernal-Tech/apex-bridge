@@ -157,7 +157,22 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 				chainID, batchID, isFailedClaim, err)
 		}
 
-		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, txs))
+		filteredTxs := make([]eth.TxDataInfo, 0, len(txs))
+
+		for _, tx := range txs {
+			if tx.ObservedTransactionHash == [32]byte(common.DefundTxHash) {
+				p.logger.Info("Skipping defund tx",
+					"chainID", common.ToStrChainID(chainIDInt),
+					"batchID", batchID, "isFailedClaim", isFailedClaim,
+				)
+
+				continue
+			}
+
+			filteredTxs = append(filteredTxs, tx)
+		}
+
+		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, filteredTxs))
 
 		return nil
 	}
