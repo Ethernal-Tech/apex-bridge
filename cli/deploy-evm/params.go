@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -187,6 +188,21 @@ func (ip *deployEVMParams) Execute(
 	dir := filepath.Clean(ip.evmDir)
 	ctx := context.Background()
 
+	const (
+		Gateway              = "Gateway"
+		NativeTokenPredicate = "NativeTokenPredicate"
+		NativeTokenWallet    = "NativeTokenWallet"
+		Validators           = "Validators"
+	)
+	contractNames := []string{
+		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
+	}
+	setDependenciesData := map[string][]string{
+		Gateway:              {NativeTokenPredicate, Validators},
+		NativeTokenPredicate: {Gateway, NativeTokenWallet},
+		NativeTokenWallet:    {NativeTokenPredicate},
+	}
+
 	if ip.evmClone {
 		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
 		outputter.WriteOutput()
@@ -201,7 +217,7 @@ func (ip *deployEVMParams) Execute(
 	}
 
 	artifacts, err := ethcontracts.LoadArtifacts(
-		dir, "ERC1967Proxy", "Gateway", "NativeTokenPredicate", "NativeTokenWallet", "Validators")
+		dir, append([]string{"ERC1967Proxy"}, contractNames...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -238,84 +254,76 @@ func (ip *deployEVMParams) Execute(
 	outputter.WriteOutput()
 
 	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier)
+	contracts := make([]contractInfo, len(contractNames)*2)
+	txHashes := make([]string, len(contractNames)*2)
 
-	gatewayProxyTx, gatewayTx, err := ethContractUtils.DeployWithProxy(
-		ctx, artifacts["Gateway"], artifacts["ERC1967Proxy"])
-	if err != nil {
-		return nil, err
+	for i, contractName := range contractNames {
+		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
+			ctx, artifacts[contractName], artifacts["ERC1967Proxy"])
+		if err != nil {
+			return nil, err
+		}
+
+		_, _ = outputter.Write([]byte(fmt.Sprintf("%s has been sent", contractName)))
+		outputter.WriteOutput()
+
+		txHashes[i*2] = proxyTx.Hash
+		txHashes[i*2+1] = tx.Hash
+		contracts[i*2] = contractInfo{
+			Name:    contractName,
+			Addr:    proxyTx.Address,
+			IsProxy: true,
+		}
+		contracts[i*2+1] = contractInfo{
+			Name: contractName,
+			Addr: tx.Address,
+		}
 	}
 
-	_, _ = outputter.Write([]byte("Gateway has been sent"))
-	outputter.WriteOutput()
+	getAddress := func(name string) ethcommon.Address {
+		for i, contractName := range contractNames {
+			if strings.EqualFold(contractName, name) {
+				return contracts[i*2].Addr
+			}
+		}
 
-	predicateProxyTx, predicateTx, err := ethContractUtils.DeployWithProxy(
-		ctx, artifacts["NativeTokenPredicate"], artifacts["ERC1967Proxy"])
-	if err != nil {
-		return nil, err
+		return ethcommon.Address{}
 	}
 
-	_, _ = outputter.Write([]byte("NativeTokenPredicate has been sent"))
+	_, _ = outputter.Write([]byte("Waiting for receipts..."))
 	outputter.WriteOutput()
 
-	walletProxyTx, walletTx, err := ethContractUtils.DeployWithProxy(
-		ctx, artifacts["NativeTokenWallet"], artifacts["ERC1967Proxy"])
-	if err != nil {
-		return nil, err
-	}
-
-	_, _ = outputter.Write([]byte("NativeTokenWallet has been sent"))
-	outputter.WriteOutput()
-
-	validatorsProxyTx, validatorsTx, err := ethContractUtils.DeployWithProxy(
-		ctx, artifacts["Validators"], artifacts["ERC1967Proxy"])
-	if err != nil {
-		return nil, err
-	}
-
-	_, _ = outputter.Write([]byte("Validators has been sent. Waiting for the receipts..."))
-	outputter.WriteOutput()
-
-	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper,
-		gatewayProxyTx.Hash, gatewayTx.Hash, predicateProxyTx.Hash, predicateTx.Hash,
-		walletProxyTx.Hash, walletTx.Hash, validatorsProxyTx.Hash, validatorsTx.Hash)
-	if err != nil {
+	if _, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txHashes...); err != nil {
 		return nil, err
 	}
 
 	_, _ = outputter.Write([]byte("Transactions have been included in the blockchain. Initializing contracts..."))
 	outputter.WriteOutput()
 
-	txHash1, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["Gateway"], gatewayProxyTx.Address, "setDependencies",
-		predicateProxyTx.Address, validatorsProxyTx.Address)
-	if err != nil {
-		return nil, err
+	additionalTxHashes := make([]string, 0, len(setDependenciesData)+1) // + 1 for setValidatorsChainData
+
+	for contractName, dependencyNames := range setDependenciesData {
+		dependencies := make([]interface{}, len(dependencyNames))
+		for i, x := range dependencyNames {
+			dependencies[i] = getAddress(x)
+		}
+
+		txHash, err := ethContractUtils.ExecuteMethod(
+			ctx, artifacts[contractName], getAddress(contractName),
+			"setDependencies", dependencies...)
+		if err != nil {
+			return nil, err
+		}
+
+		_, _ = outputter.Write([]byte(fmt.Sprintf("%s initialization transaction has been sent", contractName)))
+		outputter.WriteOutput()
+
+		additionalTxHashes = append(additionalTxHashes, txHash)
 	}
 
-	_, _ = outputter.Write([]byte("Gateway initialization transaction has been sent"))
-	outputter.WriteOutput()
-
-	txHash2, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenPredicate"], predicateProxyTx.Address, "setDependencies",
-		gatewayProxyTx.Address, walletProxyTx.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	_, _ = outputter.Write([]byte("NativeTokenPredicate initialization transaction has been sent"))
-	outputter.WriteOutput()
-
-	txHash3, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["NativeTokenWallet"], walletProxyTx.Address, "setDependencies", predicateProxyTx.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	_, _ = outputter.Write([]byte("NativeTokenWallet initialization transaction has been sent"))
-	outputter.WriteOutput()
-
-	txHash4, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["Validators"], validatorsProxyTx.Address, "setValidatorsChainData", validatorsData)
+	validatorsTxHash, err := ethContractUtils.ExecuteMethod(
+		ctx, artifacts["Validators"], getAddress(Validators),
+		"setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
 	}
@@ -323,54 +331,17 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
-	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txHash1, txHash2, txHash3, txHash4)
+	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, append(additionalTxHashes, validatorsTxHash)...)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ip.setChainAdditionalData(ctx, gatewayProxyTx.Address, txHelperBridge, outputter); err != nil {
+	if err := ip.setChainAdditionalData(ctx, getAddress(Gateway), txHelperBridge, outputter); err != nil {
 		return nil, err
 	}
 
 	return &cmdResult{
-		Contracts: []contractInfo{
-			{
-				Name:    "Gateway",
-				Addr:    gatewayProxyTx.Address,
-				IsProxy: true,
-			},
-			{
-				Name: "Gateway",
-				Addr: gatewayTx.Address,
-			},
-			{
-				Name:    "NativeTokenPredicate",
-				Addr:    predicateProxyTx.Address,
-				IsProxy: true,
-			},
-			{
-				Name: "NativeTokenPredicate",
-				Addr: predicateTx.Address,
-			},
-			{
-				Name:    "NativeTokenWallet",
-				Addr:    walletProxyTx.Address,
-				IsProxy: true,
-			},
-			{
-				Name: "NativeTokenWallet",
-				Addr: walletTx.Address,
-			},
-			{
-				Name:    "Validators",
-				Addr:    validatorsProxyTx.Address,
-				IsProxy: true,
-			},
-			{
-				Name: "Validators",
-				Addr: validatorsTx.Address,
-			},
-		},
+		Contracts: contracts,
 	}, nil
 }
 
