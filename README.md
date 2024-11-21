@@ -263,7 +263,7 @@ $ apex-bridge bridge-admin defund \
 - there is optional `--native-token-amount` flag
 
 ```shell
-$ apex-bridge set-additional-data \
+$ apex-bridge bridge-admin set-additional-data \
         --bridge-url http://localhost:12013 \
         --bridge-key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --chain nexus \
