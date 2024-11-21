@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
@@ -149,19 +150,21 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 		return nil, err
 	}
 
-	estimatedGas, _, err := txHelper.EstimateGas(
-		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"updateChainTokenQuantity", chainIDInt, increment, amount)
-	if err != nil {
-		return nil, err
-	}
+	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
+		estimatedGas, _, err := txHelper.EstimateGas(
+			ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
+			"updateChainTokenQuantity", chainIDInt, increment, amount)
+		if err != nil {
+			return nil, err
+		}
 
-	tx, err := txHelper.SendTx(
-		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			opts.GasLimit = estimatedGas
+		return txHelper.SendTx(
+			ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
+				opts.GasLimit = estimatedGas
 
-			return contract.UpdateChainTokenQuantity(opts, chainIDInt, increment, amount)
-		})
+				return contract.UpdateChainTokenQuantity(opts, chainIDInt, increment, amount)
+			})
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +179,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
-	return &chainTokenQuantityResult{}, err
+	return &successResult{}, err
 }
 
 func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {

@@ -19,8 +19,6 @@ type chainTokenQuantityResult struct {
 func (r chainTokenQuantityResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString("command execution has been finished\n")
-
 	data := make([]string, 0, len(r.results)*2)
 
 	for _, x := range r.results {
@@ -29,6 +27,17 @@ func (r chainTokenQuantityResult) GetOutput() string {
 	}
 
 	buffer.WriteString(common.FormatKV(data))
+
+	return buffer.String()
+}
+
+type successResult struct {
+}
+
+func (r successResult) GetOutput() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("command execution has been finished\n")
 
 	return buffer.String()
 }

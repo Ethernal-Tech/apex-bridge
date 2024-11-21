@@ -10,7 +10,7 @@ const (
 	addressFlag       = "addr"
 
 	bridgeNodeURLFlagDesc = "node URL of bridge chain"
-	chainIDFlagDesc       = "chain ID (prime, vector, etc)"
+	chainIDFlagDesc       = "chain ID (prime, vector, nexus, etc)"
 	privateKeyFlagDesc    = "wallet private signing key"
 
 	gasLimitMultiplier = 2.0
@@ -18,4 +18,5 @@ const (
 
 var (
 	apexBridgeAdminScAddress = common.HexToAddress("0xABEF000000000000000000000000000000000006")
+	apexBridgeScAddress      = common.HexToAddress("0xABEF000000000000000000000000000000000000")
 )
