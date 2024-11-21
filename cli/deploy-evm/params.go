@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -194,6 +193,7 @@ func (ip *deployEVMParams) Execute(
 		NativeTokenWallet    = "NativeTokenWallet"
 		Validators           = "Validators"
 	)
+
 	contractNames := []string{
 		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
 	}
@@ -256,6 +256,7 @@ func (ip *deployEVMParams) Execute(
 	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier)
 	contracts := make([]contractInfo, len(contractNames)*2)
 	txHashes := make([]string, len(contractNames)*2)
+	addresses := make(map[string]ethcommon.Address, len(contractNames))
 
 	for i, contractName := range contractNames {
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
@@ -278,16 +279,7 @@ func (ip *deployEVMParams) Execute(
 			Name: contractName,
 			Addr: tx.Address,
 		}
-	}
-
-	getAddress := func(name string) ethcommon.Address {
-		for i, contractName := range contractNames {
-			if strings.EqualFold(contractName, name) {
-				return contracts[i*2].Addr
-			}
-		}
-
-		return ethcommon.Address{}
+		addresses[contractName] = proxyTx.Address
 	}
 
 	_, _ = outputter.Write([]byte("Waiting for receipts..."))
@@ -305,12 +297,11 @@ func (ip *deployEVMParams) Execute(
 	for contractName, dependencyNames := range setDependenciesData {
 		dependencies := make([]interface{}, len(dependencyNames))
 		for i, x := range dependencyNames {
-			dependencies[i] = getAddress(x)
+			dependencies[i] = addresses[x]
 		}
 
 		txHash, err := ethContractUtils.ExecuteMethod(
-			ctx, artifacts[contractName], getAddress(contractName),
-			"setDependencies", dependencies...)
+			ctx, artifacts[contractName], addresses[contractName], "setDependencies", dependencies...)
 		if err != nil {
 			return nil, err
 		}
@@ -322,8 +313,7 @@ func (ip *deployEVMParams) Execute(
 	}
 
 	validatorsTxHash, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts["Validators"], getAddress(Validators),
-		"setValidatorsChainData", validatorsData)
+		ctx, artifacts[Validators], addresses[Validators], "setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +326,7 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	if err := ip.setChainAdditionalData(ctx, getAddress(Gateway), txHelperBridge, outputter); err != nil {
+	if err := ip.setChainAdditionalData(ctx, addresses[Gateway], txHelperBridge, outputter); err != nil {
 		return nil, err
 	}
 
