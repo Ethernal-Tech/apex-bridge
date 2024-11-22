@@ -23,13 +23,19 @@ type IEthContractUtils interface {
 		proxyArtifact *Artifact,
 		initParams ...interface{},
 	) (ethtxhelper.TxDeployInfo, ethtxhelper.TxDeployInfo, error)
+	Upgrade(
+		ctx context.Context,
+		artifact *Artifact,
+		proxyAddr ethcommon.Address,
+		initializationData []byte,
+	) (*types.Transaction, ethtxhelper.TxDeployInfo, error)
 	ExecuteMethod(
 		ctx context.Context,
 		artifact *Artifact,
 		address ethcommon.Address,
 		method string,
 		args ...interface{},
-	) (string, error)
+	) (*types.Transaction, error)
 }
 
 type ethContractUtils struct {
@@ -80,14 +86,48 @@ func (ecu *ethContractUtils) DeployWithProxy(
 	return proxyTx, tx, err
 }
 
+func (ecu *ethContractUtils) Upgrade(
+	ctx context.Context,
+	artifact *Artifact,
+	proxyAddr ethcommon.Address,
+	initializationData []byte,
+) (*types.Transaction, ethtxhelper.TxDeployInfo, error) {
+	txInfo, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (ethtxhelper.TxDeployInfo, error) {
+		return ecu.txHelper.Deploy(
+			ctx, ecu.wallet, bind.TransactOpts{}, *artifact.Abi, artifact.Bytecode)
+	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
+	if err != nil {
+		return nil, txInfo, err
+	}
+
+	boundContract := bind.NewBoundContract(
+		proxyAddr, *artifact.Abi, ecu.txHelper.GetClient(), ecu.txHelper.GetClient(), ecu.txHelper.GetClient())
+
+	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
+		return ecu.txHelper.SendTx(ctx, ecu.wallet, bind.TransactOpts{},
+			func(opts *bind.TransactOpts) (*types.Transaction, error) {
+				if _, exists := artifact.Abi.Methods["upgradeTo"]; !exists {
+					return boundContract.Transact(opts, "upgradeToAndCall", txInfo.Address, initializationData)
+				}
+
+				return boundContract.Transact(opts, "upgradeTo", txInfo.Address)
+			})
+	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
+	if err != nil {
+		return nil, txInfo, err
+	}
+
+	return tx, txInfo, nil
+}
+
 func (ecu *ethContractUtils) ExecuteMethod(
 	ctx context.Context,
 	artifact *Artifact,
 	address ethcommon.Address,
 	method string,
 	args ...interface{},
-) (string, error) {
-	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
+) (*types.Transaction, error) {
+	return infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
 		boundContract := bind.NewBoundContract(
 			address, *artifact.Abi, ecu.txHelper.GetClient(), ecu.txHelper.GetClient(), ecu.txHelper.GetClient())
 
@@ -104,9 +144,4 @@ func (ecu *ethContractUtils) ExecuteMethod(
 				return boundContract.Transact(opts, method, args...)
 			})
 	}, infracommon.WithRetryCount(ecu.numRetries), infracommon.WithRetryWaitTime(ecu.retriesWaitTime))
-	if err != nil {
-		return "", err
-	}
-
-	return tx.Hash().String(), nil
 }
