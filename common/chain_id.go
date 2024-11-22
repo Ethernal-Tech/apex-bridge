@@ -44,3 +44,7 @@ func IsExistingChainID(chainIDStr string) bool {
 
 	return exists
 }
+
+func IsEVMChainID(chainIDStr string) bool {
+	return chainIDStr == ChainIDStrNexus
+}

@@ -9,6 +9,7 @@ var (
 	getChainTokenQuantityParamsData    = &getChainTokenQuantityParams{}
 	updateChainTokenQuantityParamsData = &updateChainTokenQuantityParams{}
 	defundParamsData                   = &defundParams{}
+	setAdditionalDataParamsData        = &setAdditionalDataParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -36,17 +37,26 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(defundParamsData),
 	}
+	setAdditionalDataCmd := &cobra.Command{
+		Use:   "set-additional-data",
+		Short: "set additional data for a specific chain",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return setAdditionalDataParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(setAdditionalDataParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
+	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
 		Short: "bridge admin functions",
 	}
 
-	cmd.AddCommand(getChainTokenQuantityCmd, updateChainTokenQuantityCmd, defundCmd)
+	cmd.AddCommand(getChainTokenQuantityCmd, updateChainTokenQuantityCmd, defundCmd, setAdditionalDataCmd)
 
 	return cmd
 }

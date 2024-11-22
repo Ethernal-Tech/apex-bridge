@@ -5,33 +5,34 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 )
 
-type CmdResult struct {
-	gatewayProxyAddr              string
-	gatewayAddr                   string
-	nativeTokenPredicateProxyAddr string
-	nativeTokenPredicateAddr      string
-	nativeTokenWalletProxyAddr    string
-	nativeTokenWalletAddr         string
-	validatorsProxyAddr           string
-	validatorsAddr                string
+type contractInfo struct {
+	Name    string
+	Addr    ethcommon.Address
+	IsProxy bool
 }
 
-func (r CmdResult) GetOutput() string {
-	var buffer bytes.Buffer
+type cmdResult struct {
+	Contracts []contractInfo
+}
 
-	buffer.WriteString(common.FormatKV(
-		[]string{
-			fmt.Sprintf("Gateway Proxy Address|%s", r.gatewayProxyAddr),
-			fmt.Sprintf("Gateway Address|%s", r.gatewayAddr),
-			fmt.Sprintf("NativeTokenPredicate Proxy Address|%s", r.nativeTokenPredicateProxyAddr),
-			fmt.Sprintf("NativeTokenPredicate Address|%s", r.nativeTokenPredicateAddr),
-			fmt.Sprintf("NativeTokenWallet Proxy Address|%s", r.nativeTokenWalletProxyAddr),
-			fmt.Sprintf("NativeTokenWallet Address|%s", r.nativeTokenWalletAddr),
-			fmt.Sprintf("Validators Proxy Address|%s", r.validatorsProxyAddr),
-			fmt.Sprintf("Validators Address|%s", r.validatorsAddr),
-		}))
+func (r cmdResult) GetOutput() string {
+	var (
+		buffer  bytes.Buffer
+		columns []string
+	)
+
+	for _, x := range r.Contracts {
+		if x.IsProxy {
+			columns = append(columns, fmt.Sprintf("%s Proxy Address|%s", x.Name, x.Addr))
+		} else {
+			columns = append(columns, fmt.Sprintf("%s Address|%s", x.Name, x.Addr))
+		}
+	}
+
+	buffer.WriteString(common.FormatKV(columns))
 
 	return buffer.String()
 }
