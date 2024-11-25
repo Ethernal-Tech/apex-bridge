@@ -106,7 +106,7 @@ func (ecu *ethContractUtils) Upgrade(
 	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
 		return ecu.txHelper.SendTx(ctx, ecu.wallet, bind.TransactOpts{},
 			func(opts *bind.TransactOpts) (*types.Transaction, error) {
-				if _, exists := artifact.Abi.Methods["upgradeTo"]; !exists {
+				if _, exists := artifact.Abi.Methods["upgradeTo"]; !exists || len(initializationData) > 0 {
 					return boundContract.Transact(opts, "upgradeToAndCall", txInfo.Address, initializationData)
 				}
 
