@@ -21,7 +21,7 @@ const (
 	repositoryURLFlag = "repo"
 
 	nodeFlagDessc         = "node url"
-	contractFlagDesc      = "contractName:proxyAddr contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
+	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 	repositoryURLFlagDesc = "smart contracts github repository url"
 )
 
@@ -120,10 +120,11 @@ func (ip *upgradeEVMParams) Execute(
 	ctx := context.Background()
 	contracts := make([]string, len(ip.contracts))
 	proxyAddrs := make([]ethcommon.Address, len(ip.contracts))
+	updateFuncs := make([]string, len(ip.contracts))
 
 	for i, x := range ip.contracts {
 		ss := strings.Split(x, ":")
-		if len(ss) != 2 {
+		if len(ss) != 2 && len(ss) != 3 {
 			return nil, fmt.Errorf("invalid --%s number %d", contractFlag, i)
 		}
 
@@ -133,6 +134,10 @@ func (ip *upgradeEVMParams) Execute(
 
 		if !common.IsValidAddress(common.ChainIDStrNexus, ss[1]) {
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
+		}
+
+		if len(ss) > 2 && len(ss[2]) > 0 {
+			updateFuncs[i] = ss[2]
 		}
 
 		contracts[i] = ss[0]
@@ -191,8 +196,17 @@ func (ip *upgradeEVMParams) Execute(
 	txHashes := make([]string, len(contracts)*2)
 
 	for i, contractName := range contracts {
+		var initializationData []byte
+
+		if fn := updateFuncs[i]; fn != "" {
+			initializationData, err = artifacts[contractName].Abi.Pack(fn)
+			if err != nil {
+				return nil, fmt.Errorf("upgrade %s has been failed: %w", contractName, err)
+			}
+		}
+
 		tx, deployTxInfo, err := ethContractUtils.Upgrade(
-			ctx, artifacts[contractName], proxyAddrs[i], []byte(nil))
+			ctx, artifacts[contractName], proxyAddrs[i], initializationData)
 		if err != nil {
 			return nil, fmt.Errorf("upgrade %s has been failed: %w", contractName, err)
 		}
