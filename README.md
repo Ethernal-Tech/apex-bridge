@@ -250,6 +250,7 @@ $ apex-bridge deploy-evm upgrade \
         --contract Admin:0xABEF000000000000000000000000000000000006
 ```
 - optional `--dynamic-tx`
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 
 # Bridge admin commands
 ```shell

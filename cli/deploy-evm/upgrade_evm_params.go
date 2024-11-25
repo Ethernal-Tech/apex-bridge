@@ -21,7 +21,7 @@ const (
 	repositoryURLFlag = "repo"
 
 	nodeFlagDessc         = "node url"
-	contractFlagDesc      = "contractName::proxyAddr contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
+	contractFlagDesc      = "contractName:proxyAddr contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 	repositoryURLFlagDesc = "smart contracts github repository url"
 )
 
