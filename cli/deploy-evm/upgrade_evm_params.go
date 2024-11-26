@@ -136,8 +136,8 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
 		}
 
-		if len(ss) > 2 && len(ss[2]) > 0 {
-			updateFuncs[i] = ss[2]
+		if len(ss) > 2 {
+			updateFuncs[i] = ss[2] // empty function names will be skipped
 		}
 
 		contracts[i] = ss[0]
