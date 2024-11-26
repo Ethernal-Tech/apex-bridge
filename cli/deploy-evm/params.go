@@ -22,6 +22,8 @@ const (
 	defaultGasLimit           = uint64(5_242_880)
 	defaultGasLimitMultiplier = float64(1.1)
 
+	ercProxyContractName = "ERC1967Proxy"
+
 	evmNodeURLFlag      = "url"
 	evmSCDirFlag        = "dir"
 	evmPrivateKeyFlag   = "key"
@@ -50,9 +52,9 @@ const (
 
 	defaultEVMChainID = common.ChainIDStrNexus
 
-	evmGatewayRepositoryName         = "apex-evm-gateway"
-	evmGatewayRepositoryURL          = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
-	evmGatewayRepositoryArtifactsDir = "artifacts"
+	evmGatewayRepositoryName  = "apex-evm-gateway"
+	evmGatewayRepositoryURL   = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
+	evmRepositoryArtifactsDir = "artifacts"
 )
 
 type deployEVMParams struct {
@@ -208,7 +210,7 @@ func (ip *deployEVMParams) Execute(
 		outputter.WriteOutput()
 
 		newDir, err := ethcontracts.CloneAndBuildContracts(
-			dir, evmGatewayRepositoryURL, evmGatewayRepositoryName, evmGatewayRepositoryArtifactsDir, ip.evmBranchName)
+			dir, evmGatewayRepositoryURL, evmGatewayRepositoryName, evmRepositoryArtifactsDir, ip.evmBranchName)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +219,7 @@ func (ip *deployEVMParams) Execute(
 	}
 
 	artifacts, err := ethcontracts.LoadArtifacts(
-		dir, append([]string{"ERC1967Proxy"}, contractNames...)...)
+		dir, append([]string{ercProxyContractName}, contractNames...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -260,9 +262,9 @@ func (ip *deployEVMParams) Execute(
 
 	for i, contractName := range contractNames {
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts["ERC1967Proxy"])
+			ctx, artifacts[contractName], artifacts[ercProxyContractName])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
 
 		_, _ = outputter.Write([]byte(fmt.Sprintf("%s has been sent", contractName)))
@@ -300,19 +302,19 @@ func (ip *deployEVMParams) Execute(
 			dependencies[i] = addresses[x]
 		}
 
-		txHash, err := ethContractUtils.ExecuteMethod(
+		txInfo, err := ethContractUtils.ExecuteMethod(
 			ctx, artifacts[contractName], addresses[contractName], "setDependencies", dependencies...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("setDependecies for %s has been failed: %w", contractName, err)
 		}
 
 		_, _ = outputter.Write([]byte(fmt.Sprintf("%s initialization transaction has been sent", contractName)))
 		outputter.WriteOutput()
 
-		additionalTxHashes = append(additionalTxHashes, txHash)
+		additionalTxHashes = append(additionalTxHashes, txInfo.Hash().String())
 	}
 
-	validatorsTxHash, err := ethContractUtils.ExecuteMethod(
+	setValidatorsChainDataTx, err := ethContractUtils.ExecuteMethod(
 		ctx, artifacts[Validators], addresses[Validators], "setValidatorsChainData", validatorsData)
 	if err != nil {
 		return nil, err
@@ -321,7 +323,8 @@ func (ip *deployEVMParams) Execute(
 	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
-	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, append(additionalTxHashes, validatorsTxHash)...)
+	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper,
+		append(additionalTxHashes, setValidatorsChainDataTx.Hash().String())...)
 	if err != nil {
 		return nil, err
 	}

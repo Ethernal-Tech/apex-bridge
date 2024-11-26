@@ -5,21 +5,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const upgradeEVMCommandUse = "upgrade"
+
 var deployEVMParamsData = &deployEVMParams{}
+var upgradeEVMParamsData = &upgradeEVMParams{}
 
 func GetDeployEVMCommand() *cobra.Command {
-	cmd := &cobra.Command{
+	cmdDeployEVM := &cobra.Command{
 		Use:     "deploy-evm",
 		Short:   "deploys evm gateway smart contract to evm chain (by default nexus)",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(deployEVMParamsData),
 	}
+	cmdUpgradeEVM := &cobra.Command{
+		Use:     upgradeEVMCommandUse,
+		Short:   "upgrade desired smart contract(s)",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(upgradeEVMParamsData),
+	}
 
-	deployEVMParamsData.setFlags(cmd)
+	deployEVMParamsData.setFlags(cmdDeployEVM)
+	upgradeEVMParamsData.setFlags(cmdUpgradeEVM)
 
-	return cmd
+	cmdDeployEVM.AddCommand(cmdUpgradeEVM)
+
+	return cmdDeployEVM
 }
 
-func runPreRun(_ *cobra.Command, _ []string) error {
+func runPreRun(cb *cobra.Command, _ []string) error {
+	if cb.Use == upgradeEVMCommandUse {
+		return upgradeEVMParamsData.validateFlags()
+	}
+
 	return deployEVMParamsData.validateFlags()
 }

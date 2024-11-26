@@ -238,6 +238,20 @@ $ apex-bridge deploy-evm \
         --bls-key 0x.... \        
 ```
 
+# How to upgrade bridge/gateway contracts
+```shell
+$ apex-bridge deploy-evm upgrade \
+        --url http://127.0.0.1:12001 \
+        --key NEXUS_OR_EVM_PRIVATE_KEY \
+        --dir /tmp \
+        --clone \
+        --branch main \
+        --repo https://github.com/Ethernal-Tech/apex-bridge-smartcontracts \
+        --contract Admin:0xABEF000000000000000000000000000000000006
+```
+- optional `--dynamic-tx`
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+
 # Bridge admin commands
 ```shell
 $ apex-bridge bridge-admin get-chain-token-quantity \
