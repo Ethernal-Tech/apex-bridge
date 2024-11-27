@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
@@ -73,7 +74,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -82,13 +83,13 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -102,8 +103,8 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), wallet.MinUTxODefaultValue*2)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUTxODefaultValue*2)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
 
@@ -114,7 +115,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -123,13 +124,13 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -143,7 +144,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
@@ -155,7 +156,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -164,7 +165,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
@@ -174,7 +175,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -188,8 +189,8 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), wallet.MinUTxODefaultValue*2)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUTxODefaultValue*2)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
 
@@ -200,7 +201,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -209,7 +210,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
@@ -219,7 +220,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -233,7 +234,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
@@ -245,7 +246,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -254,7 +255,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
@@ -264,7 +265,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -278,8 +279,8 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), wallet.MinUTxODefaultValue*2-131)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUTxODefaultValue*2-131)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
 
@@ -290,7 +291,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue + 131,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -299,7 +300,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue * 3,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue * 3},
 		}
 
 		outputs := []wallet.TxOutput{
@@ -309,7 +310,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -323,7 +324,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
@@ -335,7 +336,7 @@ func TestCreateTx(t *testing.T) {
 					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 				},
 			},
-			Sum: wallet.MinUTxODefaultValue + 131,
+			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUTxODefaultValue + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -344,7 +345,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: 195377 - 131,
+			Sum: map[string]uint64{wallet.AdaTokenName: 195377 - 131},
 		}
 
 		outputs := []wallet.TxOutput{
@@ -358,7 +359,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			{
 				Addr:   outputAddr,
-				Amount: wallet.MinUTxODefaultValue,
+				Amount: common.MinUTxODefaultValue,
 			},
 		}
 
@@ -372,7 +373,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 1)
-		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), wallet.MinUTxODefaultValue)
+		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUTxODefaultValue)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
 	})

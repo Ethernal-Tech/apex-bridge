@@ -152,7 +152,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
 		}
 	} else {
-		if ip.feeAmount.Uint64() < cardanowallet.MinUTxODefaultValue {
+		if ip.feeAmount.Uint64() < common.MinUTxODefaultValue {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
@@ -202,7 +202,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.chainIDDst != common.ChainIDStrNexus &&
-			amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
+			amount.Cmp(new(big.Int).SetUint64(common.MinUTxODefaultValue)) < 0 {
 			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
@@ -326,7 +326,9 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		cardanoCliBinary,
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc, cardanotx.DefaultPotentialFee)
+		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc,
+		cardanotx.DefaultPotentialFee,
+	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
 	if err != nil {
@@ -334,7 +336,8 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	}
 
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(), receivers, ip.feeAmount.Uint64())
+		context.Background(), ip.chainIDDst, senderAddr.String(),
+		receivers, ip.feeAmount.Uint64(), common.MinUTxODefaultValue)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +354,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(context.Background(), receivers)
+		err = txSender.WaitForTx(context.Background(), receivers, cardanowallet.AdaTokenName)
 		if err != nil {
 			return nil, err
 		}
@@ -448,7 +451,8 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		}
 
 		err = cardanotx.WaitForTx(
-			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst), cardanoReceivers)
+			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			cardanoReceivers, cardanowallet.AdaTokenName)
 		if err != nil {
 			return nil, err
 		}

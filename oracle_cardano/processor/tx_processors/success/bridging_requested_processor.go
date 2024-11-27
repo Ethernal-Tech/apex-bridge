@@ -159,6 +159,15 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
+		return err
+	}
+
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
 	if err != nil {
 		return err

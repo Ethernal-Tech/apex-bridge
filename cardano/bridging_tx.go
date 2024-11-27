@@ -55,6 +55,7 @@ func (bts *BridgingTxSender) CreateTx(
 	senderAddr string,
 	receivers []cardanowallet.TxOutput,
 	feeAmount uint64,
+	minUtxoValue uint64,
 ) ([]byte, string, error) {
 	qtd, err := bts.txProviderSrc.GetTip(ctx)
 	if err != nil {
@@ -74,22 +75,35 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	outputsSum := cardanowallet.GetOutputsSum(receivers) + feeAmount
+	outputsSum := cardanowallet.GetOutputsSum(receivers)[cardanowallet.AdaTokenName] + feeAmount
+	desiredSum := outputsSum + bts.potentialFee + minUtxoValue
+
+	inputs, err := bts.GetUTXOsForAmount(
+		ctx, bts.txProviderSrc, senderAddr, cardanowallet.AdaTokenName, desiredSum, desiredSum)
+	if err != nil {
+		return nil, "", err
+	}
+
+	tokens := make([]cardanowallet.TokenAmount, 0, len(inputs.Sum)-1)
+
+	for tokenName, tokenValue := range inputs.Sum {
+		token, err := cardanowallet.NewTokenAmountWithFullName(tokenName, tokenValue, true)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to create token (%s, %d). err: %w", tokenName, tokenValue, err)
+		}
+
+		tokens = append(tokens, token)
+	}
+
 	outputs := []cardanowallet.TxOutput{
 		{
 			Addr:   bts.multiSigAddrSrc,
 			Amount: outputsSum,
 		},
 		{
-			Addr: senderAddr,
+			Addr:   senderAddr,
+			Tokens: tokens,
 		},
-	}
-
-	desiredSum := outputsSum + bts.potentialFee + cardanowallet.MinUTxODefaultValue
-
-	inputs, err := cardanowallet.GetUTXOsForAmount(ctx, bts.txProviderSrc, senderAddr, desiredSum, desiredSum)
-	if err != nil {
-		return nil, "", err
 	}
 
 	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
@@ -111,22 +125,61 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	change := inputs.Sum - outputsSum - fee
+	inputsAdaSum := inputs.Sum[cardanowallet.AdaTokenName]
+	change := inputsAdaSum - outputsSum - fee
 	// handle overflow or insufficient amount
-	if change > inputs.Sum || (change > 0 && change < cardanowallet.MinUTxODefaultValue) {
+	if change > inputsAdaSum || change < minUtxoValue {
 		return []byte{}, "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
-			inputs.Sum, outputsSum+fee)
+			inputsAdaSum, outputsSum+fee)
 	}
 
-	if change == 0 {
-		builder.RemoveOutput(-1)
-	} else {
-		builder.UpdateOutputAmount(-1, change)
-	}
+	builder.UpdateOutputAmount(-1, change)
 
 	builder.SetFee(fee)
 
 	return builder.Build()
+}
+
+func (bts *BridgingTxSender) GetUTXOsForAmount(
+	ctx context.Context, retriever cardanowallet.IUTxORetriever, addr string,
+	tokenName string, exactSum uint64, atLeastSum uint64,
+) (cardanowallet.TxInputs, error) {
+	utxos, err := retriever.GetUtxos(ctx, addr)
+	if err != nil {
+		return cardanowallet.TxInputs{}, err
+	}
+
+	// Loop through utxos to find first input with enough tokens
+	// If we don't have this UTXO we need to use more of them
+	//nolint:prealloc
+	var (
+		currentSum  = map[string]uint64{}
+		chosenUTXOs []cardanowallet.TxInput
+	)
+
+	for _, utxo := range utxos {
+		currentSum[cardanowallet.AdaTokenName] += utxo.Amount
+
+		for _, token := range utxo.Tokens {
+			currentSum[token.TokenName()] += token.Amount
+		}
+
+		chosenUTXOs = append(chosenUTXOs, cardanowallet.TxInput{
+			Hash:  utxo.Hash,
+			Index: utxo.Index,
+		})
+
+		if currentSum[tokenName] == exactSum || currentSum[tokenName] >= atLeastSum {
+			return cardanowallet.TxInputs{
+				Inputs: chosenUTXOs,
+				Sum:    currentSum,
+			}, nil
+		}
+	}
+
+	return cardanowallet.TxInputs{}, fmt.Errorf(
+		"not enough funds for the transaction: (available, exact, at least) = (%d, %d, %d)",
+		currentSum[tokenName], exactSum, atLeastSum)
 }
 
 func (bts *BridgingTxSender) SendTx(
@@ -157,9 +210,9 @@ func (bts *BridgingTxSender) SendTx(
 }
 
 func (bts *BridgingTxSender) WaitForTx(
-	ctx context.Context, receivers []cardanowallet.TxOutput,
+	ctx context.Context, receivers []cardanowallet.TxOutput, tokenName string,
 ) error {
-	return WaitForTx(ctx, bts.txUtxoRetrieverDst, receivers)
+	return WaitForTx(ctx, bts.txUtxoRetrieverDst, receivers, tokenName)
 }
 
 func (bts *BridgingTxSender) createMetadata(
@@ -196,7 +249,8 @@ func IsAddressInOutputs(
 }
 
 func WaitForTx(
-	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []cardanowallet.TxOutput,
+	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever,
+	receivers []cardanowallet.TxOutput, tokenName string,
 ) error {
 	errs := make([]error, len(receivers))
 	wg := sync.WaitGroup{}
@@ -214,7 +268,9 @@ func WaitForTx(
 						return nil, err
 					}
 
-					return new(big.Int).SetUint64(cardanowallet.GetUtxosSum(utxos)), nil
+					sum := cardanowallet.GetUtxosSum(utxos)
+
+					return new(big.Int).SetUint64(sum[tokenName]), nil
 				})
 		}(i, x)
 	}

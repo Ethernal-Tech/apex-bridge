@@ -18,7 +18,8 @@ func CreateTx(
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
-	changeAmount := common.SafeSubtract(txInputInfos.MultiSig.Sum+multisigAmount, outputsAmount, 0)
+	changeAmount := common.SafeSubtract(
+		txInputInfos.MultiSig.Sum[cardanowallet.AdaTokenName]+multisigAmount, outputsAmount[cardanowallet.AdaTokenName], 0)
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
@@ -68,7 +69,7 @@ func CreateTx(
 
 	builder.SetFee(fee)
 
-	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum+feeAmount, fee, 0)
+	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum[cardanowallet.AdaTokenName]+feeAmount, fee, 0)
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeAmountFinal > 0 {
