@@ -84,19 +84,9 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	tokens := make([]cardanowallet.TokenAmount, 0, len(inputs.Sum)-1)
-
-	for tokenName, tokenValue := range inputs.Sum {
-		if tokenName == cardanowallet.AdaTokenName {
-			continue
-		}
-
-		token, err := cardanowallet.NewTokenAmountWithFullName(tokenName, tokenValue, true)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to create token (%s, %d). err: %w", tokenName, tokenValue, err)
-		}
-
-		tokens = append(tokens, token)
+	tokens, err := cardanowallet.GetTokensFromSumMap(inputs.Sum)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create tokens from sum map. err: %w", err)
 	}
 
 	outputs := []cardanowallet.TxOutput{
