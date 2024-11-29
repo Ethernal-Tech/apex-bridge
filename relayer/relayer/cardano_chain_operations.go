@@ -53,7 +53,14 @@ func (cco *CardanoChainOperations) SendTx(
 	copy(witnesses, smartContractData.Signatures)
 	copy(witnesses[len(smartContractData.Signatures):], smartContractData.FeeSignatures)
 
-	txSigned, err := cardanotx.AssembleTxWitnesses(cco.cardanoCliBinary, smartContractData.RawTransaction, witnesses)
+	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
+	if err != nil {
+		return err
+	}
+
+	defer txBuilder.Dispose()
+
+	txSigned, err := txBuilder.AssembleTxWitnesses(smartContractData.RawTransaction, witnesses)
 	if err != nil {
 		return err
 	}

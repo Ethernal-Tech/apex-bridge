@@ -81,23 +81,6 @@ func CreateTx(
 	return builder.Build()
 }
 
-// CreateTxWitness creates cbor of vkey+signature pair of tx hash
-func CreateTxWitness(txHash string, key cardanowallet.ISigner) ([]byte, error) {
-	return cardanowallet.CreateTxWitness(txHash, key)
-}
-
-// AssembleTxWitnesses assembles all witnesses in final cbor of signed tx
-func AssembleTxWitnesses(cardanoCliBinary string, txRaw []byte, witnesses [][]byte) ([]byte, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
-	if err != nil {
-		return nil, err
-	}
-
-	defer builder.Dispose()
-
-	return builder.AssembleTxWitnesses(txRaw, witnesses)
-}
-
 func CreateBatchMetaData(v uint64) ([]byte, error) {
 	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,

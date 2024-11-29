@@ -177,7 +177,7 @@ func (bts *BridgingTxSender) GetUTXOsForAmount(
 }
 
 func (bts *BridgingTxSender) SendTx(
-	ctx context.Context, txRaw []byte, txHash string, cardanoWallet cardanowallet.IWallet,
+	ctx context.Context, txRaw []byte, cardanoWallet cardanowallet.ITxSigner,
 ) error {
 	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
 	if err != nil {
@@ -186,12 +186,7 @@ func (bts *BridgingTxSender) SendTx(
 
 	defer builder.Dispose()
 
-	witness, err := cardanowallet.CreateTxWitness(txHash, cardanoWallet)
-	if err != nil {
-		return err
-	}
-
-	txSigned, err := builder.AssembleTxWitnesses(txRaw, [][]byte{witness})
+	txSigned, err := builder.SignTx(txRaw, []cardanowallet.ITxSigner{cardanoWallet})
 	if err != nil {
 		return err
 	}
