@@ -144,22 +144,22 @@ func (ip *initParams) Execute() (common.ICommandResult, error) {
 			return nil, err
 		}
 
-		keyHash, err := cardanowallet.GetKeyHash(wallet.MultiSig.GetVerificationKey())
+		keyHash, err := cardanowallet.GetKeyHash(wallet.MultiSig.VerificationKey)
 		if err != nil {
 			return nil, err
 		}
 
-		keyHashFee, err := cardanowallet.GetKeyHash(wallet.MultiSigFee.GetVerificationKey())
+		keyHashFee, err := cardanowallet.GetKeyHash(wallet.MultiSigFee.VerificationKey)
 		if err != nil {
 			return nil, err
 		}
 
 		return &cardanoCmdResult{
-			SigningKey:      wallet.MultiSig.GetSigningKey(),
-			VerifyingKey:    wallet.MultiSig.GetVerificationKey(),
+			SigningKey:      wallet.MultiSig.SigningKey,
+			VerifyingKey:    wallet.MultiSig.VerificationKey,
 			KeyHash:         keyHash,
-			SigningKeyFee:   wallet.MultiSigFee.GetSigningKey(),
-			VerifyingKeyFee: wallet.MultiSigFee.GetVerificationKey(),
+			SigningKeyFee:   wallet.MultiSigFee.SigningKey,
+			VerifyingKeyFee: wallet.MultiSigFee.VerificationKey,
 			KeyHashFee:      keyHashFee,
 			showPrivateKey:  ip.showPrivateKey,
 			ChainID:         ip.chainID,

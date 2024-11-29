@@ -161,12 +161,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-	witnessMultiSig, err := cardano.CreateTxWitness(txHash, cco.wallet.MultiSig)
+	witnessMultiSig, err := cardanowallet.CreateTxWitness(txHash, cco.wallet.MultiSig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	witnessMultiSigFee, err := cardano.CreateTxWitness(txHash, cco.wallet.MultiSigFee)
+	witnessMultiSigFee, err := cardanowallet.CreateTxWitness(txHash, cco.wallet.MultiSigFee)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -236,9 +236,9 @@ func (cco *CardanoChainOperations) getCardanoData(
 	hasVerificationKey, hasFeeVerificationKey := false, false
 
 	for _, validator := range validatorsData {
-		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.GetVerificationKey(),
+		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.VerificationKey,
 			cardanowallet.PadKeyToSize(validator.Key[0].Bytes()))
-		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.GetVerificationKey(),
+		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.VerificationKey,
 			cardanowallet.PadKeyToSize(validator.Key[1].Bytes()))
 	}
 

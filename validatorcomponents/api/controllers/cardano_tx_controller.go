@@ -283,12 +283,7 @@ func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxReque
 
 	defer txBuilder.Dispose()
 
-	witness, err := wallet.CreateTxWitness(requestBody.TxHash, senderWallet)
-	if err != nil {
-		return "", fmt.Errorf("failed to create witness: %w", err)
-	}
-
-	signedTxBytes, err := txBuilder.AssembleTxWitnesses(txRawBytes, [][]byte{witness})
+	signedTxBytes, err := txBuilder.SignTx(txRawBytes, []wallet.ITxSigner{senderWallet})
 	if err != nil {
 		return "", fmt.Errorf("failed to sign tx: %w", err)
 	}

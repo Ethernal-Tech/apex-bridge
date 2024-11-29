@@ -112,7 +112,7 @@ type sendTxParams struct {
 
 	feeAmount       *big.Int
 	receiversParsed []*receiverAmount
-	wallet          cardanowallet.IWallet
+	wallet          *cardanowallet.Wallet
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -345,7 +345,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SendTx(context.Background(), txRaw, txHash, ip.wallet)
+	err = txSender.SendTx(context.Background(), txRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
