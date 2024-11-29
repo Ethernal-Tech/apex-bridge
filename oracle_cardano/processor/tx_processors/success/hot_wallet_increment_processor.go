@@ -72,6 +72,15 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 func (p *HotWalletIncrementProcessor) validate(
 	tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
+		return err
+	}
+
 	if _, err := utils.ValidateTxOutputs(tx, appConfig, true); err != nil {
 		return err
 	}

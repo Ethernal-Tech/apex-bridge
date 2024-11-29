@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
@@ -48,16 +47,16 @@ func (g *defundParams) ValidateFlags() error {
 	amount, ok := new(big.Int).SetString(g.amountStr, 0)
 	if !ok || amount.Sign() <= 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, cardanowallet.MinUTxODefaultValue)
+			amountFlag, common.MinUTxODefaultValue)
 	}
 
 	if g.nativeTokenAmount {
 		amount = common.GetDfmAmount(g.chainID, amount)
 	}
 
-	if amount.Cmp(new(big.Int).SetUint64(cardanowallet.MinUTxODefaultValue)) < 0 {
+	if amount.Cmp(new(big.Int).SetUint64(common.MinUTxODefaultValue)) < 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, cardanowallet.MinUTxODefaultValue)
+			amountFlag, common.MinUTxODefaultValue)
 	}
 
 	if g.privateKeyRaw == "" {

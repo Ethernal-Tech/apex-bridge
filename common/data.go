@@ -8,6 +8,8 @@ const (
 	HashSize = 32
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
+
+	MinUTxODefaultValue = uint64(1_000_000)
 )
 
 var (

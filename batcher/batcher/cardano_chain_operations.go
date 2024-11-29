@@ -268,6 +268,9 @@ func (cco *CardanoChainOperations) getUTXOs(
 		return
 	}
 
+	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
+	feeUtxos = filterOutTokenUtxos(feeUtxos)
+
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
@@ -294,10 +297,22 @@ func (cco *CardanoChainOperations) getUTXOs(
 	return
 }
 
+func filterOutTokenUtxos(utxos []*indexer.TxInputOutput) []*indexer.TxInputOutput {
+	result := make([]*indexer.TxInputOutput, 0, len(utxos))
+
+	for _, utxo := range utxos {
+		if len(utxo.Output.Tokens) == 0 {
+			result = append(result, utxo)
+		}
+	}
+
+	return result
+}
+
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
-	result.Sum = uint64(0)
+	result.Sum = make(map[string]uint64)
 
 	for i, utxo := range utxos {
 		result.Inputs[i] = cardanowallet.TxInput{
@@ -305,7 +320,11 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 			Index: utxo.Input.Index,
 		}
 
-		result.Sum += utxo.Output.Amount
+		result.Sum[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
+		for _, token := range utxo.Output.Tokens {
+			result.Sum[token.TokenName()] += token.Amount
+		}
 	}
 
 	return result

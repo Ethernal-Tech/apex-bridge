@@ -40,15 +40,26 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return nil
 }
 
+func ValidateOutputsHaveTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+
+	for _, out := range tx.Outputs {
+		if len(out.Tokens) > 0 && (out.Address == chainConfig.BridgingAddresses.BridgingAddress ||
+			out.Address == chainConfig.BridgingAddresses.FeeAddress) {
+			return fmt.Errorf("tx %s has output (%s, %d), with token count %d",
+				tx.Hash, out.Address, out.Amount, len(out.Tokens))
+		}
+	}
+
+	return nil
+}
+
 // Validate if there is one and only one tx output that belongs to the multisig address
 // Returns found multisig output utxo
 func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool) (*indexer.TxOutput, error) {
 	var multisigUtxoOutput *indexer.TxOutput = nil
 
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-	if chainConfig == nil {
-		return nil, fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
-	}
 
 	for _, output := range tx.Tx.Outputs {
 		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
