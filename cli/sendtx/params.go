@@ -152,7 +152,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
 		}
 	} else {
-		if ip.feeAmount.Uint64() < common.MinUTxODefaultValue {
+		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
@@ -202,7 +202,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.chainIDDst != common.ChainIDStrNexus &&
-			amount.Cmp(new(big.Int).SetUint64(common.MinUTxODefaultValue)) < 0 {
+			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
 			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
@@ -337,7 +337,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 
 	txRaw, txHash, err := txSender.CreateTx(
 		context.Background(), ip.chainIDDst, senderAddr.String(),
-		receivers, ip.feeAmount.Uint64(), common.MinUTxODefaultValue)
+		receivers, ip.feeAmount.Uint64(), common.MinUtxoAmountDefault)
 	if err != nil {
 		return nil, err
 	}
