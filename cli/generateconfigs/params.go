@@ -145,7 +145,7 @@ const (
 )
 
 var (
-	defaultMaxAmountAllowedToBridge = big.NewInt(0)
+	defaultMaxAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
 )
 
 type generateConfigsParams struct {
