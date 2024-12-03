@@ -74,7 +74,7 @@ func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, erro
 
 func GetAddress(
 	networkID cardanowallet.CardanoNetworkType, cardanoWallet *cardanowallet.Wallet,
-) (cardanowallet.CardanoAddress, error) {
+) (*cardanowallet.CardanoAddress, error) {
 	if len(cardanoWallet.StakeVerificationKey) > 0 {
 		return cardanowallet.NewBaseAddress(networkID,
 			cardanoWallet.VerificationKey, cardanoWallet.StakeVerificationKey)
