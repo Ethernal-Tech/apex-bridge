@@ -142,7 +142,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 				break
 			}
 
-			addr, err := wallet.NewAddress(receiver.Addr)
+			addr, err := wallet.NewCardanoAddressFromString(receiver.Addr)
 			if err != nil || addr.GetInfo().Network != cardanoDestConfig.NetworkID {
 				foundAnInvalidReceiverAddr = true
 

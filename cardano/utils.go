@@ -53,10 +53,8 @@ func GetMultisigAddresses(
 }
 
 func IsValidOutputAddress(addr string, networkID wallet.CardanoNetworkType) bool {
-	cardAddr, err := wallet.NewAddress(addr)
-	if err != nil {
-		return false
-	}
+	cardAddr, err := wallet.NewCardanoAddressFromString(addr)
 
-	return cardAddr.GetInfo().AddressType != wallet.RewardAddress && cardAddr.GetInfo().Network == networkID
+	return err == nil && cardAddr.GetInfo().AddressType != wallet.RewardAddress &&
+		cardAddr.GetInfo().Network == networkID
 }

@@ -257,9 +257,9 @@ func IsValidAddress(chainID string, addr string) bool {
 	case ChainIDStrNexus:
 		return ethcommon.IsHexAddress(addr)
 	default:
-		_, err := cardanowallet.NewAddress(addr)
+		addr, err := cardanowallet.NewCardanoAddressFromString(addr)
 
-		return err == nil
+		return err == nil && addr.GetInfo().AddressType != cardanowallet.RewardAddress
 	}
 }
 
