@@ -21,10 +21,8 @@ var (
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 )
 
-// nolintlint TODO: Get from protocol parameters, maybe add to core.CardanoChainConfig
 // Get real tx size from protocolParams/config
 const (
-	minUtxoAmount   = uint64(1000000)
 	maxFeeUtxoCount = 4
 	maxUtxoCount    = 50
 	maxTxSize       = 16000
@@ -283,7 +281,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
 		txOutputs.Sum,
-		minUtxoAmount,
+		cco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
 		cco.config.TakeAtLeastUtxoCount,

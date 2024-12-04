@@ -9,7 +9,8 @@ const (
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
-	MinUTxODefaultValue = uint64(1_000_000)
+	MinFeeForBridgingDefault = uint64(1_000_010)
+	MinUtxoAmountDefault     = uint64(1_000_000)
 )
 
 var (

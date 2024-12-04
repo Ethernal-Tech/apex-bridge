@@ -85,7 +85,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
 
-	minUtxoAmount := new(big.Int).SetUint64(minUtxoAmount)
+	minUtxoAmount := new(big.Int).SetUint64(1_000)
 
 	defer func() {
 		os.RemoveAll(testDir)
@@ -103,7 +103,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
-			"testnetMagic": 42
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
 			}`))
 	dbMock := &indexer.DatabaseMock{}
 	txProviderMock := &cardano.TxProviderTestMock{

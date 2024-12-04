@@ -47,16 +47,16 @@ func (g *defundParams) ValidateFlags() error {
 	amount, ok := new(big.Int).SetString(g.amountStr, 0)
 	if !ok || amount.Sign() <= 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUTxODefaultValue)
+			amountFlag, common.MinUtxoAmountDefault)
 	}
 
 	if g.nativeTokenAmount {
 		amount = common.GetDfmAmount(g.chainID, amount)
 	}
 
-	if amount.Cmp(new(big.Int).SetUint64(common.MinUTxODefaultValue)) < 0 {
+	if amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUTxODefaultValue)
+			amountFlag, common.MinUtxoAmountDefault)
 	}
 
 	if g.privateKeyRaw == "" {

@@ -571,6 +571,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
+				UxtoMinAmount:            common.MinUtxoAmountDefault,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -589,6 +590,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
+				UxtoMinAmount:            common.MinUtxoAmountDefault,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -616,8 +618,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		BridgingSettings: oCore.BridgingSettings{
-			MinFeeForBridging:              1000010,
-			UtxoMinValue:                   1000000,
+			MinFeeForBridging:              common.MinFeeForBridgingDefault,
+			UtxoMinValue:                   common.MinUtxoAmountDefault,
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
