@@ -136,7 +136,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	for _, receiver := range requestBody.Transactions {
 		if cardanoDestConfig != nil {
-			if receiver.Amount < c.oracleConfig.BridgingSettings.UtxoMinValue {
+			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
 
 				break
@@ -248,7 +248,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
 		context.Background(), requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		c.oracleConfig.BridgingSettings.UtxoMinValue,
+		sourceChainConfig.UtxoMinAmount,
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)

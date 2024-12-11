@@ -164,7 +164,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	for _, receiver := range metadata.Transactions {
 		receiverAmountDfm := common.WeiToDfm(receiver.Amount)
-		if receiverAmountDfm.Uint64() < appConfig.BridgingSettings.UtxoMinValue {
+		if receiverAmountDfm.Uint64() < cardanoDestConfig.UtxoMinAmount {
 			foundAUtxoValueBelowMinimumValue = true
 
 			break

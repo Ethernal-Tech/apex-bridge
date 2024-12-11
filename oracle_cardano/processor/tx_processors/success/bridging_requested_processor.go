@@ -197,7 +197,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		receiverAddr := strings.Join(receiver.Address, "")
 
 		if cardanoDestConfig != nil {
-			if receiver.Amount < appConfig.BridgingSettings.UtxoMinValue {
+			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
 
 				break
