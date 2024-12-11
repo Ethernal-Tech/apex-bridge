@@ -606,6 +606,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfig := &vcCore.AppConfig{
+		RunMode:             common.ReactorMode,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{

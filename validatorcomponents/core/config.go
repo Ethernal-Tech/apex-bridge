@@ -19,7 +19,7 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
-	RunMode                      common.VCRunMode                          `json:"-"`
+	RunMode                      common.VCRunMode                          `json:"runMode"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`

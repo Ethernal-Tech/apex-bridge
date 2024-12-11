@@ -47,8 +47,8 @@ type ValidatorComponentsImpl struct {
 	oracleDB          *bbolt.DB
 	db                core.Database
 	cardanoIndexerDbs map[string]indexer.Database
-	oracle            cardanoOracleCore.Oracle
-	ethOracle         ethOracleCore.Oracle
+	oracle            *cardanoOracle.OracleImpl
+	ethOracle         *ethOracle.OracleImpl
 	batcherManager    batcherCore.BatcherManager
 	relayerImitator   core.RelayerImitator
 	api               core.API
