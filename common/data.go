@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 )
 
+type VCRunMode string
+
 const (
 	HashSize = 32
 
@@ -11,6 +13,9 @@ const (
 
 	MinFeeForBridgingDefault = uint64(1_000_010)
 	MinUtxoAmountDefault     = uint64(1_000_000)
+
+	ReactorMode VCRunMode = "reactor"
+	SkylineMode VCRunMode = "skyline"
 )
 
 var (

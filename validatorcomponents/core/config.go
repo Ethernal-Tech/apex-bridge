@@ -19,6 +19,7 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
+	RunMode                      common.VCRunMode                          `json:"-"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
@@ -84,6 +85,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	oracleConfig := &oracleCore.AppConfig{
+		RunMode:                  appConfig.RunMode,
 		ValidatorDataDir:         appConfig.ValidatorDataDir,
 		ValidatorConfigPath:      appConfig.ValidatorConfigPath,
 		Bridge:                   appConfig.Bridge,
@@ -95,6 +97,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
+		RunMode:       appConfig.RunMode,
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,
 	}

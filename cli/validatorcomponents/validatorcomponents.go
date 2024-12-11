@@ -44,6 +44,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	config.RunMode = common.VCRunMode(vcParams.mode)
+
 	logger, err := loggerInfra.NewLogger(config.Settings.Logger)
 	if err != nil {
 		outputter.SetError(err)
@@ -61,7 +63,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, vcParams.runAPI, logger)
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(
+		ctx, config, vcParams.runAPI, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
