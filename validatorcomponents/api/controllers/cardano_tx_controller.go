@@ -188,7 +188,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	if requestBody.BridgingFee == 0 {
 		if cardanoDestConfig != nil {
 			requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
-		} else if requestBody.BridgingFee == 0 && ethDestConfig != nil {
+		} else if ethDestConfig != nil {
 			requestBody.BridgingFee = ethDestConfig.MinFeeForBridging
 		}
 	}
