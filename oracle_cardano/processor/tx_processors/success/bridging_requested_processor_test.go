@@ -37,6 +37,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
+				UtxoMinAmount:     utxoMinValue,
+				MinFeeForBridging: minFeeForBridging,
 			},
 			common.ChainIDStrVector: {
 				NetworkID: wallet.VectorTestNetNetwork,
@@ -44,6 +46,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
+				UtxoMinAmount:     utxoMinValue,
+				MinFeeForBridging: minFeeForBridging,
 			},
 		},
 		BridgingSettings: cCore.BridgingSettings{

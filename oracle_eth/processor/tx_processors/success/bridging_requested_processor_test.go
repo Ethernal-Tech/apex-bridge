@@ -33,6 +33,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
+				UtxoMinAmount:     utxoMinValue,
+				MinFeeForBridging: minFeeForBridging,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -40,6 +42,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				BridgingAddresses: oCore.EthBridgingAddresses{
 					BridgingAddress: nexusBridgingAddr,
 				},
+				MinFeeForBridging: minFeeForBridging,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
