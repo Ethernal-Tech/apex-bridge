@@ -136,7 +136,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	for _, receiver := range requestBody.Transactions {
 		if cardanoDestConfig != nil {
-			if receiver.Amount < c.oracleConfig.BridgingSettings.UtxoMinValue {
+			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
 
 				break
@@ -186,12 +186,17 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
+		if cardanoDestConfig != nil {
+			requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
+		} else if ethDestConfig != nil {
+			requestBody.BridgingFee = ethDestConfig.MinFeeForBridging
+		}
 	}
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if requestBody.BridgingFee < c.oracleConfig.BridgingSettings.MinFeeForBridging {
+	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
+		(ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 
@@ -248,7 +253,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
 		context.Background(), requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		c.oracleConfig.BridgingSettings.UtxoMinValue,
+		sourceChainConfig.UtxoMinAmount,
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)

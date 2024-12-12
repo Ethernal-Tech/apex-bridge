@@ -164,7 +164,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	for _, receiver := range metadata.Transactions {
 		receiverAmountDfm := common.WeiToDfm(receiver.Amount)
-		if receiverAmountDfm.Uint64() < appConfig.BridgingSettings.UtxoMinValue {
+		if receiverAmountDfm.Uint64() < cardanoDestConfig.UtxoMinAmount {
 			foundAUtxoValueBelowMinimumValue = true
 
 			break
@@ -196,7 +196,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	receiverAmountSum.Add(receiverAmountSum, metadata.FeeAmount)
 
 	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
-	if feeAmountDfm.Uint64() < appConfig.BridgingSettings.MinFeeForBridging {
+	if feeAmountDfm.Uint64() < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
