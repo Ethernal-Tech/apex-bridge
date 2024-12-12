@@ -34,6 +34,8 @@ const (
 	primeTTLSlotIncFlag            = "prime-ttl-slot-inc"
 	primeSlotRoundingThresholdFlag = "prime-slot-rounding-threshold"
 	primeStartingBlockFlag         = "prime-starting-block"
+	primeUtxoMinAmountFlag         = "prime-utxo-min-amount"
+	primeMinFeeForBridgingFlag     = "prime-min-fee-for-bridging"
 
 	vectorNetworkAddressFlag        = "vector-network-address"
 	vectorNetworkMagicFlag          = "vector-network-magic"
@@ -45,6 +47,8 @@ const (
 	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
 	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
 	vectorStartingBlockFlag         = "vector-starting-block"
+	vectorUtxoMinAmountFlag         = "vector-utxo-min-amount"
+	vectorMinFeeForBridgingFlag     = "vector-min-fee-for-bridging"
 
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
@@ -69,6 +73,7 @@ const (
 	nexusTTLBlockNumberIncFlag      = "nexus-ttl-block-inc"
 	nexusBlockRoundingThresholdFlag = "nexus-block-rounding-threshold"
 	nexusStartingBlockFlag          = "nexus-starting-block"
+	nexusMinFeeForBridgingFlag      = "nexus-min-fee-for-bridging"
 	relayerDataDirFlag              = "relayer-data-dir"
 	relayerConfigPathFlag           = "relayer-config"
 
@@ -82,6 +87,8 @@ const (
 	primeTTLSlotIncFlagDesc            = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 	primeStartingBlockFlagDesc         = "slot: hash of the block from where to start prime oracle"
+	primeUtxoMinAmountFlagDesc         = "minimal UTXO amount needed for bridging from prime"
+	primeMinFeeForBridgingFlagDesc     = "minimal bridging fee for prime"
 
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
@@ -93,6 +100,8 @@ const (
 	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 	vectorStartingBlockFlagDesc         = "slot: hash of the block from where to start vector oracle"
+	vectorUtxoMinAmountFlagDesc         = "minimal UTXO amount needed for bridging from vector"
+	vectorMinFeeForBridgingFlagDesc     = "minimal bridging fee for vector"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
@@ -119,6 +128,7 @@ const (
 	relayerDataDirFlagDesc              = "path to relayer secret directory when using local secrets manager"
 	relayerConfigPathFlagDesc           = "path to relayer secrets manager config file"
 	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle"
+	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
 
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
@@ -159,6 +169,8 @@ type generateConfigsParams struct {
 	primeTTLSlotInc            uint64
 	primeSlotRoundingThreshold uint64
 	primeStartingBlock         string
+	primeUtxoMinAmount         uint64
+	primeMinFeeForBridging     uint64
 
 	vectorNetworkAddress        string
 	vectorNetworkMagic          uint32
@@ -170,6 +182,8 @@ type generateConfigsParams struct {
 	vectorTTLSlotInc            uint64
 	vectorSlotRoundingThreshold uint64
 	vectorStartingBlock         string
+	vectorUtxoMinAmount         uint64
+	vectorMinFeeForBridging     uint64
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -194,6 +208,7 @@ type generateConfigsParams struct {
 	nexusTTLBlockNumberInc      uint64
 	nexusBlockRoundingThreshold uint64
 	nexusStartingBlock          uint64
+	nexusMinFeeForBridging      uint64
 
 	relayerDataDir    string
 	relayerConfigPath string
@@ -340,6 +355,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		primeStartingBlockFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.primeUtxoMinAmount,
+		primeUtxoMinAmountFlag,
+		common.MinUtxoAmountDefault,
+		primeUtxoMinAmountFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.primeMinFeeForBridging,
+		primeMinFeeForBridgingFlag,
+		common.MinFeeForBridgingDefault,
+		primeMinFeeForBridgingFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.vectorNetworkAddress,
@@ -400,6 +427,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorStartingBlockFlag,
 		"",
 		vectorStartingBlockFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorUtxoMinAmount,
+		vectorUtxoMinAmountFlag,
+		common.MinUtxoAmountDefault,
+		vectorUtxoMinAmountFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorMinFeeForBridging,
+		vectorMinFeeForBridgingFlag,
+		common.MinFeeForBridgingDefault,
+		vectorMinFeeForBridgingFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -523,6 +562,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		0,
 		nexusStartingBlockFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.nexusMinFeeForBridging,
+		nexusMinFeeForBridgingFlag,
+		common.MinFeeForBridgingDefault,
+		nexusMinFeeForBridgingFlagDesc,
+	)
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
@@ -571,8 +616,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-				UtxoMinAmount:            common.MinUtxoAmountDefault,
-				MinFeeForBridging:        common.MinFeeForBridgingDefault,
+				UtxoMinAmount:            p.primeUtxoMinAmount,
+				MinFeeForBridging:        p.primeMinFeeForBridging,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -591,8 +636,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-				UtxoMinAmount:            common.MinUtxoAmountDefault,
-				MinFeeForBridging:        common.MinFeeForBridgingDefault,
+				UtxoMinAmount:            p.vectorUtxoMinAmount,
+				MinFeeForBridging:        p.vectorMinFeeForBridging,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -607,7 +652,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
 				DynamicTx:               true,
 				NonceStrategy:           ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
-				MinFeeForBridging:       common.MinFeeForBridgingDefault,
+				MinFeeForBridging:       p.nexusMinFeeForBridging,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
