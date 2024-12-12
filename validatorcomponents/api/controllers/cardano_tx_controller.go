@@ -195,7 +195,8 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) || (ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
+	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
+		(ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 

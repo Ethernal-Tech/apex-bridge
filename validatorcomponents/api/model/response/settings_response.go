@@ -17,11 +17,13 @@ func NewSettingsResponse(
 ) *SettingsResponse {
 	minUtxoMap := make(map[string]uint64)
 	minFeeForBridgingMap := make(map[string]uint64)
+
 	var maxUtxoValue uint64 = 0
 
 	for chainID, chainConfig := range appConfig.CardanoChains {
 		minUtxoMap[chainID] = chainConfig.UtxoMinAmount
 		minFeeForBridgingMap[chainID] = chainConfig.MinFeeForBridging
+
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount
 		}
@@ -30,7 +32,7 @@ func NewSettingsResponse(
 	for chainID, ethConfig := range appConfig.EthChains {
 		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging
 	}
-	
+
 	return &SettingsResponse{
 		MinChainFeeForBridging:         minFeeForBridgingMap,
 		MinUtxoChainValue:              minUtxoMap,

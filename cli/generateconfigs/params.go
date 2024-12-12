@@ -87,7 +87,7 @@ const (
 	primeTTLSlotIncFlagDesc            = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 	primeStartingBlockFlagDesc         = "slot: hash of the block from where to start prime oracle"
-	primeUtxoMinAmountFlagDesc         = "minimal UTXO amount needed for bridging from prime"
+	primeUtxoMinAmountFlagDesc         = "minimal UTXO value for prime"
 	primeMinFeeForBridgingFlagDesc     = "minimal bridging fee for prime"
 
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
@@ -100,7 +100,7 @@ const (
 	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
 	vectorStartingBlockFlagDesc         = "slot: hash of the block from where to start vector oracle"
-	vectorUtxoMinAmountFlagDesc         = "minimal UTXO amount needed for bridging from vector"
+	vectorUtxoMinAmountFlagDesc         = "minimal UTXO value for vector"
 	vectorMinFeeForBridgingFlagDesc     = "minimal bridging fee for vector"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
@@ -281,6 +281,16 @@ func (p *generateConfigsParams) validateFlags() error {
 		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 			return fmt.Errorf("invalid vector starting block: %s", p.vectorStartingBlock)
 		}
+	}
+
+	if p.primeMinFeeForBridging < p.primeUtxoMinAmount {
+		return fmt.Errorf("prime minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
+			p.primeMinFeeForBridging, p.primeUtxoMinAmount)
+	}
+
+	if p.vectorMinFeeForBridging < p.vectorUtxoMinAmount {
+		return fmt.Errorf("vector minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
+			p.vectorMinFeeForBridging, p.vectorUtxoMinAmount)
 	}
 
 	if !common.IsValidHTTPURL(p.nexusNodeURL) {

@@ -55,6 +55,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
 			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
 			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
+			UtxoMinAmount:         ccConfig.UtxoMinAmount,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{

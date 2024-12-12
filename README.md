@@ -114,6 +114,8 @@ $ go run ./main.go generate-configs \
         --prime-ttl-slot-inc <ttl slot increment for prime> \
         --prime-slot-rounding-threshold <prime slot rounding threshold> \
         --prime-starting-block <slot:hash> \
+        --prime-utxo-min-amount <minimal UTXO value for prime> \
+        --prime-min-fee-for-bridging <minimal bridging fee for prime> \
         --vector-network-address <address of vector network> \
         --vector-network-magic <network magic of vector network> \
         --vector-network-id <network id of vector network> \
@@ -124,10 +126,13 @@ $ go run ./main.go generate-configs \
         --vector-ttl-slot-inc <ttl slot increment for vector> \
         --vector-slot-rounding-threshold <vector slot rounding threshold> \
         --vector-starting-block <slot:hash> \
+        --vector-utxo-min-amount <minimal UTXO value for vector> \
+        --vector-min-fee-for-bridging<minimal bridging fee for vector> \
         --nexus-node-url <nexus node URL> \
         --nexus-ttl-block-inc <nexus ttl block increment> \
         --nexus-block-rounding-threshold <nexus block rounding threshold> \
         --nexus-starting-block <block number> \
+        --nexus-min-fee-for-bridging <minimal bridging fee for nexus> \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
         --relayer-data-dir <relayer data dir for secrets> \
