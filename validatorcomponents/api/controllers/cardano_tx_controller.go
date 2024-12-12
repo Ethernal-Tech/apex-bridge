@@ -186,12 +186,16 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		requestBody.BridgingFee = c.oracleConfig.BridgingSettings.MinFeeForBridging
+		if cardanoDestConfig != nil {
+			requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
+		} else if requestBody.BridgingFee == 0 && ethDestConfig != nil {
+			requestBody.BridgingFee = ethDestConfig.MinFeeForBridging
+		}
 	}
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if requestBody.BridgingFee < c.oracleConfig.BridgingSettings.MinFeeForBridging {
+	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) || (ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 

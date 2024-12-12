@@ -43,7 +43,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
-			MinFeeForBridging:              minFeeForBridging,
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 		},

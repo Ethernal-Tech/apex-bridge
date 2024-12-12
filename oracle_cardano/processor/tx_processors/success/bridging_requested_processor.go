@@ -241,7 +241,8 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	metadata.FeeAmount += feeSum
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
 
-	if metadata.FeeAmount < appConfig.BridgingSettings.MinFeeForBridging {
+	// should we check minFeeForBridging for both cardano and eth config?
+	if (cardanoDestConfig != nil && metadata.FeeAmount < cardanoDestConfig.MinFeeForBridging) || (ethDestConfig != nil && metadata.FeeAmount < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

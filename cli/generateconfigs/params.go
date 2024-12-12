@@ -572,6 +572,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 				UtxoMinAmount:            common.MinUtxoAmountDefault,
+				MinFeeForBridging:        common.MinFeeForBridgingDefault,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -591,6 +592,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 				UtxoMinAmount:            common.MinUtxoAmountDefault,
+				MinFeeForBridging:        common.MinFeeForBridgingDefault,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -605,6 +607,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
 				DynamicTx:               true,
 				NonceStrategy:           ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
+				MinFeeForBridging:       common.MinFeeForBridgingDefault,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -618,7 +621,6 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		BridgingSettings: oCore.BridgingSettings{
-			MinFeeForBridging:              common.MinFeeForBridgingDefault,
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,

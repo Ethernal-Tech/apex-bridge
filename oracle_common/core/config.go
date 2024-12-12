@@ -40,6 +40,7 @@ type EthChainConfig struct {
 	DynamicTx               bool                          `json:"dynamicTx"`
 	TestMode                uint8                         `json:"testMode"`
 	NonceStrategy           ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
+	MinFeeForBridging       uint64                        `json:"minFeeForBridging"`
 }
 
 type CardanoChainConfig struct {
@@ -64,6 +65,7 @@ type CardanoChainConfig struct {
 	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
 	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
 	UtxoMinAmount         uint64  `json:"minUtxoAmount"`
+	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
 }
 
 type SubmitConfig struct {
@@ -85,7 +87,6 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MinFeeForBridging              uint64   `json:"minFeeForBridging"`
 	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
