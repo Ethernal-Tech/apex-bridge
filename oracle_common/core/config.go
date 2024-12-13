@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -98,6 +99,7 @@ type RetryUnprocessedSettings struct {
 }
 
 type AppConfig struct {
+	RunMode                  common.VCRunMode               `json:"-"`
 	ValidatorDataDir         string                         `json:"validatorDataDir"`
 	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
 	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`

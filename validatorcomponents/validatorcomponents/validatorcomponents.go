@@ -47,8 +47,8 @@ type ValidatorComponentsImpl struct {
 	oracleDB          *bbolt.DB
 	db                core.Database
 	cardanoIndexerDbs map[string]indexer.Database
-	oracle            cardanoOracleCore.Oracle
-	ethOracle         ethOracleCore.Oracle
+	oracle            *cardanoOracle.OracleImpl
+	ethOracle         *ethOracle.OracleImpl
 	batcherManager    batcherCore.BatcherManager
 	relayerImitator   core.RelayerImitator
 	api               core.API
@@ -149,21 +149,26 @@ func NewValidatorComponents(
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
 		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
 
-	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
+	cardanoOracleObj, err := cardanoOracle.NewCardanoOracle(
+		ctx, oracleDB, typeRegister, oracleConfig,
+		oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
 
-	ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
-		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
+	var ethOracleObj *ethOracle.OracleImpl
 
-	ethOracle, err := ethOracle.NewEthOracle(
-		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
-		bridgingRequestStateManager, logger.Named("oracle_eth"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
+	if len(appConfig.EthChains) > 0 {
+		ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
+			ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
+
+		ethOracleObj, err = ethOracle.NewEthOracle(
+			ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
+			bridgingRequestStateManager, logger.Named("oracle_eth"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
+		}
 	}
 
 	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
@@ -209,8 +214,8 @@ func NewValidatorComponents(
 		oracleDB:          oracleDB,
 		db:                db,
 		cardanoIndexerDbs: cardanoIndexerDbs,
-		oracle:            cardanoOracle,
-		ethOracle:         ethOracle,
+		oracle:            cardanoOracleObj,
+		ethOracle:         ethOracleObj,
 		batcherManager:    batcherManager,
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
@@ -232,9 +237,11 @@ func (v *ValidatorComponentsImpl) Start() error {
 		return fmt.Errorf("failed to start oracle_cardano. error: %w", err)
 	}
 
-	err = v.ethOracle.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start oracle_eth. error: %w", err)
+	if v.ethOracle != nil {
+		err = v.ethOracle.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start oracle_eth. error: %w", err)
+		}
 	}
 
 	v.batcherManager.Start()
@@ -272,9 +279,11 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("error while disposing oracle. err: %w", err))
 	}
 
-	if err := v.ethOracle.Dispose(); err != nil {
-		v.logger.Error("error while disposing oracle_eth", "err", err)
-		errs = append(errs, fmt.Errorf("error while disposing oracle_eth. err: %w", err))
+	if v.ethOracle != nil {
+		if err := v.ethOracle.Dispose(); err != nil {
+			v.logger.Error("error while disposing oracle_eth", "err", err)
+			errs = append(errs, fmt.Errorf("error while disposing oracle_eth. err: %w", err))
+		}
 	}
 
 	err := v.oracleDB.Close()
