@@ -585,7 +585,9 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
-func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
+func (p *generateConfigsParams) Execute(
+	outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	telemetryConfig := telemetry.TelemetryConfig{}
 
 	if p.telemetry != "" {
@@ -611,43 +613,66 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkMagic:          p.primeNetworkMagic,
+					NetworkID:             wallet.CardanoNetworkType(p.primeNetworkID),
+					TTLSlotNumberInc:      p.primeTTLSlotInc,
+					OgmiosURL:             p.primeOgmiosURL,
+					BlockfrostURL:         p.primeBlockfrostURL,
+					BlockfrostAPIKey:      p.primeBlockfrostAPIKey,
+					SocketPath:            p.primeSocketPath,
+					PotentialFee:          300000,
+					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
+					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
+					UtxoMinAmount:         p.primeUtxoMinAmount,
+					Destinations: []cardanotx.CardanoConfigTokenExchange{
+						{
+							Chain:        common.ChainIDStrVector,
+							SrcTokenName: wallet.AdaTokenName,
+							DstTokenName: wallet.AdaTokenName,
+						},
+						{
+							Chain:        common.ChainIDStrNexus,
+							SrcTokenName: wallet.AdaTokenName,
+							DstTokenName: wallet.AdaTokenName, // or "" or "eth" ?
+						},
+					},
+				},
 				NetworkAddress:           p.primeNetworkAddress,
-				NetworkMagic:             p.primeNetworkMagic,
-				NetworkID:                wallet.CardanoNetworkType(p.primeNetworkID),
 				StartBlockHash:           primeStartingHash,
 				StartSlot:                primeStartingSlot,
 				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
-				TTLSlotNumberInc:         p.primeTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
-				OgmiosURL:                p.primeOgmiosURL,
-				BlockfrostURL:            p.primeBlockfrostURL,
-				BlockfrostAPIKey:         p.primeBlockfrostAPIKey,
-				SocketPath:               p.primeSocketPath,
-				PotentialFee:             300000,
-				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
-				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
-				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-				UtxoMinAmount:            p.primeUtxoMinAmount,
 				MinFeeForBridging:        p.primeMinFeeForBridging,
 			},
 			common.ChainIDStrVector: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkMagic:          p.vectorNetworkMagic,
+					NetworkID:             wallet.CardanoNetworkType(p.vectorNetworkID),
+					TTLSlotNumberInc:      p.vectorTTLSlotInc,
+					OgmiosURL:             p.vectorOgmiosURL,
+					BlockfrostURL:         p.vectorBlockfrostURL,
+					BlockfrostAPIKey:      p.vectorBlockfrostAPIKey,
+					SocketPath:            p.vectorSocketPath,
+					PotentialFee:          300000,
+					SlotRoundingThreshold: p.vectorSlotRoundingThreshold,
+					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
+					UtxoMinAmount:         p.vectorUtxoMinAmount,
+					Destinations: []cardanotx.CardanoConfigTokenExchange{
+						{
+							Chain:        common.ChainIDStrPrime,
+							SrcTokenName: wallet.AdaTokenName,
+							DstTokenName: wallet.AdaTokenName,
+						},
+					},
+				},
 				NetworkAddress:           p.vectorNetworkAddress,
-				NetworkMagic:             p.vectorNetworkMagic,
-				NetworkID:                wallet.CardanoNetworkType(p.vectorNetworkID),
 				StartBlockHash:           vectorStartingHash,
 				StartSlot:                vectorStartingSlot,
 				ConfirmationBlockCount:   defaultVectorBlockConfirmationCount,
-				TTLSlotNumberInc:         p.vectorTTLSlotInc,
 				OtherAddressesOfInterest: []string{},
-				OgmiosURL:                p.vectorOgmiosURL,
-				BlockfrostURL:            p.vectorBlockfrostURL,
-				BlockfrostAPIKey:         p.vectorBlockfrostAPIKey,
-				SocketPath:               p.vectorSocketPath,
-				PotentialFee:             300000,
-				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
-				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
-				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-				UtxoMinAmount:            p.vectorUtxoMinAmount,
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
 			},
 		},
@@ -719,26 +744,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		Telemetry: telemetryConfig,
 	}
 
-	primeChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
-		NetworkID:        wallet.CardanoNetworkType(p.primeNetworkID),
-		TestNetMagic:     p.primeNetworkMagic,
-		OgmiosURL:        p.primeOgmiosURL,
-		BlockfrostURL:    p.primeBlockfrostURL,
-		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
-		SocketPath:       p.primeSocketPath,
-		PotentialFee:     300000,
-	})
-
-	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
-		NetworkID:        wallet.CardanoNetworkType(p.vectorNetworkID),
-		TestNetMagic:     p.vectorNetworkMagic,
-		OgmiosURL:        p.vectorOgmiosURL,
-		BlockfrostURL:    p.vectorBlockfrostURL,
-		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
-		SocketPath:       p.vectorSocketPath,
-		PotentialFee:     300000,
-	})
-
+	primeChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrPrime].CardanoChainConfig)
+	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
 		NodeURL:       p.nexusNodeURL,
 		DataDir:       cleanPath(p.relayerDataDir),

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -38,9 +39,11 @@ func TestCardanoChainObserver(t *testing.T) {
 	}
 
 	chainConfig := &cCore.CardanoChainConfig{
+		CardanoChainConfig: cardanotx.CardanoChainConfig{
+			NetworkMagic: 764824073,
+		},
 		ChainID:                common.ChainIDStrPrime,
 		NetworkAddress:         "backbone.cardano.iog.io:3001",
-		NetworkMagic:           764824073,
 		StartBlockHash:         "335ac2d90bc37906c1264cfdc5769a652293cf64fa42b0c74d323473938b8ff1",
 		StartSlot:              127933773,
 		ConfirmationBlockCount: 10,

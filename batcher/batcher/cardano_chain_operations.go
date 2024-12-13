@@ -105,7 +105,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
-		cco.cardanoCliBinary, uint(cco.config.TestNetMagic), multisigPolicyScript, multisigFeePolicyScript)
+		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
 	if err != nil {
 		return nil, err
 	}
@@ -119,13 +119,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
-		"magic", cco.config.TestNetMagic, "binary", cco.cardanoCliBinary,
+		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
-		uint(cco.config.TestNetMagic),
+		uint(cco.config.NetworkMagic),
 		protocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
 		metadata,

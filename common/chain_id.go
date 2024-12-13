@@ -6,13 +6,15 @@ const (
 	ChainTypeCardano = iota
 	ChainTypeEVM
 
-	ChainIDStrPrime  = "prime"
-	ChainIDStrVector = "vector"
-	ChainIDStrNexus  = "nexus"
+	ChainIDStrPrime   = "prime"
+	ChainIDStrVector  = "vector"
+	ChainIDStrNexus   = "nexus"
+	ChainIDStrCardano = "cardano"
 
-	ChainIDIntPrime  = chainIDNum(1)
-	ChainIDIntVector = chainIDNum(2)
-	ChainIDIntNexus  = chainIDNum(3)
+	ChainIDIntPrime   = chainIDNum(1)
+	ChainIDIntVector  = chainIDNum(2)
+	ChainIDIntNexus   = chainIDNum(3)
+	ChainIDIntCardano = chainIDNum(4)
 
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"

@@ -1,47 +1,43 @@
 package cligenerateconfigs
 
 import (
-	"fmt"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/spf13/cobra"
 )
 
-var paramsData = &generateConfigsParams{}
+const skylineUse = "skyline"
+
+var (
+	paramsData        = &generateConfigsParams{}
+	skylineParamsData = &skylineGenerateConfigsParams{}
+)
 
 func GetGenerateConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "generate-configs",
 		Short:   "generates default config json files",
 		PreRunE: runPreRun,
-		Run:     runCommand,
+		Run:     common.GetCliRunCommand(paramsData),
+	}
+	cmdSkyline := &cobra.Command{
+		Use:     skylineUse,
+		Short:   "upgrade desired smart contract(s)",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(skylineParamsData),
 	}
 
 	paramsData.setFlags(cmd)
+	skylineParamsData.setFlags(cmdSkyline)
+
+	cmd.AddCommand(cmdSkyline)
 
 	return cmd
 }
 
-func runPreRun(_ *cobra.Command, _ []string) error {
-	return paramsData.validateFlags()
-}
-
-func runCommand(cmd *cobra.Command, _ []string) {
-	outputter := common.InitializeOutputter(cmd)
-	defer outputter.WriteOutput()
-
-	defer func() {
-		if r := recover(); r != nil {
-			outputter.SetError(fmt.Errorf("%v", r))
-		}
-	}()
-
-	results, err := paramsData.Execute()
-	if err != nil {
-		outputter.SetError(err)
-
-		return
+func runPreRun(cb *cobra.Command, _ []string) error {
+	if cb.Use == skylineUse {
+		return skylineParamsData.validateFlags()
 	}
 
-	outputter.SetCommandResult(results)
+	return paramsData.validateFlags()
 }
