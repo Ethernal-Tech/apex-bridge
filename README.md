@@ -152,19 +152,37 @@ $ go run ./main.go generate-configs \
         --relayer-data-dir ./blade-dir \
         --prime-network-address localhost:13001 \
         --prime-network-magic 142 \
-        --prime-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
+        --prime-ogmios-url https://prime.ogmios.com \
         --vector-network-address localhost:23001 \
         --vector-network-magic 242 \
-        --vector-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
+        --vector-ogmios-url https://vector.ogmios.com \
         --nexus-node-url localhost:5500 \
-        --bridge-node-url https://polygon-mumbai-pokt.nodies.app \
+        --bridge-node-url https://bridge.com \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
+        --api-keys test_api_key_1
+```
+
+Skyline minimal example
+``` shell
+$ apex-bridge generate-configs skyline \
+        --validator-data-dir ./blade-dir \
+        --relayer-data-dir ./blade-dir \
+        --prime-network-address localhost:13001 \
+        --prime-network-magic 142 \
+        --prime-ogmios-url https://prime.ogmios.com \
+        --cardano-network-address localhost:23001 \
+        --cardano-network-magic 242 \
+        --cardano-ogmios-url https://vector.ogmios.com \
+        --bridge-node-url https://bridge.com \
+        --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
+        --prime-cardano-token-name 29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e \
+        --cardano-prime-token-name 29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Route3 \
         --api-keys test_api_key_1
 ```
 
 # Example of sending a transaction from the prime to the vector
 ```shell
-apex-bridge sendtx \
+$ apex-bridge sendtx \
         --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -177,7 +195,7 @@ apex-bridge sendtx \
 
 # Example of sending a transaction from the vector to the prime
 ```shell
-apex-bridge sendtx \
+$ apex-bridge sendtx \
         --key VECTOR_WALLET_PRIVATE_KEY \
         --testnet-src 1127 \
         --addr-multisig-src vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg \
@@ -191,7 +209,7 @@ apex-bridge sendtx \
 
 # Example of sending a transaction from the prime to the nexus
 ```shell
-apex-bridge sendtx \
+$ apex-bridge sendtx \
         --key PRIME_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -205,7 +223,7 @@ apex-bridge sendtx \
 
 # Example of sending a transaction from the nexus to the prime
 ```shell
-apex-bridge sendtx \
+$ apex-bridge sendtx \
         --tx-type evm \
         --key NEXUS_WALLET_PRIVATE_KEY \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \

@@ -10,7 +10,8 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-// CardanoConfigTokenExchange holds src and dst token to exchange full token name[policyID.hex(name) or ada
+// CardanoConfigTokenExchange holds src and dst token to exchange with destionation chain
+// full token name[policyID.hex(name)or lovelace or "" for eth
 type CardanoConfigTokenExchange struct {
 	Chain        string
 	SrcTokenName string
