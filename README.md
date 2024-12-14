@@ -171,7 +171,6 @@ $ apex-bridge generate-configs skyline \
         --prime-network-magic 142 \
         --prime-ogmios-url https://prime.ogmios.com \
         --cardano-network-address localhost:23001 \
-        --cardano-network-magic 242 \
         --cardano-ogmios-url https://vector.ogmios.com \
         --bridge-node-url https://bridge.com \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \

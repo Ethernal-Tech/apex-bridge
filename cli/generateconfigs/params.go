@@ -132,7 +132,7 @@ const (
 
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
-	defaultNetworkMagic                      = 0
+	defaultNetworkMagic                      = uint32(wallet.MainNetProtocolMagic)
 	defaultLogsPath                          = "./logs"
 	defaultDBsPath                           = "./db"
 	defaultAPIPort                           = 10000
