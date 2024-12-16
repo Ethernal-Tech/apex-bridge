@@ -21,7 +21,7 @@ func GetGenerateConfigsCommand() *cobra.Command {
 	}
 	cmdSkyline := &cobra.Command{
 		Use:     skylineUse,
-		Short:   "upgrade desired smart contract(s)",
+		Short:   "generate default config json files for skyline",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(skylineParamsData),
 	}

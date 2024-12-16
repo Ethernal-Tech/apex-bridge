@@ -491,7 +491,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 	}
 
 	vcConfig := &vcCore.AppConfig{
-		RunMode:             common.ReactorMode,
+		RunMode:             common.SkylineMode,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
