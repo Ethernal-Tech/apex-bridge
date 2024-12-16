@@ -10,9 +10,17 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+// CardanoConfigTokenExchange holds src and dst token to exchange with destionation chain
+// full token name[policyID.hex(name)or lovelace or "" for eth
+type CardanoConfigTokenExchange struct {
+	Chain        string
+	SrcTokenName string
+	DstTokenName string
+}
+
 type CardanoChainConfig struct {
 	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
-	TestNetMagic          uint32                           `json:"testnetMagic"`
+	NetworkMagic          uint32                           `json:"testnetMagic"`
 	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
 	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
 	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
@@ -23,6 +31,7 @@ type CardanoChainConfig struct {
 	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
 	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
+	Destinations          []CardanoConfigTokenExchange     `json:"destinations"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -50,7 +59,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(
-			uint(config.TestNetMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	}
 
 	if config.BlockfrostURL != "" {

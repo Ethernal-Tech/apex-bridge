@@ -44,20 +44,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	for _, ccConfig := range appConfig.CardanoChains {
 		oracleCardanoChains[ccConfig.ChainID] = ccConfig
 
-		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
-			NetworkID:             ccConfig.NetworkID,
-			TestNetMagic:          ccConfig.NetworkMagic,
-			OgmiosURL:             ccConfig.OgmiosURL,
-			BlockfrostURL:         ccConfig.BlockfrostURL,
-			BlockfrostAPIKey:      ccConfig.BlockfrostAPIKey,
-			SocketPath:            ccConfig.SocketPath,
-			PotentialFee:          ccConfig.PotentialFee,
-			TTLSlotNumberInc:      ccConfig.TTLSlotNumberInc,
-			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
-			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
-			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
-			UtxoMinAmount:         ccConfig.UtxoMinAmount,
-		}).Serialize()
+		chainSpecificJSONRaw, _ := ccConfig.CardanoChainConfig.Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
 			ChainID:       ccConfig.ChainID,

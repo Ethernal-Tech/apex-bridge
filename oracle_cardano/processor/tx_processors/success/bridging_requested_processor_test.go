@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -32,21 +33,25 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
-				NetworkID: wallet.TestNetNetwork,
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.TestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+				},
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
-				UtxoMinAmount:     utxoMinValue,
 				MinFeeForBridging: minFeeForBridging,
 			},
 			common.ChainIDStrVector: {
-				NetworkID: wallet.VectorTestNetNetwork,
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.VectorTestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+				},
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
-				UtxoMinAmount:     utxoMinValue,
 				MinFeeForBridging: minFeeForBridging,
 			},
 		},

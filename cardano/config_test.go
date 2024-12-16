@@ -27,7 +27,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, config)
 		require.Equal(t, "cardano", config.GetChainType())
-		require.Equal(t, uint32(2), config.TestNetMagic)
+		require.Equal(t, uint32(2), config.NetworkMagic)
 		require.Equal(t, "pera", config.BlockfrostURL)
 		require.Equal(t, "zdera", config.BlockfrostAPIKey)
 		require.Equal(t, uint64(300000), config.PotentialFee)

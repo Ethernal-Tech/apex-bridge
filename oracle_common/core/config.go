@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type BridgingAddresses struct {
@@ -45,28 +45,16 @@ type EthChainConfig struct {
 }
 
 type CardanoChainConfig struct {
-	ChainID                  string                           `json:"-"`
-	BridgingAddresses        BridgingAddresses                `json:"-"`
-	NetworkAddress           string                           `json:"networkAddress"`
-	NetworkMagic             uint32                           `json:"networkMagic"`
-	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
-	StartBlockHash           string                           `json:"startBlockHash"`
-	StartSlot                uint64                           `json:"startSlot"`
-	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
-	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
-
-	OgmiosURL             string  `json:"ogmiosUrl"`
-	BlockfrostURL         string  `json:"blockfrostUrl"`
-	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
-	SocketPath            string  `json:"socketPath"`
-	PotentialFee          uint64  `json:"potentialFee"`
-	SlotRoundingThreshold uint64  `json:"slotRoundingThreshold"`
-	TTLSlotNumberInc      uint64  `json:"ttlSlotNumberIncrement"`
-	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
-	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
-	UtxoMinAmount         uint64  `json:"utxoMinAmount"`
-	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
+	cardanotx.CardanoChainConfig
+	ChainID                  string                   `json:"-"`
+	BridgingAddresses        BridgingAddresses        `json:"-"`
+	NetworkAddress           string                   `json:"networkAddress"`
+	StartBlockHash           string                   `json:"startBlockHash"`
+	StartSlot                uint64                   `json:"startSlot"`
+	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
+	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
+	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
 }
 
 type SubmitConfig struct {
