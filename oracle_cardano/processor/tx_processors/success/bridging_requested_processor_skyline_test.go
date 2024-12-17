@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBridgingRequestedProcessor(t *testing.T) {
+func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	const (
 		utxoMinValue          = 1000000
 		minFeeForBridging     = 1000010
@@ -25,6 +25,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "vector_test1wtyslvqxffyppmzhs7ecwunsnpq6g2p6kf9r4aa8ntfzc4qj925fr"
 		validTestAddress      = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
+		validPrimeTestAddress = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
@@ -471,6 +472,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
@@ -547,5 +549,323 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - valid", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrVector
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(vectorBridgingFeeAddr, 40),
+				Amount:  minFeeForBridging,
+			},
+			{
+				Address:       []string{validTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      500_000,
+					DestinationCurrencyAmount: 1_000_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       receivers,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - valid #2", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrVector
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(vectorBridgingFeeAddr, 40),
+				Amount:  minFeeForBridging,
+			},
+			{
+				Address:       []string{validTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      500_000,
+					DestinationCurrencyAmount: 1_000_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       receivers,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - valid #3", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrVector
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address:       []string{validTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      500_000,
+					DestinationCurrencyAmount: 1_000_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       receivers,
+			FeeAmount: common.BridgingRequestMetadataAmount{
+				SourceCurrencyAmount:      2_000_020,
+				DestinationCurrencyAmount: 1_000_010,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
+
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - invalid", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrVector
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address:       []string{validTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      2_000_020,
+					DestinationCurrencyAmount: 1_000_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       receivers,
+			FeeAmount: common.BridgingRequestMetadataAmount{
+				SourceCurrencyAmount:      250_000,
+				DestinationCurrencyAmount: 500_000,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - invalid #2", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address:       []string{validPrimeTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      1_000_000,
+					DestinationCurrencyAmount: 500_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"vector1"},
+			Transactions:       receivers,
+			FeeAmount: common.BridgingRequestMetadataAmount{
+				SourceCurrencyAmount:      500_000,
+				DestinationCurrencyAmount: 250_000,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - native token - valid #4", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrPrime
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []common.BridgingRequestMetadataTransaction{
+			{
+				Address:       []string{validPrimeTestAddress},
+				IsNativeToken: true,
+				Amount:        utxoMinValue,
+				Additional: &common.BridgingRequestMetadataAmount{
+					SourceCurrencyAmount:      1_000_000,
+					DestinationCurrencyAmount: 500_000,
+				},
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: destinationChainID,
+			SenderAddr:         []string{"vector1"},
+			Transactions:       receivers,
+			FeeAmount: common.BridgingRequestMetadataAmount{
+				SourceCurrencyAmount:      500_000,
+				DestinationCurrencyAmount: 1_000_010,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: vectorBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrVector,
+		}, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers)+1)
+
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
 	})
 }

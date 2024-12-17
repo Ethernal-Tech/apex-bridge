@@ -27,6 +27,7 @@ type BaseMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
+/*
 type BridgingRequestMetadataTransaction struct {
 	Address []string `cbor:"a" json:"a"`
 	Amount  uint64   `cbor:"m" json:"m"`
@@ -38,6 +39,35 @@ type BridgingRequestMetadata struct {
 	SenderAddr         []string                             `cbor:"s" json:"s"`
 	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
 	FeeAmount          uint64                               `cbor:"fa" json:"fa"`
+}
+*/
+
+type BridgingRequestMetadataAmount struct {
+	SourceCurrencyAmount      uint64 `cbor:"sca" json:"sca"`
+	DestinationCurrencyAmount uint64 `cbor:"dca" json:"dca"`
+}
+
+// IsNativeToken - is the user trying to bridge native tokens (WAda, WApex), or native currency (Ada, APEX)
+// Additional will be counted towards the bridging fee shown to the user, but it will actually be assigned to
+// the user on destination chain, because we can not create a UTXO with only native tokens
+// Additional will be nil for reactor
+// Additional.DestinationCurrencyAmount is minUtxoAmount on destination chain
+// Additional.SourceCurrencyAmount is Additional.DestinationCurrencyAmount * exchangeRate
+type BridgingRequestMetadataTransaction struct {
+	Address       []string                       `cbor:"a" json:"a"`
+	IsNativeToken bool                           `cbor:"nt" json:"nt"`
+	Amount        uint64                         `cbor:"m" json:"m"`
+	Additional    *BridgingRequestMetadataAmount `cbor:"ad" json:"ad"`
+}
+
+// FeeAmount.DestinationCurrencyAmount is minBridgingFee on destination chain
+// FeeAmount.SourceCurrencyAmount is FeeAmount.DestinationCurrencyAmount * exchangeRate
+type BridgingRequestMetadata struct {
+	BridgingTxType     BridgingTxType                       `cbor:"t" json:"t"`
+	DestinationChainID string                               `cbor:"d" json:"d"`
+	SenderAddr         []string                             `cbor:"s" json:"s"`
+	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
+	FeeAmount          BridgingRequestMetadataAmount        `cbor:"fa" json:"fa"`
 }
 
 type BatchExecutedMetadata struct {

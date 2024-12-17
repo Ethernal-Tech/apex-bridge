@@ -15,27 +15,27 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorSkylineImpl)(nil)
 
-type BridgingRequestedProcessorImpl struct {
+type BridgingRequestedProcessorSkylineImpl struct {
 	logger hclog.Logger
 }
 
-func NewBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
-	return &BridgingRequestedProcessorImpl{
-		logger: logger.Named("bridging_requested_processor"),
+func NewNativeBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorSkylineImpl {
+	return &BridgingRequestedProcessorSkylineImpl{
+		logger: logger.Named("bridging_requested_processor_skyline"),
 	}
 }
 
-func (*BridgingRequestedProcessorImpl) GetType() common.BridgingTxType {
+func (*BridgingRequestedProcessorSkylineImpl) GetType() common.BridgingTxType {
 	return common.BridgingTxTypeBridgingRequest
 }
 
-func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+func (*BridgingRequestedProcessorSkylineImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return nil
 }
 
-func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
+func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
@@ -62,7 +62,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	return nil
 }
 
-func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
+//nolint:dupl
+func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
@@ -127,7 +128,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 }
 
 /*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
+func (*BridgingRequestedProcessorSkylineImpl) addRefundRequestClaim(
 	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
 ) {
 
@@ -156,7 +157,7 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 }
 */
 
-func (p *BridgingRequestedProcessorImpl) validate(
+func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
@@ -193,14 +194,29 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
+	exchangeRate, err := GetExchangeRate(metadata.DestinationChainID)
+	if err != nil {
+		return err
+	}
+
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
 		if cardanoDestConfig != nil {
-			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
-				foundAUtxoValueBelowMinimumValue = true
+			if receiver.IsNativeToken {
+				// amount_to_bridge must be >= minUtxoAmount on destination
+				if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
+					foundAUtxoValueBelowMinimumValue = true
 
-				break
+					break
+				}
+			} else {
+				// amount_to_bridge must be >= minUtxoAmount on source
+				if receiver.Amount < uint64(float64(cardanoSrcConfig.UtxoMinAmount)*exchangeRate) {
+					foundAUtxoValueBelowMinimumValue = true
+
+					break
+				}
 			}
 
 			if !cardanotx.IsValidOutputAddress(receiverAddr, cardanoDestConfig.NetworkID) {
@@ -239,10 +255,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	// update fee amount if needed with sum of fee address receivers
 	metadata.FeeAmount.DestinationCurrencyAmount += feeSum
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount.DestinationCurrencyAmount))
+	feeAmount := metadata.FeeAmount.DestinationCurrencyAmount
+	metadata.FeeAmount.SourceCurrencyAmount = uint64(float64(feeAmount) * exchangeRate)
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(feeAmount))
 
-	if (cardanoDestConfig != nil && metadata.FeeAmount.DestinationCurrencyAmount < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && metadata.FeeAmount.DestinationCurrencyAmount < ethDestConfig.MinFeeForBridging) {
+	if feeAmount < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
@@ -259,4 +276,12 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	return nil
+}
+
+func GetExchangeRate(destinationChainID string) (float64, error) {
+	if destinationChainID == "prime" {
+		return 2, nil
+	}
+
+	return 0.5, nil
 }
