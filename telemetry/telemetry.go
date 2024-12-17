@@ -17,8 +17,9 @@ import (
 )
 
 type TelemetryConfig struct {
-	PrometheusAddr string `json:"prometheusAddr"` // empty means disabled otherwise something like 0.0.0.0:5001
-	DataDogAddr    string `json:"dataDogAddr"`    // empty means disabled otherwise something like localhost:8126
+	PrometheusAddr string        `json:"prometheusAddr"` // empty means disabled otherwise something like 0.0.0.0:5001
+	DataDogAddr    string        `json:"dataDogAddr"`    // empty means disabled otherwise something like localhost:8126
+	PullTime       time.Duration `json:"pullTime"`
 }
 
 // Telemetry holds the config details for metric services
@@ -28,22 +29,31 @@ type Telemetry struct {
 	logger           hclog.Logger
 }
 
-func NewTelemetry(config TelemetryConfig, logger hclog.Logger) (*Telemetry, error) {
-	if err := setupDataDog(config.DataDogAddr != ""); err != nil {
-		return nil, err
-	}
-
+func NewTelemetry(config TelemetryConfig, logger hclog.Logger) *Telemetry {
 	return &Telemetry{
-		config:           config,
-		prometheusServer: setupPrometheus(config.PrometheusAddr),
-		logger:           logger,
-	}, nil
+		config: config,
+		logger: logger,
+	}
 }
 
 func (t *Telemetry) Start() error {
-	go t.startPrometheus()
+	if t.config.DataDogAddr != "" {
+		if err := setupDataDog(); err != nil {
+			return err
+		}
 
-	return t.startDataDogProfiler()
+		if err := t.startDataDogProfiler(); err != nil {
+			return err
+		}
+	}
+
+	if t.config.PrometheusAddr != "" {
+		t.prometheusServer = setupPrometheus(t.config.PrometheusAddr)
+
+		go t.startPrometheus()
+	}
+
+	return nil
 }
 
 func (t *Telemetry) Close(ctx context.Context) error {
@@ -63,11 +73,11 @@ func (t *Telemetry) Close(ctx context.Context) error {
 	return nil
 }
 
-func (t *Telemetry) startPrometheus() {
-	if t.prometheusServer == nil {
-		return
-	}
+func (t *Telemetry) IsEnabled() bool {
+	return t.config.DataDogAddr != "" || t.config.PrometheusAddr != ""
+}
 
+func (t *Telemetry) startPrometheus() {
 	t.logger.Info("Prometheus server started", "addr", t.config.PrometheusAddr)
 
 	if err := t.prometheusServer.ListenAndServe(); err != nil {
@@ -78,10 +88,6 @@ func (t *Telemetry) startPrometheus() {
 }
 
 func (t *Telemetry) startDataDogProfiler() error {
-	if t.config.DataDogAddr == "" {
-		return nil
-	}
-
 	err := profiler.Start(
 		// enable all profiles
 		profiler.WithProfileTypes(
@@ -105,11 +111,7 @@ func (t *Telemetry) startDataDogProfiler() error {
 	return nil
 }
 
-func setupDataDog(enabled bool) error {
-	if !enabled {
-		return nil
-	}
-
+func setupDataDog() error {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 
@@ -132,10 +134,6 @@ func setupDataDog(enabled bool) error {
 }
 
 func setupPrometheus(prometheusAddr string) *http.Server {
-	if prometheusAddr == "" {
-		return nil
-	}
-
 	return &http.Server{
 		Addr: prometheusAddr,
 		Handler: promhttp.InstrumentMetricHandler(

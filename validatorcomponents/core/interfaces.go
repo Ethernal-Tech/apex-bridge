@@ -37,7 +37,7 @@ type BridgingRequestStateManager interface {
 }
 
 type RelayerImitator interface {
-	Start()
+	common.IStartable
 }
 
 type ValidatorComponents interface {

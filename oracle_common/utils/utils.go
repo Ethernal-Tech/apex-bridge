@@ -1,6 +1,9 @@
 package utils
 
-import "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+import (
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+)
 
 func GetChainConfig(appConfig *core.AppConfig, chainID string) (*core.CardanoChainConfig, *core.EthChainConfig) {
 	if cardanoChainConfig, exists := appConfig.CardanoChains[chainID]; exists {
@@ -12,4 +15,12 @@ func GetChainConfig(appConfig *core.AppConfig, chainID string) (*core.CardanoCha
 	}
 
 	return nil, nil
+}
+
+func GetTxPriority(txProcessorType common.BridgingTxType) uint8 {
+	if txProcessorType == common.BridgingTxTypeBatchExecution || txProcessorType == common.TxTypeHotWalletFund {
+		return 0
+	}
+
+	return 1
 }

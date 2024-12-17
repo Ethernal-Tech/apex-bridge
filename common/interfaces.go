@@ -1,5 +1,7 @@
 package common
 
+import "context"
+
 type BridgingRequestStateUpdater interface {
 	New(sourceChainID string, model *NewBridgingRequestStateModel) error
 	NewMultiple(sourceChainID string, models []*NewBridgingRequestStateModel) error
@@ -14,4 +16,8 @@ type BridgingRequestStateUpdater interface {
 // ChainSpecificConfig defines the interface for chain-specific configurations
 type ChainSpecificConfig interface {
 	GetChainType() string
+}
+
+type IStartable interface {
+	Start(context.Context)
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 
@@ -38,22 +39,15 @@ func NewCardanoTxsReceiverImpl(
 
 func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*indexer.Tx) error {
 	var (
-		bridgingRequests  []*common.NewBridgingRequestStateModel
-		relevantTxs       = make([]*core.CardanoTx, 0)
-		processedTxs      []*core.ProcessedCardanoTx
-		invalidTxsCounter int
+		bridgingRequests []*common.NewBridgingRequestStateModel
+		relevantTxs      = make([]*core.CardanoTx, 0)
+		processedTxs     []*core.ProcessedCardanoTx
 	)
-
-	onIrrelevantTx := func(cardanoTx *core.CardanoTx) {
-		processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
-		invalidTxsCounter++
-	}
 
 	for _, tx := range txs {
 		cardanoTx := &core.CardanoTx{
 			OriginChainID: originChainID,
 			Tx:            *tx,
-			Priority:      1,
 		}
 
 		r.logger.Info("Checking if tx is relevant", "chain", originChainID, "tx", tx)
@@ -62,16 +56,13 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 		if err != nil {
 			r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
-			onIrrelevantTx(cardanoTx)
+			processedTxs = append(processedTxs, cardanoTx.ToProcessedCardanoTx(false))
 
 			continue
 		}
 
 		txProcessorType := txProcessor.GetType()
-		if txProcessorType == common.BridgingTxTypeBatchExecution ||
-			txProcessorType == common.TxTypeHotWalletFund {
-			cardanoTx.Priority = 0
-		}
+		cardanoTx.Priority = utils.GetTxPriority(txProcessorType)
 
 		relevantTxs = append(relevantTxs, cardanoTx)
 
@@ -104,11 +95,25 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 			return err
 		}
-	}
 
-	if invalidTxsCounter > 0 {
-		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
+		updateTelemetry(originChainID, processedTxs, relevantTxs)
 	}
 
 	return nil
+}
+
+func updateTelemetry(originChainID string, processedTxs []*core.ProcessedCardanoTx, relevantTxs []*core.CardanoTx) {
+	telemetry.UpdateOracleTxsReceivedCounter(originChainID, len(processedTxs)+len(relevantTxs))
+
+	invalidCnt := 0
+
+	for _, x := range processedTxs {
+		if x.IsInvalid {
+			invalidCnt++
+		}
+	}
+
+	if invalidCnt > 0 {
+		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidCnt)
+	}
 }
