@@ -10,7 +10,6 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/ethgo"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -116,7 +115,7 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 			return err
 		}
 
-		updateTelemetry(originChainID, processedTxs, relevantTxs)
+		utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
 	}
 
 	return nil
@@ -262,20 +261,4 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		Value:           txValue,
 		InnerActionHash: innerActionTxHash,
 	}, nil
-}
-
-func updateTelemetry(originChainID string, processedTxs []*core.ProcessedEthTx, relevantTxs []*core.EthTx) {
-	telemetry.UpdateOracleTxsReceivedCounter(originChainID, len(processedTxs)+len(relevantTxs))
-
-	invalidCnt := 0
-
-	for _, x := range processedTxs {
-		if x.IsInvalid {
-			invalidCnt++
-		}
-	}
-
-	if invalidCnt > 0 {
-		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidCnt)
-	}
 }

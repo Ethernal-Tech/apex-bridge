@@ -5,7 +5,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
-	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -96,24 +95,8 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 			return err
 		}
 
-		updateTelemetry(originChainID, processedTxs, relevantTxs)
+		utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
 	}
 
 	return nil
-}
-
-func updateTelemetry(originChainID string, processedTxs []*core.ProcessedCardanoTx, relevantTxs []*core.CardanoTx) {
-	telemetry.UpdateOracleTxsReceivedCounter(originChainID, len(processedTxs)+len(relevantTxs))
-
-	invalidCnt := 0
-
-	for _, x := range processedTxs {
-		if x.IsInvalid {
-			invalidCnt++
-		}
-	}
-
-	if invalidCnt > 0 {
-		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidCnt)
-	}
 }
