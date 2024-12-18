@@ -62,12 +62,14 @@ func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 	return nil
 }
 
-//nolint:dupl
 func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
-	totalAmount := big.NewInt(0)
+	totalAmountSrc := uint64(0)
+	totalAmountDest := uint64(0)
+	totalAmountWrappedTokenSrc := uint64(0)
+	totalAmountWrappedTokenDest := uint64(0)
 
 	var feeAddress string
 
@@ -94,31 +96,58 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			continue
 		}
 
-		receiverAmount := new(big.Int).SetUint64(receiver.Amount)
+		var (
+			receiverAmount        uint64
+			receiverAmountWrapped uint64
+		)
+
+		if receiver.IsNativeToken {
+			receiverAmount = receiver.Amount + receiver.Additional.DestinationCurrencyAmount
+			receiverAmountWrapped = uint64(0)
+
+			totalAmountSrc += receiver.Additional.SourceCurrencyAmount
+			totalAmountWrappedTokenSrc += receiver.Amount
+
+			totalAmountDest += receiver.Amount + receiver.Additional.DestinationCurrencyAmount
+			totalAmountWrappedTokenDest += uint64(0)
+		} else {
+			receiverAmount = receiver.Additional.DestinationCurrencyAmount
+			receiverAmountWrapped = receiver.Amount
+
+			totalAmountSrc += receiver.Amount + receiver.Additional.SourceCurrencyAmount
+			totalAmountWrappedTokenSrc += uint64(0)
+
+			totalAmountDest += receiver.Additional.DestinationCurrencyAmount
+			totalAmountWrappedTokenDest += receiver.Amount
+		}
+
 		receivers = append(receivers, cCore.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
-			Amount:             receiverAmount,
+			Amount:             new(big.Int).SetUint64(receiverAmount),
+			AmountWrapped:      new(big.Int).SetUint64(receiverAmountWrapped),
 		})
-
-		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount.DestinationCurrencyAmount)
+	feeAmount := metadata.FeeAmount.DestinationCurrencyAmount
 
-	totalAmount.Add(totalAmount, feeAmount)
+	totalAmountDest += feeAmount
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
-		Amount:             feeAmount,
+		Amount:             new(big.Int).SetUint64(feeAmount),
+		AmountWrapped:      new(big.Int).SetUint64(0),
 	})
 
 	claim := cCore.BridgingRequestClaim{
-		ObservedTransactionHash: tx.Hash,
-		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
-		Receivers:               receivers,
-		TotalAmount:             totalAmount,
-		RetryCounter:            big.NewInt(int64(tx.BatchFailedCount)),
+		ObservedTransactionHash:         tx.Hash,
+		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		Receivers:                       receivers,
+		NativeCurrencyAmountDestination: new(big.Int).SetUint64(totalAmountDest),
+		NativeCurrencyAmountSource:      new(big.Int).SetUint64(totalAmountSrc),
+		WrappedTokenAmountSource:        new(big.Int).SetUint64(totalAmountWrappedTokenSrc),
+		WrappedTokenAmountDestination:   new(big.Int).SetUint64(totalAmountWrappedTokenDest),
+		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
@@ -202,7 +231,27 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
+		var totalAmountToBridge uint64
+
 		if cardanoDestConfig != nil {
+			if receiver.Additional == nil {
+				if !cardanotx.IsValidOutputAddress(receiverAddr, cardanoDestConfig.NetworkID) {
+					foundAnInvalidReceiverAddr = true
+
+					break
+				}
+
+				if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+					feeSum += receiver.Amount
+
+					continue
+				} else {
+					foundAUtxoValueBelowMinimumValue = true
+
+					break
+				}
+			}
+
 			if receiver.IsNativeToken {
 				// amount_to_bridge must be >= minUtxoAmount on destination
 				if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
@@ -210,13 +259,28 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 					break
 				}
+
+				totalAmountToBridge = receiver.Amount
 			} else {
 				// amount_to_bridge must be >= minUtxoAmount on source
-				if receiver.Amount < uint64(float64(cardanoSrcConfig.UtxoMinAmount)*exchangeRate) {
+				if receiver.Amount < cardanoSrcConfig.UtxoMinAmount {
 					foundAUtxoValueBelowMinimumValue = true
 
 					break
 				}
+
+				if receiver.Additional.DestinationCurrencyAmount < cardanoDestConfig.UtxoMinAmount {
+					foundAUtxoValueBelowMinimumValue = true
+
+					break
+				}
+
+				totalAmountToBridge = receiver.Amount
+			}
+
+			if uint64(float64(receiver.Additional.DestinationCurrencyAmount)*exchangeRate) !=
+				receiver.Additional.SourceCurrencyAmount {
+				return fmt.Errorf("found an exchange rate error in metadata: %v", metadata)
 			}
 
 			if !cardanotx.IsValidOutputAddress(receiverAddr, cardanoDestConfig.NetworkID) {
@@ -225,11 +289,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 				break
 			}
 
-			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-				feeSum += receiver.Amount
-			} else {
-				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
-			}
+			receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(totalAmountToBridge))
 		} else if ethDestConfig != nil {
 			if !goEthCommon.IsHexAddress(receiverAddr) {
 				foundAnInvalidReceiverAddr = true
@@ -254,12 +314,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount.DestinationCurrencyAmount += feeSum
-	feeAmount := metadata.FeeAmount.DestinationCurrencyAmount
-	metadata.FeeAmount.SourceCurrencyAmount = uint64(float64(feeAmount) * exchangeRate)
+	feeAmount := metadata.FeeAmount.DestinationCurrencyAmount + feeSum
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(feeAmount))
 
-	if feeAmount < cardanoDestConfig.MinFeeForBridging {
+	if cardanoDestConfig != nil && feeAmount < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
@@ -280,8 +338,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 func GetExchangeRate(destinationChainID string) (float64, error) {
 	if destinationChainID == "prime" {
-		return 2, nil
+		return 0.5, nil
 	}
 
-	return 0.5, nil
+	return 2, nil
 }
