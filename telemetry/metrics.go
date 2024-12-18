@@ -1,12 +1,16 @@
 package telemetry
 
 import (
+	"math/big"
+
 	"github.com/armon/go-metrics"
 )
 
 const (
-	oracleMetricsPrefix  = "oracle"
-	batcherMetricsPrefix = "batcher"
+	oracleMetricsPrefix    = "oracle"
+	batcherMetricsPrefix   = "batcher"
+	indexersMetricsPrefix  = "indexers"
+	hotWalletMetricsPrefix = "hotwallet"
 )
 
 func UpdateOracleTxsReceivedCounter(chain string, cnt int) {
@@ -31,4 +35,15 @@ func UpdateBatcherBatchSubmitSucceeded(chain string, id uint64) {
 
 func UpdateBatcherBatchSubmitFailed(chain string, id uint64) {
 	metrics.SetGauge([]string{batcherMetricsPrefix, "batch_submit_failed", chain}, float32(id))
+}
+
+func UpdateIndexersBlockCounter(chain string, cnt int) {
+	metrics.IncrCounter([]string{indexersMetricsPrefix, "block_counter", chain}, float32(cnt))
+}
+
+func UpdateHotWalletState(chain string, v *big.Int) {
+	val := v.Uint64()
+
+	metrics.SetGauge([]string{batcherMetricsPrefix, "state_high", chain}, float32(val>>32))
+	metrics.SetGauge([]string{batcherMetricsPrefix, "state_low", chain}, float32(uint32(val))) //nolint:gosec
 }

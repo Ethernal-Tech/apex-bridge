@@ -19,7 +19,7 @@ func TestRelayerImitator(t *testing.T) {
 		bsc := &eth.BridgeSmartContractMock{}
 		db := &relayerDb.DBMock{}
 
-		ri, err := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, err := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, ri)
 	})
@@ -36,7 +36,7 @@ func TestRelayerImitator(t *testing.T) {
 
 		db := &relayerDb.DBMock{}
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.Error(t, err)
@@ -54,7 +54,7 @@ func TestRelayerImitator(t *testing.T) {
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, fmt.Errorf("test err"))
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.Error(t, err)
@@ -72,7 +72,7 @@ func TestRelayerImitator(t *testing.T) {
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestRelayerImitator(t *testing.T) {
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(2), nil)
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.Error(t, err)
@@ -109,7 +109,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.Error(t, err)
@@ -129,7 +129,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.Error(t, err)
@@ -149,7 +149,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
-		ri, _ := NewRelayerImitator(context.Background(), nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.NoError(t, err)

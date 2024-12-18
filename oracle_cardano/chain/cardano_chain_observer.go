@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 
 	"github.com/hashicorp/go-hclog"
@@ -64,8 +63,6 @@ func NewCardanoChainObserver(
 		if err != nil {
 			return err
 		}
-
-		telemetry.UpdateOracleTxsReceivedCounter(config.ChainID, len(txs))
 
 		return nil
 	}

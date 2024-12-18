@@ -116,6 +116,11 @@ func (tx ProcessedCardanoTx) UnprocessedDBKey() []byte {
 	return ToUnprocessedTxKey(tx.Priority, tx.BlockSlot, tx.Hash)
 }
 
+// GetIsInvalid implements core.BaseProcessedTx.
+func (tx ProcessedCardanoTx) GetIsInvalid() bool {
+	return tx.IsInvalid
+}
+
 // ChainID implements core.BaseExpectedTx.
 func (tx BridgeExpectedCardanoTx) GetChainID() string {
 	return tx.ChainID

@@ -8,8 +8,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/ethgo"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -54,10 +54,9 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 	}
 
 	var (
-		bridgingRequests  []*common.NewBridgingRequestStateModel
-		relevantTxs       []*core.EthTx
-		processedTxs      []*core.ProcessedEthTx
-		invalidTxsCounter int
+		bridgingRequests []*common.NewBridgingRequestStateModel
+		relevantTxs      []*core.EthTx
+		processedTxs     []*core.ProcessedEthTx
 	)
 
 	if log == nil || log.Data == nil || log.Topics == nil {
@@ -80,13 +79,9 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 		r.logger.Error("Failed to get tx processor for new tx", "tx", tx, "err", err)
 
 		processedTxs = append(processedTxs, tx.ToProcessedEthTx(false))
-		invalidTxsCounter++
 	} else {
 		txProcessorType := txProcessor.GetType()
-		if txProcessorType == common.BridgingTxTypeBatchExecution ||
-			txProcessorType == common.TxTypeHotWalletFund {
-			tx.Priority = 0
-		}
+		tx.Priority = utils.GetTxPriority(txProcessorType)
 
 		relevantTxs = append(relevantTxs, tx)
 
@@ -119,10 +114,8 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 
 			return err
 		}
-	}
 
-	if invalidTxsCounter > 0 {
-		telemetry.UpdateOracleClaimsInvalidMetaDataCounter(originChainID, invalidTxsCounter) // update telemetry
+		utils.UpdateTxReceivedTelemetry(originChainID, processedTxs, len(relevantTxs))
 	}
 
 	return nil

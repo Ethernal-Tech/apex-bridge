@@ -265,8 +265,12 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one %s", apiKeysFlag)
 	}
 
-	if p.telemetry != "" && !common.IsValidNetworkAddress(p.telemetry) {
-		return fmt.Errorf("invalid telemetry: %s", p.telemetry)
+	if p.telemetry != "" {
+		parts := strings.Split(p.telemetry, ",")
+		if len(parts) < 1 || len(parts) > 2 || !common.IsValidNetworkAddress(strings.TrimSpace(parts[0])) ||
+			(len(parts) == 2 && !common.IsValidNetworkAddress(strings.TrimSpace(parts[1]))) {
+			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
+		}
 	}
 
 	if p.primeStartingBlock != "" {
@@ -586,13 +590,17 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 }
 
 func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
-	telemetryConfig := telemetry.TelemetryConfig{}
+	telemetryConfig := telemetry.TelemetryConfig{
+		PullTime: time.Second * 10,
+	}
 
 	if p.telemetry != "" {
 		parts := strings.Split(p.telemetry, ",")
 
-		telemetryConfig.PrometheusAddr = parts[0]
-		telemetryConfig.DataDogAddr = parts[1]
+		telemetryConfig.PrometheusAddr = strings.TrimSpace(parts[0])
+		if len(parts) == 2 {
+			telemetryConfig.DataDogAddr = strings.TrimSpace(parts[1])
+		}
 	}
 
 	primeStartingSlot, primeStartingHash, err := parseStartingBlock(p.primeStartingBlock)

@@ -144,6 +144,11 @@ func (tx ProcessedEthTx) UnprocessedDBKey() []byte {
 	return toUnprocessedEthTxKey(tx.Priority, tx.BlockNumber, tx.Hash)
 }
 
+// GetIsInvalid implements core.BaseProcessedTx.
+func (tx ProcessedEthTx) GetIsInvalid() bool {
+	return tx.IsInvalid
+}
+
 // ChainID implements core.BaseExpectedTx.
 func (tx BridgeExpectedEthTx) GetChainID() string {
 	return tx.ChainID
