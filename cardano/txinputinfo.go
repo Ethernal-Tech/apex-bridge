@@ -11,7 +11,7 @@ type TxInputInfos struct {
 
 type TxOutputs struct {
 	Outputs []cardanowallet.TxOutput
-	Sum     uint64
+	Sum     map[string]uint64
 }
 
 type TxInputInfo struct {

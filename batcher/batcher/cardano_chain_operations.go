@@ -280,7 +280,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum,
+		txOutputs.Sum[cardanowallet.AdaTokenName],
 		cco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
@@ -413,7 +413,7 @@ func getOutputs(
 
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
-		Sum:     0,
+		Sum:     map[string]uint64{},
 	}
 
 	for addr, amount := range receiversMap {
@@ -432,7 +432,7 @@ func getOutputs(
 			Addr:   addr,
 			Amount: amount,
 		})
-		result.Sum += amount
+		result.Sum[cardanowallet.AdaTokenName] += amount
 	}
 
 	// sort outputs because all batchers should have same order of outputs

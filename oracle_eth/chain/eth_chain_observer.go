@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -108,7 +109,7 @@ type confirmedEventHandler struct {
 	Logger      hclog.Logger
 }
 
-func (handler confirmedEventHandler) AddLog(log *ethgo.Log) error {
+func (handler confirmedEventHandler) AddLog(_ *big.Int, log *ethgo.Log) error {
 	handler.Logger.Info("Confirmed Event Handler invoked",
 		"block hash", log.BlockHash, "block number", log.BlockNumber, "tx hash", log.TransactionHash)
 

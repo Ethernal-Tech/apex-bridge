@@ -421,7 +421,7 @@ func Test_getOutputs(t *testing.T) {
 
 	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
 
-	assert.Equal(t, uint64(6830), res.Sum)
+	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
@@ -462,7 +462,9 @@ func Test_getUTXOs(t *testing.T) {
 		Outputs: []cardanowallet.TxOutput{
 			{}, {}, {},
 		},
-		Sum: 2_000_000,
+		Sum: map[string]uint64{
+			cardanowallet.AdaTokenName: 2_000_000,
+		},
 	}
 
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
