@@ -53,8 +53,9 @@ type ValidatorComponentsImpl struct {
 	relayerImitator   core.RelayerImitator
 	api               core.API
 	telemetry         *telemetry.Telemetry
-	logger            hclog.Logger
+	telemetryWorker   *TelemetryWorker
 	errorCh           chan error
+	logger            hclog.Logger
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -65,11 +66,6 @@ func NewValidatorComponents(
 	shouldRunAPI bool,
 	logger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
-	telemetry, err := telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create telemetry. err: %w", err)
-	}
-
 	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
@@ -182,8 +178,7 @@ func NewValidatorComponents(
 	}
 
 	relayerImitator, err := NewRelayerImitator(
-		ctx, appConfig, bridgingRequestStateManager, bridgeSmartContract, db,
-		logger.Named("relayer_imitator"))
+		appConfig, bridgingRequestStateManager, bridgeSmartContract, db, logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}
@@ -219,20 +214,17 @@ func NewValidatorComponents(
 		batcherManager:    batcherManager,
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
-		telemetry:         telemetry,
-		logger:            logger,
+		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
+		telemetryWorker: NewTelemetryWorker(ethHelper, cardanoIndexerDbs, ethIndexerDbs,
+			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
+		logger: logger,
 	}, nil
 }
 
 func (v *ValidatorComponentsImpl) Start() error {
 	v.logger.Debug("Starting ValidatorComponents")
 
-	err := v.telemetry.Start()
-	if err != nil {
-		return err
-	}
-
-	err = v.oracle.Start()
+	err := v.oracle.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start oracle_cardano. error: %w", err)
 	}
@@ -250,7 +242,15 @@ func (v *ValidatorComponentsImpl) Start() error {
 		go v.api.Start()
 	}
 
-	go v.relayerImitator.Start()
+	go v.relayerImitator.Start(v.ctx)
+
+	if v.telemetry.IsEnabled() {
+		if err := v.telemetry.Start(); err != nil {
+			return fmt.Errorf("failed to start telemetry. error: %w", err)
+		}
+
+		go v.telemetryWorker.Start(v.ctx)
+	}
 
 	v.errorCh = make(chan error, 1)
 
@@ -304,7 +304,7 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 		errs = append(errs, fmt.Errorf("failed to close validatorcomponents db. err: %w", err))
 	}
 
-	if err := v.telemetry.Close(context.Background()); err != nil {
+	if err := v.telemetry.Close(v.ctx); err != nil {
 		v.logger.Error("Failed to close telemetry", "err", err)
 		errs = append(errs, fmt.Errorf("failed to close telemetry. err: %w", err))
 	}

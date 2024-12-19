@@ -20,7 +20,12 @@ type BaseTx interface {
 	GetPriority() uint8
 }
 
+type IIsInvalid interface {
+	GetIsInvalid() bool
+}
+
 type BaseProcessedTx interface {
+	IIsInvalid
 	GetChainID() string
 	GetTxHash() []byte
 	HasInnerActionTxHash() bool

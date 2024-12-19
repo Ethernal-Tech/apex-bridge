@@ -14,7 +14,6 @@ import (
 )
 
 type RelayerImitatorImpl struct {
-	ctx                         context.Context
 	config                      *core.AppConfig
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	bridgeSmartContract         eth.IBridgeSmartContract
@@ -25,7 +24,6 @@ type RelayerImitatorImpl struct {
 var _ core.RelayerImitator = (*RelayerImitatorImpl)(nil)
 
 func NewRelayerImitator(
-	ctx context.Context,
 	config *core.AppConfig,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgeSmartContract eth.IBridgeSmartContract,
@@ -33,7 +31,6 @@ func NewRelayerImitator(
 	logger hclog.Logger,
 ) (*RelayerImitatorImpl, error) {
 	return &RelayerImitatorImpl{
-		ctx:                         ctx,
 		config:                      config,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		bridgeSmartContract:         bridgeSmartContract,
@@ -43,26 +40,26 @@ func NewRelayerImitator(
 }
 
 // Start implements core.RelayerImitator.
-func (ri *RelayerImitatorImpl) Start() {
+func (ri *RelayerImitatorImpl) Start(ctx context.Context) {
 	ri.logger.Debug("Relayer imitator started")
 
 	waitTime := time.Millisecond * time.Duration(ri.config.RelayerImitatorPullTimeMilis)
 
 	for {
 		select {
-		case <-ri.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-time.After(waitTime):
 		}
 
 		for chainID := range ri.config.CardanoChains {
-			if err := ri.execute(ri.ctx, chainID); err != nil {
+			if err := ri.execute(ctx, chainID); err != nil {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
 
 		for chainID := range ri.config.EthChains {
-			if err := ri.execute(ri.ctx, chainID); err != nil {
+			if err := ri.execute(ctx, chainID); err != nil {
 				ri.logger.Error("execute failed", "err", err)
 			}
 		}
