@@ -21,32 +21,35 @@ import (
 const (
 	defaultGasLimit = 5_242_880
 
-	validatorDataDirFlag   = "validator-data-dir"
-	validatorConfigFlag    = "validator-config"
-	bridgeURLFlag          = "bridge-url"
-	bridgeSCAddrFlag       = "bridge-addr"
-	chainIDFlag            = "chain"
-	chainTypeFlag          = "type"
-	initialTokenSupplyFlag = "token-supply"
+	validatorDataDirFlag          = "validator-data-dir"
+	validatorConfigFlag           = "validator-config"
+	bridgeURLFlag                 = "bridge-url"
+	bridgeSCAddrFlag              = "bridge-addr"
+	chainIDFlag                   = "chain"
+	chainTypeFlag                 = "type"
+	initialTokenSupplyFlag        = "token-supply"
+	initialWrappedTokenSupplyFlag = "wrapped-token-supply"
 
-	validatorDataDirFlagDesc   = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
-	validatorConfigFlagDesc    = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
-	chainIDFlagDesc            = "chain ID (prime, vector, etc)"
-	chainTypeFlagDesc          = "chain type (0 is Cardano, 1 is EVM, etc)"
-	socketPathFlagDesc         = "socket path for cardano node"
-	bridgeURLFlagDesc          = "bridge node url"
-	bridgeSCAddrFlagDesc       = "bridge smart contract address"
-	initialTokenSupplyFlagDesc = "initial token supply for the chain"
+	validatorDataDirFlagDesc          = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
+	validatorConfigFlagDesc           = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
+	chainIDFlagDesc                   = "chain ID (prime, vector, etc)"
+	chainTypeFlagDesc                 = "chain type (0 is Cardano, 1 is EVM, etc)"
+	socketPathFlagDesc                = "socket path for cardano node"
+	bridgeURLFlagDesc                 = "bridge node url"
+	bridgeSCAddrFlagDesc              = "bridge smart contract address"
+	initialTokenSupplyFlagDesc        = "initial token supply for the chain"
+	initialWrappedTokenSupplyFlagDesc = "initial wrapped token supply for the chain"
 )
 
 type registerChainParams struct {
-	validatorDataDir   string
-	validatorConfig    string
-	bridgeURL          string
-	bridgeSCAddr       string
-	chainID            string
-	chainType          uint8
-	initialTokenSupply string
+	validatorDataDir          string
+	validatorConfig           string
+	bridgeURL                 string
+	bridgeSCAddr              string
+	chainID                   string
+	chainType                 uint8
+	initialTokenSupply        string
+	initialWrappedTokenSupply string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
 }
@@ -88,6 +91,10 @@ func (ip *registerChainParams) validateFlags() error {
 		return errors.New("invalid initial token supply")
 	}
 
+	if _, ok := new(big.Int).SetString(ip.initialWrappedTokenSupply, 0); !ok {
+		return errors.New("invalid initial wrapped token supply")
+	}
+
 	ip.ethTxHelper = ethTxHelper
 
 	return nil
@@ -113,6 +120,13 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		initialTokenSupplyFlag,
 		"",
 		initialTokenSupplyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.initialWrappedTokenSupply,
+		initialWrappedTokenSupplyFlag,
+		"",
+		initialWrappedTokenSupplyFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -189,6 +203,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	}
 
 	initialTokenSupply, _ := new(big.Int).SetString(ip.initialTokenSupply, 0)
+	initialWrappedTokenSupply, _ := new(big.Int).SetString(ip.initialWrappedTokenSupply, 0)
 
 	// create and send register chain tx
 	transaction, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
@@ -210,6 +225,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					common.ToNumChainID(ip.chainID),
 					ip.chainType,
 					initialTokenSupply,
+					initialWrappedTokenSupply,
 					validatorChainData)
 			})
 	})
