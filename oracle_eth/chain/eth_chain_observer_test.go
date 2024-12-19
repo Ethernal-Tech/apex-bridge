@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"errors"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,6 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const ethNodeURL = "https://lb.drpc.org/ogrpc?network=ethereum&dkey=Asw61vWBgEgGiV0n4Kq-zfq1GZCgZgMR75uYyp-Zw4Id"
+
 func TestEthChainObserver(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "boltdb-test")
 	require.NoError(t, err)
@@ -37,6 +40,8 @@ func TestEthChainObserver(t *testing.T) {
 
 	config := &oCore.EthChainConfig{
 		StartBlockNumber: uint64(1),
+		ChainID:          "nexus",
+		NodeURL:          ethNodeURL,
 	}
 
 	t.Run("chain observer - initOracleState error", func(t *testing.T) {
@@ -127,7 +132,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		testConfig := &oCore.EthChainConfig{
 			ChainID:                 "nexus",
-			NodeURL:                 "https://lb.drpc.org/ogrpc?network=ethereum&dkey=Asw61vWBgEgGiV0n4Kq-zfq1GZCgZgMR75uYyp-Zw4Id",
+			NodeURL:                 ethNodeURL,
 			PoolIntervalMiliseconds: 1 * time.Second,
 			SyncBatchSize:           10,
 			NumBlockConfirmations:   1,
@@ -271,13 +276,13 @@ func Test_AddLog(t *testing.T) {
 	t.Run("log processed successfully", func(t *testing.T) {
 		txsReceiverMock.On("NewUnprocessedLog", "nexus", mockLog).Return(nil).Once()
 
-		require.NoError(t, mockEventHandler.AddLog(mockLog))
+		require.NoError(t, mockEventHandler.AddLog(big.NewInt(1), mockLog))
 	})
 
 	t.Run("NewUnprocessedLog errors", func(t *testing.T) {
 		txsReceiverMock.On("NewUnprocessedLog", "nexus", mockLog).Return(errors.New("test error")).Once()
 
-		require.Error(t, mockEventHandler.AddLog(mockLog))
+		require.Error(t, mockEventHandler.AddLog(big.NewInt(1), mockLog))
 	})
 }
 

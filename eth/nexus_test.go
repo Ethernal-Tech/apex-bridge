@@ -36,7 +36,7 @@ type es struct {
 	test string
 }
 
-func (sub es) AddLog(log *ethgo.Log) error {
+func (sub es) AddLog(_ *big.Int, log *ethgo.Log) error {
 	fmt.Println("AddLog new event")
 	fmt.Printf("%+v\n", log)
 
