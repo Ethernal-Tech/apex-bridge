@@ -42,32 +42,36 @@ type BridgingRequestMetadata struct {
 }
 */
 
-type BridgingRequestMetadataAmount struct {
-	SourceCurrencyAmount      uint64 `cbor:"sca" json:"sca"`
-	DestinationCurrencyAmount uint64 `cbor:"dca" json:"dca"`
+type BridgingRequestMetadataCurrencyInfo struct {
+	SrcAmount  uint64 `cbor:"sa" json:"sa"`
+	DestAmount uint64 `cbor:"da" json:"da"`
 }
 
-// IsNativeToken - is the user trying to bridge native tokens (WAda, WApex), or native currency (Ada, APEX)
+// IsNativeTokenOnSrc - is the user trying to bridge native tokens (WAda, WApex), or native currency (Ada, APEX)
 // Additional will be counted towards the bridging fee shown to the user, but it will actually be assigned to
-// the user on destination chain, because we can not create a UTXO with only native tokens
+// the user on destination chain, because of the technical limitation for creating utxos on source and destination
 // Additional will be nil for reactor
-// Additional.DestinationCurrencyAmount is minUtxoAmount on destination chain
-// Additional.SourceCurrencyAmount is Additional.DestinationCurrencyAmount * exchangeRate
+// If source is native currency then:
+// Additional.DestAmount is minUtxoAmount on destination chain
+// Additional.SrcAmount is Additional.DestAmount * exchangeRate
+// If source is native token then:
+// Additional.SrcAmount is up to minUtxoAmount on source chain
+// Additional.DestAmount is Additional.SrcAmount * exchangeRate
 type BridgingRequestMetadataTransaction struct {
-	Address       []string                       `cbor:"a" json:"a"`
-	IsNativeToken bool                           `cbor:"nt" json:"nt"`
-	Amount        uint64                         `cbor:"m" json:"m"`
-	Additional    *BridgingRequestMetadataAmount `cbor:"ad" json:"ad"`
+	Address            []string                             `cbor:"a" json:"a"`
+	IsNativeTokenOnSrc bool                                 `cbor:"nt" json:"nt"`
+	Amount             uint64                               `cbor:"m" json:"m"`
+	Additional         *BridgingRequestMetadataCurrencyInfo `cbor:"ad" json:"ad"`
 }
 
-// FeeAmount.DestinationCurrencyAmount is minBridgingFee on destination chain
-// FeeAmount.SourceCurrencyAmount is FeeAmount.DestinationCurrencyAmount * exchangeRate
+// FeeAmount.DestAmount is minBridgingFee on destination chain
+// FeeAmount.SrcAmount is FeeAmount.DestAmount * exchangeRate
 type BridgingRequestMetadata struct {
 	BridgingTxType     BridgingTxType                       `cbor:"t" json:"t"`
 	DestinationChainID string                               `cbor:"d" json:"d"`
 	SenderAddr         []string                             `cbor:"s" json:"s"`
 	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
-	FeeAmount          BridgingRequestMetadataAmount        `cbor:"fa" json:"fa"`
+	FeeAmount          BridgingRequestMetadataCurrencyInfo  `cbor:"fa" json:"fa"`
 }
 
 type BatchExecutedMetadata struct {

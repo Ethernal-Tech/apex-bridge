@@ -99,6 +99,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:                       receivers,
+		NativeCurrencyAmountSource:      totalAmount,
 		NativeCurrencyAmountDestination: totalAmount,
 		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}

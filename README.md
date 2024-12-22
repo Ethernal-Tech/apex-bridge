@@ -72,6 +72,7 @@ $ go run ./main.go register-chain \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
         --token-supply 20000000 \
+        --wrapped-token-supply 0 \
         --bridge-url https://polygon-mumbai.blockpi.network/v1/rpc/public \
         --bridge-addr 0x8F371EeFe210ad18a2Ce45d51B48E56aBa1a58A9        
 ```

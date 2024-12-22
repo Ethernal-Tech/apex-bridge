@@ -248,16 +248,16 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
-					Address:       []string{validTestAddress},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{validTestAddress},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					}},
 			},
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				DestinationCurrencyAmount: minFeeForBridging - 1},
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				DestAmount: minFeeForBridging - 1},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
@@ -284,22 +284,22 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
-					Address:       []string{validTestAddress},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{validTestAddress},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					},
 				},
 				{
-					Address:       common.SplitString(vectorBridgingFeeAddr, 40),
-					Amount:        minFeeForBridging,
-					IsNativeToken: false,
+					Address:            common.SplitString(vectorBridgingFeeAddr, 40),
+					Amount:             minFeeForBridging,
+					IsNativeTokenOnSrc: false,
 				},
 			},
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				DestinationCurrencyAmount: 100},
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				DestAmount: 100},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -385,21 +385,21 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
-					Address:       []string{vectorBridgingFeeAddr},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{vectorBridgingFeeAddr},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					},
 				},
 				{
-					Address:       []string{"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					},
 				},
 			},
@@ -429,17 +429,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
-					Address:       []string{vectorBridgingFeeAddr},
-					Amount:        minFeeForBridging,
-					IsNativeToken: false,
+					Address:            []string{vectorBridgingFeeAddr},
+					Amount:             minFeeForBridging,
+					IsNativeTokenOnSrc: false,
 				},
 				{
-					Address:       []string{validTestAddress},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{validTestAddress},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					},
 				},
 			},
@@ -469,17 +469,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
-					Address:       []string{vectorBridgingFeeAddr},
-					Amount:        minFeeForBridging,
-					IsNativeToken: false,
+					Address:            []string{vectorBridgingFeeAddr},
+					Amount:             minFeeForBridging,
+					IsNativeTokenOnSrc: false,
 				},
 				{
-					Address:       []string{validTestAddress},
-					Amount:        utxoMinValue,
-					IsNativeToken: false,
-					Additional: &common.BridgingRequestMetadataAmount{
-						SourceCurrencyAmount:      2_000_000,
-						DestinationCurrencyAmount: 1_000_000,
+					Address:            []string{validTestAddress},
+					Amount:             utxoMinValue,
+					IsNativeTokenOnSrc: false,
+					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+						SrcAmount:  2_000_000,
+						DestAmount: 1_000_000,
 					},
 				},
 			},
@@ -539,12 +539,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging,
 			},
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        maxAmountAllowedToBridge.Uint64(),
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      1_000_000,
-					DestinationCurrencyAmount: 500_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             maxAmountAllowedToBridge.Uint64(),
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  1_000_000,
+					DestAmount: 500_000,
 				},
 			},
 		}
@@ -585,12 +585,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging,
 			},
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      1_000_000,
-					DestinationCurrencyAmount: 500_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  1_000_000,
+					DestAmount: 500_000,
 				},
 			},
 		}
@@ -641,12 +641,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging,
 			},
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      1_000_000,
-					DestinationCurrencyAmount: 500_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  1_000_000,
+					DestAmount: 500_000,
 				},
 			},
 		}
@@ -697,12 +697,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging,
 			},
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      1_000_000,
-					DestinationCurrencyAmount: 500_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  1_000_000,
+					DestAmount: 500_000,
 				},
 			},
 		}
@@ -749,12 +749,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      2_000_000,
-					DestinationCurrencyAmount: 1_000_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  2_000_000,
+					DestAmount: 1_000_000,
 				},
 			},
 		}
@@ -764,9 +764,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				SourceCurrencyAmount:      2_000_020,
-				DestinationCurrencyAmount: 1_000_010,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				SrcAmount:  2_000_020,
+				DestAmount: 1_000_010,
 			},
 		})
 		require.NoError(t, err)
@@ -806,12 +806,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
-				Address:       []string{validTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      2_000_000,
-					DestinationCurrencyAmount: 1_000_000,
+				Address:            []string{validTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  2_000_000,
+					DestAmount: 1_000_000,
 				},
 			},
 		}
@@ -821,9 +821,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				SourceCurrencyAmount:      250_000,
-				DestinationCurrencyAmount: 500_000,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				SrcAmount:  250_000,
+				DestAmount: 500_000,
 			},
 		})
 		require.NoError(t, err)
@@ -852,12 +852,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
-				Address:       []string{validPrimeTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      500_000,
-					DestinationCurrencyAmount: 1_000_000,
+				Address:            []string{validPrimeTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  500_000,
+					DestAmount: 1_000_000,
 				},
 			},
 		}
@@ -867,9 +867,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				SourceCurrencyAmount:      500_000,
-				DestinationCurrencyAmount: 250_000,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				SrcAmount:  500_000,
+				DestAmount: 250_000,
 			},
 		})
 		require.NoError(t, err)
@@ -898,12 +898,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
-				Address:       []string{validPrimeTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      500_000,
-					DestinationCurrencyAmount: 1_000_000,
+				Address:            []string{validPrimeTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  500_000,
+					DestAmount: 1_000_000,
 				},
 			},
 		}
@@ -913,9 +913,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				SourceCurrencyAmount:      500_005,
-				DestinationCurrencyAmount: 1_000_010,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				SrcAmount:  500_005,
+				DestAmount: 1_000_010,
 			},
 		})
 		require.NoError(t, err)
@@ -955,12 +955,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
-				Address:       []string{validPrimeTestAddress},
-				IsNativeToken: true,
-				Amount:        utxoMinValue,
-				Additional: &common.BridgingRequestMetadataAmount{
-					SourceCurrencyAmount:      1_000_000,
-					DestinationCurrencyAmount: 500_005,
+				Address:            []string{validPrimeTestAddress},
+				IsNativeTokenOnSrc: true,
+				Amount:             utxoMinValue,
+				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					SrcAmount:  1_000_000,
+					DestAmount: 500_005,
 				},
 			},
 		}
@@ -970,9 +970,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataAmount{
-				SourceCurrencyAmount:      500_000,
-				DestinationCurrencyAmount: 1_000_010,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				SrcAmount:  500_000,
+				DestAmount: 1_000_010,
 			},
 		})
 		require.NoError(t, err)

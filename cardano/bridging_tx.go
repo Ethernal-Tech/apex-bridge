@@ -212,8 +212,8 @@ func (bts *BridgingTxSender) createMetadata(
 		DestinationChainID: chain,
 		SenderAddr:         common.SplitString(senderAddr, splitStringLength),
 		Transactions:       make([]common.BridgingRequestMetadataTransaction, 0, len(receivers)+1),
-		FeeAmount: common.BridgingRequestMetadataAmount{
-			DestinationCurrencyAmount: feeAmount,
+		FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			DestAmount: feeAmount,
 		},
 	}
 
