@@ -93,6 +93,11 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		)
 
 		if receiver.IsNativeTokenOnSrc {
+			// receiverAmount represents the amount of native currency that is bridged to the receiver.
+			// receiver.Amount of native tokens on the source will be converted to the same amount of native currency on
+			// the destination.
+			// Additionally, receiver.Additional.SrcAmount (native currency) will be transferred to the destination
+			// as receiver.Additional.DestAmount (native currency).
 			receiverAmount = receiver.Amount + receiver.Additional.DestAmount
 			receiverAmountWrapped = uint64(0)
 
@@ -265,9 +270,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			totalNativeCurrencyAmountToBridge = receiver.Amount + receiver.Additional.SrcAmount
 		}
 
-		exchangeDiff := float64(receiver.Additional.DestAmount)*exchangeRate - float64(receiver.Additional.SrcAmount)
-		if (exchangeDiff > 0 && exchangeDiff > exchangeMargin) ||
-			(exchangeDiff < 0 && exchangeDiff < -1*exchangeMargin) {
+		if !common.IsEqual(float64(receiver.Additional.DestAmount)*exchangeRate,
+			float64(receiver.Additional.SrcAmount), exchangeMargin) {
 			return fmt.Errorf("found an exchange rate error in metadata: %v", metadata)
 		}
 
@@ -283,19 +287,22 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	feeExchangeDiff := float64(metadata.FeeAmount.DestAmount)*exchangeRate - float64(metadata.FeeAmount.SrcAmount)
-	if (feeExchangeDiff > 0 && feeExchangeDiff > exchangeMargin) ||
-		(feeExchangeDiff < 0 && feeExchangeDiff < -exchangeMargin) {
+	if !common.IsEqual(float64(metadata.FeeAmount.DestAmount)*exchangeRate,
+		float64(metadata.FeeAmount.SrcAmount), exchangeMargin) {
 		return fmt.Errorf("found an exchage rate error if fee metadata: %v", metadata)
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	feeAmount := metadata.FeeAmount.SrcAmount + feeSum
-	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(feeAmount))
+	if feeSum > 0 {
+		metadata.FeeAmount.SrcAmount += feeSum
+		metadata.FeeAmount.DestAmount = uint64(float64(metadata.FeeAmount.SrcAmount) / exchangeRate)
+	}
 
-	if feeAmount < cardanoSrcConfig.MinFeeForBridging {
+	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(metadata.FeeAmount.SrcAmount))
+
+	if metadata.FeeAmount.DestAmount < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
-			feeAmount, cardanoSrcConfig.MinFeeForBridging, metadata)
+			metadata.FeeAmount.DestAmount, cardanoSrcConfig.MinFeeForBridging, metadata)
 	}
 
 	if nativeCurrencyAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
@@ -333,9 +340,7 @@ func GetNativeTokenAmount(config *cCore.CardanoChainConfig, utxo *indexer.TxOutp
 
 	var tokenName string
 
-	tokenNames := config.Destinations
-
-	for _, token := range tokenNames {
+	for _, token := range config.Destinations {
 		if token.Chain == chainID {
 			tokenName = token.SrcTokenName
 
@@ -344,9 +349,7 @@ func GetNativeTokenAmount(config *cCore.CardanoChainConfig, utxo *indexer.TxOutp
 	}
 
 	for _, token := range utxo.Tokens {
-		fullTokenName := fmt.Sprintf("%s.%s", token.PolicyID, token.Name)
-
-		if fullTokenName == tokenName {
+		if token.TokenName() == tokenName {
 			amount += token.Amount
 		}
 	}

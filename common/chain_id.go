@@ -50,3 +50,13 @@ func IsExistingChainID(chainIDStr string) bool {
 func IsEVMChainID(chainIDStr string) bool {
 	return chainIDStr == ChainIDStrNexus
 }
+
+func IsEqual(a, b, errorMargin float64) bool {
+	diff := a - b
+
+	if diff > errorMargin || diff < -1*errorMargin {
+		return false
+	}
+
+	return true
+}

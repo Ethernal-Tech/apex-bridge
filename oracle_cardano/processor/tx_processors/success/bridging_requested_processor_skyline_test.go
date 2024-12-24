@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
@@ -43,8 +44,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
 							Chain:        common.ChainIDStrVector,
-							SrcTokenName: fmt.Sprintf("%s.%s", "123", wrappedTokenPrime),
-							DstTokenName: fmt.Sprintf("%s.%s", "123", wrappedTokenVector),
+							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
+							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
 						},
 					},
 				},
@@ -60,8 +61,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
 							Chain:        common.ChainIDStrPrime,
-							SrcTokenName: fmt.Sprintf("%s.%s", "123", wrappedTokenVector),
-							DstTokenName: fmt.Sprintf("%s.%s", "123", wrappedTokenPrime),
+							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
+							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
 						},
 					},
 				},
@@ -314,7 +315,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 				{
 					Address:            common.SplitString(vectorBridgingFeeAddr, 40),
-					Amount:             minFeeForBridging,
+					Amount:             minFeeForBridging * 2,
 					IsNativeTokenOnSrc: false,
 				},
 			},
@@ -329,7 +330,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  utxoMinValue + 2_000_000 + minFeeForBridging + 200,
+				Amount:  utxoMinValue + 2_000_000 + minFeeForBridging*2 + 200,
 			},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
@@ -455,7 +456,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
-					Amount:             minFeeForBridging,
+					Amount:             minFeeForBridging * 2,
 					IsNativeTokenOnSrc: false,
 				},
 				{
@@ -495,7 +496,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
-					Amount:             minFeeForBridging,
+					Amount:             minFeeForBridging * 2,
 					IsNativeTokenOnSrc: false,
 				},
 				{
@@ -565,7 +566,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
 				Address:            common.SplitString(vectorBridgingFeeAddr, 40),
-				Amount:             minFeeForBridging,
+				Amount:             minFeeForBridging * 2,
 				IsNativeTokenOnSrc: false,
 			},
 			{
@@ -592,7 +593,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minFeeForBridging + maxAmountAllowedToBridge.Uint64() + 2_000_000,
+				Amount:  minFeeForBridging*2 + maxAmountAllowedToBridge.Uint64() + 2_000_000,
 			},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
@@ -614,7 +615,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
 				Address:            common.SplitString(vectorBridgingFeeAddr, 40),
-				Amount:             minFeeForBridging,
+				Amount:             minFeeForBridging * 2,
 				IsNativeTokenOnSrc: false,
 			},
 			{
@@ -641,7 +642,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minFeeForBridging + utxoMinValue,
+				Amount:  minFeeForBridging*2 + utxoMinValue,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "123",
@@ -681,7 +682,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
 				Address: common.SplitString(vectorBridgingFeeAddr, 40),
-				Amount:  minFeeForBridging,
+				Amount:  minFeeForBridging * 2,
 			},
 			{
 				Address:            []string{validTestAddress},
@@ -707,7 +708,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minFeeForBridging + utxoMinValue,
+				Amount:  minFeeForBridging*2 + utxoMinValue,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "123",
@@ -747,7 +748,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []common.BridgingRequestMetadataTransaction{
 			{
 				Address: common.SplitString(vectorBridgingFeeAddr, 40),
-				Amount:  minFeeForBridging,
+				Amount:  minFeeForBridging * 2,
 			},
 			{
 				Address:            []string{validTestAddress},
@@ -773,7 +774,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minFeeForBridging + utxoMinValue,
+				Amount:  minFeeForBridging*2 + utxoMinValue,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "123",
