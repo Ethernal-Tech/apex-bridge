@@ -54,9 +54,5 @@ func IsEVMChainID(chainIDStr string) bool {
 func IsEqual(a, b, errorMargin float64) bool {
 	diff := a - b
 
-	if diff > errorMargin || diff < -1*errorMargin {
-		return false
-	}
-
-	return true
+	return diff >= -1*errorMargin && diff <= errorMargin
 }
