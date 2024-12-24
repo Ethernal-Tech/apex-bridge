@@ -3,19 +3,26 @@ package batcher
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,6 +102,346 @@ func TestSkylineCardanoChainOperations_IsSynchronized(t *testing.T) {
 	val, err = scco.IsSynchronized(ctx, bridgeSmartContractMock, chainID)
 	require.NoError(t, err)
 	require.True(t, val)
+}
+
+func TestGenerateSkylineBatchTransaction(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	minUtxoAmount := new(big.Int).SetUint64(1_000)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	wallet, err := cardanotx.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardanotx.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	scco, err := NewSkylineCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	scco.txProvider = txProviderMock
+	scco.config.SlotRoundingThreshold = 100
+
+	testError := errors.New("test err")
+	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
+	confirmedTransactions[0] = eth.ConfirmedTransaction{
+		Nonce:       1,
+		BlockHeight: big.NewInt(1),
+		Receivers: []eth.BridgeReceiver{{
+			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+			Amount:             minUtxoAmount,
+		}},
+	}
+	batchNonceID := uint64(1)
+	destinationChain := common.ChainIDStrVector
+
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
+
+	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("no vkey for multisig address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput(nil), testError).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+
+		_, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+	})
+
+	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0xFF"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 20000,
+					},
+				},
+			}, error(nil)).Once()
+
+		result, err := scco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	t.Run("Test SignBatchTransaction", func(t *testing.T) {
+		witnessMultiSig, witnessMultiSigFee, err := scco.SignBatchTransaction(
+			"26a9d1a894c7e3719a79342d0fc788989e5d55f076581327c54bcc0c7693905a")
+		require.NoError(t, err)
+		require.NotNil(t, witnessMultiSig)
+		require.NotNil(t, witnessMultiSigFee)
+	})
+}
+
+func Test_getNeededSkylineUtxos(t *testing.T) {
+	primeCardanoWrappedTokenName := "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533"
+	polID, tName, _ := splitTokenAmount(primeCardanoWrappedTokenName, true)
+
+	var minUtxoAmount uint64 = 5
+
+	inputs := []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 100},
+			Output: indexer.TxOutput{
+				Amount: 20,
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 0},
+			Output: indexer.TxOutput{
+				Amount: minUtxoAmount,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   20,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x2"), Index: 7},
+			Output: indexer.TxOutput{
+				Amount: 15,
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 5},
+			Output: indexer.TxOutput{
+				Amount: minUtxoAmount,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   40,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 6},
+			Output: indexer.TxOutput{
+				Amount: 10,
+			},
+		},
+	}
+
+	t.Run("pass", func(t *testing.T) {
+		desiredAmounts := map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 35,
+		}
+
+		result, err := getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
+
+		desiredAmounts = map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", tName):                      45,
+		}
+
+		result, err = getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:len(inputs)-1], result)
+	})
+
+	t.Run("pass with change", func(t *testing.T) {
+		minUtxoAmount = 4
+		desiredAmounts := map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", tName):                      40,
+		}
+		result, err := getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:len(inputs)-1], result)
+	})
+
+	t.Run("pass with at least", func(t *testing.T) {
+		minUtxoAmount = 4
+		desiredAmounts := map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", tName):                      20,
+		}
+		result, err := getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 3)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:3], result)
+
+		desiredAmounts = map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 12,
+		}
+		result, err = getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 3)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:3], result)
+	})
+
+	t.Run("not enough sum", func(t *testing.T) {
+		minUtxoAmount = 5
+		desiredAmounts := map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 160,
+		}
+		_, err := getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+
+		desiredAmounts = map[string]uint64{
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", tName):                      250,
+		}
+		_, err = getNeededSkylineUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+	})
 }
 
 func Test_getSkylineOutputs(t *testing.T) {
