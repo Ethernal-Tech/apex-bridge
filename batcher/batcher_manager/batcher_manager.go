@@ -45,17 +45,19 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			if config.RunMode == common.ReactorMode {
+			switch config.RunMode {
+			case common.ReactorMode:
 				operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
 				if err != nil {
 					return nil, err
 				}
-			} else if config.RunMode == common.SkylineMode {
+
+			case common.SkylineMode:
 				operations, err = getSkylineCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
 				if err != nil {
 					return nil, err
 				}
-			} else {
+			default:
 				return nil, fmt.Errorf("unknown run mode: %s", config.RunMode)
 			}
 		case common.ChainTypeEVMStr:

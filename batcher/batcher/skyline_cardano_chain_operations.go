@@ -104,7 +104,8 @@ func (scco *SkylineCardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	// this has to change
-	txOutputs, err := getSkylineOutputs(confirmedTransactions, scco.config.Destinations, chainID, scco.config.NetworkID, scco.logger)
+	txOutputs, err := getSkylineOutputs(confirmedTransactions,
+		scco.config.Destinations, chainID, scco.config.NetworkID, scco.logger)
 	if err != nil {
 		return nil, errors.New("no valid tx outputs")
 	}
@@ -250,7 +251,6 @@ func (scco *SkylineCardanoChainOperations) getCardanoData(
 	return validatorsData, nil
 }
 
-// this has to chabge
 func (scco *SkylineCardanoChainOperations) getUTXOs(
 	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
@@ -264,7 +264,7 @@ func (scco *SkylineCardanoChainOperations) getUTXOs(
 		return
 	}
 
-	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
+	// multisigUtxos = filterOutTokenUtxos(multisigUtxos)
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
 
 	if len(feeUtxos) == 0 {
@@ -276,9 +276,9 @@ func (scco *SkylineCardanoChainOperations) getUTXOs(
 
 	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
-	multisigUtxos, err = getNeededUtxos(
+	multisigUtxos, err = getNeededSkylineUtxos(
 		multisigUtxos,
-		txOutputs.Sum[cardanowallet.AdaTokenName],
+		txOutputs.Sum,
 		scco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
@@ -293,21 +293,129 @@ func (scco *SkylineCardanoChainOperations) getUTXOs(
 	return
 }
 
-func getConfigTokenExchange(destChainID string, isDestNativeToken bool, dests []cardano.CardanoConfigTokenExchange) (result cardano.CardanoConfigTokenExchange) {
+// getNeededSkylineUtxos returns only needed input utxos
+// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
+// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
+// if desiredAmount has been met, tx is created regularly
+// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
+func getNeededSkylineUtxos(
+	inputUTXOs []*indexer.TxInputOutput,
+	desiredAmount map[string]uint64,
+	minUtxoAmount uint64,
+	utxoCount int,
+	maxUtxoCount int,
+	takeAtLeastUtxoCount int,
+) (chosenUTXOs []*indexer.TxInputOutput, err error) {
+	chosenUTXOsSum := map[string]uint64{}
+	isUtxosOk := false
+	txCostWithMinChange := map[string]uint64{}
+
+	for chainName, desiredValue := range desiredAmount {
+		if chainName == cardanowallet.AdaTokenName {
+			// if we have change then it must be greater than this amount
+			txCostWithMinChange[chainName] = desiredValue + minUtxoAmount
+		} else {
+			txCostWithMinChange[chainName] = desiredValue
+		}
+	}
+
+	for i, utxo := range inputUTXOs {
+		chosenUTXOs = append(chosenUTXOs, utxo)
+
+		utxoCount++
+		chosenUTXOsSum[cardanowallet.AdaTokenName] += utxo.Output.Amount // in cardano we should not care about overflow
+
+		if len(utxo.Output.Tokens) > 0 {
+			chosenUTXOsSum[utxo.Output.Tokens[0].Name] += utxo.Output.Tokens[0].Amount
+		}
+
+		var minChosenUTXO *indexer.TxInputOutput
+		var minChosenUTXOIdx int
+
+		if utxoCount > maxUtxoCount {
+			if len(utxo.Output.Tokens) == 0 {
+				minChosenUTXO, minChosenUTXOIdx = findMinUtxo(chosenUTXOs)
+			} else {
+				minChosenUTXO, minChosenUTXOIdx = findMinWrappedUtxo(chosenUTXOs)
+			}
+
+			chosenUTXOsSum[cardanowallet.AdaTokenName] -= minChosenUTXO.Output.Amount
+
+			if len(minChosenUTXO.Output.Tokens) > 0 {
+				chosenUTXOsSum[minChosenUTXO.Output.Tokens[0].Name] -= minChosenUTXO.Output.Tokens[0].Amount
+			}
+
+			chosenUTXOs[minChosenUTXOIdx] = utxo
+			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
+			utxoCount--
+		}
+
+		achievedDesiredAmountsCount := 0
+
+		for tokenName, amount := range desiredAmount {
+			if chosenUTXOsSum[tokenName] >= txCostWithMinChange[tokenName] ||
+				chosenUTXOsSum[tokenName] == amount {
+				achievedDesiredAmountsCount++
+			}
+		}
+
+		if achievedDesiredAmountsCount == len(desiredAmount) {
+			isUtxosOk = true
+
+			// try to add utxos until we reach tryAtLeastUtxoCount
+			cnt := min(
+				len(inputUTXOs)-i-1,                   // still available in inputUTXOs
+				takeAtLeastUtxoCount-len(chosenUTXOs), // needed to fill tryAtLeastUtxoCount
+				maxUtxoCount-utxoCount,                // maxUtxoCount limit must be preserved
+			)
+			if cnt > 0 {
+				chosenUTXOs = append(chosenUTXOs, inputUTXOs[i+1:i+1+cnt]...)
+			}
+
+			break
+		}
+	}
+
+	if !isUtxosOk {
+		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %v", desiredAmount)
+	}
+
+	return chosenUTXOs, nil
+}
+
+func findMinWrappedUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
+	minimal := utxos[0]
+	idx := 0
+
+	for i, utxo := range utxos[1:] {
+		if utxo.Output.Tokens[0].Amount < minimal.Output.Tokens[0].Amount {
+			minimal = utxo
+			idx = i + 1
+		}
+	}
+
+	return minimal, idx
+}
+
+func getConfigTokenExchange(destChainID string, isDestNativeToken bool,
+	dests []cardano.CardanoConfigTokenExchange) (result cardano.CardanoConfigTokenExchange) {
 	for _, x := range dests {
 		if x.Chain != destChainID {
 			continue
 		}
+
 		if isDestNativeToken && x.SrcTokenName == cardanowallet.AdaTokenName ||
 			!isDestNativeToken && x.DstTokenName == cardanowallet.AdaTokenName {
 			return x
 		}
 	}
+
 	return result
 }
 
 func getSkylineOutputs(
-	txs []eth.ConfirmedTransaction, destinations []cardano.CardanoConfigTokenExchange, destinationChainID string, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction, destinations []cardano.CardanoConfigTokenExchange,
+	destinationChainID string, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
 ) (*cardano.TxOutputs, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 
@@ -320,9 +428,11 @@ func getSkylineOutputs(
 				if len(data.Tokens) == 0 {
 					tconf := getConfigTokenExchange(destinationChainID, true, destinations)
 					token, err := cardanowallet.NewTokenAmountWithFullName(tconf.DstTokenName, 0, true)
+
 					if err != nil {
 						return nil, fmt.Errorf("failed to create new token amount")
 					}
+
 					data.Tokens = []cardanowallet.TokenAmount{token}
 				}
 
@@ -352,11 +462,11 @@ func getSkylineOutputs(
 		txOut.Addr = addr
 
 		result.Outputs = append(result.Outputs, txOut)
+
 		result.Sum[cardanowallet.AdaTokenName] += txOut.Amount
 		for _, token := range txOut.Tokens {
 			result.Sum[token.TokenName()] += token.Amount
 		}
-
 	}
 
 	// sort outputs because all batchers should have same order of outputs
