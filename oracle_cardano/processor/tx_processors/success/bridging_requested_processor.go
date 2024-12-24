@@ -102,7 +102,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
+	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount.DestAmount)
 
 	totalAmount.Add(totalAmount, feeAmount)
 
@@ -112,12 +112,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	})
 
 	claim := cCore.BridgingRequestClaim{
-		ObservedTransactionHash: tx.Hash,
-		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
-		Receivers:               receivers,
-		TotalAmount:             totalAmount,
-		RetryCounter:            big.NewInt(int64(tx.BatchFailedCount)),
+		ObservedTransactionHash:         tx.Hash,
+		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		Receivers:                       receivers,
+		NativeCurrencyAmountSource:      totalAmount,
+		NativeCurrencyAmountDestination: totalAmount,
+		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
@@ -238,11 +239,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount += feeSum
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
+	metadata.FeeAmount.DestAmount += feeSum
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount.DestAmount))
 
-	if (cardanoDestConfig != nil && metadata.FeeAmount < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && metadata.FeeAmount < ethDestConfig.MinFeeForBridging) {
+	if (cardanoDestConfig != nil && metadata.FeeAmount.DestAmount < cardanoDestConfig.MinFeeForBridging) ||
+		(ethDestConfig != nil && metadata.FeeAmount.DestAmount < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 

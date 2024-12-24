@@ -95,12 +95,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	})
 
 	claim := oCore.BridgingRequestClaim{
-		ObservedTransactionHash: tx.Hash,
-		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
-		Receivers:               receivers,
-		TotalAmount:             totalAmount,
-		RetryCounter:            big.NewInt(int64(tx.BatchFailedCount)),
+		ObservedTransactionHash:         tx.Hash,
+		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		Receivers:                       receivers,
+		NativeCurrencyAmountSource:      totalAmount,
+		NativeCurrencyAmountDestination: totalAmount,
+		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)

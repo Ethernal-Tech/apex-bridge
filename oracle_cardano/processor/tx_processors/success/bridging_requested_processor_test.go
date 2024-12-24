@@ -248,7 +248,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 			},
-			FeeAmount: minFeeForBridging - 1,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				DestAmount: minFeeForBridging - 1},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
@@ -277,7 +278,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 				{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
 			},
-			FeeAmount: 100,
+			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+				DestAmount: 100},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
