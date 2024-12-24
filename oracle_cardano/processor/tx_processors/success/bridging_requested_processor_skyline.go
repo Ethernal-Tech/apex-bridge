@@ -12,6 +12,7 @@ import (
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -341,7 +342,7 @@ func GetNativeTokenAmount(config *cCore.CardanoChainConfig, utxo *indexer.TxOutp
 	var tokenName string
 
 	for _, token := range config.Destinations {
-		if token.Chain == chainID {
+		if token.Chain == chainID && token.DstTokenName == wallet.AdaTokenName {
 			tokenName = token.SrcTokenName
 
 			break

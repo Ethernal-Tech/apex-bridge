@@ -45,6 +45,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						{
 							Chain:        common.ChainIDStrVector,
 							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
+							DstTokenName: wallet.AdaTokenName,
+						},
+						{
+							Chain:        common.ChainIDStrVector,
+							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
 						},
 					},
@@ -61,8 +66,13 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
 							Chain:        common.ChainIDStrPrime,
-							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
+							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
+						},
+						{
+							Chain:        common.ChainIDStrPrime,
+							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
+							DstTokenName: wallet.AdaTokenName,
 						},
 					},
 				},

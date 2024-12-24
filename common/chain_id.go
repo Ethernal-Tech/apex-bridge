@@ -1,5 +1,7 @@
 package common
 
+import "math"
+
 type chainIDNum = uint8
 
 const (
@@ -52,7 +54,5 @@ func IsEVMChainID(chainIDStr string) bool {
 }
 
 func IsEqual(a, b, errorMargin float64) bool {
-	diff := a - b
-
-	return diff >= -1*errorMargin && diff <= errorMargin
+	return math.Abs(a-b) <= errorMargin
 }
