@@ -306,9 +306,11 @@ func Test_getNeededUtxos(t *testing.T) {
 		"testnetMagic": 42,
 		"minUtxoAmount": 1000
 		}`))
-	dbMock := &indexer.DatabaseMock{}
 	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
 	require.NoError(t, err)
+
+	dbMock := &indexer.DatabaseMock{}
+
 	strategy := &CardanoChainOperationReactorStrategy{}
 	cco := &CardanoChainOperations{
 		db:       dbMock,
@@ -387,6 +389,7 @@ func Test_getOutputs(t *testing.T) {
 		}`))
 	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
 	require.NoError(t, err)
+
 	cco := &CardanoChainOperations{
 		strategy: &CardanoChainOperationReactorStrategy{},
 		config:   cardanoConfig,
