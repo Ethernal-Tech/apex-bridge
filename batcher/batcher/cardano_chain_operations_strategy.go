@@ -134,18 +134,20 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	return chosenUTXOs, nil
 }
 
-func (s *CardanoChainOperationReactorStrategy) FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
-	min := utxos[0]
+func (s *CardanoChainOperationReactorStrategy) FindMinUtxo(
+	utxos []*indexer.TxInputOutput,
+) (*indexer.TxInputOutput, int) {
+	minimal := utxos[0]
 	idx := 0
 
 	for i, utxo := range utxos[1:] {
-		if utxo.Output.Amount < min.Output.Amount {
-			min = utxo
+		if utxo.Output.Amount < minimal.Output.Amount {
+			minimal = utxo
 			idx = i + 1
 		}
 	}
 
-	return min, idx
+	return minimal, idx
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -307,7 +309,9 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	return chosenUTXOs, nil
 }
 
-func (s *CardanoChainOperationSkylineStrategy) FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
+func (s *CardanoChainOperationSkylineStrategy) FindMinUtxo(
+	utxos []*indexer.TxInputOutput,
+) (*indexer.TxInputOutput, int) {
 	minimal := utxos[0]
 	idx := 0
 
