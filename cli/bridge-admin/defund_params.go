@@ -20,16 +20,18 @@ const (
 
 	defundAddressFlagDesc     = "address where defund amount goes"
 	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM (or in native tokens if the --native-token-amount flag is specified)" //nolint:lll
-	nativeTokenAmountFlagDesc = "use at your own risk (see the --amount flag)"                                                                       //nolint:gosec
+	defundTokenAmountFlagDesc = "amount to withdraw native tokens from the hot wallet in DFM"
+	nativeTokenAmountFlagDesc = "use at your own risk (see the --amount flag)" //nolint:gosec
 )
 
 type defundParams struct {
-	bridgeNodeURL     string
-	chainID           string
-	amountStr         string
-	privateKeyRaw     string
-	address           string
-	nativeTokenAmount bool
+	bridgeNodeURL        string
+	chainID              string
+	currencyAmountStr    string
+	nativeTokenAmountStr string
+	privateKeyRaw        string
+	address              string
+	nativeTokenAmount    bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -42,21 +44,25 @@ func (g *defundParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	g.amountStr = strings.TrimSpace(g.amountStr)
+	g.currencyAmountStr = strings.TrimSpace(g.currencyAmountStr)
 
-	amount, ok := new(big.Int).SetString(g.amountStr, 0)
-	if !ok || amount.Sign() <= 0 {
+	currencyAmount, ok := new(big.Int).SetString(g.currencyAmountStr, 0)
+	if !ok || currencyAmount.Sign() <= 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
+			currencyAmountFlag, common.MinUtxoAmountDefault)
 	}
 
-	if g.nativeTokenAmount {
-		amount = common.GetDfmAmount(g.chainID, amount)
+	g.nativeTokenAmountStr = strings.TrimSpace(g.nativeTokenAmountStr)
+
+	nativeTokenAmount, ok := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
+	if !ok || nativeTokenAmount.Sign() <= 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
+			nativeTokenAmountFlag, 0) // should this be 0 by default?
 	}
 
-	if amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
+	if currencyAmount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			amountFlag, common.MinUtxoAmountDefault)
+			currencyAmountFlag, common.MinUtxoAmountDefault)
 	}
 
 	if g.privateKeyRaw == "" {
@@ -74,7 +80,8 @@ func (g *defundParams) ValidateFlags() error {
 func (g *defundParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(g.chainID)
-	amount, _ := new(big.Int).SetString(g.amountStr, 0)
+	amount, _ := new(big.Int).SetString(g.currencyAmountStr, 0)
+	tokenAmount, _ := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -101,6 +108,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 		return nil, err
 	}
 
+	// should wrapped amount affect gas estimation?
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
 		"defund", chainIDInt, g.address, amount)
@@ -112,7 +120,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.Defund(opts, chainIDInt, g.address, amount)
+			return contract.Defund(opts, chainIDInt, amount, tokenAmount, g.address)
 		})
 	if err != nil {
 		return nil, err
@@ -151,10 +159,16 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		privateKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.amountStr,
-		amountFlag,
+		&g.currencyAmountStr,
+		currencyAmountFlag,
 		"0",
 		defundAmountFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.nativeTokenAmountStr,
+		nativeTokenAmountFlag,
+		"0",
+		defundTokenAmountFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&g.address,

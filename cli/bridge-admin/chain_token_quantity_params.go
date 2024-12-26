@@ -107,7 +107,7 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 
 	amount, ok := new(big.Int).SetString(g.amountStr, 0)
 	if !ok || amount.BitLen() == 0 {
-		return fmt.Errorf("--%s flag must be greater or lower than zero", amountFlag)
+		return fmt.Errorf("--%s flag must be greater or lower than zero", currencyAmountFlag)
 	}
 
 	if g.privateKeyRaw == "" {
@@ -203,7 +203,7 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 	)
 	cmd.Flags().StringVar(
 		&g.amountStr,
-		amountFlag,
+		currencyAmountFlag,
 		"0",
 		chainTokenQuantityAmountFlagDesc,
 	)
