@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -18,7 +17,8 @@ import (
 )
 
 var (
-	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+	_ core.ChainOperations            = (*CardanoChainOperations)(nil)
+	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationReactorStrategy)(nil)
 )
 
 // Get real tx size from protocolParams/config
@@ -35,6 +35,7 @@ type CardanoChainOperations struct {
 	db               indexer.Database
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
+	strategy         ICardanoChainOperationsStrategy
 	logger           hclog.Logger
 }
 
@@ -43,6 +44,7 @@ func NewCardanoChainOperations(
 	db indexer.Database,
 	secretsManager secrets.SecretsManager,
 	chainID string,
+	strategy ICardanoChainOperationsStrategy,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -67,6 +69,7 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
+		strategy:         strategy,
 		logger:           logger,
 	}, nil
 }
@@ -110,10 +113,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs := getOutputs(confirmedTransactions, cco.config.NetworkID, cco.logger)
+	txOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
+	if err != nil {
+		return nil, err
+	}
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs)
+		multisigAddress, multisigFeeAddress, *txOutputs)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +272,6 @@ func (cco *CardanoChainOperations) getUTXOs(
 		return
 	}
 
-	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
 
 	if len(feeUtxos) == 0 {
@@ -278,9 +283,9 @@ func (cco *CardanoChainOperations) getUTXOs(
 
 	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
-	multisigUtxos, err = getNeededUtxos(
+	multisigUtxos, err = cco.strategy.GetNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum[cardanowallet.AdaTokenName],
+		txOutputs.Sum,
 		cco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
@@ -328,64 +333,6 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	return result
 }
 
-// getNeededUtxos returns only needed input utxos
-// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
-// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
-// if desiredAmount has been met, tx is created regularly
-// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
-func getNeededUtxos(
-	inputUTXOs []*indexer.TxInputOutput,
-	desiredAmount uint64,
-	minUtxoAmount uint64,
-	utxoCount int,
-	maxUtxoCount int,
-	takeAtLeastUtxoCount int,
-) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	txCostWithMinChange := minUtxoAmount + desiredAmount // if we have change then it must be greater than this amount
-
-	// algorithm that chooses multisig UTXOs
-	chosenUTXOsSum := uint64(0)
-	isUtxosOk := false
-
-	for i, utxo := range inputUTXOs {
-		chosenUTXOs = append(chosenUTXOs, utxo)
-		utxoCount++
-
-		chosenUTXOsSum += utxo.Output.Amount // in cardano we should not care about overflow
-
-		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx := findMinUtxo(chosenUTXOs)
-
-			chosenUTXOs[minChosenUTXOIdx] = utxo
-			chosenUTXOsSum -= minChosenUTXO.Output.Amount
-			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
-			utxoCount--
-		}
-
-		if chosenUTXOsSum >= txCostWithMinChange || chosenUTXOsSum == desiredAmount {
-			isUtxosOk = true
-
-			// try to add utxos until we reach tryAtLeastUtxoCount
-			cnt := min(
-				len(inputUTXOs)-i-1,                   // still available in inputUTXOs
-				takeAtLeastUtxoCount-len(chosenUTXOs), // needed to fill tryAtLeastUtxoCount
-				maxUtxoCount-utxoCount,                // maxUtxoCount limit must be preserved
-			)
-			if cnt > 0 {
-				chosenUTXOs = append(chosenUTXOs, inputUTXOs[i+1:i+1+cnt]...)
-			}
-
-			break
-		}
-	}
-
-	if !isUtxosOk {
-		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %d", desiredAmount)
-	}
-
-	return chosenUTXOs, nil
-}
-
 func findMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
 	min := utxos[0]
 	idx := 0
@@ -398,47 +345,4 @@ func findMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
 	}
 
 	return min, idx
-}
-
-func getOutputs(
-	txs []eth.ConfirmedTransaction, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
-) cardano.TxOutputs {
-	receiversMap := map[string]uint64{}
-
-	for _, transaction := range txs {
-		for _, receiver := range transaction.Receivers {
-			receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
-		}
-	}
-
-	result := cardano.TxOutputs{
-		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
-		Sum:     map[string]uint64{},
-	}
-
-	for addr, amount := range receiversMap {
-		if amount == 0 {
-			logger.Warn("skipped output with zero amount", "addr", addr)
-
-			continue
-		} else if !cardano.IsValidOutputAddress(addr, networkID) {
-			// apex-361 fix
-			logger.Warn("skipped output because it is invalid", "addr", addr)
-
-			continue
-		}
-
-		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
-			Addr:   addr,
-			Amount: amount,
-		})
-		result.Sum[cardanowallet.AdaTokenName] += amount
-	}
-
-	// sort outputs because all batchers should have same order of outputs
-	sort.Slice(result.Outputs, func(i, j int) bool {
-		return result.Outputs[i].Addr < result.Outputs[j].Addr
-	})
-
-	return result
 }
