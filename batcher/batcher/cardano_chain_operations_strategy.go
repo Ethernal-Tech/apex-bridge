@@ -258,11 +258,6 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 		var minChosenUTXOIdx int
 
 		if utxoCount > maxUtxoCount {
-			// if len(utxo.Output.Tokens) == 0 {
-			// 	minChosenUTXO, minChosenUTXOIdx = findMinUtxo(chosenUTXOs)
-			// } else {
-			// 	minChosenUTXO, minChosenUTXOIdx = findMinWrappedUtxo(chosenUTXOs)
-			// }
 			minChosenUTXO, minChosenUTXOIdx = s.FindMinUtxo(chosenUTXOs)
 
 			chosenUTXOsSum[cardanowallet.AdaTokenName] -= minChosenUTXO.Output.Amount

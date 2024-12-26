@@ -106,7 +106,6 @@ func (scco *SkylineCardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	// this has to change
 	txOutputs, err := scco.strategy.GetOutputs(confirmedTransactions,
 		scco.config, chainID, scco.logger)
 	if err != nil {
