@@ -324,14 +324,6 @@ func TestGenerateSkylineBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededSkylineUtxos(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
-	require.NoError(t, err)
-
-	defer func() {
-		os.RemoveAll(testDir)
-		os.Remove(testDir)
-	}()
-
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 42,

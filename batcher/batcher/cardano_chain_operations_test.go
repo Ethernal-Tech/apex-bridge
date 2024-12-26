@@ -302,14 +302,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededUtxos(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
-	require.NoError(t, err)
-
-	defer func() {
-		os.RemoveAll(testDir)
-		os.Remove(testDir)
-	}()
-
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 42,
@@ -394,16 +386,6 @@ func Test_getNeededUtxos(t *testing.T) {
 }
 
 func Test_getOutputs(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
-	require.NoError(t, err)
-
-	defer func() {
-		os.RemoveAll(testDir)
-		os.Remove(testDir)
-	}()
-
-	require.NoError(t, err)
-
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 42,
