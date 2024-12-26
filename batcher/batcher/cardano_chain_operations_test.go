@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -111,7 +112,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	strategy := &CardanoChainOperationReactorStrategy{}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", strategy, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -299,6 +302,37 @@ func TestGenerateBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededUtxos(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+
+	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
+	require.NoError(t, err)
+
+	strategy := &CardanoChainOperationReactorStrategy{}
+
+	cco := &CardanoChainOperations{
+		db:       dbMock,
+		logger:   hclog.NewNullLogger(),
+		strategy: strategy,
+		config:   cardanoConfig,
+	}
+
+	desiredAmounts := map[string]uint64{
+		fmt.Sprintf("%s", cardanowallet.AdaTokenName): 0,
+	}
+
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 100},
@@ -323,38 +357,68 @@ func Test_getNeededUtxos(t *testing.T) {
 	}
 
 	t.Run("pass", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 65, 5, 5, 30, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 65
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:len(inputs)-1], result)
 
-		result, err = getNeededUtxos(inputs, 50, 6, 0, 2, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 50
+		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 6, 0, 2, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[3], inputs[1]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 67, 4, 5, 30, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 67
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs, result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 10, 4, 5, 30, 3)
+		desiredAmounts[cardanowallet.AdaTokenName] = 10
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
 	})
 
 	t.Run("not enough sum", func(t *testing.T) {
-		_, err := getNeededUtxos(inputs, 160, 5, 5, 30, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 160
+		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 1)
 		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
 	})
 }
 
 func Test_getOutputs(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+
+	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
+	require.NoError(t, err)
+
+	cco := &CardanoChainOperations{
+		strategy: &CardanoChainOperationReactorStrategy{},
+		config:   cardanoConfig,
+	}
+	cco.config.NetworkID = cardanowallet.MainNetNetwork
+
 	txs := []eth.ConfirmedTransaction{
 		{
 			Receivers: []eth.BridgeReceiver{
@@ -419,7 +483,7 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
+	res, _ := cco.strategy.GetOutputs(txs, cco.config, "", hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
@@ -456,7 +520,8 @@ func Test_getUTXOs(t *testing.T) {
 		config: &cardano.CardanoChainConfig{
 			NoBatchPeriodPercent: 0.1,
 		},
-		logger: hclog.NewNullLogger(),
+		strategy: &CardanoChainOperationReactorStrategy{},
+		logger:   hclog.NewNullLogger(),
 	}
 	txOutputs := cardano.TxOutputs{
 		Outputs: []cardanowallet.TxOutput{

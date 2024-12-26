@@ -45,20 +45,9 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			switch config.RunMode {
-			case common.ReactorMode:
-				operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
-				if err != nil {
-					return nil, err
-				}
-
-			case common.SkylineMode:
-				operations, err = getSkylineCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
-				if err != nil {
-					return nil, err
-				}
-			default:
-				return nil, fmt.Errorf("unknown run mode: %s", config.RunMode)
+			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, config.RunMode, logger)
+			if err != nil {
+				return nil, err
 			}
 		case common.ChainTypeEVMStr:
 			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
@@ -97,33 +86,26 @@ func (bm *BatchManagerImpl) Start() {
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, runMode common.VCRunMode, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
 		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
+	}
+
+	var strategy batcher.ICardanoChainOperationsStrategy
+
+	switch runMode {
+	case common.ReactorMode:
+		strategy = &batcher.CardanoChainOperationReactorStrategy{}
+	case common.SkylineMode:
+		strategy = &batcher.CardanoChainOperationSkylineStrategy{}
+	default:
+		return nil, fmt.Errorf("unknown run mode: %s", runMode)
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return operations, nil
-}
-
-func getSkylineCardanoOperations(
-	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
-) (core.ChainOperations, error) {
-	db, exists := cardanoIndexerDbs[config.ChainID]
-	if !exists {
-		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
-	}
-
-	operations, err := batcher.NewSkylineCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, db, secretsManager, config.ChainID, strategy, logger)
 	if err != nil {
 		return nil, err
 	}
