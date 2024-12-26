@@ -46,7 +46,6 @@ func splitTokenAmount(name string, isNameEncoded bool) (string, string, error) {
 	return parts[0], name, nil
 }
 
-//nolint:dupl
 func TestSkylineCardanoChainOperations_IsSynchronized(t *testing.T) {
 	chainID := "prime"
 	dbMock := &indexer.DatabaseMock{}

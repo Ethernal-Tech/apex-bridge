@@ -254,7 +254,6 @@ func (scco *SkylineCardanoChainOperations) getCardanoData(
 	return validatorsData, nil
 }
 
-//nolint:dupl
 func (scco *SkylineCardanoChainOperations) getUTXOs(
 	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
