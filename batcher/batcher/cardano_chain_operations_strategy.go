@@ -24,6 +24,7 @@ type ICardanoChainOperationsStrategy interface {
 		maxUtxoCount int,
 		takeAtLeastUtxoCount int,
 	) (chosenUTXOs []*indexer.TxInputOutput, err error)
+	FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int)
 }
 
 type CardanoChainOperationReactorStrategy struct {
@@ -101,7 +102,7 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 		chosenUTXOsSum += utxo.Output.Amount // in cardano we should not care about overflow
 
 		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx := findMinUtxo(chosenUTXOs)
+			minChosenUTXO, minChosenUTXOIdx := s.FindMinUtxo(chosenUTXOs)
 
 			chosenUTXOs[minChosenUTXOIdx] = utxo
 			chosenUTXOsSum -= minChosenUTXO.Output.Amount
@@ -131,6 +132,20 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
+}
+
+func (s *CardanoChainOperationReactorStrategy) FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
+	min := utxos[0]
+	idx := 0
+
+	for i, utxo := range utxos[1:] {
+		if utxo.Output.Amount < min.Output.Amount {
+			min = utxo
+			idx = i + 1
+		}
+	}
+
+	return min, idx
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -241,11 +256,12 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 		var minChosenUTXOIdx int
 
 		if utxoCount > maxUtxoCount {
-			if len(utxo.Output.Tokens) == 0 {
-				minChosenUTXO, minChosenUTXOIdx = findMinUtxo(chosenUTXOs)
-			} else {
-				minChosenUTXO, minChosenUTXOIdx = findMinWrappedUtxo(chosenUTXOs)
-			}
+			// if len(utxo.Output.Tokens) == 0 {
+			// 	minChosenUTXO, minChosenUTXOIdx = findMinUtxo(chosenUTXOs)
+			// } else {
+			// 	minChosenUTXO, minChosenUTXOIdx = findMinWrappedUtxo(chosenUTXOs)
+			// }
+			minChosenUTXO, minChosenUTXOIdx = s.FindMinUtxo(chosenUTXOs)
 
 			chosenUTXOsSum[cardanowallet.AdaTokenName] -= minChosenUTXO.Output.Amount
 
@@ -289,4 +305,25 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
+}
+
+func (s *CardanoChainOperationSkylineStrategy) FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
+	minimal := utxos[0]
+	idx := 0
+
+	for i, utxo := range utxos[1:] {
+		if len(utxo.Output.Tokens) > 0 && len(minimal.Output.Tokens) > 0 {
+			if utxo.Output.Tokens[0].Amount < minimal.Output.Tokens[0].Amount {
+				minimal = utxo
+				idx = i + 1
+			}
+		} else {
+			if utxo.Output.Amount < minimal.Output.Amount {
+				minimal = utxo
+				idx = i + 1
+			}
+		}
+	}
+
+	return minimal, idx
 }

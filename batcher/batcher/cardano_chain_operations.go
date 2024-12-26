@@ -332,17 +332,3 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 
 	return result
 }
-
-func findMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
-	min := utxos[0]
-	idx := 0
-
-	for i, utxo := range utxos[1:] {
-		if utxo.Output.Amount < min.Output.Amount {
-			min = utxo
-			idx = i + 1
-		}
-	}
-
-	return min, idx
-}

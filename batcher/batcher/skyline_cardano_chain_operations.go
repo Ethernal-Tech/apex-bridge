@@ -295,20 +295,6 @@ func (scco *SkylineCardanoChainOperations) getUTXOs(
 	return
 }
 
-func findMinWrappedUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
-	minimal := utxos[0]
-	idx := 0
-
-	for i, utxo := range utxos[1:] {
-		if utxo.Output.Tokens[0].Amount < minimal.Output.Tokens[0].Amount {
-			minimal = utxo
-			idx = i + 1
-		}
-	}
-
-	return minimal, idx
-}
-
 func getConfigTokenExchange(destChainID string, isDestNativeToken bool,
 	dests []cardano.CardanoConfigTokenExchange) (result cardano.CardanoConfigTokenExchange) {
 	for _, x := range dests {
