@@ -112,7 +112,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.Defund(opts, chainIDInt, g.address, amount)
+			return contract.Defund(opts, chainIDInt, amount, big.NewInt(0), g.address)
 		})
 	if err != nil {
 		return nil, err
