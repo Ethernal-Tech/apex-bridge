@@ -395,23 +395,24 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 			},
 		},
 	}
+	var outputsWithTokens uint64 = 2
 
 	t.Run("pass", func(t *testing.T) {
 		desiredAmounts := map[string]uint64{
 			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 35,
 		}
 
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, 1)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
 
 		desiredAmounts = map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
 			fmt.Sprintf("%s", tName):                      45,
 		}
 
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:len(inputs)-1], result)
@@ -420,10 +421,10 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("pass with change", func(t *testing.T) {
 		minUtxoAmount = 4
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
 			fmt.Sprintf("%s", tName):                      40,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:len(inputs)-1], result)
@@ -432,10 +433,10 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("pass with at least", func(t *testing.T) {
 		minUtxoAmount = 4
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
 			fmt.Sprintf("%s", tName):                      20,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 3)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -443,7 +444,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts = map[string]uint64{
 			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 12,
 		}
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 3)
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -454,14 +455,14 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts := map[string]uint64{
 			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 160,
 		}
-		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
 
 		desiredAmounts = map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): minUtxoAmount,
+			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
 			fmt.Sprintf("%s", tName):                      250,
 		}
-		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 1)
+		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
 	})
 }
@@ -545,13 +546,15 @@ func Test_getSkylineOutputs(t *testing.T) {
 		}
 
 		polID, tName, _ := splitTokenAmount(primeCardanoWrappedTokenName, true)
-		res, err := scco.strategy.GetOutputs(txs, scco.config, common.ChainIDStrPrime, hclog.NewNullLogger())
+		res, outTokens, err := scco.strategy.GetOutputs(txs, scco.config, common.ChainIDStrPrime, hclog.NewNullLogger())
 		assert.NoError(t, err)
 
 		assert.Equal(t, map[string]uint64{
 			fmt.Sprintf("%s", cardanowallet.AdaTokenName):   1600,
 			fmt.Sprintf("%s", primeCardanoWrappedTokenName): 110,
 		}, res.Sum)
+
+		assert.Equal(t, uint64(3), outTokens)
 
 		assert.Equal(t, []cardanowallet.TxOutput{
 			{
@@ -627,12 +630,13 @@ func Test_getSkylineOutputs(t *testing.T) {
 		}
 
 		polID, tName, _ := splitTokenAmount(cardanoPrimeWrappedTokenName, true)
-		res, err := scco.strategy.GetOutputs(txs, scco.config, common.ChainIDStrCardano, hclog.NewNullLogger())
+		res, outTokens, err := scco.strategy.GetOutputs(txs, scco.config, common.ChainIDStrCardano, hclog.NewNullLogger())
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]uint64{
 			fmt.Sprintf("%s", cardanowallet.AdaTokenName):   3170,
 			fmt.Sprintf("%s", cardanoPrimeWrappedTokenName): 250,
 		}, res.Sum)
+		assert.Equal(t, uint64(2), outTokens)
 
 		assert.Equal(t, []cardanowallet.TxOutput{
 			{

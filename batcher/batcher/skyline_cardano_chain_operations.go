@@ -106,14 +106,14 @@ func (scco *SkylineCardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, err := scco.strategy.GetOutputs(confirmedTransactions,
+	txOutputs, outputsWithTokens, err := scco.strategy.GetOutputs(confirmedTransactions,
 		scco.config, chainID, scco.logger)
 	if err != nil {
 		return nil, errors.New("no valid tx outputs")
 	}
 
 	multisigUtxos, feeUtxos, err := scco.getUTXOs(
-		multisigAddress, multisigFeeAddress, *txOutputs)
+		multisigAddress, multisigFeeAddress, *txOutputs, outputsWithTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (scco *SkylineCardanoChainOperations) getCardanoData(
 
 //nolint:dupl
 func (scco *SkylineCardanoChainOperations) getUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
+	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, tokenHoldingOutputs uint64,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
 	multisigUtxos, err = scco.db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
@@ -284,6 +284,7 @@ func (scco *SkylineCardanoChainOperations) getUTXOs(
 		scco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
+		tokenHoldingOutputs,
 		scco.config.TakeAtLeastUtxoCount,
 	)
 	if err != nil {

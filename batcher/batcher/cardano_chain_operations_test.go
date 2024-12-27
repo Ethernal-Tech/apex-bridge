@@ -350,13 +350,13 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 65
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 1)
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:len(inputs)-1], result)
 
 		desiredAmounts[cardanowallet.AdaTokenName] = 50
-		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 6, 0, 2, 1)
+		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 6, 0, 2, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[3], inputs[1]}, result)
@@ -364,7 +364,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with change", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 67
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 1)
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs, result)
@@ -372,7 +372,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with at least", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 10
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 3)
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -380,7 +380,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("not enough sum", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 160
-		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 1)
+		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 0, 1)
 		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
 	})
 }
@@ -465,7 +465,7 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res, _ := cco.strategy.GetOutputs(txs, cco.config, "", hclog.NewNullLogger())
+	res, _, _ := cco.strategy.GetOutputs(txs, cco.config, "", hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{

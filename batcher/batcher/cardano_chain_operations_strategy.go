@@ -15,13 +15,14 @@ type ICardanoChainOperationsStrategy interface {
 	GetOutputs(
 		txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig,
 		destChainID string, logger hclog.Logger,
-	) (*cardano.TxOutputs, error)
+	) (*cardano.TxOutputs, uint64, error)
 	GetNeededUtxos(
 		inputUTXOs []*indexer.TxInputOutput,
 		desiredAmount map[string]uint64,
 		minUtxoAmount uint64,
 		utxoCount int,
 		maxUtxoCount int,
+		tokenHoldingOutputs uint64,
 		takeAtLeastUtxoCount int,
 	) (chosenUTXOs []*indexer.TxInputOutput, err error)
 	FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int)
@@ -32,7 +33,7 @@ type CardanoChainOperationReactorStrategy struct {
 
 func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, _ string, logger hclog.Logger,
-) (*cardano.TxOutputs, error) {
+) (*cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]uint64{}
 
 	for _, transaction := range txs {
@@ -70,7 +71,7 @@ func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return &result, nil
+	return &result, 0, nil
 }
 
 // getNeededUtxos returns only needed input utxos
@@ -84,6 +85,7 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	minUtxoAmount uint64,
 	utxoCount int,
 	maxUtxoCount int,
+	_ uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
 	inputUTXOs = filterOutTokenUtxos(inputUTXOs)
@@ -156,21 +158,22 @@ type CardanoChainOperationSkylineStrategy struct {
 func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig,
 	destChainID string, logger hclog.Logger,
-) (*cardano.TxOutputs, error) {
+) (*cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
+	var tokenHoldingOutputs uint64 = 0
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
 			data.Amount += receiver.Amount.Uint64()
 
-			if receiver.AmountWrapped != nil {
+			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 				if len(data.Tokens) == 0 {
 					tconf := getConfigTokenExchange(destChainID, true, cardanoConfig.Destinations)
 					token, err := cardanowallet.NewTokenAmountWithFullName(tconf.DstTokenName, 0, true)
 
 					if err != nil {
-						return nil, fmt.Errorf("failed to create new token amount")
+						return nil, 0, fmt.Errorf("failed to create new token amount")
 					}
 
 					data.Tokens = []cardanowallet.TokenAmount{token}
@@ -204,8 +207,12 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 		result.Outputs = append(result.Outputs, txOut)
 
 		result.Sum[cardanowallet.AdaTokenName] += txOut.Amount
-		for _, token := range txOut.Tokens {
-			result.Sum[token.TokenName()] += token.Amount
+
+		if txOut.Tokens != nil && txOut.Tokens[0].Amount > 0 {
+			tokenHoldingOutputs++
+			for _, token := range txOut.Tokens {
+				result.Sum[token.TokenName()] += token.Amount
+			}
 		}
 	}
 
@@ -214,7 +221,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return &result, nil
+	return &result, tokenHoldingOutputs, nil
 }
 
 // getNeededSkylineUtxos returns only needed input utxos
@@ -228,6 +235,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	minUtxoAmount uint64,
 	utxoCount int,
 	maxUtxoCount int,
+	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
 	chosenUTXOsSum := map[string]uint64{}
@@ -237,7 +245,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	for chainName, desiredValue := range desiredAmount {
 		if chainName == cardanowallet.AdaTokenName {
 			// if we have change then it must be greater than this amount
-			txCostWithMinChange[chainName] = desiredValue + minUtxoAmount
+			txCostWithMinChange[chainName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
 		} else {
 			txCostWithMinChange[chainName] = desiredValue
 		}
