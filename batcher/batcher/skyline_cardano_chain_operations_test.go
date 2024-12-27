@@ -395,6 +395,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 			},
 		},
 	}
+
 	var outputsWithTokens uint64 = 2
 
 	t.Run("pass", func(t *testing.T) {

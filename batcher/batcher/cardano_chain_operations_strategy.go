@@ -160,6 +160,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	destChainID string, logger hclog.Logger,
 ) (*cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
+
 	var tokenHoldingOutputs uint64 = 0
 
 	for _, transaction := range txs {
@@ -210,6 +211,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 
 		if txOut.Tokens != nil && txOut.Tokens[0].Amount > 0 {
 			tokenHoldingOutputs++
+
 			for _, token := range txOut.Tokens {
 				result.Sum[token.TokenName()] += token.Amount
 			}
