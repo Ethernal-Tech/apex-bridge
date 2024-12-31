@@ -118,8 +118,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	multisigUtxos, feeUtxos, err := cco.getUTXOs(
-		multisigAddress, multisigFeeAddress, *txOutputs)
+	multisigUtxos, feeUtxos, err := cco.strategy.GetUTXOs(
+		multisigAddress, multisigFeeAddress, *txOutputs, 0, cco.config, cco.db, cco.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -257,48 +257,6 @@ func (cco *CardanoChainOperations) getCardanoData(
 	}
 
 	return validatorsData, nil
-}
-
-func (cco *CardanoChainOperations) getUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
-) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
-	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos = filterOutTokenUtxos(feeUtxos)
-
-	if len(feeUtxos) == 0 {
-		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
-	}
-
-	cco.logger.Debug("UTXOs retrieved",
-		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
-
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
-
-	multisigUtxos, err = cco.strategy.GetNeededUtxos(
-		multisigUtxos,
-		txOutputs.Sum,
-		cco.config.UtxoMinAmount,
-		len(feeUtxos)+len(txOutputs.Outputs),
-		maxUtxoCount,
-		0,
-		cco.config.TakeAtLeastUtxoCount,
-	)
-	if err != nil {
-		return
-	}
-
-	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
-
-	return
 }
 
 func filterOutTokenUtxos(utxos []*indexer.TxInputOutput) []*indexer.TxInputOutput {

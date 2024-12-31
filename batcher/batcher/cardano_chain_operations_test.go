@@ -2,11 +2,14 @@ package batcher
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -111,9 +114,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	strategy := &CardanoChainOperationReactorStrategy{}
-
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", strategy, hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", &CardanoChainOperationReactorStrategy{}, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -311,12 +312,10 @@ func Test_getNeededUtxos(t *testing.T) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
 	require.NoError(t, err)
 
-	strategy := &CardanoChainOperationReactorStrategy{}
-
 	cco := &CardanoChainOperations{
 		db:       dbMock,
 		logger:   hclog.NewNullLogger(),
-		strategy: strategy,
+		strategy: &CardanoChainOperationReactorStrategy{},
 		config:   cardanoConfig,
 	}
 
@@ -382,6 +381,145 @@ func Test_getNeededUtxos(t *testing.T) {
 	t.Run("not enough sum", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 155
 		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 0, 1)
+		require.ErrorContains(t, err, "not enough funds for the transaction")
+	})
+}
+
+func Test_getNeededSkylineUtxos(t *testing.T) {
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+
+	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
+	require.NoError(t, err)
+
+	scco := &CardanoChainOperations{
+		db:       dbMock,
+		logger:   hclog.NewNullLogger(),
+		strategy: &CardanoChainOperationSkylineStrategy{},
+		config:   cardanoConfig,
+	}
+
+	var minUtxoAmount uint64 = 5
+
+	inputs := []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
+			Output: indexer.TxOutput{
+				Amount: 20,
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
+			Output: indexer.TxOutput{
+				Amount: minUtxoAmount,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   20,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
+			Output: indexer.TxOutput{
+				Amount: 15,
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			Output: indexer.TxOutput{
+				Amount: 30,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   40,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
+			Output: indexer.TxOutput{
+				Amount: 10,
+			},
+		},
+	}
+
+	var outputsWithTokens uint64 = 2
+
+	t.Run("pass", func(t *testing.T) {
+		desiredAmounts := map[string]uint64{
+			cardanowallet.AdaTokenName: 35,
+		}
+
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, outputsWithTokens, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[3]}, result)
+
+		desiredAmounts = map[string]uint64{
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     45,
+		}
+
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:len(inputs)-1], result)
+	})
+
+	t.Run("pass with change", func(t *testing.T) {
+		minUtxoAmount = 4
+		desiredAmounts := map[string]uint64{
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     40,
+		}
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:len(inputs)-1], result)
+	})
+
+	t.Run("pass with at least", func(t *testing.T) {
+		minUtxoAmount = 4
+		desiredAmounts := map[string]uint64{
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     20,
+		}
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:3], result)
+
+		desiredAmounts = map[string]uint64{
+			cardanowallet.AdaTokenName: 12,
+		}
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
+
+		require.NoError(t, err)
+		require.Equal(t, inputs[:3], result)
+	})
+
+	t.Run("not enough sum", func(t *testing.T) {
+		minUtxoAmount = 5
+		desiredAmounts := map[string]uint64{
+			cardanowallet.AdaTokenName: 160,
+		}
+		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+		require.ErrorContains(t, err, "not enough funds for the transaction")
+
+		desiredAmounts = map[string]uint64{
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     250,
+		}
+		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
@@ -493,6 +631,204 @@ func Test_getOutputs(t *testing.T) {
 	}, res.Outputs)
 }
 
+func Test_getSkylineOutputs(t *testing.T) {
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	cardanoConfig, _ := cardano.NewCardanoChainConfig(configRaw)
+
+	cco := &CardanoChainOperations{
+		strategy: &CardanoChainOperationSkylineStrategy{},
+		config:   cardanoConfig,
+	}
+	cco.config.NetworkID = cardanowallet.MainNetNetwork
+
+	cardanoPrimeWrappedTokenName := "72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e"
+	primeCardanoWrappedTokenName := "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533"
+
+	ccCardanoConfigExchange := []cardano.CardanoConfigTokenExchange{
+		{
+			Chain:        common.ChainIDStrPrime,
+			SrcTokenName: cardanowallet.AdaTokenName,
+			DstTokenName: primeCardanoWrappedTokenName,
+		},
+		{
+			Chain:        common.ChainIDStrPrime,
+			SrcTokenName: cardanoPrimeWrappedTokenName,
+			DstTokenName: cardanowallet.AdaTokenName,
+		},
+	}
+
+	ccPrimeTokenExchange := []cardano.CardanoConfigTokenExchange{
+		{
+			Chain:        common.ChainIDStrCardano,
+			SrcTokenName: cardanowallet.AdaTokenName,
+			DstTokenName: cardanoPrimeWrappedTokenName,
+		},
+		{
+			Chain:        common.ChainIDStrCardano,
+			SrcTokenName: primeCardanoWrappedTokenName,
+			DstTokenName: cardanowallet.AdaTokenName,
+		},
+	}
+
+	t.Run("from cardano to prime", func(t *testing.T) {
+		cco.config.Destinations = ccCardanoConfigExchange
+		txs := []eth.ConfirmedTransaction{
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+						Amount:             big.NewInt(100),
+						AmountWrapped:      big.NewInt(10),
+					},
+					{
+						DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+						Amount:             big.NewInt(200),
+						AmountWrapped:      big.NewInt(20),
+					},
+					{
+						DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+						Amount:             big.NewInt(400),
+						AmountWrapped:      big.NewInt(0),
+					},
+				},
+				SourceChainId: 4,
+			},
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+						Amount:             big.NewInt(900),
+						AmountWrapped:      big.NewInt(80),
+					},
+				},
+				SourceChainId: 4,
+			},
+		}
+
+		polID, tName, _ := splitTokenAmount(primeCardanoWrappedTokenName, true)
+		res, outTokens, err := cco.strategy.GetOutputs(txs, cco.config, common.ChainIDStrPrime, hclog.NewNullLogger())
+		assert.NoError(t, err)
+
+		assert.Equal(t, map[string]uint64{
+			cardanowallet.AdaTokenName:   1600,
+			primeCardanoWrappedTokenName: 110,
+		}, res.Sum)
+
+		assert.Equal(t, uint64(3), outTokens)
+
+		assert.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+				Amount: 200,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   20,
+					},
+				},
+			},
+			{
+				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				Amount: 100,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   10,
+					},
+				},
+			},
+			{
+				Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+				Amount: 1300,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   80,
+					},
+				},
+			},
+		}, res.Outputs)
+	})
+
+	t.Run("from prime to cardano", func(t *testing.T) {
+		cco.config.Destinations = ccPrimeTokenExchange
+		txs := []eth.ConfirmedTransaction{
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+						Amount:             big.NewInt(3000),
+						AmountWrapped:      big.NewInt(200),
+					},
+					{
+						DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
+						Amount:             big.NewInt(0),
+						AmountWrapped:      big.NewInt(0),
+					},
+					{
+						// this one will be skipped
+						DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
+						Amount:             big.NewInt(3000),
+						AmountWrapped:      big.NewInt(1300),
+					},
+				},
+				SourceChainId: 1,
+			},
+			{
+				Receivers: []eth.BridgeReceiver{
+					{
+						DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+						Amount:             big.NewInt(170),
+						AmountWrapped:      big.NewInt(50),
+					},
+				},
+				SourceChainId: 1,
+			},
+		}
+
+		polID, tName, _ := splitTokenAmount(cardanoPrimeWrappedTokenName, true)
+		res, outTokens, err := cco.strategy.GetOutputs(txs, cco.config, common.ChainIDStrCardano, hclog.NewNullLogger())
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]uint64{
+			cardanowallet.AdaTokenName:   3170,
+			cardanoPrimeWrappedTokenName: 250,
+		}, res.Sum)
+		assert.Equal(t, uint64(2), outTokens)
+
+		assert.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+				Amount: 3000,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   200,
+					},
+				},
+			},
+			{
+				Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+				Amount: 170,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: polID,
+						Name:     tName,
+						Amount:   50,
+					},
+				},
+			},
+		}, res.Outputs)
+	})
+}
+
 func Test_getUTXOs(t *testing.T) {
 	dbMock := &indexer.DatabaseMock{}
 	multisigAddr := "0x001"
@@ -518,7 +854,7 @@ func Test_getUTXOs(t *testing.T) {
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -526,7 +862,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -551,10 +887,147 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
 	})
+}
+
+func Test_getSkylineUTXOs(t *testing.T) {
+	dbMock := &indexer.DatabaseMock{}
+	multisigAddr := "0x001"
+	feeAddr := "0x002"
+	testErr := errors.New("test err")
+
+	ops := &CardanoChainOperations{
+		db: dbMock,
+		config: &cardano.CardanoChainConfig{
+			NoBatchPeriodPercent: 0.1,
+		},
+		strategy: &CardanoChainOperationSkylineStrategy{},
+		logger:   hclog.NewNullLogger(),
+	}
+
+	txOutputs := cardano.TxOutputs{
+		Outputs: []cardanowallet.TxOutput{
+			{
+				Amount: 5,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   20,
+					},
+				},
+			},
+			{
+				Amount: 15,
+			},
+			{
+				Amount: 30,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   40,
+					},
+				},
+			},
+			{
+				Amount: 10,
+			},
+		},
+		Sum: map[string]uint64{
+			cardanowallet.AdaTokenName: 60,
+			"1.31":                     60,
+		},
+	}
+
+	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
+
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+		require.Error(t, err)
+	})
+
+	t.Run("GetAllTxOutputs fee error", func(t *testing.T) {
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
+
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+		require.Error(t, err)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+		expectedUtxos := []*indexer.TxInputOutput{
+			{
+				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
+				Output: indexer.TxOutput{
+					Amount: 30,
+					Slot:   80,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: "1",
+							Name:     "1",
+							Amount:   40,
+						},
+					},
+				},
+			},
+
+			{
+				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 3},
+				Output: indexer.TxOutput{
+					Amount: 40,
+					Slot:   1900,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: "1",
+							Name:     "1",
+							Amount:   30,
+						},
+					},
+				},
+			},
+			{
+				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("AA"), Index: 100},
+				Output: indexer.TxOutput{
+					Amount: 10,
+				},
+			},
+		}
+		allMultisigUtxos := expectedUtxos[0:2]
+		allFeeUtxos := expectedUtxos[2:]
+
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+
+		require.NoError(t, err)
+		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
+		require.Equal(t, expectedUtxos[2:], feeUtxos)
+	})
+}
+
+func splitTokenAmount(name string, isNameEncoded bool) (string, string, error) {
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid full token name: %s", name)
+	}
+
+	if !isNameEncoded {
+		name = parts[1]
+	} else {
+		decodedName, err := hex.DecodeString(parts[1])
+		if err != nil {
+			return "", "", fmt.Errorf("invalid full token name: %s", name)
+		}
+
+		name = string(decodedName)
+	}
+
+	return parts[0], name, nil
 }
