@@ -344,52 +344,49 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		config:   cardanoConfig,
 	}
 
-	primeCardanoWrappedTokenName := "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533"
-	polID, tName, _ := splitTokenAmount(primeCardanoWrappedTokenName, true)
-
 	var minUtxoAmount uint64 = 5
 
 	inputs := []*indexer.TxInputOutput{
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 100},
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
 			Output: indexer.TxOutput{
 				Amount: 20,
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 0},
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
 			Output: indexer.TxOutput{
 				Amount: minUtxoAmount,
 				Tokens: []indexer.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
+						PolicyID: "1",
+						Name:     "1",
 						Amount:   20,
 					},
 				},
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x2"), Index: 7},
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
 			Output: indexer.TxOutput{
 				Amount: 15,
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 5},
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
 			Output: indexer.TxOutput{
-				Amount: minUtxoAmount,
+				Amount: 30,
 				Tokens: []indexer.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
+						PolicyID: "1",
+						Name:     "1",
 						Amount:   40,
 					},
 				},
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 6},
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
 			Output: indexer.TxOutput{
 				Amount: 10,
 			},
@@ -400,17 +397,17 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 
 	t.Run("pass", func(t *testing.T) {
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 35,
+			cardanowallet.AdaTokenName: 35,
 		}
 
 		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, outputsWithTokens, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[3]}, result)
 
 		desiredAmounts = map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
-			fmt.Sprintf("%s", tName):                      45,
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     45,
 		}
 
 		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
@@ -422,8 +419,8 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("pass with change", func(t *testing.T) {
 		minUtxoAmount = 4
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
-			fmt.Sprintf("%s", tName):                      40,
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     40,
 		}
 		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
 
@@ -434,8 +431,8 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("pass with at least", func(t *testing.T) {
 		minUtxoAmount = 4
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
-			fmt.Sprintf("%s", tName):                      20,
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     20,
 		}
 		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
 
@@ -443,7 +440,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		require.Equal(t, inputs[:3], result)
 
 		desiredAmounts = map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 12,
+			cardanowallet.AdaTokenName: 12,
 		}
 		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
 
@@ -454,17 +451,17 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("not enough sum", func(t *testing.T) {
 		minUtxoAmount = 5
 		desiredAmounts := map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): 160,
+			cardanowallet.AdaTokenName: 160,
 		}
 		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
-		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+		require.ErrorContains(t, err, "not enough funds for the transaction")
 
 		desiredAmounts = map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName): outputsWithTokens * minUtxoAmount,
-			fmt.Sprintf("%s", tName):                      250,
+			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			"1.31":                     250,
 		}
 		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
-		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
 
@@ -551,8 +548,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName):   1600,
-			fmt.Sprintf("%s", primeCardanoWrappedTokenName): 110,
+			cardanowallet.AdaTokenName:   1600,
+			primeCardanoWrappedTokenName: 110,
 		}, res.Sum)
 
 		assert.Equal(t, uint64(3), outTokens)
@@ -634,8 +631,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 		res, outTokens, err := scco.strategy.GetOutputs(txs, scco.config, common.ChainIDStrCardano, hclog.NewNullLogger())
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]uint64{
-			fmt.Sprintf("%s", cardanowallet.AdaTokenName):   3170,
-			fmt.Sprintf("%s", cardanoPrimeWrappedTokenName): 250,
+			cardanowallet.AdaTokenName:   3170,
+			cardanoPrimeWrappedTokenName: 250,
 		}, res.Sum)
 		assert.Equal(t, uint64(2), outTokens)
 

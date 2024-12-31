@@ -6,6 +6,7 @@ import (
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/bridgingtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -25,7 +26,6 @@ type ICardanoChainOperationsStrategy interface {
 		tokenHoldingOutputs uint64,
 		takeAtLeastUtxoCount int,
 	) (chosenUTXOs []*indexer.TxInputOutput, err error)
-	FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int)
 }
 
 type CardanoChainOperationReactorStrategy struct {
@@ -74,11 +74,6 @@ func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 	return &result, 0, nil
 }
 
-// getNeededUtxos returns only needed input utxos
-// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
-// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
-// if desiredAmount has been met, tx is created regularly
-// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
 func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	inputUTXOs []*indexer.TxInputOutput,
 	desiredAmount map[string]uint64,
@@ -89,67 +84,33 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
 	inputUTXOs = filterOutTokenUtxos(inputUTXOs)
-	lovelaceDesiredAmount := desiredAmount[cardanowallet.AdaTokenName]
 	// if we have change then it must be greater than this amount
-	txCostWithMinChange := minUtxoAmount + lovelaceDesiredAmount
+	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
 
-	// algorithm that chooses multisig UTXOs
-	chosenUTXOsSum := uint64(0)
-	isUtxosOk := false
+	inUtxos := mapUtxos(inputUTXOs)
 
-	for i, utxo := range inputUTXOs {
-		chosenUTXOs = append(chosenUTXOs, utxo)
-		utxoCount++
-
-		chosenUTXOsSum += utxo.Output.Amount // in cardano we should not care about overflow
-
-		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx := s.FindMinUtxo(chosenUTXOs)
-
-			chosenUTXOs[minChosenUTXOIdx] = utxo
-			chosenUTXOsSum -= minChosenUTXO.Output.Amount
-			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
-			utxoCount--
-		}
-
-		if chosenUTXOsSum >= txCostWithMinChange || chosenUTXOsSum == lovelaceDesiredAmount {
-			isUtxosOk = true
-
-			// try to add utxos until we reach tryAtLeastUtxoCount
-			cnt := min(
-				len(inputUTXOs)-i-1,                   // still available in inputUTXOs
-				takeAtLeastUtxoCount-len(chosenUTXOs), // needed to fill tryAtLeastUtxoCount
-				maxUtxoCount-utxoCount,                // maxUtxoCount limit must be preserved
-			)
-			if cnt > 0 {
-				chosenUTXOs = append(chosenUTXOs, inputUTXOs[i+1:i+1+cnt]...)
-			}
-
-			break
-		}
+	outputUTXOs, err := bridgingtx.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	if err != nil {
+		return nil, err
 	}
 
-	if !isUtxosOk {
-		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %v", desiredAmount)
+	usedUtxoMap := map[string]bool{}
+	for _, utxo := range outputUTXOs.Inputs {
+		usedUtxoMap[utxo.String()] = true
+	}
+
+	chosenCount := 0
+
+	for _, utxo := range inputUTXOs {
+		if !usedUtxoMap[fmt.Sprintf("%s#%d", utxo.Input.Hash, utxo.Input.Index)] {
+			continue
+		}
+
+		chosenUTXOs = append(chosenUTXOs, utxo)
+		chosenCount++
 	}
 
 	return chosenUTXOs, nil
-}
-
-func (s *CardanoChainOperationReactorStrategy) FindMinUtxo(
-	utxos []*indexer.TxInputOutput,
-) (*indexer.TxInputOutput, int) {
-	minimal := utxos[0]
-	idx := 0
-
-	for i, utxo := range utxos[1:] {
-		if utxo.Output.Amount < minimal.Output.Amount {
-			minimal = utxo
-			idx = i + 1
-		}
-	}
-
-	return minimal, idx
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -226,11 +187,24 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	return &result, tokenHoldingOutputs, nil
 }
 
-// getNeededSkylineUtxos returns only needed input utxos
-// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
-// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
-// if desiredAmount has been met, tx is created regularly
-// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
+func mapUtxos(inputUTXOs []*indexer.TxInputOutput) []cardanowallet.Utxo {
+	output := make([]cardanowallet.Utxo, len(inputUTXOs))
+
+	for i, utxo := range inputUTXOs {
+		output[i] = cardanowallet.Utxo{
+			Hash:   utxo.Input.Hash.String(),
+			Index:  utxo.Input.Index,
+			Amount: utxo.Output.Amount,
+			Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
+		}
+		for j, token := range utxo.Output.Tokens {
+			output[i].Tokens[j] = cardanowallet.TokenAmount(token)
+		}
+	}
+
+	return output
+}
+
 func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	inputUTXOs []*indexer.TxInputOutput,
 	desiredAmount map[string]uint64,
@@ -240,8 +214,6 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	chosenUTXOsSum := map[string]uint64{}
-	isUtxosOk := false
 	txCostWithMinChange := map[string]uint64{}
 
 	for chainName, desiredValue := range desiredAmount {
@@ -253,86 +225,28 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 		}
 	}
 
-	for i, utxo := range inputUTXOs {
-		chosenUTXOs = append(chosenUTXOs, utxo)
+	inUtxos := mapUtxos(inputUTXOs)
 
-		utxoCount++
-		chosenUTXOsSum[cardanowallet.AdaTokenName] += utxo.Output.Amount // in cardano we should not care about overflow
-
-		if len(utxo.Output.Tokens) > 0 {
-			chosenUTXOsSum[utxo.Output.Tokens[0].Name] += utxo.Output.Tokens[0].Amount
-		}
-
-		var minChosenUTXO *indexer.TxInputOutput
-
-		var minChosenUTXOIdx int
-
-		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx = s.FindMinUtxo(chosenUTXOs)
-
-			chosenUTXOsSum[cardanowallet.AdaTokenName] -= minChosenUTXO.Output.Amount
-
-			if len(minChosenUTXO.Output.Tokens) > 0 {
-				chosenUTXOsSum[minChosenUTXO.Output.Tokens[0].Name] -= minChosenUTXO.Output.Tokens[0].Amount
-			}
-
-			chosenUTXOs[minChosenUTXOIdx] = utxo
-			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
-			utxoCount--
-		}
-
-		achievedDesiredAmountsCount := 0
-
-		for tokenName, amount := range desiredAmount {
-			if chosenUTXOsSum[tokenName] >= txCostWithMinChange[tokenName] ||
-				chosenUTXOsSum[tokenName] == amount {
-				achievedDesiredAmountsCount++
-			}
-		}
-
-		if achievedDesiredAmountsCount == len(desiredAmount) {
-			isUtxosOk = true
-
-			// try to add utxos until we reach tryAtLeastUtxoCount
-			cnt := min(
-				len(inputUTXOs)-i-1,                   // still available in inputUTXOs
-				takeAtLeastUtxoCount-len(chosenUTXOs), // needed to fill tryAtLeastUtxoCount
-				maxUtxoCount-utxoCount,                // maxUtxoCount limit must be preserved
-			)
-			if cnt > 0 {
-				chosenUTXOs = append(chosenUTXOs, inputUTXOs[i+1:i+1+cnt]...)
-			}
-
-			break
-		}
+	outputUTXOs, err := bridgingtx.GetUTXOsForAmounts(inUtxos, txCostWithMinChange, maxUtxoCount, takeAtLeastUtxoCount)
+	if err != nil {
+		return nil, err
 	}
 
-	if !isUtxosOk {
-		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %v", desiredAmount)
+	usedUtxoMap := map[string]bool{}
+	for _, utxo := range outputUTXOs.Inputs {
+		usedUtxoMap[utxo.String()] = true
+	}
+
+	chosenCount := 0
+
+	for _, utxo := range inputUTXOs {
+		if !usedUtxoMap[fmt.Sprintf("%s#%d", utxo.Input.Hash, utxo.Input.Index)] {
+			continue
+		}
+
+		chosenUTXOs = append(chosenUTXOs, utxo)
+		chosenCount++
 	}
 
 	return chosenUTXOs, nil
-}
-
-func (s *CardanoChainOperationSkylineStrategy) FindMinUtxo(
-	utxos []*indexer.TxInputOutput,
-) (*indexer.TxInputOutput, int) {
-	minimal := utxos[0]
-	idx := 0
-
-	for i, utxo := range utxos[1:] {
-		if len(utxo.Output.Tokens) > 0 && len(minimal.Output.Tokens) > 0 {
-			if utxo.Output.Tokens[0].Amount < minimal.Output.Tokens[0].Amount {
-				minimal = utxo
-				idx = i + 1
-			}
-		} else {
-			if utxo.Output.Amount < minimal.Output.Amount {
-				minimal = utxo
-				idx = i + 1
-			}
-		}
-	}
-
-	return minimal, idx
 }
