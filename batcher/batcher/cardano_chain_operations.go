@@ -113,7 +113,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
+	txOutputs, _, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +289,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 		cco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
 		maxUtxoCount,
+		0,
 		cco.config.TakeAtLeastUtxoCount,
 	)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/bridgingtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -13,18 +14,29 @@ import (
 
 type ICardanoChainOperationsStrategy interface {
 	GetOutputs(
-		txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig,
-		destChainID string, logger hclog.Logger,
-	) (*cardano.TxOutputs, error)
+		txs []eth.ConfirmedTransaction,
+		cardanoConfig *cardano.CardanoChainConfig,
+		destChainID string,
+		logger hclog.Logger,
+	) (*cardano.TxOutputs, uint64, error)
 	GetNeededUtxos(
 		inputUTXOs []*indexer.TxInputOutput,
 		desiredAmount map[string]uint64,
 		minUtxoAmount uint64,
 		utxoCount int,
 		maxUtxoCount int,
+		tokenHoldingOutputs uint64,
 		takeAtLeastUtxoCount int,
 	) (chosenUTXOs []*indexer.TxInputOutput, err error)
-	FindMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int)
+	GetUTXOs(
+		multisigAddress,
+		multisigFeeAddress string,
+		txOutputs cardano.TxOutputs,
+		tokenHoldingOutputs uint64,
+		cardanoConfig *cardano.CardanoChainConfig,
+		db indexer.Database,
+		logger hclog.Logger,
+	) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error)
 }
 
 type CardanoChainOperationReactorStrategy struct {
@@ -32,7 +44,7 @@ type CardanoChainOperationReactorStrategy struct {
 
 func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, _ string, logger hclog.Logger,
-) (*cardano.TxOutputs, error) {
+) (*cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]uint64{}
 
 	for _, transaction := range txs {
@@ -70,82 +82,104 @@ func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return &result, nil
+	return &result, 0, nil
 }
 
-// getNeededUtxos returns only needed input utxos
-// It is expected that UTXOs are sorted by their Block Slot number (for example: returned sorted by db.GetAllTxOutput)
-// and taken from first to last until desiredAmount has been met or maxUtxoCount reached
-// if desiredAmount has been met, tx is created regularly
-// if maxUtxoCount has been reached, we replace smallest UTXO with first next bigger one until we reach desiredAmount
 func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 	inputUTXOs []*indexer.TxInputOutput,
 	desiredAmount map[string]uint64,
 	minUtxoAmount uint64,
 	utxoCount int,
 	maxUtxoCount int,
+	_ uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
 	inputUTXOs = filterOutTokenUtxos(inputUTXOs)
-	lovelaceDesiredAmount := desiredAmount[cardanowallet.AdaTokenName]
 	// if we have change then it must be greater than this amount
-	txCostWithMinChange := minUtxoAmount + lovelaceDesiredAmount
+	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
 
-	// algorithm that chooses multisig UTXOs
-	chosenUTXOsSum := uint64(0)
-	isUtxosOk := false
+	inUtxos := mapUtxos(inputUTXOs)
 
-	for i, utxo := range inputUTXOs {
-		chosenUTXOs = append(chosenUTXOs, utxo)
-		utxoCount++
-
-		chosenUTXOsSum += utxo.Output.Amount // in cardano we should not care about overflow
-
-		if utxoCount > maxUtxoCount {
-			minChosenUTXO, minChosenUTXOIdx := s.FindMinUtxo(chosenUTXOs)
-
-			chosenUTXOs[minChosenUTXOIdx] = utxo
-			chosenUTXOsSum -= minChosenUTXO.Output.Amount
-			chosenUTXOs = chosenUTXOs[:len(chosenUTXOs)-1]
-			utxoCount--
-		}
-
-		if chosenUTXOsSum >= txCostWithMinChange || chosenUTXOsSum == lovelaceDesiredAmount {
-			isUtxosOk = true
-
-			// try to add utxos until we reach tryAtLeastUtxoCount
-			cnt := min(
-				len(inputUTXOs)-i-1,                   // still available in inputUTXOs
-				takeAtLeastUtxoCount-len(chosenUTXOs), // needed to fill tryAtLeastUtxoCount
-				maxUtxoCount-utxoCount,                // maxUtxoCount limit must be preserved
-			)
-			if cnt > 0 {
-				chosenUTXOs = append(chosenUTXOs, inputUTXOs[i+1:i+1+cnt]...)
-			}
-
-			break
-		}
+	outputUTXOs, err := bridgingtx.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	if err != nil {
+		return nil, err
 	}
 
-	if !isUtxosOk {
-		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %v", desiredAmount)
+	usedUtxoMap := map[string]bool{}
+	for _, utxo := range outputUTXOs.Inputs {
+		usedUtxoMap[utxo.String()] = true
+	}
+
+	chosenUTXOs = make([]*indexer.TxInputOutput, 0, len(outputUTXOs.Inputs))
+
+	for _, utxo := range inputUTXOs {
+		if !usedUtxoMap[fmt.Sprintf("%s#%d", utxo.Input.Hash, utxo.Input.Index)] {
+			continue
+		}
+
+		chosenUTXOs = append(chosenUTXOs, utxo)
 	}
 
 	return chosenUTXOs, nil
 }
 
-func (s *CardanoChainOperationReactorStrategy) FindMinUtxo(
-	utxos []*indexer.TxInputOutput,
-) (*indexer.TxInputOutput, int) {
-	minimal := utxos[0]
-	idx := 0
+func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
+	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, _ uint64,
+	cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
+) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
+	multisigUtxos, err = db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return
+	}
 
-	for i, utxo := range utxos[1:] {
-		if utxo.Output.Amount < minimal.Output.Amount {
-			minimal = utxo
-			idx = i + 1
+	feeUtxos, err = db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return
+	}
+
+	feeUtxos = filterOutTokenUtxos(feeUtxos)
+
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
+
+	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+
+	multisigUtxos, err = s.GetNeededUtxos(
+		multisigUtxos,
+		txOutputs.Sum,
+		cardanoConfig.UtxoMinAmount,
+		len(feeUtxos)+len(txOutputs.Outputs),
+		maxUtxoCount,
+		0,
+		cardanoConfig.TakeAtLeastUtxoCount,
+	)
+	if err != nil {
+		return
+	}
+
+	logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	return
+}
+
+func mapUtxos(inputUTXOs []*indexer.TxInputOutput) []cardanowallet.Utxo {
+	output := make([]cardanowallet.Utxo, len(inputUTXOs))
+
+	for i, utxo := range inputUTXOs {
+		output[i] = cardanowallet.Utxo{
+			Hash:   utxo.Input.Hash.String(),
+			Index:  utxo.Input.Index,
+			Amount: utxo.Output.Amount,
+			Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
+		}
+		for j, token := range utxo.Output.Tokens {
+			output[i].Tokens[j] = cardanowallet.TokenAmount(token)
 		}
 	}
 
-	return minimal, idx
+	return output
 }
