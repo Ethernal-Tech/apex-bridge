@@ -328,59 +328,71 @@ func Test_getNeededUtxos(t *testing.T) {
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
-			Output: indexer.TxOutput{Amount: 10},
+			Output: indexer.TxOutput{Amount: 100},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
-			Output: indexer.TxOutput{Amount: 20},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
-			Output: indexer.TxOutput{Amount: 5},
+			Output: indexer.TxOutput{Amount: 150},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
-			Output: indexer.TxOutput{Amount: 30},
+			Output: indexer.TxOutput{Amount: 200},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
-			Output: indexer.TxOutput{Amount: 15},
+			Output: indexer.TxOutput{Amount: 160},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("06"), Index: 8},
+			Output: indexer.TxOutput{Amount: 400},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("07"), Index: 10},
+			Output: indexer.TxOutput{Amount: 200},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("08"), Index: 9},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 	}
 
-	t.Run("pass", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 60
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 0, 1)
+	t.Run("exact amount", func(t *testing.T) {
+		desiredAmounts[cardanowallet.AdaTokenName] = 605
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs[:len(inputs)-1], result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
-		desiredAmounts[cardanowallet.AdaTokenName] = 45
-		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 245
+		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, []*indexer.TxInputOutput{inputs[1], inputs[3]}, result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 62
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 706
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs, result)
+		require.Equal(t, inputs[3:6], result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 5
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 3)
+		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
 	})
 
 	t.Run("not enough sum", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 155
-		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 1550
+		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
@@ -407,84 +419,108 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 
 	inputs := []*indexer.TxInputOutput{
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
-			Output: indexer.TxOutput{
-				Amount: 20,
-			},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
+			Output: indexer.TxOutput{Amount: 100},
 		},
 		{
 			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
 			Output: indexer.TxOutput{
-				Amount: minUtxoAmount,
+				Amount: 50,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "1",
 						Name:     "1",
-						Amount:   20,
+						Amount:   100,
 					},
 				},
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
-			Output: indexer.TxOutput{
-				Amount: 15,
-			},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
+			Output: indexer.TxOutput{Amount: 150},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
-			Output: indexer.TxOutput{
-				Amount: 30,
-				Tokens: []indexer.TokenAmount{
-					{
-						PolicyID: "1",
-						Name:     "1",
-						Amount:   40,
-					},
-				},
-			},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			Output: indexer.TxOutput{Amount: 200},
 		},
 		{
 			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
 			Output: indexer.TxOutput{
-				Amount: 10,
+				Amount: 160,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   50,
+					},
+				},
+			},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("06"), Index: 8},
+			Output: indexer.TxOutput{Amount: 400},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("07"), Index: 10},
+			Output: indexer.TxOutput{
+				Amount: 200,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   400,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("08"), Index: 9},
+			Output: indexer.TxOutput{
+				Amount: 50,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   200,
+					},
+				},
 			},
 		},
 	}
 
-	var outputsWithTokens uint64 = 2
+	var outputsWithTokens uint64 = 4
 
 	t.Run("pass", func(t *testing.T) {
 		desiredAmounts := map[string]uint64{
-			cardanowallet.AdaTokenName: 35,
+			cardanowallet.AdaTokenName: 590,
 		}
 
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, outputsWithTokens, 1)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, outputsWithTokens, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[3]}, result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
-			"1.31":                     45,
+			"1.31":                     100,
 		}
 
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 1, outputsWithTokens, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs[:len(inputs)-1], result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[1]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
 		minUtxoAmount = 4
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
-			"1.31":                     40,
+			"1.31":                     350,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, outputsWithTokens, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs[:len(inputs)-1], result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[1], inputs[6]}, result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
@@ -493,7 +529,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
 			"1.31":                     20,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
+		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -501,7 +537,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: 12,
 		}
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 3)
+		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -510,16 +546,16 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	t.Run("not enough sum", func(t *testing.T) {
 		minUtxoAmount = 5
 		desiredAmounts := map[string]uint64{
-			cardanowallet.AdaTokenName: 160,
+			cardanowallet.AdaTokenName: 1600,
 		}
-		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
-			"1.31":                     250,
+			"1.31":                     2500,
 		}
-		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, outputsWithTokens, 1)
+		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
