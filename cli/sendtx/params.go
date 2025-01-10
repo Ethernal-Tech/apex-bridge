@@ -13,7 +13,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -357,8 +356,6 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 				TxProvider: cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 			},
 		},
-		infracommon.WithRetryWaitTime(common.WaitForAmountWaitTime),
-		infracommon.WithRetryCount(common.WaitForAmountRetryCount),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -387,7 +384,9 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(context.Background(), ip.chainIDDst, receivers, cardanowallet.AdaTokenName)
+		err = waitForTxOnCardano(
+			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}
