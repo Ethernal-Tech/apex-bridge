@@ -11,8 +11,10 @@ const (
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
-	MinFeeForBridgingDefault = uint64(1_000_010)
-	MinUtxoAmountDefault     = uint64(1_000_000)
+	MinFeeForBridgingDefault      = uint64(1_000_010)
+	MinUtxoAmountDefault          = uint64(1_000_000)
+	PotentialFeeDefault           = 250_000
+	MaxInputsPerBridgingTxDefault = 16
 
 	ReactorMode VCRunMode = "reactor"
 	SkylineMode VCRunMode = "skyline"
