@@ -6,8 +6,8 @@ import (
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/bridgingtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	txsend "github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -98,7 +98,7 @@ func (s *CardanoChainOperationReactorStrategy) GetNeededUtxos(
 
 	inUtxos := mapUtxos(inputUTXOs)
 
-	outputUTXOs, err := bridgingtx.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetNeededUtxos(
 
 	inUtxos := mapUtxos(inputUTXOs)
 
-	outputUTXOs, err := bridgingtx.GetUTXOsForAmounts(inUtxos, txCostWithMinChange, maxUtxoCount, takeAtLeastUtxoCount)
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, txCostWithMinChange, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
