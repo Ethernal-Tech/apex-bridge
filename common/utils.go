@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	waitForAmountRetryCount = 144 // 144 * 5 = 12 min
-	waitForAmountWaitTime   = time.Second * 5
+	WaitForAmountRetryCount = 144 // 144 * 5 = 12 min
+	WaitForAmountWaitTime   = time.Second * 5
 )
 
 func IsValidHTTPURL(input string) bool {
@@ -249,7 +249,7 @@ func WaitForAmount(
 		}
 
 		return balance, nil
-	}, infracommon.WithRetryCount(waitForAmountRetryCount), infracommon.WithRetryWaitTime(waitForAmountWaitTime))
+	}, infracommon.WithRetryCount(WaitForAmountRetryCount), infracommon.WithRetryWaitTime(WaitForAmountWaitTime))
 }
 
 func IsValidAddress(chainID string, addr string) bool {

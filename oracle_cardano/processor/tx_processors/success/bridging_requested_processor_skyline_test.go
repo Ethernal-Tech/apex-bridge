@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -132,10 +133,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
 			SenderAddr:         []string{"addr1"},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, destinationChainNonRegisteredMetadata)
@@ -160,10 +161,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, destinationChainNonRegisteredMetadata)
@@ -188,10 +189,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, bridgingAddrNotFoundInUtxosMetadata)
@@ -214,10 +215,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
 		multipleUtxosToBridgingAddrMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, multipleUtxosToBridgingAddrMetadata)
@@ -240,10 +241,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
 				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
 				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
@@ -270,20 +271,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{validTestAddress},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
-					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					IsNativeTokenOnSrc: 0,
+					Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 						SrcAmount:  2_000_000,
 						DestAmount: 1_000_000,
 					}},
 			},
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  (minFeeForBridging - 2),
 				DestAmount: (minFeeForBridging - 2) / 2},
 		})
@@ -310,15 +311,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{validTestAddress},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
-					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					IsNativeTokenOnSrc: 0,
+					Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 						SrcAmount:  2_000_000,
 						DestAmount: 1_000_000,
 					},
@@ -326,10 +327,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address:            common.SplitString(vectorBridgingFeeAddr, 40),
 					Amount:             minFeeForBridging * 2,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 			},
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  200,
 				DestAmount: 100},
 		})
@@ -356,10 +357,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{Address: []string{validTestAddress}, Amount: utxoMinValue},
 				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
 			},
@@ -384,19 +385,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 				{
 					Address:            []string{"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 			},
 		})
@@ -420,20 +421,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 				{
 					Address:            []string{"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
-					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					IsNativeTokenOnSrc: 0,
+					Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 						SrcAmount:  2_000_000,
 						DestAmount: 1_000_000,
 					},
@@ -460,20 +461,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
 					Amount:             minFeeForBridging * 2,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 				{
 					Address:            []string{validTestAddress},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
-					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					IsNativeTokenOnSrc: 0,
+					Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 						SrcAmount:  2_000_000,
 						DestAmount: 1_000_000,
 					},
@@ -500,20 +501,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
 					Amount:             minFeeForBridging * 2,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 				{
 					Address:            []string{validTestAddress},
 					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: false,
-					Additional: &common.BridgingRequestMetadataCurrencyInfo{
+					IsNativeTokenOnSrc: 0,
+					Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 						SrcAmount:  2_000_000,
 						DestAmount: 1_000_000,
 					},
@@ -540,14 +541,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
-			Transactions: []common.BridgingRequestMetadataTransaction{
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
 					Address:            []string{vectorBridgingFeeAddr},
 					Amount:             minFeeForBridging - 1,
-					IsNativeTokenOnSrc: false,
+					IsNativeTokenOnSrc: 0,
 				},
 			},
 		})
@@ -573,17 +574,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            common.SplitString(vectorBridgingFeeAddr, 40),
 				Amount:             minFeeForBridging * 2,
-				IsNativeTokenOnSrc: false,
+				IsNativeTokenOnSrc: 0,
 			},
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: false,
+				IsNativeTokenOnSrc: 0,
 				Amount:             maxAmountAllowedToBridge.Uint64(),
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  2_000_000,
 					DestAmount: 1_000_000,
 				},
@@ -591,7 +592,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
@@ -622,17 +623,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            common.SplitString(vectorBridgingFeeAddr, 40),
 				Amount:             minFeeForBridging * 2,
-				IsNativeTokenOnSrc: false,
+				IsNativeTokenOnSrc: 0,
 			},
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  1_000_000,
 					DestAmount: 500_000,
 				},
@@ -640,7 +641,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
@@ -689,16 +690,16 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address: common.SplitString(vectorBridgingFeeAddr, 40),
 				Amount:  minFeeForBridging * 2,
 			},
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  1_000_000,
 					DestAmount: 500_000,
 				},
@@ -706,7 +707,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
@@ -755,16 +756,16 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address: common.SplitString(vectorBridgingFeeAddr, 40),
 				Amount:  minFeeForBridging * 2,
 			},
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  1_000_000,
 					DestAmount: 500_000,
 				},
@@ -772,7 +773,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
@@ -821,12 +822,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  2_000_000,
 					DestAmount: 1_000_000,
 				},
@@ -834,11 +835,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  2_000_020,
 				DestAmount: 1_000_010,
 			},
@@ -888,12 +889,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            []string{validTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  2_000_000,
 					DestAmount: 1_000_000,
 				},
@@ -901,11 +902,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"addr1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  500_000,
 				DestAmount: 250_000,
 			},
@@ -934,12 +935,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            []string{validPrimeTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  500_000,
 					DestAmount: 1_000_000,
 				},
@@ -947,11 +948,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  250_000,
 				DestAmount: 500_000,
 			},
@@ -980,12 +981,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            []string{validPrimeTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  500_000,
 					DestAmount: 1_000_000,
 				},
@@ -993,11 +994,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  1_000_010,
 				DestAmount: 2_000_020,
 			},
@@ -1047,12 +1048,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address:            []string{validPrimeTestAddress},
-				IsNativeTokenOnSrc: true,
+				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
-				Additional: &common.BridgingRequestMetadataCurrencyInfo{
+				Additional: &sendtx.BridgingRequestMetadataCurrencyInfo{
 					SrcAmount:  1_000_000,
 					DestAmount: 500_005,
 				},
@@ -1060,11 +1061,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
 			SenderAddr:         []string{"vector1"},
 			Transactions:       receivers,
-			FeeAmount: common.BridgingRequestMetadataCurrencyInfo{
+			FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
 				SrcAmount:  500_000,
 				DestAmount: 1_000_010,
 			},

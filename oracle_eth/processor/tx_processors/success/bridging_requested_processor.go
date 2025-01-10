@@ -81,6 +81,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		receivers = append(receivers, oCore.BridgingRequestReceiver{
 			DestinationAddress: receiver.Address,
 			Amount:             receiverAmountDfm,
+			AmountWrapped:      big.NewInt(0),
 		})
 
 		totalAmount.Add(totalAmount, receiverAmountDfm)
@@ -92,6 +93,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
 		Amount:             feeAmountDfm,
+		AmountWrapped:      big.NewInt(0),
 	})
 
 	claim := oCore.BridgingRequestClaim{
@@ -101,6 +103,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmount,
 		NativeCurrencyAmountDestination: totalAmount,
+		WrappedTokenAmountSource:        big.NewInt(0),
+		WrappedTokenAmountDestination:   big.NewInt(0),
 		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}
 
