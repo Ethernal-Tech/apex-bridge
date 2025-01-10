@@ -113,13 +113,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, _, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
+	txOutputs, tokenHoldingOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
 	if err != nil {
 		return nil, err
 	}
 
 	multisigUtxos, feeUtxos, err := cco.strategy.GetUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs, 0, cco.config, cco.db, cco.logger)
+		multisigAddress, multisigFeeAddress, txOutputs, tokenHoldingOutputs, cco.config, cco.db, cco.logger)
 	if err != nil {
 		return nil, err
 	}

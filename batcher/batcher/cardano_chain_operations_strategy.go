@@ -129,7 +129,6 @@ func (s *CardanoChainOperationReactorStrategy) getNeededUtxos(
 	inputUTXOs = filterOutTokenUtxos(inputUTXOs)
 	// if we have change then it must be greater than this amount
 	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
-
 	inUtxos := mapUtxos(inputUTXOs)
 
 	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
@@ -163,8 +162,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	destChainID string, logger hclog.Logger,
 ) (cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
-
-	var tokenHoldingOutputs uint64 = 0
+	tokenHoldingOutputs := uint64(0)
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
@@ -176,7 +174,6 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 					tconf := getConfigTokenExchange(destChainID, true, cardanoConfig.Destinations)
 
 					token, err := cardanowallet.NewTokenAmountWithFullName(tconf.DstTokenName, 0, true)
-
 					if err != nil {
 						return cardano.TxOutputs{}, 0, fmt.Errorf("failed to create new token amount")
 					}
@@ -279,20 +276,16 @@ func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
 	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	txCostWithMinChange := map[string]uint64{}
-
 	for chainName, desiredValue := range desiredAmount {
 		if chainName == cardanowallet.AdaTokenName {
 			// if we have change then it must be greater than this amount
-			txCostWithMinChange[chainName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
-		} else {
-			txCostWithMinChange[chainName] = desiredValue
+			desiredAmount[chainName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
 		}
 	}
 
 	inUtxos := mapUtxos(inputUTXOs)
 
-	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, txCostWithMinChange, maxUtxoCount, takeAtLeastUtxoCount)
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
