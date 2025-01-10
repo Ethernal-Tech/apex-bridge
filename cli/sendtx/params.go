@@ -324,17 +324,21 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	ctx := context.Background()
+
 	switch ip.txType {
 	case common.ChainTypeEVMStr:
-		return ip.executeEvm(outputter)
+		return ip.executeEvm(ctx, outputter)
 	case common.ChainTypeCardanoStr, "":
-		return ip.executeCardano(outputter)
+		return ip.executeCardano(ctx, outputter)
 	default:
 		return nil, fmt.Errorf("txType not supported")
 	}
 }
 
-func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.OutputFormatter) (
+	common.ICommandResult, error,
+) {
 	receivers := ToCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	txSender := sendtx.NewTxSender(
@@ -364,7 +368,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	}
 
 	txRaw, txHash, _, err := txSender.CreateBridgingTx(
-		context.Background(),
+		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
 	)
@@ -375,7 +379,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SubmitTx(context.Background(), ip.chainIDSrc, txRaw, ip.wallet)
+	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +389,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 
 	if ip.ogmiosURLDst != "" {
 		err = waitForTxOnCardano(
-			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			ctx, cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 			ip.receiversParsed)
 		if err != nil {
 			return nil, err
@@ -407,7 +411,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 			}
 		}
 
-		err = waitForTxOnEvm(context.Background(), txHelper.GetClient(), receivers)
+		err = waitForTxOnEvm(ctx, txHelper.GetClient(), receivers)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +425,9 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	}, nil
 }
 
-func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputFormatter) (
+	common.ICommandResult, error,
+) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
@@ -451,7 +457,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		context.Background(), wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
+		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
 		abi, "withdraw", chainID, receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
@@ -460,7 +466,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet,
+	tx, err := txHelper.SendTx(ctx, wallet,
 		bind.TransactOpts{
 			GasLimit: estimatedGas,
 			Value:    totalAmount,
@@ -477,7 +483,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String(), true)
+	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
@@ -494,7 +500,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		}
 
 		err = waitForTxOnCardano(
-			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			ctx, cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 			receivers)
 		if err != nil {
 			return nil, err
