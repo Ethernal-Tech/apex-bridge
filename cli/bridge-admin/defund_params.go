@@ -108,7 +108,6 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 		return nil, err
 	}
 
-	// should wrapped amount affect gas estimation?
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
 		"defund", chainIDInt, g.address, amount)

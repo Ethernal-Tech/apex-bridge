@@ -119,39 +119,17 @@ func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
 }
 
 func (s *CardanoChainOperationReactorStrategy) getNeededUtxos(
-	inputUTXOs []*indexer.TxInputOutput,
+	txInputsOutputs []*indexer.TxInputOutput,
 	desiredAmount map[string]uint64,
 	minUtxoAmount uint64,
 	maxUtxoCount int,
 	_ uint64,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	inputUTXOs = filterOutTokenUtxos(inputUTXOs)
 	// if we have change then it must be greater than this amount
 	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
-	inUtxos := mapUtxos(inputUTXOs)
 
-	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
-	if err != nil {
-		return nil, err
-	}
-
-	usedUtxoMap := map[string]bool{}
-	for _, utxo := range outputUTXOs.Inputs {
-		usedUtxoMap[utxo.String()] = true
-	}
-
-	chosenUTXOs = make([]*indexer.TxInputOutput, 0, len(outputUTXOs.Inputs))
-
-	for _, utxo := range inputUTXOs {
-		if !usedUtxoMap[fmt.Sprintf("%s#%d", utxo.Input.Hash, utxo.Input.Index)] {
-			continue
-		}
-
-		chosenUTXOs = append(chosenUTXOs, utxo)
-	}
-
-	return chosenUTXOs, nil
+	return getNeededUtxos(filterOutTokenUtxos(txInputsOutputs), desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -269,13 +247,13 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 }
 
 func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
-	inputUTXOs []*indexer.TxInputOutput,
+	txInputsOutputs []*indexer.TxInputOutput,
 	desiredAmount map[string]uint64,
 	minUtxoAmount uint64,
 	maxUtxoCount int,
 	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
-) (chosenUTXOs []*indexer.TxInputOutput, err error) {
+) ([]*indexer.TxInputOutput, error) {
 	for chainName, desiredValue := range desiredAmount {
 		if chainName == cardanowallet.AdaTokenName {
 			// if we have change then it must be greater than this amount
@@ -283,47 +261,7 @@ func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
 		}
 	}
 
-	inUtxos := mapUtxos(inputUTXOs)
-
-	outputUTXOs, err := txsend.GetUTXOsForAmounts(inUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
-	if err != nil {
-		return nil, err
-	}
-
-	usedUtxoMap := map[string]bool{}
-	for _, utxo := range outputUTXOs.Inputs {
-		usedUtxoMap[utxo.String()] = true
-	}
-
-	chosenUTXOs = make([]*indexer.TxInputOutput, 0, len(outputUTXOs.Inputs))
-
-	for _, utxo := range inputUTXOs {
-		if !usedUtxoMap[fmt.Sprintf("%s#%d", utxo.Input.Hash, utxo.Input.Index)] {
-			continue
-		}
-
-		chosenUTXOs = append(chosenUTXOs, utxo)
-	}
-
-	return chosenUTXOs, nil
-}
-
-func mapUtxos(inputUTXOs []*indexer.TxInputOutput) []cardanowallet.Utxo {
-	output := make([]cardanowallet.Utxo, len(inputUTXOs))
-
-	for i, utxo := range inputUTXOs {
-		output[i] = cardanowallet.Utxo{
-			Hash:   utxo.Input.Hash.String(),
-			Index:  utxo.Input.Index,
-			Amount: utxo.Output.Amount,
-			Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
-		}
-		for j, token := range utxo.Output.Tokens {
-			output[i].Tokens[j] = cardanowallet.TokenAmount(token)
-		}
-	}
-
-	return output
+	return getNeededUtxos(txInputsOutputs, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 }
 
 func getConfigTokenExchange(destChainID string, isDestNativeToken bool,
@@ -340,4 +278,43 @@ func getConfigTokenExchange(destChainID string, isDestNativeToken bool,
 	}
 
 	return result
+}
+
+func getNeededUtxos(
+	txInputOutputs []*indexer.TxInputOutput, desiredAmount map[string]uint64,
+	maxUtxoCount int, takeAtLeastUtxoCount int,
+) ([]*indexer.TxInputOutput, error) {
+	inputUtxos := make([]cardanowallet.Utxo, len(txInputOutputs))
+
+	for i, utxo := range txInputOutputs {
+		inputUtxos[i] = cardanowallet.Utxo{
+			Hash:   utxo.Input.Hash.String(),
+			Index:  utxo.Input.Index,
+			Amount: utxo.Output.Amount,
+			Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
+		}
+		for j, token := range utxo.Output.Tokens {
+			inputUtxos[i].Tokens[j] = cardanowallet.TokenAmount(token)
+		}
+	}
+
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(inputUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	if err != nil {
+		return nil, err
+	}
+
+	usedUtxoMap := map[string]bool{}
+	for _, utxo := range outputUTXOs.Inputs {
+		usedUtxoMap[utxo.String()] = true
+	}
+
+	chosenUTXOs := make([]*indexer.TxInputOutput, 0, len(outputUTXOs.Inputs))
+
+	for _, utxo := range txInputOutputs {
+		if usedUtxoMap[utxo.Input.String()] {
+			chosenUTXOs = append(chosenUTXOs, utxo)
+		}
+	}
+
+	return chosenUTXOs, nil
 }
