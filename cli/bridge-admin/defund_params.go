@@ -49,7 +49,7 @@ func (g *defundParams) ValidateFlags() error {
 	currencyAmount, ok := new(big.Int).SetString(g.currencyAmountStr, 0)
 	if !ok || currencyAmount.Sign() <= 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			currencyAmountFlag, common.MinUtxoAmountDefault)
+			amountFlag, common.MinUtxoAmountDefault)
 	}
 
 	g.nativeTokenAmountStr = strings.TrimSpace(g.nativeTokenAmountStr)
@@ -62,7 +62,7 @@ func (g *defundParams) ValidateFlags() error {
 
 	if currencyAmount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
 		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			currencyAmountFlag, common.MinUtxoAmountDefault)
+			amountFlag, common.MinUtxoAmountDefault)
 	}
 
 	if g.privateKeyRaw == "" {
@@ -160,7 +160,7 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 	)
 	cmd.Flags().StringVar(
 		&g.currencyAmountStr,
-		currencyAmountFlag,
+		amountFlag,
 		"0",
 		defundAmountFlagDesc,
 	)

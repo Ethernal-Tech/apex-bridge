@@ -302,29 +302,12 @@ func TestGenerateBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededUtxos(t *testing.T) {
-	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 42,
-			"minUtxoAmount": 1000
-			}`))
-	dbMock := &indexer.DatabaseMock{}
+	const minUtxoAmount = 5
 
-	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
-	require.NoError(t, err)
-
-	cco := &CardanoChainOperations{
-		db:       dbMock,
-		logger:   hclog.NewNullLogger(),
-		strategy: &CardanoChainOperationReactorStrategy{},
-		config:   cardanoConfig,
-	}
-
+	reactorStrategy := &CardanoChainOperationReactorStrategy{}
 	desiredAmounts := map[string]uint64{
 		cardanowallet.AdaTokenName: 0,
 	}
-
-	var minUtxoAmount uint64 = 5
-
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
@@ -362,13 +345,13 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("exact amount", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 605
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
 		desiredAmounts[cardanowallet.AdaTokenName] = 245
-		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
+		result, err = reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
@@ -376,7 +359,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with change", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 706
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[3:6], result)
@@ -384,7 +367,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with at least", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 5
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -392,31 +375,13 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("not enough sum", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 1550
-		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
+		_, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
 
 func Test_getNeededSkylineUtxos(t *testing.T) {
-	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 42,
-			"minUtxoAmount": 1000
-			}`))
-	dbMock := &indexer.DatabaseMock{}
-
-	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
-	require.NoError(t, err)
-
-	scco := &CardanoChainOperations{
-		db:       dbMock,
-		logger:   hclog.NewNullLogger(),
-		strategy: &CardanoChainOperationSkylineStrategy{},
-		config:   cardanoConfig,
-	}
-
-	var minUtxoAmount uint64 = 5
-
+	strategy := &CardanoChainOperationSkylineStrategy{}
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
@@ -491,11 +456,13 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	var outputsWithTokens uint64 = 4
 
 	t.Run("pass", func(t *testing.T) {
+		const minUtxoAmount = 5
+
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: 590,
 		}
 
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, outputsWithTokens, 1)
+		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
@@ -505,31 +472,33 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 			"1.31":                     100,
 		}
 
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 1, outputsWithTokens, 1)
+		result, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 1, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[1]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
-		minUtxoAmount = 4
+		const minUtxoAmount = 4
+
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
 			"1.31":                     350,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, outputsWithTokens, 1)
+		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, outputsWithTokens, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[1], inputs[6]}, result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
-		minUtxoAmount = 4
+		const minUtxoAmount = 4
+
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
 			"1.31":                     20,
 		}
-		result, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
+		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -537,25 +506,26 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: 12,
 		}
-		result, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
+		result, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
 	})
 
 	t.Run("not enough sum", func(t *testing.T) {
-		minUtxoAmount = 5
+		const minUtxoAmount = 5
+
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: 1600,
 		}
-		_, err := scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
+		_, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
 			"1.31":                     2500,
 		}
-		_, err = scco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
+		_, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
