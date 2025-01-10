@@ -113,7 +113,8 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, tokenHoldingOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, "", cco.logger)
+	txOutputs, tokenHoldingOutputs, err := cco.strategy.GetOutputs(
+		confirmedTransactions, cco.config, chainID, cco.logger)
 	if err != nil {
 		return nil, err
 	}
