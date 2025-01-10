@@ -19,9 +19,8 @@ const (
 	nativeTokenAmountFlag = "native-token-amount"
 
 	defundAddressFlagDesc     = "address where defund amount goes"
-	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM (or in native tokens if the --native-token-amount flag is specified)" //nolint:lll
-	defundTokenAmountFlagDesc = "amount to withdraw native tokens from the hot wallet in DFM"
-	nativeTokenAmountFlagDesc = "use at your own risk (see the --amount flag)" //nolint:gosec
+	defundAmountFlagDesc      = "amount to withdraw from the hot wallet in DFM"
+	defundTokenAmountFlagDesc = "amount to withdraw from the hot wallet in native tokens"
 )
 
 type defundParams struct {
@@ -31,7 +30,6 @@ type defundParams struct {
 	nativeTokenAmountStr string
 	privateKeyRaw        string
 	address              string
-	nativeTokenAmount    bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -174,12 +172,6 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		addressFlag,
 		"0",
 		defundAddressFlagDesc,
-	)
-	cmd.Flags().BoolVar(
-		&g.nativeTokenAmount,
-		nativeTokenAmountFlag,
-		false,
-		nativeTokenAmountFlagDesc,
 	)
 }
 
