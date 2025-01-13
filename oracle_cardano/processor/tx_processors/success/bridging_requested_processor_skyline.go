@@ -12,6 +12,7 @@ import (
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -44,7 +45,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
 
-	if metadata.BridgingTxType != p.GetType() {
+	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
@@ -80,7 +81,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		receiverAddr := strings.Join(receiver.Address, "")
 
 		if receiver.Additional == nil {
-			receiver.Additional = &common.BridgingRequestMetadataCurrencyInfo{}
+			receiver.Additional = &sendtx.BridgingRequestMetadataCurrencyInfo{}
 		}
 
 		if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
@@ -93,7 +94,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			receiverAmountWrapped uint64
 		)
 
-		if receiver.IsNativeTokenOnSrc {
+		if receiver.IsNativeTokenOnSrc != 0 {
 			// receiverAmount represents the amount of native currency that is bridged to the receiver.
 			// receiver.Amount of native tokens on the source will be converted to the same amount of native currency on
 			// the destination.
@@ -231,7 +232,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		)
 
 		if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-			if receiver.IsNativeTokenOnSrc || receiver.Additional != nil {
+			if receiver.IsNativeTokenOnSrc != 0 || receiver.Additional != nil {
 				return fmt.Errorf("fee receiver metadata invalid: %v", metadata)
 			}
 
@@ -241,10 +242,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		}
 
 		if receiver.Additional == nil {
-			receiver.Additional = &common.BridgingRequestMetadataCurrencyInfo{}
+			receiver.Additional = &sendtx.BridgingRequestMetadataCurrencyInfo{}
 		}
 
-		if receiver.IsNativeTokenOnSrc {
+		if receiver.IsNativeTokenOnSrc != 0 {
 			// amount_to_bridge must be >= minUtxoAmount on destination
 			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true

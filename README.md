@@ -188,6 +188,7 @@ $ apex-bridge sendtx \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --ogmios-dst http://ogmios.vector.testnet.apexfusion.org:1337 \
+        --chain-src prime \
         --chain-dst vector \
         --receiver vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
         --fee 1_100_000
@@ -201,6 +202,7 @@ $ apex-bridge sendtx \
         --addr-multisig-src vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg \
         --ogmios-src http://ogmios.vector.testnet.apexfusion.org:1337 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --chain-src vector \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
         --fee 1_100_000 \
@@ -214,6 +216,7 @@ $ apex-bridge sendtx \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --testnet-src 3311 \
+        --chain-src prime \
         --chain-dst nexus \
         --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
@@ -228,6 +231,7 @@ $ apex-bridge sendtx \
         --key NEXUS_WALLET_PRIVATE_KEY \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
+        --chain-src nexus \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
         --fee 1000010000000000000 \

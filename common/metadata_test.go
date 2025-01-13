@@ -61,14 +61,16 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Json Marshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BridgingRequestMetadata](
+			MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Json Unmarshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := SimulateRealMetadata(
+			MetadataEncodingTypeJSON, BridgingRequestMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -78,14 +80,16 @@ func TestMetadata(t *testing.T) {
 	})
 
 	t.Run("Cbor Marshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := MarshalMetadata[BridgingRequestMetadata](
+			MetadataEncodingTypeCbor, BridgingRequestMetadata{BridgingTxType: "test"})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 	})
 
 	t.Run("Cbor Unmarshal BridgingRequestMetadata", func(t *testing.T) {
-		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadata{BridgingTxType: "test"})
+		result, err := SimulateRealMetadata(
+			MetadataEncodingTypeCbor, BridgingRequestMetadata{BridgingTxType: "test"})
 		require.NoError(t, err)
 		require.NotNil(t, result)
 
@@ -162,5 +166,35 @@ func TestMetadata(t *testing.T) {
 		metadata, err := UnmarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeCbor, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
+	})
+
+	t.Run("Cbor Unmarshal V1 obsolete bridging request", func(t *testing.T) {
+		feeAmount := uint64(1)
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadataV1{
+			BridgingTxType: "test",
+			FeeAmount:      feeAmount,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, result)
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+		require.Equal(t, feeAmount, metadata.FeeAmount.DestAmount)
+	})
+
+	t.Run("Json Unmarshal V1 obsolete bridging request", func(t *testing.T) {
+		feeAmount := uint64(1)
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadataV1{
+			BridgingTxType: "test",
+			FeeAmount:      feeAmount,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, result)
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+		require.Equal(t, feeAmount, metadata.FeeAmount.DestAmount)
 	})
 }

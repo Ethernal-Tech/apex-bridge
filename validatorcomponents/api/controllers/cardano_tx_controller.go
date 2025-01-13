@@ -17,6 +17,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
@@ -213,8 +214,6 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
-	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
-
 	var batcherChainConfig batcherCore.ChainConfig
 
 	for _, batcherChain := range c.batcherConfig.Chains {
@@ -235,25 +234,46 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
-	bridgingTxSender := cardanotx.NewBridgingTxSender(
-		wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
-		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
-		sourceChainConfig.BridgingAddresses.BridgingAddress,
-		cardanoConfig.TTLSlotNumberInc, cardanoConfig.PotentialFee,
+	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
+	minAmountToBridge := uint64(0)
+
+	destCardanoChainConfig, exists := c.oracleConfig.CardanoChains[requestBody.DestinationChainID]
+	if exists {
+		minAmountToBridge = destCardanoChainConfig.UtxoMinAmount
+	}
+
+	txSender := sendtx.NewTxSender(
+		requestBody.BridgingFee,
+		minAmountToBridge,
+		cardanoConfig.PotentialFee,
+		common.MaxInputsPerBridgingTxDefault,
+		map[string]sendtx.ChainConfig{
+			requestBody.SourceChainID: {
+				CardanoCliBinary: wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
+				TxProvider:       txProvider,
+				MultiSigAddr:     sourceChainConfig.BridgingAddresses.BridgingAddress,
+				TestNetMagic:     uint(sourceChainConfig.NetworkMagic),
+				TTLSlotNumberInc: cardanoConfig.TTLSlotNumberInc,
+				MinUtxoValue:     sourceChainConfig.UtxoMinAmount,
+				ExchangeRate:     make(map[string]float64),
+			},
+			requestBody.DestinationChainID: {},
+		},
 	)
 
-	receivers := make([]wallet.TxOutput, len(requestBody.Transactions))
+	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
-		receivers[i] = wallet.TxOutput{
-			Addr:   tx.Addr,
-			Amount: tx.Amount,
+		receivers[i] = sendtx.BridgingTxReceiver{
+			Addr:         tx.Addr,
+			Amount:       tx.Amount,
+			BridgingType: sendtx.BridgingTypeNormal,
 		}
 	}
 
-	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
-		context.Background(), requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		sourceChainConfig.UtxoMinAmount,
+	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
+		context.Background(),
+		requestBody.SourceChainID, requestBody.DestinationChainID,
+		requestBody.SenderAddr, receivers,
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)

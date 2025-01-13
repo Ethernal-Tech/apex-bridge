@@ -43,7 +43,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
 
-	if metadata.BridgingTxType != p.GetType() {
+	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
 		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
 	}
 
@@ -97,6 +97,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		receivers = append(receivers, cCore.BridgingRequestReceiver{
 			DestinationAddress: receiverAddr,
 			Amount:             receiverAmount,
+			AmountWrapped:      big.NewInt(0),
 		})
 
 		totalAmount.Add(totalAmount, receiverAmount)
@@ -109,6 +110,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
 		Amount:             feeAmount,
+		AmountWrapped:      big.NewInt(0),
 	})
 
 	claim := cCore.BridgingRequestClaim{
@@ -118,6 +120,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmount,
 		NativeCurrencyAmountDestination: totalAmount,
+		WrappedTokenAmountSource:        big.NewInt(0),
+		WrappedTokenAmountDestination:   big.NewInt(0),
 		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
 	}
 

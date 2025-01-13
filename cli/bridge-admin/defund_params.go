@@ -108,7 +108,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"defund", chainIDInt, g.address, amount)
+		"defund", chainIDInt, amount, big.NewInt(0), g.address)
 	if err != nil {
 		return nil, err
 	}

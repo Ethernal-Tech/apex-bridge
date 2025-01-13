@@ -2,6 +2,7 @@ package successtxprocessors
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -43,9 +44,10 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	}
 
 	claims.HotWalletIncrementClaims = append(claims.HotWalletIncrementClaims, oCore.HotWalletIncrementClaim{
-		ChainId:     common.ToNumChainID(tx.OriginChainID),
-		Amount:      common.WeiToDfm(tx.Value),
-		IsIncrement: true,
+		ChainId:       common.ToNumChainID(tx.OriginChainID),
+		Amount:        common.WeiToDfm(tx.Value),
+		AmountWrapped: big.NewInt(0),
+		IsIncrement:   true,
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",
