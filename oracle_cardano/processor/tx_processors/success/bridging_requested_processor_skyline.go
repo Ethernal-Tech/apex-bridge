@@ -94,7 +94,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			receiverAmountWrapped uint64
 		)
 
-		if receiver.IsNativeTokenOnSrc != 0 {
+		if receiver.IsNativeTokenOnSource() {
 			// receiverAmount represents the amount of native currency that is bridged to the receiver.
 			// receiver.Amount of native tokens on the source will be converted to the same amount of native currency on
 			// the destination.
@@ -232,7 +232,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		)
 
 		if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-			if receiver.IsNativeTokenOnSrc != 0 || receiver.Additional != nil {
+			if receiver.IsNativeTokenOnSource() || receiver.Additional != nil {
 				return fmt.Errorf("fee receiver metadata invalid: %v", metadata)
 			}
 
@@ -245,7 +245,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			receiver.Additional = &sendtx.BridgingRequestMetadataCurrencyInfo{}
 		}
 
-		if receiver.IsNativeTokenOnSrc != 0 {
+		if receiver.IsNativeTokenOnSource() {
 			// amount_to_bridge must be >= minUtxoAmount on destination
 			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
