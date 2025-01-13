@@ -45,7 +45,7 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
+			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, config.RunMode, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -86,15 +86,26 @@ func (bm *BatchManagerImpl) Start() {
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, runMode common.VCRunMode, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
 		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
 	}
 
+	var strategy batcher.ICardanoChainOperationsStrategy
+
+	switch runMode {
+	case common.ReactorMode:
+		strategy = &batcher.CardanoChainOperationReactorStrategy{}
+	case common.SkylineMode:
+		strategy = &batcher.CardanoChainOperationSkylineStrategy{}
+	default:
+		return nil, fmt.Errorf("unknown run mode: %s", runMode)
+	}
+
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, db, secretsManager, config.ChainID, strategy, logger)
 	if err != nil {
 		return nil, err
 	}

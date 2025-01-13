@@ -299,9 +299,9 @@ $ apex-bridge bridge-admin defund \
         --chain nexus \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --amount 100 \
+        --native-token-amount 200 \
         --addr 0xeefcd00000000000000000000000000000000000
 ```
-- there is optional `--native-token-amount` flag
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
