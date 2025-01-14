@@ -2,14 +2,11 @@ package batcher
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -302,85 +299,80 @@ func TestGenerateBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededUtxos(t *testing.T) {
-	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 42,
-			"minUtxoAmount": 1000
-			}`))
-	dbMock := &indexer.DatabaseMock{}
+	const minUtxoAmount = 5
 
-	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
-	require.NoError(t, err)
-
-	cco := &CardanoChainOperations{
-		db:       dbMock,
-		logger:   hclog.NewNullLogger(),
-		strategy: &CardanoChainOperationReactorStrategy{},
-		config:   cardanoConfig,
-	}
-
+	reactorStrategy := &CardanoChainOperationReactorStrategy{}
 	desiredAmounts := map[string]uint64{
 		cardanowallet.AdaTokenName: 0,
 	}
-
-	var minUtxoAmount uint64 = 5
-
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
-			Output: indexer.TxOutput{Amount: 10},
+			Output: indexer.TxOutput{Amount: 100},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
-			Output: indexer.TxOutput{Amount: 20},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
-			Output: indexer.TxOutput{Amount: 5},
+			Output: indexer.TxOutput{Amount: 150},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
-			Output: indexer.TxOutput{Amount: 30},
+			Output: indexer.TxOutput{Amount: 200},
 		},
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
-			Output: indexer.TxOutput{Amount: 15},
+			Output: indexer.TxOutput{Amount: 160},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("06"), Index: 8},
+			Output: indexer.TxOutput{Amount: 400},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("07"), Index: 10},
+			Output: indexer.TxOutput{Amount: 200},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("08"), Index: 9},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 	}
 
-	t.Run("pass", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 60
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 5, 30, 0, 1)
+	t.Run("exact amount", func(t *testing.T) {
+		desiredAmounts[cardanowallet.AdaTokenName] = 605
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs[:len(inputs)-1], result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
-		desiredAmounts[cardanowallet.AdaTokenName] = 45
-		result, err = cco.strategy.GetNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 0, 2, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 245
+		result, err = reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, []*indexer.TxInputOutput{inputs[1], inputs[3]}, result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 62
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 706
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs, result)
+		require.Equal(t, inputs[3:6], result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 5
-		result, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 4, 5, 30, 0, 3)
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
 	})
 
 	t.Run("not enough sum", func(t *testing.T) {
-		desiredAmounts[cardanowallet.AdaTokenName] = 155
-		_, err := cco.strategy.GetNeededUtxos(inputs, desiredAmounts, 5, 5, 30, 0, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 1550
+		_, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
 		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
@@ -556,24 +548,4 @@ func Test_getUTXOs(t *testing.T) {
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
 	})
-}
-
-func splitTokenAmount(name string, isNameEncoded bool) (string, string, error) {
-	parts := strings.Split(name, ".")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid full token name: %s", name)
-	}
-
-	if !isNameEncoded {
-		name = parts[1]
-	} else {
-		decodedName, err := hex.DecodeString(parts[1])
-		if err != nil {
-			return "", "", fmt.Errorf("invalid full token name: %s", name)
-		}
-
-		name = string(decodedName)
-	}
-
-	return parts[0], name, nil
 }

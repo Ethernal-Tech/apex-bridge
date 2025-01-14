@@ -41,6 +41,8 @@ github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241204113545-adc7b09280
 github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241204113545-adc7b0928071/go.mod h1:m4KVQGs10zoSEGpL5pEdRElQFAwettiZMJhpeshqMsI=
 github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241231090328-d93b350bc316 h1:PnZkcIb+Y3A+q62BLw5rHDd7ihbXvjTEdE1n0wREBlY=
 github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20241231090328-d93b350bc316/go.mod h1:m4KVQGs10zoSEGpL5pEdRElQFAwettiZMJhpeshqMsI=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250113102140-de475961dc97 h1:6vrQZeWczZHGB858+wbGPWPluWxX5ZCKVOZLz638ZlY=
+github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250113102140-de475961dc97/go.mod h1:m4KVQGs10zoSEGpL5pEdRElQFAwettiZMJhpeshqMsI=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94 h1:xUvsP9JPf8BKZ0ZJt0kC0UlernoKTkAzm4JVo4Mig/M=
 github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94/go.mod h1:B8gumPuc8eynSJmAcMd2CEjhlOSE8CynwFx9G3AlaQ8=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
