@@ -1,8 +1,9 @@
 package request
 
 type CreateBridgingTxTransactionRequest struct {
-	Addr   string `json:"addr"`
-	Amount uint64 `json:"amount"`
+	Addr          string `json:"addr"`
+	Amount        uint64 `json:"amount"`
+	IsNativeToken bool   `json:"isNativeToken"`
 }
 
 type CreateBridgingTxRequest struct {

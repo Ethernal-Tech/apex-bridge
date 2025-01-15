@@ -18,19 +18,18 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
-type CardanoTxControllerImpl struct {
+type SkylineTxControllerImpl struct {
 	oracleConfig  *oCore.AppConfig
 	batcherConfig *batcherCore.BatcherManagerConfiguration
 	logger        hclog.Logger
 }
 
-var _ core.APIController = (*CardanoTxControllerImpl)(nil)
+var _ core.APIController = (*SkylineTxControllerImpl)(nil)
 
-func NewCardanoTxController(
+func NewSkylineTxController(
 	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,
@@ -42,61 +41,65 @@ func NewCardanoTxController(
 	}
 }
 
-func (*CardanoTxControllerImpl) GetPathPrefix() string {
+func (*SkylineTxControllerImpl) GetPathPrefix() string {
 	return "CardanoTx"
 }
 
-func (c *CardanoTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
+func (sc *SkylineTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
 	return []*core.APIEndpoint{
-		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: c.createBridgingTx, APIKeyAuth: true},
+		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: sc.createBridgingTx, APIKeyAuth: true},
 	}
 }
 
-func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
-	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
+func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
+	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, sc.logger)
 	if !ok {
 		return
 	}
 
-	c.logger.Debug("createBridgingTx request", "body", requestBody, "url", r.URL)
+	sc.logger.Debug("createBridgingTx request", "body", requestBody, "url", r.URL)
 
-	err := c.validateAndFillOutCreateBridgingTxRequest(&requestBody)
+	err := sc.validateAndFillOutCreateBridgingTxRequest(&requestBody)
 	if err != nil {
 		utils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
-			fmt.Errorf("validation error. err: %w", err), c.logger)
+			fmt.Errorf("validation error. err: %w", err), sc.logger,
+		)
 
 		return
 	}
 
-	txRaw, txHash, err := c.createTx(requestBody)
+	txRaw, txHash, bridgingRequestMetadata, err := sc.createTx(requestBody)
 	if err != nil {
-		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
+		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
 
 		return
 	}
+
+	currencyOutput, tokenOutput, bridgingFee := getOutputAmounts(bridgingRequestMetadata)
 
 	utils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
+		response.NewFullSkylineBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+	)
 }
 
-func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
+func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
-	cardanoSrcConfig, _ := oUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
+	cardanoSrcConfig, _ := oUtils.GetChainConfig(sc.oracleConfig, requestBody.SourceChainID)
 	if cardanoSrcConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", requestBody.SourceChainID)
 	}
 
-	cardanoDestConfig, ethDestConfig := oUtils.GetChainConfig(c.oracleConfig, requestBody.DestinationChainID)
-	if cardanoDestConfig == nil && ethDestConfig == nil {
+	cardanoDestConfig, _ := oUtils.GetChainConfig(sc.oracleConfig, requestBody.DestinationChainID)
+	if cardanoDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}
 
-	if len(requestBody.Transactions) > c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
+	if len(requestBody.Transactions) > sc.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
 		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, requestBody: %v",
-			len(requestBody.Transactions), c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
+			len(requestBody.Transactions), sc.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
 	}
 
 	receiverAmountSum := big.NewInt(0)
@@ -106,41 +109,26 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	transactions := make([]request.CreateBridgingTxTransactionRequest, 0, len(requestBody.Transactions))
 
 	for _, receiver := range requestBody.Transactions {
-		if cardanoDestConfig != nil {
-			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
-				foundAUtxoValueBelowMinimumValue = true
+		if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
+			foundAUtxoValueBelowMinimumValue = true
 
-				break
-			}
+			break
+		}
 
-			addr, err := wallet.NewCardanoAddressFromString(receiver.Addr)
-			if err != nil || addr.GetInfo().Network != cardanoDestConfig.NetworkID {
-				foundAnInvalidReceiverAddr = true
+		addr, err := wallet.NewCardanoAddressFromString(receiver.Addr)
+		if err != nil || addr.GetInfo().Network != cardanoDestConfig.NetworkID {
+			foundAnInvalidReceiverAddr = true
 
-				break
-			}
+			break
+		}
 
-			// if fee address is specified in transactions just add amount to the fee sum
-			// otherwise keep this transaction
-			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-				feeSum += receiver.Amount
-			} else {
-				transactions = append(transactions, receiver)
-				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
-			}
-		} else if ethDestConfig != nil {
-			if !goEthCommon.IsHexAddress(receiver.Addr) {
-				foundAnInvalidReceiverAddr = true
-
-				break
-			}
-
-			if receiver.Addr == common.EthZeroAddr {
-				feeSum += receiver.Amount
-			} else {
-				transactions = append(transactions, receiver)
-				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
-			}
+		// if fee address is specified in transactions just add amount to the fee sum
+		// otherwise keep this transaction
+		if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+			feeSum += receiver.Amount
+		} else {
+			transactions = append(transactions, receiver)
+			receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 		}
 	}
 
@@ -157,36 +145,31 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		if cardanoDestConfig != nil {
-			requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
-		} else if ethDestConfig != nil {
-			requestBody.BridgingFee = ethDestConfig.MinFeeForBridging
-		}
+		requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
 	}
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
+	if requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 
-	if c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
-		c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+	if sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
+		receiverAmountSum.Cmp(sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee greater than maximum allowed: %v, for request: %v",
-			c.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge, requestBody)
+			sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge, requestBody)
 	}
 
 	return nil
 }
 
-func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
-	string, string, error,
+func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+	string, string, *sendtx.BridgingRequestMetadata, error,
 ) {
 	var batcherChainConfig batcherCore.ChainConfig
 
-	for _, batcherChain := range c.batcherConfig.Chains {
+	for _, batcherChain := range sc.batcherConfig.Chains {
 		if batcherChain.ChainID == requestBody.SourceChainID {
 			batcherChainConfig = batcherChain
 
@@ -196,18 +179,18 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	cardanoConfig, err := cardanotx.NewCardanoChainConfig(batcherChainConfig.ChainSpecific)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	txProvider, err := cardanoConfig.CreateTxProvider()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
+		return "", "", nil, fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
-	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
+	sourceChainConfig := sc.oracleConfig.CardanoChains[requestBody.SourceChainID]
 	minAmountToBridge := uint64(0)
 
-	destCardanoChainConfig, exists := c.oracleConfig.CardanoChains[requestBody.DestinationChainID]
+	destCardanoChainConfig, exists := sc.oracleConfig.CardanoChains[requestBody.DestinationChainID]
 	if exists {
 		minAmountToBridge = destCardanoChainConfig.UtxoMinAmount
 	}
@@ -234,22 +217,46 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
 		receivers[i] = sendtx.BridgingTxReceiver{
-			Addr:         tx.Addr,
-			Amount:       tx.Amount,
-			BridgingType: sendtx.BridgingTypeNormal,
+			Addr:   tx.Addr,
+			Amount: tx.Amount,
+		}
+		if tx.IsNativeToken {
+			receivers[i].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
+		} else {
+			receivers[i].BridgingType = sendtx.BridgingTypeCurrencyOnSource
 		}
 	}
 
-	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
+	txRawBytes, txHash, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers,
 	)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to build tx: %w", err)
+		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)
 	}
 
 	txRaw := hex.EncodeToString(txRawBytes)
 
-	return txRaw, txHash, nil
+	return txRaw, txHash, metadata, nil
+}
+
+func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64) {
+	bridgingFee = metadata.FeeAmount.SrcAmount
+
+	for _, x := range metadata.Transactions {
+		if x.IsNativeTokenOnSource() {
+			// WADA/WAPEX to ADA/APEX
+			outputNativeToken += x.Amount
+		} else {
+			// ADA/APEX to WADA/WAPEX or reactor
+			outputCurrencyLovelace += x.Amount
+		}
+
+		if x.Additional != nil {
+			bridgingFee += x.Additional.SrcAmount
+		}
+	}
+
+	return outputCurrencyLovelace, outputNativeToken, bridgingFee
 }
