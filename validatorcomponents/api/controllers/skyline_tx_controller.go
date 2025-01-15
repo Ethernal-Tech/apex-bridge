@@ -241,7 +241,9 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 	return txRaw, txHash, metadata, nil
 }
 
-func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64) {
+func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
+	outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64,
+) {
 	bridgingFee = metadata.FeeAmount.SrcAmount
 
 	for _, x := range metadata.Transactions {

@@ -22,7 +22,7 @@ const (
 
 const (
 	tokenDenomFlag     = "token-denom"
-	tokenDenomFlagDesc = "denom of the token to transfer"
+	tokenDenomFlagDesc = "denom of the token to transfer" //nolint:gosec
 )
 
 func ToCardanoMetadataForSkyline(receivers []*receiverAmount, tokenDenom string) []sendtx.BridgingTxReceiver {
