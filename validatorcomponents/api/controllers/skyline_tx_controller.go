@@ -230,7 +230,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 	txRawBytes, txHash, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers,
+		requestBody.SenderAddr, receivers, sendtx.NewExchangeRate(),
 	)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)

@@ -243,8 +243,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers,
-	)
+		requestBody.SenderAddr, receivers, sendtx.NewExchangeRate())
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}

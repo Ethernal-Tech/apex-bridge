@@ -269,8 +269,7 @@ func (p *sendSkylineTxParams) Execute(
 	txRaw, txHash, _, err := txSender.CreateBridgingTx(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
-		senderAddr.String(), receivers,
-	)
+		senderAddr.String(), receivers, sendtx.NewExchangeRate())
 	if err != nil {
 		return nil, err
 	}

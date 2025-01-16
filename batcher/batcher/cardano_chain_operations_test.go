@@ -732,9 +732,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 				Amount: 200,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
-						Amount:   20,
+						Token:  cardanowallet.NewToken(polID, tName),
+						Amount: 20,
 					},
 				},
 			},
@@ -743,9 +742,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 				Amount: 100,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
-						Amount:   10,
+						Token:  cardanowallet.NewToken(polID, tName),
+						Amount: 10,
 					},
 				},
 			},
@@ -754,9 +752,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 				Amount: 1300,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
-						Amount:   80,
+						Token:  cardanowallet.NewToken(polID, tName),
+						Amount: 80,
 					},
 				},
 			},
@@ -814,9 +811,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 				Amount: 3000,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
-						Amount:   200,
+						Token:  cardanowallet.NewToken(polID, tName),
+						Amount: 200,
 					},
 				},
 			},
@@ -825,9 +821,8 @@ func Test_getSkylineOutputs(t *testing.T) {
 				Amount: 170,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: polID,
-						Name:     tName,
-						Amount:   50,
+						Token:  cardanowallet.NewToken(polID, tName),
+						Amount: 50,
 					},
 				},
 			},
@@ -922,9 +917,8 @@ func Test_getSkylineUTXOs(t *testing.T) {
 				Amount: 5,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: "1",
-						Name:     "1",
-						Amount:   20,
+						Token:  cardanowallet.NewToken("1", "1"),
+						Amount: 20,
 					},
 				},
 			},
@@ -935,9 +929,8 @@ func Test_getSkylineUTXOs(t *testing.T) {
 				Amount: 30,
 				Tokens: []cardanowallet.TokenAmount{
 					{
-						PolicyID: "1",
-						Name:     "1",
-						Amount:   40,
+						Token:  cardanowallet.NewToken("1", "1"),
+						Amount: 40,
 					},
 				},
 			},

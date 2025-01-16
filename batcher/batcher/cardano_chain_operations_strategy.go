@@ -151,12 +151,14 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 				if len(data.Tokens) == 0 {
 					tconf := getConfigTokenExchange(destChainID, true, cardanoConfig.Destinations)
 
-					token, err := cardanowallet.NewTokenAmountWithFullName(tconf.DstTokenName, 0, true)
+					token, err := cardanowallet.NewTokenWithFullName(tconf.DstTokenName, true)
 					if err != nil {
 						return cardano.TxOutputs{}, 0, fmt.Errorf("failed to create new token amount")
 					}
 
-					data.Tokens = []cardanowallet.TokenAmount{token}
+					data.Tokens = []cardanowallet.TokenAmount{
+						cardanowallet.NewTokenAmount(token, 0),
+					}
 				}
 
 				data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
@@ -294,7 +296,8 @@ func getNeededUtxos(
 			Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
 		}
 		for j, token := range utxo.Output.Tokens {
-			inputUtxos[i].Tokens[j] = cardanowallet.TokenAmount(token)
+			inputUtxos[i].Tokens[j] = cardanowallet.NewTokenAmount(
+				cardanowallet.NewToken(token.PolicyID, token.Name), token.Amount)
 		}
 	}
 
