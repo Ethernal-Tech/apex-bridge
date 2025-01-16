@@ -110,11 +110,11 @@ func (appConfig *AppConfig) FillOut() {
 	}
 }
 
-func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig, error) {
+func (appConfig AppConfig) ToSendTxChainConfigs(bridgingFee uint64) (map[string]sendtx.ChainConfig, error) {
 	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 
 	for chainID, cardanoConfig := range appConfig.CardanoChains {
-		cfg, err := cardanoConfig.ToSendTxChainConfig()
+		cfg, err := cardanoConfig.ToSendTxChainConfig(bridgingFee)
 		if err != nil {
 			return nil, err
 		}
@@ -123,13 +123,13 @@ func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig
 	}
 
 	for chainID, config := range appConfig.EthChains {
-		result[chainID] = config.ToSendTxChainConfig()
+		result[chainID] = config.ToSendTxChainConfig(bridgingFee)
 	}
 
 	return result, nil
 }
 
-func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, err error) {
+func (config CardanoChainConfig) ToSendTxChainConfig(bridgingFee uint64) (res sendtx.ChainConfig, err error) {
 	txProvider, err := config.CreateTxProvider()
 	if err != nil {
 		return res, err
@@ -153,15 +153,15 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 		TestNetMagic:      uint(config.NetworkMagic),
 		TTLSlotNumberInc:  config.TTLSlotNumberInc,
 		MinUtxoValue:      config.UtxoMinAmount,
-		BridgingFeeAmount: config.MinFeeForBridging,
+		BridgingFeeAmount: max(bridgingFee, config.MinFeeForBridging),
 		PotentialFee:      config.PotentialFee,
 		NativeTokens:      tokens,
 	}, nil
 }
 
-func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
+func (config EthChainConfig) ToSendTxChainConfig(bridgingFee uint64) sendtx.ChainConfig {
 	return sendtx.ChainConfig{
 		MultiSigAddr:      config.BridgingAddresses.BridgingAddress,
-		BridgingFeeAmount: config.MinFeeForBridging,
+		BridgingFeeAmount: max(bridgingFee, config.MinFeeForBridging),
 	}
 }

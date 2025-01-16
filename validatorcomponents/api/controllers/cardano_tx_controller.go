@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
@@ -184,52 +183,13 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
-	var batcherChainConfig batcherCore.ChainConfig
-
-	for _, batcherChain := range c.batcherConfig.Chains {
-		if batcherChain.ChainID == requestBody.SourceChainID {
-			batcherChainConfig = batcherChain
-
-			break
-		}
-	}
-
-	cardanoConfig, err := cardanotx.NewCardanoChainConfig(batcherChainConfig.ChainSpecific)
+	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs(requestBody.BridgingFee)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to create configuration")
 	}
 
-	txProvider, err := cardanoConfig.CreateTxProvider()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
-	}
-
-	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
-	minAmountToBridge := uint64(0)
-
-	destCardanoChainConfig, exists := c.oracleConfig.CardanoChains[requestBody.DestinationChainID]
-	if exists {
-		minAmountToBridge = destCardanoChainConfig.UtxoMinAmount
-	}
-
-	txSender := sendtx.NewTxSender(
-		requestBody.BridgingFee,
-		minAmountToBridge,
-		cardanoConfig.PotentialFee,
-		common.MaxInputsPerBridgingTxDefault,
-		map[string]sendtx.ChainConfig{
-			requestBody.SourceChainID: {
-				CardanoCliBinary: wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
-				TxProvider:       txProvider,
-				MultiSigAddr:     sourceChainConfig.BridgingAddresses.BridgingAddress,
-				TestNetMagic:     uint(sourceChainConfig.NetworkMagic),
-				TTLSlotNumberInc: cardanoConfig.TTLSlotNumberInc,
-				MinUtxoValue:     sourceChainConfig.UtxoMinAmount,
-				ExchangeRate:     make(map[string]float64),
-			},
-			requestBody.DestinationChainID: {},
-		},
-	)
+	txSender := sendtx.NewTxSender(txSenderChainsConfig,
+		sendtx.WithMaxInputsPerTx(common.MaxInputsPerBridgingTxDefault))
 
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
@@ -248,7 +208,5 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	txRaw := hex.EncodeToString(txRawBytes)
-
-	return txRaw, txHash, nil
+	return hex.EncodeToString(txRawBytes), txHash, nil
 }
