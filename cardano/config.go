@@ -13,9 +13,9 @@ import (
 // CardanoConfigTokenExchange holds src and dst token to exchange with destionation chain
 // full token name[policyID.hex(name)or lovelace or "" for eth
 type CardanoConfigTokenExchange struct {
-	Chain        string
-	SrcTokenName string
-	DstTokenName string
+	DstChainID   string `json:"dstChainID"`
+	SrcTokenName string `json:"srcTokenName"`
+	DstTokenName string `json:"dstTokenName"`
 }
 
 type CardanoChainConfig struct {
@@ -35,7 +35,7 @@ type CardanoChainConfig struct {
 }
 
 // GetChainType implements ChainSpecificConfig.
-func (*CardanoChainConfig) GetChainType() string {
+func (CardanoChainConfig) GetChainType() string {
 	return common.ChainTypeCardanoStr
 }
 
@@ -67,6 +67,45 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
+}
+
+func (config CardanoChainConfig) GetNativeTokenName(
+	dstChainID string, isNativeTokenOnSrc bool,
+) string {
+	for _, dst := range config.Destinations {
+		if dst.DstChainID != dstChainID {
+			continue
+		}
+
+		if !isNativeTokenOnSrc && dst.SrcTokenName == cardanowallet.AdaTokenName {
+			return dst.DstTokenName
+		} else if isNativeTokenOnSrc && dst.DstTokenName == cardanowallet.AdaTokenName {
+			return dst.SrcTokenName
+		}
+	}
+
+	return ""
+}
+
+func (config CardanoChainConfig) GetNativeToken(
+	dstChainID string, isNativeTokenOnSrc bool,
+) (token cardanowallet.Token, err error) {
+	tokenName := config.GetNativeTokenName(dstChainID, isNativeTokenOnSrc)
+	if tokenName == "" {
+		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
+	}
+
+	token, err = cardanowallet.NewTokenWithFullName(tokenName, true)
+	if err == nil {
+		return token, nil
+	}
+
+	token, err = cardanowallet.NewTokenWithFullName(tokenName, false)
+	if err == nil {
+		return token, nil
+	}
+
+	return token, fmt.Errorf("invalid token name %s for destination: %s", tokenName, dstChainID)
 }
 
 var (

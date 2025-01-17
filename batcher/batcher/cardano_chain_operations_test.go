@@ -656,12 +656,12 @@ func Test_getSkylineOutputs(t *testing.T) {
 
 	ccCardanoConfigExchange := []cardano.CardanoConfigTokenExchange{
 		{
-			Chain:        common.ChainIDStrPrime,
+			DstChainID:   common.ChainIDStrPrime,
 			SrcTokenName: cardanowallet.AdaTokenName,
 			DstTokenName: primeCardanoWrappedTokenName,
 		},
 		{
-			Chain:        common.ChainIDStrPrime,
+			DstChainID:   common.ChainIDStrPrime,
 			SrcTokenName: cardanoPrimeWrappedTokenName,
 			DstTokenName: cardanowallet.AdaTokenName,
 		},
@@ -669,12 +669,12 @@ func Test_getSkylineOutputs(t *testing.T) {
 
 	ccPrimeTokenExchange := []cardano.CardanoConfigTokenExchange{
 		{
-			Chain:        common.ChainIDStrCardano,
+			DstChainID:   common.ChainIDStrCardano,
 			SrcTokenName: cardanowallet.AdaTokenName,
 			DstTokenName: cardanoPrimeWrappedTokenName,
 		},
 		{
-			Chain:        common.ChainIDStrCardano,
+			DstChainID:   common.ChainIDStrCardano,
 			SrcTokenName: primeCardanoWrappedTokenName,
 			DstTokenName: cardanowallet.AdaTokenName,
 		},

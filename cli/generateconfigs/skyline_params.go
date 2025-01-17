@@ -519,12 +519,12 @@ func (p *skylineGenerateConfigsParams) Execute(
 					UtxoMinAmount:         p.primeUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrCardano,
+							DstChainID:   common.ChainIDStrCardano,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: p.cardanoPrimeWrappedTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrCardano,
+							DstChainID:   common.ChainIDStrCardano,
 							SrcTokenName: p.primeCardanoWrappedTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},
@@ -553,12 +553,12 @@ func (p *skylineGenerateConfigsParams) Execute(
 					UtxoMinAmount:         p.cardanoUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: p.primeCardanoWrappedTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: p.cardanoPrimeWrappedTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},

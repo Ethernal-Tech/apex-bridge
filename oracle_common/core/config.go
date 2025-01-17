@@ -140,7 +140,7 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 	for _, tdst := range config.Destinations {
 		if tdst.SrcTokenName != cardanowallet.AdaTokenName {
 			tokens = append(tokens, sendtx.TokenExchangeConfig{
-				DstChainID: tdst.Chain,
+				DstChainID: tdst.DstChainID,
 				TokenName:  tdst.SrcTokenName,
 			})
 		}
