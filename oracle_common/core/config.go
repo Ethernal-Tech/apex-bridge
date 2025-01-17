@@ -110,11 +110,11 @@ func (appConfig *AppConfig) FillOut() {
 	}
 }
 
-func (appConfig AppConfig) ToSendTxChainConfigs(bridgingFee uint64) (map[string]sendtx.ChainConfig, error) {
+func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig, error) {
 	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 
 	for chainID, cardanoConfig := range appConfig.CardanoChains {
-		cfg, err := cardanoConfig.ToSendTxChainConfig(bridgingFee)
+		cfg, err := cardanoConfig.ToSendTxChainConfig()
 		if err != nil {
 			return nil, err
 		}
@@ -123,13 +123,13 @@ func (appConfig AppConfig) ToSendTxChainConfigs(bridgingFee uint64) (map[string]
 	}
 
 	for chainID, config := range appConfig.EthChains {
-		result[chainID] = config.ToSendTxChainConfig(bridgingFee)
+		result[chainID] = config.ToSendTxChainConfig()
 	}
 
 	return result, nil
 }
 
-func (config CardanoChainConfig) ToSendTxChainConfig(bridgingFee uint64) (res sendtx.ChainConfig, err error) {
+func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, err error) {
 	txProvider, err := config.CreateTxProvider()
 	if err != nil {
 		return res, err
@@ -147,21 +147,19 @@ func (config CardanoChainConfig) ToSendTxChainConfig(bridgingFee uint64) (res se
 	}
 
 	return sendtx.ChainConfig{
-		CardanoCliBinary:  cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:        txProvider,
-		MultiSigAddr:      config.BridgingAddresses.BridgingAddress,
-		TestNetMagic:      uint(config.NetworkMagic),
-		TTLSlotNumberInc:  config.TTLSlotNumberInc,
-		MinUtxoValue:      config.UtxoMinAmount,
-		BridgingFeeAmount: max(bridgingFee, config.MinFeeForBridging),
-		PotentialFee:      config.PotentialFee,
-		NativeTokens:      tokens,
+		CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:       txProvider,
+		MultiSigAddr:     config.BridgingAddresses.BridgingAddress,
+		TestNetMagic:     uint(config.NetworkMagic),
+		TTLSlotNumberInc: config.TTLSlotNumberInc,
+		MinUtxoValue:     config.UtxoMinAmount,
+		PotentialFee:     config.PotentialFee,
+		NativeTokens:     tokens,
 	}, nil
 }
 
-func (config EthChainConfig) ToSendTxChainConfig(bridgingFee uint64) sendtx.ChainConfig {
+func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
 	return sendtx.ChainConfig{
-		MultiSigAddr:      config.BridgingAddresses.BridgingAddress,
-		BridgingFeeAmount: max(bridgingFee, config.MinFeeForBridging),
+		MultiSigAddr: config.BridgingAddresses.BridgingAddress,
 	}
 }

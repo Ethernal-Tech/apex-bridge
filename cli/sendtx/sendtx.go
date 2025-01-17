@@ -5,10 +5,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const sendSkylineTxCommandUse = "skyline-tx"
+const sendSkylineTxCommandUse = "skyline"
 
-var sendtxParamsData = &sendTxParams{}
-var sendSkylineTxParamsData = &sendSkylineTxParams{}
+var (
+	sendtxParamsData        = &sendTxParams{}
+	sendSkylineTxParamsData = &sendSkylineTxParams{}
+)
 
 func GetSendTxCommand() *cobra.Command {
 	cmdSendTx := &cobra.Command{

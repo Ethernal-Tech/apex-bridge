@@ -77,7 +77,7 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if !common.IsExistingChainID(ip.evmChainID) {
+	if !common.IsExistingReactorChainID(ip.evmChainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
 	}
 

@@ -133,11 +133,11 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDSrc) {
+	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDDst) {
+	if !common.IsExistingReactorChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -342,10 +342,6 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	receivers := ToCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	txSender := sendtx.NewTxSender(
-		ip.feeAmount.Uint64(),
-		common.MinUtxoAmountDefault,
-		common.PotentialFeeDefault,
-		common.MaxInputsPerBridgingTxDefault,
 		map[string]sendtx.ChainConfig{
 			ip.chainIDSrc: {
 				CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(networkID),
@@ -354,7 +350,6 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				TestNetMagic:     ip.testnetMagicSrc,
 				TTLSlotNumberInc: ttlSlotNumberInc,
 				MinUtxoValue:     common.MinUtxoAmountDefault,
-				ExchangeRate:     make(map[string]float64),
 			},
 			ip.chainIDDst: {
 				TxProvider: cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
@@ -371,6 +366,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
+		ip.feeAmount.Uint64(), sendtx.NewExchangeRate(),
 	)
 	if err != nil {
 		return nil, err

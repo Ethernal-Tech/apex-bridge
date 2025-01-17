@@ -21,37 +21,37 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type CardanoTxControllerImpl struct {
+type ReactorTxControllerImpl struct {
 	oracleConfig  *oCore.AppConfig
 	batcherConfig *batcherCore.BatcherManagerConfiguration
 	logger        hclog.Logger
 }
 
-var _ core.APIController = (*CardanoTxControllerImpl)(nil)
+var _ core.APIController = (*ReactorTxControllerImpl)(nil)
 
 func NewCardanoTxController(
 	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,
-) *CardanoTxControllerImpl {
-	return &CardanoTxControllerImpl{
+) *ReactorTxControllerImpl {
+	return &ReactorTxControllerImpl{
 		oracleConfig:  oracleConfig,
 		batcherConfig: batcherConfig,
 		logger:        logger,
 	}
 }
 
-func (*CardanoTxControllerImpl) GetPathPrefix() string {
+func (*ReactorTxControllerImpl) GetPathPrefix() string {
 	return "CardanoTx"
 }
 
-func (c *CardanoTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
+func (c *ReactorTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
 	return []*core.APIEndpoint{
 		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: c.createBridgingTx, APIKeyAuth: true},
 	}
 }
 
-func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
+func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
 	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
 	if !ok {
 		return
@@ -80,7 +80,7 @@ func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
 }
 
-func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
+func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
 	cardanoSrcConfig, _ := oUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
@@ -180,10 +180,10 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
-	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs(requestBody.BridgingFee)
+	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create configuration")
 	}
@@ -203,7 +203,9 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, sendtx.NewExchangeRate())
+		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
+		sendtx.NewExchangeRate(),
+	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}

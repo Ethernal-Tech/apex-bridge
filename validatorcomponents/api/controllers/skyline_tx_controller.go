@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
@@ -33,8 +32,8 @@ func NewSkylineTxController(
 	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,
-) *CardanoTxControllerImpl {
-	return &CardanoTxControllerImpl{
+) *SkylineTxControllerImpl {
+	return &SkylineTxControllerImpl{
 		oracleConfig:  oracleConfig,
 		batcherConfig: batcherConfig,
 		logger:        logger,
@@ -109,7 +108,13 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	transactions := make([]request.CreateBridgingTxTransactionRequest, 0, len(requestBody.Transactions))
 
 	for _, receiver := range requestBody.Transactions {
-		if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
+		if receiver.IsNativeToken && receiver.Amount < cardanoDestConfig.UtxoMinAmount {
+			foundAUtxoValueBelowMinimumValue = true
+
+			break
+		}
+
+		if !receiver.IsNativeToken && receiver.Amount < cardanoSrcConfig.UtxoMinAmount {
 			foundAUtxoValueBelowMinimumValue = true
 
 			break
@@ -124,11 +129,13 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 		// if fee address is specified in transactions just add amount to the fee sum
 		// otherwise keep this transaction
-		if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-			feeSum += receiver.Amount
-		} else {
-			transactions = append(transactions, receiver)
-			receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
+		if !receiver.IsNativeToken {
+			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+				feeSum += receiver.Amount
+			} else {
+				transactions = append(transactions, receiver)
+				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
+			}
 		}
 	}
 
@@ -167,52 +174,13 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, *sendtx.BridgingRequestMetadata, error,
 ) {
-	var batcherChainConfig batcherCore.ChainConfig
-
-	for _, batcherChain := range sc.batcherConfig.Chains {
-		if batcherChain.ChainID == requestBody.SourceChainID {
-			batcherChainConfig = batcherChain
-
-			break
-		}
-	}
-
-	cardanoConfig, err := cardanotx.NewCardanoChainConfig(batcherChainConfig.ChainSpecific)
+	txSenderChainsConfig, err := sc.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, fmt.Errorf("failed to generate configuration")
 	}
 
-	txProvider, err := cardanoConfig.CreateTxProvider()
-	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to create tx provider: %w", err)
-	}
-
-	sourceChainConfig := sc.oracleConfig.CardanoChains[requestBody.SourceChainID]
-	minAmountToBridge := uint64(0)
-
-	destCardanoChainConfig, exists := sc.oracleConfig.CardanoChains[requestBody.DestinationChainID]
-	if exists {
-		minAmountToBridge = destCardanoChainConfig.UtxoMinAmount
-	}
-
-	txSender := sendtx.NewTxSender(
-		requestBody.BridgingFee,
-		minAmountToBridge,
-		cardanoConfig.PotentialFee,
-		common.MaxInputsPerBridgingTxDefault,
-		map[string]sendtx.ChainConfig{
-			requestBody.SourceChainID: {
-				CardanoCliBinary: wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
-				TxProvider:       txProvider,
-				MultiSigAddr:     sourceChainConfig.BridgingAddresses.BridgingAddress,
-				TestNetMagic:     uint(sourceChainConfig.NetworkMagic),
-				TTLSlotNumberInc: cardanoConfig.TTLSlotNumberInc,
-				MinUtxoValue:     sourceChainConfig.UtxoMinAmount,
-				ExchangeRate:     make(map[string]float64),
-			},
-			requestBody.DestinationChainID: {},
-		},
-	)
+	txSender := sendtx.NewTxSender(txSenderChainsConfig,
+		sendtx.WithMaxInputsPerTx(common.MaxInputsPerBridgingTxDefault))
 
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
@@ -230,15 +198,14 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 	txRawBytes, txHash, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, sendtx.NewExchangeRate(),
+		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
+		sendtx.NewExchangeRate(),
 	)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	txRaw := hex.EncodeToString(txRawBytes)
-
-	return txRaw, txHash, metadata, nil
+	return hex.EncodeToString(txRawBytes), txHash, metadata, nil
 }
 
 func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (

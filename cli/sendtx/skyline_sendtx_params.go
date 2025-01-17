@@ -14,25 +14,20 @@ import (
 )
 
 const (
-	adaNativeCurrencyDenom  = "ada"
-	apexNativeCurrencyDenom = "apex"
-	adaNativeTokenDenom     = "wada"
-	apexNativeTokenDenom    = "wapex"
+	fullSrcTokenNameFlag      = "src-token-name"                                      //nolint:gosec
+	fullDestTokenNameFlag     = "dest-token-name"                                     //nolint:gosec
+	fullSrcTokenNameFlagDesc  = "denom of the token to transfer from source chain"    //nolint:gosec
+	fullDestTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
 )
 
-const (
-	tokenDenomFlag     = "token-denom"
-	tokenDenomFlagDesc = "denom of the token to transfer" //nolint:gosec
-)
-
-func ToCardanoMetadataForSkyline(receivers []*receiverAmount, tokenDenom string) []sendtx.BridgingTxReceiver {
+func ToCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName string) []sendtx.BridgingTxReceiver {
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
 		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
 			Addr:   rec.ReceiverAddr,
 			Amount: rec.Amount.Uint64(),
 		}
-		if tokenDenom == adaNativeCurrencyDenom || tokenDenom == apexNativeCurrencyDenom {
+		if sourceTokenName == "" {
 			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeCurrencyOnSource
 		} else {
 			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
@@ -43,12 +38,13 @@ func ToCardanoMetadataForSkyline(receivers []*receiverAmount, tokenDenom string)
 }
 
 type sendSkylineTxParams struct {
-	privateKeyRaw string
-	receivers     []string
-	chainIDSrc    string
-	chainIDDst    string
-	feeString     string
-	tokenDenom    string
+	privateKeyRaw           string
+	receivers               []string
+	chainIDSrc              string
+	chainIDDst              string
+	feeString               string
+	fullSrcTokenNameString  string
+	fullDestTokenNameString string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -56,9 +52,11 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount         *big.Int
+	fullSrcTokenName  cardanowallet.Token
+	fullDestTokenName cardanowallet.Token
+	receiversParsed   []*receiverAmount
+	wallet            *cardanowallet.Wallet
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -70,22 +68,44 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingChainID(p.chainIDSrc) {
+	if !common.IsExistingSkylineChainID(p.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingChainID(p.chainIDDst) {
+	if !common.IsExistingSkylineChainID(p.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		if p.tokenDenom != adaNativeCurrencyDenom && p.tokenDenom != apexNativeTokenDenom {
-			return fmt.Errorf("--%s invalid denom for chain: %s", tokenDenomFlag, p.chainIDSrc)
+	if (p.fullSrcTokenNameString != "" && p.fullDestTokenNameString != "") ||
+		(p.fullSrcTokenNameString == "" && p.fullDestTokenNameString == "") {
+		return fmt.Errorf("only one flag between %s and %s should be specified",
+			p.fullSrcTokenNameString, p.fullDestTokenNameString)
+	}
+
+	if p.fullSrcTokenNameString != "" {
+		tokenName, err := cardanowallet.NewTokenWithFullName(p.fullSrcTokenNameString, false)
+		if err != nil {
+			tokenName, err = cardanowallet.NewTokenWithFullName(p.fullSrcTokenNameString, true)
+			if err != nil {
+				return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.fullSrcTokenNameString)
+			}
 		}
-	} else {
-		if p.tokenDenom != apexNativeCurrencyDenom && p.tokenDenom != adaNativeTokenDenom {
-			return fmt.Errorf("--%s invalid denom for chain: %s", tokenDenomFlag, p.chainIDSrc)
+
+		p.fullSrcTokenName = tokenName
+		p.fullDestTokenName.Name = cardanowallet.AdaTokenName
+	}
+
+	if p.fullDestTokenNameString != "" {
+		tokenName, err := cardanowallet.NewTokenWithFullName(p.fullDestTokenNameString, false)
+		if err != nil {
+			tokenName, err = cardanowallet.NewTokenWithFullName(p.fullDestTokenNameString, true)
+			if err != nil {
+				return fmt.Errorf("--%s invalid token name: %s", fullDestTokenNameFlag, p.fullDestTokenNameString)
+			}
 		}
+
+		p.fullDestTokenName = tokenName
+		p.fullSrcTokenName.Name = cardanowallet.AdaTokenName
 	}
 
 	feeAmount, ok := new(big.Int).SetString(p.feeString, 0)
@@ -95,7 +115,13 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	if p.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
+	minFeeForBridging := common.MinFeeForBridgingToPrime
+
+	if p.chainIDDst == common.ChainIDStrCardano {
+		minFeeForBridging = common.MinFeeForBridgingToCardano
+	}
+
+	if p.feeAmount.Uint64() < minFeeForBridging {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 	}
 
@@ -137,11 +163,6 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 		if !common.IsValidAddress(p.chainIDDst, vals[0]) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
-		}
-
-		if p.chainIDDst != common.ChainIDStrNexus &&
-			amount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
-			return fmt.Errorf("--%s number %d has insufficient amount: %s", receiverFlag, i, x)
 		}
 
 		receivers = append(receivers, &receiverAmount{
@@ -192,10 +213,17 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.tokenDenom,
-		tokenDenomFlag,
+		&p.fullSrcTokenNameString,
+		fullSrcTokenNameFlag,
 		"",
-		feeAmountFlagDesc,
+		fullSrcTokenNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.fullDestTokenNameString,
+		fullDestTokenNameFlag,
+		"",
+		fullDestTokenNameFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -238,13 +266,18 @@ func (p *sendSkylineTxParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
-	receivers := ToCardanoMetadataForSkyline(p.receiversParsed, p.tokenDenom)
+	receivers := ToCardanoMetadataForSkyline(p.receiversParsed, p.fullDestTokenName.Name)
 	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
+
+	utxoAmountSrc := common.MinUtxoAmountDefaultPrime
+	utxoAmountDest := common.MinUtxoAmountDefaultCardano
+
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		utxoAmountSrc = common.MinUtxoAmountDefaultCardano
+		utxoAmountDest = common.MinUtxoAmountDefaultPrime
+	}
+
 	txSender := sendtx.NewTxSender(
-		p.feeAmount.Uint64(),
-		common.MinUtxoAmountDefault,
-		common.PotentialFeeDefault,
-		common.MaxInputsPerBridgingTxDefault,
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
 				CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(networkID),
@@ -252,11 +285,17 @@ func (p *sendSkylineTxParams) Execute(
 				MultiSigAddr:     p.multisigAddrSrc,
 				TestNetMagic:     p.testnetMagicSrc,
 				TTLSlotNumberInc: ttlSlotNumberInc,
-				MinUtxoValue:     common.MinUtxoAmountDefault,
-				ExchangeRate:     make(map[string]float64),
+				MinUtxoValue:     utxoAmountSrc,
+				NativeTokens: []sendtx.TokenExchangeConfig{
+					{
+						DstChainID: p.chainIDDst,
+						TokenName:  p.fullSrcTokenName.Name,
+					},
+				},
 			},
 			p.chainIDDst: {
-				TxProvider: cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
+				TxProvider:   cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
+				MinUtxoValue: utxoAmountDest,
 			},
 		},
 	)
@@ -269,7 +308,8 @@ func (p *sendSkylineTxParams) Execute(
 	txRaw, txHash, _, err := txSender.CreateBridgingTx(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
-		senderAddr.String(), receivers, sendtx.NewExchangeRate())
+		senderAddr.String(), receivers,
+		p.feeAmount.Uint64(), sendtx.NewExchangeRate())
 	if err != nil {
 		return nil, err
 	}
@@ -285,9 +325,9 @@ func (p *sendSkylineTxParams) Execute(
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
 	outputter.WriteOutput()
 
-	err = waitForTxOnCardano(
+	err = waitForSkylineTx(
 		ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
-		p.receiversParsed)
+		p.fullSrcTokenName.Name, p.fullDestTokenName.Name, p.receiversParsed)
 	if err != nil {
 		return nil, err
 	}
@@ -301,4 +341,27 @@ func (p *sendSkylineTxParams) Execute(
 		Receipts:   p.receiversParsed,
 		TxHash:     txHash,
 	}, nil
+}
+
+func waitForSkylineTx(
+	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever,
+	sourceTokenName string, destinationTokenName string, receivers []*receiverAmount) error {
+	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
+		utxos, err := txUtxoRetriever.GetUtxos(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		sum := cardanowallet.GetUtxosSum(utxos)
+
+		var receivingTokenName string
+
+		if sourceTokenName == cardanowallet.AdaTokenName {
+			receivingTokenName = destinationTokenName
+		} else {
+			receivingTokenName = cardanowallet.AdaTokenName
+		}
+
+		return new(big.Int).SetUint64(sum[receivingTokenName]), nil
+	})
 }
