@@ -20,7 +20,7 @@ const (
 	MinUtxoAmountDefaultPrime   = uint64(1_000_000)
 
 	PotentialFeeDefault           = 250_000
-	MaxInputsPerBridgingTxDefault = 16
+	MaxInputsPerBridgingTxDefault = 50
 
 	ReactorMode VCRunMode = "reactor"
 	SkylineMode VCRunMode = "skyline"

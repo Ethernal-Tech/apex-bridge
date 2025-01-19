@@ -49,6 +49,10 @@ func ToStrChainID(chainIDNum chainIDNum) string {
 	return reactorIntToStr[chainIDNum]
 }
 
+func IsExistingChainID(chainIDStr string) bool {
+	return IsExistingReactorChainID(chainIDStr) || IsExistingSkylineChainID(chainIDStr)
+}
+
 func IsExistingReactorChainID(chainIDStr string) bool {
 	_, exists := reactorStrToInt[chainIDStr]
 

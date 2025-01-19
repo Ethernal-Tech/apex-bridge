@@ -344,15 +344,17 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			ip.chainIDSrc: {
-				CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:       cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
-				MultiSigAddr:     ip.multisigAddrSrc,
-				TestNetMagic:     ip.testnetMagicSrc,
-				TTLSlotNumberInc: ttlSlotNumberInc,
-				MinUtxoValue:     common.MinUtxoAmountDefault,
+				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
+				MultiSigAddr:         ip.multisigAddrSrc,
+				TestNetMagic:         ip.testnetMagicSrc,
+				TTLSlotNumberInc:     ttlSlotNumberInc,
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
+				MinUtxoValue:         common.MinUtxoAmountDefault,
 			},
 			ip.chainIDDst: {
-				TxProvider: cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
 			},
 		},
 	)

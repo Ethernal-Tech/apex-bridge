@@ -35,7 +35,7 @@ type setAdditionalDataParams struct {
 }
 
 func (ip *setAdditionalDataParams) ValidateFlags() error {
-	if !common.IsExistingReactorChainID(ip.chainID) {
+	if !common.IsExistingChainID(ip.chainID) {
 		return fmt.Errorf("invalid --%s flag", chainIDFlag)
 	}
 

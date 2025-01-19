@@ -277,15 +277,24 @@ func (p *sendSkylineTxParams) Execute(
 		utxoAmountDest = common.MinUtxoAmountDefaultPrime
 	}
 
+	minFeeForBridgingSrc := common.MinFeeForBridgingToPrime
+	minFeeForBridgingDest := common.MinFeeForBridgingToCardano
+
+	if p.chainIDDst == common.ChainIDStrCardano {
+		minFeeForBridgingSrc = common.MinFeeForBridgingToCardano
+		minFeeForBridgingDest = common.MinFeeForBridgingToPrime
+	}
+
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:       cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				MultiSigAddr:     p.multisigAddrSrc,
-				TestNetMagic:     p.testnetMagicSrc,
-				TTLSlotNumberInc: ttlSlotNumberInc,
-				MinUtxoValue:     utxoAmountSrc,
+				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
+				MultiSigAddr:         p.multisigAddrSrc,
+				TestNetMagic:         p.testnetMagicSrc,
+				TTLSlotNumberInc:     ttlSlotNumberInc,
+				MinBridgingFeeAmount: minFeeForBridgingSrc,
+				MinUtxoValue:         utxoAmountSrc,
 				NativeTokens: []sendtx.TokenExchangeConfig{
 					{
 						DstChainID: p.chainIDDst,
@@ -294,8 +303,9 @@ func (p *sendSkylineTxParams) Execute(
 				},
 			},
 			p.chainIDDst: {
-				TxProvider:   cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
-				MinUtxoValue: utxoAmountDest,
+				TxProvider:           cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
+				MinUtxoValue:         utxoAmountDest,
+				MinBridgingFeeAmount: minFeeForBridgingDest,
 			},
 		},
 	)

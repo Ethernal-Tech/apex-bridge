@@ -147,19 +147,28 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 	}
 
 	return sendtx.ChainConfig{
-		CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:       txProvider,
-		MultiSigAddr:     config.BridgingAddresses.BridgingAddress,
-		TestNetMagic:     uint(config.NetworkMagic),
-		TTLSlotNumberInc: config.TTLSlotNumberInc,
-		MinUtxoValue:     config.UtxoMinAmount,
-		PotentialFee:     config.PotentialFee,
-		NativeTokens:     tokens,
+		CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:           txProvider,
+		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
+		TestNetMagic:         uint(config.NetworkMagic),
+		TTLSlotNumberInc:     config.TTLSlotNumberInc,
+		MinUtxoValue:         config.UtxoMinAmount,
+		NativeTokens:         tokens,
+		MinBridgingFeeAmount: config.MinFeeForBridging,
+		PotentialFee:         config.PotentialFee,
+		ProtocolParameters:   nil,
 	}, nil
 }
 
 func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
+	feeValue := new(big.Int).SetUint64(config.MinFeeForBridging)
+
+	if len(feeValue.String()) == common.WeiDecimals {
+		feeValue = common.WeiToDfm(feeValue)
+	}
+
 	return sendtx.ChainConfig{
-		MultiSigAddr: config.BridgingAddresses.BridgingAddress,
+		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
+		MinBridgingFeeAmount: feeValue.Uint64(),
 	}
 }

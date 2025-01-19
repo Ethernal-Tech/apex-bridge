@@ -51,7 +51,7 @@ func (ip *createAddressParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 		}
 
-		if !common.IsExistingReactorChainID(ip.chainID) {
+		if !common.IsExistingChainID(ip.chainID) {
 			return fmt.Errorf("unexisting chain: %s", ip.chainID)
 		}
 

@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
@@ -129,11 +128,14 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 		// if fee address is specified in transactions just add amount to the fee sum
 		// otherwise keep this transaction
-		if !receiver.IsNativeToken {
-			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+			if !receiver.IsNativeToken {
 				feeSum += receiver.Amount
-			} else {
-				transactions = append(transactions, receiver)
+			}
+		} else {
+			transactions = append(transactions, receiver)
+
+			if !receiver.IsNativeToken {
 				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		}
@@ -179,8 +181,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 		return "", "", nil, fmt.Errorf("failed to generate configuration")
 	}
 
-	txSender := sendtx.NewTxSender(txSenderChainsConfig,
-		sendtx.WithMaxInputsPerTx(common.MaxInputsPerBridgingTxDefault))
+	txSender := sendtx.NewTxSender(txSenderChainsConfig)
 
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {

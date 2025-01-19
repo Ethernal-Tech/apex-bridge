@@ -188,8 +188,7 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		return "", "", fmt.Errorf("failed to create configuration")
 	}
 
-	txSender := sendtx.NewTxSender(txSenderChainsConfig,
-		sendtx.WithMaxInputsPerTx(common.MaxInputsPerBridgingTxDefault))
+	txSender := sendtx.NewTxSender(txSenderChainsConfig)
 
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
