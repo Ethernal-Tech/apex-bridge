@@ -132,6 +132,7 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			if receiver.IsNativeToken {
 				return fmt.Errorf("fee receiver invalid")
 			}
+
 			feeSum += receiver.Amount
 		} else {
 			transactions = append(transactions, receiver)
