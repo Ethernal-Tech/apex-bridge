@@ -129,9 +129,10 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		// if fee address is specified in transactions just add amount to the fee sum
 		// otherwise keep this transaction
 		if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
-			if !receiver.IsNativeToken {
-				feeSum += receiver.Amount
+			if receiver.IsNativeToken {
+				return fmt.Errorf("fee receiver invalid")
 			}
+			feeSum += receiver.Amount
 		} else {
 			transactions = append(transactions, receiver)
 

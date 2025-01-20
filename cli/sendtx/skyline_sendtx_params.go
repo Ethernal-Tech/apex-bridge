@@ -280,7 +280,7 @@ func (p *sendSkylineTxParams) Execute(
 	minFeeForBridgingSrc := common.MinFeeForBridgingToPrime
 	minFeeForBridgingDest := common.MinFeeForBridgingToCardano
 
-	if p.chainIDDst == common.ChainIDStrCardano {
+	if p.chainIDSrc == common.ChainIDStrCardano {
 		minFeeForBridgingSrc = common.MinFeeForBridgingToCardano
 		minFeeForBridgingDest = common.MinFeeForBridgingToPrime
 	}
