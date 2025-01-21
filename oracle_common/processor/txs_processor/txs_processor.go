@@ -292,16 +292,18 @@ func (p *TxsProcessorImpl) updateBridgingStateForBatch(
 				common.ToStrChainID(x.SourceChainID), x.ObservedTransactionHash)
 		}
 
+		dstChainID := common.ToStrChainID(event.DstChainID)
+
 		if event.IsFailedClaim {
-			err = bridgingRequestStateUpdater.FailedToExecuteOnDestination(stateKeys)
+			err = bridgingRequestStateUpdater.FailedToExecuteOnDestination(stateKeys, dstChainID)
 		} else {
-			err = bridgingRequestStateUpdater.ExecutedOnDestination(stateKeys, event.DstTxHash)
+			err = bridgingRequestStateUpdater.ExecutedOnDestination(stateKeys, event.DstTxHash, dstChainID)
 		}
 
 		if err != nil {
 			p.logger.Error(
 				"error while updating bridging request states",
-				"dstChainId", common.ToStrChainID(event.DstChainID), "batchId", event.BatchID,
+				"dstChainId", dstChainID, "batchId", event.BatchID,
 				"isFailedClaim", event.IsFailedClaim, "dstTxHash", event.DstTxHash, "err", err)
 		}
 	}

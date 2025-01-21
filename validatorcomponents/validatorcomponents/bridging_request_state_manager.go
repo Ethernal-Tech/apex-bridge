@@ -72,7 +72,11 @@ func (m *BridgingRequestStateManagerImpl) SubmittedToBridge(
 	key common.BridgingRequestStateKey, dstChainID string,
 ) error {
 	return m.updateStates([]common.BridgingRequestStateKey{key}, func(state *core.BridgingRequestState) error {
-		return state.ToSubmittedToBridge(dstChainID)
+		if err := state.UpdateDestChainID(dstChainID); err != nil {
+			return err
+		}
+
+		return state.ToSubmittedToBridge()
 	})
 }
 
@@ -81,13 +85,8 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
 	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
-		if state.DestinationChainID == "" {
-			state.DestinationChainID = dstChainID
-		}
-
-		if state.DestinationChainID != dstChainID {
-			return fmt.Errorf("destination chain not equal %s != %s for (%s, %s)",
-				state.DestinationChainID, dstChainID, state.SourceChainID, state.SourceTxHash)
+		if err := state.UpdateDestChainID(dstChainID); err != nil {
+			return err
 		}
 
 		return state.ToIncludedInBatch()
@@ -96,27 +95,39 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 
 // SubmittedToDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) SubmittedToDestination(
-	txs []common.BridgingRequestStateKey,
+	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
 	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
+		if err := state.UpdateDestChainID(dstChainID); err != nil {
+			return err
+		}
+
 		return state.ToSubmittedToDestination()
 	})
 }
 
 // FailedToExecuteOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
-	txs []common.BridgingRequestStateKey,
+	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
 	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
+		if err := state.UpdateDestChainID(dstChainID); err != nil {
+			return err
+		}
+
 		return state.ToFailedToExecuteOnDestination()
 	})
 }
 
 // ExecutedOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
-	txs []common.BridgingRequestStateKey, dstTxHash common.Hash,
+	txs []common.BridgingRequestStateKey, dstTxHash common.Hash, dstChainID string,
 ) error {
 	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
+		if err := state.UpdateDestChainID(dstChainID); err != nil {
+			return err
+		}
+
 		return state.ToExecutedOnDestination(dstTxHash)
 	})
 }

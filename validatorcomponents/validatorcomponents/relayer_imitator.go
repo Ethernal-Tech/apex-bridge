@@ -85,7 +85,7 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 					common.ToStrChainID(tx.SourceChainId), tx.ObservedTransactionHash)
 			}
 
-			err = ri.bridgingRequestStateUpdater.SubmittedToDestination(txsKeys)
+			err = ri.bridgingRequestStateUpdater.SubmittedToDestination(txsKeys, chainID)
 			if err != nil {
 				return fmt.Errorf("failed to update bridging request states (%s, %d) to SubmittedToDestination: %w",
 					chainID, confirmedBatch.ID, err)

@@ -53,7 +53,7 @@ func (s *BridgingRequestState) ToInvalidRequest() error {
 	return nil
 }
 
-func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) error {
+func (s *BridgingRequestState) ToSubmittedToBridge() error {
 	if s.Status != BridgingRequestStatusDiscoveredOnSource &&
 		s.Status != BridgingRequestStatusFailedToExecuteOnDestination {
 		return fmt.Errorf("can not change BridgingRequestState={sourceChainId: %v, sourceTxHash: %v} from %v status to %v",
@@ -61,7 +61,6 @@ func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) er
 	}
 
 	s.Status = BridgingRequestStatusSubmittedToBridge
-	s.DestinationChainID = destinationChainID
 
 	return nil
 }
@@ -112,6 +111,19 @@ func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash common.
 
 	s.Status = BridgingRequestStatusExecutedOnDestination
 	s.DestinationTxHash = destinationTxHash
+
+	return nil
+}
+
+func (s *BridgingRequestState) UpdateDestChainID(chainID string) error {
+	if s.DestinationChainID == "" {
+		s.DestinationChainID = chainID
+	}
+
+	if s.DestinationChainID != chainID {
+		return fmt.Errorf("destination chain not equal %s != %s for (%s, %s)",
+			s.DestinationChainID, chainID, s.SourceChainID, s.SourceTxHash)
+	}
 
 	return nil
 }

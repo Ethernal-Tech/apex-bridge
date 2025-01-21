@@ -8,9 +8,9 @@ type BridgingRequestStateUpdater interface {
 	Invalid(key BridgingRequestStateKey) error
 	SubmittedToBridge(key BridgingRequestStateKey, dstChainID string) error
 	IncludedInBatch(txs []BridgingRequestStateKey, dstChainID string) error
-	SubmittedToDestination(txs []BridgingRequestStateKey) error
-	FailedToExecuteOnDestination(txs []BridgingRequestStateKey) error
-	ExecutedOnDestination(txs []BridgingRequestStateKey, dstTxHash Hash) error
+	SubmittedToDestination(txs []BridgingRequestStateKey, dstChainID string) error
+	FailedToExecuteOnDestination(txs []BridgingRequestStateKey, dstChainID string) error
+	ExecutedOnDestination(txs []BridgingRequestStateKey, dstTxHash Hash, dstChainID string) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

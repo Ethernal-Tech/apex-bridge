@@ -103,7 +103,7 @@ func TestRelayerImitator(t *testing.T) {
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination", stateKeys).Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
@@ -129,7 +129,7 @@ func TestRelayerImitator(t *testing.T) {
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination", stateKeys).Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
@@ -155,7 +155,7 @@ func TestRelayerImitator(t *testing.T) {
 		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination", stateKeys).Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
@@ -183,7 +183,7 @@ func TestRelayerImitator(t *testing.T) {
 		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination", stateKeys).Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)

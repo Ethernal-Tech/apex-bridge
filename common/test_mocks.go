@@ -68,65 +68,65 @@ func (m *BridgingRequestStateUpdaterMock) Invalid(key BridgingRequestStateKey) e
 
 // SubmittedToBridge implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) SubmittedToBridge(
-	key BridgingRequestStateKey, destinationChainID string,
+	key BridgingRequestStateKey, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
-	args := m.Called(key, destinationChainID)
+	args := m.Called(key, dstChainID)
 
 	return args.Error(0)
 }
 
 // IncludedInBatch implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) IncludedInBatch(
-	txs []BridgingRequestStateKey, destinationChainID string,
+	txs []BridgingRequestStateKey, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
-	args := m.Called(txs, destinationChainID)
+	args := m.Called(txs, dstChainID)
 
 	return args.Error(0)
 }
 
 // SubmittedToDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) SubmittedToDestination(
-	txs []BridgingRequestStateKey,
+	txs []BridgingRequestStateKey, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
-	args := m.Called(txs)
+	args := m.Called(txs, dstChainID)
 
 	return args.Error(0)
 }
 
 // FailedToExecuteOnDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) FailedToExecuteOnDestination(
-	txs []BridgingRequestStateKey,
+	txs []BridgingRequestStateKey, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
-	args := m.Called(txs)
+	args := m.Called(txs, dstChainID)
 
 	return args.Error(0)
 }
 
 // ExecutedOnDestination implements BridgingRequestStateUpdater.
 func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
-	txs []BridgingRequestStateKey, destinationTxHash Hash,
+	txs []BridgingRequestStateKey, destinationTxHash Hash, dstChainID string,
 ) error {
 	if m.ReturnNil {
 		return nil
 	}
 
-	args := m.Called(txs, destinationTxHash)
+	args := m.Called(txs, destinationTxHash, dstChainID)
 
 	return args.Error(0)
 }
