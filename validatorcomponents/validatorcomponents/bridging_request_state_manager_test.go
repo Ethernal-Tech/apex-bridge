@@ -78,8 +78,11 @@ func TestBridgingRequestStateManager(t *testing.T) {
 	})
 
 	t.Run("Invalid 2", func(t *testing.T) {
+		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
+
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(nil, nil)
+		db.On("AddBridgingRequestState", state).Return(fmt.Errorf("test err"))
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
@@ -144,8 +147,11 @@ func TestBridgingRequestStateManager(t *testing.T) {
 	})
 
 	t.Run("SubmittedToBridge 2", func(t *testing.T) {
+		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
+
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(nil, nil)
+		db.On("AddBridgingRequestState", state).Return(fmt.Errorf("test err"))
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 

@@ -174,10 +174,16 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 		}
 
 		if state == nil {
-			errs = append(errs, fmt.Errorf("BridgingRequestState does not exist (%s, %s)",
-				stateKey.SourceChainID, stateKey.SourceTxHash))
+			// insert bridging request state if not exists in db
+			state = core.NewBridgingRequestState(stateKey.SourceChainID, stateKey.SourceTxHash)
 
-			continue
+			err := m.db.AddBridgingRequestState(state)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("BridgingRequestState does not exist (%s, %s) but failed to add: %w",
+					stateKey.SourceChainID, stateKey.SourceTxHash, err))
+
+				continue
+			}
 		}
 
 		oldStatus := state.Status
