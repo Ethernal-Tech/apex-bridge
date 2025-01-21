@@ -73,7 +73,7 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 		ri.bridgeSmartContract,
 		ri.db,
 		func(ctx context.Context, sc eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch) error {
-			txs, err := sc.GetConfirmedTransactions(ctx, chainID)
+			txs, err := sc.GetBatchTransactions(ctx, chainID, confirmedBatch.ID)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve confirmed txs for (%s, %d): %w",
 					chainID, confirmedBatch.ID, err)

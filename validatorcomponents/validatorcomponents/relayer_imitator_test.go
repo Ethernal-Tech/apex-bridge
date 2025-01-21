@@ -94,7 +94,7 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 5", func(t *testing.T) {
-		txs := []eth.ConfirmedTransaction{
+		txs := []eth.TxDataInfo{
 			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
@@ -107,7 +107,7 @@ func TestRelayerImitator(t *testing.T) {
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
-		bsc.On("GetConfirmedTransactions", ctx, chainID).Return(txs, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
@@ -120,7 +120,7 @@ func TestRelayerImitator(t *testing.T) {
 	})
 
 	t.Run("execute 6", func(t *testing.T) {
-		txs := []eth.ConfirmedTransaction{
+		txs := []eth.TxDataInfo{
 			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
@@ -133,7 +133,7 @@ func TestRelayerImitator(t *testing.T) {
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
-		bsc.On("GetConfirmedTransactions", ctx, chainID).Return(txs, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
@@ -147,7 +147,7 @@ func TestRelayerImitator(t *testing.T) {
 
 	t.Run("execute 7", func(t *testing.T) {
 		ctx := context.Background()
-		txs := []eth.ConfirmedTransaction{
+		txs := []eth.TxDataInfo{
 			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
@@ -159,7 +159,7 @@ func TestRelayerImitator(t *testing.T) {
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
-		bsc.On("GetConfirmedTransactions", ctx, chainID).Return(txs, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
@@ -173,7 +173,7 @@ func TestRelayerImitator(t *testing.T) {
 
 	t.Run("execute 8", func(t *testing.T) {
 		ctx := context.Background()
-		txs := []eth.ConfirmedTransaction{
+		txs := []eth.TxDataInfo{
 			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
 			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntVector},
 		}
@@ -187,7 +187,7 @@ func TestRelayerImitator(t *testing.T) {
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
-		bsc.On("GetConfirmedTransactions", ctx, chainID).Return(txs, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
