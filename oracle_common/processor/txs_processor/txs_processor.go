@@ -141,9 +141,9 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 		}
 
 		p.updateBridgingStateForBatch(batchTxs, p.bridgingRequestStateUpdater)
-		p.stateProcessor.UpdateBridgingRequestStates(bridgeClaims, p.bridgingRequestStateUpdater)
 	}
 
+	p.stateProcessor.UpdateBridgingRequestStates(bridgeClaims, p.bridgingRequestStateUpdater)
 	p.stateProcessor.PersistNew()
 }
 
