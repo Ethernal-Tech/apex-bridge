@@ -166,7 +166,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 
 	signatureMultisig := []byte(nil)
 	signatureFee := []byte(nil)
-	messageBytes := []byte(messageToSign + string(walletEth.GetAddress().Bytes()))
+	messageBytes := append([]byte(messageToSign), walletEth.GetAddress().Bytes()...)
 
 	messageHash, err := common.Keccak256(messageBytes)
 	if err != nil {
