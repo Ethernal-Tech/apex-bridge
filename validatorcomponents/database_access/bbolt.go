@@ -103,38 +103,6 @@ func (bd *BBoltDatabase) GetBridgingRequestState(
 	return result, err
 }
 
-// GetBridgingRequestStatesByBatchID implements core.Database.
-func (bd *BBoltDatabase) GetBridgingRequestStatesByBatchID(
-	destinationChainID string, batchID uint64,
-) (
-	[]*core.BridgingRequestState, error,
-) {
-	var result []*core.BridgingRequestState
-
-	err := bd.db.View(func(tx *bbolt.Tx) error {
-		cursor := tx.Bucket(bridgingRequestStatesBucket).Cursor()
-
-		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			var state *core.BridgingRequestState
-
-			if err := json.Unmarshal(v, &state); err != nil {
-				return err
-			}
-
-			if state.BatchID == batchID && state.DestinationChainID == destinationChainID {
-				result = append(result, state)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
 // AddLastSubmittedBatchID implements core.Database.
 func (bd *BBoltDatabase) AddLastSubmittedBatchID(chainID string, batchID *big.Int) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {

@@ -2,7 +2,7 @@ package validatorcomponents
 
 import (
 	"context"
-	"math/big"
+	"fmt"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -72,15 +72,23 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 		chainID,
 		ri.bridgeSmartContract,
 		ri.db,
-		func(ctx context.Context, _ eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch) error {
-			receivedBatchID := new(big.Int).SetUint64(confirmedBatch.ID)
-
-			err := ri.bridgingRequestStateUpdater.SubmittedToDestination(chainID, receivedBatchID.Uint64())
+		func(ctx context.Context, sc eth.IBridgeSmartContract, confirmedBatch *eth.ConfirmedBatch) error {
+			txs, err := sc.GetConfirmedTransactions(ctx, chainID)
 			if err != nil {
-				ri.logger.Error(
-					"error while updating bridging request states to SubmittedToDestination",
-					"destinationChainId", chainID, "batchId", receivedBatchID.Uint64(),
-					"err", err)
+				return fmt.Errorf("failed to retrieve confirmed txs for (%s, %d): %w",
+					chainID, confirmedBatch.ID, err)
+			}
+
+			txsKeys := make([]common.BridgingRequestStateKey, len(txs))
+			for i, tx := range txs {
+				txsKeys[i] = common.NewBridgingRequestStateKey(
+					common.ToStrChainID(tx.SourceChainId), tx.ObservedTransactionHash)
+			}
+
+			err = ri.bridgingRequestStateUpdater.SubmittedToDestination(txsKeys)
+			if err != nil {
+				return fmt.Errorf("failed to update bridging request states (%s, %d) to SubmittedToDestination: %w",
+					chainID, confirmedBatch.ID, err)
 			}
 
 			return nil

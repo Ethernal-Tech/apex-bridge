@@ -24,6 +24,13 @@ type BridgingRequestStateKey struct {
 	SourceTxHash  Hash
 }
 
+func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash) BridgingRequestStateKey {
+	return BridgingRequestStateKey{
+		SourceChainID: sourceChainID,
+		SourceTxHash:  sourceTxHash,
+	}
+}
+
 type NewBridgingRequestStateModel struct {
 	SourceTxHash Hash
 }

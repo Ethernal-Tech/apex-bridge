@@ -22,7 +22,6 @@ type BridgingRequestState struct {
 	SourceChainID      string
 	SourceTxHash       common.Hash
 	DestinationChainID string
-	BatchID            uint64
 	Status             BridgingRequestStatus
 	DestinationTxHash  common.Hash
 }
@@ -63,12 +62,11 @@ func (s *BridgingRequestState) ToSubmittedToBridge(destinationChainID string) er
 
 	s.Status = BridgingRequestStatusSubmittedToBridge
 	s.DestinationChainID = destinationChainID
-	s.BatchID = 0
 
 	return nil
 }
 
-func (s *BridgingRequestState) ToIncludedInBatch(batchID uint64) error {
+func (s *BridgingRequestState) ToIncludedInBatch() error {
 	if s.Status != BridgingRequestStatusDiscoveredOnSource &&
 		s.Status != BridgingRequestStatusSubmittedToBridge &&
 		s.Status != BridgingRequestStatusFailedToExecuteOnDestination {
@@ -77,7 +75,6 @@ func (s *BridgingRequestState) ToIncludedInBatch(batchID uint64) error {
 	}
 
 	s.Status = BridgingRequestStatusIncludedInBatch
-	s.BatchID = batchID
 
 	return nil
 }

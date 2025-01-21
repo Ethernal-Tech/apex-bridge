@@ -94,37 +94,6 @@ func TestBoltDatabase(t *testing.T) {
 		require.NotNil(t, state)
 	})
 
-	t.Run("GetBridgingRequestStatesByBatchID", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		err := db.Init(filePath)
-		require.NoError(t, err)
-
-		sourceChainID := primeChainID
-		sourceTxHash := testTxHash
-		destinationChainID := common.ChainIDStrVector
-		batchID := uint64(1)
-
-		stateToAdd := core.NewBridgingRequestState(sourceChainID, sourceTxHash)
-		require.NoError(t, stateToAdd.ToSubmittedToBridge(destinationChainID))
-		require.NoError(t, stateToAdd.ToIncludedInBatch(batchID))
-
-		err = db.AddBridgingRequestState(stateToAdd)
-		require.NoError(t, err)
-
-		states, err := db.GetBridgingRequestStatesByBatchID(destinationChainID, 2)
-		require.NoError(t, err)
-		require.Nil(t, states)
-
-		states, err = db.GetBridgingRequestStatesByBatchID(destinationChainID, batchID)
-		require.NoError(t, err)
-		require.NotNil(t, states)
-		require.Len(t, states, 1)
-		require.Equal(t, sourceChainID, states[0].SourceChainID)
-		require.Equal(t, sourceTxHash, states[0].SourceTxHash)
-	})
-
 	t.Run("UpdateBridgingRequestState", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 

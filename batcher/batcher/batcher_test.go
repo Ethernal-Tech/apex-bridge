@@ -291,18 +291,9 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}, 3, 5)
 
 		require.Equal(t, []common.BridgingRequestStateKey{
-			{
-				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  included[0],
-			},
-			{
-				SourceChainID: common.ChainIDStrVector,
-				SourceTxHash:  included[1],
-			},
-			{
-				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  included[2],
-			},
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[0]),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, included[1]),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[2]),
 		}, res)
 	})
 }

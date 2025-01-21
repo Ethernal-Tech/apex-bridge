@@ -25,7 +25,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
 		require.NotNil(t, state)
 
-		err := state.ToIncludedInBatch(1)
+		err := state.ToIncludedInBatch()
 		require.NoError(t, err)
 		require.Equal(t, BridgingRequestStatusIncludedInBatch, state.Status)
 
@@ -68,7 +68,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
@@ -113,7 +113,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		require.Equal(t, BridgingRequestStatusIncludedInBatch, state.Status)
 	})
@@ -122,7 +122,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 
 		err = state.ToInvalidRequest()
@@ -133,7 +133,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
@@ -143,7 +143,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state = NewBridgingRequestState(chainID, txHash)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 
 		err = state.ToExecutedOnDestination(destinationTxHash)
@@ -152,7 +152,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state = NewBridgingRequestState(chainID, txHash)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 
 		err = state.ToSubmittedToDestination()
@@ -164,7 +164,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
@@ -192,7 +192,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state = NewBridgingRequestState(chainID, txHash)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
@@ -219,20 +219,20 @@ func TestBridgingRequestState(t *testing.T) {
 
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
 		err = state.ToFailedToExecuteOnDestination()
 		require.NoError(t, err)
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 
 		state = NewBridgingRequestState(chainID, txHash)
 		err = state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestBridgingRequestState(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
 		err := state.ToSubmittedToBridge("test")
 		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.NoError(t, err)
 		err = state.ToSubmittedToDestination()
 		require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
-		err = state.ToIncludedInBatch(1)
+		err = state.ToIncludedInBatch()
 		require.Error(t, err)
 		require.ErrorContains(t, err, "can not change BridgingRequestState")
 
