@@ -49,9 +49,9 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Equal(t, BridgingRequestStatusInvalidRequest, state.Status)
 
 		state = NewBridgingRequestState(chainID, txHash)
-		state.UpdateDestChainID("test")
-		err = state.ToSubmittedToBridge()
-		require.NoError(t, err)
+
+		require.NoError(t, state.UpdateDestChainID("test"))
+		require.NoError(t, state.ToSubmittedToBridge())
 		require.Equal(t, "test", state.DestinationChainID)
 		require.Equal(t, BridgingRequestStatusSubmittedToBridge, state.Status)
 	})
