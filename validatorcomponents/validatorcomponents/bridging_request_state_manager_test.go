@@ -25,6 +25,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 		err := sm.New(common.ChainIDStrPrime, &common.NewBridgingRequestStateModel{})
 		require.ErrorContains(t, err, "failed to add new BridgingRequestState")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("New 2", func(t *testing.T) {
@@ -35,6 +37,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.New(common.ChainIDStrPrime, &common.NewBridgingRequestStateModel{})
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("NewMultiple 1", func(t *testing.T) {
@@ -44,6 +48,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.NewMultiple(common.ChainIDStrPrime, []*common.NewBridgingRequestStateModel{})
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("NewMultiple 2", func(t *testing.T) {
@@ -54,6 +60,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.NewMultiple(common.ChainIDStrPrime, []*common.NewBridgingRequestStateModel{{}})
 		require.ErrorContains(t, err, "failed to add some new BridgingRequestStates")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("NewMultiple 3", func(t *testing.T) {
@@ -64,6 +72,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.NewMultiple(common.ChainIDStrPrime, []*common.NewBridgingRequestStateModel{{}})
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Invalid 1", func(t *testing.T) {
@@ -76,6 +86,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
 		require.ErrorContains(t, err, "failed to get BridgingRequestState")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Invalid 2", func(t *testing.T) {
@@ -91,6 +103,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
 		require.ErrorContains(t, err, "BridgingRequestState does not exist")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Invalid 3", func(t *testing.T) {
@@ -105,6 +119,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
 		require.ErrorContains(t, err, "invalid transition")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Invalid 4", func(t *testing.T) {
@@ -120,6 +136,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
 		require.ErrorContains(t, err, "failed to update some BridgingRequestStates")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Invalid 5", func(t *testing.T) {
@@ -135,6 +153,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToBridge 1", func(t *testing.T) {
@@ -147,6 +167,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
 		require.ErrorContains(t, err, "failed to get BridgingRequestState")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToBridge 2", func(t *testing.T) {
@@ -162,6 +184,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
 		require.ErrorContains(t, err, "BridgingRequestState does not exist")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToBridge 3", func(t *testing.T) {
@@ -176,6 +200,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
 		require.ErrorContains(t, err, "invalid transition")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToBridge 4", func(t *testing.T) {
@@ -191,6 +217,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
 		require.ErrorContains(t, err, "failed to save updated")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToBridge 5", func(t *testing.T) {
@@ -206,6 +234,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("IncludedInBatch 1", func(t *testing.T) {
@@ -219,6 +249,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		}, common.ChainIDStrVector)
 
 		require.ErrorContains(t, err, "failed to get")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("IncludedInBatch 2", func(t *testing.T) {
@@ -228,6 +260,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.IncludedInBatch([]common.BridgingRequestStateKey{}, common.ChainIDStrVector)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("IncludedInBatch 3", func(t *testing.T) {
@@ -243,6 +277,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, common.ChainIDStrVector)
 		require.ErrorContains(t, err, "failed to update BridgingRequestState")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("IncludedInBatch 4", func(t *testing.T) {
@@ -259,6 +295,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		}, common.ChainIDStrVector)
 
 		require.ErrorContains(t, err, "failed to save updated")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("IncludedInBatch 5", func(t *testing.T) {
@@ -274,6 +312,25 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, common.ChainIDStrVector)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
+	})
+
+	t.Run("IncludedInBatch 6", func(t *testing.T) {
+		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
+		state.ToSubmittedToDestination()
+
+		db := &databaseaccess.BridgingRequestStateDBMock{}
+		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
+
+		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
+
+		err := sm.IncludedInBatch([]common.BridgingRequestStateKey{
+			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
+		}, common.ChainIDStrVector)
+		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 1", func(t *testing.T) {
@@ -286,6 +343,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to get BridgingRequestState")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 2", func(t *testing.T) {
@@ -294,6 +353,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.SubmittedToDestination(nil, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 3", func(t *testing.T) {
@@ -309,6 +370,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to update")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 4", func(t *testing.T) {
@@ -324,6 +387,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to save updated")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 5", func(t *testing.T) {
@@ -339,6 +404,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("SubmittedToDestination 6", func(t *testing.T) {
@@ -355,6 +422,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 1", func(t *testing.T) {
@@ -367,6 +436,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to get BridgingRequestState from db")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 2", func(t *testing.T) {
@@ -375,6 +446,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.FailedToExecuteOnDestination(nil, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 3", func(t *testing.T) {
@@ -390,6 +463,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to update")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 4", func(t *testing.T) {
@@ -405,6 +480,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.ErrorContains(t, err, "failed to save updated")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 5", func(t *testing.T) {
@@ -420,6 +497,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("FailedToExecuteOnDestination 6", func(t *testing.T) {
@@ -436,6 +515,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 1", func(t *testing.T) {
@@ -448,6 +529,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, txHash, dstChainID)
 		require.ErrorContains(t, err, "failed to get BridgingRequestState from db")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 2", func(t *testing.T) {
@@ -456,6 +539,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 		err := sm.ExecutedOnDestination([]common.BridgingRequestStateKey{}, common.Hash{}, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 3", func(t *testing.T) {
@@ -471,6 +556,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, txHash, dstChainID)
 		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to update")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 4", func(t *testing.T) {
@@ -486,6 +573,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, txHash, dstChainID)
 		require.ErrorContains(t, err, "failed to update some BridgingRequestStates: failed to save updated")
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 5", func(t *testing.T) {
@@ -501,6 +590,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, txHash, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("ExecutedOnDestination 6", func(t *testing.T) {
@@ -517,6 +608,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, txHash, dstChainID)
 		require.NoError(t, err)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Get 1", func(t *testing.T) {
@@ -528,6 +621,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		state, err := sm.Get(common.ChainIDStrPrime, txHash)
 		require.ErrorContains(t, err, "failed to get BridgingRequestState")
 		require.Nil(t, state)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Get 2", func(t *testing.T) {
@@ -539,6 +634,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		state, err := sm.Get(common.ChainIDStrPrime, txHash)
 		require.NoError(t, err)
 		require.Nil(t, state)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("Get 3", func(t *testing.T) {
@@ -550,6 +647,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		state, err := sm.Get(common.ChainIDStrPrime, txHash)
 		require.NoError(t, err)
 		require.NotNil(t, state)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("GetMultiple 1", func(t *testing.T) {
@@ -564,6 +663,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get some BridgingRequestStates")
 		require.Nil(t, states)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("GetMultiple 2", func(t *testing.T) {
@@ -577,6 +678,8 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Len(t, states, 0)
+
+		db.AssertExpectations(t)
 	})
 
 	t.Run("GetMultiple 3", func(t *testing.T) {
@@ -591,5 +694,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, states)
 		require.Len(t, states, 1)
+
+		db.AssertExpectations(t)
 	})
 }

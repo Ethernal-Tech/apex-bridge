@@ -14,7 +14,10 @@ type BridgingRequestStateManagerImpl struct {
 	logger hclog.Logger
 }
 
-var _ core.BridgingRequestStateManager = (*BridgingRequestStateManagerImpl)(nil)
+var (
+	errSkipTransition                                  = errors.New("skip transition")
+	_                 core.BridgingRequestStateManager = (*BridgingRequestStateManagerImpl)(nil)
+)
 
 func NewBridgingRequestStateManager(
 	db core.BridgingRequestStateDB, logger hclog.Logger,
@@ -97,6 +100,11 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
 	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
+		if state.Status == core.BridgingRequestStatusSubmittedToDestination {
+			return fmt.Errorf("%w: %s -> %s",
+				errSkipTransition, state.Status, core.BridgingRequestStatusIncludedInBatch)
+		}
+
 		if err := state.UpdateDestChainID(dstChainID); err != nil {
 			return err
 		}
@@ -237,8 +245,14 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 
 		err = updateState(state)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to update BridgingRequestState (%s, %s) with status %s: %w",
-				state.SourceChainID, state.SourceTxHash, oldStatus, err))
+			// Some transitions should not be considered errors:
+			// For example, a relayer imitator might be faster than the batch submitter
+			// and may set the status to SubmittedToBridge before the batch submitter updates it to IncludedInBatch.
+			// In that case, we simply need to skip the transition.
+			if !errors.Is(err, errSkipTransition) {
+				errs = append(errs, fmt.Errorf("failed to update BridgingRequestState (%s, %s) with status %s: %w",
+					state.SourceChainID, state.SourceTxHash, oldStatus, err))
+			}
 
 			continue
 		}
