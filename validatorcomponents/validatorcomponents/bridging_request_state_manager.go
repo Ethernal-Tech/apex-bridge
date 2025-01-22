@@ -63,7 +63,13 @@ func (m *BridgingRequestStateManagerImpl) NewMultiple(
 // Invalid implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Invalid(key common.BridgingRequestStateKey) error {
 	return m.updateStates([]common.BridgingRequestStateKey{key}, func(state *core.BridgingRequestState) error {
-		return state.ToInvalidRequest()
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusInvalidRequest); err != nil {
+			return err
+		}
+
+		state.ToInvalidRequest()
+
+		return nil
 	})
 }
 
@@ -76,7 +82,13 @@ func (m *BridgingRequestStateManagerImpl) SubmittedToBridge(
 			return err
 		}
 
-		return state.ToSubmittedToBridge()
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusSubmittedToBridge); err != nil {
+			return err
+		}
+
+		state.ToSubmittedToBridge()
+
+		return nil
 	})
 }
 
@@ -89,7 +101,13 @@ func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 			return err
 		}
 
-		return state.ToIncludedInBatch()
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusIncludedInBatch); err != nil {
+			return err
+		}
+
+		state.ToIncludedInBatch()
+
+		return nil
 	})
 }
 
@@ -102,7 +120,13 @@ func (m *BridgingRequestStateManagerImpl) SubmittedToDestination(
 			return err
 		}
 
-		return state.ToSubmittedToDestination()
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusSubmittedToDestination); err != nil {
+			return err
+		}
+
+		state.ToSubmittedToDestination()
+
+		return nil
 	})
 }
 
@@ -115,7 +139,13 @@ func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
 			return err
 		}
 
-		return state.ToFailedToExecuteOnDestination()
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusFailedToExecuteOnDestination); err != nil {
+			return err
+		}
+
+		state.ToFailedToExecuteOnDestination()
+
+		return nil
 	})
 }
 
@@ -128,7 +158,13 @@ func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
 			return err
 		}
 
-		return state.ToExecutedOnDestination(dstTxHash)
+		if err := state.IsTransitionPossible(core.BridgingRequestStatusExecutedOnDestination); err != nil {
+			return err
+		}
+
+		state.ToExecutedOnDestination(dstTxHash)
+
+		return nil
 	})
 }
 

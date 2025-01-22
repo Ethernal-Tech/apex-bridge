@@ -95,14 +95,16 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("Invalid 3", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(&core.BridgingRequestState{}, nil)
+		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(&core.BridgingRequestState{
+			Status: core.BridgingRequestStatusExecutedOnDestination,
+		}, nil)
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
 		err := sm.Invalid(common.BridgingRequestStateKey{
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		})
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+		require.ErrorContains(t, err, "invalid transition")
 	})
 
 	t.Run("Invalid 4", func(t *testing.T) {
@@ -164,14 +166,16 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToBridge 3", func(t *testing.T) {
 		db := &databaseaccess.BridgingRequestStateDBMock{}
-		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(&core.BridgingRequestState{}, nil)
+		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(&core.BridgingRequestState{
+			Status: core.BridgingRequestStatusExecutedOnDestination,
+		}, nil)
 
 		sm := NewBridgingRequestStateManager(db, hclog.NewNullLogger())
 
 		err := sm.SubmittedToBridge(common.BridgingRequestStateKey{
 			SourceChainID: srcChainID, SourceTxHash: srcTxHash,
 		}, common.ChainIDStrVector)
-		require.ErrorContains(t, err, "can not change BridgingRequestState=")
+		require.ErrorContains(t, err, "invalid transition")
 	})
 
 	t.Run("SubmittedToBridge 4", func(t *testing.T) {
@@ -244,8 +248,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 	t.Run("IncludedInBatch 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
 
-		require.NoError(t, state.ToSubmittedToBridge())
-
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
 		db.On("UpdateBridgingRequestState", mock.Anything).Return(fmt.Errorf("test err"))
@@ -261,8 +263,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("IncludedInBatch 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
-
-		require.NoError(t, state.ToSubmittedToBridge())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
@@ -298,6 +298,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("SubmittedToDestination 3", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
+		state.ToExecutedOnDestination(txHash)
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
@@ -322,14 +323,11 @@ func TestBridgingRequestStateManager(t *testing.T) {
 		err := sm.SubmittedToDestination([]common.BridgingRequestStateKey{
 			common.NewBridgingRequestStateKey(srcChainID, srcTxHash),
 		}, dstChainID)
-		require.ErrorContains(t, err, "can not change BridgingRequestState=")
+		require.ErrorContains(t, err, "failed to save updated")
 	})
 
 	t.Run("SubmittedToDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
-
-		require.NoError(t, state.ToSubmittedToBridge())
-		require.NoError(t, state.ToIncludedInBatch())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
@@ -381,10 +379,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 	t.Run("FailedToExecuteOnDestination 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
 
-		require.NoError(t, state.ToSubmittedToBridge())
-		require.NoError(t, state.ToIncludedInBatch())
-		require.NoError(t, state.ToSubmittedToDestination())
-
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
 		db.On("UpdateBridgingRequestState", mock.Anything).Return(fmt.Errorf("test err"))
@@ -399,10 +393,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("FailedToExecuteOnDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
-
-		require.NoError(t, state.ToSubmittedToBridge())
-		require.NoError(t, state.ToIncludedInBatch())
-		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
@@ -438,6 +428,7 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 3", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
+		state.ToInvalidRequest()
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
@@ -453,10 +444,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 	t.Run("ExecutedOnDestination 4", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
 
-		require.NoError(t, state.ToSubmittedToBridge())
-		require.NoError(t, state.ToIncludedInBatch())
-		require.NoError(t, state.ToSubmittedToDestination())
-
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)
 		db.On("UpdateBridgingRequestState", mock.Anything).Return(fmt.Errorf("test err"))
@@ -471,10 +458,6 @@ func TestBridgingRequestStateManager(t *testing.T) {
 
 	t.Run("ExecutedOnDestination 5", func(t *testing.T) {
 		state := core.NewBridgingRequestState(srcChainID, srcTxHash)
-
-		require.NoError(t, state.ToSubmittedToBridge())
-		require.NoError(t, state.ToIncludedInBatch())
-		require.NoError(t, state.ToSubmittedToDestination())
 
 		db := &databaseaccess.BridgingRequestStateDBMock{}
 		db.On("GetBridgingRequestState", srcChainID, srcTxHash).Return(state, nil)

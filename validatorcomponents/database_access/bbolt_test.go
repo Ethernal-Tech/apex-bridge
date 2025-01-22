@@ -117,7 +117,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, state)
 
-		require.NoError(t, state.ToInvalidRequest())
+		state.ToInvalidRequest()
 		err = db.UpdateBridgingRequestState(state)
 		require.NoError(t, err)
 
