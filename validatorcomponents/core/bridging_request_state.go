@@ -81,42 +81,36 @@ func (s *BridgingRequestState) UpdateDestChainID(chainID string) error {
 }
 
 func (s *BridgingRequestState) IsTransitionPossible(newStatus BridgingRequestStatus) error {
-	isValidTransition := true
+	isInvalidTransition := false
 
 	switch s.Status {
 	case BridgingRequestStatusDiscoveredOnSource:
 
 	case BridgingRequestStatusInvalidRequest:
-		isValidTransition = false
+		isInvalidTransition = true
 
 	case BridgingRequestStatusSubmittedToBridge:
-		if newStatus == BridgingRequestStatusDiscoveredOnSource || newStatus == BridgingRequestStatusInvalidRequest {
-			isValidTransition = false
-		}
+		isInvalidTransition = newStatus == BridgingRequestStatusDiscoveredOnSource ||
+			newStatus == BridgingRequestStatusInvalidRequest
 
 	case BridgingRequestStatusIncludedInBatch:
-		if newStatus == BridgingRequestStatusDiscoveredOnSource || newStatus == BridgingRequestStatusInvalidRequest ||
-			newStatus == BridgingRequestStatusSubmittedToBridge {
-			isValidTransition = false
-		}
+		isInvalidTransition = newStatus == BridgingRequestStatusDiscoveredOnSource ||
+			newStatus == BridgingRequestStatusInvalidRequest ||
+			newStatus == BridgingRequestStatusSubmittedToBridge
 
 	case BridgingRequestStatusSubmittedToDestination:
-		if newStatus == BridgingRequestStatusDiscoveredOnSource || newStatus == BridgingRequestStatusInvalidRequest ||
-			newStatus == BridgingRequestStatusSubmittedToBridge || newStatus == BridgingRequestStatusIncludedInBatch {
-			isValidTransition = false
-		}
+		isInvalidTransition = newStatus == BridgingRequestStatusDiscoveredOnSource ||
+			newStatus == BridgingRequestStatusInvalidRequest ||
+			newStatus == BridgingRequestStatusSubmittedToBridge || newStatus == BridgingRequestStatusIncludedInBatch
 
 	case BridgingRequestStatusFailedToExecuteOnDestination:
-		if newStatus == BridgingRequestStatusDiscoveredOnSource || newStatus == BridgingRequestStatusInvalidRequest ||
-			newStatus == BridgingRequestStatusIncludedInBatch {
-			isValidTransition = false
-		}
+		isInvalidTransition = newStatus == BridgingRequestStatusDiscoveredOnSource
 
 	case BridgingRequestStatusExecutedOnDestination:
-		isValidTransition = false
+		isInvalidTransition = true
 	}
 
-	if !isValidTransition {
+	if isInvalidTransition {
 		return fmt.Errorf("BridgingRequestState (%s, %s) invalid transition %s -> %s",
 			s.SourceChainID, s.SourceTxHash, s.Status, newStatus)
 	}
