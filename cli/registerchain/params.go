@@ -150,8 +150,9 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	var (
-		validatorChainData eth.ValidatorChainData
-		ctx                = context.Background()
+		validatorChainData              eth.ValidatorChainData
+		signatureMultisig, signatureFee []byte
+		ctx                             = context.Background()
 	)
 
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
@@ -164,11 +165,8 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		return nil, fmt.Errorf("failed to load blade wallet: %w", err)
 	}
 
-	signatureMultisig := []byte(nil)
-	signatureFee := []byte(nil)
-	messageBytes := append([]byte(messageToSign), walletEth.GetAddress().Bytes()...)
-
-	messageHash, err := common.Keccak256(messageBytes)
+	messageHash, err := common.Keccak256(
+		append([]byte(messageToSign), walletEth.GetAddress().Bytes()...))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message hash: %w", err)
 	}
