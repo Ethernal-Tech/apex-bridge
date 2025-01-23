@@ -71,11 +71,6 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
 	}
 
-	bridgingRequestStateManager, err := NewBridgingRequestStateManager(db, logger.Named("bridging_request_state_manager"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
-	}
-
 	secretsManager, err := common.GetSecretsManager(
 		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
 	if err != nil {
@@ -86,6 +81,8 @@ func NewValidatorComponents(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
 	}
+
+	bridgingRequestStateManager := NewBridgingRequestStateManager(db, logger.Named("bridging_request_state_manager"))
 
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
 		wallet, logger.Named("tx_helper_wrapper"),

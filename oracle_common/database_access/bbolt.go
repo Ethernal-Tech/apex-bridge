@@ -604,7 +604,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) addBatchInfoEvents(
 	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
 ) error {
 	for _, evt := range batchInfoEvents {
-		chainID := common.ToStrChainID(evt.ChainID)
+		chainID := common.ToStrChainID(evt.DstChainID)
 		if supported := bd.SupportedChains[chainID]; !supported {
 			return fmt.Errorf("unsupported chain: %s", chainID)
 		}
@@ -629,7 +629,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) removeBatchInfoEvents(
 	tx *bbolt.Tx, batchInfoEvents []*core.DBBatchInfoEvent,
 ) error {
 	for _, evt := range batchInfoEvents {
-		chainID := common.ToStrChainID(evt.ChainID)
+		chainID := common.ToStrChainID(evt.DstChainID)
 		if supported := bd.SupportedChains[chainID]; !supported {
 			return fmt.Errorf("unsupported chain: %s", chainID)
 		}
