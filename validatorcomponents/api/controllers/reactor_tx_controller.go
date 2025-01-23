@@ -29,7 +29,7 @@ type ReactorTxControllerImpl struct {
 
 var _ core.APIController = (*ReactorTxControllerImpl)(nil)
 
-func NewCardanoTxController(
+func NewReactorTxController(
 	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,

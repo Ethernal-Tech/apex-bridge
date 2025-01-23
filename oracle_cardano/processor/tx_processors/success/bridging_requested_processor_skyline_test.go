@@ -35,7 +35,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	proc := NewNativeBridgingRequestedProcessor(hclog.NewNullLogger())
+	proc := NewSkylineBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {

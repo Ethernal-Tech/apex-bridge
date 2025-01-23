@@ -22,7 +22,7 @@ type BridgingRequestedProcessorSkylineImpl struct {
 	logger hclog.Logger
 }
 
-func NewNativeBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorSkylineImpl {
+func NewSkylineBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorSkylineImpl {
 	return &BridgingRequestedProcessorSkylineImpl{
 		logger: logger.Named("bridging_requested_processor_skyline"),
 	}
