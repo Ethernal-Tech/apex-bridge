@@ -203,6 +203,7 @@ func (ip *deployEVMParams) Execute(
 		Gateway:              {NativeTokenPredicate, Validators},
 		NativeTokenPredicate: {Gateway, NativeTokenWallet},
 		NativeTokenWallet:    {NativeTokenPredicate},
+		Validators:           {Gateway},
 	}
 
 	if ip.evmClone {
