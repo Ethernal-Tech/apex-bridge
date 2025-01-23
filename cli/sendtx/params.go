@@ -2,6 +2,7 @@ package clisendtx
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -133,11 +134,11 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDSrc) {
+	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDDst) {
+	if !common.IsExistingReactorChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -165,8 +166,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
-		bytes, err := cardanowallet.GetKeyBytes(ip.privateKeyRaw)
-		if err != nil || len(bytes) != 32 {
+		bytes, err := getCardanoPrivateKeyBytes(ip.privateKeyRaw)
+		if err != nil {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 		}
 
@@ -342,22 +343,19 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	receivers := ToCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	txSender := sendtx.NewTxSender(
-		ip.feeAmount.Uint64(),
-		common.MinUtxoAmountDefault,
-		common.PotentialFeeDefault,
-		common.MaxInputsPerBridgingTxDefault,
 		map[string]sendtx.ChainConfig{
 			ip.chainIDSrc: {
-				CardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:       cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
-				MultiSigAddr:     ip.multisigAddrSrc,
-				TestNetMagic:     ip.testnetMagicSrc,
-				TTLSlotNumberInc: ttlSlotNumberInc,
-				MinUtxoValue:     common.MinUtxoAmountDefault,
-				ExchangeRate:     make(map[string]float64),
+				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
+				MultiSigAddr:         ip.multisigAddrSrc,
+				TestNetMagic:         ip.testnetMagicSrc,
+				TTLSlotNumberInc:     ttlSlotNumberInc,
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
+				MinUtxoValue:         common.MinUtxoAmountDefault,
 			},
 			ip.chainIDDst: {
-				TxProvider: cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
 			},
 		},
 	)
@@ -371,6 +369,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
+		ip.feeAmount.Uint64(), sendtx.NewExchangeRate(),
 	)
 	if err != nil {
 		return nil, err
@@ -566,4 +565,18 @@ func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+}
+
+func getCardanoPrivateKeyBytes(str string) ([]byte, error) {
+	bytes, err := cardanowallet.GetKeyBytes(str)
+	if err != nil {
+		bytes, err = hex.DecodeString(str)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --%s value %s", privateKeyFlag, str)
+		}
+
+		bytes = cardanowallet.PadKeyToSize(bytes)
+	}
+
+	return bytes, nil
 }

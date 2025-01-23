@@ -8,6 +8,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type BridgingAddresses struct {
@@ -105,5 +107,68 @@ func (appConfig *AppConfig) FillOut() {
 
 	for chainID, ethChainConfig := range appConfig.EthChains {
 		ethChainConfig.ChainID = chainID
+	}
+}
+
+func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig, error) {
+	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
+
+	for chainID, cardanoConfig := range appConfig.CardanoChains {
+		cfg, err := cardanoConfig.ToSendTxChainConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		result[chainID] = cfg
+	}
+
+	for chainID, config := range appConfig.EthChains {
+		result[chainID] = config.ToSendTxChainConfig()
+	}
+
+	return result, nil
+}
+
+func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, err error) {
+	txProvider, err := config.CreateTxProvider()
+	if err != nil {
+		return res, err
+	}
+
+	var tokens []sendtx.TokenExchangeConfig
+
+	for _, tdst := range config.Destinations {
+		if tdst.SrcTokenName != cardanowallet.AdaTokenName {
+			tokens = append(tokens, sendtx.TokenExchangeConfig{
+				DstChainID: tdst.DstChainID,
+				TokenName:  tdst.SrcTokenName,
+			})
+		}
+	}
+
+	return sendtx.ChainConfig{
+		CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:           txProvider,
+		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
+		TestNetMagic:         uint(config.NetworkMagic),
+		TTLSlotNumberInc:     config.TTLSlotNumberInc,
+		MinUtxoValue:         config.UtxoMinAmount,
+		NativeTokens:         tokens,
+		MinBridgingFeeAmount: config.MinFeeForBridging,
+		PotentialFee:         config.PotentialFee,
+		ProtocolParameters:   nil,
+	}, nil
+}
+
+func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
+	feeValue := new(big.Int).SetUint64(config.MinFeeForBridging)
+
+	if len(feeValue.String()) == common.WeiDecimals {
+		feeValue = common.WeiToDfm(feeValue)
+	}
+
+	return sendtx.ChainConfig{
+		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
+		MinBridgingFeeAmount: feeValue.Uint64(),
 	}
 }

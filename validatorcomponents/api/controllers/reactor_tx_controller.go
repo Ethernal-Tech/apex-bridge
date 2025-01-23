@@ -3,13 +3,11 @@ package controllers
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
 
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
@@ -23,38 +21,37 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type CardanoTxControllerImpl struct {
+type ReactorTxControllerImpl struct {
 	oracleConfig  *oCore.AppConfig
 	batcherConfig *batcherCore.BatcherManagerConfiguration
 	logger        hclog.Logger
 }
 
-var _ core.APIController = (*CardanoTxControllerImpl)(nil)
+var _ core.APIController = (*ReactorTxControllerImpl)(nil)
 
-func NewCardanoTxController(
+func NewReactorTxController(
 	oracleConfig *oCore.AppConfig,
 	batcherConfig *batcherCore.BatcherManagerConfiguration,
 	logger hclog.Logger,
-) *CardanoTxControllerImpl {
-	return &CardanoTxControllerImpl{
+) *ReactorTxControllerImpl {
+	return &ReactorTxControllerImpl{
 		oracleConfig:  oracleConfig,
 		batcherConfig: batcherConfig,
 		logger:        logger,
 	}
 }
 
-func (*CardanoTxControllerImpl) GetPathPrefix() string {
+func (*ReactorTxControllerImpl) GetPathPrefix() string {
 	return "CardanoTx"
 }
 
-func (c *CardanoTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
+func (c *ReactorTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
 	return []*core.APIEndpoint{
 		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: c.createBridgingTx, APIKeyAuth: true},
-		{Path: "SignBridgingTx", Method: http.MethodPost, Handler: c.signBridgingTx, APIKeyAuth: true},
 	}
 }
 
-func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
+func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
 	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
 	if !ok {
 		return
@@ -83,35 +80,7 @@ func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
 }
 
-func (c *CardanoTxControllerImpl) signBridgingTx(w http.ResponseWriter, r *http.Request) {
-	requestBody, ok := utils.DecodeModel[request.SignBridgingTxRequest](w, r, c.logger)
-	if !ok {
-		return
-	}
-
-	if requestBody.TxRaw == "" || requestBody.SigningKeyHex == "" || requestBody.TxHash == "" {
-		utils.WriteErrorResponse(
-			w, r, http.StatusBadRequest, errors.New("invalid input data"), c.logger)
-
-		return
-	}
-
-	c.logger.Debug("signBridgingTx request", "body", requestBody, "url", r.URL)
-
-	signedTx, err := c.signTx(requestBody)
-	if err != nil {
-		utils.WriteErrorResponse(
-			w, r, http.StatusBadRequest, errors.New("validation error"), c.logger)
-
-		return
-	}
-
-	utils.WriteResponse(
-		w, r, http.StatusOK,
-		response.NewBridgingTxResponse(signedTx, requestBody.TxHash), c.logger)
-}
-
-func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
+func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody *request.CreateBridgingTxRequest,
 ) error {
 	cardanoSrcConfig, _ := oUtils.GetChainConfig(c.oracleConfig, requestBody.SourceChainID)
@@ -211,55 +180,15 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
-	var batcherChainConfig batcherCore.ChainConfig
-
-	for _, batcherChain := range c.batcherConfig.Chains {
-		if batcherChain.ChainID == requestBody.SourceChainID {
-			batcherChainConfig = batcherChain
-
-			break
-		}
-	}
-
-	cardanoConfig, err := cardanotx.NewCardanoChainConfig(batcherChainConfig.ChainSpecific)
+	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to create configuration")
 	}
 
-	txProvider, err := cardanoConfig.CreateTxProvider()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
-	}
-
-	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
-	minAmountToBridge := uint64(0)
-
-	destCardanoChainConfig, exists := c.oracleConfig.CardanoChains[requestBody.DestinationChainID]
-	if exists {
-		minAmountToBridge = destCardanoChainConfig.UtxoMinAmount
-	}
-
-	txSender := sendtx.NewTxSender(
-		requestBody.BridgingFee,
-		minAmountToBridge,
-		cardanoConfig.PotentialFee,
-		common.MaxInputsPerBridgingTxDefault,
-		map[string]sendtx.ChainConfig{
-			requestBody.SourceChainID: {
-				CardanoCliBinary: wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
-				TxProvider:       txProvider,
-				MultiSigAddr:     sourceChainConfig.BridgingAddresses.BridgingAddress,
-				TestNetMagic:     uint(sourceChainConfig.NetworkMagic),
-				TTLSlotNumberInc: cardanoConfig.TTLSlotNumberInc,
-				MinUtxoValue:     sourceChainConfig.UtxoMinAmount,
-				ExchangeRate:     make(map[string]float64),
-			},
-			requestBody.DestinationChainID: {},
-		},
-	)
+	txSender := sendtx.NewTxSender(txSenderChainsConfig)
 
 	receivers := make([]sendtx.BridgingTxReceiver, len(requestBody.Transactions))
 	for i, tx := range requestBody.Transactions {
@@ -273,45 +202,12 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers,
+		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
+		sendtx.NewExchangeRate(),
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	txRaw := hex.EncodeToString(txRawBytes)
-
-	return txRaw, txHash, nil
-}
-
-func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxRequest) (
-	string, error,
-) {
-	signingKeyBytes, err := common.DecodeHex(requestBody.SigningKeyHex)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode singing key hex: %w", err)
-	}
-
-	txRawBytes, err := common.DecodeHex(requestBody.TxRaw)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode raw tx: %w", err)
-	}
-
-	cardanoCliBinary := wallet.ResolveCardanoCliBinary(wallet.CardanoNetworkType(requestBody.NetworkID))
-	senderWallet := wallet.NewWallet(
-		wallet.GetVerificationKeyFromSigningKey(signingKeyBytes), signingKeyBytes)
-
-	txBuilder, err := wallet.NewTxBuilder(cardanoCliBinary)
-	if err != nil {
-		return "", fmt.Errorf("failed to create tx builder: %w", err)
-	}
-
-	defer txBuilder.Dispose()
-
-	signedTxBytes, err := txBuilder.SignTx(txRawBytes, []wallet.ITxSigner{senderWallet})
-	if err != nil {
-		return "", fmt.Errorf("failed to sign tx: %w", err)
-	}
-
-	return hex.EncodeToString(signedTxBytes), nil
+	return hex.EncodeToString(txRawBytes), txHash, nil
 }

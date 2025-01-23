@@ -198,16 +198,16 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 
 	if p.primeCardanoWrappedTokenName == "" {
 		return fmt.Errorf("missing %s", primeCardanoWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenAmountWithFullName(p.primeCardanoWrappedTokenName, 0, true); err != nil {
-		if _, err := wallet.NewTokenAmountWithFullName(p.primeCardanoWrappedTokenName, 0, false); err != nil {
+	} else if _, err := wallet.NewTokenWithFullName(p.primeCardanoWrappedTokenName, true); err != nil {
+		if _, err := wallet.NewTokenWithFullName(p.primeCardanoWrappedTokenName, false); err != nil {
 			return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
 		}
 	}
 
 	if p.cardanoPrimeWrappedTokenName == "" {
 		return fmt.Errorf("missing %s", cardanoPrimeWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenAmountWithFullName(p.cardanoPrimeWrappedTokenName, 0, true); err != nil {
-		if _, err := wallet.NewTokenAmountWithFullName(p.cardanoPrimeWrappedTokenName, 0, false); err != nil {
+	} else if _, err := wallet.NewTokenWithFullName(p.cardanoPrimeWrappedTokenName, true); err != nil {
+		if _, err := wallet.NewTokenWithFullName(p.cardanoPrimeWrappedTokenName, false); err != nil {
 			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
 		}
 	}
@@ -519,12 +519,12 @@ func (p *skylineGenerateConfigsParams) Execute(
 					UtxoMinAmount:         p.primeUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrCardano,
+							DstChainID:   common.ChainIDStrCardano,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: p.cardanoPrimeWrappedTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrCardano,
+							DstChainID:   common.ChainIDStrCardano,
 							SrcTokenName: p.primeCardanoWrappedTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},
@@ -553,12 +553,12 @@ func (p *skylineGenerateConfigsParams) Execute(
 					UtxoMinAmount:         p.cardanoUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: p.primeCardanoWrappedTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: p.cardanoPrimeWrappedTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},

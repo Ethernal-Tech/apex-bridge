@@ -53,9 +53,9 @@ func (g *defundParams) ValidateFlags() error {
 	g.nativeTokenAmountStr = strings.TrimSpace(g.nativeTokenAmountStr)
 
 	nativeTokenAmount, ok := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
-	if !ok || nativeTokenAmount.Sign() <= 0 {
-		return fmt.Errorf(" --%s flag must specify a value greater than %d in dfm",
-			nativeTokenAmountFlag, 0) // should this be 0 by default?
+	if !ok || nativeTokenAmount.Sign() < 0 {
+		return fmt.Errorf(" --%s flag must specify a value greater or equal than %d in dfm",
+			nativeTokenAmountFlag, 0)
 	}
 
 	if currencyAmount.Cmp(new(big.Int).SetUint64(common.MinUtxoAmountDefault)) < 0 {
@@ -108,7 +108,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"defund", chainIDInt, amount, big.NewInt(0), g.address)
+		"defund", chainIDInt, amount, tokenAmount, g.address)
 	if err != nil {
 		return nil, err
 	}

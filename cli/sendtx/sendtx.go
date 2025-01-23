@@ -1,47 +1,43 @@
 package clisendtx
 
 import (
-	"fmt"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/spf13/cobra"
 )
 
-var sendtxParamsData = &sendTxParams{}
+const sendSkylineTxCommandUse = "skyline"
+
+var (
+	sendtxParamsData        = &sendTxParams{}
+	sendSkylineTxParamsData = &sendSkylineTxParams{}
+)
 
 func GetSendTxCommand() *cobra.Command {
-	cmd := &cobra.Command{
+	cmdSendTx := &cobra.Command{
 		Use:     "sendtx",
 		Short:   "sends apex bridging transaction",
 		PreRunE: runPreRun,
-		Run:     runCommand,
+		Run:     common.GetCliRunCommand(sendtxParamsData),
+	}
+	cmdSendSkylineTx := &cobra.Command{
+		Use:     sendSkylineTxCommandUse,
+		Short:   "sends the transaction in skyline mode",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(sendSkylineTxParamsData),
 	}
 
-	sendtxParamsData.setFlags(cmd)
+	sendtxParamsData.setFlags(cmdSendTx)
+	sendSkylineTxParamsData.setFlags(cmdSendSkylineTx)
 
-	return cmd
+	cmdSendTx.AddCommand(cmdSendSkylineTx)
+
+	return cmdSendTx
 }
 
-func runPreRun(_ *cobra.Command, _ []string) error {
+func runPreRun(cb *cobra.Command, _ []string) error {
+	if cb.Use == sendSkylineTxCommandUse {
+		return sendSkylineTxParamsData.validateFlags()
+	}
+
 	return sendtxParamsData.validateFlags()
-}
-
-func runCommand(cmd *cobra.Command, _ []string) {
-	outputter := common.InitializeOutputter(cmd)
-	defer outputter.WriteOutput()
-
-	defer func() {
-		if r := recover(); r != nil {
-			outputter.SetError(fmt.Errorf("%v", r))
-		}
-	}()
-
-	results, err := sendtxParamsData.Execute(outputter)
-	if err != nil {
-		outputter.SetError(err)
-
-		return
-	}
-
-	outputter.SetCommandResult(results)
 }

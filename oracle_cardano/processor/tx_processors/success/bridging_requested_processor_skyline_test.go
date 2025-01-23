@@ -35,7 +35,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	proc := NewNativeBridgingRequestedProcessor(hclog.NewNullLogger())
+	proc := NewSkylineBridgingRequestedProcessor(hclog.NewNullLogger())
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
@@ -44,12 +44,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					UtxoMinAmount: utxoMinValue,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrVector,
+							DstChainID:   common.ChainIDStrVector,
 							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
 							DstTokenName: wallet.AdaTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrVector,
+							DstChainID:   common.ChainIDStrVector,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
 						},
@@ -66,12 +66,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					UtxoMinAmount: utxoMinValue,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenPrime))),
 						},
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: fmt.Sprintf("%s.%s", "123", hex.EncodeToString([]byte(wrappedTokenVector))),
 							DstTokenName: wallet.AdaTokenName,
 						},

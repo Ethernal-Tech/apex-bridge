@@ -636,12 +636,12 @@ func (p *generateConfigsParams) Execute(
 					UtxoMinAmount:         p.primeUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrVector,
+							DstChainID:   common.ChainIDStrVector,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},
 						{
-							Chain:        common.ChainIDStrNexus,
+							DstChainID:   common.ChainIDStrNexus,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: wallet.AdaTokenName, // or "" or "eth" ?
 						},
@@ -670,7 +670,7 @@ func (p *generateConfigsParams) Execute(
 					UtxoMinAmount:         p.vectorUtxoMinAmount,
 					Destinations: []cardanotx.CardanoConfigTokenExchange{
 						{
-							Chain:        common.ChainIDStrPrime,
+							DstChainID:   common.ChainIDStrPrime,
 							SrcTokenName: wallet.AdaTokenName,
 							DstTokenName: wallet.AdaTokenName,
 						},

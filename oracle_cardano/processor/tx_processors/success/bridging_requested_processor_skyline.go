@@ -13,7 +13,6 @@ import (
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -23,7 +22,7 @@ type BridgingRequestedProcessorSkylineImpl struct {
 	logger hclog.Logger
 }
 
-func NewNativeBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorSkylineImpl {
+func NewSkylineBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorSkylineImpl {
 	return &BridgingRequestedProcessorSkylineImpl{
 		logger: logger.Named("bridging_requested_processor_skyline"),
 	}
@@ -312,7 +311,12 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			multisigUtxo.Amount, nativeCurrencyAmountSum)
 	}
 
-	multisigWrappedTokenAmount := GetNativeTokenAmount(cardanoSrcConfig, multisigUtxo, metadata.DestinationChainID)
+	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID, true)
+	if err != nil {
+		return err
+	}
+
+	multisigWrappedTokenAmount := getNativeTokenAmount(multisigUtxo, nativeToken.String())
 
 	if wrappedTokenAmountSum.Cmp(new(big.Int).SetUint64(multisigWrappedTokenAmount)) != 0 {
 		return fmt.Errorf("multisig wrapped token is not equal to receiver wrapped token amount: expected %v but got %v",
@@ -337,19 +341,7 @@ func GetExchangeRate(sourceChainID string, destinationChainID string) (float64, 
 	return 2, nil
 }
 
-func GetNativeTokenAmount(config *cCore.CardanoChainConfig, utxo *indexer.TxOutput, chainID string) uint64 {
-	amount := uint64(0)
-
-	var tokenName string
-
-	for _, token := range config.Destinations {
-		if token.Chain == chainID && token.DstTokenName == wallet.AdaTokenName {
-			tokenName = token.SrcTokenName
-
-			break
-		}
-	}
-
+func getNativeTokenAmount(utxo *indexer.TxOutput, tokenName string) (amount uint64) {
 	for _, token := range utxo.Tokens {
 		if token.TokenName() == tokenName {
 			amount += token.Amount
