@@ -251,9 +251,10 @@ $ apex-bridge sendtx skyline \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
         --fee 1_100_000 \
-        --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
+        --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
 
 ```
+- optional `--src-token-name` which can be used instead of `--dst-token-name`
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):

@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	fullSrcTokenNameFlag      = "src-token-name"                                      //nolint:gosec
-	fullDestTokenNameFlag     = "dest-token-name"                                     //nolint:gosec
-	fullSrcTokenNameFlagDesc  = "denom of the token to transfer from source chain"    //nolint:gosec
-	fullDestTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
+	fullSrcTokenNameFlag     = "src-token-name"                                      //nolint:gosec
+	fullDstTokenNameFlag     = "dst-token-name"                                      //nolint:gosec
+	fullSrcTokenNameFlagDesc = "denom of the token to transfer from source chain"    //nolint:gosec
+	fullDstTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
 )
 
 type sendSkylineTxParams struct {
@@ -57,11 +57,13 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
-	if (p.tokenFullNameSrc != "" && p.tokenFullNameDst != "") ||
-		(p.tokenFullNameSrc == "" && p.tokenFullNameDst == "") {
-		return fmt.Errorf("only one flag between %s and %s should be specified",
-			p.tokenFullNameSrc, p.tokenFullNameDst)
-	} else if p.tokenFullNameSrc != "" {
+	switch {
+	case p.tokenFullNameSrc != "":
+		if p.tokenFullNameDst != "" {
+			return fmt.Errorf("only one flag between --%s and --%s should be specified",
+				fullSrcTokenNameFlag, fullDstTokenNameFlag)
+		}
+
 		token, err := getToken(p.tokenFullNameSrc)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
@@ -69,14 +71,18 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 		p.tokenFullNameSrc = token.String()
 		p.tokenFullNameDst = cardanowallet.AdaTokenName
-	} else {
+
+	case p.tokenFullNameDst != "":
 		token, err := getToken(p.tokenFullNameDst)
 		if err != nil {
-			return fmt.Errorf("--%s invalid token name: %s", fullDestTokenNameFlag, p.tokenFullNameDst)
+			return fmt.Errorf("--%s invalid token name: %s", fullDstTokenNameFlag, p.tokenFullNameDst)
 		}
 
 		p.tokenFullNameSrc = cardanowallet.AdaTokenName
 		p.tokenFullNameDst = token.String()
+
+	default:
+		return fmt.Errorf("specify at least one of: --%s, --%s", fullSrcTokenNameFlag, fullDstTokenNameFlag)
 	}
 
 	feeAmount, ok := new(big.Int).SetString(p.feeString, 0)
@@ -192,9 +198,9 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&p.tokenFullNameDst,
-		fullDestTokenNameFlag,
+		fullDstTokenNameFlag,
 		"",
-		fullDestTokenNameFlagDesc,
+		fullDstTokenNameFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
