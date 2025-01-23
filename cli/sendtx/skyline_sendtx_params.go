@@ -20,31 +20,14 @@ const (
 	fullDestTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
 )
 
-func ToCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName string) []sendtx.BridgingTxReceiver {
-	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
-	for idx, rec := range receivers {
-		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:   rec.ReceiverAddr,
-			Amount: rec.Amount.Uint64(),
-		}
-		if sourceTokenName == "" {
-			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeCurrencyOnSource
-		} else {
-			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
-		}
-	}
-
-	return metadataReceivers
-}
-
 type sendSkylineTxParams struct {
-	privateKeyRaw           string
-	receivers               []string
-	chainIDSrc              string
-	chainIDDst              string
-	feeString               string
-	fullSrcTokenNameString  string
-	fullDestTokenNameString string
+	privateKeyRaw    string
+	receivers        []string
+	chainIDSrc       string
+	chainIDDst       string
+	feeString        string
+	tokenFullNameSrc string
+	tokenFullNameDst string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -52,11 +35,9 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	feeAmount         *big.Int
-	fullSrcTokenName  cardanowallet.Token
-	fullDestTokenName cardanowallet.Token
-	receiversParsed   []*receiverAmount
-	wallet            *cardanowallet.Wallet
+	feeAmount       *big.Int
+	receiversParsed []*receiverAmount
+	wallet          *cardanowallet.Wallet
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -76,36 +57,26 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
-	if (p.fullSrcTokenNameString != "" && p.fullDestTokenNameString != "") ||
-		(p.fullSrcTokenNameString == "" && p.fullDestTokenNameString == "") {
+	if (p.tokenFullNameSrc != "" && p.tokenFullNameDst != "") ||
+		(p.tokenFullNameSrc == "" && p.tokenFullNameDst == "") {
 		return fmt.Errorf("only one flag between %s and %s should be specified",
-			p.fullSrcTokenNameString, p.fullDestTokenNameString)
-	}
-
-	if p.fullSrcTokenNameString != "" {
-		tokenName, err := cardanowallet.NewTokenWithFullName(p.fullSrcTokenNameString, false)
+			p.tokenFullNameSrc, p.tokenFullNameDst)
+	} else if p.tokenFullNameSrc != "" {
+		token, err := getToken(p.tokenFullNameSrc)
 		if err != nil {
-			tokenName, err = cardanowallet.NewTokenWithFullName(p.fullSrcTokenNameString, true)
-			if err != nil {
-				return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.fullSrcTokenNameString)
-			}
+			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
 		}
 
-		p.fullSrcTokenName = tokenName
-		p.fullDestTokenName.Name = cardanowallet.AdaTokenName
-	}
-
-	if p.fullDestTokenNameString != "" {
-		tokenName, err := cardanowallet.NewTokenWithFullName(p.fullDestTokenNameString, false)
+		p.tokenFullNameSrc = token.String()
+		p.tokenFullNameDst = cardanowallet.AdaTokenName
+	} else {
+		token, err := getToken(p.tokenFullNameDst)
 		if err != nil {
-			tokenName, err = cardanowallet.NewTokenWithFullName(p.fullDestTokenNameString, true)
-			if err != nil {
-				return fmt.Errorf("--%s invalid token name: %s", fullDestTokenNameFlag, p.fullDestTokenNameString)
-			}
+			return fmt.Errorf("--%s invalid token name: %s", fullDestTokenNameFlag, p.tokenFullNameDst)
 		}
 
-		p.fullDestTokenName = tokenName
-		p.fullSrcTokenName.Name = cardanowallet.AdaTokenName
+		p.tokenFullNameSrc = cardanowallet.AdaTokenName
+		p.tokenFullNameDst = token.String()
 	}
 
 	feeAmount, ok := new(big.Int).SetString(p.feeString, 0)
@@ -125,8 +96,8 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 	}
 
-	bytes, err := cardanowallet.GetKeyBytes(p.privateKeyRaw)
-	if err != nil || len(bytes) != 32 {
+	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
+	if err != nil {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
 	}
 
@@ -213,14 +184,14 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.fullSrcTokenNameString,
+		&p.tokenFullNameSrc,
 		fullSrcTokenNameFlag,
 		"",
 		fullSrcTokenNameFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
-		&p.fullDestTokenNameString,
+		&p.tokenFullNameDst,
 		fullDestTokenNameFlag,
 		"",
 		fullDestTokenNameFlagDesc,
@@ -266,7 +237,7 @@ func (p *sendSkylineTxParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
-	receivers := ToCardanoMetadataForSkyline(p.receiversParsed, p.fullDestTokenName.Name)
+	receivers := toCardanoMetadataForSkyline(p.receiversParsed, p.tokenFullNameSrc)
 	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
 
 	utxoAmountSrc := common.MinUtxoAmountDefaultPrime
@@ -285,6 +256,14 @@ func (p *sendSkylineTxParams) Execute(
 		minFeeForBridgingDest = common.MinFeeForBridgingToPrime
 	}
 
+	var srcNativeTokens []sendtx.TokenExchangeConfig
+	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
+		srcNativeTokens = append(srcNativeTokens, sendtx.TokenExchangeConfig{
+			DstChainID: p.chainIDDst,
+			TokenName:  p.tokenFullNameSrc,
+		})
+	}
+
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
@@ -295,15 +274,9 @@ func (p *sendSkylineTxParams) Execute(
 				TTLSlotNumberInc:     ttlSlotNumberInc,
 				MinBridgingFeeAmount: minFeeForBridgingSrc,
 				MinUtxoValue:         utxoAmountSrc,
-				NativeTokens: []sendtx.TokenExchangeConfig{
-					{
-						DstChainID: p.chainIDDst,
-						TokenName:  p.fullSrcTokenName.Name,
-					},
-				},
+				NativeTokens:         srcNativeTokens,
 			},
 			p.chainIDDst: {
-				TxProvider:           cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
 				MinUtxoValue:         utxoAmountDest,
 				MinBridgingFeeAmount: minFeeForBridgingDest,
 			},
@@ -336,8 +309,7 @@ func (p *sendSkylineTxParams) Execute(
 	outputter.WriteOutput()
 
 	err = waitForSkylineTx(
-		ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
-		p.fullSrcTokenName.Name, p.fullDestTokenName.Name, p.receiversParsed)
+		ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst), p.tokenFullNameDst, p.receiversParsed)
 	if err != nil {
 		return nil, err
 	}
@@ -355,23 +327,44 @@ func (p *sendSkylineTxParams) Execute(
 
 func waitForSkylineTx(
 	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever,
-	sourceTokenName string, destinationTokenName string, receivers []*receiverAmount) error {
+	tokenName string, receivers []*receiverAmount) error {
 	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
 		utxos, err := txUtxoRetriever.GetUtxos(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
 
-		sum := cardanowallet.GetUtxosSum(utxos)
-
-		var receivingTokenName string
-
-		if sourceTokenName == cardanowallet.AdaTokenName {
-			receivingTokenName = destinationTokenName
-		} else {
-			receivingTokenName = cardanowallet.AdaTokenName
-		}
-
-		return new(big.Int).SetUint64(sum[receivingTokenName]), nil
+		return new(big.Int).SetUint64(cardanowallet.GetUtxosSum(utxos)[tokenName]), nil
 	})
+}
+
+func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName string) []sendtx.BridgingTxReceiver {
+	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
+	for idx, rec := range receivers {
+		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
+			Addr:   rec.ReceiverAddr,
+			Amount: rec.Amount.Uint64(),
+		}
+		if sourceTokenName == cardanowallet.AdaTokenName {
+			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeCurrencyOnSource
+		} else {
+			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
+		}
+	}
+
+	return metadataReceivers
+}
+
+func getToken(fullName string) (token cardanowallet.Token, err error) {
+	token, err = cardanowallet.NewTokenWithFullName(fullName, false)
+	if err == nil {
+		return token, nil
+	}
+
+	token, err = cardanowallet.NewTokenWithFullName(fullName, true)
+	if err == nil {
+		return token, nil
+	}
+
+	return token, err
 }
