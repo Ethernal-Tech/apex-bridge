@@ -153,7 +153,7 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.evmBranchName,
 		evmBranchNameFlag,
-		"audit/APEX-467",
+		"main",
 		evmBranchNameFlagDesc,
 	)
 
