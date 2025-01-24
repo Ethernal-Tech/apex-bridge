@@ -43,9 +43,8 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	}
 
 	claims.HotWalletIncrementClaims = append(claims.HotWalletIncrementClaims, oCore.HotWalletIncrementClaim{
-		ChainId:     common.ToNumChainID(tx.OriginChainID),
-		Amount:      common.WeiToDfm(tx.Value),
-		IsIncrement: true,
+		ChainId: common.ToNumChainID(tx.OriginChainID),
+		Amount:  common.WeiToDfm(tx.Value),
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",
