@@ -111,7 +111,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", &CardanoChainOperationReactorStrategy{}, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -299,62 +299,100 @@ func TestGenerateBatchTransaction(t *testing.T) {
 }
 
 func Test_getNeededUtxos(t *testing.T) {
+	const minUtxoAmount = 5
+
+	reactorStrategy := &CardanoChainOperationReactorStrategy{}
+	desiredAmounts := map[string]uint64{
+		cardanowallet.AdaTokenName: 0,
+	}
 	inputs := []*indexer.TxInputOutput{
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 100},
-			Output: indexer.TxOutput{Amount: 10},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
+			Output: indexer.TxOutput{Amount: 100},
 		},
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 0},
-			Output: indexer.TxOutput{Amount: 20},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 0},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x2"), Index: 7},
-			Output: indexer.TxOutput{Amount: 5},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 7},
+			Output: indexer.TxOutput{Amount: 150},
 		},
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 5},
-			Output: indexer.TxOutput{Amount: 30},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			Output: indexer.TxOutput{Amount: 200},
 		},
 		{
-			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x4"), Index: 6},
-			Output: indexer.TxOutput{Amount: 15},
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("05"), Index: 6},
+			Output: indexer.TxOutput{Amount: 160},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("06"), Index: 8},
+			Output: indexer.TxOutput{Amount: 400},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("07"), Index: 10},
+			Output: indexer.TxOutput{Amount: 200},
+		},
+		{
+			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("08"), Index: 9},
+			Output: indexer.TxOutput{Amount: 50},
 		},
 	}
 
-	t.Run("pass", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 65, 5, 5, 30, 1)
+	t.Run("exact amount", func(t *testing.T) {
+		desiredAmounts[cardanowallet.AdaTokenName] = 605
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs[:len(inputs)-1], result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
-		result, err = getNeededUtxos(inputs, 50, 6, 0, 2, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 245
+		result, err = reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, []*indexer.TxInputOutput{inputs[3], inputs[1]}, result)
+		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
 	})
 
 	t.Run("pass with change", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 67, 4, 5, 30, 1)
+		desiredAmounts[cardanowallet.AdaTokenName] = 706
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
 
 		require.NoError(t, err)
-		require.Equal(t, inputs, result)
+		require.Equal(t, inputs[3:6], result)
 	})
 
 	t.Run("pass with at least", func(t *testing.T) {
-		result, err := getNeededUtxos(inputs, 10, 4, 5, 30, 3)
+		desiredAmounts[cardanowallet.AdaTokenName] = 5
+		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
 	})
 
 	t.Run("not enough sum", func(t *testing.T) {
-		_, err := getNeededUtxos(inputs, 160, 5, 5, 30, 1)
-		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+		desiredAmounts[cardanowallet.AdaTokenName] = 1550
+		_, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
+		require.ErrorContains(t, err, "not enough funds for the transaction")
 	})
 }
 
 func Test_getOutputs(t *testing.T) {
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+
+	cardanoConfig, err := cardano.NewCardanoChainConfig(configRaw)
+	require.NoError(t, err)
+
+	cco := &CardanoChainOperations{
+		strategy: &CardanoChainOperationReactorStrategy{},
+		config:   cardanoConfig,
+	}
+	cco.config.NetworkID = cardanowallet.MainNetNetwork
+
 	txs := []eth.ConfirmedTransaction{
 		{
 			Receivers: []eth.BridgeReceiver{
@@ -419,7 +457,7 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
+	res, _, _ := cco.strategy.GetOutputs(txs, cco.config, "", hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
@@ -456,7 +494,8 @@ func Test_getUTXOs(t *testing.T) {
 		config: &cardano.CardanoChainConfig{
 			NoBatchPeriodPercent: 0.1,
 		},
-		logger: hclog.NewNullLogger(),
+		strategy: &CardanoChainOperationReactorStrategy{},
+		logger:   hclog.NewNullLogger(),
 	}
 	txOutputs := cardano.TxOutputs{
 		Outputs: []cardanowallet.TxOutput{
@@ -470,7 +509,7 @@ func Test_getUTXOs(t *testing.T) {
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -478,7 +517,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -503,7 +542,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)

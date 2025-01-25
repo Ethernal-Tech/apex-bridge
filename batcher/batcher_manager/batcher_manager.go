@@ -94,7 +94,7 @@ func getCardanoOperations(
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, db, secretsManager, config.ChainID, &batcher.CardanoChainOperationReactorStrategy{}, logger)
 	if err != nil {
 		return nil, err
 	}
