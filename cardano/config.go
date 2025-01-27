@@ -7,16 +7,9 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
-
-// CardanoConfigTokenExchange holds src and dst token to exchange with destionation chain
-// full token name[policyID.hex(name)or lovelace or "" for eth
-type CardanoConfigTokenExchange struct {
-	DstChainID   string `json:"dstChainID"`
-	SrcTokenName string `json:"srcTokenName"`
-	DstTokenName string `json:"dstTokenName"`
-}
 
 type CardanoChainConfig struct {
 	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
@@ -31,7 +24,7 @@ type CardanoChainConfig struct {
 	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
 	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
-	Destinations          []CardanoConfigTokenExchange     `json:"destinations"`
+	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -69,28 +62,20 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }
 
-func (config CardanoChainConfig) GetNativeTokenName(
-	dstChainID string, isNativeTokenOnSrc bool,
-) string {
-	for _, dst := range config.Destinations {
+func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {
+	for _, dst := range config.NativeTokens {
 		if dst.DstChainID != dstChainID {
 			continue
 		}
 
-		if !isNativeTokenOnSrc && dst.SrcTokenName == cardanowallet.AdaTokenName {
-			return dst.DstTokenName
-		} else if isNativeTokenOnSrc && dst.DstTokenName == cardanowallet.AdaTokenName {
-			return dst.SrcTokenName
-		}
+		return dst.TokenName
 	}
 
 	return ""
 }
 
-func (config CardanoChainConfig) GetNativeToken(
-	dstChainID string, isNativeTokenOnSrc bool,
-) (token cardanowallet.Token, err error) {
-	tokenName := config.GetNativeTokenName(dstChainID, isNativeTokenOnSrc)
+func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardanowallet.Token, err error) {
+	tokenName := config.GetNativeTokenName(dstChainID)
 	if tokenName == "" {
 		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
 	}

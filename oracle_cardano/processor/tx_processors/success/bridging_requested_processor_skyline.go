@@ -311,7 +311,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			multisigUtxo.Amount, nativeCurrencyAmountSum)
 	}
 
-	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID, true)
+	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
 	if err != nil {
 		return err
 	}
