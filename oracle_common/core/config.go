@@ -135,17 +135,6 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 		return res, err
 	}
 
-	var tokens []sendtx.TokenExchangeConfig
-
-	for _, tdst := range config.Destinations {
-		if tdst.SrcTokenName != cardanowallet.AdaTokenName {
-			tokens = append(tokens, sendtx.TokenExchangeConfig{
-				DstChainID: tdst.DstChainID,
-				TokenName:  tdst.SrcTokenName,
-			})
-		}
-	}
-
 	return sendtx.ChainConfig{
 		CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
 		TxProvider:           txProvider,
@@ -153,7 +142,7 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 		TestNetMagic:         uint(config.NetworkMagic),
 		TTLSlotNumberInc:     config.TTLSlotNumberInc,
 		MinUtxoValue:         config.UtxoMinAmount,
-		NativeTokens:         tokens,
+		NativeTokens:         config.NativeTokens,
 		MinBridgingFeeAmount: config.MinFeeForBridging,
 		PotentialFee:         config.PotentialFee,
 		ProtocolParameters:   nil,

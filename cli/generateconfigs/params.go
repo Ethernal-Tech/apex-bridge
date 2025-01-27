@@ -634,18 +634,6 @@ func (p *generateConfigsParams) Execute(
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.primeUtxoMinAmount,
-					Destinations: []cardanotx.CardanoConfigTokenExchange{
-						{
-							DstChainID:   common.ChainIDStrVector,
-							SrcTokenName: wallet.AdaTokenName,
-							DstTokenName: wallet.AdaTokenName,
-						},
-						{
-							DstChainID:   common.ChainIDStrNexus,
-							SrcTokenName: wallet.AdaTokenName,
-							DstTokenName: wallet.AdaTokenName, // or "" or "eth" ?
-						},
-					},
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
@@ -668,13 +656,6 @@ func (p *generateConfigsParams) Execute(
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.vectorUtxoMinAmount,
-					Destinations: []cardanotx.CardanoConfigTokenExchange{
-						{
-							DstChainID:   common.ChainIDStrPrime,
-							SrcTokenName: wallet.AdaTokenName,
-							DstTokenName: wallet.AdaTokenName,
-						},
-					},
 				},
 				NetworkAddress:           p.vectorNetworkAddress,
 				StartBlockHash:           vectorStartingHash,

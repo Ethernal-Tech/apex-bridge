@@ -14,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -517,16 +518,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.primeUtxoMinAmount,
-					Destinations: []cardanotx.CardanoConfigTokenExchange{
+					NativeTokens: []sendtx.TokenExchangeConfig{
 						{
-							DstChainID:   common.ChainIDStrCardano,
-							SrcTokenName: wallet.AdaTokenName,
-							DstTokenName: p.cardanoPrimeWrappedTokenName,
-						},
-						{
-							DstChainID:   common.ChainIDStrCardano,
-							SrcTokenName: p.primeCardanoWrappedTokenName,
-							DstTokenName: wallet.AdaTokenName,
+							DstChainID: common.ChainIDStrCardano,
+							TokenName:  p.primeCardanoWrappedTokenName,
 						},
 					},
 				},
@@ -551,16 +546,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.cardanoUtxoMinAmount,
-					Destinations: []cardanotx.CardanoConfigTokenExchange{
+					NativeTokens: []sendtx.TokenExchangeConfig{
 						{
-							DstChainID:   common.ChainIDStrPrime,
-							SrcTokenName: wallet.AdaTokenName,
-							DstTokenName: p.primeCardanoWrappedTokenName,
-						},
-						{
-							DstChainID:   common.ChainIDStrPrime,
-							SrcTokenName: p.cardanoPrimeWrappedTokenName,
-							DstTokenName: wallet.AdaTokenName,
+							DstChainID: common.ChainIDStrPrime,
+							TokenName:  p.cardanoPrimeWrappedTokenName,
 						},
 					},
 				},

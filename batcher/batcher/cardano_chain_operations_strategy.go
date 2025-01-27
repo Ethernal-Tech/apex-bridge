@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	txsend "github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -16,7 +17,6 @@ type ICardanoChainOperationsStrategy interface {
 	GetOutputs(
 		txs []eth.ConfirmedTransaction,
 		cardanoConfig *cardano.CardanoChainConfig,
-		destChainID string,
 		logger hclog.Logger,
 	) (cardano.TxOutputs, uint64, error)
 	GetUTXOs(
@@ -30,11 +30,16 @@ type ICardanoChainOperationsStrategy interface {
 	) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error)
 }
 
+var (
+	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationReactorStrategy)(nil)
+	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationSkylineStrategy)(nil)
+)
+
 type CardanoChainOperationReactorStrategy struct {
 }
 
 func (s *CardanoChainOperationReactorStrategy) GetOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, _ string, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]uint64{}
 
@@ -136,8 +141,7 @@ type CardanoChainOperationSkylineStrategy struct {
 }
 
 func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig,
-	destChainID string, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, uint64, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 	tokenHoldingOutputs := uint64(0)
@@ -149,17 +153,18 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 
 			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 				if len(data.Tokens) == 0 {
-					token, err := cardanoConfig.GetNativeToken(destChainID, false)
+					token, err := cardanoConfig.GetNativeToken(
+						common.ToStrChainID(transaction.SourceChainId))
 					if err != nil {
 						return cardano.TxOutputs{}, 0, err
 					}
 
 					data.Tokens = []cardanowallet.TokenAmount{
-						cardanowallet.NewTokenAmount(token, 0),
+						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
 					}
+				} else {
+					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
 				}
-
-				data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
 			}
 
 			receiversMap[receiver.DestinationAddress] = data
@@ -188,7 +193,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 
 		result.Sum[cardanowallet.AdaTokenName] += txOut.Amount
 
-		if txOut.Tokens != nil && txOut.Tokens[0].Amount > 0 {
+		if len(txOut.Tokens) > 0 {
 			tokenHoldingOutputs++
 
 			for _, token := range txOut.Tokens {

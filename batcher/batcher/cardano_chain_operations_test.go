@@ -5,11 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +17,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -530,7 +529,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 	})
 }
 
-func Test_getOutputs(t *testing.T) {
+func Test_reactorGetOutputs(t *testing.T) {
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 42,
@@ -610,7 +609,7 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res, _, _ := cco.strategy.GetOutputs(txs, cco.config, "", hclog.NewNullLogger())
+	res, _, _ := cco.strategy.GetOutputs(txs, cco.config, hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
@@ -637,197 +636,87 @@ func Test_getOutputs(t *testing.T) {
 	}, res.Outputs)
 }
 
-func Test_getSkylineOutputs(t *testing.T) {
-	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 42,
-			"minUtxoAmount": 1000
-			}`))
-	cardanoConfig, _ := cardano.NewCardanoChainConfig(configRaw)
+func Test_skylineGetOutputs(t *testing.T) {
+	// vector -> prime
+	const (
+		addr1 = "vector_test1vgxk3ha6hmftgjzrjlrxrndmqrg43y862pu909r87q8kpas0c0mzc"
+		addr2 = "vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf"
+		addr3 = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
+	)
 
-	cco := &CardanoChainOperations{
-		strategy: &CardanoChainOperationSkylineStrategy{},
-		config:   cardanoConfig,
-	}
-	cco.config.NetworkID = cardanowallet.MainNetNetwork
-
-	cardanoPrimeWrappedTokenName := "72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e"
-	primeCardanoWrappedTokenName := "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533"
-
-	ccCardanoConfigExchange := []cardano.CardanoConfigTokenExchange{
-		{
-			DstChainID:   common.ChainIDStrPrime,
-			SrcTokenName: cardanowallet.AdaTokenName,
-			DstTokenName: primeCardanoWrappedTokenName,
-		},
-		{
-			DstChainID:   common.ChainIDStrPrime,
-			SrcTokenName: cardanoPrimeWrappedTokenName,
-			DstTokenName: cardanowallet.AdaTokenName,
+	policyID := "584ffccecba8a7c6a18037152119907b6b5c2ed063798ee68b012c41"
+	tokenName, _ := hex.DecodeString("526f75746533")
+	token := cardanowallet.NewToken(policyID, string(tokenName))
+	bactherStrategyPrime := &CardanoChainOperationSkylineStrategy{}
+	config := &cardano.CardanoChainConfig{
+		NetworkID: cardanowallet.VectorTestNetNetwork,
+		NativeTokens: []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrVector,
+				TokenName:  token.String(),
+			},
 		},
 	}
 
-	ccPrimeTokenExchange := []cardano.CardanoConfigTokenExchange{
+	txs := []eth.ConfirmedTransaction{
 		{
-			DstChainID:   common.ChainIDStrCardano,
-			SrcTokenName: cardanowallet.AdaTokenName,
-			DstTokenName: cardanoPrimeWrappedTokenName,
+			SourceChainId: common.ChainIDIntVector,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: addr1,
+					Amount:             big.NewInt(100),
+					AmountWrapped:      big.NewInt(200),
+				},
+				{
+					DestinationAddress: addr2,
+					Amount:             big.NewInt(51),
+					AmountWrapped:      big.NewInt(102),
+				},
+			},
 		},
 		{
-			DstChainID:   common.ChainIDStrCardano,
-			SrcTokenName: primeCardanoWrappedTokenName,
-			DstTokenName: cardanowallet.AdaTokenName,
+			SourceChainId: common.ChainIDIntVector,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: addr3,
+					Amount:             big.NewInt(8),
+				},
+				{
+					DestinationAddress: addr1,
+					Amount:             big.NewInt(2),
+					AmountWrapped:      big.NewInt(5),
+				},
+			},
 		},
 	}
 
-	t.Run("from cardano to prime", func(t *testing.T) {
-		cco.config.Destinations = ccCardanoConfigExchange
-		txs := []eth.ConfirmedTransaction{
-			{
-				Receivers: []eth.BridgeReceiver{
-					{
-						DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
-						Amount:             big.NewInt(100),
-						AmountWrapped:      big.NewInt(10),
-					},
-					{
-						DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
-						Amount:             big.NewInt(200),
-						AmountWrapped:      big.NewInt(20),
-					},
-					{
-						DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-						Amount:             big.NewInt(400),
-						AmountWrapped:      big.NewInt(0),
-					},
-				},
-				SourceChainId: 4,
-			},
-			{
-				Receivers: []eth.BridgeReceiver{
-					{
-						DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-						Amount:             big.NewInt(900),
-						AmountWrapped:      big.NewInt(80),
-					},
-				},
-				SourceChainId: 4,
-			},
-		}
+	outputs, tokenOutputs, err := bactherStrategyPrime.GetOutputs(txs, config, hclog.NewNullLogger())
+	require.NoError(t, err)
 
-		polID, tName, _ := splitTokenAmount(primeCardanoWrappedTokenName, true)
-		res, outTokens, err := cco.strategy.GetOutputs(txs, cco.config, common.ChainIDStrPrime, hclog.NewNullLogger())
-		assert.NoError(t, err)
-
-		assert.Equal(t, map[string]uint64{
-			cardanowallet.AdaTokenName:   1600,
-			primeCardanoWrappedTokenName: 110,
-		}, res.Sum)
-
-		assert.Equal(t, uint64(3), outTokens)
-
-		assert.Equal(t, []cardanowallet.TxOutput{
-			{
-				Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
-				Amount: 200,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken(polID, tName),
-						Amount: 20,
-					},
-				},
+	require.Equal(t, uint64(2), tokenOutputs)
+	require.Equal(t, []cardanowallet.TxOutput{
+		{
+			Addr:   addr2,
+			Amount: 51,
+			Tokens: []cardanowallet.TokenAmount{
+				cardanowallet.NewTokenAmount(token, 102),
 			},
-			{
-				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
-				Amount: 100,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken(polID, tName),
-						Amount: 10,
-					},
-				},
+		},
+		{
+			Addr:   addr1,
+			Amount: 102,
+			Tokens: []cardanowallet.TokenAmount{
+				cardanowallet.NewTokenAmount(token, 205),
 			},
-			{
-				Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-				Amount: 1300,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken(polID, tName),
-						Amount: 80,
-					},
-				},
-			},
-		}, res.Outputs)
-	})
-
-	t.Run("from prime to cardano", func(t *testing.T) {
-		cco.config.Destinations = ccPrimeTokenExchange
-		txs := []eth.ConfirmedTransaction{
-			{
-				Receivers: []eth.BridgeReceiver{
-					{
-						DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
-						Amount:             big.NewInt(3000),
-						AmountWrapped:      big.NewInt(200),
-					},
-					{
-						DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
-						Amount:             big.NewInt(0),
-						AmountWrapped:      big.NewInt(0),
-					},
-					{
-						// this one will be skipped
-						DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
-						Amount:             big.NewInt(3000),
-						AmountWrapped:      big.NewInt(1300),
-					},
-				},
-				SourceChainId: 1,
-			},
-			{
-				Receivers: []eth.BridgeReceiver{
-					{
-						DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
-						Amount:             big.NewInt(170),
-						AmountWrapped:      big.NewInt(50),
-					},
-				},
-				SourceChainId: 1,
-			},
-		}
-
-		polID, tName, _ := splitTokenAmount(cardanoPrimeWrappedTokenName, true)
-		res, outTokens, err := cco.strategy.GetOutputs(txs, cco.config, common.ChainIDStrCardano, hclog.NewNullLogger())
-		assert.NoError(t, err)
-		assert.Equal(t, map[string]uint64{
-			cardanowallet.AdaTokenName:   3170,
-			cardanoPrimeWrappedTokenName: 250,
-		}, res.Sum)
-		assert.Equal(t, uint64(2), outTokens)
-
-		assert.Equal(t, []cardanowallet.TxOutput{
-			{
-				Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
-				Amount: 3000,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken(polID, tName),
-						Amount: 200,
-					},
-				},
-			},
-			{
-				Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
-				Amount: 170,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken(polID, tName),
-						Amount: 50,
-					},
-				},
-			},
-		}, res.Outputs)
-	})
+		},
+		{
+			Addr:   addr3,
+			Amount: 8,
+		},
+	}, outputs.Outputs)
+	require.Len(t, outputs.Sum, 2)
+	require.Equal(t, uint64(307), outputs.Sum[token.String()])
+	require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
 }
 
 func Test_getUTXOs(t *testing.T) {
@@ -1009,24 +898,4 @@ func Test_getSkylineUTXOs(t *testing.T) {
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
 	})
-}
-
-func splitTokenAmount(name string, isNameEncoded bool) (string, string, error) {
-	parts := strings.Split(name, ".")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid full token name: %s", name)
-	}
-
-	if !isNameEncoded {
-		name = parts[1]
-	} else {
-		decodedName, err := hex.DecodeString(parts[1])
-		if err != nil {
-			return "", "", fmt.Errorf("invalid full token name: %s", name)
-		}
-
-		name = string(decodedName)
-	}
-
-	return parts[0], name, nil
 }
