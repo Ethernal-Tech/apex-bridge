@@ -57,6 +57,13 @@ const (
 	evmRepositoryArtifactsDir = "artifacts"
 )
 
+const (
+	Gateway              = "Gateway"
+	NativeTokenPredicate = "NativeTokenPredicate"
+	NativeTokenWallet    = "NativeTokenWallet"
+	Validators           = "Validators"
+)
+
 type deployEVMParams struct {
 	evmNodeURL    string
 	evmPrivateKey string
@@ -153,7 +160,7 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.evmBranchName,
 		evmBranchNameFlag,
-		"main",
+		"audit/APEX-472",
 		evmBranchNameFlagDesc,
 	)
 
@@ -188,13 +195,6 @@ func (ip *deployEVMParams) Execute(
 ) (common.ICommandResult, error) {
 	dir := filepath.Clean(ip.evmDir)
 	ctx := context.Background()
-
-	const (
-		Gateway              = "Gateway"
-		NativeTokenPredicate = "NativeTokenPredicate"
-		NativeTokenWallet    = "NativeTokenWallet"
-		Validators           = "Validators"
-	)
 
 	contractNames := []string{
 		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
@@ -263,7 +263,7 @@ func (ip *deployEVMParams) Execute(
 
 	for i, contractName := range contractNames {
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName])
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], getInitParams(contractName)...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -423,4 +423,16 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithDynamicTx(false)), nil
+}
+
+func getInitParams(contractName string) []interface{} {
+	var initParams []interface{}
+	if contractName == Gateway {
+		initParams = []interface{}{
+			common.MinFeeForBridgingDefault,
+			common.MinUtxoAmountDefault,
+		}
+	}
+
+	return initParams
 }
