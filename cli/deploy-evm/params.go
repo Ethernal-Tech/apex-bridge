@@ -65,7 +65,7 @@ const (
 	Validators           = "Validators"
 )
 
-type GatewayInitParams struct {
+type gatewayInitParams struct {
 	minFeeAmount      *big.Int
 	minBridgingAmount *big.Int
 }
@@ -87,7 +87,7 @@ type deployEVMParams struct {
 	minFeeString            string
 	minBridgingAmountString string
 
-	gatewayInitParams *GatewayInitParams
+	gatewayInitParams *gatewayInitParams
 }
 
 func (ip *deployEVMParams) validateFlags() error {

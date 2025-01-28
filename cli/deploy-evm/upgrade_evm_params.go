@@ -46,7 +46,7 @@ type upgradeEVMParams struct {
 	minFeeString            string
 	minBridgingAmountString string
 
-	gatewayInitParams *GatewayInitParams
+	gatewayInitParams *gatewayInitParams
 	ethTxHelper       ethtxhelper.IEthTxHelper
 }
 
