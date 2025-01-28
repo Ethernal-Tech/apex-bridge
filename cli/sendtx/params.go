@@ -162,7 +162,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return err
 		}
 
-		ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+		ip.wallet = cardanowallet.NewWallet(bytes, nil)
 
 		if !common.IsValidHTTPURL(ip.ogmiosURLSrc) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, ip.ogmiosURLSrc)

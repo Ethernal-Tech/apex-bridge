@@ -278,8 +278,7 @@ func (c *CardanoTxControllerImpl) signTx(requestBody request.SignBridgingTxReque
 	}
 
 	cardanoCliBinary := wallet.ResolveCardanoCliBinary(wallet.CardanoNetworkType(requestBody.NetworkID))
-	senderWallet := wallet.NewWallet(
-		wallet.GetVerificationKeyFromSigningKey(signingKeyBytes), signingKeyBytes)
+	senderWallet := wallet.NewWallet(signingKeyBytes, nil)
 
 	txBuilder, err := wallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
