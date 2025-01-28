@@ -471,7 +471,7 @@ func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
 	return initParams
 }
 
-func validateAndSetGatewayParams(minFeeString, minBridgingAmountString string) (*GatewayInitParams, error) {
+func validateAndSetGatewayParams(minFeeString, minBridgingAmountString string) (*gatewayInitParams, error) {
 	feeAmount, ok := new(big.Int).SetString(minFeeString, 0)
 	if !ok {
 		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
@@ -490,7 +490,7 @@ func validateAndSetGatewayParams(minFeeString, minBridgingAmountString string) (
 		return nil, fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
 	}
 
-	return &GatewayInitParams{
+	return &gatewayInitParams{
 		minFeeAmount:      feeAmount,
 		minBridgingAmount: bridgingAmount,
 	}, nil
