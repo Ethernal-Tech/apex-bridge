@@ -3,7 +3,6 @@ package clideployevm
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"path/filepath"
 	"strings"
 
@@ -47,8 +46,7 @@ type upgradeEVMParams struct {
 	minFeeString            string
 	minBridgingAmountString string
 
-	minFeeAmount      *big.Int
-	minBridgingAmount *big.Int
+	gatewayInitParams *GatewayInitParams
 	ethTxHelper       ethtxhelper.IEthTxHelper
 }
 
@@ -69,27 +67,14 @@ func (ip *upgradeEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
 	}
 
-	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
-	if !ok {
-		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
+	gatewayInitParams, err := validateAndSetGatewayParams(
+		ip.minFeeString, ip.minBridgingAmountString,
+	)
+	if err != nil {
+		return err
 	}
 
-	ip.minFeeAmount = feeAmount
-
-	if ip.minFeeAmount.Cmp(big.NewInt(0)) <= 0 {
-		return fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, ip.minFeeAmount)
-	}
-
-	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
-	if !ok {
-		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
-	}
-
-	ip.minBridgingAmount = bridgingAmount
-
-	if ip.minBridgingAmount.Cmp(big.NewInt(0)) <= 0 {
-		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, ip.minBridgingAmount)
-	}
+	ip.gatewayInitParams = gatewayInitParams
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.nodeURL))
 	if err != nil {
@@ -298,8 +283,8 @@ func (ip *upgradeEVMParams) Execute(
 					func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 						return contract.SetMinAmounts(
 							txOpts,
-							ip.minFeeAmount,
-							ip.minBridgingAmount,
+							ip.gatewayInitParams.minFeeAmount,
+							ip.gatewayInitParams.minBridgingAmount,
 						)
 					},
 				)

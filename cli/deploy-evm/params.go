@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -64,6 +65,11 @@ const (
 	Validators           = "Validators"
 )
 
+type GatewayInitParams struct {
+	minFeeAmount      *big.Int
+	minBridgingAmount *big.Int
+}
+
 type deployEVMParams struct {
 	evmNodeURL    string
 	evmPrivateKey string
@@ -77,6 +83,11 @@ type deployEVMParams struct {
 	bridgeNodeURL    string
 	bridgeSCAddr     string
 	bridgePrivateKey string
+
+	minFeeString            string
+	minBridgingAmountString string
+
+	gatewayInitParams *GatewayInitParams
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -103,6 +114,15 @@ func (ip *deployEVMParams) validateFlags() error {
 	} else if len(ip.evmBlsKeys) == 0 {
 		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
 	}
+
+	gatewayInitParams, err := validateAndSetGatewayParams(
+		ip.minFeeString, ip.minBridgingAmountString,
+	)
+	if err != nil {
+		return err
+	}
+
+	ip.gatewayInitParams = gatewayInitParams
 
 	return nil
 }
@@ -185,6 +205,20 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		bridgePrivateKeyFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.minFeeString,
+		minFeeAmountFlag,
+		"",
+		minFeeAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minBridgingAmountString,
+		minBridgingAmountFlag,
+		"",
+		minBridgingAmountFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, evmBlsKeyFlag)
@@ -263,7 +297,7 @@ func (ip *deployEVMParams) Execute(
 
 	for i, contractName := range contractNames {
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName], getInitParams(contractName)...)
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], ip.getInitParams(contractName)...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -425,14 +459,39 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithDynamicTx(false)), nil
 }
 
-func getInitParams(contractName string) []interface{} {
+func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
 	var initParams []interface{}
 	if contractName == Gateway {
 		initParams = []interface{}{
-			common.MinFeeForBridgingDefault,
-			common.MinUtxoAmountDefault,
+			ip.gatewayInitParams.minFeeAmount,
+			ip.gatewayInitParams.minBridgingAmount,
 		}
 	}
 
 	return initParams
+}
+
+func validateAndSetGatewayParams(minFeeString, minBridgingAmountString string) (*GatewayInitParams, error) {
+	feeAmount, ok := new(big.Int).SetString(minFeeString, 0)
+	if !ok {
+		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
+	}
+
+	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
+		return nil, fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, feeAmount)
+	}
+
+	bridgingAmount, ok := new(big.Int).SetString(minBridgingAmountString, 0)
+	if !ok {
+		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
+	}
+
+	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
+		return nil, fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
+	}
+
+	return &GatewayInitParams{
+		minFeeAmount:      feeAmount,
+		minBridgingAmount: bridgingAmount,
+	}, nil
 }
