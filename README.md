@@ -242,6 +242,8 @@ $ apex-bridge deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+- optional `--min-fee`, min-fee value can be specified for the Gateway contract
+- optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 
 # How to upgrade bridge/gateway contracts
 ```shell
@@ -269,6 +271,15 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+
+```shell
+$ apex/bridge bridge-admin set-min-amounts \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --contract-addr 0xeefcd00000000000000000000000000000000013
+        --min-fee 200 \
+        --min-bridging-amount 100 
 ```
 
 ```shell

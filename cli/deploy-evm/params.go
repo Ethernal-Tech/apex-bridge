@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -37,6 +40,9 @@ const (
 	bridgeSCAddrFlag     = "bridge-addr"
 	bridgePrivateKeyFlag = "bridge-key"
 
+	minFeeAmountFlag      = "min-fee"
+	minBridgingAmountFlag = "min-bridging-amount"
+
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
 	evmPrivateKeyFlagDesc   = "private key for evm chain"
@@ -50,11 +56,21 @@ const (
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
 	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
 
+	minFeeAmountFlagDesc      = "minimal fee amount"
+	minBridgingAmountFlagDesc = "minimal amount to bridge"
+
 	defaultEVMChainID = common.ChainIDStrNexus
 
 	evmGatewayRepositoryName  = "apex-evm-gateway"
 	evmGatewayRepositoryURL   = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
 	evmRepositoryArtifactsDir = "artifacts"
+)
+
+const (
+	Gateway              = "Gateway"
+	NativeTokenPredicate = "NativeTokenPredicate"
+	NativeTokenWallet    = "NativeTokenWallet"
+	Validators           = "Validators"
 )
 
 type deployEVMParams struct {
@@ -70,6 +86,12 @@ type deployEVMParams struct {
 	bridgeNodeURL    string
 	bridgeSCAddr     string
 	bridgePrivateKey string
+
+	minFeeString            string
+	minBridgingAmountString string
+
+	minFeeAmount      *big.Int
+	minBridgingAmount *big.Int
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -96,6 +118,27 @@ func (ip *deployEVMParams) validateFlags() error {
 	} else if len(ip.evmBlsKeys) == 0 {
 		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
 	}
+
+	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minFeeAmountFlag)
+	}
+
+	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, feeAmount)
+	}
+
+	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minBridgingAmountFlag)
+	}
+
+	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
+	}
+
+	ip.minFeeAmount = feeAmount
+	ip.minBridgingAmount = bridgingAmount
 
 	return nil
 }
@@ -178,6 +221,20 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		bridgePrivateKeyFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.minFeeString,
+		minFeeAmountFlag,
+		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
+		minFeeAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minBridgingAmountString,
+		minBridgingAmountFlag,
+		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
+		minBridgingAmountFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, evmBlsKeyFlag)
@@ -188,13 +245,6 @@ func (ip *deployEVMParams) Execute(
 ) (common.ICommandResult, error) {
 	dir := filepath.Clean(ip.evmDir)
 	ctx := context.Background()
-
-	const (
-		Gateway              = "Gateway"
-		NativeTokenPredicate = "NativeTokenPredicate"
-		NativeTokenWallet    = "NativeTokenWallet"
-		Validators           = "Validators"
-	)
 
 	contractNames := []string{
 		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
@@ -263,7 +313,7 @@ func (ip *deployEVMParams) Execute(
 
 	for i, contractName := range contractNames {
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName])
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], ip.getInitParams(contractName)...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -423,4 +473,16 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithDynamicTx(false)), nil
+}
+
+func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
+	switch strings.ToLower(contractName) {
+	case strings.ToLower(Gateway):
+		return []interface{}{
+			ip.minFeeAmount,
+			ip.minBridgingAmount,
+		}
+	default:
+		return nil
+	}
 }
