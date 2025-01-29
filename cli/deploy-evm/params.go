@@ -38,6 +38,9 @@ const (
 	bridgeSCAddrFlag     = "bridge-addr"
 	bridgePrivateKeyFlag = "bridge-key"
 
+	minFeeAmountFlag      = "min-fee"
+	minBridgingAmountFlag = "min-bridging-amount"
+
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
 	evmPrivateKeyFlagDesc   = "private key for evm chain"
@@ -50,6 +53,9 @@ const (
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
 	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
+
+	minFeeAmountFlagDesc      = "minimal fee amount"
+	minBridgingAmountFlagDesc = "minimal amount to bridge"
 
 	defaultEVMChainID = common.ChainIDStrNexus
 
@@ -87,7 +93,8 @@ type deployEVMParams struct {
 	minFeeString            string
 	minBridgingAmountString string
 
-	gatewayInitParams *gatewayInitParams
+	minFeeAmount      *big.Int
+	minBridgingAmount *big.Int
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -115,14 +122,27 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("bls keys not specified: --%s", evmBlsKeyFlag)
 	}
 
-	gatewayInitParams, err := validateAndSetGatewayParams(
-		ip.minFeeString, ip.minBridgingAmountString,
-	)
-	if err != nil {
-		return err
+	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
+	if !ok {
+		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
 	}
 
-	ip.gatewayInitParams = gatewayInitParams
+	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, feeAmount)
+	}
+
+	ip.minFeeAmount = feeAmount
+
+	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
+	if !ok {
+		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
+	}
+
+	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
+	}
+
+	ip.minBridgingAmount = bridgingAmount
 
 	return nil
 }
@@ -180,7 +200,7 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.evmBranchName,
 		evmBranchNameFlag,
-		"audit/APEX-472",
+		"main",
 		evmBranchNameFlagDesc,
 	)
 
@@ -463,8 +483,8 @@ func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
 	var initParams []interface{}
 	if contractName == Gateway {
 		initParams = []interface{}{
-			ip.gatewayInitParams.minFeeAmount,
-			ip.gatewayInitParams.minBridgingAmount,
+			ip.minFeeAmount,
+			ip.minBridgingAmount,
 		}
 	}
 

@@ -7,30 +7,22 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
 const (
 	apexBridgeSmartContracts = "apex-bridge-smartcontracts"
 
-	nodeFlag              = "url"
-	contractFlag          = "contract"
-	repositoryURLFlag     = "repo"
-	minFeeAmountFlag      = "min-fee"
-	minBridgingAmountFlag = "min-bridging-amount"
+	nodeFlag          = "url"
+	contractFlag      = "contract"
+	repositoryURLFlag = "repo"
 
-	nodeFlagDessc             = "node url"
-	contractFlagDesc          = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
-	repositoryURLFlagDesc     = "smart contracts github repository url"
-	minFeeAmountFlagDesc      = "minimal fee amount"
-	minBridgingAmountFlagDesc = "minimal amount to bridge"
+	nodeFlagDessc         = "node url"
+	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
+	repositoryURLFlagDesc = "smart contracts github repository url"
 )
 
 type upgradeEVMParams struct {
@@ -42,12 +34,6 @@ type upgradeEVMParams struct {
 	branchName    string
 	dynamicTx     bool
 	contracts     []string
-
-	minFeeString            string
-	minBridgingAmountString string
-
-	gatewayInitParams *gatewayInitParams
-	ethTxHelper       ethtxhelper.IEthTxHelper
 }
 
 func (ip *upgradeEVMParams) validateFlags() error {
@@ -66,22 +52,6 @@ func (ip *upgradeEVMParams) validateFlags() error {
 	if ip.clone && !common.IsValidHTTPURL(ip.repositoryURL) {
 		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
 	}
-
-	gatewayInitParams, err := validateAndSetGatewayParams(
-		ip.minFeeString, ip.minBridgingAmountString,
-	)
-	if err != nil {
-		return err
-	}
-
-	ip.gatewayInitParams = gatewayInitParams
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.nodeURL))
-	if err != nil {
-		return fmt.Errorf("failed to connect to the bridge node: %w", err)
-	}
-
-	ip.ethTxHelper = ethTxHelper
 
 	return nil
 }
@@ -125,7 +95,7 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.branchName,
 		evmBranchNameFlag,
-		"audit/APEX-472",
+		"main",
 		evmBranchNameFlagDesc,
 	)
 
@@ -141,20 +111,6 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		repositoryURLFlag,
 		"",
 		repositoryURLFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.minFeeString,
-		minFeeAmountFlag,
-		"",
-		minFeeAmountFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.minBridgingAmountString,
-		minBridgingAmountFlag,
-		"",
-		minBridgingAmountFlagDesc,
 	)
 }
 
@@ -264,37 +220,6 @@ func (ip *upgradeEVMParams) Execute(
 		contractInfos[i] = contractInfo{
 			Name: contractName,
 			Addr: deployTxInfo.Address,
-		}
-
-		if contractName == Gateway {
-			transaction, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
-				contract, err := contractbinding.NewGateway(
-					(contractInfos[i].Addr), ip.ethTxHelper.GetClient())
-				if err != nil {
-					return nil, fmt.Errorf("failed to connect to gateway smart contract: %w", err)
-				}
-
-				return ip.ethTxHelper.SendTx(
-					ctx,
-					wallet,
-					bind.TransactOpts{
-						GasLimit: defaultGasLimit,
-					},
-					func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
-						return contract.SetMinAmounts(
-							txOpts,
-							ip.gatewayInitParams.minFeeAmount,
-							ip.gatewayInitParams.minBridgingAmount,
-						)
-					},
-				)
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", transaction.Hash())))
-			outputter.WriteOutput()
 		}
 	}
 

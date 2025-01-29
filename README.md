@@ -257,8 +257,6 @@ $ apex-bridge deploy-evm upgrade \
         --contract Admin:0xABEF000000000000000000000000000000000006
 ```
 - optional `--dynamic-tx`
-- optional `--min-fee`, if there is an upgrade on Gateway contract, new min-fee value can be specified
-- optional `--min-bridging-amount` - also for the Gateway contract upgrade, new min-bridging-amount can be defined
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 
 # Bridge admin commands
@@ -273,6 +271,15 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+
+```shell
+$ apex/bridge bridge-admin set-min-amounts \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --contract-addr 0xeefcd00000000000000000000000000000000013
+        --min-fee 200 \
+        --min-bridging-amount 100 
 ```
 
 ```shell
