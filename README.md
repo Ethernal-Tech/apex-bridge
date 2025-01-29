@@ -242,6 +242,8 @@ $ apex-bridge deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+- optional `--min-fee`, min-fee value can be specified for the Gateway contract
+- optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 
 # How to upgrade bridge/gateway contracts
 ```shell
