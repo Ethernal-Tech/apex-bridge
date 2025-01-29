@@ -65,8 +65,6 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, feeAmount)
 	}
 
-	ip.minFeeAmount = feeAmount
-
 	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
 	if !ok {
 		return fmt.Errorf("--%s invalid amount", minBridgingAmountFlag)
@@ -76,6 +74,7 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
 	}
 
+	ip.minFeeAmount = feeAmount
 	ip.minBridgingAmount = bridgingAmount
 
 	return nil
