@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -183,12 +184,14 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		validatorChainData.Key[2] = new(big.Int)
 		validatorChainData.Key[3] = new(big.Int)
 
-		signatureMultisig, err = walletCardano.MultiSig.SignTransaction(messageHash)
+		signatureMultisig, err = wallet.SignMessage(
+			walletCardano.MultiSig.SigningKey, walletCardano.MultiSig.VerificationKey, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create multisig signature: %w", err)
 		}
 
-		signatureFee, err = walletCardano.MultiSigFee.SignTransaction(messageHash)
+		signatureFee, err = wallet.SignMessage(
+			walletCardano.MultiSigFee.SigningKey, walletCardano.MultiSigFee.VerificationKey, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create fee signature: %w", err)
 		}
