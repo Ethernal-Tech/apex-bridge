@@ -128,7 +128,9 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.nodeURL))
+	txHelper, err := ethtxhelper.NewEThTxHelper(
+		ethtxhelper.WithNodeURL(ip.nodeURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +145,26 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 			return nil, fmt.Errorf("failed to connect to gateway smart contract: %w", err)
 		}
 
+		parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse gateway smart contract abi: %w", err)
+		}
+
+		estimatedGas, _, err := txHelper.EstimateGas(
+			ctx, wallet.GetAddress(),
+			contractAddress, nil, 1.2,
+			parsedABI, "setMinAmounts", ip.minFeeAmount, ip.minBridgingAmount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to estimate gas for gateway smart contract: %w", err)
+		}
+
 		return txHelper.SendTx(
 			ctx,
 			wallet,
 			bind.TransactOpts{},
 			func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+				txOpts.GasLimit = estimatedGas
+
 				return contract.SetMinAmounts(
 					txOpts,
 					ip.minFeeAmount,

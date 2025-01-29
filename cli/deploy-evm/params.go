@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -475,8 +476,8 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 }
 
 func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
-	switch contractName {
-	case Gateway:
+	switch strings.ToLower(contractName) {
+	case strings.ToLower(Gateway):
 		return []interface{}{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
