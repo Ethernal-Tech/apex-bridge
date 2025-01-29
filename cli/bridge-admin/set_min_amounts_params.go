@@ -128,19 +128,11 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKey)
 	if err != nil {
-		_, _ = outputter.Write([]byte(fmt.Sprintf("failed to generate wallet with key: %s", ip.privateKey)))
-		outputter.WriteOutput()
-
 		return nil, err
-		
 	}
-
-	
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.nodeURL))
 	if err != nil {
-		_, _ = outputter.Write([]byte(fmt.Sprintf("failed to generate txHelper with nodeURL: %s", ip.nodeURL)))
-		outputter.WriteOutput()
 		return nil, err
 	}
 
@@ -151,8 +143,6 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 			contractAddress,
 			txHelper.GetClient())
 		if err != nil {
-			_, _ = outputter.Write([]byte(fmt.Sprintf("failed to instantiate contract with addressd: %s", contractAddress)))
-			outputter.WriteOutput()
 			return nil, fmt.Errorf("failed to connect to gateway smart contract: %w", err)
 		}
 
