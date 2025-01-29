@@ -184,14 +184,12 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		validatorChainData.Key[2] = new(big.Int)
 		validatorChainData.Key[3] = new(big.Int)
 
-		signatureMultisig, err = wallet.SignMessage(
-			walletCardano.MultiSig.SigningKey, walletCardano.MultiSig.VerificationKey, messageHash)
+		signatureMultisig, err = signMessageByWallet(walletCardano.MultiSig, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create multisig signature: %w", err)
 		}
 
-		signatureFee, err = wallet.SignMessage(
-			walletCardano.MultiSigFee.SigningKey, walletCardano.MultiSigFee.VerificationKey, messageHash)
+		signatureFee, err = signMessageByWallet(walletCardano.MultiSigFee, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create fee signature: %w", err)
 		}
@@ -278,4 +276,8 @@ func createMessage(msg string, addr ethcommon.Address) ([]byte, error) {
 	}
 
 	return messageHash, nil
+}
+
+func signMessageByWallet(w *wallet.Wallet, msg []byte) ([]byte, error) {
+	return wallet.SignMessage(w.SigningKey, w.VerificationKey, msg)
 }
