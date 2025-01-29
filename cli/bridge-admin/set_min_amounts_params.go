@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -17,12 +18,9 @@ import (
 )
 
 const (
-	apexBridgeSmartContracts = "apex-bridge-smartcontracts"
-
-	nodeFlag            = "url"
-	evmPrivateKeyFlag   = "key"
-	contractAddressFlag = "contract-addr"
-
+	nodeFlag              = "url"
+	evmPrivateKeyFlag     = "key"
+	contractAddressFlag   = "contract-addr"
 	minFeeAmountFlag      = "min-fee"
 	minBridgingAmountFlag = "min-bridging-amount"
 
@@ -60,7 +58,7 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 
 	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
 	if !ok {
-		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
+		return fmt.Errorf("--%s invalid amount", minFeeAmountFlag)
 	}
 
 	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
@@ -71,7 +69,7 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 
 	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
 	if !ok {
-		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
+		return fmt.Errorf("--%s invalid amount", minBridgingAmountFlag)
 	}
 
 	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
@@ -108,14 +106,14 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		"",
+		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		"",
+		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
 		minBridgingAmountFlagDesc,
 	)
 }
@@ -123,7 +121,7 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	_, _ = outputter.Write([]byte("creating and sending transaction..."))
+	_, _ = outputter.Write([]byte("preparing transaction to update minimum values..."))
 	outputter.WriteOutput()
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKey)
@@ -164,9 +162,6 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 	}
 
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", transaction.Hash())))
-	outputter.WriteOutput()
-
-	_, _ = outputter.Write([]byte("Waiting for receipts..."))
 	outputter.WriteOutput()
 
 	receipt, err := txHelper.WaitForReceipt(ctx, transaction.Hash().String(), true)

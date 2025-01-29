@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -71,11 +72,6 @@ const (
 	Validators           = "Validators"
 )
 
-type gatewayInitParams struct {
-	minFeeAmount      *big.Int
-	minBridgingAmount *big.Int
-}
-
 type deployEVMParams struct {
 	evmNodeURL    string
 	evmPrivateKey string
@@ -124,7 +120,7 @@ func (ip *deployEVMParams) validateFlags() error {
 
 	feeAmount, ok := new(big.Int).SetString(ip.minFeeString, 0)
 	if !ok {
-		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
+		return fmt.Errorf("--%s invalid amount", minFeeAmountFlag)
 	}
 
 	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
@@ -135,7 +131,7 @@ func (ip *deployEVMParams) validateFlags() error {
 
 	bridgingAmount, ok := new(big.Int).SetString(ip.minBridgingAmountString, 0)
 	if !ok {
-		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
+		return fmt.Errorf("--%s invalid amount", minBridgingAmountFlag)
 	}
 
 	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
@@ -228,14 +224,14 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		"",
+		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		"",
+		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
 		minBridgingAmountFlagDesc,
 	)
 
@@ -480,38 +476,13 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 }
 
 func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
-	var initParams []interface{}
-	if contractName == Gateway {
-		initParams = []interface{}{
+	switch contractName {
+	case Gateway:
+		return []interface{}{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
 		}
+	default:
+		return nil
 	}
-
-	return initParams
-}
-
-func validateAndSetGatewayParams(minFeeString, minBridgingAmountString string) (*gatewayInitParams, error) {
-	feeAmount, ok := new(big.Int).SetString(minFeeString, 0)
-	if !ok {
-		feeAmount = new(big.Int).SetUint64(common.MinFeeForBridgingDefault)
-	}
-
-	if feeAmount.Cmp(big.NewInt(0)) <= 0 {
-		return nil, fmt.Errorf("--%s invalid amount: %d", minFeeAmountFlag, feeAmount)
-	}
-
-	bridgingAmount, ok := new(big.Int).SetString(minBridgingAmountString, 0)
-	if !ok {
-		bridgingAmount = new(big.Int).SetUint64(common.MinUtxoAmountDefault)
-	}
-
-	if bridgingAmount.Cmp(big.NewInt(0)) <= 0 {
-		return nil, fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
-	}
-
-	return &gatewayInitParams{
-		minFeeAmount:      feeAmount,
-		minBridgingAmount: bridgingAmount,
-	}, nil
 }
