@@ -14,7 +14,7 @@ const (
 	ChainIDIntPrime   = chainIDNum(1)
 	ChainIDIntVector  = chainIDNum(2)
 	ChainIDIntNexus   = chainIDNum(3)
-	ChainIDIntCardano = chainIDNum(4)
+	ChainIDIntCardano = chainIDNum(0)
 
 	ChainTypeCardanoStr = "cardano"
 	ChainTypeEVMStr     = "evm"
@@ -22,14 +22,16 @@ const (
 
 var (
 	reactorStrToInt = map[string]chainIDNum{
-		ChainIDStrPrime:  ChainIDIntPrime,
-		ChainIDStrVector: ChainIDIntVector,
-		ChainIDStrNexus:  ChainIDIntNexus,
+		ChainIDStrPrime:   ChainIDIntPrime,
+		ChainIDStrVector:  ChainIDIntVector,
+		ChainIDStrNexus:   ChainIDIntNexus,
+		ChainIDStrCardano: ChainIDIntCardano,
 	}
 	reactorIntToStr = map[chainIDNum]string{
-		ChainIDIntPrime:  ChainIDStrPrime,
-		ChainIDIntVector: ChainIDStrVector,
-		ChainIDIntNexus:  ChainIDStrNexus,
+		ChainIDIntPrime:   ChainIDStrPrime,
+		ChainIDIntVector:  ChainIDStrVector,
+		ChainIDIntNexus:   ChainIDStrNexus,
+		ChainIDIntCardano: ChainIDStrCardano,
 	}
 	skylineStrToInt = map[string]chainIDNum{
 		ChainIDStrCardano: ChainIDIntCardano,

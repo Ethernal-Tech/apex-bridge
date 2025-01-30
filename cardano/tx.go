@@ -40,15 +40,39 @@ func CreateTx(
 		})
 	}
 
+	tokenChange := []cardanowallet.TokenAmount{}
+	tokenChangeVals := []uint64{}
+
+	for token, amount := range txInputInfos.MultiSig.Sum {
+		if token == "lovelace" {
+			continue
+		}
+
+		newToken, err := cardanowallet.NewTokenWithFullName(token, true)
+		if err != nil {
+			return nil, "", err
+		}
+
+		tokenChangeAmount := amount - outputsAmount[token]
+		if tokenChangeAmount > 0 {
+			tokenChange = append(tokenChange, cardanowallet.NewTokenAmount(newToken, tokenChangeAmount))
+			tokenChangeVals = append(tokenChangeVals, tokenChangeAmount)
+		}
+	}
+
+	if len(tokenChange) == 0 {
+		tokenChange = nil
+	}
 	// add multisig output if change is not zero
 	if changeAmount > 0 {
 		if multiSigIndex == -1 {
 			builder.AddOutputs(cardanowallet.TxOutput{
 				Addr:   txInputInfos.MultiSig.Address,
 				Amount: changeAmount,
+				Tokens: tokenChange,
 			})
 		} else {
-			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
+			builder.UpdateOutputAmount(multiSigIndex, changeAmount, tokenChangeVals...)
 		}
 	} else if multiSigIndex >= 0 {
 		// we need to decrement feeIndex if it was after multisig in outputs
