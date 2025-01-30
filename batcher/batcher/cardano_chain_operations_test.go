@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -290,8 +292,11 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
+		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
+		require.NoError(t, err)
+
 		witnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			"26a9d1a894c7e3719a79342d0fc788989e5d55f076581327c54bcc0c7693905a")
+			&core.GeneratedBatchTxData{TxRaw: txRaw})
 		require.NoError(t, err)
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)

@@ -158,13 +158,21 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 }
 
 // SignBatchTransaction implements core.ChainOperations.
-func (cco *CardanoChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-	witnessMultiSig, err := cardanowallet.CreateTxWitness(txHash, cco.wallet.MultiSig)
+func (cco *CardanoChainOperations) SignBatchTransaction(
+	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	witnessMultiSigFee, err := cardanowallet.CreateTxWitness(txHash, cco.wallet.MultiSigFee)
+	defer txBuilder.Dispose()
+
+	witnessMultiSig, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	witnessMultiSigFee, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSigFee)
 	if err != nil {
 		return nil, nil, err
 	}

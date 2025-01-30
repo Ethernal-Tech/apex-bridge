@@ -109,8 +109,9 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 }
 
 // SignBatchTransaction implements core.ChainOperations.
-func (cco *EVMChainOperations) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-	txsHashBytes, err := common.DecodeHex(txHash)
+func (cco *EVMChainOperations) SignBatchTransaction(
+	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	txsHashBytes, err := common.DecodeHex(generatedBatchData.TxHash)
 	if err != nil {
 		return nil, nil, err
 	}

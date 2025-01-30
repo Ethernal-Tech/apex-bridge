@@ -174,6 +174,7 @@ apex-bridge sendtx \
         --receiver vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
         --fee 1_100_000
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the vector to the prime
 ```shell
@@ -188,6 +189,7 @@ apex-bridge sendtx \
         --fee 1_100_000 \
         --network-id-src 2
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the prime to the nexus
 ```shell
@@ -200,8 +202,8 @@ apex-bridge sendtx \
         --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c
-
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the nexus to the prime
 ```shell
@@ -215,6 +217,7 @@ apex-bridge sendtx \
         --fee 1000010000000000000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
+- there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
