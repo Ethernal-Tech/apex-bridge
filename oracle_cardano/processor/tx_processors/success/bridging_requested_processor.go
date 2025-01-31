@@ -164,6 +164,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
+	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {
+		return err
+	}
+
 	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
 		return err
 	}

@@ -153,6 +153,34 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
+	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrNexus,
+			SenderAddr:         []string{"addr1"},
+			Transactions:       []common.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, destinationChainNonRegisteredMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: vectorBridgingAddr, Amount: 3},
+			{Address: vectorBridgingAddr, Amount: 4},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: destinationChainNonRegisteredMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrVector,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
