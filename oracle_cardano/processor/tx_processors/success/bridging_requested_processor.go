@@ -168,6 +168,10 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
+	if tx.OriginChainID == common.ChainIDStrVector && metadata.DestinationChainID == common.ChainIDStrNexus {
+		return fmt.Errorf("transaction direction not allowed: %s -> %s", tx.OriginChainID, metadata.DestinationChainID)
+	}
+
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
 	if err != nil {
 		return err

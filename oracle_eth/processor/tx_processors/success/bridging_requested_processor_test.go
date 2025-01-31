@@ -128,6 +128,26 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
+	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrVector,
+			SenderAddr:         "addr1",
+			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, destinationChainNonRegisteredMetadata)
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Metadata:      destinationChainNonRegisteredMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
 	t.Run("ValidateAndAddClaim more than max receivers in metadata", func(t *testing.T) {
 		moreThanMaxReceiversReceiversMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
