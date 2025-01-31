@@ -106,7 +106,7 @@ func createChangeTxOutput(
 		// token amount from tokens
 		totalTokenAmount := amount
 		for _, token := range baseTxOutput.Tokens {
-			if token.String() == tokenName {
+			if token.TokenName() == tokenName {
 				totalTokenAmount += token.Amount
 
 				break
