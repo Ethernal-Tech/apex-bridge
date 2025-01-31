@@ -164,12 +164,12 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
+	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {
 		return err
 	}
 
-	if tx.OriginChainID == common.ChainIDStrVector && metadata.DestinationChainID == common.ChainIDStrNexus {
-		return fmt.Errorf("transaction direction not allowed: %s -> %s", tx.OriginChainID, metadata.DestinationChainID)
+	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
+		return err
 	}
 
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
