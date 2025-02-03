@@ -355,7 +355,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	}
 
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(),
+		context.Background(), cardanoCliBinary, ip.chainIDDst, senderAddr.String(),
 		receivers, ip.feeAmount.Uint64(), common.MinUtxoAmountDefault)
 	if err != nil {
 		return nil, err
