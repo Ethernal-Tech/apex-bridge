@@ -58,14 +58,18 @@ func (bts *BridgingTxSender) CreateTx(
 	feeBridgeAmount uint64,
 	minUtxoValue uint64,
 ) ([]byte, string, error) {
-	qtd, err := bts.txProviderSrc.GetTip(ctx)
+	qtd, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (cardanowallet.QueryTipData, error) {
+		return bts.txProviderSrc.GetTip(ctx)
+	})
 	if err != nil {
 		return nil, "", err
 	}
 
 	protocolParams := bts.protocolParameters
 	if protocolParams == nil {
-		protocolParams, err = bts.txProviderSrc.GetProtocolParameters(ctx)
+		protocolParams, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+			return bts.txProviderSrc.GetProtocolParameters(ctx)
+		})
 		if err != nil {
 			return nil, "", err
 		}
@@ -83,7 +87,9 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	allUtxos, err := bts.txProviderSrc.GetUtxos(ctx, senderAddr)
+	allUtxos, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) ([]cardanowallet.Utxo, error) {
+		return bts.txProviderSrc.GetUtxos(ctx, senderAddr)
+	})
 	if err != nil {
 		return nil, "", err
 	}
