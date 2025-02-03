@@ -87,12 +87,12 @@ func (bts *BridgingTxSender) CreateTx(
 
 	defer builder.Dispose()
 
-	minUtxoCost, err := cardanowallet.GetTokenCostSum(builder, senderAddr, userUtxos)
+	potentialTokenCost, err := cardanowallet.GetTokenCostSum(builder, senderAddr, userUtxos)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to retrieve token cost sum. err: %w", err)
 	}
 
-	minUtxoValue = max(minUtxoValue, minUtxoCost)
+	minUtxoValue = max(minUtxoValue, potentialTokenCost)
 
 	outputsSum := cardanowallet.GetOutputsSum(receivers)[cardanowallet.AdaTokenName] + feeAmount
 	desiredSum := outputsSum + bts.potentialFee + minUtxoValue
@@ -103,20 +103,30 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	tokens, err := cardanowallet.GetTokensFromSumMap(inputs.Sum)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create tokens from sum map. err: %w", err)
-	}
-
 	outputs := []cardanowallet.TxOutput{
 		{
 			Addr:   bts.multiSigAddrSrc,
 			Amount: outputsSum,
 		},
-		{
-			Addr:   senderAddr,
-			Tokens: tokens,
-		},
+	}
+
+	senderOutput := cardanowallet.NewTxOutput(senderAddr, 0)
+
+	senderTotalSum := cardanowallet.GetUtxosSum(userUtxos)
+	totalOutputs := cardanowallet.GetOutputsSum(receivers)
+
+	senderChangeOutput, err := cardanowallet.CreateTxOutputChange(senderOutput, senderTotalSum, totalOutputs)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create tx output change. err: %w", err)
+	}
+
+	if senderChangeOutput.Amount > 0 || len(senderChangeOutput.Tokens) > 0 {
+		outputs = append(outputs, senderChangeOutput)
+	}
+
+	fee, err := builder.CalculateFee(0)
+	if err != nil {
+		return nil, "", err
 	}
 
 	builder.SetMetaData(metadata).
@@ -125,21 +135,6 @@ func (bts *BridgingTxSender) CreateTx(
 		SetTestNetMagic(bts.testNetMagicSrc).
 		AddInputs(inputs.Inputs...).
 		AddOutputs(outputs...)
-
-	fee, err := builder.CalculateFee(0)
-	if err != nil {
-		return nil, "", err
-	}
-
-	inputsAdaSum := inputs.Sum[cardanowallet.AdaTokenName]
-	change := inputsAdaSum - outputsSum - fee
-	// handle overflow or insufficient amount
-	if change > inputsAdaSum || change < minUtxoValue {
-		return []byte{}, "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
-			inputsAdaSum, outputsSum+fee)
-	}
-
-	builder.UpdateOutputAmount(-1, change)
 
 	builder.SetFee(fee)
 
