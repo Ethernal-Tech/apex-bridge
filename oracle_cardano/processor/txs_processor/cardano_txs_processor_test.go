@@ -530,7 +530,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -659,7 +659,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -733,7 +733,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -823,7 +823,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -910,7 +910,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -1003,7 +1003,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -1092,7 +1092,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
@@ -1192,7 +1192,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		var submittedClaims []*cCore.BridgeClaims
 
 		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &core.BridgeSubmitterMock{}
