@@ -732,7 +732,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		var submittedClaims []*oCore.BridgeClaims
 
 		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "cardano", uint64(0x1)).
+		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
 			Return([]eth.TxDataInfo{}, error(nil))
 
 		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
