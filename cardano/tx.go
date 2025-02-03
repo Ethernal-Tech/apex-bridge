@@ -16,10 +16,8 @@ func CreateTx(
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
-	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
-	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
-	changeAmount := common.SafeSubtract(
-		txInputInfos.MultiSig.Sum[cardanowallet.AdaTokenName]+multisigAmount, outputsAmount[cardanowallet.AdaTokenName], 0)
+	multisigOutput, multiSigIndex := getOutputForAddress(outputs, txInputInfos.MultiSig.Address)
+	feeOutput, feeIndex := getOutputForAddress(outputs, txInputInfos.MultiSigFee.Address)
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
@@ -40,15 +38,18 @@ func CreateTx(
 		})
 	}
 
+	multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
+		multisigOutput, txInputInfos.MultiSig.Sum, outputsAmount)
+	if err != nil {
+		return nil, "", err
+	}
+
 	// add multisig output if change is not zero
-	if changeAmount > 0 {
+	if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
 		if multiSigIndex == -1 {
-			builder.AddOutputs(cardanowallet.TxOutput{
-				Addr:   txInputInfos.MultiSig.Address,
-				Amount: changeAmount,
-			})
+			builder.AddOutputs(multisigChangeTxOutput)
 		} else {
-			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
+			builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
 		}
 	} else if multiSigIndex >= 0 {
 		// we need to decrement feeIndex if it was after multisig in outputs
@@ -69,11 +70,17 @@ func CreateTx(
 
 	builder.SetFee(fee)
 
-	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum[cardanowallet.AdaTokenName]+feeAmount, fee, 0)
+	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
+		feeOutput, txInputInfos.MultiSigFee.Sum, map[string]uint64{
+			cardanowallet.AdaTokenName: fee,
+		})
+	if err != nil {
+		return nil, "", err
+	}
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
-	if feeAmountFinal > 0 {
-		builder.UpdateOutputAmount(feeIndex, feeAmountFinal)
+	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {
+		builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
 	} else {
 		builder.RemoveOutput(feeIndex)
 	}
@@ -88,14 +95,16 @@ func CreateBatchMetaData(v uint64) ([]byte, error) {
 	})
 }
 
-func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uint64) {
+func getOutputForAddress(outputs []cardanowallet.TxOutput, addr string) (cardanowallet.TxOutput, int) {
 	for i, x := range outputs {
 		if x.Addr == addr {
-			return i, x.Amount
+			return x, i
 		}
 	}
 
-	return -1, 0
+	return cardanowallet.TxOutput{
+		Addr: addr,
+	}, -1
 }
 
 func GetAddressFromPolicyScript(

@@ -21,32 +21,26 @@ const (
 )
 
 var (
-	reactorStrToInt = map[string]chainIDNum{
-		ChainIDStrPrime:  ChainIDIntPrime,
-		ChainIDStrVector: ChainIDIntVector,
-		ChainIDStrNexus:  ChainIDIntNexus,
-	}
-	reactorIntToStr = map[chainIDNum]string{
-		ChainIDIntPrime:  ChainIDStrPrime,
-		ChainIDIntVector: ChainIDStrVector,
-		ChainIDIntNexus:  ChainIDStrNexus,
-	}
-	skylineStrToInt = map[string]chainIDNum{
-		ChainIDStrCardano: ChainIDIntCardano,
+	chainStrToInt = map[string]chainIDNum{
 		ChainIDStrPrime:   ChainIDIntPrime,
+		ChainIDStrVector:  ChainIDIntVector,
+		ChainIDStrNexus:   ChainIDIntNexus,
+		ChainIDStrCardano: ChainIDIntCardano,
 	}
-	skylineIntToStr = map[chainIDNum]string{
-		ChainIDIntCardano: ChainIDStrCardano,
+	chainIntToStr = map[chainIDNum]string{
 		ChainIDIntPrime:   ChainIDStrPrime,
+		ChainIDIntVector:  ChainIDStrVector,
+		ChainIDIntNexus:   ChainIDStrNexus,
+		ChainIDIntCardano: ChainIDStrCardano,
 	}
 )
 
 func ToNumChainID(chainIDStr string) chainIDNum {
-	return reactorStrToInt[chainIDStr]
+	return chainStrToInt[chainIDStr]
 }
 
 func ToStrChainID(chainIDNum chainIDNum) string {
-	return reactorIntToStr[chainIDNum]
+	return chainIntToStr[chainIDNum]
 }
 
 func IsExistingChainID(chainIDStr string) bool {
@@ -54,15 +48,13 @@ func IsExistingChainID(chainIDStr string) bool {
 }
 
 func IsExistingReactorChainID(chainIDStr string) bool {
-	_, exists := reactorStrToInt[chainIDStr]
+	_, exists := chainStrToInt[chainIDStr]
 
-	return exists
+	return exists && chainIDStr != ChainIDStrCardano
 }
 
 func IsExistingSkylineChainID(chainIDStr string) bool {
-	_, exists := skylineStrToInt[chainIDStr]
-
-	return exists
+	return chainIDStr == ChainIDStrPrime || chainIDStr == ChainIDStrCardano
 }
 
 func IsEVMChainID(chainIDStr string) bool {
