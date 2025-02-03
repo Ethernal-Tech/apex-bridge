@@ -38,7 +38,7 @@ func CreateTx(
 		})
 	}
 
-	multisigChangeTxOutput, err := createChangeTxOutput(
+	multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 		multisigOutput, txInputInfos.MultiSig.Sum, outputsAmount)
 	if err != nil {
 		return nil, "", err
@@ -49,8 +49,7 @@ func CreateTx(
 		if multiSigIndex == -1 {
 			builder.AddOutputs(multisigChangeTxOutput)
 		} else {
-			builder.UpdateOutputAmount(
-				multiSigIndex, multisigChangeTxOutput.Amount, getTokensAmounts(multisigChangeTxOutput)...)
+			builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
 		}
 	} else if multiSigIndex >= 0 {
 		// we need to decrement feeIndex if it was after multisig in outputs
@@ -71,7 +70,7 @@ func CreateTx(
 
 	builder.SetFee(fee)
 
-	feeChangeTxOutput, err := createChangeTxOutput(
+	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 		feeOutput, txInputInfos.MultiSigFee.Sum, map[string]uint64{
 			cardanowallet.AdaTokenName: fee,
 		})
@@ -81,63 +80,12 @@ func CreateTx(
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {
-		builder.UpdateOutputAmount(feeIndex, feeChangeTxOutput.Amount, getTokensAmounts(feeChangeTxOutput)...)
+		builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
 	} else {
 		builder.RemoveOutput(feeIndex)
 	}
 
 	return builder.Build()
-}
-
-func createChangeTxOutput(
-	baseTxOutput cardanowallet.TxOutput, totalSum map[string]uint64, outputsSum map[string]uint64,
-) (cardanowallet.TxOutput, error) {
-	changeAmount := common.SafeSubtract(
-		totalSum[cardanowallet.AdaTokenName]+baseTxOutput.Amount,
-		outputsSum[cardanowallet.AdaTokenName],
-		0)
-	changeTokens := []cardanowallet.TokenAmount(nil)
-
-	for tokenName, amount := range totalSum {
-		if tokenName == cardanowallet.AdaTokenName {
-			continue
-		}
-
-		// token amount from tokens
-		totalTokenAmount := amount
-		for _, token := range baseTxOutput.Tokens {
-			if token.TokenName() == tokenName {
-				totalTokenAmount += token.Amount
-
-				break
-			}
-		}
-
-		tokenChangeAmount := common.SafeSubtract(totalTokenAmount, outputsSum[tokenName], 0)
-		if tokenChangeAmount > 0 {
-			newToken, err := cardanowallet.NewTokenWithFullName(tokenName, true)
-			if err != nil {
-				return cardanowallet.TxOutput{}, err
-			}
-
-			changeTokens = append(changeTokens, cardanowallet.NewTokenAmount(newToken, tokenChangeAmount))
-		}
-	}
-
-	return cardanowallet.TxOutput{
-		Addr:   baseTxOutput.Addr,
-		Amount: changeAmount,
-		Tokens: changeTokens,
-	}, nil
-}
-
-func getTokensAmounts(txOutput cardanowallet.TxOutput) []uint64 {
-	result := make([]uint64, len(txOutput.Tokens))
-	for i, token := range txOutput.Tokens {
-		result[i] = token.Amount
-	}
-
-	return result
 }
 
 func CreateBatchMetaData(v uint64) ([]byte, error) {
