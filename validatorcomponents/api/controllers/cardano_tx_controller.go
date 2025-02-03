@@ -235,10 +235,8 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		return "", "", fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
-	cardanoCliBinary := wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID)
-
 	bridgingTxSender := cardanotx.NewBridgingTxSender(
-		cardanoCliBinary,
+		wallet.ResolveCardanoCliBinary(sourceChainConfig.NetworkID),
 		txProvider, nil, uint(sourceChainConfig.NetworkMagic),
 		sourceChainConfig.BridgingAddresses.BridgingAddress,
 		cardanoConfig.TTLSlotNumberInc, cardanoConfig.PotentialFee,
@@ -253,7 +251,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
-		context.Background(), cardanoCliBinary, requestBody.DestinationChainID,
+		context.Background(), requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 		sourceChainConfig.UtxoMinAmount,
 	)

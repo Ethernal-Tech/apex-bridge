@@ -51,7 +51,6 @@ func NewBridgingTxSender(
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
 func (bts *BridgingTxSender) CreateTx(
 	ctx context.Context,
-	cardanoCliBinary string,
 	chain string,
 	senderAddr string,
 	receivers []cardanowallet.TxOutput,
@@ -81,12 +80,14 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
-	txBuilder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
+	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
 	if err != nil {
 		return nil, "", err
 	}
 
-	minUtxoCost, err := cardanowallet.GetTokenCostSum(txBuilder, senderAddr, userUtxos)
+	defer builder.Dispose()
+
+	minUtxoCost, err := cardanowallet.GetTokenCostSum(builder, senderAddr, userUtxos)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to retrieve token cost sum. err: %w", err)
 	}
@@ -117,13 +118,6 @@ func (bts *BridgingTxSender) CreateTx(
 			Tokens: tokens,
 		},
 	}
-
-	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
-	if err != nil {
-		return nil, "", err
-	}
-
-	defer builder.Dispose()
 
 	builder.SetMetaData(metadata).
 		SetProtocolParameters(protocolParams).
