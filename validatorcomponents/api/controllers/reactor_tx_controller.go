@@ -7,14 +7,14 @@ import (
 	"math/big"
 	"net/http"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
@@ -27,7 +27,7 @@ type ReactorTxControllerImpl struct {
 	logger        hclog.Logger
 }
 
-var _ core.APIController = (*ReactorTxControllerImpl)(nil)
+var _ apiCore.APIController = (*ReactorTxControllerImpl)(nil)
 
 func NewReactorTxController(
 	oracleConfig *oCore.AppConfig,
@@ -45,14 +45,14 @@ func (*ReactorTxControllerImpl) GetPathPrefix() string {
 	return "CardanoTx"
 }
 
-func (c *ReactorTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
-	return []*core.APIEndpoint{
+func (c *ReactorTxControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
 		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: c.createBridgingTx, APIKeyAuth: true},
 	}
 }
 
 func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
-	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
+	requestBody, ok := apiUtils.DecodeModel[request.CreateBridgingTxRequest](w, r, c.logger)
 	if !ok {
 		return
 	}
@@ -61,7 +61,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 
 	err := c.validateAndFillOutCreateBridgingTxRequest(&requestBody)
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("validation error. err: %w", err), c.logger)
 
@@ -70,12 +70,12 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 
 	txRaw, txHash, err := c.createTx(requestBody)
 	if err != nil {
-		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
+		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
 		return
 	}
 
-	utils.WriteResponse(
+	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
 		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
 }

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -17,7 +18,7 @@ type BridgingRequestStateControllerImpl struct {
 	logger                      hclog.Logger
 }
 
-var _ core.APIController = (*BridgingRequestStateControllerImpl)(nil)
+var _ apiCore.APIController = (*BridgingRequestStateControllerImpl)(nil)
 
 func NewBridgingRequestStateController(
 	bridgingRequestStateManager core.BridgingRequestStateManager, logger hclog.Logger,
@@ -32,8 +33,8 @@ func (*BridgingRequestStateControllerImpl) GetPathPrefix() string {
 	return "BridgingRequestState"
 }
 
-func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*core.APIEndpoint {
-	return []*core.APIEndpoint{
+func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.get, APIKeyAuth: true},
 		{Path: "GetMultiple", Method: http.MethodGet, Handler: c.getMultiple, APIKeyAuth: true},
 	}
@@ -45,7 +46,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("chainId missing from query"), c.logger)
 
@@ -54,7 +55,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("txHash missing from query"), c.logger)
 
@@ -66,7 +67,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 
 	state, err := c.bridgingRequestStateManager.Get(chainID, txHash)
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("failed to get bridging request state: %w", err), c.logger)
 
@@ -74,14 +75,14 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	}
 
 	if state == nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusNotFound,
 			errors.New("not found"), c.logger)
 
 		return
 	}
 
-	utils.WriteResponse(w, r, http.StatusOK, response.NewBridgingRequestStateResponse(state), c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewBridgingRequestStateResponse(state), c.logger)
 }
 
 func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +91,7 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("chainId missing from query"), c.logger)
 
@@ -108,7 +109,7 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 
 	states, err := c.bridgingRequestStateManager.GetMultiple(chainID, txHashes)
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("failed to get bridging request states: %w", err), c.logger)
 
@@ -120,5 +121,5 @@ func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, 
 		statesResponse[state.SourceTxHash.String()] = response.NewBridgingRequestStateResponse(state)
 	}
 
-	utils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, statesResponse, c.logger)
 }

@@ -1,22 +1,13 @@
 package core
 
 import (
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 )
-
-type APIConfig struct {
-	Port           uint32   `json:"port"`
-	PathPrefix     string   `json:"pathPrefix"`
-	AllowedHeaders []string `json:"allowedHeaders"`
-	AllowedOrigins []string `json:"allowedOrigins"`
-	AllowedMethods []string `json:"allowedMethods"`
-	APIKeyHeader   string   `json:"apiKeyHeader"`
-	APIKeys        []string `json:"apiKeys"`
-}
 
 type AppConfig struct {
 	RunMode                      common.VCRunMode                          `json:"runMode"`
@@ -29,7 +20,7 @@ type AppConfig struct {
 	Settings                     oracleCore.AppSettings                    `json:"appSettings"`
 	RelayerImitatorPullTimeMilis uint64                                    `json:"relayerImitatorPullTime"`
 	BatcherPullTimeMilis         uint64                                    `json:"batcherPullTime"`
-	APIConfig                    APIConfig                                 `json:"api"`
+	APIConfig                    apiCore.APIConfig                         `json:"api"`
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
 }

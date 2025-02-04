@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"strings"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	vcUtils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/utils"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -28,7 +29,7 @@ type OracleStateControllerImpl struct {
 	logger                      hclog.Logger
 }
 
-var _ core.APIController = (*OracleStateControllerImpl)(nil)
+var _ apiCore.APIController = (*OracleStateControllerImpl)(nil)
 
 func NewOracleStateController(
 	appConfig *core.AppConfig,
@@ -52,8 +53,8 @@ func (*OracleStateControllerImpl) GetPathPrefix() string {
 	return "OracleState"
 }
 
-func (c *OracleStateControllerImpl) GetEndpoints() []*core.APIEndpoint {
-	return []*core.APIEndpoint{
+func (c *OracleStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.getState, APIKeyAuth: true},
 		{Path: "GetHasTxFailed", Method: http.MethodGet, Handler: c.getHasTxFailed, APIKeyAuth: true},
 	}
@@ -64,7 +65,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("chainId missing from query"), c.logger)
 
@@ -77,7 +78,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 	addresses, existsAddrs := c.adressesMap[chainID]
 
 	if !existsDB || !existsAddrs {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("invalid chainID: %s", chainID), c.logger)
 
@@ -86,7 +87,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 
 	latestBlockPoint, err := db.GetLatestBlockPoint()
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("get latest point: %w", err), c.logger)
 
@@ -99,7 +100,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 	for i, addr := range addresses {
 		utxos, err := db.GetAllTxOutputs(addr, true)
 		if err != nil {
-			utils.WriteErrorResponse(
+			apiUtils.WriteErrorResponse(
 				w, r, http.StatusBadRequest,
 				fmt.Errorf("get all tx outputs: %w", err), c.logger)
 
@@ -124,7 +125,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	utils.WriteResponse(w, r, http.StatusOK, response.NewOracleStateResponse(
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewOracleStateResponse(
 		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash), c.logger)
 }
 
@@ -133,7 +134,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("chainId missing from query"), c.logger)
 
@@ -144,7 +145,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	txHashArr, exists := queryValues["txHash"]
 	if !exists || len(txHashArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("txHash missing from query"), c.logger)
 
@@ -155,7 +156,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	ttlArr, exists := queryValues["ttl"]
 	if !exists || len(ttlArr) == 0 {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("ttl missing from query"), c.logger)
 
@@ -164,7 +165,7 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	ttl, ok := new(big.Int).SetString(ttlArr[0], 10)
 	if !ok {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			errors.New("ttl invalid"), c.logger)
 
@@ -173,14 +174,14 @@ func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *htt
 
 	hasFailed, err := c.hasTxFailed(chainID, txHash, ttl)
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("hasTxFailed err: %w", err), c.logger)
 
 		return
 	}
 
-	utils.WriteResponse(w, r, http.StatusOK, response.HasTxFailedResponse{Failed: hasFailed}, c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.HasTxFailedResponse{Failed: hasFailed}, c.logger)
 }
 
 func (c *OracleStateControllerImpl) hasTxFailed(

@@ -7,13 +7,13 @@ import (
 	"math/big"
 	"net/http"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/request"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -25,7 +25,7 @@ type SkylineTxControllerImpl struct {
 	logger        hclog.Logger
 }
 
-var _ core.APIController = (*SkylineTxControllerImpl)(nil)
+var _ apiCore.APIController = (*SkylineTxControllerImpl)(nil)
 
 func NewSkylineTxController(
 	oracleConfig *oCore.AppConfig,
@@ -43,14 +43,14 @@ func (*SkylineTxControllerImpl) GetPathPrefix() string {
 	return "CardanoTx"
 }
 
-func (sc *SkylineTxControllerImpl) GetEndpoints() []*core.APIEndpoint {
-	return []*core.APIEndpoint{
+func (sc *SkylineTxControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
 		{Path: "CreateBridgingTx", Method: http.MethodPost, Handler: sc.createBridgingTx, APIKeyAuth: true},
 	}
 }
 
 func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *http.Request) {
-	requestBody, ok := utils.DecodeModel[request.CreateBridgingTxRequest](w, r, sc.logger)
+	requestBody, ok := apiUtils.DecodeModel[request.CreateBridgingTxRequest](w, r, sc.logger)
 	if !ok {
 		return
 	}
@@ -59,7 +59,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	err := sc.validateAndFillOutCreateBridgingTxRequest(&requestBody)
 	if err != nil {
-		utils.WriteErrorResponse(
+		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
 			fmt.Errorf("validation error. err: %w", err), sc.logger,
 		)
@@ -69,7 +69,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	txRaw, txHash, bridgingRequestMetadata, err := sc.createTx(requestBody)
 	if err != nil {
-		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
+		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
 
 		return
 	}
@@ -78,12 +78,12 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	err = sc.checkMaxBridgeAmount(requestBody, currencyOutput, bridgingFee)
 	if err != nil {
-		utils.WriteErrorResponse(w, r, http.StatusBadRequest, err, sc.logger)
+		apiUtils.WriteErrorResponse(w, r, http.StatusBadRequest, err, sc.logger)
 
 		return
 	}
 
-	utils.WriteResponse(
+	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
 		response.NewFullSkylineBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
 	)
