@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	DefaultPotentialFee = 450_000
-	splitStringLength   = 40
-	maxInputs           = 40
+	splitStringLength = 40
+	maxInputs         = 40
 )
 
 type BridgingTxSender struct {

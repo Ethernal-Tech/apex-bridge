@@ -56,6 +56,7 @@ const (
 	gasLimitMultiplier       = 1.6
 	amountCheckRetryWaitTime = time.Second * 5
 	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
+	potentialFee             = 500_000
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -346,7 +347,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
 		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc,
-		cardanotx.DefaultPotentialFee,
+		potentialFee,
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
