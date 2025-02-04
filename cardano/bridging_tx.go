@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -13,8 +14,8 @@ import (
 )
 
 const (
-	DefaultPotentialFee = 250_000
-	splitStringLength   = 40
+	splitStringLength = 40
+	maxInputs         = 40
 )
 
 type BridgingTxSender struct {
@@ -54,50 +55,41 @@ func (bts *BridgingTxSender) CreateTx(
 	chain string,
 	senderAddr string,
 	receivers []cardanowallet.TxOutput,
-	feeAmount uint64,
+	feeBridgeAmount uint64,
 	minUtxoValue uint64,
 ) ([]byte, string, error) {
-	qtd, err := bts.txProviderSrc.GetTip(ctx)
+	qtd, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (cardanowallet.QueryTipData, error) {
+		return bts.txProviderSrc.GetTip(ctx)
+	})
 	if err != nil {
 		return nil, "", err
 	}
 
 	protocolParams := bts.protocolParameters
 	if protocolParams == nil {
-		protocolParams, err = bts.txProviderSrc.GetProtocolParameters(ctx)
+		protocolParams, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+			return bts.txProviderSrc.GetProtocolParameters(ctx)
+		})
 		if err != nil {
 			return nil, "", err
 		}
 	}
 
-	metadata, err := bts.createMetadata(chain, senderAddr, receivers, feeAmount)
+	allUtxos, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) ([]cardanowallet.Utxo, error) {
+		return bts.txProviderSrc.GetUtxos(ctx, senderAddr)
+	})
 	if err != nil {
 		return nil, "", err
 	}
 
-	outputsSum := cardanowallet.GetOutputsSum(receivers)[cardanowallet.AdaTokenName] + feeAmount
-	desiredSum := outputsSum + bts.potentialFee + minUtxoValue
+	// utxos without tokens should come first
+	sort.Slice(allUtxos, func(i, j int) bool {
+		return len(allUtxos[i].Tokens) < len(allUtxos[j].Tokens)
+	})
 
-	inputs, err := bts.GetUTXOsForAmount(
-		ctx, bts.txProviderSrc, senderAddr, cardanowallet.AdaTokenName, desiredSum, desiredSum)
+	metadata, err := bts.createMetadata(chain, senderAddr, receivers, feeBridgeAmount)
 	if err != nil {
 		return nil, "", err
-	}
-
-	tokens, err := cardanowallet.GetTokensFromSumMap(inputs.Sum)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create tokens from sum map. err: %w", err)
-	}
-
-	outputs := []cardanowallet.TxOutput{
-		{
-			Addr:   bts.multiSigAddrSrc,
-			Amount: outputsSum,
-		},
-		{
-			Addr:   senderAddr,
-			Tokens: tokens,
-		},
 	}
 
 	builder, err := cardanowallet.NewTxBuilder(bts.cardanoCliBinary)
@@ -110,70 +102,54 @@ func (bts *BridgingTxSender) CreateTx(
 	builder.SetMetaData(metadata).
 		SetProtocolParameters(protocolParams).
 		SetTimeToLive(qtd.Slot + bts.ttlSlotNumberInc).
-		SetTestNetMagic(bts.testNetMagicSrc).
-		AddInputs(inputs.Inputs...).
-		AddOutputs(outputs...)
+		SetTestNetMagic(bts.testNetMagicSrc)
+
+	potentialTokenCost, err := cardanowallet.GetTokenCostSum(builder, senderAddr, allUtxos)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to retrieve token cost sum. err: %w", err)
+	}
+
+	minUtxoValue = max(minUtxoValue, potentialTokenCost)
+	outputsSum := cardanowallet.GetOutputsSum(receivers)
+	outputsSumLovelace := outputsSum[cardanowallet.AdaTokenName] + feeBridgeAmount
+	desiredSumLovelace := outputsSumLovelace + bts.potentialFee + minUtxoValue
+	changeTxOutput := cardanowallet.TxOutput{
+		Addr: senderAddr,
+	}
+
+	inputs, err := cardanowallet.GetUTXOsForAmount(
+		allUtxos, cardanowallet.AdaTokenName, desiredSumLovelace, maxInputs)
+	if err != nil {
+		return nil, "", err
+	}
+
+	builder.AddInputs(inputs.Inputs...).AddOutputs(cardanowallet.TxOutput{
+		Addr:   bts.multiSigAddrSrc,
+		Amount: outputsSumLovelace,
+	}, changeTxOutput)
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
 		return nil, "", err
 	}
 
-	inputsAdaSum := inputs.Sum[cardanowallet.AdaTokenName]
-	change := inputsAdaSum - outputsSum - fee
-	// handle overflow or insufficient amount
-	if change > inputsAdaSum || change < minUtxoValue {
-		return []byte{}, "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
-			inputsAdaSum, outputsSum+fee)
+	// add bridging fee and calculated tx fee to lovelace output in order to calculate good change tx output
+	outputsSum[cardanowallet.AdaTokenName] += fee + feeBridgeAmount
+
+	changeTxOutput, err = cardanowallet.CreateTxOutputChange(changeTxOutput, inputs.Sum, outputsSum)
+	if err != nil {
+		return nil, "", err
 	}
 
-	builder.UpdateOutputAmount(-1, change)
+	if changeTxOutput.Amount > 0 || len(changeTxOutput.Tokens) > 0 {
+		builder.ReplaceOutput(-1, changeTxOutput)
+	} else {
+		builder.RemoveOutput(-1)
+	}
 
 	builder.SetFee(fee)
 
 	return builder.Build()
-}
-
-func (bts *BridgingTxSender) GetUTXOsForAmount(
-	ctx context.Context, retriever cardanowallet.IUTxORetriever, addr string,
-	tokenName string, exactSum uint64, atLeastSum uint64,
-) (cardanowallet.TxInputs, error) {
-	utxos, err := retriever.GetUtxos(ctx, addr)
-	if err != nil {
-		return cardanowallet.TxInputs{}, err
-	}
-
-	// Loop through utxos to find first input with enough tokens
-	// If we don't have this UTXO we need to use more of them
-	//nolint:prealloc
-	var (
-		currentSum  = map[string]uint64{}
-		chosenUTXOs []cardanowallet.TxInput
-	)
-
-	for _, utxo := range utxos {
-		currentSum[cardanowallet.AdaTokenName] += utxo.Amount
-
-		for _, token := range utxo.Tokens {
-			currentSum[token.TokenName()] += token.Amount
-		}
-
-		chosenUTXOs = append(chosenUTXOs, cardanowallet.TxInput{
-			Hash:  utxo.Hash,
-			Index: utxo.Index,
-		})
-
-		if currentSum[tokenName] == exactSum || currentSum[tokenName] >= atLeastSum {
-			return cardanowallet.TxInputs{
-				Inputs: chosenUTXOs,
-				Sum:    currentSum,
-			}, nil
-		}
-	}
-
-	return cardanowallet.TxInputs{}, fmt.Errorf(
-		"not enough funds for the transaction: (available, exact, at least) = (%d, %d, %d)",
-		currentSum[tokenName], exactSum, atLeastSum)
 }
 
 func (bts *BridgingTxSender) SendTx(
@@ -223,18 +199,6 @@ func (bts *BridgingTxSender) createMetadata(
 	}
 
 	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataObj)
-}
-
-func IsAddressInOutputs(
-	receivers []cardanowallet.TxOutput, addr string,
-) bool {
-	for _, x := range receivers {
-		if x.Addr == addr {
-			return true
-		}
-	}
-
-	return false
 }
 
 func WaitForTx(
