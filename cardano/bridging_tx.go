@@ -113,9 +113,6 @@ func (bts *BridgingTxSender) CreateTx(
 	outputsSum := cardanowallet.GetOutputsSum(receivers)
 	outputsSumLovelace := outputsSum[cardanowallet.AdaTokenName] + feeBridgeAmount
 	desiredSumLovelace := outputsSumLovelace + bts.potentialFee + minUtxoValue
-	changeTxOutput := cardanowallet.TxOutput{
-		Addr: senderAddr,
-	}
 
 	inputs, err := cardanowallet.GetUTXOsForAmount(
 		allUtxos, cardanowallet.AdaTokenName, desiredSumLovelace, maxInputs)
@@ -123,10 +120,18 @@ func (bts *BridgingTxSender) CreateTx(
 		return nil, "", err
 	}
 
+	tokens, err := cardanowallet.GetTokensFromSumMap(inputs.Sum)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create tokens from sum map. err: %w", err)
+	}
+
 	builder.AddInputs(inputs.Inputs...).AddOutputs(cardanowallet.TxOutput{
 		Addr:   bts.multiSigAddrSrc,
 		Amount: outputsSumLovelace,
-	}, changeTxOutput)
+	}, cardanowallet.TxOutput{
+		Addr:   senderAddr,
+		Tokens: tokens,
+	})
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
@@ -136,7 +141,9 @@ func (bts *BridgingTxSender) CreateTx(
 	// add bridging fee and calculated tx fee to lovelace output in order to calculate good change tx output
 	outputsSum[cardanowallet.AdaTokenName] += fee + feeBridgeAmount
 
-	changeTxOutput, err = cardanowallet.CreateTxOutputChange(changeTxOutput, inputs.Sum, outputsSum)
+	changeTxOutput, err := cardanowallet.CreateTxOutputChange(cardanowallet.TxOutput{
+		Addr: senderAddr,
+	}, inputs.Sum, outputsSum)
 	if err != nil {
 		return nil, "", err
 	}
