@@ -277,10 +277,10 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
 ```
 
 ```shell
-$ apex/bridge bridge-admin set-min-amounts \
+$ apex-bridge bridge-admin set-min-amounts \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
-        --contract-addr 0xeefcd00000000000000000000000000000000013
+        --contract-addr 0xeefcd00000000000000000000000000000000013 \
         --min-fee 200 \
         --min-bridging-amount 100 
 ```
