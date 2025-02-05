@@ -744,7 +744,7 @@ func Test_getUTXOs(t *testing.T) {
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -752,7 +752,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -777,7 +777,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, ops.config, ops.db, ops.logger)
+		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
@@ -787,6 +787,7 @@ func Test_getUTXOs(t *testing.T) {
 
 func Test_getSkylineUTXOs(t *testing.T) {
 	dbMock := &indexer.DatabaseMock{}
+
 	multisigAddr := "0x001"
 	feeAddr := "0x002"
 	testErr := errors.New("test err")
@@ -795,6 +796,12 @@ func Test_getSkylineUTXOs(t *testing.T) {
 		db: dbMock,
 		config: &cardano.CardanoChainConfig{
 			NoBatchPeriodPercent: 0.1,
+			NativeTokens: []sendtx.TokenExchangeConfig{
+				{
+					DstChainID: "testChainID",
+					TokenName:  "1.31",
+				},
+			},
 		},
 		strategy: &CardanoChainOperationSkylineStrategy{},
 		logger:   hclog.NewNullLogger(),
@@ -836,7 +843,7 @@ func Test_getSkylineUTXOs(t *testing.T) {
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -844,7 +851,7 @@ func Test_getSkylineUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
 		require.Error(t, err)
 	})
 
@@ -892,10 +899,94 @@ func Test_getSkylineUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, ops.config, ops.db, ops.logger)
+		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
+	})
+}
+
+func Test_filterOutTokenUtxos(t *testing.T) {
+	multisigUtxos := []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
+			Output: indexer.TxOutput{
+				Amount: 30,
+				Slot:   80,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   40,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 3},
+			Output: indexer.TxOutput{
+				Amount: 40,
+				Slot:   1900,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "2",
+						Amount:   30,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 4},
+			Output: indexer.TxOutput{
+				Amount: 50,
+				Slot:   21,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   51,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			Output: indexer.TxOutput{
+				Amount: 2,
+				Slot:   16,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   7,
+					},
+				},
+			},
+		},
+	}
+
+	t.Run("filter out all the tokens", func(t *testing.T) {
+		resTxInputOutput := filterOutTokenUtxos(multisigUtxos)
+		require.Equal(t, 0, len(resTxInputOutput))
+	})
+
+	t.Run("filter out all the tokens except the one with specified token name", func(t *testing.T) {
+		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "1.31")
+		require.Equal(t, 2, len(resTxInputOutput))
+		require.Equal(
+			t,
+			indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
+			resTxInputOutput[0].Input,
+		)
+
+		resTxInputOutput = filterOutTokenUtxos(multisigUtxos, "3.31")
+		require.Equal(t, 1, len(resTxInputOutput))
+		require.Equal(
+			t,
+			indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			resTxInputOutput[0].Input,
+		)
 	})
 }

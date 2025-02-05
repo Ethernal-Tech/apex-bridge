@@ -24,6 +24,7 @@ type ICardanoChainOperationsStrategy interface {
 		multisigFeeAddress string,
 		txOutputs cardano.TxOutputs,
 		tokenHoldingOutputs uint64,
+		destChainID string,
 		cardanoConfig *cardano.CardanoChainConfig,
 		db indexer.Database,
 		logger hclog.Logger,
@@ -82,7 +83,7 @@ func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 }
 
 func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, _ uint64,
+	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, _ uint64, _ string,
 	cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
 	multisigUtxos, err = db.GetAllTxOutputs(multisigAddress, true)
@@ -212,7 +213,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 
 func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, tokenHoldingOutputs uint64,
-	cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
+	destChainID string, cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
 	multisigUtxos, err = db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
@@ -228,6 +229,10 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
+
+	tokenName := cardanoConfig.GetNativeTokenName(destChainID)
+
+	multisigUtxos = filterOutTokenUtxos(multisigUtxos, tokenName)
 
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
