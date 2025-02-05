@@ -76,6 +76,13 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	currencyOutput, tokenOutput, bridgingFee := getOutputAmounts(bridgingRequestMetadata)
 
+	err = sc.checkMaxBridgeAmount(requestBody, currencyOutput, bridgingFee)
+	if err != nil {
+		utils.WriteErrorResponse(w, r, http.StatusBadRequest, err, sc.logger)
+
+		return
+	}
+
 	utils.WriteResponse(
 		w, r, http.StatusOK,
 		response.NewFullSkylineBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
@@ -100,7 +107,6 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			len(requestBody.Transactions), sc.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
 	}
 
-	receiverAmountSum := big.NewInt(0)
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
@@ -136,10 +142,6 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 			feeSum += receiver.Amount
 		} else {
 			transactions = append(transactions, receiver)
-
-			if !receiver.IsNativeToken {
-				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
-			}
 		}
 	}
 
@@ -159,12 +161,17 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
 	}
 
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
-
 	if requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 
+	return nil
+}
+
+func (sc *SkylineTxControllerImpl) checkMaxBridgeAmount(
+	requestBody request.CreateBridgingTxRequest, currencyOutput uint64, bridgingFee uint64,
+) error {
+	receiverAmountSum := new(big.Int).SetUint64(currencyOutput + bridgingFee)
 	if sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
 		sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
 		receiverAmountSum.Cmp(sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
