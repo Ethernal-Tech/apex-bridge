@@ -910,10 +910,9 @@ func Test_getSkylineUTXOs(t *testing.T) {
 func Test_filterOutTokenUtxos(t *testing.T) {
 	multisigUtxos := []*indexer.TxInputOutput{
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
+			Input: indexer.TxInput{Index: 0},
 			Output: indexer.TxOutput{
 				Amount: 30,
-				Slot:   80,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "1",
@@ -924,10 +923,9 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("02"), Index: 3},
+			Input: indexer.TxInput{Index: 1},
 			Output: indexer.TxOutput{
 				Amount: 40,
-				Slot:   1900,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "3",
@@ -943,10 +941,9 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("03"), Index: 4},
+			Input: indexer.TxInput{Index: 2},
 			Output: indexer.TxOutput{
 				Amount: 50,
-				Slot:   21,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "1",
@@ -957,10 +954,9 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 			},
 		},
 		{
-			Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			Input: indexer.TxInput{Index: 3},
 			Output: indexer.TxOutput{
 				Amount: 2,
-				Slot:   16,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: "3",
@@ -982,8 +978,13 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 		require.Equal(t, 2, len(resTxInputOutput))
 		require.Equal(
 			t,
-			indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
+			indexer.TxInput{Index: 0},
 			resTxInputOutput[0].Input,
+		)
+		require.Equal(
+			t,
+			indexer.TxInput{Index: 2},
+			resTxInputOutput[1].Input,
 		)
 	})
 
@@ -992,7 +993,7 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 		require.Equal(t, 1, len(resTxInputOutput))
 		require.Equal(
 			t,
-			indexer.TxInput{Hash: indexer.NewHashFromHexString("04"), Index: 5},
+			indexer.TxInput{Index: 3},
 			resTxInputOutput[0].Input,
 		)
 	})
