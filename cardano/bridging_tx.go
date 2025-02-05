@@ -133,7 +133,7 @@ func (bts *BridgingTxSender) CreateTx(
 		Tokens: tokens,
 	})
 
-	fee, err := builder.CalculateFee(0)
+	fee, err := builder.CalculateFee(1)
 	if err != nil {
 		return nil, "", err
 	}
