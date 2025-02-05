@@ -930,6 +930,11 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 				Slot:   1900,
 				Tokens: []indexer.TokenAmount{
 					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   30,
+					},
+					{
 						PolicyID: "1",
 						Name:     "2",
 						Amount:   30,
@@ -980,8 +985,10 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 			indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 2},
 			resTxInputOutput[0].Input,
 		)
+	})
 
-		resTxInputOutput = filterOutTokenUtxos(multisigUtxos, "3.31")
+	t.Run("filter out InputOutput with invalid token even if it contains valid token as well", func(t *testing.T) {
+		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "3.31")
 		require.Equal(t, 1, len(resTxInputOutput))
 		require.Equal(
 			t,
