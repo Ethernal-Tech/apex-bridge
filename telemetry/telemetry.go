@@ -48,13 +48,11 @@ func (t *Telemetry) Start() error {
 	if t.config.PrometheusAddr != "" {
 		t.prometheusServer = getPrometheusServer(t.config.PrometheusAddr)
 
-		go t.startPrometheus()
-	}
-
-	if t.IsEnabled() {
-		if err := setupTelemetry(); err != nil {
+		if err := setupPrometheusTelemetry(); err != nil {
 			return err
 		}
+
+		go t.startPrometheus()
 	}
 
 	return nil
@@ -113,7 +111,7 @@ func startDataDogProfiler(addr string) error {
 	return nil
 }
 
-func setupTelemetry() error {
+func setupPrometheusTelemetry() error {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 
