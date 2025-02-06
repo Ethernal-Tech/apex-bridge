@@ -269,23 +269,15 @@ func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...stri
 			continue
 		}
 
-		isValid := true
+		isValid := false
 
-		for _, token := range utxo.Output.Tokens {
-			excluded := false
-
-			for _, t := range excludingTokens {
-				if token.TokenName() == t {
-					excluded = true
-
+		for _, t := range excludingTokens {
+			for _, token := range utxo.Output.Tokens {
+				if token.TokenName() != t {
+					isValid = false
 					break
 				}
-			}
-
-			if !excluded {
-				isValid = false
-
-				break
+				isValid = true
 			}
 		}
 
