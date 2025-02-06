@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
+	"github.com/Ethernal-Tech/apex-bridge/api/model/response"
 	"github.com/hashicorp/go-hclog"
 )
 

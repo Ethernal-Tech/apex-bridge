@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -590,7 +591,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 		},
 		RelayerImitatorPullTimeMilis: 1000,
 		BatcherPullTimeMilis:         2500,
-		APIConfig: vcCore.APIConfig{
+		APIConfig: apiCore.APIConfig{
 			Port:       p.apiPort,
 			PathPrefix: "api",
 			AllowedHeaders: []string{

@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	api "github.com/Ethernal-Tech/apex-bridge/api"
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -23,7 +25,6 @@ import (
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
@@ -51,7 +52,7 @@ type ValidatorComponentsImpl struct {
 	ethOracle         *ethOracle.OracleImpl
 	batcherManager    batcherCore.BatcherManager
 	relayerImitator   core.RelayerImitator
-	api               core.API
+	api               apiCore.API
 	telemetry         *telemetry.Telemetry
 	telemetryWorker   *TelemetryWorker
 	errorCh           chan error
@@ -186,23 +187,13 @@ func NewValidatorComponents(
 	var apiObj *api.APIImpl
 
 	if shouldRunAPI {
-		apiControllers := []core.APIController{
+		apiControllers := []apiCore.APIController{
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
 			controllers.NewOracleStateController(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
 				getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, logger.Named("settings_controller")),
-		}
-
-		if appConfig.RunMode == common.ReactorMode {
-			apiControllers = append(apiControllers,
-				controllers.NewReactorTxController(
-					oracleConfig, batcherConfig, logger.Named("reactor_tx_controller")))
-		} else {
-			apiControllers = append(apiControllers,
-				controllers.NewSkylineTxController(
-					oracleConfig, batcherConfig, logger.Named("skyline_tx_controller")))
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))

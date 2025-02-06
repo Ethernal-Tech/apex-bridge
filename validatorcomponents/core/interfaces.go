@@ -19,16 +19,6 @@ type Database interface {
 	Close() error
 }
 
-type APIController interface {
-	GetPathPrefix() string
-	GetEndpoints() []*APIEndpoint
-}
-
-type API interface {
-	Start()
-	Dispose() error
-}
-
 type BridgingRequestStateManager interface {
 	common.BridgingRequestStateUpdater
 

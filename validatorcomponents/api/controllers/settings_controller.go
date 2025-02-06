@@ -3,8 +3,9 @@ package controllers
 import (
 	"net/http"
 
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
 )
@@ -14,7 +15,7 @@ type SettingsControllerImpl struct {
 	logger    hclog.Logger
 }
 
-var _ core.APIController = (*SettingsControllerImpl)(nil)
+var _ apiCore.APIController = (*SettingsControllerImpl)(nil)
 
 func NewSettingsController(
 	appConfig *core.AppConfig,
@@ -30,12 +31,12 @@ func (*SettingsControllerImpl) GetPathPrefix() string {
 	return "Settings"
 }
 
-func (c *SettingsControllerImpl) GetEndpoints() []*core.APIEndpoint {
-	return []*core.APIEndpoint{
+func (c *SettingsControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.getSettings, APIKeyAuth: true},
 	}
 }
 
 func (c *SettingsControllerImpl) getSettings(w http.ResponseWriter, r *http.Request) {
-	utils.WriteResponse(w, r, http.StatusOK, response.NewSettingsResponse(c.appConfig), c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewSettingsResponse(c.appConfig), c.logger)
 }

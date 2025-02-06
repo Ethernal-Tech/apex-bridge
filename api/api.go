@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/api/core"
+	"github.com/Ethernal-Tech/apex-bridge/api/utils"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/utils"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-hclog"
