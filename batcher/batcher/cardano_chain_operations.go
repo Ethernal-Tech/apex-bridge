@@ -261,25 +261,20 @@ func (cco *CardanoChainOperations) getCardanoData(
 
 func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...string) []*indexer.TxInputOutput {
 	result := make([]*indexer.TxInputOutput, 0, len(utxos))
+	excludingTokensMap := make(map[string]bool)
+
+	for _, t := range excludingTokens {
+		excludingTokensMap[t] = true
+	}
 
 	for _, utxo := range utxos {
-		if len(utxo.Output.Tokens) == 0 {
-			result = append(result, utxo)
+		isValid := true
 
-			continue
-		}
+		for _, token := range utxo.Output.Tokens {
+			if _, exists := excludingTokensMap[token.TokenName()]; !exists {
+				isValid = false
 
-		isValid := false
-
-		for _, t := range excludingTokens {
-			for _, token := range utxo.Output.Tokens {
-				if token.TokenName() != t {
-					isValid = false
-
-					break
-				}
-
-				isValid = true
+				break
 			}
 		}
 

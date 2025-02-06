@@ -950,6 +950,11 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 						Name:     "1",
 						Amount:   51,
 					},
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   21,
+					},
 				},
 			},
 		},
@@ -975,16 +980,11 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 
 	t.Run("filter out all the tokens except the one with specified token name", func(t *testing.T) {
 		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "1.31")
-		require.Equal(t, 2, len(resTxInputOutput))
+		require.Equal(t, 1, len(resTxInputOutput))
 		require.Equal(
 			t,
 			indexer.TxInput{Index: 0},
 			resTxInputOutput[0].Input,
-		)
-		require.Equal(
-			t,
-			indexer.TxInput{Index: 2},
-			resTxInputOutput[1].Input,
 		)
 	})
 
@@ -995,6 +995,21 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 			t,
 			indexer.TxInput{Index: 3},
 			resTxInputOutput[0].Input,
+		)
+	})
+
+	t.Run("filter out all the tokens except those with specified token names", func(t *testing.T) {
+		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "3.31", "1.31")
+		require.Equal(t, 3, len(resTxInputOutput))
+		require.Equal(
+			t,
+			indexer.TxInput{Index: 0},
+			resTxInputOutput[0].Input,
+		)
+		require.Equal(
+			t,
+			2,
+			len(resTxInputOutput[1].Output.Tokens),
 		)
 	})
 }
