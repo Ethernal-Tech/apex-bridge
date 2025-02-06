@@ -181,8 +181,6 @@ func NewValidatorComponents(
 		apiControllers := []core.APIController{
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
-			controllers.NewCardanoTxController(
-				oracleConfig, batcherConfig, logger.Named("cardano_tx_controller")),
 			controllers.NewOracleStateController(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
 				getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
@@ -207,7 +205,8 @@ func NewValidatorComponents(
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
 		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
-		telemetryWorker: NewTelemetryWorker(ethHelper, cardanoIndexerDbs, ethIndexerDbs,
+		telemetryWorker: NewTelemetryWorker(
+			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger: logger,
 	}, nil

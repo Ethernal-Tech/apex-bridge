@@ -1,7 +1,7 @@
 package telemetry
 
 import (
-	"math/big"
+	"fmt"
 
 	"github.com/hashicorp/go-metrics"
 )
@@ -41,9 +41,10 @@ func UpdateIndexersBlockCounter(chain string, cnt int) {
 	metrics.IncrCounter([]string{indexersMetricsPrefix, "block_counter", chain}, float32(cnt))
 }
 
-func UpdateHotWalletState(chain string, v *big.Int) {
-	val := v.Uint64()
+func UpdateHotWalletState(chain string, typeWallet string, val uint64) {
+	stateLow := fmt.Sprintf("%s_%s_low", hotWalletMetricsPrefix, typeWallet)
+	stateHigh := fmt.Sprintf("%s_%s_high", hotWalletMetricsPrefix, typeWallet)
 
-	metrics.SetGauge([]string{batcherMetricsPrefix, "state_high", chain}, float32(val>>32))
-	metrics.SetGauge([]string{batcherMetricsPrefix, "state_low", chain}, float32(uint32(val))) //nolint:gosec
+	metrics.SetGauge([]string{batcherMetricsPrefix, stateHigh, chain}, float32(val>>32))
+	metrics.SetGauge([]string{batcherMetricsPrefix, stateLow, chain}, float32(uint32(val))) //nolint:gosec
 }

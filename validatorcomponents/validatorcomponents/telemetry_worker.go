@@ -8,6 +8,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -15,32 +16,42 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const (
+	feeMetricName      = "fee"
+	multisigMetricName = "multisig"
+)
+
 var apexBridgeAdminScAddress = common.HexToAddress("0xABEF000000000000000000000000000000000006")
 
 type TelemetryWorker struct {
-	etxHelperWrapper     *eth.EthHelperWrapper
-	cardanoDBs           map[string]indexer.Database
-	ethDBs               map[string]eventTrackerStore.EventTrackerStore
-	waitTime             time.Duration
-	latestBlock          map[string]*indexer.BlockPoint
-	latestHotWalletState map[string]*big.Int
-	logger               hclog.Logger
+	etxHelperWrapper       *eth.EthHelperWrapper
+	cardanoDBs             map[string]indexer.Database
+	ethDBs                 map[string]eventTrackerStore.EventTrackerStore
+	config                 *oracleCommonCore.AppConfig
+	waitTime               time.Duration
+	latestBlock            map[string]*indexer.BlockPoint
+	latestHotWalletState   map[string]*big.Int
+	latestFeeMultisigState map[string]uint64
+	logger                 hclog.Logger
 }
 
 func NewTelemetryWorker(
 	txHelper *eth.EthHelperWrapper,
 	cardanoDBs map[string]indexer.Database,
 	ethDBs map[string]eventTrackerStore.EventTrackerStore,
+	config *oracleCommonCore.AppConfig,
 	waitTime time.Duration,
 	logger hclog.Logger,
 ) *TelemetryWorker {
 	return &TelemetryWorker{
-		etxHelperWrapper:     txHelper,
-		cardanoDBs:           cardanoDBs,
-		ethDBs:               ethDBs,
-		latestBlock:          map[string]*indexer.BlockPoint{},
-		latestHotWalletState: map[string]*big.Int{},
-		logger:               logger,
+		etxHelperWrapper:       txHelper,
+		cardanoDBs:             cardanoDBs,
+		ethDBs:                 ethDBs,
+		config:                 config,
+		latestBlock:            map[string]*indexer.BlockPoint{},
+		latestHotWalletState:   map[string]*big.Int{},
+		latestFeeMultisigState: map[string]uint64{},
+		logger:                 logger,
 	}
 }
 
@@ -66,6 +77,8 @@ func (ti *TelemetryWorker) execute() {
 
 			telemetry.UpdateIndexersBlockCounter(chainID, 1)
 		}
+
+		ti.updateFeeHotWalletState(db, chainID)
 	}
 
 	for chainID, db := range ti.ethDBs {
@@ -98,24 +111,49 @@ func (ti *TelemetryWorker) execute() {
 	}
 
 	for chainID := range ti.cardanoDBs {
-		val, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
-		if err != nil {
-			ti.logger.Warn("failed to retrieve hot wallet state", "chain", chainID, "err", err)
-		} else if cache := ti.latestHotWalletState[chainID]; cache == nil || cache.Cmp(val) != 0 {
-			ti.latestHotWalletState[chainID] = val
-
-			telemetry.UpdateHotWalletState(chainID, val)
+		if val := ti.getHotWalletState(contract, chainID); val != nil {
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, val.Uint64())
 		}
 	}
 
 	for chainID := range ti.ethDBs {
-		val, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
-		if err != nil {
-			ti.logger.Warn("failed to retrieve hot wallet state", "chain", chainID, "err", err)
-		} else if cache := ti.latestHotWalletState[chainID]; cache == nil || cache.Cmp(val) != 0 {
-			ti.latestHotWalletState[chainID] = val
-
-			telemetry.UpdateHotWalletState(chainID, val)
+		if val := ti.getHotWalletState(contract, chainID); val != nil {
+			telemetry.UpdateHotWalletState(chainID, multisigMetricName, val.Uint64())
 		}
 	}
+}
+
+func (ti *TelemetryWorker) updateFeeHotWalletState(db indexer.Database, chainID string) {
+	txInOuts, err := db.GetAllTxOutputs(ti.config.CardanoChains[chainID].BridgingAddresses.FeeAddress, true)
+	if err != nil {
+		ti.logger.Warn("failed to retrieve utxos for fee multisig", "chain", chainID, "err", err)
+	} else {
+		stateSum := uint64(0)
+
+		for _, x := range txInOuts {
+			// do not count utxos with tokens - reactor only
+			if len(x.Output.Tokens) == 0 {
+				stateSum += x.Output.Amount
+			}
+		}
+
+		if cache := ti.latestFeeMultisigState[chainID]; cache != stateSum {
+			telemetry.UpdateHotWalletState(chainID, feeMetricName, stateSum)
+		}
+	}
+}
+
+func (ti *TelemetryWorker) getHotWalletState(
+	contract *contractbinding.AdminContract, chainID string,
+) (value *big.Int) {
+	val, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+	if err != nil {
+		ti.logger.Warn("failed to retrieve hot wallet state", "chain", chainID, "err", err)
+	} else if cache := ti.latestHotWalletState[chainID]; cache == nil || cache.Cmp(val) != 0 {
+		ti.latestHotWalletState[chainID] = val
+
+		value = val
+	}
+
+	return value
 }
