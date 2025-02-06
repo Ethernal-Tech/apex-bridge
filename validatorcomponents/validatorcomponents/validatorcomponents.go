@@ -196,16 +196,6 @@ func NewValidatorComponents(
 			controllers.NewSettingsController(appConfig, logger.Named("settings_controller")),
 		}
 
-		if appConfig.RunMode == common.ReactorMode {
-			apiControllers = append(apiControllers,
-				controllers.NewReactorTxController(
-					oracleConfig, batcherConfig, logger.Named("reactor_tx_controller")))
-		} else {
-			apiControllers = append(apiControllers,
-				controllers.NewSkylineTxController(
-					oracleConfig, batcherConfig, logger.Named("skyline_tx_controller")))
-		}
-
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
