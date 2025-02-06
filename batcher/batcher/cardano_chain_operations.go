@@ -119,7 +119,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	}
 
 	multisigUtxos, feeUtxos, err := cco.strategy.GetUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs, tokenHoldingOutputs, cco.config, cco.db, cco.logger)
+		multisigAddress, multisigFeeAddress, txOutputs, tokenHoldingOutputs, chainID, cco.config, cco.db, cco.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -257,18 +257,6 @@ func (cco *CardanoChainOperations) getCardanoData(
 	}
 
 	return validatorsData, nil
-}
-
-func filterOutTokenUtxos(utxos []*indexer.TxInputOutput) []*indexer.TxInputOutput {
-	result := make([]*indexer.TxInputOutput, 0, len(utxos))
-
-	for _, utxo := range utxos {
-		if len(utxo.Output.Tokens) == 0 {
-			result = append(result, utxo)
-		}
-	}
-
-	return result
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
