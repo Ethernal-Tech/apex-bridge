@@ -230,9 +230,7 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	tokenName := cardanoConfig.GetNativeTokenName(destChainID)
-
-	multisigUtxos = filterOutTokenUtxos(multisigUtxos, tokenName)
+	multisigUtxos = filterOutTokenUtxos(multisigUtxos, cardanoConfig.GetNativeTokenName(destChainID))
 
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
@@ -312,4 +310,31 @@ func getNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
+}
+
+func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...string) []*indexer.TxInputOutput {
+	result := make([]*indexer.TxInputOutput, 0, len(utxos))
+	excludingTokensMap := make(map[string]bool, len(excludingTokens))
+
+	for _, t := range excludingTokens {
+		excludingTokensMap[t] = true
+	}
+
+	for _, utxo := range utxos {
+		isValid := true
+
+		for _, token := range utxo.Output.Tokens {
+			if _, exists := excludingTokensMap[token.TokenName()]; !exists {
+				isValid = false
+
+				break
+			}
+		}
+
+		if isValid {
+			result = append(result, utxo)
+		}
+	}
+
+	return result
 }

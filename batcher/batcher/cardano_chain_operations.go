@@ -259,33 +259,6 @@ func (cco *CardanoChainOperations) getCardanoData(
 	return validatorsData, nil
 }
 
-func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...string) []*indexer.TxInputOutput {
-	result := make([]*indexer.TxInputOutput, 0, len(utxos))
-	excludingTokensMap := make(map[string]bool)
-
-	for _, t := range excludingTokens {
-		excludingTokensMap[t] = true
-	}
-
-	for _, utxo := range utxos {
-		isValid := true
-
-		for _, token := range utxo.Output.Tokens {
-			if _, exists := excludingTokensMap[token.TokenName()]; !exists {
-				isValid = false
-
-				break
-			}
-		}
-
-		if isValid {
-			result = append(result, utxo)
-		}
-	}
-
-	return result
-}
-
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
