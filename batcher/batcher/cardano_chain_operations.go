@@ -275,8 +275,10 @@ func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...stri
 			for _, token := range utxo.Output.Tokens {
 				if token.TokenName() != t {
 					isValid = false
+
 					break
 				}
+
 				isValid = true
 			}
 		}
