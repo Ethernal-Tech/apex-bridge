@@ -320,3 +320,48 @@ func Test_LoadTrackerConfig(t *testing.T) {
 		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsReceiverMock, logger))
 	})
 }
+
+func Test_executeIsTrackerAlive(t *testing.T) {
+	indexerDB := &core.EventStoreMock{}
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	defer cancelFunc()
+
+	co := &EthChainObserverImpl{
+		indexerDB: indexerDB,
+		ctx:       ctx,
+		trackerConfig: &eventTracker.EventTrackerConfig{
+			RPCEndpoint:     ethNodeURL,
+			EventSubscriber: confirmedEventHandler{},
+		},
+		logger: hclog.NewNullLogger(),
+	}
+
+	t.Run("everything is normal", func(t *testing.T) {
+		indexerDB.On("GetLastProcessedBlock").Return(uint64(1), nil).Once()
+
+		co.executeIsTrackerAlive(time.Millisecond)
+
+		require.False(t, co.trackerClosed)
+	})
+
+	t.Run("restart required", func(t *testing.T) {
+		indexerDB.On("GetLastProcessedBlock").Return(uint64(2), nil).Twice()
+
+		co.lastBlock = 2
+
+		co.executeIsTrackerAlive(time.Millisecond)
+
+		require.False(t, co.trackerClosed)
+	})
+
+	t.Run("already closed", func(t *testing.T) {
+		co.trackerClosed = true
+
+		co.executeIsTrackerAlive(time.Millisecond)
+
+		require.True(t, co.trackerClosed)
+	})
+
+	indexerDB.AssertExpectations(t)
+}

@@ -74,7 +74,7 @@ func (co *EthChainObserverImpl) Start() error {
 			case <-co.ctx.Done():
 				return
 			case <-time.After(co.config.RestartTrackerPullCheck):
-				co.executeIsTrackerAlive()
+				co.executeIsTrackerAlive(restartTrackerWaitTime)
 			}
 		}
 	}()
@@ -99,16 +99,22 @@ func (co *EthChainObserverImpl) GetConfig() *oCore.EthChainConfig {
 	return co.config
 }
 
-func (co *EthChainObserverImpl) executeIsTrackerAlive() {
+func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime time.Duration) {
+	co.lastBlockLock.Lock()
+	defer co.lastBlockLock.Unlock()
+
+	if co.trackerClosed {
+		co.logger.Debug("eth tracker is already closed")
+
+		return
+	}
+
 	block, err := co.indexerDB.GetLastProcessedBlock()
 	if err != nil {
 		co.logger.Warn("failed to retrieve last processed eth block from eth tracker: %w")
 
 		return
 	}
-
-	co.lastBlockLock.Lock()
-	defer co.lastBlockLock.Unlock()
 
 	// everything is ok, tracker block is greater then previous saved
 	if block > co.lastBlock {
@@ -117,11 +123,11 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive() {
 		return
 	}
 
-	// close only if not already closed
-	if !co.trackerClosed {
-		co.trackerClosed = true
-
+	// close only if there is tracker to close
+	if co.tracker != nil {
 		co.tracker.Close()
+
+		co.tracker = nil
 	}
 
 	// wait some time before restart
@@ -145,7 +151,6 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive() {
 	}
 
 	co.tracker = ethTracker
-	co.trackerClosed = false
 }
 
 func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
