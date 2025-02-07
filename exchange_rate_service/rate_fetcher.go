@@ -42,6 +42,7 @@ func (r *RateFetcher) FetchRateByExchange(exchange core.ExchangeProvider) error 
 			if err != nil {
 				return fmt.Errorf("error fetching rate from %d: %w", exchange, err)
 			}
+
 			fmt.Printf("Fetched rate from %d: %f\n", exchange, rate)
 		}
 	}
