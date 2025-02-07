@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const restartTrackerWaitTime = time.Second * 30
+
 type EthChainObserverImpl struct {
 	ctx           context.Context
 	config        *oCore.EthChainConfig
@@ -115,10 +117,18 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive() {
 		return
 	}
 
+	// close only if not already closed
 	if !co.trackerClosed {
 		co.trackerClosed = true
 
 		co.tracker.Close()
+	}
+
+	// wait some time before restart
+	select {
+	case <-co.ctx.Done():
+		return
+	case <-time.After(restartTrackerWaitTime):
 	}
 
 	ethTracker, err := eventTracker.NewEventTracker(co.trackerConfig, co.indexerDB, block)
