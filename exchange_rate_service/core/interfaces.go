@@ -1,5 +1,5 @@
 package core
 
 type ExchangeRateFetcher interface {
-	FetchRate() (float64, error)
+	FetchRate(symbol string) (float64, error)
 }

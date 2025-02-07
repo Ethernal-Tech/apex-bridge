@@ -6,6 +6,6 @@ type Kraken struct{}
 
 var _ core.ExchangeRateFetcher = (*Kraken)(nil)
 
-func (k *Kraken) FetchRate() (float64, error) {
+func (k *Kraken) FetchRate(pair string) (float64, error) {
 	return 0, nil
 }
