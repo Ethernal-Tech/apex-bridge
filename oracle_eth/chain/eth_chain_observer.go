@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -16,10 +17,15 @@ import (
 )
 
 type EthChainObserverImpl struct {
-	ctx     context.Context
-	config  *oCore.EthChainConfig
-	tracker *eventTracker.EventTracker
-	logger  hclog.Logger
+	ctx           context.Context
+	config        *oCore.EthChainConfig
+	tracker       *eventTracker.EventTracker
+	indexerDB     eventTrackerStore.EventTrackerStore
+	lastBlockLock sync.Mutex
+	lastBlock     uint64
+	trackerClosed bool
+	trackerConfig *eventTracker.EventTrackerConfig
+	logger        hclog.Logger
 }
 
 var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
@@ -45,10 +51,12 @@ func NewEthChainObserver(
 	}
 
 	return &EthChainObserverImpl{
-		ctx:     ctx,
-		logger:  logger,
-		config:  config,
-		tracker: ethTracker,
+		ctx:           ctx,
+		config:        config,
+		tracker:       ethTracker,
+		indexerDB:     indexerDB,
+		trackerConfig: trackerConfig,
+		logger:        logger,
 	}, nil
 }
 
@@ -57,17 +65,77 @@ func (co *EthChainObserverImpl) Start() error {
 		return err
 	}
 
+	// restart tracker if it is not alive
+	go func() {
+		for {
+			select {
+			case <-co.ctx.Done():
+				return
+			case <-time.After(co.config.RestartTrackerPullCheck):
+				co.executeIsTrackerAlive()
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (co *EthChainObserverImpl) Dispose() error {
-	co.tracker.Close()
+	co.lastBlockLock.Lock()
+	defer co.lastBlockLock.Unlock()
+
+	if !co.trackerClosed {
+		co.trackerClosed = true
+
+		co.tracker.Close()
+	}
 
 	return nil
 }
 
 func (co *EthChainObserverImpl) GetConfig() *oCore.EthChainConfig {
 	return co.config
+}
+
+func (co *EthChainObserverImpl) executeIsTrackerAlive() {
+	block, err := co.indexerDB.GetLastProcessedBlock()
+	if err != nil {
+		co.logger.Warn("failed to retrieve last processed eth block from eth tracker: %w")
+
+		return
+	}
+
+	co.lastBlockLock.Lock()
+	defer co.lastBlockLock.Unlock()
+
+	// everything is ok, tracker block is greater then previous saved
+	if block > co.lastBlock {
+		co.lastBlock = block
+
+		return
+	}
+
+	if !co.trackerClosed {
+		co.trackerClosed = true
+
+		co.tracker.Close()
+	}
+
+	ethTracker, err := eventTracker.NewEventTracker(co.trackerConfig, co.indexerDB, block)
+	if err != nil {
+		co.logger.Warn("failed to create new eth block tracker: %w")
+
+		return
+	}
+
+	if err := ethTracker.Start(); err != nil {
+		co.logger.Warn("failed to restart eth block tracker: %w")
+
+		return
+	}
+
+	co.tracker = ethTracker
+	co.trackerClosed = false
 }
 
 func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
