@@ -148,10 +148,6 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 }
 
 func HotWalletIncrementClaimsString(c HotWalletIncrementClaim) string {
-	if !c.IsIncrement {
-		return fmt.Sprintf("(%s, -%s)", common.ToStrChainID(c.ChainId), c.Amount)
-	}
-
 	return fmt.Sprintf("(%s, %s)", common.ToStrChainID(c.ChainId), c.Amount)
 }
 

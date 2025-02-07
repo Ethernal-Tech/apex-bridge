@@ -14,11 +14,13 @@ import (
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
 const (
+	messageToSign   = "Hello world of apex-bridge:"
 	defaultGasLimit = 5_242_880
 
 	validatorDataDirFlag          = "validator-data-dir"
@@ -162,13 +164,25 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 
 func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	var (
-		validatorChainData eth.ValidatorChainData
-		ctx                = context.Background()
+		validatorChainData              eth.ValidatorChainData
+		signatureMultisig, signatureFee []byte
+		ctx                             = context.Background()
 	)
 
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+	}
+
+	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load blade wallet: %w", err)
+	}
+
+	messageHash, err := common.Keccak256(
+		append([]byte(messageToSign), walletEth.GetAddress().Bytes()...))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create message hash: %w", err)
 	}
 
 	switch ip.chainType {
@@ -182,6 +196,17 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		validatorChainData.Key[1] = new(big.Int).SetBytes(walletCardano.MultiSigFee.VerificationKey)
 		validatorChainData.Key[2] = new(big.Int)
 		validatorChainData.Key[3] = new(big.Int)
+
+		signatureMultisig, err = walletCardano.MultiSig.SignTransaction(messageHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create multisig signature: %w", err)
+		}
+
+		signatureFee, err = walletCardano.MultiSigFee.SignTransaction(messageHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create fee signature: %w", err)
+		}
+
 	case common.ChainTypeEVM:
 		privateKey, err := eth.GetBatcherEVMPrivateKey(secretsManager, ip.chainID)
 		if err != nil {
@@ -193,13 +218,19 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		validatorChainData.Key[1] = bigInts[1]
 		validatorChainData.Key[2] = bigInts[2]
 		validatorChainData.Key[3] = bigInts[3]
+
+		sign, err := privateKey.Sign(messageHash, eth.BN256Domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create signature: %w", err)
+		}
+
+		signatureMultisig, err = sign.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create serialized signature: %w", err)
+		}
+
 	default:
 		return nil, fmt.Errorf("chain type does not exist: %d", ip.chainType)
-	}
-
-	walletEth, err := ethtxhelper.NewEthTxWalletFromSecretManager(secretsManager)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load blade wallet: %w", err)
 	}
 
 	initialTokenSupply, _ := new(big.Int).SetString(ip.initialTokenSupply, 0)
@@ -226,7 +257,9 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 					ip.chainType,
 					initialTokenSupply,
 					initialWrappedTokenSupply,
-					validatorChainData)
+					validatorChainData,
+					signatureMultisig,
+					signatureFee)
 			})
 	})
 	if err != nil {
@@ -247,4 +280,16 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		chainID:   ip.chainID,
 		blockHash: receipt.BlockHash.String(),
 	}, nil
+}
+
+func createMessage(msg string, addr ethcommon.Address) ([]byte, error) {
+	messageBytes := []byte(msg + string(addr.Bytes()))
+
+	messageHash, err := common.Keccak256(messageBytes)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create message hash: %w", err)
+	}
+
+	return messageHash, nil
 }
