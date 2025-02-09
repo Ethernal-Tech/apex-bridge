@@ -16,7 +16,15 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const restartTrackerWaitTime = time.Second * 30
+type ethChainObserverState byte
+
+const (
+	ethChainObserverStateDisposed ethChainObserverState = iota
+	ethChainObserverStateCreated
+	ethChainObserverStateFinished
+
+	restartTrackerWaitTime = time.Second * 30
+)
 
 type EthChainObserverImpl struct {
 	ctx           context.Context
@@ -25,7 +33,7 @@ type EthChainObserverImpl struct {
 	indexerDB     eventTrackerStore.EventTrackerStore
 	lastBlockLock sync.Mutex
 	lastBlock     uint64
-	trackerClosed bool
+	trackerState  ethChainObserverState
 	trackerConfig *eventTracker.EventTrackerConfig
 	logger        hclog.Logger
 }
@@ -58,6 +66,7 @@ func NewEthChainObserver(
 		tracker:       ethTracker,
 		indexerDB:     indexerDB,
 		trackerConfig: trackerConfig,
+		trackerState:  ethChainObserverStateCreated,
 		logger:        logger,
 	}, nil
 }
@@ -86,11 +95,11 @@ func (co *EthChainObserverImpl) Dispose() error {
 	co.lastBlockLock.Lock()
 	defer co.lastBlockLock.Unlock()
 
-	if !co.trackerClosed {
-		co.trackerClosed = true
-
+	if co.trackerState == ethChainObserverStateCreated {
 		co.tracker.Close()
 	}
+
+	co.trackerState = ethChainObserverStateFinished
 
 	return nil
 }
@@ -103,7 +112,7 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime tim
 	co.lastBlockLock.Lock()
 	defer co.lastBlockLock.Unlock()
 
-	if co.trackerClosed {
+	if co.trackerState == ethChainObserverStateFinished {
 		co.logger.Debug("eth tracker is already closed")
 
 		return
@@ -124,10 +133,10 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime tim
 	}
 
 	// close only if there is tracker to close
-	if co.tracker != nil {
+	if co.trackerState == ethChainObserverStateCreated {
 		co.tracker.Close()
 
-		co.tracker = nil
+		co.trackerState = ethChainObserverStateDisposed
 	}
 
 	// wait some time before restart
@@ -151,6 +160,7 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime tim
 	}
 
 	co.tracker = ethTracker
+	co.trackerState = ethChainObserverStateCreated
 }
 
 func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,

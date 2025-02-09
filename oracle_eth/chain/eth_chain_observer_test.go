@@ -327,14 +327,23 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 
 	defer cancelFunc()
 
+	trackerConfig := &eventTracker.EventTrackerConfig{
+		RPCEndpoint:     ethNodeURL,
+		EventSubscriber: confirmedEventHandler{},
+	}
+
+	indexerDB.On("GetLastProcessedBlock").Return(uint64(0), nil).Once()
+
+	tracker, err := eventTracker.NewEventTracker(trackerConfig, indexerDB, 0)
+	require.NoError(t, err)
+
 	co := &EthChainObserverImpl{
-		indexerDB: indexerDB,
-		ctx:       ctx,
-		trackerConfig: &eventTracker.EventTrackerConfig{
-			RPCEndpoint:     ethNodeURL,
-			EventSubscriber: confirmedEventHandler{},
-		},
-		logger: hclog.NewNullLogger(),
+		indexerDB:     indexerDB,
+		ctx:           ctx,
+		trackerConfig: trackerConfig,
+		trackerState:  ethChainObserverStateCreated,
+		tracker:       tracker,
+		logger:        hclog.NewNullLogger(),
 	}
 
 	t.Run("everything is normal", func(t *testing.T) {
@@ -342,7 +351,7 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 
 		co.executeIsTrackerAlive(time.Millisecond)
 
-		require.False(t, co.trackerClosed)
+		require.Equal(t, ethChainObserverStateCreated, co.trackerState)
 	})
 
 	t.Run("restart required", func(t *testing.T) {
@@ -352,16 +361,18 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 
 		co.executeIsTrackerAlive(time.Millisecond)
 
-		require.False(t, co.trackerClosed)
+		require.Equal(t, ethChainObserverStateCreated, co.trackerState)
 	})
 
 	t.Run("already closed", func(t *testing.T) {
-		co.trackerClosed = true
+		require.NoError(t, co.Dispose())
 
 		co.executeIsTrackerAlive(time.Millisecond)
 
-		require.True(t, co.trackerClosed)
+		require.Equal(t, ethChainObserverStateFinished, co.trackerState)
 	})
+
+	require.NoError(t, co.Dispose())
 
 	indexerDB.AssertExpectations(t)
 }
