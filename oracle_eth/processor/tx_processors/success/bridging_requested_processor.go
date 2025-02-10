@@ -147,6 +147,10 @@ func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
+	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {
+		return err
+	}
+
 	_, ethSrcConfig := oUtils.GetChainConfig(appConfig, tx.OriginChainID)
 	if ethSrcConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)

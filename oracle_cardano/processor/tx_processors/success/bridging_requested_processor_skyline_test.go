@@ -123,6 +123,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
