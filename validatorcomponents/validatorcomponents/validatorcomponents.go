@@ -211,7 +211,8 @@ func NewValidatorComponents(
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
 		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
-		telemetryWorker: NewTelemetryWorker(ethHelper, cardanoIndexerDbs, ethIndexerDbs,
+		telemetryWorker: NewTelemetryWorker(
+			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger: logger,
 	}, nil

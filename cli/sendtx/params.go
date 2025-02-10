@@ -59,6 +59,7 @@ const (
 	gasLimitMultiplier       = 1.6
 	amountCheckRetryWaitTime = time.Second * 5
 	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
+	potentialFee             = 500_000
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -370,10 +371,12 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				TTLSlotNumberInc:     ttlSlotNumberInc,
 				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
 				MinUtxoValue:         common.MinUtxoAmountDefault,
+				PotentialFee:         potentialFee,
 			},
 			ip.chainIDDst: {
 				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
+				PotentialFee:         potentialFee,
 			},
 		},
 	)
