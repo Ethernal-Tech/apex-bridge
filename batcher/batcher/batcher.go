@@ -141,7 +141,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		"txHash", generatedBatchData.TxHash, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
-	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
+	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)

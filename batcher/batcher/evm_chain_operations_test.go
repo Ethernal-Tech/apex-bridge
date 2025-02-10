@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -96,7 +97,7 @@ func TestEthChain_SignBatchTransaction(t *testing.T) {
 			logger:     hclog.NewNullLogger(),
 		}
 
-		bytes, _, err := ops.SignBatchTransaction(hash)
+		bytes, _, err := ops.SignBatchTransaction(&core.GeneratedBatchTxData{TxHash: hash})
 		require.NoError(t, err)
 
 		require.Equal(t, expected, hex.EncodeToString(bytes))

@@ -24,6 +24,7 @@ import (
 
 const (
 	privateKeyFlag      = "key"
+	stakePrivateKeyFlag = "stake-key"
 	ogmiosURLSrcFlag    = "ogmios-src"
 	receiverFlag        = "receiver"
 	networkIDSrcFlag    = "network-id-src"
@@ -37,7 +38,8 @@ const (
 	gatewayAddressFlag  = "gateway-addr"
 	nexusURLFlag        = "nexus-url"
 
-	privateKeyFlagDesc      = "wallet private signing key"
+	privateKeyFlagDesc      = "wallet payment signing key"
+	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
 	receiverFlagDesc        = "receiver addr:amount"
 	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
@@ -99,11 +101,12 @@ type sendTxParams struct {
 	txType string // cardano or evm
 
 	// common
-	privateKeyRaw string
-	receivers     []string
-	chainIDSrc    string
-	chainIDDst    string
-	feeString     string
+	privateKeyRaw      string
+	stakePrivateKeyRaw string
+	receivers          []string
+	chainIDSrc         string
+	chainIDDst         string
+	feeString          string
 
 	// apex
 	ogmiosURLSrc    string
@@ -171,7 +174,15 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 		}
 
-		ip.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+		var stakeBytes []byte
+		if len(ip.stakePrivateKeyRaw) > 0 {
+			stakeBytes, err = getCardanoPrivateKeyBytes(ip.stakePrivateKeyRaw)
+			if err != nil {
+				return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, ip.stakePrivateKeyRaw)
+			}
+		}
+
+		ip.wallet = cardanowallet.NewWallet(bytes, stakeBytes)
 
 		if !common.IsValidHTTPURL(ip.ogmiosURLSrc) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, ip.ogmiosURLSrc)
@@ -240,6 +251,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		privateKeyFlag,
 		"",
 		privateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.stakePrivateKeyRaw,
+		stakePrivateKeyFlag,
+		"",
+		stakePrivateKeyFlagDesc,
 	)
 
 	cmd.Flags().StringArrayVar(
@@ -572,7 +590,7 @@ func getCardanoPrivateKeyBytes(str string) ([]byte, error) {
 	if err != nil {
 		bytes, err = hex.DecodeString(str)
 		if err != nil {
-			return nil, fmt.Errorf("invalid --%s value %s", privateKeyFlag, str)
+			return nil, err
 		}
 
 		bytes = cardanowallet.PadKeyToSize(bytes)

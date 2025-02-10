@@ -193,6 +193,7 @@ $ apex-bridge sendtx \
         --receiver vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
         --fee 1_100_000
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the vector to the prime
 ```shell
@@ -208,6 +209,7 @@ $ apex-bridge sendtx \
         --fee 1_100_000 \
         --network-id-src 2
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the prime to the nexus
 ```shell
@@ -221,8 +223,8 @@ $ apex-bridge sendtx \
         --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c
-
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a transaction from the nexus to the prime
 ```shell
@@ -237,6 +239,7 @@ $ apex-bridge sendtx \
         --fee 1000010000000000000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
+- there is an optional `--stake-key` flag
 
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
@@ -282,6 +285,8 @@ $ apex-bridge deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+- optional `--min-fee`, min-fee value can be specified for the Gateway contract
+- optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 
 # How to upgrade bridge/gateway contracts
 ```shell
@@ -309,6 +314,15 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+
+```shell
+$ apex/bridge bridge-admin set-min-amounts \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --contract-addr 0xeefcd00000000000000000000000000000000013
+        --min-fee 200 \
+        --min-bridging-amount 100 
 ```
 
 ```shell
