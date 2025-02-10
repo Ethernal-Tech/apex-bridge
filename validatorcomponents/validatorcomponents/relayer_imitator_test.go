@@ -39,7 +39,6 @@ func TestRelayerImitator(t *testing.T) {
 		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to retrieve confirmed batch")
 	})
 
@@ -57,7 +56,6 @@ func TestRelayerImitator(t *testing.T) {
 		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get last submitted batch id from db")
 	})
 
@@ -92,18 +90,24 @@ func TestRelayerImitator(t *testing.T) {
 		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "last submitted batch id greater than received")
 	})
 
 	t.Run("execute 5", func(t *testing.T) {
+		txs := []eth.TxDataInfo{
+			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntPrime},
+		}
+		stateKeys := []common.BridgingRequestStateKey{
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x1")),
+		}
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination").Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
@@ -112,18 +116,24 @@ func TestRelayerImitator(t *testing.T) {
 		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
 	})
 
 	t.Run("execute 6", func(t *testing.T) {
+		txs := []eth.TxDataInfo{
+			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
+		}
+		stateKeys := []common.BridgingRequestStateKey{
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
+		}
 		ctx := context.Background()
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination").Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
@@ -132,18 +142,24 @@ func TestRelayerImitator(t *testing.T) {
 		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
 	})
 
 	t.Run("execute 7", func(t *testing.T) {
 		ctx := context.Background()
+		txs := []eth.TxDataInfo{
+			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
+		}
+		stateKeys := []common.BridgingRequestStateKey{
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
+		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination").Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
@@ -157,12 +173,21 @@ func TestRelayerImitator(t *testing.T) {
 
 	t.Run("execute 8", func(t *testing.T) {
 		ctx := context.Background()
+		txs := []eth.TxDataInfo{
+			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
+			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntVector},
+		}
+		stateKeys := []common.BridgingRequestStateKey{
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, common.NewHashFromHexString("0x1")),
+		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
-		brsUpdater.On("SubmittedToDestination").Return(nil)
+		brsUpdater.On("SubmittedToDestination", stateKeys, chainID).Return(nil)
 
 		bsc := &eth.BridgeSmartContractMock{}
 		bsc.On("GetConfirmedBatch", ctx, chainID).Return(&eth.ConfirmedBatch{ID: 2}, nil)
+		bsc.On("GetBatchTransactions", ctx, chainID, uint64(2)).Return(txs, nil)
 
 		db := &relayerDb.DBMock{}
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)

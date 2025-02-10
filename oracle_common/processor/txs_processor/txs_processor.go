@@ -139,6 +139,8 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 			events.BatchExecutionInfo = batchTxs
 			p.stateProcessor.ProcessSubmitClaimsEvents(events, bridgeClaims)
 		}
+
+		p.updateBridgingStateForBatch(batchTxs, p.bridgingRequestStateUpdater)
 	}
 
 	p.stateProcessor.UpdateBridgingRequestStates(bridgeClaims, p.bridgingRequestStateUpdater)
@@ -148,7 +150,7 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	claims *core.BridgeClaims,
 ) (result []*core.DBBatchInfoEvent, err error) {
-	addInfo := func(chainIDInt uint8, batchID uint64, isFailedClaim bool) error {
+	addInfo := func(batchID uint64, chainIDInt uint8, txHash [32]byte, isFailedClaim bool) error {
 		chainID := common.ToStrChainID(chainIDInt)
 
 		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
@@ -172,19 +174,20 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 			filteredTxs = append(filteredTxs, tx)
 		}
 
-		result = append(result, core.NewDBBatchInfoEvent(chainIDInt, batchID, isFailedClaim, filteredTxs))
+		result = append(result, core.NewDBBatchInfoEvent(
+			batchID, chainIDInt, txHash, isFailedClaim, filteredTxs))
 
 		return nil
 	}
 
 	for _, x := range claims.BatchExecutedClaims {
-		if err := addInfo(x.ChainId, x.BatchNonceId, false); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, false); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, x := range claims.BatchExecutionFailedClaims {
-		if err := addInfo(x.ChainId, x.BatchNonceId, true); err != nil {
+		if err := addInfo(x.BatchNonceId, x.ChainId, x.ObservedTransactionHash, true); err != nil {
 			return nil, err
 		}
 	}
@@ -274,4 +277,34 @@ func (p *TxsProcessorImpl) extractEventsFromReceipt(receipt *types.Receipt) (*co
 	}
 
 	return events, nil
+}
+
+func (p *TxsProcessorImpl) updateBridgingStateForBatch(
+	batchInfoEvents []*core.DBBatchInfoEvent,
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+) {
+	var err error
+
+	for _, event := range batchInfoEvents {
+		stateKeys := make([]common.BridgingRequestStateKey, len(event.TxHashes))
+		for i, x := range event.TxHashes {
+			stateKeys[i] = common.NewBridgingRequestStateKey(
+				common.ToStrChainID(x.SourceChainID), x.ObservedTransactionHash)
+		}
+
+		dstChainID := common.ToStrChainID(event.DstChainID)
+
+		if event.IsFailedClaim {
+			err = bridgingRequestStateUpdater.FailedToExecuteOnDestination(stateKeys, dstChainID)
+		} else {
+			err = bridgingRequestStateUpdater.ExecutedOnDestination(stateKeys, event.DstTxHash, dstChainID)
+		}
+
+		if err != nil {
+			p.logger.Error(
+				"error while updating bridging request states",
+				"dstChainId", dstChainID, "batchId", event.BatchID,
+				"isFailedClaim", event.IsFailedClaim, "dstTxHash", event.DstTxHash, "err", err)
+		}
+	}
 }

@@ -562,51 +562,21 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		}
 
 		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
-			notRejected := notRejectedMap[string(core.ToCardanoTxKey(
-				common.ToStrChainID(brClaim.SourceChainId), brClaim.ObservedTransactionHash))]
-			if notRejected {
-				err := bridgingRequestStateUpdater.SubmittedToBridge(common.BridgingRequestStateKey{
-					SourceChainID: common.ToStrChainID(brClaim.SourceChainId),
-					SourceTxHash:  brClaim.ObservedTransactionHash,
-				}, common.ToStrChainID(brClaim.DestinationChainId))
+			srcChainID := common.ToStrChainID(brClaim.SourceChainId)
+			key := core.ToCardanoTxKey(srcChainID, brClaim.ObservedTransactionHash)
 
-				if err != nil {
-					sp.logger.Error(
-						"error while updating a bridging request state to SubmittedToBridge",
-						"sourceChainId", common.ToStrChainID(brClaim.SourceChainId),
-						"sourceTxHash", brClaim.ObservedTransactionHash, "err", err)
-				}
+			if !notRejectedMap[string(key)] {
+				continue
 			}
-		}
-	}
 
-	if len(bridgeClaims.BatchExecutedClaims) > 0 {
-		for _, beClaim := range bridgeClaims.BatchExecutedClaims {
-			err := bridgingRequestStateUpdater.ExecutedOnDestination(
-				common.ToStrChainID(beClaim.ChainId),
-				beClaim.BatchNonceId,
-				beClaim.ObservedTransactionHash)
+			err := bridgingRequestStateUpdater.SubmittedToBridge(
+				common.NewBridgingRequestStateKey(srcChainID, brClaim.ObservedTransactionHash),
+				common.ToStrChainID(brClaim.DestinationChainId))
 
 			if err != nil {
 				sp.logger.Error(
-					"error while updating bridging request states to ExecutedOnDestination",
-					"destinationChainId", common.ToStrChainID(beClaim.ChainId), "batchId", beClaim.BatchNonceId,
-					"destinationTxHash", beClaim.ObservedTransactionHash, "err", err)
-			}
-		}
-	}
-
-	if len(bridgeClaims.BatchExecutionFailedClaims) > 0 {
-		for _, befClaim := range bridgeClaims.BatchExecutionFailedClaims {
-			err := bridgingRequestStateUpdater.FailedToExecuteOnDestination(
-				common.ToStrChainID(befClaim.ChainId),
-				befClaim.BatchNonceId)
-
-			if err != nil {
-				sp.logger.Error(
-					"error while updating bridging request states to FailedToExecuteOnDestination",
-					"destinationChainId", common.ToStrChainID(befClaim.ChainId),
-					"batchId", befClaim.BatchNonceId, "err", err)
+					"error while updating a bridging request state to SubmittedToBridge",
+					"srcChainId", srcChainID, "srcTxHash", brClaim.ObservedTransactionHash, "err", err)
 			}
 		}
 	}
@@ -616,16 +586,14 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
 		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
-			err := bridgingRequestStateUpdater.Invalid(common.BridgingRequestStateKey{
-				SourceChainID: tx.OriginChainID,
-				SourceTxHash:  common.Hash(tx.Hash),
-			})
+			err := bridgingRequestStateUpdater.Invalid(common.NewBridgingRequestStateKey(
+				tx.OriginChainID, common.Hash(tx.Hash)))
 
 			if err != nil {
 				sp.logger.Error(
 					"error while updating a bridging request state to Invalid",
-					"sourceChainId", tx.OriginChainID,
-					"sourceTxHash", tx.Hash, "err", err)
+					"srcChainId", tx.OriginChainID,
+					"srcTxHash", tx.Hash, "err", err)
 			}
 		}
 	}
