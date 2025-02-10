@@ -7,6 +7,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/core"
 	"github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/fetchers"
+	"github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/model"
 )
 
 type RateFetcher struct {
@@ -38,7 +39,7 @@ func (r *RateFetcher) FetchRateByExchange(exchange core.ExchangeProvider) error 
 		case <-r.ctx.Done():
 			return nil
 		case <-ticker.C:
-			rate, err := fetcher.FetchRate("ADAUSDT")
+			rate, err := fetcher.FetchRate(model.FetchRateParams{Symbol: "ADA", Currency: "USD"})
 			if err != nil {
 				return fmt.Errorf("error fetching rate from %d: %w", exchange, err)
 			}

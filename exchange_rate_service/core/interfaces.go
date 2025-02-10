@@ -1,5 +1,7 @@
 package core
 
+import "github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/model"
+
 type ExchangeRateFetcher interface {
-	FetchRate(symbol string) (float64, error)
+	FetchRate(params model.FetchRateParams) (float64, error)
 }
