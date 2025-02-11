@@ -198,7 +198,7 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Validators initialization transaction has been sent. Waiting for the receipts..."))
+	_, _ = outputter.Write([]byte("setValidatorsChainData transaction has been sent. Waiting for the receipts..."))
 	outputter.WriteOutput()
 
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, setValidatorsChainDataTx.Hash().String())
