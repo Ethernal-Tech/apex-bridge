@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -270,4 +273,32 @@ func GetDfmAmount(chainID string, amount *big.Int) *big.Int {
 	default:
 		return amount
 	}
+}
+
+func HTTPGet[T any](ctx context.Context, requestURL string) (t T, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return t, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return t, err
+	} else if resp.StatusCode != http.StatusOK {
+		return t, fmt.Errorf("http status for %s code is %d", requestURL, resp.StatusCode)
+	}
+
+	resBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return t, err
+	}
+
+	var responseModel T
+
+	err = json.Unmarshal(resBody, &responseModel)
+	if err != nil {
+		return t, err
+	}
+
+	return responseModel, nil
 }
