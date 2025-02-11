@@ -31,7 +31,7 @@ func NewRateFetcher(config *core.ExchangeRateServiceConfig) *RateFetcher {
 	}
 }
 
-func (r *RateFetcher) FetchRateByExchange(exchange core.ExchangeProvider, ctx context.Context) error {
+func (r *RateFetcher) FetchRateByExchange(ctx context.Context, exchange core.ExchangeProvider) error {
 	fetcher, exists := r.fetchers[exchange]
 	if !exists {
 		return fmt.Errorf("unsupported exchange: %d", exchange)
@@ -42,7 +42,7 @@ func (r *RateFetcher) FetchRateByExchange(exchange core.ExchangeProvider, ctx co
 		case <-ctx.Done():
 			return nil
 		case <-time.After(5 * time.Second):
-			rate, err := fetcher.FetchRate(model.FetchRateParams{Base: USDT, Currency: ADA})
+			rate, err := fetcher.FetchRate(ctx, model.FetchRateParams{Base: USDT, Currency: ADA})
 			if err != nil {
 				return fmt.Errorf("error fetching rate from %d: %w", exchange, err)
 			}
