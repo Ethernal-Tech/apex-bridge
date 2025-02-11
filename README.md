@@ -230,7 +230,6 @@ $ apex-bridge deploy-evm \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
-        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
 -- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
 Example with explicit bls keys:
@@ -261,6 +260,33 @@ $ apex-bridge deploy-evm upgrade \
 ```
 - optional `--dynamic-tx`
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+
+# How to Set validators data on Nexus Smart Contracts
+Default example (bls keys are retrieved from bridge):
+```shell
+$ apex-bridge deploy-evm set-validators-chain-data \
+        --url http://127.0.0.1:12001 \
+        --key NEXUS_OR_EVM_PRIVATE_KEY \
+        --dir /tmp \
+        --clone \
+        --bridge-url http://127.0.0.1:12013 \
+        --bridge-addr 0xABEF000000000000000000000000000000000000 \
+        --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
+```
+
+Example with explicit bls keys:
+```shell
+$ apex-bridge deploy-evm set-validators-chain-data \
+        --url http://127.0.0.1:12001 \
+        --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
+        --dir /tmp \
+        --clone \
+        --bls-key 0x.... \
+        --bls-key 0x.... \
+        --bls-key 0x.... \
+        --bls-key 0x.... \
+        --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
+```
 
 # Bridge admin commands
 ```shell
