@@ -16,7 +16,7 @@ type Kraken struct{}
 var _ core.ExchangeRateFetcher = (*Kraken)(nil)
 
 func (k *Kraken) FetchRate(params model.FetchRateParams) (float64, error) {
-	pair := params.Symbol + params.Currency
+	pair := params.Currency + params.Base
 	url := fmt.Sprintf("https://api.kraken.com/0/public/Ticker?pair=%s", pair)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(url)

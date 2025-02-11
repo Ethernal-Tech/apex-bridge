@@ -1,6 +1,6 @@
 package model
 
 type FetchRateParams struct {
-	Symbol   string
+	Base     string
 	Currency string
 }

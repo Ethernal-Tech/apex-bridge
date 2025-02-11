@@ -16,7 +16,7 @@ type BinanceFetcher struct{}
 var _ core.ExchangeRateFetcher = (*BinanceFetcher)(nil)
 
 func (b *BinanceFetcher) FetchRate(params model.FetchRateParams) (float64, error) {
-	pair := params.Symbol + params.Currency
+	pair := params.Currency + params.Base
 	url := fmt.Sprintf("https://api.binance.com/api/v3/ticker/price?symbol=%s", pair)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(url)
