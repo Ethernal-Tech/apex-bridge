@@ -287,7 +287,6 @@ func createMessage(msg string, addr ethcommon.Address) ([]byte, error) {
 	messageBytes := []byte(msg + string(addr.Bytes()))
 
 	messageHash, err := common.Keccak256(messageBytes)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message hash: %w", err)
 	}

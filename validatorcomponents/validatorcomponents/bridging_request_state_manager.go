@@ -69,7 +69,9 @@ func (m *BridgingRequestStateManagerImpl) Invalid(key common.BridgingRequestStat
 		if err := state.IsTransitionPossible(core.BridgingRequestStatusInvalidRequest); err != nil {
 			return err
 		}
+
 		state.ToInvalidRequest()
+
 		return nil
 	})
 }
@@ -82,10 +84,13 @@ func (m *BridgingRequestStateManagerImpl) SubmittedToBridge(
 		if err := state.UpdateDestChainID(dstChainID); err != nil {
 			return err
 		}
+
 		if err := state.IsTransitionPossible(core.BridgingRequestStatusSubmittedToBridge); err != nil {
 			return err
 		}
+
 		state.ToSubmittedToBridge()
+
 		return nil
 	})
 }
@@ -207,40 +212,6 @@ func (m *BridgingRequestStateManagerImpl) GetMultiple(
 	}
 
 	return result, nil
-}
-
-func (m *BridgingRequestStateManagerImpl) updateStateByKey(
-	key common.BridgingRequestStateKey, updateState func(state *core.BridgingRequestState) error,
-) error {
-	state, err := m.db.GetBridgingRequestState(key.SourceChainID, key.SourceTxHash)
-	if err != nil {
-		return fmt.Errorf("failed to get BridgingRequestState from db (%s, %s): %w",
-			key.SourceChainID, key.SourceTxHash, err)
-	}
-
-	if state == nil {
-		return fmt.Errorf("trying to get a non-existent BridgingRequestState (%s, %s)",
-			key.SourceChainID, key.SourceTxHash)
-	}
-
-	oldStatus := state.Status
-
-	err = updateState(state)
-	if err != nil {
-		return fmt.Errorf("failed to update a BridgingRequestState (%s, %s): %w",
-			key.SourceChainID, key.SourceTxHash, err)
-	}
-
-	err = m.db.UpdateBridgingRequestState(state)
-	if err != nil {
-		return fmt.Errorf("failed to save updated BridgingRequestState (%s, %s): %w",
-			key.SourceChainID, key.SourceTxHash, err)
-	} else {
-		m.logger.Debug("Updated BridgingRequestState", "sourceChainID", state.SourceChainID,
-			"sourceTxHash", state.SourceTxHash, "Old Status", oldStatus, "New Status", state.Status)
-	}
-
-	return nil
 }
 
 func (m *BridgingRequestStateManagerImpl) updateStates(
