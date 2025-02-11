@@ -6,7 +6,7 @@ const (
 	Binance ExchangeProvider = iota
 	Kraken
 	KuCoin
-	DummyExchange
+	Dummy
 )
 
 func (e ExchangeProvider) String() string {
@@ -17,8 +17,8 @@ func (e ExchangeProvider) String() string {
 		return "Kraken"
 	case KuCoin:
 		return "KuCoin"
-	case DummyExchange:
-		return "DummyExchange"
+	case Dummy:
+		return "Dummy"
 	default:
 		return "Unknown"
 	}

@@ -11,11 +11,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/model"
 )
 
-type Kraken struct{}
+type KrakenFetcher struct{}
 
-var _ core.ExchangeRateFetcher = (*Kraken)(nil)
+var _ core.ExchangeRateFetcher = (*KrakenFetcher)(nil)
 
-func (k *Kraken) FetchRate(params model.FetchRateParams) (float64, error) {
+func (k *KrakenFetcher) FetchRate(params model.FetchRateParams) (float64, error) {
 	pair := params.Currency + params.Base
 	url := fmt.Sprintf("https://api.kraken.com/0/public/Ticker?pair=%s", pair)
 	client := &http.Client{Timeout: 10 * time.Second}

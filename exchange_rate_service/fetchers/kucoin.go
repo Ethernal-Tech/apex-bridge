@@ -11,11 +11,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/exchange_rate_service/model"
 )
 
-type KuCoin struct{}
+type KuCoinFetcher struct{}
 
-var _ core.ExchangeRateFetcher = (*KuCoin)(nil)
+var _ core.ExchangeRateFetcher = (*KuCoinFetcher)(nil)
 
-func (k *KuCoin) FetchRate(params model.FetchRateParams) (float64, error) {
+func (k *KuCoinFetcher) FetchRate(params model.FetchRateParams) (float64, error) {
 	url := fmt.Sprintf("https://api.kucoin.com/api/v1/prices?base=%s&currencies=%s", params.Base, params.Currency)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(url)
