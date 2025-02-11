@@ -128,6 +128,6 @@ func (m *BridgeSmartContractMock) GetBatchTransactions(
 ) ([]TxDataInfo, error) {
 	args := m.Called(ctx, chainID, batchID)
 	result, _ := args.Get(0).([]TxDataInfo)
-	
+
 	return result, args.Error(1)
 }
