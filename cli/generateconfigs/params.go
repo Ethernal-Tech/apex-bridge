@@ -679,6 +679,7 @@ func (p *generateConfigsParams) Execute(
 				DynamicTx:               true,
 				NonceStrategy:           ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
+				RestartTrackerPullCheck: time.Second * 150,
 			},
 		},
 		Bridge: oCore.BridgeConfig{

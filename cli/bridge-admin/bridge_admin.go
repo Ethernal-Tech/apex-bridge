@@ -10,6 +10,7 @@ var (
 	updateChainTokenQuantityParamsData = &updateChainTokenQuantityParams{}
 	defundParamsData                   = &defundParams{}
 	setAdditionalDataParamsData        = &setAdditionalDataParams{}
+	setMinAmountsParamsData            = &setMinAmountsParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -45,18 +46,33 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(setAdditionalDataParamsData),
 	}
+	setMinAmountsCmd := &cobra.Command{
+		Use:   "set-min-amounts",
+		Short: "sets minimal amounts for fee and bridging",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return setMinAmountsParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(setMinAmountsParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
 	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
+	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
 		Short: "bridge admin functions",
 	}
 
-	cmd.AddCommand(getChainTokenQuantityCmd, updateChainTokenQuantityCmd, defundCmd, setAdditionalDataCmd)
+	cmd.AddCommand(
+		getChainTokenQuantityCmd,
+		updateChainTokenQuantityCmd,
+		defundCmd,
+		setAdditionalDataCmd,
+		setMinAmountsCmd,
+	)
 
 	return cmd
 }

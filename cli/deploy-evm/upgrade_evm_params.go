@@ -103,7 +103,8 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		&ip.contracts,
 		contractFlag,
 		nil,
-		contractFlagDesc)
+		contractFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&ip.repositoryURL,

@@ -11,7 +11,7 @@ func TestBridgingRequestState(t *testing.T) {
 	const chainID = common.ChainIDStrPrime
 
 	txHash := common.Hash{1, 88, 208}
-	destinationTxHash := common.NewHashFromHexString("0xFF")
+	dstTxHash := common.NewHashFromHexString("0xFF")
 
 	t.Run("NewBridgingRequestState", func(t *testing.T) {
 		state := NewBridgingRequestState(chainID, txHash)
@@ -21,270 +21,69 @@ func TestBridgingRequestState(t *testing.T) {
 		require.Equal(t, BridgingRequestStatusDiscoveredOnSource, state.Status)
 	})
 
-	t.Run("state changes from BridgingRequestStatusDiscoveredOnSource", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		require.NotNil(t, state)
-
-		err := state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusIncludedInBatch, state.Status)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		require.NotNil(t, state)
-
-		err = state.ToSubmittedToDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToInvalidRequest()
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusInvalidRequest, state.Status)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		require.Equal(t, "test", state.DestinationChainID)
-		require.Equal(t, BridgingRequestStatusSubmittedToBridge, state.Status)
+	t.Run("UpdateDestChainID empty chain id", func(t *testing.T) {
+		state := NewBridgingRequestState("", txHash)
+		require.NoError(t, state.UpdateDestChainID(chainID))
+		require.Equal(t, chainID, state.DestinationChainID)
 	})
 
-	t.Run("state changes from BridgingRequestStatusInvalidRequest", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToInvalidRequest()
-		require.NoError(t, err)
-
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToIncludedInBatch(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+	t.Run("UpdateDestChainID not empty chain id", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.DestinationChainID = common.ChainIDStrVector
+		require.Error(t, state.UpdateDestChainID(common.ChainIDStrPrime))
+		require.Equal(t, common.ChainIDStrVector, state.DestinationChainID)
 	})
 
-	t.Run("state changes from BridgingRequestStatusSubmittedToBridge", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusIncludedInBatch, state.Status)
+	t.Run("IsTransitionPossible BridgingRequestStatusInvalidRequest", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToInvalidRequest()
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
 	})
 
-	t.Run("state changes from BridgingRequestStatusIncludedInBatch", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToIncludedInBatch(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.NoError(t, err)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.NoError(t, err)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusSubmittedToDestination, state.Status)
+	t.Run("IsTransitionPossible BridgingRequestStatusInvalidRequest", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToExecutedOnDestination(dstTxHash)
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusSubmittedToBridge))
 	})
 
-	t.Run("state changes from BridgingRequestStatusSubmittedToDestination", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToIncludedInBatch(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusFailedToExecuteOnDestination, state.Status)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.NoError(t, err)
-		require.Equal(t, BridgingRequestStatusExecutedOnDestination, state.Status)
+	t.Run("IsTransitionPossible BridgingRequestStatusSubmittedToBridge", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToSubmittedToBridge()
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
 	})
 
-	t.Run("state changes from BridgingRequestStatusFailedToExecuteOnDestination", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-		err = state.ToFailedToExecuteOnDestination()
-		require.NoError(t, err)
-
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-		err = state.ToFailedToExecuteOnDestination()
-		require.NoError(t, err)
-
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-
-		state = NewBridgingRequestState(chainID, txHash)
-		err = state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-		err = state.ToFailedToExecuteOnDestination()
-		require.NoError(t, err)
-
-		err = state.ToSubmittedToDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+	t.Run("IsTransitionPossible BridgingRequestStatusIncludedInBatch", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToIncludedInBatch()
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
 	})
 
-	t.Run("state changes from BridgingRequestStatusExecutedOnDestination", func(t *testing.T) {
-		state := NewBridgingRequestState(chainID, txHash)
-		err := state.ToSubmittedToBridge("test")
-		require.NoError(t, err)
-		err = state.ToIncludedInBatch(1)
-		require.NoError(t, err)
-		err = state.ToSubmittedToDestination()
-		require.NoError(t, err)
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.NoError(t, err)
+	t.Run("IsTransitionPossible BridgingRequestStatusSubmittedToDestination", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToSubmittedToDestination()
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
+	})
 
-		err = state.ToInvalidRequest()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+	t.Run("IsTransitionPossible BridgingRequestStatusDiscoveredOnSource", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusFailedToExecuteOnDestination))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
+	})
 
-		err = state.ToSubmittedToBridge("test")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToIncludedInBatch(1)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToSubmittedToDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToFailedToExecuteOnDestination()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
-
-		err = state.ToExecutedOnDestination(destinationTxHash)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "can not change BridgingRequestState")
+	t.Run("IsTransitionPossible BridgingRequestStatusFailedToExecuteOnDestination", func(t *testing.T) {
+		state := NewBridgingRequestState(common.ChainIDStrNexus, txHash)
+		state.ToFailedToExecuteOnDestination()
+		require.Error(t, state.IsTransitionPossible(BridgingRequestStatusDiscoveredOnSource))
+		require.NoError(t, state.IsTransitionPossible(BridgingRequestStatusExecutedOnDestination))
 	})
 }

@@ -5,14 +5,14 @@ go 1.22
 toolchain go1.23.1
 
 require (
-	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20241218182212-662984f36ad1
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250122093640-58ab3d384bf9
+	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250131082129-26f286625815
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250206135742-60b030f63290
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
-	github.com/armon/go-metrics v0.4.1
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-hclog v1.6.3
+	github.com/hashicorp/go-metrics v0.5.4
 	github.com/prometheus/client_golang v1.19.1
 	github.com/quasilyte/go-ruleguard v0.4.2
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22

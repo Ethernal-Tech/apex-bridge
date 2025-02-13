@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/armon/go-metrics"
-	prometheusMetrics "github.com/armon/go-metrics/prometheus"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
+	prometheusmetrics "github.com/hashicorp/go-metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -38,17 +38,19 @@ func NewTelemetry(config TelemetryConfig, logger hclog.Logger) *Telemetry {
 
 func (t *Telemetry) Start() error {
 	if t.config.DataDogAddr != "" {
-		if err := setupDataDog(); err != nil {
+		if err := startDataDogProfiler(t.config.DataDogAddr); err != nil {
 			return err
 		}
 
-		if err := t.startDataDogProfiler(); err != nil {
-			return err
-		}
+		t.logger.Info("DataDog profiler started", "addr", t.config.DataDogAddr)
 	}
 
 	if t.config.PrometheusAddr != "" {
-		t.prometheusServer = setupPrometheus(t.config.PrometheusAddr)
+		t.prometheusServer = getPrometheusServer(t.config.PrometheusAddr)
+
+		if err := setupPrometheusTelemetry(); err != nil {
+			return err
+		}
 
 		go t.startPrometheus()
 	}
@@ -87,7 +89,7 @@ func (t *Telemetry) startPrometheus() {
 	}
 }
 
-func (t *Telemetry) startDataDogProfiler() error {
+func startDataDogProfiler(addr string) error {
 	err := profiler.Start(
 		// enable all profiles
 		profiler.WithProfileTypes(
@@ -98,7 +100,7 @@ func (t *Telemetry) startDataDogProfiler() error {
 			profiler.GoroutineProfile,
 			profiler.MetricsProfile,
 		),
-		profiler.WithAgentAddr(t.config.DataDogAddr),
+		profiler.WithAgentAddr(addr),
 	)
 	if err != nil {
 		return fmt.Errorf("could not start datadog profiler: %w", err)
@@ -106,16 +108,14 @@ func (t *Telemetry) startDataDogProfiler() error {
 
 	tracer.Start() // start the tracer
 
-	t.logger.Info("DataDog profiler started", "addr", t.config.DataDogAddr)
-
 	return nil
 }
 
-func setupDataDog() error {
+func setupPrometheusTelemetry() error {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 
-	promSink, err := prometheusMetrics.NewPrometheusSinkFrom(prometheusMetrics.PrometheusOpts{
+	promSink, err := prometheusmetrics.NewPrometheusSinkFrom(prometheusmetrics.PrometheusOpts{
 		Name:       "apex_bridge_prometheus_sink",
 		Expiration: 0,
 	})
@@ -123,9 +123,8 @@ func setupDataDog() error {
 		return err
 	}
 
-	metricsConf := metrics.DefaultConfig("apex_bridge")
+	metricsConf := metrics.DefaultConfig("apex-bridge")
 	metricsConf.EnableHostname = false
-
 	_, err = metrics.NewGlobal(metricsConf, metrics.FanoutSink{
 		inm, promSink,
 	})
@@ -133,7 +132,7 @@ func setupDataDog() error {
 	return err
 }
 
-func setupPrometheus(prometheusAddr string) *http.Server {
+func getPrometheusServer(prometheusAddr string) *http.Server {
 	return &http.Server{
 		Addr: prometheusAddr,
 		Handler: promhttp.InstrumentMetricHandler(

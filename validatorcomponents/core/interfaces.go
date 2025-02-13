@@ -9,7 +9,6 @@ type BridgingRequestStateDB interface {
 	AddBridgingRequestState(state *BridgingRequestState) error
 	UpdateBridgingRequestState(state *BridgingRequestState) error
 	GetBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) (*BridgingRequestState, error)
-	GetBridgingRequestStatesByBatchID(destinationChainID string, batchID uint64) ([]*BridgingRequestState, error)
 }
 
 type Database interface {

@@ -141,7 +141,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		"txHash", generatedBatchData.TxHash, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
-	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData.TxHash)
+	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -172,7 +172,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	if b.lastBatch.id != batchID {
 		brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
 
-		err = b.bridgingRequestStateUpdater.IncludedInBatch(b.config.Chain.ChainID, batchID, brStateKeys)
+		err = b.bridgingRequestStateUpdater.IncludedInBatch(brStateKeys, b.config.Chain.ChainID)
 		if err != nil {
 			b.logger.Error(
 				"error while updating bridging request states to IncludedInBatch",
@@ -219,10 +219,8 @@ func getBridgingRequestStateKeys(
 	for _, confirmedTx := range txs {
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
 			confirmedTx.ObservedTransactionHash != [32]byte(common.DefundTxHash) {
-			txsInBatch = append(txsInBatch, common.BridgingRequestStateKey{
-				SourceChainID: common.ToStrChainID(confirmedTx.SourceChainId),
-				SourceTxHash:  confirmedTx.ObservedTransactionHash,
-			})
+			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
+				common.ToStrChainID(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash))
 		}
 	}
 

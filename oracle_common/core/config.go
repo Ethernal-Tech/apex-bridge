@@ -44,6 +44,7 @@ type EthChainConfig struct {
 	TestMode                uint8                         `json:"testMode"`
 	NonceStrategy           ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
 	MinFeeForBridging       uint64                        `json:"minFeeForBridging"`
+	RestartTrackerPullCheck time.Duration                 `json:"restartTrackerPullCheck"`
 }
 
 type CardanoChainConfig struct {

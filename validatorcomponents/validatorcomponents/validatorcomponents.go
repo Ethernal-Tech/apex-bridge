@@ -72,11 +72,6 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
 	}
 
-	bridgingRequestStateManager, err := NewBridgingRequestStateManager(db, logger.Named("bridging_request_state_manager"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create BridgingRequestStateManager. err: %w", err)
-	}
-
 	secretsManager, err := common.GetSecretsManager(
 		appConfig.ValidatorDataDir, appConfig.ValidatorConfigPath, true)
 	if err != nil {
@@ -87,6 +82,8 @@ func NewValidatorComponents(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create blade wallet: %w", err)
 	}
+
+	bridgingRequestStateManager := NewBridgingRequestStateManager(db, logger.Named("bridging_request_state_manager"))
 
 	ethHelper := eth.NewEthHelperWrapperWithWallet(
 		wallet, logger.Named("tx_helper_wrapper"),
@@ -214,7 +211,8 @@ func NewValidatorComponents(
 		relayerImitator:   relayerImitator,
 		api:               apiObj,
 		telemetry:         telemetry.NewTelemetry(appConfig.Telemetry, logger.Named("telemetry")),
-		telemetryWorker: NewTelemetryWorker(ethHelper, cardanoIndexerDbs, ethIndexerDbs,
+		telemetryWorker: NewTelemetryWorker(
+			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
 		logger: logger,
 	}, nil

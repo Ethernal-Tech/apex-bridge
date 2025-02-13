@@ -78,19 +78,20 @@ func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
 }
 
 type DBBatchTx struct {
-	SourceChainID           uint8    `json:"s_chain"`
-	ObservedTransactionHash [32]byte `json:"s_tx_hash"`
+	SourceChainID           uint8       `json:"s_chain"`
+	ObservedTransactionHash common.Hash `json:"s_tx_hash"`
 }
 
 type DBBatchInfoEvent struct {
 	BatchID       uint64      `json:"batch"`
-	ChainID       uint8       `json:"chain"`
+	DstChainID    uint8       `json:"chain"`
+	DstTxHash     common.Hash `json:"tx_hash"`
 	IsFailedClaim bool        `json:"failed"`
 	TxHashes      []DBBatchTx `json:"txs"`
 }
 
 func NewDBBatchInfoEvent(
-	chainID uint8, batchID uint64, isFailedClaim bool, txs []eth.TxDataInfo,
+	batchID uint64, chainID uint8, txHash common.Hash, isFailedClaim bool, txs []eth.TxDataInfo,
 ) *DBBatchInfoEvent {
 	dbBatchTxs := make([]DBBatchTx, len(txs))
 	for i, tx := range txs {
@@ -102,7 +103,8 @@ func NewDBBatchInfoEvent(
 
 	return &DBBatchInfoEvent{
 		BatchID:       batchID,
-		ChainID:       chainID,
+		DstChainID:    chainID,
+		DstTxHash:     txHash,
 		IsFailedClaim: isFailedClaim,
 		TxHashes:      dbBatchTxs,
 	}

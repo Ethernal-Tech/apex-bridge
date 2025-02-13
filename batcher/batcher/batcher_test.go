@@ -123,15 +123,16 @@ func TestBatcherExecute(t *testing.T) {
 	t.Run("SignBatchTransaction returns error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
+		batchData := &core.GeneratedBatchTxData{
+			TxRaw:  []byte{0},
+			TxHash: "txHash",
+		}
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
-			Return(&core.GeneratedBatchTxData{
-				TxRaw:  []byte{0},
-				TxHash: "txHash",
-			}, nil)
-		operationsMock.On("SignBatchTransaction", "txHash").Return(nil, nil, testError)
+			Return(batchData, nil)
+		operationsMock.On("SignBatchTransaction", batchData).Return(nil, nil, testError)
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
@@ -145,15 +146,16 @@ func TestBatcherExecute(t *testing.T) {
 	t.Run("SubmitSignedBatch returns error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
+		batchData := &core.GeneratedBatchTxData{
+			TxRaw:  []byte{0},
+			TxHash: "txHash",
+		}
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
-			Return(&core.GeneratedBatchTxData{
-				TxRaw:  []byte{0},
-				TxHash: "txHash",
-			}, nil)
-		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
+			Return(batchData, nil)
+		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, operationsMock,
@@ -195,15 +197,16 @@ func TestBatcherExecute(t *testing.T) {
 	t.Run("execute pass", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		operationsMock := &cardanoChainOperationsMock{}
+		batchData := &core.GeneratedBatchTxData{
+			TxRaw:  []byte{0},
+			TxHash: "txHash",
+		}
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
 		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
-			Return(&core.GeneratedBatchTxData{
-				TxRaw:  []byte{0},
-				TxHash: "txHash",
-			}, nil)
-		operationsMock.On("SignBatchTransaction", "txHash").Return([]byte{}, []byte{}, nil)
+			Return(batchData, nil)
+		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 
 		b := NewBatcher(config, operationsMock,
@@ -291,18 +294,9 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 		}, 3, 5)
 
 		require.Equal(t, []common.BridgingRequestStateKey{
-			{
-				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  included[0],
-			},
-			{
-				SourceChainID: common.ChainIDStrVector,
-				SourceTxHash:  included[1],
-			},
-			{
-				SourceChainID: common.ChainIDStrPrime,
-				SourceTxHash:  included[2],
-			},
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[0]),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, included[1]),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, included[2]),
 		}, res)
 	})
 }
@@ -324,8 +318,8 @@ func (c *cardanoChainOperationsMock) GenerateBatchTransaction(
 }
 
 // SignBatchTransaction implements core.ChainOperations.
-func (c *cardanoChainOperationsMock) SignBatchTransaction(txHash string) ([]byte, []byte, error) {
-	args := c.Called(txHash)
+func (c *cardanoChainOperationsMock) SignBatchTransaction(generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	args := c.Called(generatedBatchData)
 
 	if args.Get(0) == nil {
 		return []byte{}, []byte{}, args.Error(2)
