@@ -281,7 +281,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0xFF"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 20000,
+						Amount: 2_000_000,
 					},
 				},
 			}, error(nil)).Once()
