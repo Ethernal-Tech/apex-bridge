@@ -22,6 +22,9 @@ import (
 )
 
 const (
+	primeMinOperationFeeFlag     = "prime-min-operation-fee"
+	primeMinOperationFeeFlagDesc = "minimal operation fee for prime"
+
 	primeCardanoWrappedTokenNameFlag     = "prime-cardano-token-name"
 	primeCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
 

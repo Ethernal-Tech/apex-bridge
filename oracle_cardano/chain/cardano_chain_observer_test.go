@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -138,8 +139,13 @@ func TestCardanoChainObserver(t *testing.T) {
 		doneCh := make(chan bool, 1)
 		closed := false
 
+		var mu sync.Mutex
+
 		txsReceiverMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
 			t.Helper()
+
+			mu.Lock()
+			defer mu.Unlock()
 
 			if !closed {
 				close(doneCh)
