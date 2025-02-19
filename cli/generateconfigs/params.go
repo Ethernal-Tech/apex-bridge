@@ -37,6 +37,7 @@ const (
 	primeStartingBlockFlag         = "prime-starting-block"
 	primeUtxoMinAmountFlag         = "prime-utxo-min-amount"
 	primeMinFeeForBridgingFlag     = "prime-min-fee-for-bridging"
+	primeMinOperationFeeFlag       = "prime-min-operation-fee"
 
 	vectorNetworkAddressFlag        = "vector-network-address"
 	vectorNetworkMagicFlag          = "vector-network-magic"
@@ -90,6 +91,7 @@ const (
 	primeStartingBlockFlagDesc         = "slot: hash of the block from where to start prime oracle"
 	primeUtxoMinAmountFlagDesc         = "minimal UTXO value for prime"
 	primeMinFeeForBridgingFlagDesc     = "minimal bridging fee for prime"
+	primeMinOperationFeeFlagDesc       = "minimal operation fee for prime"
 
 	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
 	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"

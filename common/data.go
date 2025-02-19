@@ -11,6 +11,8 @@ const (
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
+	MinOperationFeeDefault = uint64(1_000_010)
+
 	MinFeeForBridgingDefault   = uint64(1_000_010)
 	MinFeeForBridgingToCardano = uint64(1_000_010)
 	MinFeeForBridgingToPrime   = uint64(1_000_010)
