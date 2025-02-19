@@ -58,6 +58,7 @@ type CardanoChainConfig struct {
 	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
 	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
 	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
+	MinOperationFee          uint64                   `json:"minOperationFee"`
 }
 
 type SubmitConfig struct {

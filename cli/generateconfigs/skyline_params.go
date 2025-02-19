@@ -22,6 +22,9 @@ import (
 )
 
 const (
+	primeMinOperationFeeFlag     = "prime-min-operation-fee"
+	primeMinOperationFeeFlagDesc = "minimal operation fee for prime"
+
 	primeCardanoWrappedTokenNameFlag     = "prime-cardano-token-name"
 	primeCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
 
@@ -40,6 +43,7 @@ const (
 	cardanoStartingBlockFlag         = "cardano-starting-block"
 	cardanoUtxoMinAmountFlag         = "cardano-utxo-min-amount"
 	cardanoMinFeeForBridgingFlag     = "cardano-min-fee-for-bridging"
+	cardanoMinOperationFeeFlag       = "cardano-min-operation-fee"
 
 	cardanoNetworkAddressFlagDesc        = "(mandatory) address of cardano network"
 	cardanoNetworkMagicFlagDesc          = "cardano network magic (default 0)"
@@ -53,6 +57,7 @@ const (
 	cardanoStartingBlockFlagDesc         = "slot: hash of the block from where to start cardano oracle"
 	cardanoUtxoMinAmountFlagDesc         = "minimal UTXO value for cardano"
 	cardanoMinFeeForBridgingFlagDesc     = "minimal bridging fee for cardano"
+	cardanoMinOperationFeeFlagDesc       = "minimal operation fee for cardano"
 
 	defaultCardanoBlockConfirmationCount = 10
 	defaultCardanoTTLSlotNumberInc       = 1800 + defaultCardanoBlockConfirmationCount*10 // BlockTimeSeconds
@@ -72,6 +77,7 @@ type skylineGenerateConfigsParams struct {
 	primeStartingBlock         string
 	primeUtxoMinAmount         uint64
 	primeMinFeeForBridging     uint64
+	primeMinOperationFee       uint64
 
 	cardanoNetworkAddress        string
 	cardanoNetworkMagic          uint32
@@ -85,6 +91,7 @@ type skylineGenerateConfigsParams struct {
 	cardanoStartingBlock         string
 	cardanoUtxoMinAmount         uint64
 	cardanoMinFeeForBridging     uint64
+	cardanoMinOperationFee       uint64
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -290,6 +297,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		common.MinFeeForBridgingDefault,
 		primeMinFeeForBridgingFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.primeMinOperationFee,
+		primeMinOperationFeeFlag,
+		common.MinOperationFeeDefault,
+		primeMinOperationFeeFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.cardanoNetworkAddress,
@@ -362,6 +375,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoMinFeeForBridgingFlag,
 		common.MinFeeForBridgingDefault,
 		cardanoMinFeeForBridgingFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.cardanoMinOperationFee,
+		cardanoMinOperationFeeFlag,
+		common.MinOperationFeeDefault,
+		cardanoMinOperationFeeFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -532,6 +551,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				MinOperationFee:          p.primeMinOperationFee,
 			},
 			common.ChainIDStrCardano: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -560,6 +580,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				ConfirmationBlockCount:   defaultCardanoBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.cardanoMinFeeForBridging,
+				MinOperationFee:          p.cardanoMinOperationFee,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
