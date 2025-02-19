@@ -130,9 +130,7 @@ func mapV1ToCurrentBridgingRequest(metadataMap map[int]map[int]*BridgingRequestM
 		DestinationChainID: v1m.DestinationChainID,
 		SenderAddr:         v1m.SenderAddr,
 		Transactions:       txs,
-		FeeAmount: sendtx.BridgingRequestMetadataCurrencyInfo{
-			DestAmount: v1m.FeeAmount,
-		},
+		BridgingFee:        v1m.FeeAmount,
 	}, nil
 }
 

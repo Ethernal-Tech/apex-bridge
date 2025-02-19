@@ -66,9 +66,10 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
-	totalAmount := big.NewInt(0)
-
-	var feeAddress string
+	var (
+		totalAmount = big.NewInt(0)
+		feeAddress  string
+	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 
@@ -103,7 +104,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount.DestAmount)
+	feeAmount := new(big.Int).SetUint64(metadata.BridgingFee)
 
 	totalAmount.Add(totalAmount, feeAmount)
 
@@ -247,12 +248,12 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount.DestAmount += feeSum
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount.DestAmount))
+	metadata.BridgingFee += feeSum
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
 
-	if (cardanoDestConfig != nil && metadata.FeeAmount.DestAmount < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && metadata.FeeAmount.DestAmount < ethDestConfig.MinFeeForBridging) {
-		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
+	if metadata.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
+		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
+			metadata.BridgingFee, cardanoSrcConfig.MinFeeForBridging, metadata)
 	}
 
 	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {

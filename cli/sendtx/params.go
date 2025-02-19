@@ -390,7 +390,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
-		ip.feeAmount.Uint64(), sendtx.NewExchangeRate(),
+		ip.feeAmount.Uint64(), 0,
 	)
 	if err != nil {
 		return nil, err

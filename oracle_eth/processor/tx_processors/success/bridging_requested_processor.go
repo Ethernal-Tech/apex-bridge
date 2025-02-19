@@ -87,7 +87,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmountDfm)
 	}
 
-	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
+	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
 	totalAmount.Add(totalAmount, feeAmountDfm)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
@@ -201,11 +201,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount.Add(metadata.FeeAmount, feeSum)
-	receiverAmountSum.Add(receiverAmountSum, metadata.FeeAmount)
+	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
+	receiverAmountSum.Add(receiverAmountSum, metadata.BridgingFee)
 
-	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
-	if feeAmountDfm.Uint64() < cardanoDestConfig.MinFeeForBridging {
+	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
+	if feeAmountDfm.Uint64() < ethSrcConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
