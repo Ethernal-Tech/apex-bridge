@@ -978,12 +978,15 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	}
 
 	t.Run("filter out all the tokens", func(t *testing.T) {
-		resTxInputOutput := filterOutTokenUtxos(multisigUtxos)
+		resTxInputOutput := filterOutUtxosWithUnknownTokens(multisigUtxos)
 		require.Equal(t, 0, len(resTxInputOutput))
 	})
 
 	t.Run("filter out all the tokens except the one with specified token name", func(t *testing.T) {
-		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "1.31")
+		tok, err := cardano.GetNativeTokenFromName("1.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := filterOutUtxosWithUnknownTokens(multisigUtxos, tok)
 		require.Equal(t, 1, len(resTxInputOutput))
 		require.Equal(
 			t,
@@ -993,7 +996,10 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 
 	t.Run("filter out InputOutput with invalid token even if it contains valid token as well", func(t *testing.T) {
-		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "3.31")
+		tok, err := cardano.GetNativeTokenFromName("3.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := filterOutUtxosWithUnknownTokens(multisigUtxos, tok)
 		require.Equal(t, 1, len(resTxInputOutput))
 		require.Equal(
 			t,
@@ -1003,7 +1009,13 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 
 	t.Run("filter out all the tokens except those with specified token names", func(t *testing.T) {
-		resTxInputOutput := filterOutTokenUtxos(multisigUtxos, "3.31", "1.31")
+		tok1, err := cardano.GetNativeTokenFromName("3.31")
+		require.NoError(t, err)
+
+		tok2, err := cardano.GetNativeTokenFromName("1.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := filterOutUtxosWithUnknownTokens(multisigUtxos, tok1, tok2)
 		require.Equal(t, 3, len(resTxInputOutput))
 		require.Equal(
 			t,

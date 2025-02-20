@@ -3,6 +3,7 @@ package cardanotx
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -57,4 +58,20 @@ func IsValidOutputAddress(addr string, networkID wallet.CardanoNetworkType) bool
 
 	return err == nil && cardAddr.GetInfo().AddressType != wallet.RewardAddress &&
 		cardAddr.GetInfo().Network == networkID
+}
+
+func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Token) bool {
+	knownTokensMap := make(map[string]bool, len(knownTokens))
+
+	for _, t := range knownTokens {
+		knownTokensMap[t.String()] = true
+	}
+
+	for _, token := range txOut.Tokens {
+		if _, exists := knownTokensMap[token.TokenName()]; !exists {
+			return true
+		}
+	}
+
+	return false
 }
