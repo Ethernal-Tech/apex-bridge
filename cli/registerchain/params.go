@@ -128,7 +128,7 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.initialWrappedTokenSupply,
 		initialWrappedTokenSupplyFlag,
-		"",
+		"0",
 		initialWrappedTokenSupplyFlagDesc,
 	)
 

@@ -230,8 +230,6 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	multisigUtxos = filterOutTokenUtxos(multisigUtxos, cardanoConfig.GetNativeTokenName(destChainID))
-
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
