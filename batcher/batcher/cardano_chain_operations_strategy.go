@@ -96,7 +96,7 @@ func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
 		return
 	}
 
-	feeUtxos = filterOutTokenUtxos(feeUtxos)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
 
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
@@ -135,7 +135,8 @@ func (s *CardanoChainOperationReactorStrategy) getNeededUtxos(
 	// if we have change then it must be greater than this amount
 	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
 
-	return getNeededUtxos(filterOutTokenUtxos(txInputsOutputs), desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	return getNeededUtxos(
+		filterOutUtxosWithUnknownTokens(txInputsOutputs), desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -225,12 +226,23 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 		return
 	}
 
-	feeUtxos = filterOutTokenUtxos(feeUtxos)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	multisigUtxos = filterOutTokenUtxos(multisigUtxos, cardanoConfig.GetNativeTokenName(destChainID))
+	knownTokens := make([]cardanowallet.Token, len(cardanoConfig.NativeTokens))
+
+	for i, tokenConfig := range cardanoConfig.NativeTokens {
+		token, err := cardano.GetNativeTokenFromConfig(tokenConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		knownTokens[i] = token
+	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
 
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
@@ -312,26 +324,13 @@ func getNeededUtxos(
 	return chosenUTXOs, nil
 }
 
-func filterOutTokenUtxos(utxos []*indexer.TxInputOutput, excludingTokens ...string) []*indexer.TxInputOutput {
+func filterOutUtxosWithUnknownTokens(
+	utxos []*indexer.TxInputOutput, excludingTokens ...cardanowallet.Token,
+) []*indexer.TxInputOutput {
 	result := make([]*indexer.TxInputOutput, 0, len(utxos))
-	excludingTokensMap := make(map[string]bool, len(excludingTokens))
-
-	for _, t := range excludingTokens {
-		excludingTokensMap[t] = true
-	}
 
 	for _, utxo := range utxos {
-		isValid := true
-
-		for _, token := range utxo.Output.Tokens {
-			if _, exists := excludingTokensMap[token.TokenName()]; !exists {
-				isValid = false
-
-				break
-			}
-		}
-
-		if isValid {
+		if !cardano.UtxoContainsUnknownTokens(utxo.Output, excludingTokens...) {
 			result = append(result, utxo)
 		}
 	}

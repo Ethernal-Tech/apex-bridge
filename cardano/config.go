@@ -80,6 +80,24 @@ func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardan
 		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
 	}
 
+	token, err = GetNativeTokenFromName(tokenName)
+	if err == nil {
+		return token, nil
+	}
+
+	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+}
+
+func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {
+	token, err = GetNativeTokenFromName(tokenConfig.TokenName)
+	if err == nil {
+		return token, nil
+	}
+
+	return token, fmt.Errorf("chainID: %s, err: %w", tokenConfig.DstChainID, err)
+}
+
+func GetNativeTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
 	token, err = cardanowallet.NewTokenWithFullName(tokenName, true)
 	if err == nil {
 		return token, nil
@@ -90,7 +108,7 @@ func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardan
 		return token, nil
 	}
 
-	return token, fmt.Errorf("invalid token name %s for destination: %s", tokenName, dstChainID)
+	return token, fmt.Errorf("invalid token name: %s", tokenName)
 }
 
 var (
