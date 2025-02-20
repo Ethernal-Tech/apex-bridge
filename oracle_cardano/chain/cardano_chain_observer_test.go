@@ -41,15 +41,15 @@ func TestCardanoChainObserver(t *testing.T) {
 
 	chainConfig := &cCore.CardanoChainConfig{
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
-			NetworkMagic: 764824073,
+			NetworkMagic: 3311,
 		},
 		ChainID:                common.ChainIDStrPrime,
-		NetworkAddress:         "backbone.cardano.iog.io:3001",
-		StartBlockHash:         "335ac2d90bc37906c1264cfdc5769a652293cf64fa42b0c74d323473938b8ff1",
-		StartSlot:              127933773,
-		ConfirmationBlockCount: 10,
+		NetworkAddress:         "relay-0.prime.testnet.apexfusion.org:5521",
+		StartBlockHash:         "b1bcc6d36031d4ca3104285452be4018b0a7968cb1e814ff5c8e095d7291a42c",
+		StartSlot:              23289347,
+		ConfirmationBlockCount: 1,
 		OtherAddressesOfInterest: []string{
-			"addr1v9kganeshgdqyhwnyn9stxxgl7r4y2ejfyqjn88n7ncapvs4sugsd",
+			"addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv",
 		},
 	}
 
