@@ -99,14 +99,14 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			// receiverAmount represents the amount of native currency that is bridged to the receiver.
 			// receiver.Amount of native tokens on the source will be converted to the same amount of native currency on
 			// the destination.
-			totalAmountCurrencySrc += uint64(0)
+			// totalAmountCurrencySrc stays the same
 			totalAmountWrappedSrc += receiver.Amount
 
+			// receiverAmountWrappedDst stays the same
 			receiverAmountCurrencyDst = receiver.Amount
-			receiverAmountWrappedDst = uint64(0)
 		} else {
 			totalAmountCurrencySrc += receiver.Amount
-			totalAmountWrappedSrc += uint64(0)
+			// totalAmountWrappedSrc stays the same
 
 			dstMinUtxo, err := p.calculateMinUtxo(
 				cardanoDestConfig, tx.OriginChainID, receiverAddr, receiver.Amount)
@@ -200,6 +200,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	cardanoDestConfig, _ := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 	if cardanoDestConfig == nil {
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
+	}
+
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
+		return err
 	}
 
 	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
