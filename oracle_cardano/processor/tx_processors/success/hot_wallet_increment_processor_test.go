@@ -87,6 +87,33 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
+	t.Run("ValidateAndAddClaim unknown tokens", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+		tx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: []byte{},
+				Outputs: []*indexer.TxOutput{
+					{Address: primeBridgingAddr, Amount: 1, Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: "111",
+							Name:     "222",
+							Amount:   1_000_000,
+						},
+					}},
+				},
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		err := proc.PreValidate(tx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "with some unknown tokens")
+
+		err = proc.ValidateAndAddClaim(claims, tx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "with some unknown tokens")
+	})
+
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
 		tx := &core.CardanoTx{
