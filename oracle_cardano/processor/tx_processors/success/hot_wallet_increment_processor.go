@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
@@ -49,18 +50,31 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	totalAmount := big.NewInt(0)
+	var (
+		totalAmount        = big.NewInt(0)
+		totalAmountWrapped = big.NewInt(0)
+	)
 
 	for _, output := range tx.Outputs {
 		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
+
+			if len(chainConfig.NativeTokens) > 0 {
+				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
+				if err != nil {
+					return err
+				}
+
+				totalAmountWrapped.Add(
+					totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
+			}
 		}
 	}
 
 	claims.HotWalletIncrementClaims = append(claims.HotWalletIncrementClaims, cCore.HotWalletIncrementClaim{
 		ChainId:       common.ToNumChainID(tx.OriginChainID),
 		Amount:        totalAmount,
-		AmountWrapped: big.NewInt(0), // a TODO - fix for skyline
+		AmountWrapped: totalAmountWrapped,
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",
@@ -77,7 +91,7 @@ func (p *HotWalletIncrementProcessor) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := utils.ValidateOutputsHaveTokens(tx, appConfig); err != nil {
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
 		return err
 	}
 

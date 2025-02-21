@@ -209,7 +209,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		sendtx.NewExchangeRate(),
+		0,
 	)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)
@@ -221,7 +221,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
 	outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64,
 ) {
-	bridgingFee = metadata.FeeAmount.SrcAmount
+	bridgingFee = metadata.BridgingFee + metadata.OperationFee
 
 	for _, x := range metadata.Transactions {
 		if x.IsNativeTokenOnSource() {
@@ -230,10 +230,6 @@ func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
 		} else {
 			// ADA/APEX to WADA/WAPEX or reactor
 			outputCurrencyLovelace += x.Amount
-		}
-
-		if x.Additional != nil {
-			bridgingFee += x.Additional.SrcAmount
 		}
 	}
 

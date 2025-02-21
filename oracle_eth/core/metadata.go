@@ -22,7 +22,7 @@ type BridgingRequestEthMetadata struct {
 	DestinationChainID string                                  `json:"d"`
 	SenderAddr         string                                  `json:"s"`
 	Transactions       []BridgingRequestEthMetadataTransaction `json:"tx"`
-	FeeAmount          *big.Int                                `json:"fa"`
+	BridgingFee        *big.Int                                `json:"fa"`
 }
 
 type BatchExecutedEthMetadata struct {

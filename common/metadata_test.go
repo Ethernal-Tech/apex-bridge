@@ -180,7 +180,7 @@ func TestMetadata(t *testing.T) {
 		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeCbor, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
-		require.Equal(t, feeAmount, metadata.FeeAmount.DestAmount)
+		require.Equal(t, feeAmount, metadata.BridgingFee)
 	})
 
 	t.Run("Json Unmarshal V1 obsolete bridging request", func(t *testing.T) {
@@ -195,6 +195,6 @@ func TestMetadata(t *testing.T) {
 		metadata, err := UnmarshalMetadata[BridgingRequestMetadata](MetadataEncodingTypeJSON, result)
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
-		require.Equal(t, feeAmount, metadata.FeeAmount.DestAmount)
+		require.Equal(t, feeAmount, metadata.BridgingFee)
 	})
 }

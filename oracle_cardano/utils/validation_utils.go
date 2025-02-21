@@ -3,9 +3,11 @@ package utils
 import (
 	"fmt"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 // Validate if all tx inputs belong to the multisig address or fee address
@@ -40,14 +42,29 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return nil
 }
 
-func ValidateOutputsHaveTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 
 	for _, out := range tx.Outputs {
-		if len(out.Tokens) > 0 && (out.Address == chainConfig.BridgingAddresses.BridgingAddress ||
-			out.Address == chainConfig.BridgingAddresses.FeeAddress) {
-			return fmt.Errorf("tx %s has output (%s, %d), with token count %d",
-				tx.Hash, out.Address, out.Amount, len(out.Tokens))
+		if out.Address != chainConfig.BridgingAddresses.BridgingAddress &&
+			out.Address != chainConfig.BridgingAddresses.FeeAddress {
+			continue
+		}
+
+		knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
+
+		for i, tokenConfig := range chainConfig.NativeTokens {
+			token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
+			if err != nil {
+				return err
+			}
+
+			knownTokens[i] = token
+		}
+
+		if cardanotx.UtxoContainsUnknownTokens(*out, knownTokens...) {
+			return fmt.Errorf("tx %s has output (%s, %d), with some unknown tokens",
+				tx.Hash, out.Address, out.Amount)
 		}
 	}
 

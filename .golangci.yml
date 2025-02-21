@@ -3,9 +3,6 @@
 run:
   timeout: 3m
   tests: true
-  # default is true. Enables skipping of directories:
-  #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
-  skip-dirs-use-default: true
 
 linters:
   disable-all: true
@@ -53,6 +50,7 @@ linters-settings:
 
 issues:
   new-from-rev: origin/main # report only new issues with reference to main branch
+  exclude-dirs-use-default: true
   exclude-dirs:
     - tests
   exclude-rules:

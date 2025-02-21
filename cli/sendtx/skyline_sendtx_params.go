@@ -298,7 +298,7 @@ func (p *sendSkylineTxParams) Execute(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
-		p.feeAmount.Uint64(), sendtx.NewExchangeRate())
+		p.feeAmount.Uint64(), 0)
 	if err != nil {
 		return nil, err
 	}
