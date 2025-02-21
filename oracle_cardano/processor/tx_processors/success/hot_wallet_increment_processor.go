@@ -59,18 +59,14 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
 
-			for _, tokenConfig := range chainConfig.NativeTokens {
-				if tokenConfig.DstChainID != chainConfig.ChainID {
-					wrappedToken, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
-					if err != nil {
-						return err
-					}
-
-					totalAmountWrapped.Add(
-						totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
-
-					break
+			if len(chainConfig.NativeTokens) > 0 {
+				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
+				if err != nil {
+					return err
 				}
+
+				totalAmountWrapped.Add(
+					totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
 			}
 		}
 	}
