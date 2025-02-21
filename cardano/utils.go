@@ -75,3 +75,17 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 
 	return false
 }
+
+func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {
+	if tokenName == wallet.AdaTokenName {
+		return utxo.Amount
+	}
+
+	for _, token := range utxo.Tokens {
+		if token.TokenName() == tokenName {
+			return token.Amount
+		}
+	}
+
+	return 0
+}

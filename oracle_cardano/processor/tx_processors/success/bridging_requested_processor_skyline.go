@@ -12,7 +12,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -295,7 +294,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	multisigWrappedTokenAmount := getNativeTokenAmount(multisigUtxo, nativeToken.String())
+	multisigWrappedTokenAmount := cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String())
 
 	if wrappedTokenAmountSum.Cmp(new(big.Int).SetUint64(multisigWrappedTokenAmount)) != 0 {
 		return fmt.Errorf("multisig wrapped token is not equal to receiver wrapped token amount: expected %v but got %v",
@@ -349,14 +348,4 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 	}
 
 	return max(config.UtxoMinAmount, potentialTokenCost), nil
-}
-
-func getNativeTokenAmount(utxo *indexer.TxOutput, tokenName string) (amount uint64) {
-	for _, token := range utxo.Tokens {
-		if token.TokenName() == tokenName {
-			amount += token.Amount
-		}
-	}
-
-	return amount
 }

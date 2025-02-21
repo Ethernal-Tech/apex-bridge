@@ -66,13 +66,8 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 						return err
 					}
 
-					for _, tok := range output.Tokens {
-						if tok.TokenName() == wrappedToken.String() {
-							totalAmountWrapped.Add(totalAmountWrapped, new(big.Int).SetUint64(tok.Amount))
-
-							break
-						}
-					}
+					totalAmountWrapped.Add(
+						totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
 
 					break
 				}
