@@ -85,7 +85,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewFullSkylineBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+		response.NewSkylineBridgingTxResponse(txRaw, txHash, currencyOutput, tokenOutput), sc.logger,
 	)
 }
 
@@ -158,11 +158,19 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
+		requestBody.BridgingFee = cardanoSrcConfig.MinFeeForBridging
 	}
 
-	if requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging {
+	if requestBody.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
+	}
+
+	if requestBody.OperationFee == 0 {
+		requestBody.OperationFee = cardanoSrcConfig.MinOperationFee
+	}
+
+	if requestBody.OperationFee < cardanoSrcConfig.MinOperationFee {
+		return fmt.Errorf("operation fee in request body is less than minimum: %v", requestBody)
 	}
 
 	return nil
@@ -209,7 +217,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		0,
+		requestBody.OperationFee,
 	)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)

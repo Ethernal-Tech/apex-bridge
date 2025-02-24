@@ -92,10 +92,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	minFeeForBridging := common.MinFeeForBridgingToPrime
+	minFeeForBridging := common.MinFeeForBridgingOnPrime
 
-	if p.chainIDDst == common.ChainIDStrCardano {
-		minFeeForBridging = common.MinFeeForBridgingToCardano
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minFeeForBridging = common.MinFeeForBridgingOnCardano
 	}
 
 	if p.feeAmount.Uint64() < minFeeForBridging {
@@ -254,12 +254,12 @@ func (p *sendSkylineTxParams) Execute(
 		utxoAmountDest = common.MinUtxoAmountDefaultPrime
 	}
 
-	minFeeForBridgingSrc := common.MinFeeForBridgingToPrime
-	minFeeForBridgingDest := common.MinFeeForBridgingToCardano
+	minFeeForBridgingSrc := common.MinFeeForBridgingOnPrime
+	minFeeForBridgingDest := common.MinFeeForBridgingOnCardano
 
 	if p.chainIDSrc == common.ChainIDStrCardano {
-		minFeeForBridgingSrc = common.MinFeeForBridgingToCardano
-		minFeeForBridgingDest = common.MinFeeForBridgingToPrime
+		minFeeForBridgingSrc = common.MinFeeForBridgingOnCardano
+		minFeeForBridgingDest = common.MinFeeForBridgingOnPrime
 	}
 
 	var srcNativeTokens []sendtx.TokenExchangeConfig
