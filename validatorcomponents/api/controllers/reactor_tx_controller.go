@@ -77,7 +77,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewBridgingTxResponse(txRaw, txHash), c.logger)
+		response.NewBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
 }
 
 func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(

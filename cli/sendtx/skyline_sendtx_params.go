@@ -14,8 +14,11 @@ import (
 )
 
 const (
-	fullSrcTokenNameFlag     = "src-token-name"                                      //nolint:gosec
-	fullDstTokenNameFlag     = "dst-token-name"                                      //nolint:gosec
+	operationFeeFlag     = "operation-fee"
+	fullSrcTokenNameFlag = "src-token-name" //nolint:gosec
+	fullDstTokenNameFlag = "dst-token-name" //nolint:gosec
+
+	operationFeeFlagDesc     = "operation fee"
 	fullSrcTokenNameFlagDesc = "denom of the token to transfer from source chain"    //nolint:gosec
 	fullDstTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
 )
@@ -26,6 +29,7 @@ type sendSkylineTxParams struct {
 	chainIDSrc       string
 	chainIDDst       string
 	feeString        string
+	operationFee     uint64
 	tokenFullNameSrc string
 	tokenFullNameDst string
 
@@ -100,6 +104,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	if p.feeAmount.Uint64() < minFeeForBridging {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
+	}
+
+	if p.operationFee < common.MinOperationFeeDefault {
+		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFee)
 	}
 
 	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
@@ -187,6 +195,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		feeAmountFlag,
 		"0",
 		feeAmountFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.operationFee,
+		operationFeeFlag,
+		0,
+		operationFeeFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -298,7 +313,7 @@ func (p *sendSkylineTxParams) Execute(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
-		p.feeAmount.Uint64(), 0)
+		p.feeAmount.Uint64(), p.operationFee)
 	if err != nil {
 		return nil, err
 	}
