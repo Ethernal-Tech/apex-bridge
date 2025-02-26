@@ -78,7 +78,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewSkylineBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+		response.NewBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
 	)
 }
 

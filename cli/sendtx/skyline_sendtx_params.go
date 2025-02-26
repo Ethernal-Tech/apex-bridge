@@ -106,7 +106,13 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 	}
 
-	if p.operationFee < common.MinOperationFeeDefault {
+	minOperationFee := common.MinOperationFeeOnPrime
+
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minOperationFee = common.MinOperationFeeOnCardano
+	}
+
+	if p.operationFee < minOperationFee {
 		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFee)
 	}
 
@@ -277,6 +283,14 @@ func (p *sendSkylineTxParams) Execute(
 		minFeeForBridgingDest = common.MinFeeForBridgingOnPrime
 	}
 
+	minOperationFeeSrc := common.MinOperationFeeOnPrime
+	minOperationFeeDest := common.MinOperationFeeOnCardano
+
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minOperationFeeSrc = common.MinOperationFeeOnCardano
+		minOperationFeeDest = common.MinOperationFeeOnPrime
+	}
+
 	var srcNativeTokens []sendtx.TokenExchangeConfig
 	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
 		srcNativeTokens = append(srcNativeTokens, sendtx.TokenExchangeConfig{
@@ -288,18 +302,20 @@ func (p *sendSkylineTxParams) Execute(
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:           cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				MultiSigAddr:         p.multisigAddrSrc,
-				TestNetMagic:         p.testnetMagicSrc,
-				TTLSlotNumberInc:     ttlSlotNumberInc,
-				MinBridgingFeeAmount: minFeeForBridgingSrc,
-				MinUtxoValue:         utxoAmountSrc,
-				NativeTokens:         srcNativeTokens,
+				CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:            cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
+				MultiSigAddr:          p.multisigAddrSrc,
+				TestNetMagic:          p.testnetMagicSrc,
+				TTLSlotNumberInc:      ttlSlotNumberInc,
+				MinBridgingFeeAmount:  minFeeForBridgingSrc,
+				MinOperationFeeAmount: minOperationFeeSrc,
+				MinUtxoValue:          utxoAmountSrc,
+				NativeTokens:          srcNativeTokens,
 			},
 			p.chainIDDst: {
-				MinUtxoValue:         utxoAmountDest,
-				MinBridgingFeeAmount: minFeeForBridgingDest,
+				MinUtxoValue:          utxoAmountDest,
+				MinBridgingFeeAmount:  minFeeForBridgingDest,
+				MinOperationFeeAmount: minOperationFeeDest,
 			},
 		},
 	)

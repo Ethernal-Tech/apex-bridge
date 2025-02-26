@@ -138,16 +138,17 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 	}
 
 	return sendtx.ChainConfig{
-		CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:           txProvider,
-		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
-		TestNetMagic:         uint(config.NetworkMagic),
-		TTLSlotNumberInc:     config.TTLSlotNumberInc,
-		MinUtxoValue:         config.UtxoMinAmount,
-		NativeTokens:         config.NativeTokens,
-		MinBridgingFeeAmount: config.MinFeeForBridging,
-		PotentialFee:         config.PotentialFee,
-		ProtocolParameters:   nil,
+		CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:            txProvider,
+		MultiSigAddr:          config.BridgingAddresses.BridgingAddress,
+		TestNetMagic:          uint(config.NetworkMagic),
+		TTLSlotNumberInc:      config.TTLSlotNumberInc,
+		MinUtxoValue:          config.UtxoMinAmount,
+		NativeTokens:          config.NativeTokens,
+		MinBridgingFeeAmount:  config.MinFeeForBridging,
+		MinOperationFeeAmount: config.MinOperationFee,
+		PotentialFee:          config.PotentialFee,
+		ProtocolParameters:    nil,
 	}, nil
 }
 

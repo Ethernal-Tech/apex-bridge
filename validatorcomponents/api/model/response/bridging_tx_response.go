@@ -9,16 +9,6 @@ type BridgingTxResponse struct {
 }
 
 func NewBridgingTxResponse(
-	txRaw string, txHash string, bridgingFee uint64,
-) *BridgingTxResponse {
-	return &BridgingTxResponse{
-		TxRaw:       txRaw,
-		TxHash:      txHash,
-		BridgingFee: bridgingFee,
-	}
-}
-
-func NewSkylineBridgingTxResponse(
 	txRaw string, txHash string, bridgingFee uint64, amount uint64, nativeTokenAmount uint64,
 ) *BridgingTxResponse {
 	return &BridgingTxResponse{
