@@ -24,14 +24,14 @@ const (
 )
 
 type sendSkylineTxParams struct {
-	privateKeyRaw    string
-	receivers        []string
-	chainIDSrc       string
-	chainIDDst       string
-	feeString        string
-	operationFee     uint64
-	tokenFullNameSrc string
-	tokenFullNameDst string
+	privateKeyRaw      string
+	receivers          []string
+	chainIDSrc         string
+	chainIDDst         string
+	feeString          string
+	operationFeeString string
+	tokenFullNameSrc   string
+	tokenFullNameDst   string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -39,9 +39,10 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount          *big.Int
+	operationFeeAmount *big.Int
+	receiversParsed    []*receiverAmount
+	wallet             *cardanowallet.Wallet
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -106,14 +107,21 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 	}
 
+	operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
+	}
+
+	p.operationFeeAmount = operationFeeAmount
+
 	minOperationFee := common.MinOperationFeeOnPrime
 
 	if p.chainIDSrc == common.ChainIDStrCardano {
 		minOperationFee = common.MinOperationFeeOnCardano
 	}
 
-	if p.operationFee < minOperationFee {
-		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFee)
+	if p.operationFeeAmount.Uint64() < minOperationFee {
+		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 	}
 
 	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
@@ -203,10 +211,10 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		feeAmountFlagDesc,
 	)
 
-	cmd.Flags().Uint64Var(
-		&p.operationFee,
+	cmd.Flags().StringVar(
+		&p.operationFeeString,
 		operationFeeFlag,
-		0,
+		"0",
 		operationFeeFlagDesc,
 	)
 
@@ -329,7 +337,7 @@ func (p *sendSkylineTxParams) Execute(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
-		p.feeAmount.Uint64(), p.operationFee)
+		p.feeAmount.Uint64(), p.operationFeeAmount.Uint64())
 	if err != nil {
 		return nil, err
 	}

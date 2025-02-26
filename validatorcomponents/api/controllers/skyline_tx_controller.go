@@ -169,6 +169,8 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		requestBody.OperationFee = cardanoSrcConfig.MinOperationFee
 	}
 
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.OperationFee))
+
 	if requestBody.OperationFee < cardanoSrcConfig.MinOperationFee {
 		return fmt.Errorf("operation fee in request body is less than minimum: %v", requestBody)
 	}
