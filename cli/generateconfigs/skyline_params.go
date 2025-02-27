@@ -300,7 +300,7 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.primeMinOperationFee,
 		primeMinOperationFeeFlag,
-		common.MinOperationFeeDefault,
+		common.MinOperationFeeOnPrime,
 		primeMinOperationFeeFlagDesc,
 	)
 
@@ -379,7 +379,7 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.cardanoMinOperationFee,
 		cardanoMinOperationFeeFlag,
-		common.MinOperationFeeDefault,
+		common.MinOperationFeeOnCardano,
 		cardanoMinOperationFeeFlagDesc,
 	)
 

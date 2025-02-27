@@ -14,20 +14,24 @@ import (
 )
 
 const (
-	fullSrcTokenNameFlag     = "src-token-name"                                      //nolint:gosec
-	fullDstTokenNameFlag     = "dst-token-name"                                      //nolint:gosec
+	operationFeeFlag     = "operation-fee"
+	fullSrcTokenNameFlag = "src-token-name" //nolint:gosec
+	fullDstTokenNameFlag = "dst-token-name" //nolint:gosec
+
+	operationFeeFlagDesc     = "operation fee"
 	fullSrcTokenNameFlagDesc = "denom of the token to transfer from source chain"    //nolint:gosec
 	fullDstTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
 )
 
 type sendSkylineTxParams struct {
-	privateKeyRaw    string
-	receivers        []string
-	chainIDSrc       string
-	chainIDDst       string
-	feeString        string
-	tokenFullNameSrc string
-	tokenFullNameDst string
+	privateKeyRaw      string
+	receivers          []string
+	chainIDSrc         string
+	chainIDDst         string
+	feeString          string
+	operationFeeString string
+	tokenFullNameSrc   string
+	tokenFullNameDst   string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -35,9 +39,10 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount          *big.Int
+	operationFeeAmount *big.Int
+	receiversParsed    []*receiverAmount
+	wallet             *cardanowallet.Wallet
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -92,14 +97,31 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	minFeeForBridging := common.MinFeeForBridgingToPrime
+	minFeeForBridging := common.MinFeeForBridgingOnPrime
 
-	if p.chainIDDst == common.ChainIDStrCardano {
-		minFeeForBridging = common.MinFeeForBridgingToCardano
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minFeeForBridging = common.MinFeeForBridgingOnCardano
 	}
 
 	if p.feeAmount.Uint64() < minFeeForBridging {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
+	}
+
+	operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
+	}
+
+	p.operationFeeAmount = operationFeeAmount
+
+	minOperationFee := common.MinOperationFeeOnPrime
+
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minOperationFee = common.MinOperationFeeOnCardano
+	}
+
+	if p.operationFeeAmount.Uint64() < minOperationFee {
+		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 	}
 
 	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
@@ -190,6 +212,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.operationFeeString,
+		operationFeeFlag,
+		"0",
+		operationFeeFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.tokenFullNameSrc,
 		fullSrcTokenNameFlag,
 		"",
@@ -254,12 +283,20 @@ func (p *sendSkylineTxParams) Execute(
 		utxoAmountDest = common.MinUtxoAmountDefaultPrime
 	}
 
-	minFeeForBridgingSrc := common.MinFeeForBridgingToPrime
-	minFeeForBridgingDest := common.MinFeeForBridgingToCardano
+	minFeeForBridgingSrc := common.MinFeeForBridgingOnPrime
+	minFeeForBridgingDest := common.MinFeeForBridgingOnCardano
 
 	if p.chainIDSrc == common.ChainIDStrCardano {
-		minFeeForBridgingSrc = common.MinFeeForBridgingToCardano
-		minFeeForBridgingDest = common.MinFeeForBridgingToPrime
+		minFeeForBridgingSrc = common.MinFeeForBridgingOnCardano
+		minFeeForBridgingDest = common.MinFeeForBridgingOnPrime
+	}
+
+	minOperationFeeSrc := common.MinOperationFeeOnPrime
+	minOperationFeeDest := common.MinOperationFeeOnCardano
+
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		minOperationFeeSrc = common.MinOperationFeeOnCardano
+		minOperationFeeDest = common.MinOperationFeeOnPrime
 	}
 
 	var srcNativeTokens []sendtx.TokenExchangeConfig
@@ -273,18 +310,20 @@ func (p *sendSkylineTxParams) Execute(
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:           cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				MultiSigAddr:         p.multisigAddrSrc,
-				TestNetMagic:         p.testnetMagicSrc,
-				TTLSlotNumberInc:     ttlSlotNumberInc,
-				MinBridgingFeeAmount: minFeeForBridgingSrc,
-				MinUtxoValue:         utxoAmountSrc,
-				NativeTokens:         srcNativeTokens,
+				CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:            cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
+				MultiSigAddr:          p.multisigAddrSrc,
+				TestNetMagic:          p.testnetMagicSrc,
+				TTLSlotNumberInc:      ttlSlotNumberInc,
+				MinBridgingFeeAmount:  minFeeForBridgingSrc,
+				MinOperationFeeAmount: minOperationFeeSrc,
+				MinUtxoValue:          utxoAmountSrc,
+				NativeTokens:          srcNativeTokens,
 			},
 			p.chainIDDst: {
-				MinUtxoValue:         utxoAmountDest,
-				MinBridgingFeeAmount: minFeeForBridgingDest,
+				MinUtxoValue:          utxoAmountDest,
+				MinBridgingFeeAmount:  minFeeForBridgingDest,
+				MinOperationFeeAmount: minOperationFeeDest,
 			},
 		},
 	)
@@ -298,7 +337,7 @@ func (p *sendSkylineTxParams) Execute(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
-		p.feeAmount.Uint64(), 0)
+		p.feeAmount.Uint64(), p.operationFeeAmount.Uint64())
 	if err != nil {
 		return nil, err
 	}

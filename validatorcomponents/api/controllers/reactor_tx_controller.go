@@ -75,9 +75,14 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
+	var amount uint64
+	for _, transaction := range requestBody.Transactions {
+		amount += transaction.Amount
+	}
+
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewFullBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee), c.logger)
+		response.NewBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee, amount, 0), c.logger)
 }
 
 func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
@@ -156,17 +161,12 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		if cardanoDestConfig != nil {
-			requestBody.BridgingFee = cardanoDestConfig.MinFeeForBridging
-		} else if ethDestConfig != nil {
-			requestBody.BridgingFee = ethDestConfig.MinFeeForBridging
-		}
+		requestBody.BridgingFee = cardanoSrcConfig.MinFeeForBridging
 	}
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if (cardanoDestConfig != nil && requestBody.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && requestBody.BridgingFee < ethDestConfig.MinFeeForBridging) {
+	if requestBody.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 
