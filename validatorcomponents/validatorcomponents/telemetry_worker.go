@@ -169,12 +169,15 @@ func (ti *TelemetryWorker) getHotWalletState(
 	return value
 }
 
-func (ti *TelemetryWorker) getHotWalletStateForNativeToken(contract *contractbinding.AdminContract, chainID string) (value *big.Int) {
+func (ti *TelemetryWorker) getHotWalletStateForNativeToken(
+	contract *contractbinding.AdminContract, chainID string,
+) (value *big.Int) {
 	val, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
 	if err != nil {
 		ti.logger.Warn("failed to retrieve hot wallet state for native token", "chain", chainID, "err", err)
 	} else if cache := ti.latestHotWalletStateForNativeToken[chainID]; cache == nil || cache.Cmp(val) != 0 {
 		ti.latestHotWalletStateForNativeToken[chainID] = val
+
 		value = val
 	}
 
