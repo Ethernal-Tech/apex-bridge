@@ -17,22 +17,24 @@ import (
 )
 
 const (
-	feeMetricName      = "fee"
-	multisigMetricName = "multisig"
+	feeMetricName         = "fee"
+	multisigMetricName    = "multisig"
+	nativeTokenMetricName = "nativeToken"
 )
 
 var apexBridgeAdminScAddress = common.HexToAddress("0xABEF000000000000000000000000000000000006")
 
 type TelemetryWorker struct {
-	etxHelperWrapper       *eth.EthHelperWrapper
-	cardanoDBs             map[string]indexer.Database
-	ethDBs                 map[string]eventTrackerStore.EventTrackerStore
-	config                 *oracleCommonCore.AppConfig
-	waitTime               time.Duration
-	latestBlock            map[string]*indexer.BlockPoint
-	latestHotWalletState   map[string]*big.Int
-	latestFeeMultisigState map[string]uint64
-	logger                 hclog.Logger
+	etxHelperWrapper                   *eth.EthHelperWrapper
+	cardanoDBs                         map[string]indexer.Database
+	ethDBs                             map[string]eventTrackerStore.EventTrackerStore
+	config                             *oracleCommonCore.AppConfig
+	waitTime                           time.Duration
+	latestBlock                        map[string]*indexer.BlockPoint
+	latestHotWalletState               map[string]*big.Int
+	latestHotWalletStateForNativeToken map[string]*big.Int
+	latestFeeMultisigState             map[string]uint64
+	logger                             hclog.Logger
 }
 
 func NewTelemetryWorker(
@@ -44,14 +46,15 @@ func NewTelemetryWorker(
 	logger hclog.Logger,
 ) *TelemetryWorker {
 	return &TelemetryWorker{
-		etxHelperWrapper:       txHelper,
-		cardanoDBs:             cardanoDBs,
-		ethDBs:                 ethDBs,
-		config:                 config,
-		latestBlock:            map[string]*indexer.BlockPoint{},
-		latestHotWalletState:   map[string]*big.Int{},
-		latestFeeMultisigState: map[string]uint64{},
-		logger:                 logger,
+		etxHelperWrapper:                   txHelper,
+		cardanoDBs:                         cardanoDBs,
+		ethDBs:                             ethDBs,
+		config:                             config,
+		latestBlock:                        map[string]*indexer.BlockPoint{},
+		latestHotWalletState:               map[string]*big.Int{},
+		latestHotWalletStateForNativeToken: map[string]*big.Int{},
+		latestFeeMultisigState:             map[string]uint64{},
+		logger:                             logger,
 	}
 }
 
@@ -121,6 +124,14 @@ func (ti *TelemetryWorker) execute() {
 			telemetry.UpdateHotWalletState(chainID, multisigMetricName, val.Uint64())
 		}
 	}
+
+	if ti.config.RunMode == common.SkylineMode {
+		for chainID := range ti.cardanoDBs {
+			if val := ti.getHotWalletStateForNativeToken(contract, chainID); val != nil {
+				telemetry.UpdateHotWalletState(chainID, nativeTokenMetricName, val.Uint64())
+			}
+		}
+	}
 }
 
 func (ti *TelemetryWorker) updateFeeHotWalletState(db indexer.Database, chainID string) {
@@ -151,6 +162,21 @@ func (ti *TelemetryWorker) getHotWalletState(
 		ti.logger.Warn("failed to retrieve hot wallet state", "chain", chainID, "err", err)
 	} else if cache := ti.latestHotWalletState[chainID]; cache == nil || cache.Cmp(val) != 0 {
 		ti.latestHotWalletState[chainID] = val
+
+		value = val
+	}
+
+	return value
+}
+
+func (ti *TelemetryWorker) getHotWalletStateForNativeToken(
+	contract *contractbinding.AdminContract, chainID string,
+) (value *big.Int) {
+	val, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+	if err != nil {
+		ti.logger.Warn("failed to retrieve hot wallet state for native token", "chain", chainID, "err", err)
+	} else if cache := ti.latestHotWalletStateForNativeToken[chainID]; cache == nil || cache.Cmp(val) != 0 {
+		ti.latestHotWalletStateForNativeToken[chainID] = val
 
 		value = val
 	}
