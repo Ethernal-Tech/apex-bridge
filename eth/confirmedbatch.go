@@ -42,7 +42,7 @@ func (b ConfirmedBatch) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(b.ID))
-	sb.WriteString("isConsolidation = ")
+	sb.WriteString("\nisConsolidation = ")
 	sb.WriteString(fmt.Sprint(b.IsConsolidation))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
@@ -118,7 +118,7 @@ func (sbw SignedBatchWrapper) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(sbw.Id))
-	sb.WriteString("isConsolidation = ")
+	sb.WriteString("\nisConsolidation = ")
 	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
