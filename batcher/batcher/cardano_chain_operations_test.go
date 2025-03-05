@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -521,6 +522,83 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})
+
+	t.Run("getUTXOsForConsolidation should pass when there is more utxos than maxUtxo", func(t *testing.T) {
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 50)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10)
+
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
+		require.NoError(t, err)
+		require.Equal(t, 46, len(multisigUtxos))
+		require.Equal(t, 4, len(feeUtxos))
+	})
+
+	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3)
+
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
+		require.NoError(t, err)
+		require.Equal(t, 30, len(multisigUtxos))
+		require.Equal(t, 3, len(feeUtxos))
+	})
+
+	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		batchNonceID := uint64(1)
+
+		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(2000, 10)
+
+		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
+		confirmedTransactions[0] = eth.ConfirmedTransaction{
+			Nonce:       1,
+			BlockHeight: big.NewInt(1),
+			Receivers: []eth.BridgeReceiver{{
+				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+				Amount:             new(big.Int).SetUint64(multisigUtxoOutputsSum - 10000),
+			}},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.Equal(t, true, result.IsConsolidation)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
 }
 
 func Test_getNeededUtxos(t *testing.T) {
@@ -734,4 +812,25 @@ func Test_getUTXOs(t *testing.T) {
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
 	})
+}
+
+func generateSmallUtxoOutputs(value uint64, n uint64) ([]*indexer.TxInputOutput, uint64) {
+	utxoOutput := make([]*indexer.TxInputOutput, 0, n)
+	returnSum := uint64(0)
+
+	for i := uint64(0); i < n; i++ {
+		utxoOutput = append(utxoOutput,
+			&indexer.TxInputOutput{
+				Input: indexer.TxInput{
+					Hash: indexer.NewHashFromHexString(fmt.Sprintf("0x00%d", i)),
+				},
+				Output: indexer.TxOutput{
+					Amount: value,
+				},
+			},
+		)
+		returnSum += value
+	}
+
+	return utxoOutput, returnSum
 }
