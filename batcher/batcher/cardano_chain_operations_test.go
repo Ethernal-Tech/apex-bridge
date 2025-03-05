@@ -190,6 +190,17 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
@@ -399,6 +410,17 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
 		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)

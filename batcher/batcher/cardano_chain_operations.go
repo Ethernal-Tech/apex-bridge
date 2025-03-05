@@ -396,6 +396,10 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
 
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
 	cco.logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
