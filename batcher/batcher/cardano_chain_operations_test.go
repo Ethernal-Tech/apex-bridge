@@ -653,7 +653,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("not enough sum", func(t *testing.T) {
 		_, err := getNeededUtxos(inputs, 160, 5, 5, 30, 1)
-		require.ErrorContains(t, err, "couldn't select UTXOs for sum")
+		require.ErrorIs(t, err, errUTXOsCouldNotSelect)
 	})
 }
 

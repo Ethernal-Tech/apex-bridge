@@ -20,8 +20,9 @@ import (
 var (
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 
-	errUTXOsLimitReached = errors.New("utxos limit reached, consolidation is required")
-	errTxSizeTooBig      = errors.New("batch tx size too big")
+	errUTXOsLimitReached   = errors.New("utxos limit reached, consolidation is required")
+	errUTXOsCouldNotSelect = errors.New("couldn't select UTXOs")
+	errTxSizeTooBig        = errors.New("batch tx size too big")
 )
 
 // Get real tx size from protocolParams/config
@@ -546,7 +547,7 @@ func getNeededUtxos(
 			return nil, fmt.Errorf("%w: %d vs %d", errUTXOsLimitReached, totalUTXOsSum, txCostWithMinChange)
 		}
 
-		return nil, fmt.Errorf("fatal error, couldn't select UTXOs for sum: %d", desiredAmount)
+		return nil, fmt.Errorf("%w: %d vs %d", errUTXOsCouldNotSelect, totalUTXOsSum, txCostWithMinChange)
 	}
 
 	return chosenUTXOs, nil
