@@ -156,6 +156,9 @@ const (
 
 var (
 	defaultMaxAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
+
+	maxFeeUtxoCountDefault = 4
+	maxUtxoCountDefault    = 50
 )
 
 type generateConfigsParams struct {
@@ -735,6 +738,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
 		SocketPath:       p.primeSocketPath,
 		PotentialFee:     300000,
+		MaxFeeUtxoCount:  maxFeeUtxoCountDefault,
+		MaxUtxoCount:     maxUtxoCountDefault,
 	})
 
 	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
@@ -745,6 +750,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
 		SocketPath:       p.vectorSocketPath,
 		PotentialFee:     300000,
+		MaxFeeUtxoCount:  maxFeeUtxoCountDefault,
+		MaxUtxoCount:     maxUtxoCountDefault,
 	})
 
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{

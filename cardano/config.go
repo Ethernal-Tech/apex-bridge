@@ -23,6 +23,8 @@ type CardanoChainConfig struct {
 	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
 	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
+	MaxFeeUtxoCount       int                              `json:"maxFeeUtxoCount"`
+	MaxUtxoCount          int                              `json:"maxUtxoCount"`
 }
 
 // GetChainType implements ChainSpecificConfig.

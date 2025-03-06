@@ -56,6 +56,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
 			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 			UtxoMinAmount:         ccConfig.UtxoMinAmount,
+			MaxFeeUtxoCount:       ccConfig.MaxFeeUtxoCount,
+			MaxUtxoCount:          ccConfig.MaxUtxoCount,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{

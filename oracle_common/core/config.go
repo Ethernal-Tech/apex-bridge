@@ -67,6 +67,8 @@ type CardanoChainConfig struct {
 	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
 	UtxoMinAmount         uint64  `json:"utxoMinAmount"`
 	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
+	MaxFeeUtxoCount       int     `json:"maxFeeUtxoCount"`
+	MaxUtxoCount          int     `json:"maxUtxoCount"`
 }
 
 type SubmitConfig struct {

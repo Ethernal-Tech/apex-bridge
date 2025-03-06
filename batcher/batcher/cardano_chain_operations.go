@@ -27,9 +27,7 @@ var (
 
 // Get real tx size from protocolParams/config
 const (
-	maxFeeUtxoCount = 4
-	maxUtxoCount    = 50
-	maxTxSize       = 16000
+	maxTxSize = 16000
 )
 
 type CardanoChainOperations struct {
@@ -405,9 +403,9 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	// do not take more than maxFeeUtxoCount
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))]
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))]
 	// do not take more than maxUtxoCount - length of chosen fee utxos
-	multisigUtxos = multisigUtxos[:min(maxUtxoCount-len(feeUtxos), len(multisigUtxos))]
+	multisigUtxos = multisigUtxos[:min(cco.config.MaxUtxoCount-len(feeUtxos), len(multisigUtxos))]
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
@@ -437,14 +435,14 @@ func (cco *CardanoChainOperations) getUTXOs(
 	cco.logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
 		txOutputs.Sum[cardanowallet.AdaTokenName],
 		cco.config.UtxoMinAmount,
 		len(feeUtxos)+len(txOutputs.Outputs),
-		maxUtxoCount,
+		cco.config.MaxUtxoCount,
 		cco.config.TakeAtLeastUtxoCount,
 	)
 	if err != nil {

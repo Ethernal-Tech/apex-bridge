@@ -119,6 +119,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	cco.txProvider = txProviderMock
 	cco.config.SlotRoundingThreshold = 100
+	cco.config.MaxFeeUtxoCount = 4
+	cco.config.MaxUtxoCount = 50
 
 	testError := errors.New("test err")
 	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
@@ -348,6 +350,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 	cco.txProvider = txProviderMock
 	cco.config.SlotRoundingThreshold = 100
+	cco.config.MaxFeeUtxoCount = 4
+	cco.config.MaxUtxoCount = 50
 
 	testError := errors.New("test err")
 	consolidationTxID := uint64(1)
@@ -758,6 +762,8 @@ func Test_getUTXOs(t *testing.T) {
 		db: dbMock,
 		config: &cardano.CardanoChainConfig{
 			NoBatchPeriodPercent: 0.1,
+			MaxFeeUtxoCount:      4,
+			MaxUtxoCount:         50,
 		},
 		logger: hclog.NewNullLogger(),
 	}
