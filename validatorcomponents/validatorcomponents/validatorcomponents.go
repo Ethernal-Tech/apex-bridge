@@ -27,7 +27,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
-	relayerDbAccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/validatorcomponents/database_access"
+	relayerDbAccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access/relayer_imitator"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
