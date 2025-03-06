@@ -441,7 +441,7 @@ func (cco *CardanoChainOperations) getUTXOs(
 		multisigUtxos,
 		txOutputs.Sum[cardanowallet.AdaTokenName],
 		cco.config.UtxoMinAmount,
-		len(feeUtxos)+len(txOutputs.Outputs),
+		len(feeUtxos),
 		cco.config.MaxUtxoCount,
 		cco.config.TakeAtLeastUtxoCount,
 	)
