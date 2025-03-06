@@ -64,11 +64,11 @@ type CardanoChainConfig struct {
 	SlotRoundingThreshold uint64  `json:"slotRoundingThreshold"`
 	TTLSlotNumberInc      uint64  `json:"ttlSlotNumberIncrement"`
 	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
-	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
 	UtxoMinAmount         uint64  `json:"utxoMinAmount"`
 	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
 	MaxFeeUtxoCount       int     `json:"maxFeeUtxoCount"`
 	MaxUtxoCount          int     `json:"maxUtxoCount"`
+	TakeAtLeastUtxoCount  int     `json:"takeAtLeastUtxoCount"`
 }
 
 type SubmitConfig struct {

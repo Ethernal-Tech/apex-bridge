@@ -54,10 +54,10 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			TTLSlotNumberInc:      ccConfig.TTLSlotNumberInc,
 			SlotRoundingThreshold: ccConfig.SlotRoundingThreshold,
 			NoBatchPeriodPercent:  ccConfig.NoBatchPeriodPercent,
-			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 			UtxoMinAmount:         ccConfig.UtxoMinAmount,
 			MaxFeeUtxoCount:       ccConfig.MaxFeeUtxoCount,
 			MaxUtxoCount:          ccConfig.MaxUtxoCount,
+			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
