@@ -148,10 +148,13 @@ const (
 	defaultNexusPoolIntervalMiliseconds      = 1500
 	defaultNexusNoBatchPeriodPercent         = 0.2
 	defaultNoBatchPeriodPercent              = 0.0625
-	defaultTakeAtLeastUtxoCount              = 6
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
 	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
+
+	defaultMaxFeeUtxoCount      = 4
+	defaultMaxUtxoCount         = 50
+	defaultTakeAtLeastUtxoCount = 6
 )
 
 var (
@@ -633,9 +636,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.primeSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
-				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 				UtxoMinAmount:            p.primeUtxoMinAmount,
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
+				MaxUtxoCount:             defaultMaxUtxoCount,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 			},
 			common.ChainIDStrVector: {
 				NetworkAddress:           p.vectorNetworkAddress,
@@ -653,9 +658,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				PotentialFee:             300000,
 				SlotRoundingThreshold:    p.vectorSlotRoundingThreshold,
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
-				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 				UtxoMinAmount:            p.vectorUtxoMinAmount,
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
+				MaxUtxoCount:             defaultMaxUtxoCount,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -735,6 +742,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BlockfrostAPIKey: p.primeBlockfrostAPIKey,
 		SocketPath:       p.primeSocketPath,
 		PotentialFee:     300000,
+		MaxFeeUtxoCount:  defaultMaxFeeUtxoCount,
+		MaxUtxoCount:     defaultMaxUtxoCount,
 	})
 
 	vectorChainSpecificJSONRaw, _ := json.Marshal(cardanotx.CardanoChainConfig{
@@ -745,6 +754,8 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		BlockfrostAPIKey: p.vectorBlockfrostAPIKey,
 		SocketPath:       p.vectorSocketPath,
 		PotentialFee:     300000,
+		MaxFeeUtxoCount:  defaultMaxFeeUtxoCount,
+		MaxUtxoCount:     defaultMaxUtxoCount,
 	})
 
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{

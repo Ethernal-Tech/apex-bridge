@@ -31,7 +31,7 @@ var (
 
 // AdminContractMetaData contains all meta data concerning the AdminContract contract.
 var AdminContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_claimTransactionHash\",\"type\":\"bytes32\"}],\"name\":\"AlreadyConfirmed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_claimTransactionHash\",\"type\":\"bytes32\"}],\"name\":\"NotEnoughBridgingTokensAvailable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint64\",\"name\":\"_nonce\",\"type\":\"uint64\"}],\"name\":\"WrongBatchNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawalAmount\",\"type\":\"uint256\"}],\"name\":\"InsufficientFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_quantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_claimTransactionHash\",\"type\":\"bytes32\"}],\"name\":\"AlreadyConfirmed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_claimTransactionHash\",\"type\":\"bytes32\"}],\"name\":\"NotEnoughBridgingTokensAvailable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotUpgradeAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint64\",\"name\":\"_nonce\",\"type\":\"uint64\"}],\"name\":\"WrongBatchNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"tokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint256\"}],\"name\":\"UpdatedMaxNumberOfTransactions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint256\"}],\"name\":\"UpdatedTimeoutBlocksNumber\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_quantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"}],\"name\":\"updateMaxNumberOfTransactions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"name\":\"updateTimeoutBlocksNumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // AdminContractABI is the input ABI used to generate the binding from.
@@ -449,6 +449,48 @@ func (_AdminContract *AdminContractSession) UpdateChainTokenQuantity(_chainId ui
 // Solidity: function updateChainTokenQuantity(uint8 _chainId, bool _isIncrease, uint256 _quantity) returns()
 func (_AdminContract *AdminContractTransactorSession) UpdateChainTokenQuantity(_chainId uint8, _isIncrease bool, _quantity *big.Int) (*types.Transaction, error) {
 	return _AdminContract.Contract.UpdateChainTokenQuantity(&_AdminContract.TransactOpts, _chainId, _isIncrease, _quantity)
+}
+
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractTransactor) UpdateMaxNumberOfTransactions(opts *bind.TransactOpts, _maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateMaxNumberOfTransactions", _maxNumberOfTransactions)
+}
+
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractSession) UpdateMaxNumberOfTransactions(_maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateMaxNumberOfTransactions(&_AdminContract.TransactOpts, _maxNumberOfTransactions)
+}
+
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateMaxNumberOfTransactions(_maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateMaxNumberOfTransactions(&_AdminContract.TransactOpts, _maxNumberOfTransactions)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractTransactor) UpdateTimeoutBlocksNumber(opts *bind.TransactOpts, _timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateTimeoutBlocksNumber", _timeoutBlocksNumber)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractSession) UpdateTimeoutBlocksNumber(_timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateTimeoutBlocksNumber(&_AdminContract.TransactOpts, _timeoutBlocksNumber)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateTimeoutBlocksNumber(_timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateTimeoutBlocksNumber(&_AdminContract.TransactOpts, _timeoutBlocksNumber)
 }
 
 // UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
@@ -1308,141 +1350,6 @@ func (_AdminContract *AdminContractFilterer) ParseInitialized(log types.Log) (*A
 	return event, nil
 }
 
-// AdminContractInsufficientFundsIterator is returned from FilterInsufficientFunds and is used to iterate over the raw logs and unpacked data for InsufficientFunds events raised by the AdminContract contract.
-type AdminContractInsufficientFundsIterator struct {
-	Event *AdminContractInsufficientFunds // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AdminContractInsufficientFundsIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AdminContractInsufficientFunds)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AdminContractInsufficientFunds)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AdminContractInsufficientFundsIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AdminContractInsufficientFundsIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AdminContractInsufficientFunds represents a InsufficientFunds event raised by the AdminContract contract.
-type AdminContractInsufficientFunds struct {
-	AvailableAmount  *big.Int
-	WithdrawalAmount *big.Int
-	Raw              types.Log // Blockchain specific contextual infos
-}
-
-// FilterInsufficientFunds is a free log retrieval operation binding the contract event 0x03eb8b54a949acec2cd08fdb6d6bd4647a1f2c907d75d6900648effa92eb147f.
-//
-// Solidity: event InsufficientFunds(uint256 availableAmount, uint256 withdrawalAmount)
-func (_AdminContract *AdminContractFilterer) FilterInsufficientFunds(opts *bind.FilterOpts) (*AdminContractInsufficientFundsIterator, error) {
-
-	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "InsufficientFunds")
-	if err != nil {
-		return nil, err
-	}
-	return &AdminContractInsufficientFundsIterator{contract: _AdminContract.contract, event: "InsufficientFunds", logs: logs, sub: sub}, nil
-}
-
-// WatchInsufficientFunds is a free log subscription operation binding the contract event 0x03eb8b54a949acec2cd08fdb6d6bd4647a1f2c907d75d6900648effa92eb147f.
-//
-// Solidity: event InsufficientFunds(uint256 availableAmount, uint256 withdrawalAmount)
-func (_AdminContract *AdminContractFilterer) WatchInsufficientFunds(opts *bind.WatchOpts, sink chan<- *AdminContractInsufficientFunds) (event.Subscription, error) {
-
-	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "InsufficientFunds")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AdminContractInsufficientFunds)
-				if err := _AdminContract.contract.UnpackLog(event, "InsufficientFunds", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseInsufficientFunds is a log parse operation binding the contract event 0x03eb8b54a949acec2cd08fdb6d6bd4647a1f2c907d75d6900648effa92eb147f.
-//
-// Solidity: event InsufficientFunds(uint256 availableAmount, uint256 withdrawalAmount)
-func (_AdminContract *AdminContractFilterer) ParseInsufficientFunds(log types.Log) (*AdminContractInsufficientFunds, error) {
-	event := new(AdminContractInsufficientFunds)
-	if err := _AdminContract.contract.UnpackLog(event, "InsufficientFunds", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // AdminContractNotEnoughFundsIterator is returned from FilterNotEnoughFunds and is used to iterate over the raw logs and unpacked data for NotEnoughFunds events raised by the AdminContract contract.
 type AdminContractNotEnoughFundsIterator struct {
 	Event *AdminContractNotEnoughFunds // Event containing the contract specifics and raw log
@@ -1872,6 +1779,274 @@ func (_AdminContract *AdminContractFilterer) WatchUpdatedChainTokenQuantity(opts
 func (_AdminContract *AdminContractFilterer) ParseUpdatedChainTokenQuantity(log types.Log) (*AdminContractUpdatedChainTokenQuantity, error) {
 	event := new(AdminContractUpdatedChainTokenQuantity)
 	if err := _AdminContract.contract.UnpackLog(event, "UpdatedChainTokenQuantity", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractUpdatedMaxNumberOfTransactionsIterator is returned from FilterUpdatedMaxNumberOfTransactions and is used to iterate over the raw logs and unpacked data for UpdatedMaxNumberOfTransactions events raised by the AdminContract contract.
+type AdminContractUpdatedMaxNumberOfTransactionsIterator struct {
+	Event *AdminContractUpdatedMaxNumberOfTransactions // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractUpdatedMaxNumberOfTransactionsIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractUpdatedMaxNumberOfTransactions)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractUpdatedMaxNumberOfTransactions)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractUpdatedMaxNumberOfTransactionsIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractUpdatedMaxNumberOfTransactionsIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractUpdatedMaxNumberOfTransactions represents a UpdatedMaxNumberOfTransactions event raised by the AdminContract contract.
+type AdminContractUpdatedMaxNumberOfTransactions struct {
+	MaxNumberOfTransactions *big.Int
+	Raw                     types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpdatedMaxNumberOfTransactions is a free log retrieval operation binding the contract event 0x0df74faf2972aea8bdd626cd6886a1fa4c9813a87981870c58f1e6c1ebd9f89a.
+//
+// Solidity: event UpdatedMaxNumberOfTransactions(uint256 _maxNumberOfTransactions)
+func (_AdminContract *AdminContractFilterer) FilterUpdatedMaxNumberOfTransactions(opts *bind.FilterOpts) (*AdminContractUpdatedMaxNumberOfTransactionsIterator, error) {
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "UpdatedMaxNumberOfTransactions")
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractUpdatedMaxNumberOfTransactionsIterator{contract: _AdminContract.contract, event: "UpdatedMaxNumberOfTransactions", logs: logs, sub: sub}, nil
+}
+
+// WatchUpdatedMaxNumberOfTransactions is a free log subscription operation binding the contract event 0x0df74faf2972aea8bdd626cd6886a1fa4c9813a87981870c58f1e6c1ebd9f89a.
+//
+// Solidity: event UpdatedMaxNumberOfTransactions(uint256 _maxNumberOfTransactions)
+func (_AdminContract *AdminContractFilterer) WatchUpdatedMaxNumberOfTransactions(opts *bind.WatchOpts, sink chan<- *AdminContractUpdatedMaxNumberOfTransactions) (event.Subscription, error) {
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "UpdatedMaxNumberOfTransactions")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractUpdatedMaxNumberOfTransactions)
+				if err := _AdminContract.contract.UnpackLog(event, "UpdatedMaxNumberOfTransactions", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpdatedMaxNumberOfTransactions is a log parse operation binding the contract event 0x0df74faf2972aea8bdd626cd6886a1fa4c9813a87981870c58f1e6c1ebd9f89a.
+//
+// Solidity: event UpdatedMaxNumberOfTransactions(uint256 _maxNumberOfTransactions)
+func (_AdminContract *AdminContractFilterer) ParseUpdatedMaxNumberOfTransactions(log types.Log) (*AdminContractUpdatedMaxNumberOfTransactions, error) {
+	event := new(AdminContractUpdatedMaxNumberOfTransactions)
+	if err := _AdminContract.contract.UnpackLog(event, "UpdatedMaxNumberOfTransactions", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractUpdatedTimeoutBlocksNumberIterator is returned from FilterUpdatedTimeoutBlocksNumber and is used to iterate over the raw logs and unpacked data for UpdatedTimeoutBlocksNumber events raised by the AdminContract contract.
+type AdminContractUpdatedTimeoutBlocksNumberIterator struct {
+	Event *AdminContractUpdatedTimeoutBlocksNumber // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractUpdatedTimeoutBlocksNumberIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractUpdatedTimeoutBlocksNumber)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractUpdatedTimeoutBlocksNumber)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractUpdatedTimeoutBlocksNumberIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractUpdatedTimeoutBlocksNumberIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractUpdatedTimeoutBlocksNumber represents a UpdatedTimeoutBlocksNumber event raised by the AdminContract contract.
+type AdminContractUpdatedTimeoutBlocksNumber struct {
+	TimeoutBlocksNumber *big.Int
+	Raw                 types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpdatedTimeoutBlocksNumber is a free log retrieval operation binding the contract event 0x417143ffedb5f1c20f085be7f77b19ca8b7c93d98a93d5a133e3516ecc23b409.
+//
+// Solidity: event UpdatedTimeoutBlocksNumber(uint256 _timeoutBlocksNumber)
+func (_AdminContract *AdminContractFilterer) FilterUpdatedTimeoutBlocksNumber(opts *bind.FilterOpts) (*AdminContractUpdatedTimeoutBlocksNumberIterator, error) {
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "UpdatedTimeoutBlocksNumber")
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractUpdatedTimeoutBlocksNumberIterator{contract: _AdminContract.contract, event: "UpdatedTimeoutBlocksNumber", logs: logs, sub: sub}, nil
+}
+
+// WatchUpdatedTimeoutBlocksNumber is a free log subscription operation binding the contract event 0x417143ffedb5f1c20f085be7f77b19ca8b7c93d98a93d5a133e3516ecc23b409.
+//
+// Solidity: event UpdatedTimeoutBlocksNumber(uint256 _timeoutBlocksNumber)
+func (_AdminContract *AdminContractFilterer) WatchUpdatedTimeoutBlocksNumber(opts *bind.WatchOpts, sink chan<- *AdminContractUpdatedTimeoutBlocksNumber) (event.Subscription, error) {
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "UpdatedTimeoutBlocksNumber")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractUpdatedTimeoutBlocksNumber)
+				if err := _AdminContract.contract.UnpackLog(event, "UpdatedTimeoutBlocksNumber", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpdatedTimeoutBlocksNumber is a log parse operation binding the contract event 0x417143ffedb5f1c20f085be7f77b19ca8b7c93d98a93d5a133e3516ecc23b409.
+//
+// Solidity: event UpdatedTimeoutBlocksNumber(uint256 _timeoutBlocksNumber)
+func (_AdminContract *AdminContractFilterer) ParseUpdatedTimeoutBlocksNumber(log types.Log) (*AdminContractUpdatedTimeoutBlocksNumber, error) {
+	event := new(AdminContractUpdatedTimeoutBlocksNumber)
+	if err := _AdminContract.contract.UnpackLog(event, "UpdatedTimeoutBlocksNumber", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
