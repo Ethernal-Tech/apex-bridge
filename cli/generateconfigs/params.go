@@ -149,10 +149,13 @@ const (
 	defaultNexusPoolIntervalMiliseconds      = 1500
 	defaultNexusNoBatchPeriodPercent         = 0.2
 	defaultNoBatchPeriodPercent              = 0.0625
-	defaultTakeAtLeastUtxoCount              = 6
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
 	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
+
+	defaultMaxFeeUtxoCount      = 4
+	defaultMaxUtxoCount         = 50
+	defaultTakeAtLeastUtxoCount = 6
 )
 
 var (
@@ -633,8 +636,10 @@ func (p *generateConfigsParams) Execute(
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.primeUtxoMinAmount,
+					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
+					MaxUtxoCount:          defaultMaxUtxoCount,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
@@ -655,8 +660,10 @@ func (p *generateConfigsParams) Execute(
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.vectorSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.vectorUtxoMinAmount,
+					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
+					MaxUtxoCount:          defaultMaxUtxoCount,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 				},
 				NetworkAddress:           p.vectorNetworkAddress,
 				StartBlockHash:           vectorStartingHash,

@@ -28,6 +28,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/controllers"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
+	relayerDbAccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access/relayer_imitator"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
@@ -70,6 +71,12 @@ func NewValidatorComponents(
 	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open validator components database: %w", err)
+	}
+
+	relayerImitatorDB, err := relayerDbAccess.NewDatabase(
+		filepath.Join(appConfig.Settings.DbsPath, RelayerImitatorComponentName+".db"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open relayer imitator database: %w", err)
 	}
 
 	secretsManager, err := common.GetSecretsManager(
@@ -176,7 +183,7 @@ func NewValidatorComponents(
 	}
 
 	relayerImitator, err := NewRelayerImitator(
-		appConfig, bridgingRequestStateManager, bridgeSmartContract, db, logger.Named("relayer_imitator"))
+		appConfig, bridgingRequestStateManager, bridgeSmartContract, relayerImitatorDB, logger.Named("relayer_imitator"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RelayerImitator. err: %w", err)
 	}

@@ -29,6 +29,10 @@ type ICardanoChainOperationsStrategy interface {
 		db indexer.Database,
 		logger hclog.Logger,
 	) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error)
+	FilterUTXOsForConsolidation(
+		multisigUtxos, feeUtxos []*indexer.TxInputOutput,
+		_ *cardano.CardanoChainConfig,
+	) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error)
 }
 
 var (
@@ -105,13 +109,13 @@ func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
 	multisigUtxos, err = s.getNeededUtxos(
 		multisigUtxos,
 		txOutputs.Sum,
 		cardanoConfig.UtxoMinAmount,
-		maxUtxoCount-len(feeUtxos),
+		cardanoConfig.MaxUtxoCount-len(feeUtxos),
 		0,
 		cardanoConfig.TakeAtLeastUtxoCount,
 	)
@@ -122,6 +126,13 @@ func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
 	logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
 	return
+}
+
+func (s *CardanoChainOperationReactorStrategy) FilterUTXOsForConsolidation(
+	multisigUtxos, feeUtxos []*indexer.TxInputOutput,
+	_ *cardano.CardanoChainConfig,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	return filterOutUtxosWithUnknownTokens(multisigUtxos), filterOutUtxosWithUnknownTokens(feeUtxos), nil
 }
 
 func (s *CardanoChainOperationReactorStrategy) getNeededUtxos(
@@ -231,15 +242,9 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	knownTokens := make([]cardanowallet.Token, len(cardanoConfig.NativeTokens))
-
-	for i, tokenConfig := range cardanoConfig.NativeTokens {
-		token, err := cardano.GetNativeTokenFromConfig(tokenConfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		knownTokens[i] = token
+	knownTokens, err := getKnownTokens(cardanoConfig)
+	if err != nil {
+		return
 	}
 
 	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
@@ -247,13 +252,13 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 	logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
-	feeUtxos = feeUtxos[:min(maxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
 	multisigUtxos, err = s.getNeededUtxos(
 		multisigUtxos,
 		txOutputs.Sum,
 		cardanoConfig.UtxoMinAmount,
-		maxUtxoCount-len(feeUtxos),
+		cardanoConfig.MaxUtxoCount-len(feeUtxos),
 		tokenHoldingOutputs,
 		cardanoConfig.TakeAtLeastUtxoCount,
 	)
@@ -264,6 +269,21 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 	logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
 	return
+}
+
+func (s *CardanoChainOperationSkylineStrategy) FilterUTXOsForConsolidation(
+	multisigUtxos, feeUtxos []*indexer.TxInputOutput,
+	cardanoConfig *cardano.CardanoChainConfig,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	knownTokens, err := getKnownTokens(cardanoConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to filter UTXOs for consolidation: %w", err)
+	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+
+	return multisigUtxos, feeUtxos, nil
 }
 
 func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
@@ -322,6 +342,21 @@ func getNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
+}
+
+func getKnownTokens(cardanoConfig *cardano.CardanoChainConfig) ([]cardanowallet.Token, error) {
+	knownTokens := make([]cardanowallet.Token, len(cardanoConfig.NativeTokens))
+
+	for i, tokenConfig := range cardanoConfig.NativeTokens {
+		token, err := cardano.GetNativeTokenFromConfig(tokenConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve native tokens from config: %w", err)
+		}
+
+		knownTokens[i] = token
+	}
+
+	return knownTokens, nil
 }
 
 func filterOutUtxosWithUnknownTokens(

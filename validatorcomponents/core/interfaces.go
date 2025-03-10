@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	relayerCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 )
 
 type BridgingRequestStateDB interface {
@@ -13,7 +12,6 @@ type BridgingRequestStateDB interface {
 
 type Database interface {
 	BridgingRequestStateDB
-	relayerCore.Database
 	Init(filePath string) error
 	Close() error
 }
