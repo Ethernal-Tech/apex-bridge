@@ -118,6 +118,8 @@ func (sbw SignedBatchWrapper) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(sbw.Id))
+	sb.WriteString("\nisConsolidation = ")
+	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")

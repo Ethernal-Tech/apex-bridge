@@ -545,6 +545,48 @@ func (_AdminContract *AdminContractTransactorSession) UpdateTimeoutBlocksNumber(
 	return _AdminContract.Contract.UpdateTimeoutBlocksNumber(&_AdminContract.TransactOpts, _timeoutBlocksNumber)
 }
 
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractTransactor) UpdateMaxNumberOfTransactions(opts *bind.TransactOpts, _maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateMaxNumberOfTransactions", _maxNumberOfTransactions)
+}
+
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractSession) UpdateMaxNumberOfTransactions(_maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateMaxNumberOfTransactions(&_AdminContract.TransactOpts, _maxNumberOfTransactions)
+}
+
+// UpdateMaxNumberOfTransactions is a paid mutator transaction binding the contract method 0x39588c20.
+//
+// Solidity: function updateMaxNumberOfTransactions(uint16 _maxNumberOfTransactions) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateMaxNumberOfTransactions(_maxNumberOfTransactions uint16) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateMaxNumberOfTransactions(&_AdminContract.TransactOpts, _maxNumberOfTransactions)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractTransactor) UpdateTimeoutBlocksNumber(opts *bind.TransactOpts, _timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateTimeoutBlocksNumber", _timeoutBlocksNumber)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractSession) UpdateTimeoutBlocksNumber(_timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateTimeoutBlocksNumber(&_AdminContract.TransactOpts, _timeoutBlocksNumber)
+}
+
+// UpdateTimeoutBlocksNumber is a paid mutator transaction binding the contract method 0xc378dd07.
+//
+// Solidity: function updateTimeoutBlocksNumber(uint8 _timeoutBlocksNumber) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateTimeoutBlocksNumber(_timeoutBlocksNumber uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateTimeoutBlocksNumber(&_AdminContract.TransactOpts, _timeoutBlocksNumber)
+}
+
 // UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
 //
 // Solidity: function upgradeTo(address newImplementation) returns()

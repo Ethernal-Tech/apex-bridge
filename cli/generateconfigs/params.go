@@ -647,6 +647,9 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
+				MaxUtxoCount:             defaultMaxUtxoCount,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -671,6 +674,9 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   defaultVectorBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
+				MaxUtxoCount:             defaultMaxUtxoCount,
+				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
