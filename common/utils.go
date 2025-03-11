@@ -275,7 +275,7 @@ func GetDfmAmount(chainID string, amount *big.Int) *big.Int {
 	}
 }
 
-func PackNumbersToBytes[T constraints.Integer | constraints.Float](nums []T) []byte {
+func PackNumbersToBytes[Slice ~[]T, T constraints.Integer | constraints.Float](nums Slice) []byte {
 	var zero T
 
 	buf := new(bytes.Buffer)
@@ -289,7 +289,7 @@ func PackNumbersToBytes[T constraints.Integer | constraints.Float](nums []T) []b
 	return buf.Bytes()
 }
 
-func UnpackNumbersToBytes[T constraints.Integer | constraints.Float](packedBytes []byte) ([]T, error) {
+func UnpackNumbersToBytes[Slice ~[]T, T constraints.Integer | constraints.Float](packedBytes []byte) (Slice, error) {
 	var value T
 
 	buf := bytes.NewReader(packedBytes)
@@ -307,7 +307,7 @@ func UnpackNumbersToBytes[T constraints.Integer | constraints.Float](packedBytes
 	return result, nil
 }
 
-func NumbersToString[T constraints.Integer | constraints.Float](nums []T) string {
+func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums Slice) string {
 	var sb strings.Builder
 
 	for i, x := range nums {

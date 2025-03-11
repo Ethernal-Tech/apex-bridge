@@ -170,32 +170,34 @@ func TestIsIsValidNetworkAddress(t *testing.T) {
 }
 
 func TestPackNumbersToBytes(t *testing.T) {
+	type MyInts []int16
+
 	input1 := []int32{4, 5, -10, 6, 20, 30, 17, 89893}
 	input2 := []uint64{784834, 347834, 34893, 121, 0, 378273}
 	input3 := []float32{0.3, 8.11, 89.8989, -189892.9}
-	input4 := []int16{-32768, 32767, 0, 20}
+	input4 := MyInts{-32768, 32767, 0, 20}
 
 	bytes := PackNumbersToBytes(input1)
 
-	result, err := UnpackNumbersToBytes[int32](bytes)
+	result, err := UnpackNumbersToBytes[[]int32](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input1, result)
 
 	bytes = PackNumbersToBytes(input2)
 
-	result2, err := UnpackNumbersToBytes[uint64](bytes)
+	result2, err := UnpackNumbersToBytes[[]uint64](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input2, result2)
 
 	bytes = PackNumbersToBytes(input3)
 
-	result3, err := UnpackNumbersToBytes[float32](bytes)
+	result3, err := UnpackNumbersToBytes[[]float32](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input3, result3)
 
 	bytes = PackNumbersToBytes(input4)
 
-	result4, err := UnpackNumbersToBytes[int16](bytes)
+	result4, err := UnpackNumbersToBytes[MyInts](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input4, result4)
 }
