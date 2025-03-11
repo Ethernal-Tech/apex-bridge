@@ -276,6 +276,7 @@ func Test_convertUtxos(t *testing.T) {
 				Address: "0xffaa",
 				Amount:  200,
 				Slot:    34,
+				Tokens:  []indexer.TokenAmount{},
 			},
 		},
 		{
@@ -287,6 +288,7 @@ func Test_convertUtxos(t *testing.T) {
 				Address: "0xff03",
 				Amount:  500,
 				Slot:    196,
+				Tokens:  []indexer.TokenAmount{},
 			},
 		},
 	}, convertUtxos(utxos))
