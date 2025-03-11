@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -256,6 +257,22 @@ func Test_convertUtxos(t *testing.T) {
 			Address: "0xffaa",
 			Amount:  uint64(200),
 			Slot:    34,
+			Tokens: []cardanowallet.TokenAmount{
+				{
+					Token: cardanowallet.Token{
+						PolicyID: "4t8sd93a",
+						Name:     "tokenA",
+					},
+					Amount: 10,
+				},
+				{
+					Token: cardanowallet.Token{
+						PolicyID: "3u102mna",
+						Name:     "tokenB",
+					},
+					Amount: 50,
+				},
+			},
 		},
 		{
 			Hash:    indexer.NewHashFromHexString("0x1"),
@@ -263,6 +280,15 @@ func Test_convertUtxos(t *testing.T) {
 			Address: "0xff03",
 			Amount:  uint64(500),
 			Slot:    196,
+			Tokens: []cardanowallet.TokenAmount{
+				{
+					Token: cardanowallet.Token{
+						PolicyID: "8i8ou77a",
+						Name:     "tokenC",
+					},
+					Amount: 120,
+				},
+			},
 		},
 	}
 
@@ -276,7 +302,18 @@ func Test_convertUtxos(t *testing.T) {
 				Address: "0xffaa",
 				Amount:  200,
 				Slot:    34,
-				Tokens:  []indexer.TokenAmount{},
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "4t8sd93a",
+						Name:     "tokenA",
+						Amount:   10,
+					},
+					{
+						PolicyID: "3u102mna",
+						Name:     "tokenB",
+						Amount:   50,
+					},
+				},
 			},
 		},
 		{
@@ -288,7 +325,13 @@ func Test_convertUtxos(t *testing.T) {
 				Address: "0xff03",
 				Amount:  500,
 				Slot:    196,
-				Tokens:  []indexer.TokenAmount{},
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "8i8ou77a",
+						Name:     "tokenC",
+						Amount:   120,
+					},
+				},
 			},
 		},
 	}, convertUtxos(utxos))
