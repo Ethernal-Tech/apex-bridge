@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,12 +14,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/exp/constraints"
 )
 
 const (
@@ -270,4 +273,50 @@ func GetDfmAmount(chainID string, amount *big.Int) *big.Int {
 	default:
 		return amount
 	}
+}
+
+func PackNumbersToBytes[T constraints.Integer | constraints.Float](nums []T) []byte {
+	var zero T
+
+	buf := new(bytes.Buffer)
+	// Preallocate needed bytes
+	buf.Grow(len(nums) * int(unsafe.Sizeof(zero)))
+
+	for _, v := range nums {
+		_ = binary.Write(buf, binary.LittleEndian, v) // error can not be thrown
+	}
+
+	return buf.Bytes()
+}
+
+func UnpackNumbersToBytes[T constraints.Integer | constraints.Float](packedBytes []byte) ([]T, error) {
+	var value T
+
+	buf := bytes.NewReader(packedBytes)
+	sizeInBytes := int(unsafe.Sizeof(value))
+	result := make([]T, len(packedBytes)/sizeInBytes)
+
+	for i := range result {
+		if err := binary.Read(buf, binary.LittleEndian, &value); err != nil {
+			return nil, err
+		}
+
+		result[i] = value
+	}
+
+	return result, nil
+}
+
+func NumbersToString[T constraints.Integer | constraints.Float](nums []T) string {
+	var sb strings.Builder
+
+	for i, x := range nums {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(fmt.Sprint(x))
+	}
+
+	return sb.String()
 }
