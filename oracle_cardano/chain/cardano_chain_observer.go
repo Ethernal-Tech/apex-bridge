@@ -193,7 +193,7 @@ func initOracleState(
 func convertUtxos(input []cCore.CardanoChainConfigUtxo) (output []*indexer.TxInputOutput) {
 	output = make([]*indexer.TxInputOutput, len(input))
 	for i, inp := range input {
-		output[i] = &indexer.TxInputOutput{
+		utxo := &indexer.TxInputOutput{
 			Input: indexer.TxInput{
 				Hash:  inp.Hash,
 				Index: inp.Index,
@@ -202,8 +202,18 @@ func convertUtxos(input []cCore.CardanoChainConfigUtxo) (output []*indexer.TxInp
 				Address: inp.Address,
 				Amount:  inp.Amount,
 				Slot:    inp.Slot,
+				Tokens:  make([]indexer.TokenAmount, 0, len(inp.Tokens)),
 			},
 		}
+		for _, t := range inp.Tokens {
+			utxo.Output.Tokens = append(utxo.Output.Tokens, indexer.TokenAmount{
+				PolicyID: t.Token.PolicyID,
+				Name:     t.Token.Name,
+				Amount:   t.Amount,
+			})
+		}
+
+		output[i] = utxo
 	}
 
 	return output
