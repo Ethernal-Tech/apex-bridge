@@ -355,7 +355,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	cco.config.MaxUtxoCount = 50
 
 	testError := errors.New("test err")
-	consolidationTxID := uint64(1)
+	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -365,7 +365,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -382,7 +382,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -399,7 +399,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -429,7 +429,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -450,7 +450,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -482,7 +482,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -522,15 +522,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		result, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, consolidationTxID)
+		result, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is more utxos than maxUtxo", func(t *testing.T) {
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 50, false)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10, false)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 50)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10)
 
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
@@ -544,8 +544,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30, false)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3, false)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3)
 
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
@@ -571,8 +571,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		batchNonceID := uint64(1)
 
-		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100, false)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10, false)
+		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
@@ -626,6 +626,9 @@ func TestSkylineConsolidation(t *testing.T) {
 
 	_ = wallet
 
+	token1, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", true)
+	token2, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
+
 	configRaw := json.RawMessage([]byte(`{
 			"socketPath": "./socket",
 			"testnetMagic": 42,
@@ -647,20 +650,19 @@ func TestSkylineConsolidation(t *testing.T) {
 	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
 		{
 			DstChainID: "prime",
-			TokenName:  "1.31",
+			TokenName:  token1.String(),
 		},
 	}
 
 	// testError := errors.New("test err")
-	// consolidationTxID := uint64(1)
-	// destinationChain := common.ChainIDStrVector
+	destinationChain := common.ChainIDStrVector
 
-	// ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
-	// defer cancelCtx()
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
 
 	t.Run("getUTXOsForConsolidation should pass when there is more utxos than maxUtxo", func(t *testing.T) {
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 100, true)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10, false)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 100, token1, token2)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10)
 
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
@@ -674,8 +676,8 @@ func TestSkylineConsolidation(t *testing.T) {
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30, true)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3, false)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30, token1, token2)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3)
 
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
@@ -686,6 +688,53 @@ func TestSkylineConsolidation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 15, len(multisigUtxos))
 		require.Equal(t, 3, len(feeUtxos))
+	})
+
+	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+				},
+			},
+		}
+
+		batchNonceID := uint64(1)
+
+		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100, token1, token2)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
+
+		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
+		confirmedTransactions[0] = eth.ConfirmedTransaction{
+			Nonce:       1,
+			BlockHeight: big.NewInt(1),
+			Receivers: []eth.BridgeReceiver{{
+				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+				Amount:             new(big.Int).SetUint64(multisigUtxoOutputsSum / 2),
+			}},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.Equal(t, true, result.IsConsolidation)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
 	})
 }
 
@@ -1419,40 +1468,33 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 }
 
-func generateSmallUtxoOutputs(value uint64, n uint64, includeTokens bool) ([]*indexer.TxInputOutput, uint64) {
+// if tokens are passed as parameters, two of them are required
+func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([]*indexer.TxInputOutput, uint64) {
 	utxoOutput := make([]*indexer.TxInputOutput, 0, n)
 	returnCurrencySum := uint64(0)
-
-	var tokenPolicyID string
+	hasTokens := len(tokens) == 2
 
 	for i := uint64(0); i < n; i++ {
-		utxoOutput = append(utxoOutput,
-			&indexer.TxInputOutput{
-				Input: indexer.TxInput{
-					Hash: indexer.NewHashFromHexString(fmt.Sprintf("0x00%d", i)),
-				},
-				Output: indexer.TxOutput{
-					Amount: value,
-				},
+		tx := &indexer.TxInputOutput{
+			Input: indexer.TxInput{
+				Hash: indexer.NewHashFromHexString(fmt.Sprintf("0x00%d", i)),
 			},
-		)
-		returnCurrencySum += value
-
-		if includeTokens {
-			if i%2 == 0 {
-				tokenPolicyID = "1"
-			} else {
-				tokenPolicyID = "3"
-			}
-
-			utxoOutput[i].Output.Tokens = append(
-				utxoOutput[i].Output.Tokens,
-				indexer.TokenAmount{
-					PolicyID: tokenPolicyID,
-					Name:     "1",
-					Amount:   value,
-				})
+			Output: indexer.TxOutput{
+				Amount: value,
+			},
 		}
+
+		if hasTokens {
+			token := tokens[i%2]
+			tx.Output.Tokens = append(tx.Output.Tokens, indexer.TokenAmount{
+				PolicyID: token.PolicyID,
+				Name:     token.Name,
+				Amount:   value,
+			})
+		}
+
+		utxoOutput = append(utxoOutput, tx)
+		returnCurrencySum += value
 	}
 
 	return utxoOutput, returnCurrencySum
