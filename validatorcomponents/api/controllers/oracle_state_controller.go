@@ -17,6 +17,7 @@ import (
 	vcUtils "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/utils"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -115,13 +116,25 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 
 	for _, utxos := range addressesUtxos {
 		for _, inp := range utxos {
-			outputUtxos = append(outputUtxos, oCore.CardanoChainConfigUtxo{
+			utxo := oCore.CardanoChainConfigUtxo{
 				Hash:    inp.Input.Hash,
 				Index:   inp.Input.Index,
 				Address: inp.Output.Address,
 				Amount:  inp.Output.Amount,
 				Slot:    inp.Output.Slot,
-			})
+				Tokens:  make([]cardanowallet.TokenAmount, 0, len(inp.Output.Tokens)),
+			}
+			for _, token := range inp.Output.Tokens {
+				utxo.Tokens = append(utxo.Tokens, cardanowallet.TokenAmount{
+					Token: cardanowallet.Token{
+						PolicyID: token.PolicyID,
+						Name:     token.Name,
+					},
+					Amount: token.Amount,
+				})
+			}
+
+			outputUtxos = append(outputUtxos, utxo)
 		}
 	}
 
