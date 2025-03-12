@@ -280,11 +280,6 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		return nil, err
 	}
 
-	totalMultisigAmount := uint64(0)
-	for _, utxo := range multisigUtxos {
-		totalMultisigAmount += utxo.Output.Amount
-	}
-
 	txMultisigOutput, err := getTxOutputFromUtxos(multisigUtxos, multisigAddress)
 	if err != nil {
 		return nil, err
