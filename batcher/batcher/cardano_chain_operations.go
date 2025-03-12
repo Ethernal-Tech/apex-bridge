@@ -285,6 +285,11 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		totalMultisigAmount += utxo.Output.Amount
 	}
 
+	txMultisigOutput, err := getTxOutputFromUtxos(multisigUtxos, multisigAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
 		return nil, err
@@ -314,7 +319,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 			},
 		},
 		[]cardanowallet.TxOutput{
-			cardanowallet.NewTxOutput(multisigAddress, totalMultisigAmount),
+			txMultisigOutput,
 		},
 	)
 	if err != nil {
@@ -441,4 +446,31 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	}
 
 	return result
+}
+
+func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanowallet.TxOutput, error) {
+	totalSum := map[string]uint64{}
+
+	for _, utxo := range utxos {
+		totalSum[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
+		for _, token := range utxo.Output.Tokens {
+			totalSum[token.TokenName()] += token.Amount
+		}
+	}
+
+	tokens := make([]cardanowallet.TokenAmount, 0, len(totalSum)-1)
+
+	for tokenName, amount := range totalSum {
+		if tokenName != cardanowallet.AdaTokenName {
+			newToken, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+			if err != nil {
+				return cardanowallet.TxOutput{}, err
+			}
+
+			tokens = append(tokens, cardanowallet.NewTokenAmount(newToken, amount))
+		}
+	}
+
+	return cardanowallet.NewTxOutput(addr, totalSum[cardanowallet.AdaTokenName], tokens...), nil
 }

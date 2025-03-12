@@ -654,7 +654,6 @@ func TestSkylineConsolidation(t *testing.T) {
 		},
 	}
 
-	// testError := errors.New("test err")
 	destinationChain := common.ChainIDStrVector
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)

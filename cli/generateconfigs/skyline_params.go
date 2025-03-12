@@ -536,8 +536,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.primeUtxoMinAmount,
+					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
+					MaxUtxoCount:          defaultMaxUtxoCount,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens: []sendtx.TokenExchangeConfig{
 						{
 							DstChainID: common.ChainIDStrCardano,
@@ -565,8 +567,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.cardanoSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					UtxoMinAmount:         p.cardanoUtxoMinAmount,
+					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
+					MaxUtxoCount:          defaultMaxUtxoCount,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens: []sendtx.TokenExchangeConfig{
 						{
 							DstChainID: common.ChainIDStrPrime,

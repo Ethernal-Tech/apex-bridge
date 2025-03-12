@@ -242,7 +242,7 @@ func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	knownTokens, err := getKnownTokens(cardanoConfig)
+	knownTokens, err := cardano.GetKnownTokens(cardanoConfig)
 	if err != nil {
 		return
 	}
@@ -275,9 +275,9 @@ func (s *CardanoChainOperationSkylineStrategy) FilterUTXOsForConsolidation(
 	multisigUtxos, feeUtxos []*indexer.TxInputOutput,
 	cardanoConfig *cardano.CardanoChainConfig,
 ) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	knownTokens, err := getKnownTokens(cardanoConfig)
+	knownTokens, err := cardano.GetKnownTokens(cardanoConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to filter UTXOs for consolidation: %w", err)
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
 	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
@@ -342,21 +342,6 @@ func getNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
-}
-
-func getKnownTokens(cardanoConfig *cardano.CardanoChainConfig) ([]cardanowallet.Token, error) {
-	knownTokens := make([]cardanowallet.Token, len(cardanoConfig.NativeTokens))
-
-	for i, tokenConfig := range cardanoConfig.NativeTokens {
-		token, err := cardano.GetNativeTokenFromConfig(tokenConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve native tokens from config: %w", err)
-		}
-
-		knownTokens[i] = token
-	}
-
-	return knownTokens, nil
 }
 
 func filterOutUtxosWithUnknownTokens(
