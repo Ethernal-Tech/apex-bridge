@@ -232,7 +232,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.NotNil(t, txs)
 
 		for _, tx := range txs {
-			tx.TryCount++
+			tx.SubmitTryCount++
 		}
 
 		err = db.UpdateTxs(&core.CardanoUpdateTxsData{UpdateUnprocessed: txs})
@@ -241,7 +241,7 @@ func TestBoltDatabase(t *testing.T) {
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
 		require.Len(t, txs, 1)
-		require.Equal(t, uint32(1), txs[0].TryCount)
+		require.Equal(t, uint32(1), txs[0].SubmitTryCount)
 	})
 
 	t.Run("GetPendingTxs and UpdateTxs - MoveUnprocessedToPending", func(t *testing.T) {
