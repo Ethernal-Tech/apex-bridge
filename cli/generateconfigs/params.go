@@ -701,6 +701,11 @@ func (p *generateConfigsParams) Execute(
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
 		},
+		TryCountLimits: oCore.TryCountLimits{
+			MaxBatchTryCount:  70,
+			MaxSubmitTryCount: 50,
+			MaxRefundTryCount: 50,
+		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
 				LogFilePath:   filepath.Join(p.logsPath, "validator-components.log"),

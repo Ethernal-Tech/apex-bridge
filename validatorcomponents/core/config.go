@@ -23,6 +23,7 @@ type AppConfig struct {
 	APIConfig                    apiCore.APIConfig                         `json:"api"`
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
+	TryCountLimits               oracleCore.TryCountLimits                 `json:"tryCountLimits"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
@@ -70,6 +71,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		Settings:                 appConfig.Settings,
 		BridgingSettings:         appConfig.BridgingSettings,
 		RetryUnprocessedSettings: appConfig.RetryUnprocessedSettings,
+		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
 	}
