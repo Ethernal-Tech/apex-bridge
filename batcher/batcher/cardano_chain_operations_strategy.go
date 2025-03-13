@@ -294,10 +294,10 @@ func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
 	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
 ) ([]*indexer.TxInputOutput, error) {
-	for chainName, desiredValue := range desiredAmount {
-		if chainName == cardanowallet.AdaTokenName {
+	for tokenName, desiredValue := range desiredAmount {
+		if tokenName == cardanowallet.AdaTokenName {
 			// if we have change then it must be greater than this amount
-			desiredAmount[chainName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
+			desiredAmount[tokenName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
 		}
 	}
 
