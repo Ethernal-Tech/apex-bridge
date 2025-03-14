@@ -91,8 +91,15 @@ type RetryUnprocessedSettings struct {
 	MaxTimeout  time.Duration `json:"maxTimeout"`
 }
 
+type TryCountLimits struct {
+	MaxBatchTryCount  uint32 `json:"maxBatchTryCount"`
+	MaxSubmitTryCount uint32 `json:"maxSubmitTryCount"`
+	MaxRefundTryCount uint32 `json:"maxRefundTryCount"`
+}
+
 type AppConfig struct {
 	RunMode                  common.VCRunMode               `json:"-"`
+	RefundEnabled            bool                           `json:"refundEnabled"`
 	ValidatorDataDir         string                         `json:"validatorDataDir"`
 	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
 	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`
@@ -101,6 +108,7 @@ type AppConfig struct {
 	Settings                 AppSettings                    `json:"appSettings"`
 	BridgingSettings         BridgingSettings               `json:"bridgingSettings"`
 	RetryUnprocessedSettings RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
+	TryCountLimits           TryCountLimits                 `json:"tryCountLimits"`
 }
 
 func (appConfig *AppConfig) FillOut() {

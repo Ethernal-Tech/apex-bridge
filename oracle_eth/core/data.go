@@ -10,11 +10,12 @@ import (
 )
 
 type EthTx struct {
-	OriginChainID    string    `json:"origin_chain_id"`
-	Priority         uint8     `json:"priority"`
-	TryCount         uint32    `json:"try_count"`
-	BatchFailedCount uint32    `json:"bf_count"`
-	LastTimeTried    time.Time `json:"last_time_tried"`
+	OriginChainID  string    `json:"origin_chain_id"`
+	Priority       uint8     `json:"priority"`
+	SubmitTryCount uint32    `json:"try_count"`
+	BatchTryCount  uint32    `json:"bf_count"`
+	RefundTryCount uint32    `json:"refund_try_count"`
+	LastTimeTried  time.Time `json:"last_time_tried"`
 
 	BlockNumber     uint64        `json:"block_number"`
 	BlockHash       ethgo.Hash    `json:"block_hash"`
@@ -94,14 +95,19 @@ func (tx *EthTx) SetLastTimeTried(lastTimeTried time.Time) {
 	tx.LastTimeTried = lastTimeTried
 }
 
-// IncrementTryCount implements core.BaseTx.
-func (tx *EthTx) IncrementTryCount() {
-	tx.TryCount++
+// IncrementSubmitTryCount implements core.BaseTx.
+func (tx *EthTx) IncrementSubmitTryCount() {
+	tx.SubmitTryCount++
 }
 
-// IncrementBatchFailedCount implements core.BaseTx.
-func (tx *EthTx) IncrementBatchFailedCount() {
-	tx.BatchFailedCount++
+// IncrementBatchTryCount implements core.BaseTx.
+func (tx *EthTx) IncrementBatchTryCount() {
+	tx.BatchTryCount++
+}
+
+// IncrementRefundTryCount implements core.BaseTx.
+func (tx *EthTx) IncrementRefundTryCount() {
+	tx.RefundTryCount++
 }
 
 // PendingDBKey implements core.BaseTx.
@@ -109,9 +115,9 @@ func (tx EthTx) ToProcessed(isInvalid bool) cCore.BaseProcessedTx {
 	return tx.ToProcessedEthTx(isInvalid)
 }
 
-// GetTryCount implements core.BaseTx.
-func (tx EthTx) GetTryCount() uint32 {
-	return tx.TryCount
+// GetSubmitTryCount implements core.BaseTx.
+func (tx EthTx) GetSubmitTryCount() uint32 {
+	return tx.SubmitTryCount
 }
 
 // GetPriority implements core.BaseTx.

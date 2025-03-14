@@ -175,8 +175,8 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 
 		if event.IsFailedClaim {
 			for _, tx := range txs {
-				tx.IncrementBatchFailedCount()
-				tx.IncrementTryCount()
+				tx.IncrementBatchTryCount()
+				tx.IncrementSubmitTryCount()
 				tx.SetLastTimeTried(time.Time{})
 				newUnprocessedTxs = append(newUnprocessedTxs, tx)
 			}
@@ -237,7 +237,7 @@ func (sp *EthStateProcessor) processNotEnoughFundsEvents(
 
 		delete(allPendingMap, string(txToUpdate.ToEthTxKey()))
 
-		txToUpdate.TryCount++
+		txToUpdate.SubmitTryCount++
 		txToUpdate.LastTimeTried = now
 		unprocessedToUpdate = append(unprocessedToUpdate, txToUpdate)
 
@@ -354,7 +354,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
 		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && oracleCore.IsTxReady(
-			unprocessedTx.TryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
+			unprocessedTx.SubmitTryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
 			relevantUnprocessedTxs = append(relevantUnprocessedTxs, unprocessedTx)
 		}
 	}

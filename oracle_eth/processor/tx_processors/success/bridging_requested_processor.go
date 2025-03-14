@@ -105,7 +105,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		NativeCurrencyAmountDestination: totalAmount,
 		WrappedTokenAmountSource:        big.NewInt(0),
 		WrappedTokenAmountDestination:   big.NewInt(0),
-		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
+		RetryCounter:                    big.NewInt(int64(tx.BatchTryCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)

@@ -1450,7 +1450,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
-		require.Equal(t, uint32(1), unprocessedTxs[0].TryCount)
+		require.Equal(t, uint32(1), unprocessedTxs[0].SubmitTryCount)
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 
 		// reset ctx to run again, and confirm by TryCount that this tx was skipped because of LastTimeTried
@@ -1478,7 +1478,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
-		require.Equal(t, uint32(1), unprocessedTxs[0].TryCount)
+		require.Equal(t, uint32(1), unprocessedTxs[0].SubmitTryCount)
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 
 		newTx := unprocessedTxs[0]
@@ -1515,7 +1515,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Len(t, unprocessedTxs, 1)
 		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		require.Equal(t, tx.Hash, unprocessedTxs[0].Hash)
-		require.Equal(t, uint32(2), unprocessedTxs[0].TryCount)
+		require.Equal(t, uint32(2), unprocessedTxs[0].SubmitTryCount)
 		require.False(t, unprocessedTxs[0].LastTimeTried.IsZero())
 	})
 
@@ -1646,7 +1646,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		pendingTx1, _ = oracleDB.GetPendingTx(cCore.DBTxID{ChainID: cardanoTx1.GetChainID(), DBKey: cardanoTx1.GetTxHash()})
 		require.NotNil(t, pendingTx1)
-		require.Equal(t, pendingTx1.GetTryCount(), uint32(1))
+		require.Equal(t, pendingTx1.GetSubmitTryCount(), uint32(1))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.NoError(t, err)
