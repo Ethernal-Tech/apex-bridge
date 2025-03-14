@@ -214,24 +214,21 @@ func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanow
 func subtractTxOutputsFromSumMap(
 	sumMap map[string]uint64, txOutputs []cardanowallet.TxOutput,
 ) map[string]uint64 {
-	for _, out := range txOutputs {
-		if value, exists := sumMap[cardanowallet.AdaTokenName]; exists {
-			if value > out.Amount {
-				sumMap[cardanowallet.AdaTokenName] = value - out.Amount
+	updateTokenInMap := func(tokenName string, amount uint64) {
+		if existingAmount, exists := sumMap[tokenName]; exists {
+			if existingAmount > amount {
+				sumMap[tokenName] = existingAmount - amount
 			} else {
-				delete(sumMap, cardanowallet.AdaTokenName)
+				delete(sumMap, tokenName)
 			}
 		}
+	}
+
+	for _, out := range txOutputs {
+		updateTokenInMap(cardanowallet.AdaTokenName, out.Amount)
 
 		for _, token := range out.Tokens {
-			tokenName := token.TokenName()
-			if value, exists := sumMap[tokenName]; exists {
-				if value > token.Amount {
-					sumMap[tokenName] = value - token.Amount
-				} else {
-					delete(sumMap, tokenName)
-				}
-			}
+			updateTokenInMap(token.TokenName(), token.Amount)
 		}
 	}
 

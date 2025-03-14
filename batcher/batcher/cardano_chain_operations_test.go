@@ -1453,3 +1453,34 @@ func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([
 
 	return utxoOutput, returnCurrencySum
 }
+
+func Test_subtractTxOutputsFromSumMap(t *testing.T) {
+	tok1, err := cardano.GetNativeTokenFromName("3.31")
+	require.NoError(t, err)
+
+	tok2, err := cardano.GetNativeTokenFromName("3.32")
+	require.NoError(t, err)
+
+	tok3, err := cardano.GetNativeTokenFromName("3.33")
+	require.NoError(t, err)
+
+	tok4, err := cardano.GetNativeTokenFromName("3.34")
+	require.NoError(t, err)
+
+	vals := subtractTxOutputsFromSumMap(map[string]uint64{
+		cardanowallet.AdaTokenName: 200,
+		tok1.String():              400,
+		tok2.String():              500,
+		tok4.String():              1000,
+	}, []cardanowallet.TxOutput{
+		cardanowallet.NewTxOutput("", 100, cardanowallet.NewTokenAmount(tok1, 200), cardanowallet.NewTokenAmount(tok2, 205)),
+		cardanowallet.NewTxOutput("", 50, cardanowallet.NewTokenAmount(tok1, 150), cardanowallet.NewTokenAmount(tok3, 300)),
+		cardanowallet.NewTxOutput("", 10, cardanowallet.NewTokenAmount(tok2, 300)),
+	})
+
+	require.Equal(t, map[string]uint64{
+		cardanowallet.AdaTokenName: 40,
+		tok1.String():              50,
+		tok4.String():              1000,
+	}, vals)
+}
