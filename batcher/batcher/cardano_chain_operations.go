@@ -17,8 +17,7 @@ import (
 )
 
 var (
-	_ core.ChainOperations            = (*CardanoChainOperations)(nil)
-	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationReactorStrategy)(nil)
+	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 	errTxSizeTooBig = errors.New("batch tx size too big")
 )
@@ -35,7 +34,6 @@ type CardanoChainOperations struct {
 	db               indexer.Database
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
-	strategy         ICardanoChainOperationsStrategy
 	logger           hclog.Logger
 }
 
@@ -44,7 +42,6 @@ func NewCardanoChainOperations(
 	db indexer.Database,
 	secretsManager secrets.SecretsManager,
 	chainID string,
-	strategy ICardanoChainOperationsStrategy,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -69,7 +66,6 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
-		strategy:         strategy,
 		logger:           logger,
 	}, nil
 }
@@ -182,7 +178,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, cco.logger)
+	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +340,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = cco.strategy.FilterUtxos(multisigUtxos, feeUtxos, cco.config)
+	multisigUtxos, feeUtxos, err = filterUtxos(multisigUtxos, feeUtxos, cco.config)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -379,7 +375,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = cco.strategy.FilterUtxos(multisigUtxos, feeUtxos, cco.config)
+	multisigUtxos, feeUtxos, err = filterUtxos(multisigUtxos, feeUtxos, cco.config)
 	if err != nil {
 		return nil, nil, err
 	}

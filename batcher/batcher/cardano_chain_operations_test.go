@@ -115,7 +115,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", &CardanoChainOperationReactorStrategy{}, hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -346,7 +346,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", &CardanoChainOperationReactorStrategy{}, hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -640,7 +640,7 @@ func TestSkylineConsolidation(t *testing.T) {
 	}
 
 	cco, err := NewCardanoChainOperations(
-		configRaw, dbMock, secretsMngr, common.ChainIDStrPrime, &CardanoChainOperationSkylineStrategy{}, hclog.NewNullLogger())
+		configRaw, dbMock, secretsMngr, common.ChainIDStrPrime, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	destinationChain := common.ChainIDStrCardano
@@ -974,8 +974,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 	require.NoError(t, err)
 
 	cco := &CardanoChainOperations{
-		strategy: &CardanoChainOperationReactorStrategy{},
-		config:   cardanoConfig,
+		config: cardanoConfig,
 	}
 	cco.config.NetworkID = cardanowallet.MainNetNetwork
 
@@ -1043,7 +1042,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, err := cco.strategy.GetOutputs(txs, cco.config, hclog.NewNullLogger())
+	res, err := getOutputs(txs, cco.config, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
@@ -1082,7 +1081,6 @@ func Test_skylineGetOutputs(t *testing.T) {
 	policyID := "584ffccecba8a7c6a18037152119907b6b5c2ed063798ee68b012c41"
 	tokenName, _ := hex.DecodeString("526f75746533")
 	token := cardanowallet.NewToken(policyID, string(tokenName))
-	bactherStrategyPrime := &CardanoChainOperationSkylineStrategy{}
 	config := &cardano.CardanoChainConfig{
 		NetworkID: cardanowallet.VectorTestNetNetwork,
 		NativeTokens: []sendtx.TokenExchangeConfig{
@@ -1125,7 +1123,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, err := bactherStrategyPrime.GetOutputs(txs, config, hclog.NewNullLogger())
+	outputs, err := getOutputs(txs, config, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	require.Equal(t, []cardanowallet.TxOutput{

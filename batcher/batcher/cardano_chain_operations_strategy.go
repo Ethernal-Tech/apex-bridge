@@ -13,78 +13,20 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type ICardanoChainOperationsStrategy interface {
-	GetOutputs(
-		txs []eth.ConfirmedTransaction,
-		cardanoConfig *cardano.CardanoChainConfig,
-		logger hclog.Logger,
-	) (cardano.TxOutputs, error)
-	FilterUtxos(
-		multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
-	) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error)
-}
-
-var (
-	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationReactorStrategy)(nil)
-	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationSkylineStrategy)(nil)
-)
-
-type CardanoChainOperationReactorStrategy struct {
-}
-
-func (s *CardanoChainOperationReactorStrategy) GetOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, error) {
-	receiversMap := map[string]uint64{}
-
-	for _, transaction := range txs {
-		for _, receiver := range transaction.Receivers {
-			receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
-		}
-	}
-
-	result := cardano.TxOutputs{
-		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
-		Sum:     map[string]uint64{},
-	}
-
-	for addr, amount := range receiversMap {
-		if amount == 0 {
-			logger.Warn("skipped output with zero amount", "addr", addr)
-
-			continue
-		} else if !cardano.IsValidOutputAddress(addr, cardanoConfig.NetworkID) {
-			// apex-361 fix
-			logger.Warn("skipped output because it is invalid", "addr", addr)
-
-			continue
-		}
-
-		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
-			Addr:   addr,
-			Amount: amount,
-		})
-		result.Sum[cardanowallet.AdaTokenName] += amount
-	}
-
-	// sort outputs because all batchers should have same order of outputs
-	sort.Slice(result.Outputs, func(i, j int) bool {
-		return result.Outputs[i].Addr < result.Outputs[j].Addr
-	})
-
-	return result, nil
-}
-
-func (s *CardanoChainOperationReactorStrategy) FilterUtxos(
-	multisigUtxos, feeUtxos []*indexer.TxInputOutput, _ *cardano.CardanoChainConfig,
+func filterUtxos(
+	multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
 ) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	return filterOutUtxosWithUnknownTokens(multisigUtxos), filterOutUtxosWithUnknownTokens(feeUtxos), nil
+	knownTokens, err := cardano.GetKnownTokens(config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
+	}
+
+	return filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...),
+		filterOutUtxosWithUnknownTokens(feeUtxos),
+		nil
 }
 
-type CardanoChainOperationSkylineStrategy struct {
-}
-
-func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
+func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
@@ -147,19 +89,6 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	})
 
 	return result, nil
-}
-
-func (s *CardanoChainOperationSkylineStrategy) FilterUtxos(
-	multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
-) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	knownTokens, err := cardano.GetKnownTokens(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
-	}
-
-	return filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...),
-		filterOutUtxosWithUnknownTokens(feeUtxos),
-		nil
 }
 
 func getUTXOsForAmounts(
