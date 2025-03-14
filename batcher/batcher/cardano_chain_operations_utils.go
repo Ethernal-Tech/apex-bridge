@@ -269,3 +269,24 @@ func calculateMinUtxoLovelaceAmount(
 
 	return minUtxo, nil
 }
+
+func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
+	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
+	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
+	result.Sum = make(map[string]uint64)
+
+	for i, utxo := range utxos {
+		result.Inputs[i] = cardanowallet.TxInput{
+			Hash:  utxo.Input.Hash.String(),
+			Index: utxo.Input.Index,
+		}
+
+		result.Sum[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
+		for _, token := range utxo.Output.Tokens {
+			result.Sum[token.TokenName()] += token.Amount
+		}
+	}
+
+	return result
+}
