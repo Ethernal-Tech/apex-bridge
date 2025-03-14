@@ -99,6 +99,7 @@ type TryCountLimits struct {
 
 type AppConfig struct {
 	RunMode                  common.VCRunMode               `json:"-"`
+	RefundEnabled            bool                           `json:"refundEnabled"`
 	ValidatorDataDir         string                         `json:"validatorDataDir"`
 	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
 	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`

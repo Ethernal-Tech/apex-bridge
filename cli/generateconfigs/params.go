@@ -51,6 +51,8 @@ const (
 	vectorUtxoMinAmountFlag         = "vector-utxo-min-amount"
 	vectorMinFeeForBridgingFlag     = "vector-min-fee-for-bridging"
 
+	refundEnabledFlag = "refund-enabled"
+
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
 
@@ -103,6 +105,8 @@ const (
 	vectorStartingBlockFlagDesc         = "slot: hash of the block from where to start vector oracle"
 	vectorUtxoMinAmountFlagDesc         = "minimal UTXO value for vector"
 	vectorMinFeeForBridgingFlagDesc     = "minimal bridging fee for vector"
+
+	refundEnabledFlagDesc = "run the bridge with refund functionality"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
@@ -185,6 +189,8 @@ type generateConfigsParams struct {
 	vectorStartingBlock         string
 	vectorUtxoMinAmount         uint64
 	vectorMinFeeForBridging     uint64
+
+	refundEnabled bool
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -456,6 +462,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorMinFeeForBridgingFlagDesc,
 	)
 
+	cmd.Flags().BoolVar(
+		&p.refundEnabled,
+		refundEnabledFlag,
+		false,
+		refundEnabledFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.bridgeNodeURL,
 		bridgeNodeURLFlag,
@@ -617,6 +630,7 @@ func (p *generateConfigsParams) Execute(
 	}
 
 	vcConfig := &vcCore.AppConfig{
+		RefundEnabled:       p.refundEnabled,
 		RunMode:             common.ReactorMode,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),

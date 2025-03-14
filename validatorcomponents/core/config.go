@@ -11,6 +11,7 @@ import (
 
 type AppConfig struct {
 	RunMode                      common.VCRunMode                          `json:"runMode"`
+	RefundEnabled                bool                                      `json:"refundEnabled"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
@@ -65,6 +66,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 	oracleConfig := &oracleCore.AppConfig{
 		RunMode:                  appConfig.RunMode,
+		RefundEnabled:            appConfig.RefundEnabled,
 		ValidatorDataDir:         appConfig.ValidatorDataDir,
 		ValidatorConfigPath:      appConfig.ValidatorConfigPath,
 		Bridge:                   appConfig.Bridge,

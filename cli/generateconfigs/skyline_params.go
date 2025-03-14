@@ -93,6 +93,8 @@ type skylineGenerateConfigsParams struct {
 	cardanoMinFeeForBridging     uint64
 	cardanoMinOperationFee       uint64
 
+	refundEnabled bool
+
 	bridgeNodeURL   string
 	bridgeSCAddress string
 
@@ -383,6 +385,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoMinOperationFeeFlagDesc,
 	)
 
+	cmd.Flags().BoolVar(
+		&p.refundEnabled,
+		refundEnabledFlag,
+		false,
+		refundEnabledFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.bridgeNodeURL,
 		bridgeNodeURLFlag,
@@ -521,6 +530,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
+		RefundEnabled:       p.refundEnabled,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
