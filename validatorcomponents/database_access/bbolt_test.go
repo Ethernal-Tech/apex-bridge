@@ -1,7 +1,6 @@
 package databaseaccess
 
 import (
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -125,40 +124,5 @@ func TestBoltDatabase(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, state)
 		require.Equal(t, core.BridgingRequestStatusInvalidRequest, state.Status)
-	})
-
-	t.Run("AddLastSubmittedBatchID", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		err := db.Init(filePath)
-		require.NoError(t, err)
-
-		batchID := big.NewInt(1)
-
-		err = db.AddLastSubmittedBatchID(primeChainID, batchID)
-		require.NoError(t, err)
-	})
-
-	t.Run("GetLastSubmittedBatchID", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		db := &BBoltDatabase{}
-		err := db.Init(filePath)
-		require.NoError(t, err)
-
-		batchIDToInsert := big.NewInt(1)
-
-		batchID, err := db.GetLastSubmittedBatchID(primeChainID)
-		require.NoError(t, err)
-		require.Nil(t, batchID)
-
-		err = db.AddLastSubmittedBatchID(primeChainID, batchIDToInsert)
-		require.NoError(t, err)
-
-		batchID, err = db.GetLastSubmittedBatchID(primeChainID)
-		require.NoError(t, err)
-		require.NotNil(t, batchID)
-		require.Equal(t, batchIDToInsert, batchID)
 	})
 }

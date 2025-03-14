@@ -132,13 +132,14 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	if generatedBatchData.TxHash == b.lastBatch.txHash {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
-			"batchID", batchID, "txHash", b.lastBatch.txHash)
+			"batchID", batchID, "txHash", b.lastBatch.txHash,
+			"isConsolidation", generatedBatchData.IsConsolidation)
 
 		return batchID, nil
 	}
 
-	b.logger.Info("Created batch tx", "batchID", batchID,
-		"txHash", generatedBatchData.TxHash, "txs", len(confirmedTransactions))
+	b.logger.Info("Created batch tx", "batchID", batchID, "txHash", generatedBatchData.TxHash,
+		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
@@ -149,39 +150,24 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	b.logger.Info("Batch successfully signed", "batchID", batchID, "txs", len(confirmedTransactions))
 
-	firstTxNonceID, lastTxNonceID := getFirstAndLastTxNonceID(confirmedTransactions)
 	// Submit batch to smart contract
-	signedBatch := eth.SignedBatch{
-		Id:                 batchID,
-		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
-		RawTransaction:     generatedBatchData.TxRaw,
-		Signature:          multisigSignature,
-		FeeSignature:       multisigFeeSignature,
-		FirstTxNonceId:     firstTxNonceID,
-		LastTxNonceId:      lastTxNonceID,
-	}
+	signedBatch := b.createSignedBatch(
+		batchID, generatedBatchData, multisigSignature, multisigFeeSignature, confirmedTransactions)
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
-		"signedBatch", eth.SignedBatchWrapper{SignedBatch: &signedBatch})
+		"signedBatch", eth.SignedBatchWrapper{SignedBatch: signedBatch})
 
-	err = b.operations.Submit(ctx, b.bridgeSmartContract, signedBatch)
+	err = b.operations.Submit(ctx, b.bridgeSmartContract, *signedBatch)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to submit signed batch: %w", err)
 	}
 
 	if b.lastBatch.id != batchID {
-		brStateKeys := getBridgingRequestStateKeys(confirmedTransactions, firstTxNonceID, lastTxNonceID)
-
-		err = b.bridgingRequestStateUpdater.IncludedInBatch(brStateKeys, b.config.Chain.ChainID)
-		if err != nil {
-			b.logger.Error(
-				"error while updating bridging request states to IncludedInBatch",
-				"chain", b.config.Chain.ChainID, "batchID", batchID, "err", err)
-		}
+		stateKeys := b.updateBatchTxsStates(batchID, confirmedTransactions, signedBatch)
 
 		telemetry.UpdateBatcherBatchSubmitSucceeded(b.config.Chain.ChainID, batchID)
 
-		b.logger.Info("Batch successfully submitted", "batchID", batchID, "stateKeys", brStateKeys)
+		b.logger.Info("Batch successfully submitted", "batchID", batchID, "stateKeys", stateKeys)
 	} else {
 		b.logger.Info("Batch successfully re-submitted", "batchID", batchID)
 	}
@@ -193,6 +179,43 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	}
 
 	return batchID, nil
+}
+
+func (b *BatcherImpl) createSignedBatch(
+	batchID uint64, generatedBatchData *core.GeneratedBatchTxData,
+	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
+) *eth.SignedBatch {
+	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
+	if !generatedBatchData.IsConsolidation {
+		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
+	}
+
+	return &eth.SignedBatch{
+		Id:                 batchID,
+		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
+		RawTransaction:     generatedBatchData.TxRaw,
+		Signature:          multisigSignature,
+		FeeSignature:       multisigFeeSignature,
+		FirstTxNonceId:     firstTxNonceID,
+		LastTxNonceId:      lastTxNonceID,
+		IsConsolidation:    generatedBatchData.IsConsolidation,
+	}
+}
+
+func (b *BatcherImpl) updateBatchTxsStates(
+	batchID uint64, txs []eth.ConfirmedTransaction, signedBatch *eth.SignedBatch,
+) []common.BridgingRequestStateKey {
+	if signedBatch.IsConsolidation {
+		return nil
+	}
+
+	txsInBatch := getBridgingRequestStateKeys(txs, signedBatch.FirstTxNonceId, signedBatch.LastTxNonceId)
+
+	if err := b.bridgingRequestStateUpdater.IncludedInBatch(txsInBatch, b.config.Chain.ChainID); err != nil {
+		b.logger.Error("failed to update batch txs states", "batchID", batchID, "err", err)
+	}
+
+	return txsInBatch
 }
 
 func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (uint64, uint64) {
@@ -215,10 +238,11 @@ func getBridgingRequestStateKeys(
 	txs []eth.ConfirmedTransaction, firstTxNonceID uint64, lastTxNonceID uint64,
 ) []common.BridgingRequestStateKey {
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID-firstTxNonceID+1)
+	defundHash := [32]byte(common.DefundTxHash)
 
 	for _, confirmedTx := range txs {
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
-			confirmedTx.ObservedTransactionHash != [32]byte(common.DefundTxHash) {
+			confirmedTx.ObservedTransactionHash != defundHash {
 			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
 				common.ToStrChainID(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash))
 		}

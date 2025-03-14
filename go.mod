@@ -6,7 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250131082129-26f286625815
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250220093604-4bcd833f64a5
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250311095115-0eb523c9eb66
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
@@ -153,7 +153,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.28.0
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect

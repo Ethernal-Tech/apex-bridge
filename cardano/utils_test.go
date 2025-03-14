@@ -5,7 +5,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,4 +107,43 @@ func Test_IsValidOutputAddress(t *testing.T) {
 	for _, x := range listInvalid {
 		assert.False(t, IsValidOutputAddress(x, wallet.TestNetNetwork))
 	}
+}
+
+func Test_GetKnownTokens(t *testing.T) {
+	token1, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", true)
+	token2, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
+
+	config := &CardanoChainConfig{
+		NativeTokens: []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrVector,
+				TokenName:  token1.String(),
+			},
+		},
+	}
+
+	retTokens, err := GetKnownTokens(config)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(retTokens))
+	require.Equal(t, token1, retTokens[0])
+
+	config.NativeTokens = append(config.NativeTokens,
+		sendtx.TokenExchangeConfig{
+			DstChainID: common.ChainIDStrVector,
+			TokenName:  token2.String(),
+		},
+	)
+
+	retTokens, err = GetKnownTokens(config)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(retTokens))
+	require.Equal(t, token1, retTokens[0])
+	require.Equal(t, token2, retTokens[1])
+
+	config.NativeTokens = config.NativeTokens[1:]
+
+	retTokens, err = GetKnownTokens(config)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(retTokens))
+	require.Equal(t, token2, retTokens[0])
 }

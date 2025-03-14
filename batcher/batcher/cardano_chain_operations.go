@@ -17,15 +17,14 @@ import (
 )
 
 var (
-	_ core.ChainOperations            = (*CardanoChainOperations)(nil)
-	_ ICardanoChainOperationsStrategy = (*CardanoChainOperationReactorStrategy)(nil)
+	_ core.ChainOperations = (*CardanoChainOperations)(nil)
+
+	errTxSizeTooBig = errors.New("batch tx size too big")
 )
 
 // Get real tx size from protocolParams/config
 const (
-	maxFeeUtxoCount = 4
-	maxUtxoCount    = 50
-	maxTxSize       = 16000
+	maxTxSize = 16000
 )
 
 type CardanoChainOperations struct {
@@ -35,7 +34,6 @@ type CardanoChainOperations struct {
 	db               indexer.Database
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
-	strategy         ICardanoChainOperationsStrategy
 	logger           hclog.Logger
 }
 
@@ -44,7 +42,6 @@ func NewCardanoChainOperations(
 	db indexer.Database,
 	secretsManager secrets.SecretsManager,
 	chainID string,
-	strategy ICardanoChainOperationsStrategy,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -69,7 +66,6 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
-		strategy:         strategy,
 		logger:           logger,
 	}, nil
 }
@@ -82,85 +78,19 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
-	if err != nil {
-		return nil, err
+	txData, err := cco.generateBatchTransaction(
+		ctx, bridgeSmartContract, chainID, confirmedTransactions, batchNonceID)
+
+	if cco.shouldConsolidate(err) {
+		cco.logger.Warn("consolidation batch generation started", "err", err)
+
+		txData, err = cco.generateConsolidationTransaction(ctx, bridgeSmartContract, chainID, batchNonceID)
+		if err != nil {
+			err = fmt.Errorf("consolidation batch failed: %w", err)
+		}
 	}
 
-	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
-	if err != nil {
-		return nil, err
-	}
-
-	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	slotNumber, err := cco.getSlotNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
-		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
-	if err != nil {
-		return nil, err
-	}
-
-	txOutputs, tokenHoldingOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, cco.logger)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigUtxos, feeUtxos, err := cco.strategy.GetUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs, tokenHoldingOutputs, chainID, cco.config, cco.db, cco.logger)
-	if err != nil {
-		return nil, err
-	}
-
-	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
-		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
-		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
-
-	// Create Tx
-	txRaw, txHash, err := cardano.CreateTx(
-		cco.cardanoCliBinary,
-		uint(cco.config.NetworkMagic),
-		protocolParams,
-		slotNumber+cco.config.TTLSlotNumberInc,
-		metadata,
-		cardano.TxInputInfos{
-			MultiSig: &cardano.TxInputInfo{
-				PolicyScript: multisigPolicyScript,
-				Address:      multisigAddress,
-				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
-			},
-			MultiSigFee: &cardano.TxInputInfo{
-				PolicyScript: multisigFeePolicyScript,
-				Address:      multisigFeeAddress,
-				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
-			},
-		},
-		txOutputs.Outputs,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(txRaw) > maxTxSize {
-		return nil, errors.New("fatal error, tx size too big")
-	}
-
-	return &core.GeneratedBatchTxData{
-		TxRaw:  txRaw,
-		TxHash: txHash,
-	}, nil
+	return txData, err
 }
 
 // SignBatchTransaction implements core.ChainOperations.
@@ -215,6 +145,276 @@ func (cco *CardanoChainOperations) Submit(
 	return err
 }
 
+func (cco *CardanoChainOperations) generateBatchTransaction(
+	ctx context.Context,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	chainID string,
+	confirmedTransactions []eth.ConfirmedTransaction,
+	batchNonceID uint64,
+) (*core.GeneratedBatchTxData, error) {
+	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
+		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
+	if err != nil {
+		return nil, err
+	}
+
+	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
+		multisigAddress, multisigFeeAddress, protocolParams, txOutputs)
+	if err != nil {
+		return nil, err
+	}
+
+	slotNumber, err := cco.getSlotNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
+		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
+
+	// Create Tx
+	txRaw, txHash, err := cardano.CreateTx(
+		cco.cardanoCliBinary,
+		uint(cco.config.NetworkMagic),
+		protocolParams,
+		slotNumber+cco.config.TTLSlotNumberInc,
+		metadata,
+		cardano.TxInputInfos{
+			MultiSig: &cardano.TxInputInfo{
+				PolicyScript: multisigPolicyScript,
+				Address:      multisigAddress,
+				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
+			},
+			MultiSigFee: &cardano.TxInputInfo{
+				PolicyScript: multisigFeePolicyScript,
+				Address:      multisigFeeAddress,
+				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+			},
+		},
+		txOutputs.Outputs,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(txRaw) > maxTxSize {
+		return nil, fmt.Errorf("%w: (size, max) = (%d, %d)",
+			errTxSizeTooBig, len(txRaw), maxTxSize)
+	}
+
+	return &core.GeneratedBatchTxData{
+		TxRaw:  txRaw,
+		TxHash: txHash,
+	}, nil
+}
+
+func (cco *CardanoChainOperations) shouldConsolidate(err error) bool {
+	return errors.Is(err, cardanowallet.ErrUTXOsLimitReached) || errors.Is(err, errTxSizeTooBig)
+}
+
+func (cco *CardanoChainOperations) generateConsolidationTransaction(
+	ctx context.Context,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	chainID string,
+	batchNonceID uint64,
+) (*core.GeneratedBatchTxData, error) {
+	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
+		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(multisigAddress, multisigFeeAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigTxOutput, err := getTxOutputFromSumMap(multisigAddress, getSumMapFromTxInputOutput(multisigUtxos))
+	if err != nil {
+		return nil, err
+	}
+
+	slotNumber, err := cco.getSlotNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	cco.logger.Info("Creating consolidation tx", "consolidationTxID", batchNonceID,
+		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos))
+
+	// Create Tx
+	txRaw, txHash, err := cardano.CreateTx(
+		cco.cardanoCliBinary,
+		uint(cco.config.NetworkMagic),
+		protocolParams,
+		slotNumber+cco.config.TTLSlotNumberInc,
+		metadata,
+		cardano.TxInputInfos{
+			MultiSig: &cardano.TxInputInfo{
+				PolicyScript: multisigPolicyScript,
+				Address:      multisigAddress,
+				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
+			},
+			MultiSigFee: &cardano.TxInputInfo{
+				PolicyScript: multisigFeePolicyScript,
+				Address:      multisigFeeAddress,
+				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+			},
+		},
+		[]cardanowallet.TxOutput{multisigTxOutput},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(txRaw) > maxTxSize {
+		return nil, fmt.Errorf("%w: (size, max) = (%d, %d)", errTxSizeTooBig, len(txRaw), maxTxSize)
+	}
+
+	return &core.GeneratedBatchTxData{
+		IsConsolidation: true,
+		TxRaw:           txRaw,
+		TxHash:          txHash,
+	}, nil
+}
+
+func (cco *CardanoChainOperations) getUTXOsForConsolidation(
+	multisigAddress, multisigFeeAddress string,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	knownTokens, err := cardano.GetKnownTokens(cco.config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
+	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	cco.logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
+
+	// do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))]
+	// do not take more than maxUtxoCount - length of chosen fee utxos
+	multisigUtxos = multisigUtxos[:min(cco.config.MaxUtxoCount-len(feeUtxos), len(multisigUtxos))]
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	return multisigUtxos, feeUtxos, nil
+}
+
+func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
+	multisigAddress, multisigFeeAddress string, protocolParams []byte, txOutputs cardano.TxOutputs,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	knownTokens, err := cardano.GetKnownTokens(cco.config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
+	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+
+	cco.logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
+
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+
+	minUtxoLovelaceAmount, err := calculateMinUtxoLovelaceAmount(
+		cco.cardanoCliBinary, protocolParams, multisigAddress, multisigUtxos, txOutputs.Outputs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	multisigUtxos, err = getNeededUtxos(
+		multisigUtxos,
+		txOutputs.Sum,
+		minUtxoLovelaceAmount,
+		cco.config.MaxUtxoCount-len(feeUtxos),
+		cco.config.TakeAtLeastUtxoCount,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	return multisigUtxos, feeUtxos, nil
+}
+
 func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 	data, err := cco.db.GetLatestBlockPoint()
 	if err != nil {
@@ -265,25 +465,4 @@ func (cco *CardanoChainOperations) getCardanoData(
 	}
 
 	return validatorsData, nil
-}
-
-func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
-	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
-	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
-	result.Sum = make(map[string]uint64)
-
-	for i, utxo := range utxos {
-		result.Inputs[i] = cardanowallet.TxInput{
-			Hash:  utxo.Input.Hash.String(),
-			Index: utxo.Input.Index,
-		}
-
-		result.Sum[cardanowallet.AdaTokenName] += utxo.Output.Amount
-
-		for _, token := range utxo.Output.Tokens {
-			result.Sum[token.TokenName()] += token.Amount
-		}
-	}
-
-	return result
 }

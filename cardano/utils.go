@@ -1,6 +1,8 @@
 package cardanotx
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -74,6 +76,21 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 	}
 
 	return false
+}
+
+func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
+	knownTokens := make([]wallet.Token, len(cardanoConfig.NativeTokens))
+
+	for i, tokenConfig := range cardanoConfig.NativeTokens {
+		token, err := GetNativeTokenFromConfig(tokenConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve native tokens from config: %w", err)
+		}
+
+		knownTokens[i] = token
+	}
+
+	return knownTokens, nil
 }
 
 func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {

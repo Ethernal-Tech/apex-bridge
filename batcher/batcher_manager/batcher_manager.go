@@ -93,19 +93,8 @@ func getCardanoOperations(
 		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
 	}
 
-	var strategy batcher.ICardanoChainOperationsStrategy
-
-	switch runMode {
-	case common.ReactorMode:
-		strategy = &batcher.CardanoChainOperationReactorStrategy{}
-	case common.SkylineMode:
-		strategy = &batcher.CardanoChainOperationSkylineStrategy{}
-	default:
-		return nil, fmt.Errorf("unknown run mode: %s", runMode)
-	}
-
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, strategy, logger)
+		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}
