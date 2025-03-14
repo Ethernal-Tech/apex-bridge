@@ -178,3 +178,94 @@ func filterOutUtxosWithUnknownTokens(
 
 	return result
 }
+
+func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint64 {
+	totalSum := map[string]uint64{}
+
+	for _, utxo := range utxos {
+		totalSum[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
+		for _, token := range utxo.Output.Tokens {
+			totalSum[token.TokenName()] += token.Amount
+		}
+	}
+
+	return totalSum
+}
+
+func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanowallet.TxOutput, error) {
+	totalSum := getSumMapFromTxInputOutput(utxos)
+	tokens := make([]cardanowallet.TokenAmount, 0, len(totalSum)-1)
+
+	for tokenName, amount := range totalSum {
+		if tokenName != cardanowallet.AdaTokenName {
+			newToken, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+			if err != nil {
+				return cardanowallet.TxOutput{}, err
+			}
+
+			tokens = append(tokens, cardanowallet.NewTokenAmount(newToken, amount))
+		}
+	}
+
+	return cardanowallet.NewTxOutput(addr, totalSum[cardanowallet.AdaTokenName], tokens...), nil
+}
+
+func subtractTxOutputsFromSumMap(
+	sumMap map[string]uint64, txOutputs []cardanowallet.TxOutput,
+) map[string]uint64 {
+	for _, out := range txOutputs {
+		if value, exists := sumMap[cardanowallet.AdaTokenName]; exists {
+			if value > out.Amount {
+				sumMap[cardanowallet.AdaTokenName] = value - out.Amount
+			} else {
+				delete(sumMap, cardanowallet.AdaTokenName)
+			}
+		}
+
+		for _, token := range out.Tokens {
+			tokenName := token.TokenName()
+			if value, exists := sumMap[tokenName]; exists {
+				if value > token.Amount {
+					sumMap[tokenName] = value - token.Amount
+				} else {
+					delete(sumMap, tokenName)
+				}
+			}
+		}
+	}
+
+	return sumMap
+}
+
+func calculateMinUtxoLovelaceAmount(
+	cardanoCliBinary string,
+	multisigAddr string, multisigUtxos []*indexer.TxInputOutput,
+	protocolParams []byte, txOutputs []cardanowallet.TxOutput,
+) (uint64, error) {
+	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(multisigUtxos), txOutputs)
+
+	tokens, err := cardanowallet.GetTokensFromSumMap(sumMap)
+	if err != nil {
+		return 0, err
+	}
+
+	txBuilder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
+	if err != nil {
+		return 0, err
+	}
+
+	defer txBuilder.Dispose()
+
+	// calculate final multisig output change
+	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
+		Addr:   multisigAddr,
+		Amount: sumMap[cardanowallet.AdaTokenName],
+		Tokens: tokens,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return minUtxo, nil
+}
