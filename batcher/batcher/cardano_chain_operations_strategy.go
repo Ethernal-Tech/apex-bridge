@@ -18,20 +18,9 @@ type ICardanoChainOperationsStrategy interface {
 		txs []eth.ConfirmedTransaction,
 		cardanoConfig *cardano.CardanoChainConfig,
 		logger hclog.Logger,
-	) (cardano.TxOutputs, uint64, error)
-	GetUTXOs(
-		multisigAddress,
-		multisigFeeAddress string,
-		txOutputs cardano.TxOutputs,
-		tokenHoldingOutputs uint64,
-		destChainID string,
-		cardanoConfig *cardano.CardanoChainConfig,
-		db indexer.Database,
-		logger hclog.Logger,
-	) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error)
-	FilterUTXOsForConsolidation(
-		multisigUtxos, feeUtxos []*indexer.TxInputOutput,
-		_ *cardano.CardanoChainConfig,
+	) (cardano.TxOutputs, error)
+	FilterUtxos(
+		multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
 	) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error)
 }
 
@@ -45,7 +34,7 @@ type CardanoChainOperationReactorStrategy struct {
 
 func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, uint64, error) {
+) (cardano.TxOutputs, error) {
 	receiversMap := map[string]uint64{}
 
 	for _, transaction := range txs {
@@ -83,71 +72,13 @@ func (s *CardanoChainOperationReactorStrategy) GetOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, 0, nil
+	return result, nil
 }
 
-func (s *CardanoChainOperationReactorStrategy) GetUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, _ uint64, _ string,
-	cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
-) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
-	multisigUtxos, err = db.GetAllTxOutputs(multisigAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos, err = db.GetAllTxOutputs(multisigFeeAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
-
-	if len(feeUtxos) == 0 {
-		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
-	}
-
-	logger.Debug("UTXOs retrieved",
-		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
-
-	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
-
-	multisigUtxos, err = s.getNeededUtxos(
-		multisigUtxos,
-		txOutputs.Sum,
-		cardanoConfig.UtxoMinAmount,
-		cardanoConfig.MaxUtxoCount-len(feeUtxos),
-		0,
-		cardanoConfig.TakeAtLeastUtxoCount,
-	)
-	if err != nil {
-		return
-	}
-
-	logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
-
-	return
-}
-
-func (s *CardanoChainOperationReactorStrategy) FilterUTXOsForConsolidation(
-	multisigUtxos, feeUtxos []*indexer.TxInputOutput,
-	_ *cardano.CardanoChainConfig,
+func (s *CardanoChainOperationReactorStrategy) FilterUtxos(
+	multisigUtxos, feeUtxos []*indexer.TxInputOutput, _ *cardano.CardanoChainConfig,
 ) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
 	return filterOutUtxosWithUnknownTokens(multisigUtxos), filterOutUtxosWithUnknownTokens(feeUtxos), nil
-}
-
-func (s *CardanoChainOperationReactorStrategy) getNeededUtxos(
-	txInputsOutputs []*indexer.TxInputOutput,
-	desiredAmount map[string]uint64,
-	minUtxoAmount uint64,
-	maxUtxoCount int,
-	_ uint64,
-	takeAtLeastUtxoCount int,
-) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	// if we have change then it must be greater than this amount
-	desiredAmount[cardanowallet.AdaTokenName] += minUtxoAmount
-
-	return getNeededUtxos(
-		filterOutUtxosWithUnknownTokens(txInputsOutputs), desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
 }
 
 type CardanoChainOperationSkylineStrategy struct {
@@ -155,9 +86,8 @@ type CardanoChainOperationSkylineStrategy struct {
 
 func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, uint64, error) {
+) (cardano.TxOutputs, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
-	tokenHoldingOutputs := uint64(0)
 
 	for _, transaction := range txs {
 		for _, receiver := range transaction.Receivers {
@@ -169,7 +99,7 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 					token, err := cardanoConfig.GetNativeToken(
 						common.ToStrChainID(transaction.SourceChainId))
 					if err != nil {
-						return cardano.TxOutputs{}, 0, err
+						return cardano.TxOutputs{}, err
 					}
 
 					data.Tokens = []cardanowallet.TokenAmount{
@@ -206,12 +136,8 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 
 		result.Sum[cardanowallet.AdaTokenName] += txOut.Amount
 
-		if len(txOut.Tokens) > 0 {
-			tokenHoldingOutputs++
-
-			for _, token := range txOut.Tokens {
-				result.Sum[token.TokenName()] += token.Amount
-			}
+		for _, token := range txOut.Tokens {
+			result.Sum[token.TokenName()] += token.Amount
 		}
 	}
 
@@ -220,95 +146,61 @@ func (s *CardanoChainOperationSkylineStrategy) GetOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, tokenHoldingOutputs, nil
+	return result, nil
 }
 
-func (s CardanoChainOperationSkylineStrategy) GetUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs, tokenHoldingOutputs uint64,
-	destChainID string, cardanoConfig *cardano.CardanoChainConfig, db indexer.Database, logger hclog.Logger,
-) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
-	multisigUtxos, err = db.GetAllTxOutputs(multisigAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos, err = db.GetAllTxOutputs(multisigFeeAddress, true)
-	if err != nil {
-		return
-	}
-
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
-	if len(feeUtxos) == 0 {
-		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
-	}
-
-	knownTokens, err := cardano.GetKnownTokens(cardanoConfig)
-	if err != nil {
-		return
-	}
-
-	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
-
-	logger.Debug("UTXOs retrieved",
-		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
-
-	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
-
-	multisigUtxos, err = s.getNeededUtxos(
-		multisigUtxos,
-		txOutputs.Sum,
-		cardanoConfig.UtxoMinAmount,
-		cardanoConfig.MaxUtxoCount-len(feeUtxos),
-		tokenHoldingOutputs,
-		cardanoConfig.TakeAtLeastUtxoCount,
-	)
-	if err != nil {
-		return
-	}
-
-	logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
-
-	return
-}
-
-func (s *CardanoChainOperationSkylineStrategy) FilterUTXOsForConsolidation(
-	multisigUtxos, feeUtxos []*indexer.TxInputOutput,
-	cardanoConfig *cardano.CardanoChainConfig,
+func (s *CardanoChainOperationSkylineStrategy) FilterUtxos(
+	multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
 ) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	knownTokens, err := cardano.GetKnownTokens(cardanoConfig)
+	knownTokens, err := cardano.GetKnownTokens(config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
-	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+	return filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...),
+		filterOutUtxosWithUnknownTokens(feeUtxos),
+		nil
+}
+
+func getUTXOsForAmounts(
+	cardanoConfig *cardano.CardanoChainConfig,
+	multisigFeeAddress string,
+	multisigUtxos []*indexer.TxInputOutput,
+	feeUtxos []*indexer.TxInputOutput,
+	desiredAmounts map[string]uint64,
+	minUtxoAmountLovelaceAmount uint64,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	var err error
+
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+
+	multisigUtxos, err = getNeededUtxos(
+		multisigUtxos,
+		desiredAmounts,
+		minUtxoAmountLovelaceAmount,
+		cardanoConfig.MaxUtxoCount-len(feeUtxos),
+		cardanoConfig.TakeAtLeastUtxoCount,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return multisigUtxos, feeUtxos, nil
 }
 
-func (s *CardanoChainOperationSkylineStrategy) getNeededUtxos(
-	txInputsOutputs []*indexer.TxInputOutput,
-	desiredAmount map[string]uint64,
-	minUtxoAmount uint64,
+func getNeededUtxos(
+	txInputOutputs []*indexer.TxInputOutput,
+	desiredAmounts map[string]uint64,
+	minUtxoLovelaceAmount uint64,
 	maxUtxoCount int,
-	tokenHoldingOutputs uint64,
 	takeAtLeastUtxoCount int,
 ) ([]*indexer.TxInputOutput, error) {
-	for tokenName, desiredValue := range desiredAmount {
-		if tokenName == cardanowallet.AdaTokenName {
-			// if we have change then it must be greater than this amount
-			desiredAmount[tokenName] = desiredValue + minUtxoAmount*tokenHoldingOutputs
-		}
-	}
-
-	return getNeededUtxos(txInputsOutputs, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
-}
-
-func getNeededUtxos(
-	txInputOutputs []*indexer.TxInputOutput, desiredAmount map[string]uint64,
-	maxUtxoCount int, takeAtLeastUtxoCount int,
-) ([]*indexer.TxInputOutput, error) {
 	inputUtxos := make([]cardanowallet.Utxo, len(txInputOutputs))
+	desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
 
 	for i, utxo := range txInputOutputs {
 		inputUtxos[i] = cardanowallet.Utxo{
@@ -323,7 +215,7 @@ func getNeededUtxos(
 		}
 	}
 
-	outputUTXOs, err := txsend.GetUTXOsForAmounts(inputUtxos, desiredAmount, maxUtxoCount, takeAtLeastUtxoCount)
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}

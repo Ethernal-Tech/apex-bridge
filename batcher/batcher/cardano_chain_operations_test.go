@@ -537,7 +537,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb", cco.strategy.FilterUTXOsForConsolidation)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
 		require.NoError(t, err)
 		require.Equal(t, 46, len(multisigUtxos))
 		require.Equal(t, 4, len(feeUtxos))
@@ -552,7 +552,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb", cco.strategy.FilterUTXOsForConsolidation)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
 		require.NoError(t, err)
 		require.Equal(t, 30, len(multisigUtxos))
 		require.Equal(t, 3, len(feeUtxos))
@@ -571,7 +571,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		batchNonceID := uint64(1)
 
-		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10000, 100)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
@@ -580,7 +580,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			BlockHeight: big.NewInt(1),
 			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
-				Amount:             new(big.Int).SetUint64(multisigUtxoOutputsSum - 10000),
+				Amount:             new(big.Int).SetUint64(10000),
 			}},
 		}
 
@@ -639,22 +639,21 @@ func TestSkylineConsolidation(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", &CardanoChainOperationSkylineStrategy{}, hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(
+		configRaw, dbMock, secretsMngr, common.ChainIDStrPrime, &CardanoChainOperationSkylineStrategy{}, hclog.NewNullLogger())
 	require.NoError(t, err)
 
+	destinationChain := common.ChainIDStrCardano
 	cco.txProvider = txProviderMock
 	cco.config.SlotRoundingThreshold = 100
 	cco.config.MaxFeeUtxoCount = 4
-	cco.config.MaxUtxoCount = 50
-
+	cco.config.MaxUtxoCount = 40
 	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
 		{
-			DstChainID: "prime",
+			DstChainID: destinationChain,
 			TokenName:  token1.String(),
 		},
 	}
-
-	destinationChain := common.ChainIDStrVector
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -668,9 +667,9 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb", cco.strategy.FilterUTXOsForConsolidation)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
 		require.NoError(t, err)
-		require.Equal(t, 46, len(multisigUtxos))
+		require.Equal(t, cco.config.MaxUtxoCount-len(feeUtxos), len(multisigUtxos))
 		require.Equal(t, 4, len(feeUtxos))
 	})
 
@@ -683,7 +682,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb", cco.strategy.FilterUTXOsForConsolidation)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
 		require.NoError(t, err)
 		require.Equal(t, 15, len(multisigUtxos))
 		require.Equal(t, 3, len(feeUtxos))
@@ -702,16 +701,18 @@ func TestSkylineConsolidation(t *testing.T) {
 
 		batchNonceID := uint64(1)
 
-		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100, token1, token2)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(60_000, 100, token1, token2)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
-			Nonce:       1,
-			BlockHeight: big.NewInt(1),
+			Nonce:         1,
+			BlockHeight:   big.NewInt(1),
+			SourceChainId: common.ChainIDIntCardano,
 			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
-				Amount:             new(big.Int).SetUint64(multisigUtxoOutputsSum / 2),
+				Amount:             big.NewInt(1_250_000),
+				AmountWrapped:      big.NewInt(2_500_000),
 			}},
 		}
 
@@ -740,7 +741,6 @@ func TestSkylineConsolidation(t *testing.T) {
 func Test_getNeededUtxos(t *testing.T) {
 	const minUtxoAmount = 5
 
-	reactorStrategy := &CardanoChainOperationReactorStrategy{}
 	desiredAmounts := map[string]uint64{
 		cardanowallet.AdaTokenName: 0,
 	}
@@ -781,13 +781,13 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("exact amount", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 605
-		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 0, 1)
+		result, err := getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
 		desiredAmounts[cardanowallet.AdaTokenName] = 245
-		result, err = reactorStrategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 0, 1)
+		result, err = getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2]}, result)
@@ -795,7 +795,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with change", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 706
-		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 3, 0, 1)
+		result, err := getNeededUtxos(inputs, desiredAmounts, 4, 3, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[3:6], result)
@@ -803,7 +803,7 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("pass with at least", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 5
-		result, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 4, 30, 0, 3)
+		result, err := getNeededUtxos(inputs, desiredAmounts, 4, 30, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -811,13 +811,12 @@ func Test_getNeededUtxos(t *testing.T) {
 
 	t.Run("not enough sum", func(t *testing.T) {
 		desiredAmounts[cardanowallet.AdaTokenName] = 1550
-		_, err := reactorStrategy.getNeededUtxos(inputs, desiredAmounts, 5, 30, 0, 1)
+		_, err := getNeededUtxos(inputs, desiredAmounts, 5, 30, 1)
 		require.ErrorIs(t, err, cardanowallet.ErrUTXOsCouldNotSelect)
 	})
 }
 
 func Test_getNeededSkylineUtxos(t *testing.T) {
-	strategy := &CardanoChainOperationSkylineStrategy{}
 	inputs := []*indexer.TxInputOutput{
 		{
 			Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 100},
@@ -889,8 +888,6 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		},
 	}
 
-	var outputsWithTokens uint64 = 4
-
 	t.Run("pass", func(t *testing.T) {
 		const minUtxoAmount = 5
 
@@ -898,17 +895,17 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 			cardanowallet.AdaTokenName: 590,
 		}
 
-		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, outputsWithTokens, 1)
+		result, err := getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 4, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[0], inputs[2], inputs[3], inputs[4]}, result)
 
 		desiredAmounts = map[string]uint64{
-			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			cardanowallet.AdaTokenName: minUtxoAmount,
 			"1.31":                     100,
 		}
 
-		result, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 1, outputsWithTokens, 1)
+		result, err = getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 1, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[1]}, result)
@@ -918,10 +915,10 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		const minUtxoAmount = 4
 
 		desiredAmounts := map[string]uint64{
-			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			cardanowallet.AdaTokenName: minUtxoAmount,
 			"1.31":                     350,
 		}
-		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, outputsWithTokens, 1)
+		result, err := getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 2, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{inputs[1], inputs[6]}, result)
@@ -931,10 +928,10 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		const minUtxoAmount = 4
 
 		desiredAmounts := map[string]uint64{
-			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			cardanowallet.AdaTokenName: minUtxoAmount,
 			"1.31":                     20,
 		}
-		result, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
+		result, err := getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -942,7 +939,7 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts = map[string]uint64{
 			cardanowallet.AdaTokenName: 12,
 		}
-		result, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 3)
+		result, err = getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, 3)
 
 		require.NoError(t, err)
 		require.Equal(t, inputs[:3], result)
@@ -954,14 +951,14 @@ func Test_getNeededSkylineUtxos(t *testing.T) {
 		desiredAmounts := map[string]uint64{
 			cardanowallet.AdaTokenName: 1600,
 		}
-		_, err := strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
+		_, err := getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, 1)
 		require.ErrorIs(t, err, cardanowallet.ErrUTXOsCouldNotSelect)
 
 		desiredAmounts = map[string]uint64{
-			cardanowallet.AdaTokenName: outputsWithTokens * minUtxoAmount,
+			cardanowallet.AdaTokenName: minUtxoAmount,
 			"1.31":                     2500,
 		}
-		_, err = strategy.getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, outputsWithTokens, 1)
+		_, err = getNeededUtxos(inputs, desiredAmounts, minUtxoAmount, 30, 1)
 		require.ErrorIs(t, err, cardanowallet.ErrUTXOsCouldNotSelect)
 	})
 }
@@ -1046,7 +1043,8 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, _, _ := cco.strategy.GetOutputs(txs, cco.config, hclog.NewNullLogger())
+	res, err := cco.strategy.GetOutputs(txs, cco.config, hclog.NewNullLogger())
+	require.NoError(t, err)
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
@@ -1127,10 +1125,9 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, tokenOutputs, err := bactherStrategyPrime.GetOutputs(txs, config, hclog.NewNullLogger())
+	outputs, err := bactherStrategyPrime.GetOutputs(txs, config, hclog.NewNullLogger())
 	require.NoError(t, err)
 
-	require.Equal(t, uint64(2), tokenOutputs)
 	require.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   addr2,
@@ -1157,19 +1154,11 @@ func Test_skylineGetOutputs(t *testing.T) {
 }
 
 func Test_getUTXOs(t *testing.T) {
-	dbMock := &indexer.DatabaseMock{}
-	multisigAddr := "0x001"
 	feeAddr := "0x002"
-	testErr := errors.New("test err")
-	ops := &CardanoChainOperations{
-		db: dbMock,
-		config: &cardano.CardanoChainConfig{
-			NoBatchPeriodPercent: 0.1,
-			MaxFeeUtxoCount:      4,
-			MaxUtxoCount:         50,
-		},
-		strategy: &CardanoChainOperationReactorStrategy{},
-		logger:   hclog.NewNullLogger(),
+	config := &cardano.CardanoChainConfig{
+		NoBatchPeriodPercent: 0.1,
+		MaxFeeUtxoCount:      4,
+		MaxUtxoCount:         50,
 	}
 	txOutputs := cardano.TxOutputs{
 		Outputs: []cardanowallet.TxOutput{
@@ -1180,18 +1169,16 @@ func Test_getUTXOs(t *testing.T) {
 		},
 	}
 
-	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
+	t.Run("empty fee", func(t *testing.T) {
+		allMultisigUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
+			},
+		}
 
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
-		require.Error(t, err)
-	})
-
-	t.Run("GetAllTxOutputs fee error", func(t *testing.T) {
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
-
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
+		_, _, err := getUTXOsForAmounts(
+			config, feeAddr, allMultisigUtxos, nil, txOutputs.Sum, 0)
 		require.Error(t, err)
 	})
 
@@ -1213,10 +1200,8 @@ func Test_getUTXOs(t *testing.T) {
 		allMultisigUtxos := expectedUtxos[0:2]
 		allFeeUtxos := expectedUtxos[2:]
 
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
-
-		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 0, "", ops.config, ops.db, ops.logger)
+		multisigUtxos, feeUtxos, err := getUTXOsForAmounts(
+			config, feeAddr, allMultisigUtxos, allFeeUtxos, txOutputs.Sum, 0)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
@@ -1225,29 +1210,18 @@ func Test_getUTXOs(t *testing.T) {
 }
 
 func Test_getSkylineUTXOs(t *testing.T) {
-	dbMock := &indexer.DatabaseMock{}
-
-	multisigAddr := "0x001"
 	feeAddr := "0x002"
-	testErr := errors.New("test err")
-
-	ops := &CardanoChainOperations{
-		db: dbMock,
-		config: &cardano.CardanoChainConfig{
-			NoBatchPeriodPercent: 0.1,
-			MaxFeeUtxoCount:      4,
-			MaxUtxoCount:         50,
-			NativeTokens: []sendtx.TokenExchangeConfig{
-				{
-					DstChainID: "testChainID",
-					TokenName:  "1.31",
-				},
+	config := &cardano.CardanoChainConfig{
+		NoBatchPeriodPercent: 0.1,
+		MaxFeeUtxoCount:      4,
+		MaxUtxoCount:         50,
+		NativeTokens: []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: "testChainID",
+				TokenName:  "1.31",
 			},
 		},
-		strategy: &CardanoChainOperationSkylineStrategy{},
-		logger:   hclog.NewNullLogger(),
 	}
-
 	txOutputs := cardano.TxOutputs{
 		Outputs: []cardanowallet.TxOutput{
 			{
@@ -1280,21 +1254,6 @@ func Test_getSkylineUTXOs(t *testing.T) {
 			"1.31":                     60,
 		},
 	}
-
-	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
-
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
-		require.Error(t, err)
-	})
-
-	t.Run("GetAllTxOutputs fee error", func(t *testing.T) {
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
-
-		_, _, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
-		require.Error(t, err)
-	})
 
 	t.Run("pass", func(t *testing.T) {
 		expectedUtxos := []*indexer.TxInputOutput{
@@ -1337,10 +1296,8 @@ func Test_getSkylineUTXOs(t *testing.T) {
 		allMultisigUtxos := expectedUtxos[0:2]
 		allFeeUtxos := expectedUtxos[2:]
 
-		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
-
-		multisigUtxos, feeUtxos, err := ops.strategy.GetUTXOs(multisigAddr, feeAddr, txOutputs, 2, "testChainID", ops.config, ops.db, ops.logger)
+		multisigUtxos, feeUtxos, err := getUTXOsForAmounts(
+			config, feeAddr, allMultisigUtxos, allFeeUtxos, txOutputs.Sum, 0)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
@@ -1471,7 +1428,6 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([]*indexer.TxInputOutput, uint64) {
 	utxoOutput := make([]*indexer.TxInputOutput, 0, n)
 	returnCurrencySum := uint64(0)
-	hasTokens := len(tokens) == 2
 
 	for i := uint64(0); i < n; i++ {
 		tx := &indexer.TxInputOutput{
@@ -1483,8 +1439,9 @@ func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([
 			},
 		}
 
-		if hasTokens {
-			token := tokens[i%2]
+		if len(tokens) > 0 {
+			token := tokens[int(i)%len(tokens)]
+
 			tx.Output.Tokens = append(tx.Output.Tokens, indexer.TokenAmount{
 				PolicyID: token.PolicyID,
 				Name:     token.Name,

@@ -182,13 +182,13 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs, tokenHoldingOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, cco.logger)
+	txOutputs, err := cco.strategy.GetOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigUtxos, feeUtxos, err := cco.strategy.GetUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs, tokenHoldingOutputs, chainID, cco.config, cco.db, cco.logger)
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
+		multisigAddress, multisigFeeAddress, protocolParams, txOutputs)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +274,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		return nil, err
 	}
 
-	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(
-		multisigAddress, multisigFeeAddress, cco.strategy.FilterUTXOsForConsolidation)
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(multisigAddress, multisigFeeAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -334,23 +333,20 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	multisigAddress, multisigFeeAddress string,
-	filterFunc func(
-		[]*indexer.TxInputOutput, []*indexer.TxInputOutput, *cardano.CardanoChainConfig,
-	) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error),
-) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
-	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = filterFunc(multisigUtxos, feeUtxos, cco.config)
+	multisigUtxos, feeUtxos, err = cco.strategy.FilterUtxos(multisigUtxos, feeUtxos, cco.config)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	if len(feeUtxos) == 0 {
@@ -367,7 +363,45 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
-	return
+	return multisigUtxos, feeUtxos, nil
+}
+
+func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
+	multisigAddress, multisigFeeAddress string, protocolParams []byte, txOutputs cardano.TxOutputs,
+) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	multisigUtxos, feeUtxos, err = cco.strategy.FilterUtxos(multisigUtxos, feeUtxos, cco.config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cco.logger.Debug("UTXOs retrieved",
+		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
+
+	lovelaceAmount, err := cco.calculateMinUtxoLovelaceAmount(
+		multisigAddress, multisigUtxos, protocolParams, txOutputs.Outputs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	multisigUtxos, feeUtxos, err = getUTXOsForAmounts(
+		cco.config, multisigFeeAddress, multisigUtxos, feeUtxos, txOutputs.Sum, lovelaceAmount)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+
+	return multisigUtxos, feeUtxos, nil
 }
 
 func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
@@ -422,6 +456,37 @@ func (cco *CardanoChainOperations) getCardanoData(
 	return validatorsData, nil
 }
 
+func (cco *CardanoChainOperations) calculateMinUtxoLovelaceAmount(
+	multisigAddr string, multisigUtxos []*indexer.TxInputOutput,
+	protocolParams []byte, txOutputs []cardanowallet.TxOutput,
+) (uint64, error) {
+	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(multisigUtxos), txOutputs)
+
+	tokens, err := cardanowallet.GetTokensFromSumMap(sumMap)
+	if err != nil {
+		return 0, err
+	}
+
+	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
+	if err != nil {
+		return 0, err
+	}
+
+	defer txBuilder.Dispose()
+
+	// calculate final multisig output change
+	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
+		Addr:   multisigAddr,
+		Amount: sumMap[cardanowallet.AdaTokenName],
+		Tokens: tokens,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return minUtxo, nil
+}
+
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
 	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
@@ -443,7 +508,7 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	return result
 }
 
-func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanowallet.TxOutput, error) {
+func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint64 {
 	totalSum := map[string]uint64{}
 
 	for _, utxo := range utxos {
@@ -454,6 +519,11 @@ func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanow
 		}
 	}
 
+	return totalSum
+}
+
+func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanowallet.TxOutput, error) {
+	totalSum := getSumMapFromTxInputOutput(utxos)
 	tokens := make([]cardanowallet.TokenAmount, 0, len(totalSum)-1)
 
 	for tokenName, amount := range totalSum {
@@ -468,4 +538,31 @@ func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanow
 	}
 
 	return cardanowallet.NewTxOutput(addr, totalSum[cardanowallet.AdaTokenName], tokens...), nil
+}
+
+func subtractTxOutputsFromSumMap(
+	sumMap map[string]uint64, txOutputs []cardanowallet.TxOutput,
+) map[string]uint64 {
+	for _, out := range txOutputs {
+		if value, exists := sumMap[cardanowallet.AdaTokenName]; exists {
+			if value > out.Amount {
+				sumMap[cardanowallet.AdaTokenName] = value - out.Amount
+			} else {
+				delete(sumMap, cardanowallet.AdaTokenName)
+			}
+		}
+
+		for _, token := range out.Tokens {
+			tokenName := token.TokenName()
+			if value, exists := sumMap[tokenName]; exists {
+				if value > token.Amount {
+					sumMap[tokenName] = value - token.Amount
+				} else {
+					delete(sumMap, tokenName)
+				}
+			}
+		}
+	}
+
+	return sumMap
 }

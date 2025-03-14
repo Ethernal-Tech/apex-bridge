@@ -113,8 +113,8 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 			sbReceivers.WriteString(", ")
 		}
 
-		sbReceivers.WriteString(fmt.Sprintf("{ DestinationAddress = %s, Amount = %v }",
-			r.DestinationAddress, r.Amount))
+		sbReceivers.WriteString(fmt.Sprintf("{ DestinationAddress = %s, Amount = %s, AmountWrapped = %s }",
+			r.DestinationAddress, r.Amount, r.AmountWrapped))
 	}
 
 	sb.WriteString("ObservedTransactionHash = ")
