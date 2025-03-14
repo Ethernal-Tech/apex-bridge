@@ -1,7 +1,6 @@
 package batcher
 
 import (
-	"fmt"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -12,19 +11,6 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
-
-func filterUtxos(
-	multisigUtxos, feeUtxos []*indexer.TxInputOutput, config *cardano.CardanoChainConfig,
-) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	knownTokens, err := cardano.GetKnownTokens(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
-	}
-
-	return filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...),
-		filterOutUtxosWithUnknownTokens(feeUtxos),
-		nil
-}
 
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
@@ -89,36 +75,6 @@ func getOutputs(
 	})
 
 	return result, nil
-}
-
-func getUTXOsForAmounts(
-	cardanoConfig *cardano.CardanoChainConfig,
-	multisigFeeAddress string,
-	multisigUtxos []*indexer.TxInputOutput,
-	feeUtxos []*indexer.TxInputOutput,
-	desiredAmounts map[string]uint64,
-	minUtxoAmountLovelaceAmount uint64,
-) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	var err error
-
-	if len(feeUtxos) == 0 {
-		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
-	}
-
-	feeUtxos = feeUtxos[:min(cardanoConfig.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
-
-	multisigUtxos, err = getNeededUtxos(
-		multisigUtxos,
-		desiredAmounts,
-		minUtxoAmountLovelaceAmount,
-		cardanoConfig.MaxUtxoCount-len(feeUtxos),
-		cardanoConfig.TakeAtLeastUtxoCount,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return multisigUtxos, feeUtxos, nil
 }
 
 func getNeededUtxos(
@@ -194,6 +150,10 @@ func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint6
 }
 
 func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet.TxOutput, error) {
+	if len(sumMap) == 0 {
+		return cardanowallet.NewTxOutput(addr, 0), nil
+	}
+
 	tokens := make([]cardanowallet.TokenAmount, 0, len(sumMap)-1)
 
 	for tokenName, amount := range sumMap {
@@ -206,6 +166,10 @@ func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet
 			tokens = append(tokens, cardanowallet.NewTokenAmount(newToken, amount))
 		}
 	}
+
+	sort.Slice(tokens, func(i, j int) bool {
+		return tokens[i].TokenName() < tokens[j].TokenName()
+	})
 
 	return cardanowallet.NewTxOutput(addr, sumMap[cardanowallet.AdaTokenName], tokens...), nil
 }
@@ -252,7 +216,6 @@ func calculateMinUtxoLovelaceAmount(
 
 	defer txBuilder.Dispose()
 
-	// calculate final multisig output change
 	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
 		Addr:   addr,
 		Amount: sumMap[cardanowallet.AdaTokenName],
@@ -266,7 +229,6 @@ func calculateMinUtxoLovelaceAmount(
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
-	// For now we are taking all available UTXOs as fee (should always be 1-2 of them)
 	result.Inputs = make([]cardanowallet.TxInput, len(utxos))
 	result.Sum = make(map[string]uint64)
 

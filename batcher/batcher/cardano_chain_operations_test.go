@@ -737,6 +737,127 @@ func TestSkylineConsolidation(t *testing.T) {
 	})
 }
 
+func Test_getUTXOsForNormalBatch(t *testing.T) {
+	token, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", true)
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+	multisigAddr := "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k"
+	feeAddr := "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8"
+	customAddr := "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu"
+	cco := &CardanoChainOperations{
+		config: &cardano.CardanoChainConfig{
+			MaxFeeUtxoCount: 1,
+			MaxUtxoCount:    3,
+			NativeTokens: []sendtx.TokenExchangeConfig{
+				{
+					DstChainID: common.ChainIDStrPrime,
+					TokenName:  token.String(),
+				},
+			},
+		},
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		db:               dbMock,
+		txProvider:       txProviderMock,
+		logger:           hclog.NewNullLogger(),
+	}
+	protocolParams, _ := txProviderMock.GetProtocolParameters(context.Background())
+
+	t.Run("empty fee", func(t *testing.T) {
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
+
+		_, _, err := cco.getUTXOsForNormalBatch(multisigAddr, feeAddr, protocolParams, cardano.TxOutputs{})
+		require.ErrorContains(t, err, "fee")
+	})
+
+	t.Run("pass", func(t *testing.T) {
+		multisigUtxos := []*indexer.TxInputOutput{
+			{
+				Input: indexer.TxInput{
+					Hash: indexer.Hash{1, 2},
+				},
+				Output: indexer.TxOutput{
+					Address: multisigAddr,
+					Amount:  50,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: token.PolicyID,
+							Name:     token.Name,
+							Amount:   50,
+						},
+					},
+				},
+			},
+			{
+				Input: indexer.TxInput{
+					Hash: indexer.Hash{1, 2, 3},
+				},
+				Output: indexer.TxOutput{
+					Address: multisigAddr,
+					Amount:  10,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: token.PolicyID,
+							Name:     token.Name,
+							Amount:   160,
+						},
+					},
+				},
+			},
+			{
+				Input: indexer.TxInput{
+					Hash: indexer.Hash{1, 2, 9},
+				},
+				Output: indexer.TxOutput{
+					Address: multisigAddr,
+					Amount:  2073290,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: token.PolicyID,
+							Name:     token.Name,
+							Amount:   160,
+						},
+					},
+				},
+			},
+		}
+		feeUtxos := []*indexer.TxInputOutput{
+			{
+				Output: indexer.TxOutput{
+					Amount: 260,
+				},
+			},
+			{
+				Output: indexer.TxOutput{
+					Amount: 6260,
+				},
+			},
+		}
+
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(multisigUtxos, nil).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(feeUtxos, nil).Once()
+
+		mutlisigUtxosRes, feeUtxosRes, err := cco.getUTXOsForNormalBatch(
+			multisigAddr, feeAddr, protocolParams, cardano.TxOutputs{
+				Outputs: []cardanowallet.TxOutput{
+					cardanowallet.NewTxOutput(customAddr, 100, cardanowallet.NewTokenAmount(token, 200)),
+				},
+				Sum: map[string]uint64{
+					cardanowallet.AdaTokenName: 100,
+					token.String():             200,
+				},
+			})
+
+		require.NoError(t, err)
+		require.Equal(t, []*indexer.TxInputOutput{
+			multisigUtxos[0], multisigUtxos[2],
+		}, mutlisigUtxosRes)
+		require.Equal(t, feeUtxos[:cco.config.MaxFeeUtxoCount], feeUtxosRes)
+	})
+}
+
 // if tokens are passed as parameters, two of them are required
 func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([]*indexer.TxInputOutput, uint64) {
 	utxoOutput := make([]*indexer.TxInputOutput, 0, n)

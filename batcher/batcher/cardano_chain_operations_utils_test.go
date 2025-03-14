@@ -603,106 +603,10 @@ func Test_skylineGetOutputs(t *testing.T) {
 	require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
 }
 
-func Test_getUTXOs(t *testing.T) {
-	feeAddr := "0x002"
-	config := &cardano.CardanoChainConfig{
-		NoBatchPeriodPercent: 0.1,
-		MaxFeeUtxoCount:      4,
-		MaxUtxoCount:         50,
-	}
-	txOutputs := cardano.TxOutputs{
-		Outputs: []cardanowallet.TxOutput{
-			{}, {}, {},
-		},
-		Sum: map[string]uint64{
-			cardanowallet.AdaTokenName: 2_000_000,
-		},
-	}
-
-	t.Run("empty fee", func(t *testing.T) {
-		allMultisigUtxos := []*indexer.TxInputOutput{
-			{
-				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
-				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
-			},
-		}
-
-		_, _, err := getUTXOsForAmounts(
-			config, feeAddr, allMultisigUtxos, nil, txOutputs.Sum, 0)
-		require.Error(t, err)
-	})
-
-	t.Run("pass", func(t *testing.T) {
-		expectedUtxos := []*indexer.TxInputOutput{
-			{
-				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
-				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
-			},
-			{
-				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
-				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 1900},
-			},
-			{
-				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAA"), Index: 100},
-				Output: indexer.TxOutput{Amount: 10},
-			},
-		}
-		allMultisigUtxos := expectedUtxos[0:2]
-		allFeeUtxos := expectedUtxos[2:]
-
-		multisigUtxos, feeUtxos, err := getUTXOsForAmounts(
-			config, feeAddr, allMultisigUtxos, allFeeUtxos, txOutputs.Sum, 0)
-
-		require.NoError(t, err)
-		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
-		require.Equal(t, expectedUtxos[2:], feeUtxos)
-	})
-}
-
 func Test_getSkylineUTXOs(t *testing.T) {
-	feeAddr := "0x002"
-	config := &cardano.CardanoChainConfig{
-		NoBatchPeriodPercent: 0.1,
-		MaxFeeUtxoCount:      4,
-		MaxUtxoCount:         50,
-		NativeTokens: []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: "testChainID",
-				TokenName:  "1.31",
-			},
-		},
-	}
-	txOutputs := cardano.TxOutputs{
-		Outputs: []cardanowallet.TxOutput{
-			{
-				Amount: 5,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken("1", "1"),
-						Amount: 20,
-					},
-				},
-			},
-			{
-				Amount: 15,
-			},
-			{
-				Amount: 30,
-				Tokens: []cardanowallet.TokenAmount{
-					{
-						Token:  cardanowallet.NewToken("1", "1"),
-						Amount: 40,
-					},
-				},
-			},
-			{
-				Amount: 10,
-			},
-		},
-		Sum: map[string]uint64{
-			cardanowallet.AdaTokenName: 60,
-			"1.31":                     60,
-		},
+	sumMap := map[string]uint64{
+		cardanowallet.AdaTokenName: 60,
+		"1.31":                     60,
 	}
 
 	t.Run("pass", func(t *testing.T) {
@@ -721,7 +625,6 @@ func Test_getSkylineUTXOs(t *testing.T) {
 					},
 				},
 			},
-
 			{
 				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("01"), Index: 3},
 				Output: indexer.TxOutput{
@@ -743,14 +646,11 @@ func Test_getSkylineUTXOs(t *testing.T) {
 				},
 			},
 		}
-		allMultisigUtxos := expectedUtxos[0:2]
-		allFeeUtxos := expectedUtxos[2:]
 
-		multisigUtxos, feeUtxos, err := getUTXOsForAmounts(
-			config, feeAddr, allMultisigUtxos, allFeeUtxos, txOutputs.Sum, 0)
+		multisigUtxos, err := getNeededUtxos(
+			expectedUtxos, sumMap, 0, 50, 1)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
-		require.Equal(t, expectedUtxos[2:], feeUtxos)
 	})
 }

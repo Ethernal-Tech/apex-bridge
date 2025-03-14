@@ -338,10 +338,13 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = filterUtxos(multisigUtxos, feeUtxos, cco.config)
+	knownTokens, err := cardano.GetKnownTokens(cco.config)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
 
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
@@ -373,22 +376,36 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = filterUtxos(multisigUtxos, feeUtxos, cco.config)
+	knownTokens, err := cardano.GetKnownTokens(cco.config)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
+
+	multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
 
 	cco.logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
-	lovelaceAmount, err := calculateMinUtxoLovelaceAmount(
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+
+	minUtxoLovelaceAmount, err := calculateMinUtxoLovelaceAmount(
 		cco.cardanoCliBinary, protocolParams, multisigAddress, multisigUtxos, txOutputs.Outputs)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	multisigUtxos, feeUtxos, err = getUTXOsForAmounts(
-		cco.config, multisigFeeAddress, multisigUtxos, feeUtxos, txOutputs.Sum, lovelaceAmount)
+	multisigUtxos, err = getNeededUtxos(
+		multisigUtxos,
+		txOutputs.Sum,
+		minUtxoLovelaceAmount,
+		cco.config.MaxUtxoCount-len(feeUtxos),
+		cco.config.TakeAtLeastUtxoCount,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
