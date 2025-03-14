@@ -193,11 +193,10 @@ func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint6
 	return totalSum
 }
 
-func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanowallet.TxOutput, error) {
-	totalSum := getSumMapFromTxInputOutput(utxos)
-	tokens := make([]cardanowallet.TokenAmount, 0, len(totalSum)-1)
+func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet.TxOutput, error) {
+	tokens := make([]cardanowallet.TokenAmount, 0, len(sumMap)-1)
 
-	for tokenName, amount := range totalSum {
+	for tokenName, amount := range sumMap {
 		if tokenName != cardanowallet.AdaTokenName {
 			newToken, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 			if err != nil {
@@ -208,7 +207,7 @@ func getTxOutputFromUtxos(utxos []*indexer.TxInputOutput, addr string) (cardanow
 		}
 	}
 
-	return cardanowallet.NewTxOutput(addr, totalSum[cardanowallet.AdaTokenName], tokens...), nil
+	return cardanowallet.NewTxOutput(addr, sumMap[cardanowallet.AdaTokenName], tokens...), nil
 }
 
 func subtractTxOutputsFromSumMap(
@@ -236,11 +235,10 @@ func subtractTxOutputsFromSumMap(
 }
 
 func calculateMinUtxoLovelaceAmount(
-	cardanoCliBinary string,
-	multisigAddr string, multisigUtxos []*indexer.TxInputOutput,
-	protocolParams []byte, txOutputs []cardanowallet.TxOutput,
+	cardanoCliBinary string, protocolParams []byte,
+	addr string, txInputOutputs []*indexer.TxInputOutput, txOutputs []cardanowallet.TxOutput,
 ) (uint64, error) {
-	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(multisigUtxos), txOutputs)
+	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(txInputOutputs), txOutputs)
 
 	tokens, err := cardanowallet.GetTokensFromSumMap(sumMap)
 	if err != nil {
@@ -256,7 +254,7 @@ func calculateMinUtxoLovelaceAmount(
 
 	// calculate final multisig output change
 	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
-		Addr:   multisigAddr,
+		Addr:   addr,
 		Amount: sumMap[cardanowallet.AdaTokenName],
 		Tokens: tokens,
 	})

@@ -275,7 +275,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		return nil, err
 	}
 
-	txMultisigOutput, err := getTxOutputFromUtxos(multisigUtxos, multisigAddress)
+	multisigTxOutput, err := getTxOutputFromSumMap(multisigAddress, getSumMapFromTxInputOutput(multisigUtxos))
 	if err != nil {
 		return nil, err
 	}
@@ -308,9 +308,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
 		},
-		[]cardanowallet.TxOutput{
-			txMultisigOutput,
-		},
+		[]cardanowallet.TxOutput{multisigTxOutput},
 	)
 	if err != nil {
 		return nil, err
@@ -384,7 +382,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	lovelaceAmount, err := calculateMinUtxoLovelaceAmount(
-		cco.cardanoCliBinary, multisigAddress, multisigUtxos, protocolParams, txOutputs.Outputs)
+		cco.cardanoCliBinary, protocolParams, multisigAddress, multisigUtxos, txOutputs.Outputs)
 	if err != nil {
 		return nil, nil, err
 	}
