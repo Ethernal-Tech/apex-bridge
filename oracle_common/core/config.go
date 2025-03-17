@@ -108,6 +108,7 @@ type TryCountLimits struct {
 
 type AppConfig struct {
 	ValidatorDataDir         string                         `json:"validatorDataDir"`
+	RefundEnabled            bool                           `json:"refundEnabled"`
 	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
 	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig     `json:"ethChains"`

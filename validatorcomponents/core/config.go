@@ -19,6 +19,7 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
+	RefundEnabled                bool                                      `json:"refundEnabled"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
@@ -87,6 +88,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	oracleConfig := &oracleCore.AppConfig{
+		RefundEnabled:            appConfig.RefundEnabled,
 		ValidatorDataDir:         appConfig.ValidatorDataDir,
 		ValidatorConfigPath:      appConfig.ValidatorConfigPath,
 		Bridge:                   appConfig.Bridge,
