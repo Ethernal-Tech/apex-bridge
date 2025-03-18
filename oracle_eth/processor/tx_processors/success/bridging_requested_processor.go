@@ -100,7 +100,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:               receivers,
 		TotalAmount:             totalAmount,
-		RetryCounter:            big.NewInt(int64(tx.BatchFailedCount)),
+		RetryCounter:            big.NewInt(int64(tx.BatchTryCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)

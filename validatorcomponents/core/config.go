@@ -19,6 +19,7 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
+	RefundEnabled                bool                                      `json:"refundEnabled"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
@@ -31,6 +32,7 @@ type AppConfig struct {
 	APIConfig                    APIConfig                                 `json:"api"`
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
+	TryCountLimits               oracleCore.TryCountLimits                 `json:"tryCountLimits"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
@@ -86,12 +88,14 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	oracleConfig := &oracleCore.AppConfig{
+		RefundEnabled:            appConfig.RefundEnabled,
 		ValidatorDataDir:         appConfig.ValidatorDataDir,
 		ValidatorConfigPath:      appConfig.ValidatorConfigPath,
 		Bridge:                   appConfig.Bridge,
 		Settings:                 appConfig.Settings,
 		BridgingSettings:         appConfig.BridgingSettings,
 		RetryUnprocessedSettings: appConfig.RetryUnprocessedSettings,
+		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
 	}

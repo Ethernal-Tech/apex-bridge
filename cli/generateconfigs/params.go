@@ -617,6 +617,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfig := &vcCore.AppConfig{
+		RefundEnabled:       false,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -699,6 +700,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
+		},
+		TryCountLimits: oCore.TryCountLimits{
+			MaxBatchTryCount:  70,
+			MaxSubmitTryCount: 50,
+			MaxRefundTryCount: 50,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
