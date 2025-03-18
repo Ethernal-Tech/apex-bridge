@@ -27,10 +27,6 @@ const (
 
 	ReactorMode VCRunMode = "reactor"
 	SkylineMode VCRunMode = "skyline"
-
-	BridgingConfirmedTxType ConfirmedTxType = 0
-	DefundConfirmedTxType   ConfirmedTxType = 1
-	RefundConfirmedTxType   ConfirmedTxType = 2
 )
 
 var (
@@ -50,8 +46,6 @@ func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash) Bridgin
 		SourceTxHash:  sourceTxHash,
 	}
 }
-
-type ConfirmedTxType uint8
 
 type NewBridgingRequestStateModel struct {
 	SourceTxHash Hash
