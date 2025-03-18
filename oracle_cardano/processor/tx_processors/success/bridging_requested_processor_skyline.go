@@ -289,9 +289,18 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			multisigUtxo.Amount, nativeCurrencyAmountSum)
 	}
 
-	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
-	if err != nil {
-		return err
+	var nativeToken cardanowallet.Token
+
+	if tx.OriginChainID == metadata.DestinationChainID {
+		nativeToken, err = cardanotx.GetNativeTokenFromConfig(cardanoSrcConfig.NativeTokens[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		nativeToken, err = cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
+		if err != nil {
+			return err
+		}
 	}
 
 	multisigWrappedTokenAmount := cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String())
@@ -328,9 +337,18 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 
 	builder.SetProtocolParameters(chainInfo.ProtocolParams)
 
-	nativeToken, err := config.GetNativeToken(destinationChainID)
-	if err != nil {
-		return 0, err
+	var nativeToken cardanowallet.Token
+
+	if config.ChainID == destinationChainID {
+		nativeToken, err = cardanotx.GetNativeTokenFromConfig(config.NativeTokens[0])
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		nativeToken, err = config.GetNativeToken(destinationChainID)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	potentialTokenCost, err := cardanowallet.GetTokenCostSum(
