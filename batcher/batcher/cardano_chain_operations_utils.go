@@ -24,10 +24,23 @@ func getOutputs(
 
 			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 				if len(data.Tokens) == 0 {
-					token, err := cardanoConfig.GetNativeToken(
-						common.ToStrChainID(transaction.SourceChainId))
-					if err != nil {
-						return cardano.TxOutputs{}, err
+					var (
+						err   error
+						token cardanowallet.Token
+					)
+
+					if (transaction.TransactionType == uint8(common.DefundConfirmedTxType)) ||
+						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
+						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+						if err != nil {
+							return cardano.TxOutputs{}, err
+						}
+					} else {
+						token, err = cardanoConfig.GetNativeToken(
+							common.ToStrChainID(transaction.SourceChainId))
+						if err != nil {
+							return cardano.TxOutputs{}, err
+						}
 					}
 
 					data.Tokens = []cardanowallet.TokenAmount{
