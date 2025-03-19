@@ -23,6 +23,8 @@ type CardanoChainConfig struct {
 	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
 	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
+	MaxFeeUtxoCount       int                              `json:"maxFeeUtxoCount"`
+	MaxUtxoCount          int                              `json:"maxUtxoCount"`
 	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
 	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
 }

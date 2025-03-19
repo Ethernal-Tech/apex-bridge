@@ -3,7 +3,6 @@ package databaseaccess
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -16,7 +15,6 @@ type BBoltDatabase struct {
 
 var (
 	bridgingRequestStatesBucket = []byte("BridgingRequestStates")
-	submittedBatchIDBucket      = []byte("SubmittedBatchId")
 )
 
 var _ core.Database = (*BBoltDatabase)(nil)
@@ -30,7 +28,7 @@ func (bd *BBoltDatabase) Init(filePath string) error {
 	bd.db = db
 
 	return db.Update(func(tx *bbolt.Tx) error {
-		for _, bn := range [][]byte{bridgingRequestStatesBucket, submittedBatchIDBucket} {
+		for _, bn := range [][]byte{bridgingRequestStatesBucket} {
 			_, err := tx.CreateBucketIfNotExists(bn)
 			if err != nil {
 				return fmt.Errorf("could not bucket: %s, err: %w", string(bn), err)
@@ -101,44 +99,4 @@ func (bd *BBoltDatabase) GetBridgingRequestState(
 	})
 
 	return result, err
-}
-
-// AddLastSubmittedBatchID implements core.Database.
-func (bd *BBoltDatabase) AddLastSubmittedBatchID(chainID string, batchID *big.Int) error {
-	return bd.db.Update(func(tx *bbolt.Tx) error {
-		bytes, err := batchID.MarshalText()
-		if err != nil {
-			return fmt.Errorf("could not marshal batch ID: %w", err)
-		}
-
-		if err := tx.Bucket(submittedBatchIDBucket).Put([]byte(chainID), bytes); err != nil {
-			return fmt.Errorf("last submitted batch ID write error: %w", err)
-		}
-
-		return nil
-	})
-}
-
-// GetLastSubmittedBatchID implements core.Database.
-func (bd *BBoltDatabase) GetLastSubmittedBatchID(chainID string) (*big.Int, error) {
-	var result *big.Int
-
-	err := bd.db.View(func(tx *bbolt.Tx) error {
-		bytes := tx.Bucket(submittedBatchIDBucket).Get([]byte(chainID))
-		if bytes == nil {
-			return nil
-		}
-
-		result = new(big.Int)
-		if err := result.UnmarshalText(bytes); err != nil {
-			return fmt.Errorf("could not unmarshal last submitted batch ID: %w", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }

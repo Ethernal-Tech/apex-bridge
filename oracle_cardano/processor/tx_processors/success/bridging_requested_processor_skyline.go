@@ -147,7 +147,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		NativeCurrencyAmountSource:      new(big.Int).SetUint64(totalAmountCurrencySrc),
 		WrappedTokenAmountSource:        new(big.Int).SetUint64(totalAmountWrappedSrc),
 		WrappedTokenAmountDestination:   new(big.Int).SetUint64(totalAmountWrappedDst),
-		RetryCounter:                    big.NewInt(int64(tx.BatchFailedCount)),
+		RetryCounter:                    big.NewInt(int64(tx.BatchTryCount)),
 	}
 
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
