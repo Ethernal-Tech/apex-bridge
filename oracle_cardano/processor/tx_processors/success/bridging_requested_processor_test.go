@@ -27,8 +27,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	refundRequestProcessor := &core.CardanoTxSuccessProcessorMock{}
 
-	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
+	proc := NewBridgingRequestedProcessor(refundRequestProcessor, hclog.NewNullLogger())
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {

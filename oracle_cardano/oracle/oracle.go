@@ -60,16 +60,16 @@ func NewCardanoOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
+	refundRequestProcessor := successtxprocessors.NewRefundRequestProcessor(logger)
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
 		[]core.CardanoTxSuccessProcessor{
 			successtxprocessors.NewBatchExecutedProcessor(logger),
-			successtxprocessors.NewBridgingRequestedProcessor(logger),
+			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger),
 			successtxprocessors.NewHotWalletIncrementProcessor(logger),
-			// tx_processors.NewRefundExecutedProcessor(logger),
+			refundRequestProcessor,
 		},
 		[]core.CardanoTxFailedProcessor{
 			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
-			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 		},
 	)
 

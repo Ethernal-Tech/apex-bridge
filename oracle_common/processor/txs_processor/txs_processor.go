@@ -289,7 +289,8 @@ func (p *TxsProcessorImpl) updateBridgingStateForBatch(
 		stateKeys := make([]common.BridgingRequestStateKey, len(event.TxHashes))
 		for i, x := range event.TxHashes {
 			stateKeys[i] = common.NewBridgingRequestStateKey(
-				common.ToStrChainID(x.SourceChainID), x.ObservedTransactionHash)
+				common.ToStrChainID(x.SourceChainID), x.ObservedTransactionHash,
+				x.TransactionType == uint8(common.RefundConfirmedTxType))
 		}
 
 		dstChainID := common.ToStrChainID(event.DstChainID)
