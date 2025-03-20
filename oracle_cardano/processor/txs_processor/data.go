@@ -54,12 +54,12 @@ func (pc *txProcessorsCollection) getSuccess(tx *core.CardanoTx, appConfig *cCor
 
 	if len(tx.Metadata) != 0 {
 		metadata, err := common.UnmarshalMetadata[common.BaseMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
-		if err == nil {
-			txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
-			if !relevant {
-				txProcessor = pc.successTxProcessors[string(common.TxTypeRefundRequest)]
-			}
-		} else {
+		if err != nil {
+			return nil, err
+		}
+
+		txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
+		if !relevant {
 			txProcessor = pc.successTxProcessors[string(common.TxTypeRefundRequest)]
 		}
 	} else {

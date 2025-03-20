@@ -3,7 +3,9 @@ package successtxprocessors
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
@@ -43,22 +45,28 @@ func (*RefundRequestProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cC
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	if err := p.validate(tx, appConfig); err != nil {
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
+	}
+
+	if err := p.validate(tx, metadata, appConfig); err != nil {
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, appConfig)
+	p.addRefundRequestClaim(claims, tx, metadata, appConfig)
 
 	return nil
 }
 
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
-	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
+	claims *cCore.BridgeClaims, tx *core.CardanoTx,
+	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-	receiverAddr := p.findReceiverAddr(chainConfig, tx)
+	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
-	unknownTokenOutputIndexes := make([]int, 0)
+	unknownTokenOutputIndexes := make([]int, 0, unknownNativeTokensUtxoCntMax)
 
 	for idx, out := range tx.Outputs {
 		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
@@ -77,7 +85,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
 		OriginTransactionHash:    tx.Hash,
-		OriginSenderAddress:      receiverAddr,
+		OriginSenderAddress:      senderAddr,
 		OriginAmount:             amount,
 		OutputIndexes:            common.PackNumbersToBytes(unknownTokenOutputIndexes),
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
@@ -91,7 +99,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 }
 
 func (p *RefundRequestProcessorImpl) validate(
-	tx *core.CardanoTx, appConfig *cCore.AppConfig,
+	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
 		return fmt.Errorf("try count exceeded. RefundTryCount: (current, max)=(%d, %d)",
@@ -101,6 +109,11 @@ func (p *RefundRequestProcessorImpl) validate(
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	senderAddr, err := p.getSenderAddr(chainConfig, metadata)
+	if err != nil {
+		return err
 	}
 
 	amountSum := big.NewInt(0)
@@ -122,22 +135,22 @@ func (p *RefundRequestProcessorImpl) validate(
 		}
 	}
 
-	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx)
+	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
 
-	if amountSum.Cmp(new(big.Int).SetUint64(chainConfig.UtxoMinAmount+calculatedMinUtxo)) == -1 {
+	if amountSum.Cmp(new(big.Int).SetUint64(chainConfig.MinFeeForBridging+calculatedMinUtxo)) == -1 {
 		return fmt.Errorf(
-			"sum of amounts to the bridging address: %v is less than minimum required for refund: %v",
-			amountSum, chainConfig.UtxoMinAmount+calculatedMinUtxo)
+			"sum of amounts to the bridging address: %v is less than the minimum required for refund: %v",
+			amountSum, chainConfig.MinFeeForBridging+calculatedMinUtxo)
 	}
 
 	return nil
 }
 
 func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
-	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
+	config *cCore.CardanoChainConfig, tx *core.CardanoTx, receiverAddr string,
 ) (uint64, error) {
 	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	if err != nil {
@@ -153,7 +166,6 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 
 	builder.SetProtocolParameters(chainInfo.ProtocolParams)
 
-	receiverAddr := p.findReceiverAddr(config, tx)
 	tokenNameToAmount := make(map[string]uint64)
 
 	for _, out := range tx.Outputs {
@@ -192,8 +204,14 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 	return max(config.UtxoMinAmount, potentialTokenCost), nil
 }
 
-func (p *RefundRequestProcessorImpl) findReceiverAddr(
-	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
-) string {
-	return ""
+func (p *RefundRequestProcessorImpl) getSenderAddr(
+	config *cCore.CardanoChainConfig, metadata *common.BridgingRequestMetadata,
+) (string, error) {
+	senderAddr := strings.Join(metadata.SenderAddr, "")
+
+	if valid := cardanotx.IsValidOutputAddress(senderAddr, config.NetworkID); !valid {
+		return "", fmt.Errorf("invalid sender addr: %s", senderAddr)
+	}
+
+	return senderAddr, nil
 }

@@ -42,13 +42,17 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	metadata, err := core.UnmarshalEthMetadata[core.BridgingRequestEthMetadata](
 		tx.Metadata)
 	if err != nil {
-		p.logger.Warn("failed to unmarshal metadata", "tx", tx, "err", err)
+		p.logger.Warn("failed to unmarshal metadata. handing over to refund processor",
+			"tx", tx, "err", err)
 
 		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
 
 	if metadata.BridgingTxType != p.GetType() {
-		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
+		p.logger.Warn("ValidateAndAddClaim called for irrelevant tx. handing over to refund processor",
+			"tx", tx, "err", err)
+
+		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -57,7 +61,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		p.logger.Warn("validation failed for", "tx", tx, "err", err)
+		p.logger.Warn("validation failed for tx. handing over to refund processor",
+			"tx", tx, "err", err)
 
 		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
