@@ -27,13 +27,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	refundRequestProcessor := &core.CardanoTxSuccessProcessorMock{}
-	proc := NewBridgingRequestedProcessor(refundRequestProcessor, hclog.NewNullLogger())
-
-	mockRefundRequestProcessor, ok := proc.refundRequestProcessor.(*core.CardanoTxSuccessProcessorMock)
-	if !ok {
-		t.Fatal("Couldn't declare refundRequestProcessor as *CardanoTxSuccessProcessorMock")
-	}
+	refundRequestProcessorMock := &core.CardanoTxSuccessProcessorMock{}
+	proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
@@ -66,7 +61,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{}, appConfig).Return(nil)
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{}, appConfig).Return(nil)
 
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
 		require.NoError(t, err)
@@ -97,7 +92,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &cCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 			},
@@ -134,7 +129,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -170,7 +165,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: "invalid",
 		}, appConfig).Return(nil)
@@ -206,7 +201,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrVector,
 		}, appConfig).Return(nil)
@@ -240,7 +235,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -274,7 +269,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -312,7 +307,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -348,7 +343,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -412,7 +407,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -451,7 +446,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -490,7 +485,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -526,7 +521,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -562,7 +557,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -597,7 +592,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -639,7 +634,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)

@@ -24,13 +24,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	refundRequestProcessor := &core.EthTxSuccessProcessorMock{}
-	proc := NewEthBridgingRequestedProcessor(refundRequestProcessor, hclog.NewNullLogger())
-
-	mockRefundRequestProcessor, ok := proc.refundRequestProcessor.(*core.EthTxSuccessProcessorMock)
-	if !ok {
-		t.Fatal("Couldn't declare refundRequestProcessor as *EthTxSuccessProcessorMock")
-	}
+	refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+	proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
 	appConfig := &oCore.AppConfig{
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -62,7 +57,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{}, appConfig).Return(nil)
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{}, appConfig).Return(nil)
 
 		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
 		require.NoError(t, err)
@@ -91,7 +86,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata: relevantButNotFullMetadata,
 		}, appConfig).Return(nil)
 
@@ -115,7 +110,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig).Return(nil)
@@ -141,7 +136,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      destinationChainNonRegisteredMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -167,7 +162,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      destinationChainNonRegisteredMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -198,7 +193,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      moreThanMaxReceiversReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -226,7 +221,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -255,7 +250,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
@@ -285,7 +280,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      utxoValueBelowMinInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -314,7 +309,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      invalidAddrInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -343,7 +338,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      invalidAddrInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -378,7 +373,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
@@ -418,7 +413,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
@@ -451,7 +446,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata:      feeInReceiversLessThanMinMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig).Return(nil)
@@ -485,7 +480,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		mockRefundRequestProcessor.On("ValidateAndAddClaim", claims, &core.EthTx{
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
