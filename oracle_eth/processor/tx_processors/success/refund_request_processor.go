@@ -34,7 +34,7 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 }
 
 func (p *RefundRequestProcessorImpl) validate(
-	tx *core.EthTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
+	tx *core.EthTx, appConfig *cCore.AppConfig,
 ) error {
 	return nil
 }

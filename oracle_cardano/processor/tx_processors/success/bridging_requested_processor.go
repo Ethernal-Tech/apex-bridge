@@ -135,6 +135,14 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
+		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
+		return fmt.Errorf(
+			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
+			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
+			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	}
+
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)

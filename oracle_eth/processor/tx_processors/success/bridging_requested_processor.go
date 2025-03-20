@@ -117,6 +117,14 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
+	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
+		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
+		return fmt.Errorf(
+			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
+			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
+			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	}
+
 	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {
 		return err
 	}
