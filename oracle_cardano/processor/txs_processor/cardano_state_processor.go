@@ -281,6 +281,23 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 		}
 
 		return tx, nil
+	case cCore.RRCClaimType:
+		rrcIndex := event.Index.Uint64()
+		if rrcIndex >= uint64(len(claims.RefundRequestClaims)) {
+			return nil, fmt.Errorf(
+				"invalid NotEnoughFundsEvent.Index: %d. RRCs len: %d", rrcIndex, len(claims.RefundRequestClaims))
+		}
+
+		rrc := claims.RefundRequestClaims[rrcIndex]
+
+		tx, exists := allPendingMap[string(
+			core.ToCardanoTxKey(common.ToStrChainID(rrc.OriginChainId), rrc.OriginTransactionHash))]
+		if !exists {
+			return nil, fmt.Errorf(
+				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
+		}
+
+		return tx, nil
 	default:
 		return nil, fmt.Errorf(
 			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
