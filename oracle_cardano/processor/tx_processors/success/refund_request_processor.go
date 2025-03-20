@@ -77,9 +77,11 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, idx)
 		}
 
-		if len(unknownTokenOutputIndexes) == 0 {
-			amount.Add(amount, new(big.Int).SetUint64(out.Amount))
-		}
+		amount.Add(amount, new(big.Int).SetUint64(out.Amount))
+	}
+
+	if len(unknownTokenOutputIndexes) > 0 {
+		amount = big.NewInt(0)
 	}
 
 	claim := cCore.RefundRequestClaim{
