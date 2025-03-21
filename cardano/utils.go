@@ -8,6 +8,8 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+var splitStringLength = 40
+
 func GetPolicyScripts(
 	validatorsData []eth.ValidatorChainData,
 ) (multisigPolicyScript *wallet.PolicyScript, feePolicyScript *wallet.PolicyScript, err error) {

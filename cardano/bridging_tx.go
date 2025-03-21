@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	splitStringLength = 40
-	maxInputs         = 40
+	maxInputs = 40
 )
 
 type BridgingTxSender struct {
