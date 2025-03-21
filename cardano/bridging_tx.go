@@ -192,14 +192,14 @@ func (bts *BridgingTxSender) createMetadata(
 	metadataObj := common.BridgingRequestMetadata{
 		BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 		DestinationChainID: chain,
-		SenderAddr:         addrToMetaDataAddr(senderAddr),
+		SenderAddr:         AddrToMetaDataAddr(senderAddr),
 		Transactions:       make([]common.BridgingRequestMetadataTransaction, 0, len(receivers)+1),
 		FeeAmount:          feeAmount,
 	}
 
 	for _, x := range receivers {
 		metadataObj.Transactions = append(metadataObj.Transactions, common.BridgingRequestMetadataTransaction{
-			Address: addrToMetaDataAddr(x.Addr),
+			Address: AddrToMetaDataAddr(x.Addr),
 			Amount:  x.Amount,
 		})
 	}

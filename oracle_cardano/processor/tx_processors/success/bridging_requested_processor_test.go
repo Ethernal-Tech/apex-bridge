@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -239,10 +240,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
-				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
-				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
-				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -269,7 +270,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{validTestAddress}, Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 			FeeAmount: minFeeForBridging - 1,
 		})
@@ -297,8 +298,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{validTestAddress}, Amount: utxoMinValue},
-				{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
 			},
 			FeeAmount: 100,
 		})
@@ -325,8 +326,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{validTestAddress}, Amount: utxoMinValue},
-				{Address: []string{vectorBridgingFeeAddr}, Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -354,10 +355,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
-				{Address: []string{
-					"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661",
-				}, Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(
+					"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -385,10 +385,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: utxoMinValue},
-				{Address: []string{
-					"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d",
-				}, Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(
+					"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -415,8 +414,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
-				{Address: []string{validTestAddress}, Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -443,8 +442,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging},
-				{Address: []string{validTestAddress}, Amount: utxoMinValue},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -471,7 +470,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"addr1"},
 			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: []string{vectorBridgingFeeAddr}, Amount: minFeeForBridging - 1},
+				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging - 1},
 			},
 		})
 		require.NoError(t, err)
@@ -497,8 +496,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
-			{Address: []string{validTestAddress}, Amount: maxAmountAllowedToBridge.Uint64()},
+			{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+			{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: maxAmountAllowedToBridge.Uint64()},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
@@ -531,8 +530,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: common.SplitString(vectorBridgingFeeAddr, 40), Amount: minFeeForBridging},
-			{Address: []string{validTestAddress}, Amount: utxoMinValue},
+			{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+			{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{

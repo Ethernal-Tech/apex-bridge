@@ -63,7 +63,7 @@ func IsValidOutputAddress(addr string, networkID wallet.CardanoNetworkType) bool
 		cardAddr.GetInfo().Network == networkID
 }
 
-func addrToMetaDataAddr(addr string) []string {
+func AddrToMetaDataAddr(addr string) []string {
 	addr = strings.TrimPrefix(strings.TrimPrefix(addr, "0x"), "0X")
 
 	return common.SplitString(addr, splitStringLength)
