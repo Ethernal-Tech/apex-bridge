@@ -11,6 +11,7 @@ var (
 	defundParamsData                   = &defundParams{}
 	setAdditionalDataParamsData        = &setAdditionalDataParams{}
 	setMinAmountsParamsData            = &setMinAmountsParams{}
+	validatorsDataParamsData           = &validatorsDataParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -54,12 +55,21 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(setMinAmountsParamsData),
 	}
+	validatorDataCmd := &cobra.Command{
+		Use:   "get-validators-data",
+		Short: "get validators data",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validatorsDataParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(validatorsDataParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
 	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
 	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
+	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
@@ -72,6 +82,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		defundCmd,
 		setAdditionalDataCmd,
 		setMinAmountsCmd,
+		validatorDataCmd,
 	)
 
 	return cmd
