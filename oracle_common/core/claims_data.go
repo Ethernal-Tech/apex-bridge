@@ -13,6 +13,7 @@ type ClaimType = string
 
 const (
 	BRCClaimType ClaimType = "BRC"
+	RRCClaimType ClaimType = "RRC"
 )
 
 type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
@@ -31,7 +32,8 @@ func (bc *BridgeClaims) Count() int {
 	return len(bc.BridgingRequestClaims) +
 		len(bc.BatchExecutedClaims) +
 		len(bc.BatchExecutionFailedClaims) +
-		len(bc.HotWalletIncrementClaims) /* + len(bc.RefundRequest) + len(bc.RefundExecuted)*/
+		len(bc.HotWalletIncrementClaims) +
+		len(bc.RefundRequestClaims)
 }
 
 func (bc *BridgeClaims) Any() bool {

@@ -217,6 +217,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "relevant"}
+		refundTxProc := &core.CardanoTxSuccessProcessorMock{Type: common.TxTypeRefundRequest}
 
 		proc, rec := newValidProcessor(
 			context.Background(),
@@ -227,6 +228,16 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		)
 
 		require.NotNil(t, proc)
+
+		refundProc, rec := newValidProcessor(
+			context.Background(),
+			appConfig, oracleDB,
+			refundTxProc, nil, nil, nil,
+			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+		)
+
+		require.NotNil(t, refundProc)
 
 		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
 			{
@@ -1645,7 +1656,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		pendingTx1, _ = oracleDB.GetPendingTx(cCore.DBTxID{ChainID: cardanoTx1.GetChainID(), DBKey: cardanoTx1.GetTxHash()})
 		require.NotNil(t, pendingTx1)
-		require.Equal(t, pendingTx1.GetSubmitTryCount(), uint32(1))
+		require.Equal(t, uint32(0), pendingTx1.GetSubmitTryCount())
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.NoError(t, err)

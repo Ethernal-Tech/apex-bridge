@@ -30,7 +30,7 @@ func NewBridgingRequestStateManager(
 
 // New implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *common.NewBridgingRequestStateModel) error {
-	state := core.NewBridgingRequestState(sourceChainID, model.SourceTxHash)
+	state := common.NewBridgingRequestState(sourceChainID, model.SourceTxHash, model.IsRefund)
 
 	err := m.db.AddBridgingRequestState(state)
 	if err != nil {
@@ -38,7 +38,7 @@ func (m *BridgingRequestStateManagerImpl) New(sourceChainID string, model *commo
 	}
 
 	m.logger.Debug("New BridgingRequestState", "srcChainID", state.SourceChainID,
-		"srcTxHash", state.SourceTxHash, "Status", state.Status)
+		"srcTxHash", state.SourceTxHash, "Status", state.StatusStr())
 
 	return nil
 }
@@ -65,121 +65,122 @@ func (m *BridgingRequestStateManagerImpl) NewMultiple(
 
 // Invalid implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Invalid(key common.BridgingRequestStateKey) error {
-	return m.updateStates([]common.BridgingRequestStateKey{key}, func(state *core.BridgingRequestState) error {
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusInvalidRequest); err != nil {
-			return err
-		}
+	return m.updateStates([]common.BridgingRequestStateKey{key},
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusInvalidRequest); err != nil {
+				return err
+			}
 
-		state.ToInvalidRequest()
+			state.ToInvalidRequest()
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // SubmittedToBridge implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) SubmittedToBridge(
 	key common.BridgingRequestStateKey, dstChainID string,
 ) error {
-	return m.updateStates([]common.BridgingRequestStateKey{key}, func(state *core.BridgingRequestState) error {
-		if err := state.UpdateDestChainID(dstChainID); err != nil {
-			return err
-		}
+	return m.updateStates([]common.BridgingRequestStateKey{key},
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			state.DestinationChainID = dstChainID
+			state.IsRefund = stateKey.IsRefund
 
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusSubmittedToBridge); err != nil {
-			return err
-		}
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusSubmittedToBridge); err != nil {
+				return err
+			}
 
-		state.ToSubmittedToBridge()
+			state.ToSubmittedToBridge()
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // IncludedInBatch implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) IncludedInBatch(
 	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
-	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
-		if state.Status == core.BridgingRequestStatusSubmittedToDestination {
-			return fmt.Errorf("%w: %s -> %s",
-				errSkipTransition, state.Status, core.BridgingRequestStatusIncludedInBatch)
-		}
+	return m.updateStates(txs,
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			if state.Status == common.BridgingRequestStatusSubmittedToDestination {
+				return fmt.Errorf("%w: %s -> %s",
+					errSkipTransition, state.StatusStr(), common.BridgingRequestStatusIncludedInBatch)
+			}
 
-		if err := state.UpdateDestChainID(dstChainID); err != nil {
-			return err
-		}
+			state.DestinationChainID = dstChainID
+			state.IsRefund = stateKey.IsRefund
 
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusIncludedInBatch); err != nil {
-			return err
-		}
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusIncludedInBatch); err != nil {
+				return err
+			}
 
-		state.ToIncludedInBatch()
+			state.ToIncludedInBatch()
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // SubmittedToDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) SubmittedToDestination(
 	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
-	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
-		if err := state.UpdateDestChainID(dstChainID); err != nil {
-			return err
-		}
+	return m.updateStates(txs,
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			state.DestinationChainID = dstChainID
+			state.IsRefund = stateKey.IsRefund
 
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusSubmittedToDestination); err != nil {
-			return err
-		}
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusSubmittedToDestination); err != nil {
+				return err
+			}
 
-		state.ToSubmittedToDestination()
+			state.ToSubmittedToDestination()
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // FailedToExecuteOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) FailedToExecuteOnDestination(
 	txs []common.BridgingRequestStateKey, dstChainID string,
 ) error {
-	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
-		if err := state.UpdateDestChainID(dstChainID); err != nil {
-			return err
-		}
+	return m.updateStates(txs,
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			state.DestinationChainID = dstChainID
+			state.IsRefund = stateKey.IsRefund
 
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusFailedToExecuteOnDestination); err != nil {
-			return err
-		}
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusFailedToExecuteOnDestination); err != nil {
+				return err
+			}
 
-		state.ToFailedToExecuteOnDestination()
+			state.ToFailedToExecuteOnDestination()
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // ExecutedOnDestination implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) ExecutedOnDestination(
 	txs []common.BridgingRequestStateKey, dstTxHash common.Hash, dstChainID string,
 ) error {
-	return m.updateStates(txs, func(state *core.BridgingRequestState) error {
-		if err := state.UpdateDestChainID(dstChainID); err != nil {
-			return err
-		}
+	return m.updateStates(txs,
+		func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error {
+			state.DestinationChainID = dstChainID
+			state.IsRefund = stateKey.IsRefund
 
-		if err := state.IsTransitionPossible(core.BridgingRequestStatusExecutedOnDestination); err != nil {
-			return err
-		}
+			if err := state.IsTransitionPossible(common.BridgingRequestStatusExecutedOnDestination); err != nil {
+				return err
+			}
 
-		state.ToExecutedOnDestination(dstTxHash)
+			state.ToExecutedOnDestination(dstTxHash)
 
-		return nil
-	})
+			return nil
+		})
 }
 
 // Get implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) Get(
 	srcChainID string, srcTxHash common.Hash,
-) (*core.BridgingRequestState, error) {
+) (*common.BridgingRequestState, error) {
 	state, err := m.db.GetBridgingRequestState(srcChainID, srcTxHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BridgingRequestState (%s, %s), err: %w",
@@ -192,9 +193,9 @@ func (m *BridgingRequestStateManagerImpl) Get(
 // GetAllForUser implements core.BridgingRequestStateManager.
 func (m *BridgingRequestStateManagerImpl) GetMultiple(
 	srcChainID string, srcTxHashes []common.Hash,
-) ([]*core.BridgingRequestState, error) {
+) ([]*common.BridgingRequestState, error) {
 	var (
-		result = make([]*core.BridgingRequestState, 0, len(srcTxHashes))
+		result = make([]*common.BridgingRequestState, 0, len(srcTxHashes))
 		errs   []error
 	)
 
@@ -215,7 +216,8 @@ func (m *BridgingRequestStateManagerImpl) GetMultiple(
 }
 
 func (m *BridgingRequestStateManagerImpl) updateStates(
-	stateKeys []common.BridgingRequestStateKey, updateState func(state *core.BridgingRequestState) error,
+	stateKeys []common.BridgingRequestStateKey,
+	updateState func(stateKey common.BridgingRequestStateKey, state *common.BridgingRequestState) error,
 ) error {
 	var errs []error
 
@@ -230,7 +232,7 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 
 		if state == nil {
 			// insert bridging request state if not exists in db
-			state = core.NewBridgingRequestState(stateKey.SourceChainID, stateKey.SourceTxHash)
+			state = common.NewBridgingRequestState(stateKey.SourceChainID, stateKey.SourceTxHash, stateKey.IsRefund)
 
 			err := m.db.AddBridgingRequestState(state)
 			if err != nil {
@@ -243,7 +245,7 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 
 		oldStatus := state.Status
 
-		err = updateState(state)
+		err = updateState(stateKey, state)
 		if err != nil {
 			// Some transitions should not be considered errors:
 			// For example, a relayer imitator might be faster than the batch submitter
@@ -264,7 +266,7 @@ func (m *BridgingRequestStateManagerImpl) updateStates(
 		} else {
 			m.logger.Debug("Updated BridgingRequestState",
 				"srcChainID", state.SourceChainID, "srcTxHash", state.SourceTxHash,
-				"Old Status", oldStatus, "New Status", state.Status)
+				"Old Status", oldStatus, "New Status", state.StatusStr())
 		}
 	}
 
