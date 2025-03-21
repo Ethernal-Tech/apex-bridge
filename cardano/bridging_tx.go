@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	splitStringLength = 40
-	maxInputs         = 40
+	maxInputs = 40
 )
 
 type BridgingTxSender struct {
@@ -193,14 +192,14 @@ func (bts *BridgingTxSender) createMetadata(
 	metadataObj := common.BridgingRequestMetadata{
 		BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 		DestinationChainID: chain,
-		SenderAddr:         common.SplitString(senderAddr, splitStringLength),
+		SenderAddr:         AddrToMetaDataAddr(senderAddr),
 		Transactions:       make([]common.BridgingRequestMetadataTransaction, 0, len(receivers)+1),
 		FeeAmount:          feeAmount,
 	}
 
 	for _, x := range receivers {
 		metadataObj.Transactions = append(metadataObj.Transactions, common.BridgingRequestMetadataTransaction{
-			Address: common.SplitString(x.Addr, splitStringLength),
+			Address: AddrToMetaDataAddr(x.Addr),
 			Amount:  x.Amount,
 		})
 	}
