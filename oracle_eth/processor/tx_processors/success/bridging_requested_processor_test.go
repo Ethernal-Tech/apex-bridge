@@ -71,10 +71,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
+			Metadata: irrelevantMetadata,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata: irrelevantMetadata,
 		}, appConfig)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {

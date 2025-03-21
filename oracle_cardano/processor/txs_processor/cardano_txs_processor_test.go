@@ -248,7 +248,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
-		require.NotNil(t, unprocessedTxs)
+		require.Nil(t, unprocessedTxs)
 	})
 
 	t.Run("NewUnprocessedTxs valid", func(t *testing.T) {

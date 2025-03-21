@@ -75,12 +75,19 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &cCore.BridgeClaims{}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: irrelevantMetadata,
+			},
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
 		}, appConfig)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
@@ -106,7 +113,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -142,7 +149,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		// require.ErrorContains(t, err, "destination chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
