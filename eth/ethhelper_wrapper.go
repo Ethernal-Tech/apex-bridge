@@ -95,7 +95,8 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 
 	e.logger.Info("tx has been sent", "hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 
-	if err := ethTxHelper.WaitForTxPool(ctx, e.wallet, txHashStr); err != nil {
+	err = ethTxHelper.WaitForTxPool(ctx, e.wallet, txHashStr)
+	if err != nil && !errors.Is(err, ethtxhelper.ErrTxNotIncludedInTxPool) {
 		return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
 			tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 	}

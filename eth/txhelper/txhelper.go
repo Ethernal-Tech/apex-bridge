@@ -26,13 +26,14 @@ const (
 	defaultGasFeeMultiplier  = 170               // 170%
 	defaultReceiptRetriesCnt = 1000
 	defaultReceiptWaitTime   = 300 * time.Millisecond
-	defaultTxPoolRetriesCnt  = 800 // 800 * 300ms = 240s = 4min
+	defaultTxPoolRetriesCnt  = 400 // 400 * 300ms = 120s = 2min
 	defaultTxPoolWaitTime    = 300 * time.Millisecond
 )
 
 var (
 	errGasPriceSetWhileDynamicTx   = errors.New("gasPrice cannot be set while dynamicTx is true")
 	errGasCapsSetWhileNotDynamicTx = errors.New("gasFeeCap and gasTipCap cannot be set while dynamicTx is false")
+	ErrTxNotIncludedInTxPool       = errors.New("tx not included in txpool")
 )
 
 type TxDeployInfo struct {
@@ -204,7 +205,7 @@ func (t *EthTxHelperImpl) WaitForTxPool(
 	}
 
 	if !found {
-		return fmt.Errorf("timeout while waiting for transaction %s to appear in the tx pool", txHash)
+		return ErrTxNotIncludedInTxPool
 	}
 
 	// wait indefinitely for tx to exit tx pool
