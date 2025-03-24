@@ -44,14 +44,14 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, metadata, appConfig)
+	p.addRefundRequestClaim(claims, tx, metadata)
 
 	return nil
 }
 
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
-	metadata *core.BridgingRequestEthMetadata, appConfig *cCore.AppConfig,
+	metadata *core.BridgingRequestEthMetadata,
 ) {
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),

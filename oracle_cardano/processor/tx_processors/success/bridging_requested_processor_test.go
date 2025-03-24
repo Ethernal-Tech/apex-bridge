@@ -289,7 +289,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		// require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
 	})
 
-	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
