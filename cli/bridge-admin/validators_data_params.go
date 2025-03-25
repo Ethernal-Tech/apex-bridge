@@ -137,7 +137,6 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 			outputter.WriteOutput()
 
 		default:
-
 		}
 	}
 
