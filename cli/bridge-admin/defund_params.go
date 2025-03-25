@@ -121,7 +121,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
