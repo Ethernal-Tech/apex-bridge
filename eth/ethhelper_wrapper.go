@@ -104,7 +104,8 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 
 		// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
 		// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
-		e.logger.Info("tx has not been included in tx pool", "hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
+		e.logger.Info("tx has not been included in tx pool",
+			"hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 	}
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, txHashStr, true)
