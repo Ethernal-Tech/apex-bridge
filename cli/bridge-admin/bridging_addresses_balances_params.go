@@ -1,15 +1,21 @@
 package clibridgeadmin
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/validatorcomponents"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
+
+	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 )
 
 type bridgingAddressesBalancesParams struct {
@@ -35,7 +41,23 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		return nil, err
 	}
 
-	appConfig.FillOut()
+	ctx := context.Background()
+
+	ethHelper := eth.NewEthHelperWrapper(
+		hclog.NewNullLogger(),
+		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
+		ethtxhelper.WithInitClientAndChainIDFn(ctx),
+		ethtxhelper.WithNonceStrategyType(appConfig.Bridge.NonceStrategy),
+		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
+	)
+
+	bridgeSmartContract := eth.NewBridgeSmartContract(
+		appConfig.Bridge.SmartContractAddress, ethHelper)
+
+	err = validatorcomponents.FixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, hclog.NewNullLogger())
+	if err != nil {
+		return nil, err
+	}
 
 	oracleConfig, _ := appConfig.SeparateConfigs()
 
@@ -49,6 +71,17 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		}
 
 		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
+	}
+
+	for chainId, cardanoIndexerDb := range cardanoIndexerDbs {
+		bridgingAddresses := oracleConfig.CardanoChains[chainId].BridgingAddresses
+
+		multisigUtxos, err := cardanoIndexerDb.GetAllTxOutputs(bridgingAddresses.BridgingAddress, true)
+		if err != nil {
+			return nil, err
+		}
+
+		_ = multisigUtxos
 	}
 
 	ethIndexerDbs := make(map[string]eventTrackerStore.EventTrackerStore, len(oracleConfig.EthChains))
