@@ -171,7 +171,7 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		ethtxhelper.WithNodeURL(ip.evmNodeURL),
 		ethtxhelper.WithDynamicTx(ip.evmDynamicTx),
 		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
-		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
+		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceNodePendingStrategy),
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),

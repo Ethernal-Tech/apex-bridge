@@ -150,7 +150,7 @@ const (
 	defaultNoBatchPeriodPercent              = 0.0625
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
-	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
+	defaultEVMNonceStrategy                  = ethtxhelper.NonceNodePendingStrategy
 
 	defaultMaxFeeUtxoCount      = 4
 	defaultMaxUtxoCount         = 50

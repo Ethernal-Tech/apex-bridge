@@ -180,7 +180,7 @@ func (ip *upgradeEVMParams) Execute(
 		ethtxhelper.WithNodeURL(ip.nodeURL),
 		ethtxhelper.WithDynamicTx(ip.dynamicTx),
 		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
-		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
+		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceNodePendingStrategy),
 		ethtxhelper.WithZeroGasPrice(strings.Contains(dir, apexBridgeSmartContracts)),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
