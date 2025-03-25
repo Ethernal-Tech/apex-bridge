@@ -26,14 +26,13 @@ const (
 	defaultGasFeeMultiplier  = 170               // 170%
 	defaultReceiptRetriesCnt = 1000
 	defaultReceiptWaitTime   = 300 * time.Millisecond
-	defaultTxPoolRetriesCnt  = 400 // 400 * 300ms = 120s = 2min
-	defaultTxPoolWaitTime    = 300 * time.Millisecond
+	defaultTxPoolRetriesCnt  = 20 // 10s
+	defaultTxPoolWaitTime    = 500 * time.Millisecond
 )
 
 var (
 	errGasPriceSetWhileDynamicTx   = errors.New("gasPrice cannot be set while dynamicTx is true")
 	errGasCapsSetWhileNotDynamicTx = errors.New("gasFeeCap and gasTipCap cannot be set while dynamicTx is false")
-	ErrTxNotIncludedInTxPool       = errors.New("tx not included in txpool")
 )
 
 type TxDeployInfo struct {
@@ -48,8 +47,12 @@ type IEthTxHelper interface {
 		ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
 		abiData abi.ABI, bytecode []byte, params ...any,
 	) (TxDeployInfo, error)
-	WaitForTxPool(ctx context.Context, wallet IEthTxWallet, txHash string) error
+	WaitForTxEnterTxPool(ctx context.Context, wallet IEthTxWallet, txHash string) (bool, error)
+	WaitForTxExitTxPool(ctx context.Context, wallet IEthTxWallet, txHash string) error
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
+	PrepareSendTx(
+		ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+	) (*bind.TransactOpts, error)
 	SendTx(
 		ctx context.Context, wallet IEthTxWallet,
 		txOpts bind.TransactOpts, sendTxHandler SendTxFunc,
@@ -183,61 +186,25 @@ func (t *EthTxHelperImpl) Deploy(
 	}, nil
 }
 
-func (t *EthTxHelperImpl) WaitForTxPool(
-	ctx context.Context, wallet IEthTxWallet, txHash string,
-) error {
-	found := false
-	addr := wallet.GetAddress()
-	// first wait for tx to enter tx pool
-	for range t.txPoolRetriesCnt {
-		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
-		if err == nil && inside {
-			t.logger.Debug("Transaction has entered the tx pool", "txHash", txHash)
-
-			found = true
-
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(t.txPoolWaitTime):
-		}
-	}
-
-	if !found {
-		return ErrTxNotIncludedInTxPool
-	}
-
-	// wait indefinitely for tx to exit tx pool
-	for {
-		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
-		if err == nil && !inside {
-			t.logger.Debug("Transaction has left the tx pool", "txHash", txHash)
-
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(t.txPoolWaitTime):
-		}
-	}
-}
-
 func (t *EthTxHelperImpl) WaitForReceipt(
-	ctx context.Context, hash string, skipNotFound bool,
+	ctx context.Context, txHashStr string, skipNotFound bool,
 ) (*types.Receipt, error) {
-	for range t.receiptRetriesCnt {
-		receipt, err := t.client.TransactionReceipt(ctx, common.HexToHash(hash))
+	txHash := common.HexToHash(txHashStr)
+	tryCounter := 0
+
+	for {
+		receipt, err := t.client.TransactionReceipt(ctx, txHash)
 		if err != nil {
 			if !skipNotFound && errors.Is(err, ethereum.NotFound) {
-				return nil, fmt.Errorf("transaction %s not found", hash)
+				return nil, fmt.Errorf("transaction %s not found", txHashStr)
 			}
 		} else if receipt != nil {
 			return receipt, nil
+		}
+
+		tryCounter++
+		if tryCounter >= t.receiptRetriesCnt {
+			return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", txHashStr)
 		}
 
 		select {
@@ -246,8 +213,6 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 		case <-time.After(t.receiptWaitTime):
 		}
 	}
-
-	return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", hash)
 }
 
 func (t *EthTxHelperImpl) SendTx(
@@ -256,6 +221,29 @@ func (t *EthTxHelperImpl) SendTx(
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
+	txOptsRes, err := t.PrepareSendTx(ctx, wallet, txOptsParam)
+	if err != nil {
+		return nil, err
+	}
+
+	t.logger.Debug("Sending transaction...", "addr", wallet.GetAddress(),
+		"nonce", txOptsRes.Nonce, "chainID", t.chainID, "gasLimit", txOptsRes.GasLimit)
+
+	tx, err := sendTxHandler(txOptsRes)
+	if err != nil {
+		t.nonceStrategy.UpdateNonce(wallet.GetAddress(), 0, false) // clear nonce
+
+		return nil, fmt.Errorf("error while sendTxHandler: %w", err)
+	}
+
+	t.nonceStrategy.UpdateNonce(wallet.GetAddress(), tx.Nonce(), true)
+
+	return tx, nil
+}
+
+func (t *EthTxHelperImpl) PrepareSendTx(
+	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+) (*bind.TransactOpts, error) {
 	chainID := t.chainID
 	if chainID == nil {
 		retChainID, err := t.client.ChainID(ctx)
@@ -277,19 +265,7 @@ func (t *EthTxHelperImpl) SendTx(
 		return nil, fmt.Errorf("error while populating tx opts: %w", err)
 	}
 
-	t.logger.Debug("Sending transaction...", "addr", wallet.GetAddress(),
-		"nonce", txOptsRes.Nonce, "chainID", chainID, "gasLimit", txOptsRes.GasLimit)
-
-	tx, err := sendTxHandler(txOptsRes)
-	if err != nil {
-		t.nonceStrategy.UpdateNonce(wallet.GetAddress(), 0, false) // clear nonce
-
-		return nil, fmt.Errorf("error while sendTxHandler: %w", err)
-	}
-
-	t.nonceStrategy.UpdateNonce(wallet.GetAddress(), tx.Nonce(), true)
-
-	return tx, nil
+	return txOptsRes, nil
 }
 
 func (t *EthTxHelperImpl) EstimateGas(
@@ -376,6 +352,56 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 	}
 
 	return nil
+}
+
+func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
+	ctx context.Context, wallet IEthTxWallet, txHashStr string,
+) (bool, error) {
+	addr := wallet.GetAddress()
+	txHash := common.HexToHash(txHashStr)
+	tryCounter := 0
+
+	for {
+		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
+		// if there is an error, we will retry indefinitely (do not increment tryCounter counter)
+		if err == nil {
+			if inside {
+				return true, nil
+			} else {
+				tryCounter++
+				if tryCounter >= t.receiptRetriesCnt {
+					return false, nil
+				}
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-time.After(t.txPoolWaitTime):
+		}
+	}
+}
+
+func (t *EthTxHelperImpl) WaitForTxExitTxPool(
+	ctx context.Context, wallet IEthTxWallet, txHashStr string,
+) error {
+	addr := wallet.GetAddress()
+	txHash := common.HexToHash(txHashStr)
+
+	// wait indefinitely for tx to exit tx pool
+	for {
+		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
+		if err == nil && !inside {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(t.txPoolWaitTime):
+		}
+	}
 }
 
 type TxRelayerOption func(*EthTxHelperImpl)
@@ -481,7 +507,7 @@ func WithNonceStrategy(strategy NonceStrategy) TxRelayerOption {
 	}
 }
 
-func WithTxPoolRetriesCnt(txPoolRetriesCnt int, txPoolWaitTime time.Duration) TxRelayerOption {
+func WithTxPoolRetryConfig(txPoolRetriesCnt int, txPoolWaitTime time.Duration) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.txPoolRetriesCnt = txPoolRetriesCnt
 		t.txPoolWaitTime = txPoolWaitTime

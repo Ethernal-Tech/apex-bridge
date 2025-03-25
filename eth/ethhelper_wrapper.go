@@ -85,26 +85,45 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
-	tx, err := ethTxHelper.SendTx(ctx, e.wallet, bind.TransactOpts{}, handler)
+	sendTx := func() (*types.Transaction, bool, error) {
+		e.lock.Lock()
+		defer e.lock.Unlock()
+
+		opts, err := ethTxHelper.PrepareSendTx(ctx, e.wallet, bind.TransactOpts{})
+		if err != nil {
+			return nil, false, err
+		}
+
+		tx, err := handler(opts)
+		if err != nil {
+			return nil, false, err
+		}
+
+		foundInTxPool, err := ethTxHelper.WaitForTxEnterTxPool(ctx, e.wallet, tx.Hash().String())
+
+		return tx, foundInTxPool, err
+	}
+
+	tx, foundInTxPool, err := sendTx()
 	if err != nil {
-		// tx is not available here to pick hash/gas/gasprice
 		return nil, fmt.Errorf("error while SendTx: %w", e.ProcessError(err))
 	}
 
 	txHashStr := tx.Hash().String()
 
-	e.logger.Info("tx has been sent", "hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
+	e.logger.Info("tx has been sent", "hash", txHashStr,
+		"gas limit", tx.Gas(), "gas price", tx.GasPrice(), "foundInTxPool", foundInTxPool)
 
-	err = ethTxHelper.WaitForTxPool(ctx, e.wallet, txHashStr)
-	if err != nil {
-		if !errors.Is(err, ethtxhelper.ErrTxNotIncludedInTxPool) {
+	// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
+	// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
+	if foundInTxPool {
+		err = ethTxHelper.WaitForTxExitTxPool(ctx, e.wallet, txHashStr)
+		if err != nil {
 			return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
 				tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 		}
 
-		// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
-		// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
-		e.logger.Info("tx has not been included in tx pool",
+		e.logger.Info("tx has not been removed from the tx pool",
 			"hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 	}
 

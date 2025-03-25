@@ -38,12 +38,12 @@ func GetTxPoolStateForAddr(
 }
 
 func IsTxInTxPool(
-	ctx context.Context, rpcClient *rpc.Client, addr common.Address, txHashStr string,
+	ctx context.Context, rpcClient *rpc.Client, addr common.Address, txHash common.Hash,
 ) (bool, error) {
 	txPoolContent, err := GetTxPoolStateForAddr(ctx, rpcClient, addr)
 	if err != nil {
 		return false, err
 	}
 
-	return txPoolContent.IsTxInTxPoolContent(common.HexToHash(txHashStr)), nil
+	return txPoolContent.IsTxInTxPoolContent(txHash), nil
 }
