@@ -359,7 +359,7 @@ func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
 ) (bool, error) {
 	addr := wallet.GetAddress()
 	txHash := common.HexToHash(txHashStr)
-	txPoolRetriesCnt := 0
+	tryCount := 0
 
 	for {
 		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
@@ -368,8 +368,8 @@ func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
 			if inside {
 				return true, nil
 			} else {
-				txPoolRetriesCnt++
-				if txPoolRetriesCnt >= t.receiptRetriesCnt {
+				tryCount++
+				if tryCount >= t.txPoolRetriesCnt {
 					return false, nil
 				}
 			}
