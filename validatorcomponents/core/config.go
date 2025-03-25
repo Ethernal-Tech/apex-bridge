@@ -106,3 +106,13 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 	return oracleConfig, batcherConfig
 }
+
+func (appConfig *AppConfig) FillOut() {
+	for chainID, cardanoChainConfig := range appConfig.CardanoChains {
+		cardanoChainConfig.ChainID = chainID
+	}
+
+	for chainID, ethChainConfig := range appConfig.EthChains {
+		ethChainConfig.ChainID = chainID
+	}
+}
