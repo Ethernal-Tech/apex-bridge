@@ -77,7 +77,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
 			TestMode:               ecConfig.TestMode,
-			NonceStrategy:          ecConfig.NonceStrategy,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{
