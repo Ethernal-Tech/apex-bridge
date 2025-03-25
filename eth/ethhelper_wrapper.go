@@ -85,26 +85,7 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
-	sendTx := func() (*types.Transaction, bool, error) {
-		e.lock.Lock()
-		defer e.lock.Unlock()
-
-		opts, err := ethTxHelper.PrepareSendTx(ctx, e.wallet, bind.TransactOpts{})
-		if err != nil {
-			return nil, false, err
-		}
-
-		tx, err := handler(opts)
-		if err != nil {
-			return nil, false, err
-		}
-
-		foundInTxPool, err := ethTxHelper.WaitForTxEnterTxPool(ctx, e.wallet, tx.Hash().String())
-
-		return tx, foundInTxPool, err
-	}
-
-	tx, foundInTxPool, err := sendTx()
+	tx, foundInTxPool, err := e.sendTx(ctx, ethTxHelper, handler)
 	if err != nil {
 		return nil, fmt.Errorf("error while SendTx: %w", e.ProcessError(err))
 	}
@@ -117,13 +98,12 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 	// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
 	// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
 	if foundInTxPool {
-		err = ethTxHelper.WaitForTxExitTxPool(ctx, e.wallet, txHashStr)
-		if err != nil {
+		if err = ethTxHelper.WaitForTxExitTxPool(ctx, e.wallet, txHashStr); err != nil {
 			return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
 				tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 		}
 
-		e.logger.Info("tx has not been removed from the tx pool",
+		e.logger.Info("tx has exited tx pool",
 			"hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 	}
 
@@ -143,4 +123,25 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		"block", receipt.BlockNumber, "block hash", receipt.BlockHash, "gas used", receipt.GasUsed)
 
 	return receipt, nil
+}
+
+func (e *EthHelperWrapper) sendTx(
+	ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, handler ethtxhelper.SendTxFunc,
+) (*types.Transaction, bool, error) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	opts, err := ethTxHelper.PrepareSendTx(ctx, e.wallet, bind.TransactOpts{})
+	if err != nil {
+		return nil, false, err
+	}
+
+	tx, err := handler(opts)
+	if err != nil {
+		return nil, false, err
+	}
+
+	foundInTxPool, err := ethTxHelper.WaitForTxEnterTxPool(ctx, e.wallet, tx.Hash().String())
+
+	return tx, foundInTxPool, err
 }

@@ -26,8 +26,8 @@ const (
 	defaultGasFeeMultiplier  = 170               // 170%
 	defaultReceiptRetriesCnt = 1000
 	defaultReceiptWaitTime   = 300 * time.Millisecond
-	defaultTxPoolRetriesCnt  = 20 // 10s
-	defaultTxPoolWaitTime    = 500 * time.Millisecond
+	defaultTxPoolRetriesCnt  = 25 // 5s
+	defaultTxPoolWaitTime    = 200 * time.Millisecond
 )
 
 var (
@@ -359,7 +359,7 @@ func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
 ) (bool, error) {
 	addr := wallet.GetAddress()
 	txHash := common.HexToHash(txHashStr)
-	tryCounter := 0
+	txPoolRetriesCnt := 0
 
 	for {
 		inside, err := IsTxInTxPool(ctx, t.client.Client(), addr, txHash)
@@ -368,8 +368,8 @@ func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
 			if inside {
 				return true, nil
 			} else {
-				tryCounter++
-				if tryCounter >= t.receiptRetriesCnt {
+				txPoolRetriesCnt++
+				if txPoolRetriesCnt >= t.receiptRetriesCnt {
 					return false, nil
 				}
 			}
