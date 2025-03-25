@@ -44,17 +44,19 @@ type TxDeployInfo struct {
 type IEthTxHelper interface {
 	GetClient() *ethclient.Client
 	GetNonce(ctx context.Context, addr string, pending bool) (uint64, error)
-	Deploy(ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
-		abiData abi.ABI, bytecode []byte, params ...interface{}) (TxDeployInfo, error)
-	WaitForTxPool(
-		ctx context.Context, wallet IEthTxWallet, txHash string,
-	) error
+	Deploy(
+		ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
+		abiData abi.ABI, bytecode []byte, params ...any,
+	) (TxDeployInfo, error)
+	WaitForTxPool(ctx context.Context, wallet IEthTxWallet, txHash string) error
 	WaitForReceipt(ctx context.Context, hash string, skipNotFound bool) (*types.Receipt, error)
-	SendTx(ctx context.Context, wallet IEthTxWallet,
-		txOpts bind.TransactOpts, sendTxHandler SendTxFunc) (*types.Transaction, error)
+	SendTx(
+		ctx context.Context, wallet IEthTxWallet,
+		txOpts bind.TransactOpts, sendTxHandler SendTxFunc,
+	) (*types.Transaction, error)
 	EstimateGas(
 		ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-		abi *abi.ABI, method string, args ...interface{},
+		abi *abi.ABI, method string, args ...any,
 	) (uint64, uint64, error)
 	PopulateTxOpts(ctx context.Context, from common.Address, txOpts *bind.TransactOpts) error
 }
@@ -135,7 +137,7 @@ func (t *EthTxHelperImpl) GetNonce(ctx context.Context, addr string, pending boo
 
 func (t *EthTxHelperImpl) Deploy(
 	ctx context.Context, wallet IEthTxWallet, txOptsParam bind.TransactOpts,
-	abiData abi.ABI, bytecode []byte, params ...interface{},
+	abiData abi.ABI, bytecode []byte, params ...any,
 ) (TxDeployInfo, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -292,7 +294,7 @@ func (t *EthTxHelperImpl) SendTx(
 
 func (t *EthTxHelperImpl) EstimateGas(
 	ctx context.Context, from, to common.Address, value *big.Int, gasLimitMultiplier float64,
-	abi *abi.ABI, method string, args ...interface{},
+	abi *abi.ABI, method string, args ...any,
 ) (uint64, uint64, error) {
 	input, err := abi.Pack(method, args...)
 	if err != nil {
@@ -476,6 +478,13 @@ func WithLogger(logger hclog.Logger) TxRelayerOption {
 func WithNonceStrategy(strategy NonceStrategy) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.nonceStrategy = strategy
+	}
+}
+
+func WithTxPoolRetriesCnt(txPoolRetriesCnt int, txPoolWaitTime time.Duration) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.txPoolRetriesCnt = txPoolRetriesCnt
+		t.txPoolWaitTime = txPoolWaitTime
 	}
 }
 
