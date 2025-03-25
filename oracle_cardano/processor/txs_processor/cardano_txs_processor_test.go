@@ -217,7 +217,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		validTxProc := &core.CardanoTxSuccessProcessorMock{Type: "relevant"}
-		refundTxProc := &core.CardanoTxSuccessProcessorMock{Type: common.TxTypeRefundRequest}
 
 		proc, rec := newValidProcessor(
 			context.Background(),
@@ -228,16 +227,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		)
 
 		require.NotNil(t, proc)
-
-		refundProc, rec := newValidProcessor(
-			context.Background(),
-			appConfig, oracleDB,
-			refundTxProc, nil, nil, nil,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-		)
-
-		require.NotNil(t, refundProc)
 
 		require.NoError(t, rec.NewUnprocessedTxs(common.ChainIDStrPrime, []*indexer.Tx{
 			{
