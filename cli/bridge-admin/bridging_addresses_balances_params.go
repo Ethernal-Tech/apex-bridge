@@ -73,10 +73,10 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		cardanoIndexerDbs[cardanoChainConfig.ChainID] = indexerDB
 	}
 
-	for chainId, cardanoIndexerDb := range cardanoIndexerDbs {
-		bridgingAddresses := oracleConfig.CardanoChains[chainId].BridgingAddresses
+	for chainID, cardanoIndexerDB := range cardanoIndexerDbs {
+		bridgingAddresses := oracleConfig.CardanoChains[chainID].BridgingAddresses
 
-		multisigUtxos, err := cardanoIndexerDb.GetAllTxOutputs(bridgingAddresses.BridgingAddress, true)
+		multisigUtxos, err := cardanoIndexerDB.GetAllTxOutputs(bridgingAddresses.BridgingAddress, true)
 		if err != nil {
 			return nil, err
 		}
