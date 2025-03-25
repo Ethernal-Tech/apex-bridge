@@ -96,9 +96,15 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 	e.logger.Info("tx has been sent", "hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 
 	err = ethTxHelper.WaitForTxPool(ctx, e.wallet, txHashStr)
-	if err != nil && !errors.Is(err, ethtxhelper.ErrTxNotIncludedInTxPool) {
-		return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
-			tx.Gas(), tx.GasPrice(), e.ProcessError(err))
+	if err != nil {
+		if !errors.Is(err, ethtxhelper.ErrTxNotIncludedInTxPool) {
+			return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
+				tx.Gas(), tx.GasPrice(), e.ProcessError(err))
+		}
+
+		// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
+		// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
+		e.logger.Info("tx has not been included in tx pool", "hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
 	}
 
 	receipt, err := ethTxHelper.WaitForReceipt(ctx, txHashStr, true)
