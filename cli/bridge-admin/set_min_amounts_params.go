@@ -180,7 +180,7 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", transaction.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(ctx, transaction.Hash().String(), true)
+	receipt, err := txHelper.WaitForReceipt(ctx, transaction.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {

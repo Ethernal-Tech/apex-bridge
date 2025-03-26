@@ -6,11 +6,19 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
+	apexCommon "github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
+)
+
+const (
+	defaultReceiptRetriesCnt = 1000
+	defaultReceiptWaitTime   = 300 * time.Millisecond
 )
 
 type EthHelperWrapper struct {
@@ -50,7 +58,13 @@ func (e *EthHelperWrapper) GetEthHelper() (ethtxhelper.IEthTxHelper, error) {
 		return e.ethTxHelper, nil
 	}
 
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(e.opts...)
+	option := ethtxhelper.WithReceiptRetryConfig(
+		defaultReceiptRetriesCnt, defaultReceiptWaitTime, func(err error) bool {
+			return err == nil || errors.Is(err, ethereum.NotFound)
+		})
+
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(
+		append([]ethtxhelper.TxRelayerOption{option}, e.opts...)...)
 	if err != nil {
 		return nil, fmt.Errorf("error while NewEThTxHelper: %w", err)
 	}
@@ -65,7 +79,7 @@ func (e *EthHelperWrapper) ProcessError(err error) error {
 
 	//nolint:godox
 	// TODO: verify if these errors are the only ones we need to handle
-	if errors.Is(err, net.ErrClosed) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, net.ErrClosed) || apexCommon.IsContextDoneErr(err) {
 		e.lock.Lock()
 		e.ethTxHelper = nil
 		e.lock.Unlock()
@@ -85,28 +99,63 @@ func (e *EthHelperWrapper) SendTx(ctx context.Context, handler ethtxhelper.SendT
 		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
-	tx, err := ethTxHelper.SendTx(ctx, e.wallet, bind.TransactOpts{}, handler)
+	tx, foundInTxPool, err := e.sendTx(ctx, ethTxHelper, handler)
 	if err != nil {
-		// tx is not available here to pick hash/gas/gasprice
 		return nil, fmt.Errorf("error while SendTx: %w", e.ProcessError(err))
 	}
 
-	e.logger.Info("tx has been sent", "hash", tx.Hash(), "gas limit", tx.Gas(), "gas price", tx.GasPrice())
+	txHashStr := tx.Hash().String()
 
-	receipt, err := ethTxHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	e.logger.Info("tx has been sent", "hash", txHashStr,
+		"gas limit", tx.Gas(), "gas price", tx.GasPrice(), "foundInTxPool", foundInTxPool)
+
+	// If the transaction is not included in the transaction pool, we should continue waiting for the receipt
+	// This prevents the oracle/batcher from getting stuck due to missing txpool inclusion
+	if foundInTxPool {
+		if err = ethTxHelper.WaitForTxExitTxPool(ctx, e.wallet, txHashStr); err != nil {
+			return nil, fmt.Errorf("gas limit = %d, gas price = %s: %w",
+				tx.Gas(), tx.GasPrice(), e.ProcessError(err))
+		}
+
+		e.logger.Info("tx has exited tx pool",
+			"hash", txHashStr, "gas limit", tx.Gas(), "gas price", tx.GasPrice())
+	}
+
+	receipt, err := ethTxHelper.WaitForReceipt(ctx, txHashStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to receive receipt for tx %s, gas limit = %d, gas price = %s: %w",
-			tx.Hash(), tx.Gas(), tx.GasPrice(), e.ProcessError(err))
+			txHashStr, tx.Gas(), tx.GasPrice(), e.ProcessError(err))
 	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		return receipt,
 			fmt.Errorf("tx receipt status is unsuccessful for %s, gas limit = %d, gas price = %s",
-				tx.Hash(), tx.Gas(), tx.GasPrice())
+				txHashStr, tx.Gas(), tx.GasPrice())
 	}
 
-	e.logger.Info("tx has been included in block", "hash", tx.Hash(),
+	e.logger.Info("tx has been included in block", "hash", txHashStr,
 		"block", receipt.BlockNumber, "block hash", receipt.BlockHash, "gas used", receipt.GasUsed)
 
 	return receipt, nil
+}
+
+func (e *EthHelperWrapper) sendTx(
+	ctx context.Context, ethTxHelper ethtxhelper.IEthTxHelper, handler ethtxhelper.SendTxFunc,
+) (*types.Transaction, bool, error) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	opts, err := ethTxHelper.PrepareSendTx(ctx, e.wallet, bind.TransactOpts{})
+	if err != nil {
+		return nil, false, err
+	}
+
+	tx, err := handler(opts)
+	if err != nil {
+		return nil, false, err
+	}
+
+	foundInTxPool, err := ethTxHelper.WaitForTxEnterTxPool(ctx, e.wallet, tx.Hash().String())
+
+	return tx, foundInTxPool, err
 }

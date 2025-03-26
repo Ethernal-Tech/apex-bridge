@@ -53,7 +53,7 @@ func TestTxHelper(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEqual(t, common.Address{}, txInfo.Address)
 
-		receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash, true)
+		receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash)
 		require.NoError(t, err)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 		require.Equal(t, txInfo.Address, receipt.ContractAddress)
@@ -81,7 +81,7 @@ func TestTxHelper(t *testing.T) {
 			})
 		require.NoError(t, err)
 
-		receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+		receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
 		require.NoError(t, err)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
@@ -125,7 +125,7 @@ func TestTxHelper(t *testing.T) {
 		err = client.SendTransaction(ctx, signedTx)
 		require.NoError(t, err)
 
-		receipt, err := txHelper.WaitForReceipt(ctx, signedTx.Hash().String(), true)
+		receipt, err := txHelper.WaitForReceipt(ctx, signedTx.Hash().String())
 		require.NoError(t, err)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
@@ -168,7 +168,7 @@ func TestTxHelper(t *testing.T) {
 		err = client.SendTransaction(ctx, signedTx)
 		require.NoError(t, err)
 
-		receipt, err := txHelper.WaitForReceipt(ctx, signedTx.Hash().String(), true)
+		receipt, err := txHelper.WaitForReceipt(ctx, signedTx.Hash().String())
 		require.NoError(t, err)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
