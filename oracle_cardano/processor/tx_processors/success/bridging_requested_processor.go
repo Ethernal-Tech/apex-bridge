@@ -18,12 +18,17 @@ import (
 var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	logger hclog.Logger
+	refundRequestProcessor core.CardanoTxSuccessProcessor
+	logger                 hclog.Logger
 }
 
-func NewBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
+func NewBridgingRequestedProcessor(
+	refundRequestProcessor core.CardanoTxSuccessProcessor,
+	logger hclog.Logger,
+) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
-		logger: logger.Named("bridging_requested_processor"),
+		refundRequestProcessor: refundRequestProcessor,
+		logger:                 logger.Named("bridging_requested_processor"),
 	}
 }
 
@@ -40,11 +45,17 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
+		p.logger.Warn("failed to unmarshal metadata. handing over to refund processor",
+			"tx", tx, "err", err)
+
+		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
 
 	if metadata.BridgingTxType != p.GetType() {
-		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
+		p.logger.Warn("ValidateAndAddClaim called for irrelevant tx. handing over to refund processor",
+			"tx", tx, "err", err)
+
+		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -53,10 +64,10 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		//nolint:godox
-		// TODO: Refund
-		// p.addRefundRequestClaim(claims, tx, metadata)
-		return fmt.Errorf("validation failed for tx: %s, err: %w", tx.Hash, err)
+		p.logger.Warn("validation failed for tx. handing over to refund processor",
+			"tx", tx, "err", err)
+
+		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
 	}
 
 	return nil
@@ -126,39 +137,17 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim))
 }
 
-/*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
-) {
-
-		var outputUtxos []core.Utxo
-		for _, output := range tx.Outputs {
-			outputUtxos = append(outputUtxos, core.Utxo{
-				Address: output.Address,
-				Amount:  output.Amount,
-			})
-		}
-
-		// what goes into UtxoTransaction
-		claim := core.RefundRequestClaim{
-			TxHash:             tx.Hash,
-			RetryCounter:       0,
-			RefundToAddress:    metadata.SenderAddr,
-			DestinationChainId: metadata.DestinationChainId,
-			OutputUtxos:        outputUtxos,
-			UtxoTransaction:    core.UtxoTransaction{},
-		}
-
-		claims.RefundRequest = append(claims.RefundRequest, claim)
-
-		p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
-}
-*/
-
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
+		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
+		return fmt.Errorf(
+			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
+			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
+			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	}
+
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)

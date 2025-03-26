@@ -176,6 +176,7 @@ func TestPackNumbersToBytes(t *testing.T) {
 	input2 := []uint64{784834, 347834, 34893, 121, 0, 378273}
 	input3 := []float32{0.3, 8.11, 89.8989, -189892.9}
 	input4 := MyInts{-32768, 32767, 0, 20}
+	input5 := make([]int, 0, 5)
 
 	bytes := PackNumbersToBytes(input1)
 
@@ -200,6 +201,16 @@ func TestPackNumbersToBytes(t *testing.T) {
 	result4, err := UnpackNumbersToBytes[MyInts](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input4, result4)
+
+	bytes = PackNumbersToBytes(input5)
+
+	result5, err := UnpackNumbersToBytes[[]int](bytes)
+	require.NoError(t, err)
+	assert.Equal(t, input5, result5)
+
+	result6, err := UnpackNumbersToBytes[[]int]([]byte{})
+	require.NoError(t, err)
+	assert.Equal(t, []int{}, result6)
 }
 
 func TestNumbersToString(t *testing.T) {
