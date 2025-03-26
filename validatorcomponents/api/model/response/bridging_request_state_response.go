@@ -19,7 +19,7 @@ func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *Bridgi
 		SourceTxHash:       state.SourceTxHash.String(),
 		DestinationChainID: state.DestinationChainID,
 		DestinationTxHash:  state.DestinationTxHash.String(),
-		Status:             state.StatusStr(),
+		Status:             string(state.Status),
 		IsRefund:           state.IsRefund,
 	}
 }
