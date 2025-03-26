@@ -2,12 +2,15 @@ package cardanotx
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
+
+const splitStringLength = 40
 
 func GetPolicyScripts(
 	validatorsData []eth.ValidatorChainData,
@@ -105,4 +108,10 @@ func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {
 	}
 
 	return 0
+}
+
+func AddrToMetaDataAddr(addr string) []string {
+	addr = strings.TrimPrefix(strings.TrimPrefix(addr, "0x"), "0X")
+
+	return common.SplitString(addr, splitStringLength)
 }
