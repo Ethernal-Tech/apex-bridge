@@ -10,6 +10,7 @@ import (
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
 
@@ -134,12 +135,39 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address =  %s\n", bridgingAddress)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance =  %d\n", multisigBalance)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
 			outputter.WriteOutput()
 		}
 	} else { // Retrieve Cardano balances via Ogmios
+		for chainID, cardanoConfig := range appConfig.CardanoChains {
+			var bridgingAddress string
+			if chainID == common.ChainIDStrPrime {
+				bridgingAddress = b.primeWalletAddress
+			} else if chainID == common.ChainIDStrVector {
+				bridgingAddress = b.vectorWalletAddress
+			}
 
+			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
+
+			multisigUtxos, err := txProvider.GetUtxos(context.Background(), bridgingAddress)
+			if err != nil {
+				return nil, err
+			}
+
+			var multisigBalance uint64
+
+			for _, utxo := range multisigUtxos {
+				if len(utxo.Tokens) == 0 {
+					multisigBalance += utxo.Amount
+				}
+			}
+
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+			outputter.WriteOutput()
+		}
 	}
 
 	// Retrieve balances for Ethereum chains
