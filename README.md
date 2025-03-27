@@ -336,3 +336,12 @@ $ apex-bridge bridge-admin get-validators-data \
         --bridging-addr 0xeefcd00000000000000000000000000000000022 \
         --config ./config.json
 ```
+
+```shell
+$ apex-bridge bridge-admin get-bridging-addresses-balances \
+        --config ./config.json \
+        --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \
+        --prime-wallet-addr addr_test1wrapsqy073nhdx7tz4j54q4aanhzqqgfpydftysvqyqw50cgz9hpl \
+        --vector-wallet-addr vector_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
+        --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
+```
