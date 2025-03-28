@@ -13,7 +13,6 @@ import (
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -67,8 +66,7 @@ const (
 	outputValidatorComponentsFileNameFlag = "output-validator-components-file-name"
 	outputRelayerFileNameFlag             = "output-relayer-file-name"
 
-	telemetryFlag              = "telemetry"
-	evmNonceStrategyGlobalFlag = "evm-nonce-strategy-global"
+	telemetryFlag = "telemetry"
 
 	nexusNodeURLFlag                = "nexus-node-url"
 	nexusTTLBlockNumberIncFlag      = "nexus-ttl-block-inc"
@@ -120,8 +118,7 @@ const (
 	outputValidatorComponentsFileNameFlagDesc = "validator components config json output file name"
 	outputRelayerFileNameFlagDesc             = "relayer config json output file name"
 
-	telemetryFlagDesc              = "prometheus_ip:port,datadog_ip:port"
-	evmNonceStrategyGlobalFlagDesc = "nonce strategy for all evm chains (including bridge)"
+	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
 	nexusNodeURLFlagDesc                = "nexus node URL"
 	nexusTTLBlockNumberIncFlagDesc      = "TTL block increment for nexus"
@@ -151,7 +148,6 @@ const (
 	defaultNoBatchPeriodPercent              = 0.0625
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
-	defaultEVMNonceStrategy                  = ethtxhelper.NonceInMemoryStrategy
 
 	defaultMaxFeeUtxoCount      = 4
 	defaultMaxUtxoCount         = 50
@@ -205,8 +201,7 @@ type generateConfigsParams struct {
 	outputValidatorComponentsFileName string
 	outputRelayerFileName             string
 
-	telemetry              string
-	evmNonceStrategyGlobal int
+	telemetry string
 
 	nexusNodeURL                string
 	nexusTTLBlockNumberInc      uint64
@@ -537,13 +532,6 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		telemetryFlagDesc,
 	)
 
-	cmd.Flags().IntVar(
-		&p.evmNonceStrategyGlobal,
-		evmNonceStrategyGlobalFlag,
-		int(defaultEVMNonceStrategy),
-		evmNonceStrategyGlobalFlagDesc,
-	)
-
 	cmd.Flags().StringVar(
 		&p.nexusNodeURL,
 		nexusNodeURLFlag,
@@ -685,7 +673,6 @@ func (p *generateConfigsParams) Execute(
 				BlockRoundingThreshold:  p.nexusBlockRoundingThreshold,
 				NoBatchPeriodPercent:    defaultNexusNoBatchPeriodPercent,
 				DynamicTx:               true,
-				NonceStrategy:           ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
 			},
@@ -698,7 +685,6 @@ func (p *generateConfigsParams) Execute(
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
 			},
-			NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
@@ -751,11 +737,10 @@ func (p *generateConfigsParams) Execute(
 	primeChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrPrime].CardanoChainConfig)
 	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
-		NodeURL:       p.nexusNodeURL,
-		DataDir:       cleanPath(p.relayerDataDir),
-		ConfigPath:    cleanPath(p.relayerConfigPath),
-		DynamicTx:     true,
-		NonceStrategy: ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
+		NodeURL:    p.nexusNodeURL,
+		DataDir:    cleanPath(p.relayerDataDir),
+		ConfigPath: cleanPath(p.relayerConfigPath),
+		DynamicTx:  true,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
@@ -763,7 +748,6 @@ func (p *generateConfigsParams) Execute(
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
-			NonceStrategy:        ethtxhelper.NonceStrategyType(p.evmNonceStrategyGlobal),
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {

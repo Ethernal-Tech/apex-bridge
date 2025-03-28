@@ -152,7 +152,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -208,7 +208,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -236,7 +236,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		multipleUtxosToBridgingAddrMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -288,7 +288,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
@@ -324,12 +324,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
-				{Address: []string{cardanoBridgingFeeAddr}, Amount: 2},
-				{Address: []string{cardanoBridgingFeeAddr}, Amount: 2},
-				{Address: []string{cardanoBridgingFeeAddr}, Amount: 2},
-				{Address: []string{cardanoBridgingFeeAddr}, Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr), Amount: 2},
 			},
 			OperationFee: minOperationFee,
 		})
@@ -355,10 +355,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{validTestAddress},
+					Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -391,10 +391,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{validTestAddress},
+					Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -431,9 +431,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
-				{Address: []string{validTestAddress}, Amount: 2},
+				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: 2},
 			},
 			OperationFee: minOperationFee,
 		})
@@ -460,15 +460,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{cardanoBridgingFeeAddr},
+					Address:            cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
 				{
-					Address:            []string{"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"},
+					Address:            cardanotx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -498,15 +498,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{cardanoBridgingFeeAddr},
+					Address:            cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
 				{
-					Address:            []string{"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"},
+					Address:            cardanotx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -535,15 +535,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{cardanoBridgingFeeAddr},
+					Address:            cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:             minFeeForBridging * 2,
 					IsNativeTokenOnSrc: 0,
 				},
 				{
-					Address:            []string{validTestAddress},
+					Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -572,15 +572,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{cardanoBridgingFeeAddr},
+					Address:            cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:             minFeeForBridging * 2,
 					IsNativeTokenOnSrc: 0,
 				},
 				{
-					Address:            []string{validTestAddress},
+					Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 					Amount:             utxoMinValue,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -609,10 +609,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            []string{cardanoBridgingFeeAddr},
+					Address:            cardanotx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:             minFeeForBridging - 1,
 					IsNativeTokenOnSrc: 0,
 				},
@@ -648,7 +648,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				IsNativeTokenOnSrc: 0,
 			},
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 0,
 				Amount:             maxAmountAllowedToBridge.Uint64(),
 			},
@@ -657,7 +657,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			OperationFee:       minOperationFee,
 		})
@@ -694,7 +694,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				IsNativeTokenOnSrc: 0,
 			},
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -703,7 +703,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			OperationFee:       minOperationFee,
 		})
@@ -757,7 +757,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging * 2,
 			},
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -766,7 +766,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			OperationFee:       minOperationFee,
 		})
@@ -820,7 +820,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridging * 2,
 			},
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -829,7 +829,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			OperationFee:       minOperationFee,
 		})
@@ -879,7 +879,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -888,7 +888,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			BridgingFee:        minFeeForBridging,
 			OperationFee:       minOperationFee,
@@ -939,7 +939,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            []string{validTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -948,7 +948,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr1"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			OperationFee:       minOperationFee,
 		})
@@ -977,7 +977,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            []string{validPrimeTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validPrimeTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -986,7 +986,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			BridgingFee:        250_000,
 			OperationFee:       minOperationFee,
@@ -1017,7 +1017,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            []string{validPrimeTestAddress},
+				Address:            cardanotx.AddrToMetaDataAddr(validPrimeTestAddress),
 				IsNativeTokenOnSrc: 1,
 				Amount:             utxoMinValue,
 			},
@@ -1026,7 +1026,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         []string{"addr"},
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 			BridgingFee:        minFeeForBridging,
 			OperationFee:       minOperationFee,

@@ -6,7 +6,6 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -31,21 +30,20 @@ type CardanoChainConfigUtxo struct {
 }
 
 type EthChainConfig struct {
-	ChainID                 string                        `json:"-"`
-	BridgingAddresses       EthBridgingAddresses          `json:"-"`
-	NodeURL                 string                        `json:"nodeUrl"`
-	SyncBatchSize           uint64                        `json:"syncBatchSize"`
-	NumBlockConfirmations   uint64                        `json:"numBlockConfirmations"`
-	StartBlockNumber        uint64                        `json:"startBlockNumber"`
-	PoolIntervalMiliseconds time.Duration                 `json:"poolIntervalMs"`
-	TTLBlockNumberInc       uint64                        `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold  uint64                        `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent    float64                       `json:"noBatchPeriodPercent"`
-	DynamicTx               bool                          `json:"dynamicTx"`
-	TestMode                uint8                         `json:"testMode"`
-	NonceStrategy           ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
-	MinFeeForBridging       uint64                        `json:"minFeeForBridging"`
-	RestartTrackerPullCheck time.Duration                 `json:"restartTrackerPullCheck"`
+	ChainID                 string               `json:"-"`
+	BridgingAddresses       EthBridgingAddresses `json:"-"`
+	NodeURL                 string               `json:"nodeUrl"`
+	SyncBatchSize           uint64               `json:"syncBatchSize"`
+	NumBlockConfirmations   uint64               `json:"numBlockConfirmations"`
+	StartBlockNumber        uint64               `json:"startBlockNumber"`
+	PoolIntervalMiliseconds time.Duration        `json:"poolIntervalMs"`
+	TTLBlockNumberInc       uint64               `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold  uint64               `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent    float64              `json:"noBatchPeriodPercent"`
+	DynamicTx               bool                 `json:"dynamicTx"`
+	TestMode                uint8                `json:"testMode"`
+	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
+	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
 }
 
 type CardanoChainConfig struct {
@@ -68,11 +66,10 @@ type SubmitConfig struct {
 }
 
 type BridgeConfig struct {
-	NodeURL              string                        `json:"nodeUrl"`
-	DynamicTx            bool                          `json:"dynamicTx"`
-	SmartContractAddress string                        `json:"scAddress"`
-	SubmitConfig         SubmitConfig                  `json:"submitConfig"`
-	NonceStrategy        ethtxhelper.NonceStrategyType `json:"nonceStrategy"`
+	NodeURL              string       `json:"nodeUrl"`
+	DynamicTx            bool         `json:"dynamicTx"`
+	SmartContractAddress string       `json:"scAddress"`
+	SubmitConfig         SubmitConfig `json:"submitConfig"`
 }
 
 type AppSettings struct {

@@ -78,7 +78,7 @@ func TestNexus(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, common.Address{}, txInfo.Address)
 
-	receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash, true)
+	receipt, err := txHelper.WaitForReceipt(ctx, txInfo.Hash)
 	require.NoError(t, err)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 	require.Equal(t, txInfo.Address, receipt.ContractAddress)
@@ -92,7 +92,7 @@ func TestNexus(t *testing.T) {
 		})
 	require.NoError(t, err)
 
-	receipt, err = txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	receipt, err = txHelper.WaitForReceipt(ctx, tx.Hash().String())
 
 	require.NoError(t, err)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
@@ -108,7 +108,7 @@ func TestNexus(t *testing.T) {
 		})
 	require.NoError(t, err)
 
-	receipt, err = txHelper.WaitForReceipt(ctx, tx2.Hash().String(), true)
+	receipt, err = txHelper.WaitForReceipt(ctx, tx2.Hash().String())
 
 	fmt.Println("Block Hash: ", receipt.BlockHash)
 	fmt.Printf("Receipt %+v: \n", receipt)

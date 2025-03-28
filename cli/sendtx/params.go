@@ -503,7 +503,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String(), true)
+	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
