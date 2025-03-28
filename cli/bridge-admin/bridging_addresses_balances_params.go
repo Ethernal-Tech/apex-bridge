@@ -128,15 +128,19 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 
 			var multisigBalance uint64
 
+			var filteredCount int
+
 			for _, utxo := range multisigUtxos {
 				if len(utxo.Output.Tokens) == 0 {
 					multisigBalance += utxo.Output.Amount
+					filteredCount++
 				}
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 			outputter.WriteOutput()
 		}
 	} else { // Retrieve Cardano balances via Ogmios
@@ -157,15 +161,19 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 
 			var multisigBalance uint64
 
+			var filteredCount int
+
 			for _, utxo := range multisigUtxos {
 				if len(utxo.Tokens) == 0 {
 					multisigBalance += utxo.Amount
+					filteredCount++
 				}
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 			outputter.WriteOutput()
 		}
 	}

@@ -114,7 +114,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			_, _ = outputter.Write([]byte(fmt.Sprintf("-Addresses on %s chain (retrieved from validator data): \n", chainID)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from validator data): \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", multisigAddr)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Fee Payer Address = %s\n", feeAddr)))
 
