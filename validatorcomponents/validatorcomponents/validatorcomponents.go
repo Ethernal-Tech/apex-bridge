@@ -106,7 +106,7 @@ func NewValidatorComponents(
 	bridgeSmartContract := eth.NewBridgeSmartContract(
 		appConfig.Bridge.SmartContractAddress, ethHelper)
 
-	err = FixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
+	err = fixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
@@ -333,7 +333,7 @@ outsideloop:
 	v.logger.Debug("Exiting validatorcomponents error handler")
 }
 
-func FixChainsAndAddresses(
+func fixChainsAndAddresses(
 	ctx context.Context,
 	config *core.AppConfig,
 	smartContract eth.IBridgeSmartContract,
