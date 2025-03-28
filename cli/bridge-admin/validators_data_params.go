@@ -1,14 +1,15 @@
 package clibridgeadmin
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -20,6 +21,8 @@ const (
 
 	configFlagDesc = "path to config json file"
 )
+
+type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 
 type validatorsDataParams struct {
 	bridgeNodeURL string
@@ -99,8 +102,11 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Validators data on %s chain: \n", chainID)))
-			_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(chainID, validatorsData)))
-			outputter.WriteOutput()
+
+			err = printChainValidatorsDataInfo(chainID, validatorsData, outputter)
+			if err != nil {
+				return nil, err
+			}
 
 			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData)
 			if err != nil {
@@ -129,8 +135,11 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Validators data on %s chain: \n", chainID)))
-			_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(chainID, validatorsData)))
-			outputter.WriteOutput()
+
+			err = printChainValidatorsDataInfo(chainID, validatorsData, outputter)
+			if err != nil {
+				return nil, err
+			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from registered chains): \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", regChain.AddressMultisig)))
@@ -141,6 +150,35 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 	}
 
 	return nil, nil
+}
+
+func printChainValidatorsDataInfo(
+	chainID string, data []ValidatorChainData, outputter common.OutputFormatter,
+) error {
+	for _, x := range data {
+		var formattedData string
+
+		switch chainID {
+		case common.ChainIDStrNexus:
+			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
+			if err != nil {
+				return err
+			}
+
+			formattedData = fmt.Sprintf("BLSKey=%s", hex.EncodeToString(pub.Marshal()))
+		default:
+			formattedData = fmt.Sprintf(
+				"MultisigKey=%s, FeeKey=%s",
+				hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())),
+				hex.EncodeToString(wallet.PadKeyToSize(x.Key[1].Bytes())),
+			)
+		}
+
+		_, _ = outputter.Write([]byte(formattedData))
+		outputter.WriteOutput()
+	}
+
+	return nil
 }
 
 var (

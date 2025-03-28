@@ -126,9 +126,10 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 				return nil, err
 			}
 
-			var multisigBalance uint64
-
-			var filteredCount int
+			var (
+				multisigBalance uint64
+				filteredCount   int
+			)
 
 			for _, utxo := range multisigUtxos {
 				if len(utxo.Output.Tokens) == 0 {
@@ -140,6 +141,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(multisigUtxos))))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 			outputter.WriteOutput()
 		}
@@ -159,9 +161,10 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 				return nil, err
 			}
 
-			var multisigBalance uint64
-
-			var filteredCount int
+			var (
+				multisigBalance uint64
+				filteredCount   int
+			)
 
 			for _, utxo := range multisigUtxos {
 				if len(utxo.Tokens) == 0 {
@@ -173,6 +176,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(multisigUtxos))))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 			outputter.WriteOutput()
 		}
