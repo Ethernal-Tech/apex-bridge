@@ -15,10 +15,10 @@ const (
 	BridgingRequestStatusFailedToExecuteOnDestination BridgingRequestStatus = "FailedToExecuteOnDestination"
 	BridgingRequestStatusExecutedOnDestination        BridgingRequestStatus = "ExecutedOnDestination"
 
-	BridgingRequestStatusRefundRequestSubmittedToBridge = "RefundRequestSubmittedToBridge"
-	BridgingRequestStatusRefundSubmittedToChain         = "RefundSubmittedToChain"
-	BridgingRequestStatusFailedToRefund                 = "FailedToRefund"
-	BridgingRequestStatusRefundExecuted                 = "RefundExecuted"
+	bridgingRequestStatusRefundRequestSubmittedToBridge = "RefundRequestSubmittedToBridge"
+	bridgingRequestStatusRefundSubmittedToChain         = "RefundSubmittedToChain"
+	bridgingRequestStatusFailedToRefund                 = "FailedToRefund"
+	bridgingRequestStatusRefundExecuted                 = "RefundExecuted"
 )
 
 type BridgingRequestState struct {
@@ -45,13 +45,13 @@ func BridgingRequestStateStatusStr(status BridgingRequestStatus, isRefund bool) 
 
 	switch status {
 	case BridgingRequestStatusSubmittedToBridge:
-		return BridgingRequestStatusRefundRequestSubmittedToBridge
+		return bridgingRequestStatusRefundRequestSubmittedToBridge
 	case BridgingRequestStatusSubmittedToDestination:
-		return BridgingRequestStatusRefundSubmittedToChain
+		return bridgingRequestStatusRefundSubmittedToChain
 	case BridgingRequestStatusFailedToExecuteOnDestination:
-		return BridgingRequestStatusFailedToRefund
+		return bridgingRequestStatusFailedToRefund
 	case BridgingRequestStatusExecutedOnDestination:
-		return BridgingRequestStatusRefundExecuted
+		return bridgingRequestStatusRefundExecuted
 	default:
 		return string(status)
 	}

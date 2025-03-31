@@ -99,7 +99,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Metadata: relevantButNotFullMetadata,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "validation failed for tx")
 	})
 
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
@@ -125,7 +124,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "origin chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -151,7 +149,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
@@ -177,7 +174,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim more than max receivers in metadata", func(t *testing.T) {
@@ -208,7 +204,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
@@ -236,7 +231,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
@@ -295,7 +289,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
@@ -324,7 +317,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
@@ -353,7 +345,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	//nolint:dupl
@@ -393,7 +384,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
 	})
 
 	//nolint:dupl
@@ -433,7 +423,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}, appConfig)
 
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -461,7 +450,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
@@ -499,7 +487,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {

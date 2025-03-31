@@ -146,7 +146,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
@@ -182,7 +181,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: "invalid",
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
@@ -218,7 +216,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrVector,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
@@ -252,7 +249,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, fmt.Sprintf("bridging address %s on %s", primeBridgingAddr, common.ChainIDStrPrime))
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
@@ -286,7 +282,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
 	})
 
 	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed", func(t *testing.T) {
@@ -324,7 +319,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
@@ -360,7 +354,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
@@ -424,7 +417,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
 	//nolint:dupl
@@ -463,7 +455,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	//nolint:dupl
@@ -502,7 +493,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
@@ -538,7 +528,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -574,7 +563,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -609,7 +597,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
@@ -651,7 +638,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
-		// require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {

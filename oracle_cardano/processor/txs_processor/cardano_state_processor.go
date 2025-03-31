@@ -181,6 +181,8 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
+
+						break
 					}
 				}
 
