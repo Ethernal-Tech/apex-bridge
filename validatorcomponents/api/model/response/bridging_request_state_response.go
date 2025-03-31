@@ -5,12 +5,12 @@ import (
 )
 
 type BridgingRequestStateResponse struct {
-	SourceChainID      string `json:"sourceChainId"`
-	SourceTxHash       string `json:"sourceTxHash"`
-	DestinationChainID string `json:"destinationChainId"`
-	Status             string `json:"status"`
-	DestinationTxHash  string `json:"destinationTxHash"`
-	IsRefund           bool   `json:"isRefund"`
+	SourceChainID      string                       `json:"sourceChainId"`
+	SourceTxHash       string                       `json:"sourceTxHash"`
+	DestinationChainID string                       `json:"destinationChainId"`
+	Status             common.BridgingRequestStatus `json:"status"`
+	DestinationTxHash  string                       `json:"destinationTxHash"`
+	IsRefund           bool                         `json:"isRefund"`
 }
 
 func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *BridgingRequestStateResponse {
@@ -19,7 +19,7 @@ func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *Bridgi
 		SourceTxHash:       state.SourceTxHash.String(),
 		DestinationChainID: state.DestinationChainID,
 		DestinationTxHash:  state.DestinationTxHash.String(),
-		Status:             state.StatusStr(),
+		Status:             state.Status,
 		IsRefund:           state.IsRefund,
 	}
 }

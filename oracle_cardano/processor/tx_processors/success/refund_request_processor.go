@@ -207,7 +207,6 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 	return max(config.UtxoMinAmount, potentialTokenCost), nil
 }
 
-// common function should be used after the rebase is done
 func (p *RefundRequestProcessorImpl) getSenderAddr(
 	config *cCore.CardanoChainConfig, metadata *common.RefundBridgingRequestMetadata,
 ) (string, error) {
