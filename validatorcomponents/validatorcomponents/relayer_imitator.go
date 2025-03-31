@@ -82,7 +82,8 @@ func (ri *RelayerImitatorImpl) execute(ctx context.Context, chainID string) erro
 			txsKeys := make([]common.BridgingRequestStateKey, len(txs))
 			for i, tx := range txs {
 				txsKeys[i] = common.NewBridgingRequestStateKey(
-					common.ToStrChainID(tx.SourceChainId), tx.ObservedTransactionHash)
+					common.ToStrChainID(tx.SourceChainId), tx.ObservedTransactionHash,
+					tx.TransactionType == uint8(common.RefundConfirmedTxType))
 			}
 
 			err = ri.bridgingRequestStateUpdater.SubmittedToDestination(txsKeys, chainID)
