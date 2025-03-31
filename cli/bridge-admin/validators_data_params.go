@@ -46,10 +46,10 @@ func (v *validatorsDataParams) ValidateFlags() error {
 
 	if _, err := os.Stat(v.config); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist")
+			return fmt.Errorf("config file does not exist: %s", v.config)
 		}
 
-		return fmt.Errorf("failed to check config file: %w", err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", v.config, err)
 	}
 
 	return nil

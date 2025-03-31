@@ -59,10 +59,10 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 
 	if _, err := os.Stat(b.config); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist")
+			return fmt.Errorf("config file does not exist: %s", b.config)
 		}
 
-		return fmt.Errorf("failed to check config file: %w", err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", b.config, err)
 	}
 
 	if b.indexerDbsPath != "" {
@@ -71,7 +71,7 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 				return fmt.Errorf("indexer database path does not exist: %s", b.indexerDbsPath)
 			}
 
-			return fmt.Errorf("failed to check indexer database path: %w", err)
+			return fmt.Errorf("failed to check indexer database path: %s. err: %w", b.indexerDbsPath, err)
 		}
 	}
 
@@ -165,10 +165,10 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 			}
 		}
 
-		for _, indexerDB := range cardanoIndexerDbs {
+		for chainID, indexerDB := range cardanoIndexerDbs {
 			err := indexerDB.Close()
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to close the indexer db for chain: %s. err: %w", chainID, err)
 			}
 		}
 	} else { // Retrieve Cardano balances via Ogmios
