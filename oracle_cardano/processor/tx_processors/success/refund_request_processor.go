@@ -45,7 +45,8 @@ func (*RefundRequestProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cC
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.RefundBridgingRequestMetadata](
+		common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
 	}
@@ -61,7 +62,7 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
-	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
+	metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
@@ -101,7 +102,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 }
 
 func (p *RefundRequestProcessorImpl) validate(
-	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
+	tx *core.CardanoTx, metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
 		return fmt.Errorf("try count exceeded. RefundTryCount: (current, max)=(%d, %d)",
@@ -207,7 +208,7 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 }
 
 func (p *RefundRequestProcessorImpl) getSenderAddr(
-	config *cCore.CardanoChainConfig, metadata *common.BridgingRequestMetadata,
+	config *cCore.CardanoChainConfig, metadata *common.RefundBridgingRequestMetadata,
 ) (string, error) {
 	senderAddr := strings.Join(metadata.SenderAddr, "")
 

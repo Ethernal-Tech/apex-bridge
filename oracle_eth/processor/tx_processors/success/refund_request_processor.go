@@ -34,7 +34,7 @@ func (*RefundRequestProcessorImpl) PreValidate(tx *core.EthTx, appConfig *cCore.
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
 ) error {
-	metadata, err := core.UnmarshalEthMetadata[core.BridgingRequestEthMetadata](
+	metadata, err := core.UnmarshalEthMetadata[core.RefundBridgingRequestEthMetadata](
 		tx.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
@@ -51,7 +51,7 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
-	metadata *core.BridgingRequestEthMetadata,
+	metadata *core.RefundBridgingRequestEthMetadata,
 ) {
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
@@ -70,7 +70,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 }
 
 func (p *RefundRequestProcessorImpl) validate(
-	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *cCore.AppConfig,
+	tx *core.EthTx, metadata *core.RefundBridgingRequestEthMetadata, appConfig *cCore.AppConfig,
 ) error {
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
 		return fmt.Errorf("try count exceeded. RefundTryCount: (current, max)=(%d, %d)",

@@ -40,6 +40,11 @@ type BridgingRequestMetadata struct {
 	FeeAmount          uint64                               `cbor:"fa" json:"fa"`
 }
 
+type RefundBridgingRequestMetadata struct {
+	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
+	SenderAddr     []string       `cbor:"s" json:"s"`
+}
+
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 	BatchNonceID   uint64         `cbor:"n" json:"n"`
@@ -70,7 +75,7 @@ func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) 
 }
 
 func MarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
 ) (
@@ -92,7 +97,7 @@ func MarshalMetadata[
 }
 
 func UnmarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, data []byte,
 ) (
