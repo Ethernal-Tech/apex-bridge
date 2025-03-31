@@ -333,7 +333,7 @@ $ apex-bridge bridge-admin set-additional-data \
 ```shell
 $ apex-bridge bridge-admin get-validators-data \
         --bridge-url http://localhost:12013 \
-        --bridging-addr 0xeefcd00000000000000000000000000000000022 \
+        --bridge-addr 0xeefcd00000000000000000000000000000000022 \
         --config ./config.json
 ```
 

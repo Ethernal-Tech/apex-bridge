@@ -3,6 +3,7 @@ package clibridgeadmin
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -37,6 +38,17 @@ func (v *validatorsDataParams) ValidateFlags() error {
 
 	if !ethcommon.IsHexAddress(v.bridgeSCAddr) {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
+	}
+
+	if v.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(v.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist")
+		}
+		return fmt.Errorf("failed to check config file: %w", err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package clibridgeadmin
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -20,9 +21,9 @@ const (
 	nexusWalletAddressFlag  = "nexus-wallet-addr"
 	indexerDbsPathFlag      = "indexer-dbs-path"
 
-	primeWalletAddressFlagDesc  = "prime wallet address"
-	vectorWalletAddressFlagDesc = "vector wallet address"
-	nexusWalletAddressFlagDesc  = "nexus wallet address"
+	primeWalletAddressFlagDesc  = "prime hot wallet/bridging/multisig address"
+	vectorWalletAddressFlagDesc = "vector hot wallet/bridging/multisig address"
+	nexusWalletAddressFlagDesc  = "nexus NativeTokenWallet Proxy sc address"
 	indexerDbsPathFlagDesc      = "path to the indexer database"
 )
 
@@ -53,7 +54,23 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 	}
 
 	if b.config == "" {
-		return fmt.Errorf("invalid config path: --%s", indexerDbsPathFlag)
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(b.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist")
+		}
+		return fmt.Errorf("failed to check config file: %w", err)
+	}
+
+	if b.indexerDbsPath != "" {
+		if _, err := os.Stat(b.indexerDbsPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("indexer database path does not exist: %s", b.indexerDbsPath)
+			}
+			return fmt.Errorf("failed to check indexer database path: %w", err)
+		}
 	}
 
 	return nil
@@ -98,6 +115,13 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		return nil, err
 	}
 
+	chainWalletAddr := map[string]string{
+		common.ChainIDStrPrime:  b.primeWalletAddress,
+		common.ChainIDStrVector: b.vectorWalletAddress,
+		common.ChainIDStrNexus:  b.nexusWalletAddress,
+	}
+
+	multisigUtxos := make(map[string][]cardanowallet.Utxo)
 	if b.indexerDbsPath != "" { // Retrieve Cardano balances from the database
 		cardanoIndexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
 
@@ -114,72 +138,68 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 
 		// Retrieve UTXOs for Cardano BridgingAddresses from the DB
 		for chainID, cardanoIndexerDB := range cardanoIndexerDbs {
-			var bridgingAddress string
-			if chainID == common.ChainIDStrPrime {
-				bridgingAddress = b.primeWalletAddress
-			} else if chainID == common.ChainIDStrVector {
-				bridgingAddress = b.vectorWalletAddress
-			}
+			bridgingAddress := chainWalletAddr[chainID]
 
-			multisigUtxos, err := cardanoIndexerDB.GetAllTxOutputs(bridgingAddress, true)
+			indexerUtxos, err := cardanoIndexerDB.GetAllTxOutputs(bridgingAddress, true)
 			if err != nil {
 				return nil, err
 			}
 
-			var (
-				multisigBalance uint64
-				filteredCount   int
-			)
-
-			for _, utxo := range multisigUtxos {
-				if len(utxo.Output.Tokens) == 0 {
-					multisigBalance += utxo.Output.Amount
-					filteredCount++
+			for _, utxo := range indexerUtxos {
+				walletUtxo := cardanowallet.Utxo{
+					Amount: utxo.Output.Amount,
+					Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
 				}
+				for i, token := range utxo.Output.Tokens {
+					walletUtxo.Tokens[i] = cardanowallet.TokenAmount{
+						PolicyID: token.PolicyID,
+						Name:     token.Name,
+						Amount:   token.Amount,
+					}
+				}
+				multisigUtxos[chainID] = append(multisigUtxos[chainID], walletUtxo)
 			}
+		}
 
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(multisigUtxos))))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
-			outputter.WriteOutput()
+		for _, indexerDB := range cardanoIndexerDbs {
+			err := indexerDB.Close()
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else { // Retrieve Cardano balances via Ogmios
 		for chainID, cardanoConfig := range appConfig.CardanoChains {
-			var bridgingAddress string
-			if chainID == common.ChainIDStrPrime {
-				bridgingAddress = b.primeWalletAddress
-			} else if chainID == common.ChainIDStrVector {
-				bridgingAddress = b.vectorWalletAddress
-			}
 
 			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
 
-			multisigUtxos, err := txProvider.GetUtxos(context.Background(), bridgingAddress)
+			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
 			if err != nil {
 				return nil, err
 			}
 
-			var (
-				multisigBalance uint64
-				filteredCount   int
-			)
-
-			for _, utxo := range multisigUtxos {
-				if len(utxo.Tokens) == 0 {
-					multisigBalance += utxo.Amount
-					filteredCount++
-				}
-			}
-
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", bridgingAddress)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(multisigUtxos))))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
-			outputter.WriteOutput()
+			multisigUtxos[chainID] = append(multisigUtxos[chainID], ogmiosUtxos...)
 		}
+	}
+
+	for chainID, utxos := range multisigUtxos {
+		var (
+			multisigBalance uint64
+			filteredCount   int
+		)
+
+		for _, utxo := range utxos {
+			if len(utxo.Tokens) == 0 {
+				multisigBalance += utxo.Amount
+				filteredCount++
+			}
+		}
+
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", chainWalletAddr[chainID])))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(utxos))))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
+		outputter.WriteOutput()
 	}
 
 	// Retrieve balances for Ethereum chains
