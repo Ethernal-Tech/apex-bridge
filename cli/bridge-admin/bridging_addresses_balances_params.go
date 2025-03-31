@@ -61,6 +61,7 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("config file does not exist")
 		}
+
 		return fmt.Errorf("failed to check config file: %w", err)
 	}
 
@@ -69,6 +70,7 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 			if os.IsNotExist(err) {
 				return fmt.Errorf("indexer database path does not exist: %s", b.indexerDbsPath)
 			}
+
 			return fmt.Errorf("failed to check indexer database path: %w", err)
 		}
 	}
@@ -122,6 +124,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 	}
 
 	multisigUtxos := make(map[string][]cardanowallet.Utxo)
+
 	if b.indexerDbsPath != "" { // Retrieve Cardano balances from the database
 		cardanoIndexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
 
@@ -157,6 +160,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 						Amount:   token.Amount,
 					}
 				}
+
 				multisigUtxos[chainID] = append(multisigUtxos[chainID], walletUtxo)
 			}
 		}
@@ -169,7 +173,6 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		}
 	} else { // Retrieve Cardano balances via Ogmios
 		for chainID, cardanoConfig := range appConfig.CardanoChains {
-
 			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
 
 			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])

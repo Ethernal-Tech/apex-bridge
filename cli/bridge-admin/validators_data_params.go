@@ -48,6 +48,7 @@ func (v *validatorsDataParams) ValidateFlags() error {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("config file does not exist")
 		}
+
 		return fmt.Errorf("failed to check config file: %w", err)
 	}
 
