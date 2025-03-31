@@ -61,7 +61,7 @@ func (pc *txProcessorsCollection) getSuccess(tx *core.EthTx, appConfig *cCore.Ap
 
 		txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
 		if !relevant {
-			return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+			txProcessor = pc.successTxProcessors[string(common.TxTypeRefundRequest)]
 		}
 	} else {
 		txProcessor = pc.successTxProcessors[string(common.TxTypeHotWalletFund)]
