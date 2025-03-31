@@ -132,7 +132,7 @@ func UnmarshalMetadata[
 }
 
 func MarshalMetadataMap[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
 ) (
