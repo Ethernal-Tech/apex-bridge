@@ -29,6 +29,7 @@ type OracleImpl struct {
 	db                       core.Database
 	expectedTxsFetcher       cCore.ExpectedTxsFetcher
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
+	chainInfos               map[string]*chain.CardanoChainInfo
 	logger                   hclog.Logger
 }
 
@@ -53,16 +54,28 @@ func NewCardanoOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
+	chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
+
+	for _, cc := range appConfig.CardanoChains {
+		info := chain.NewCardanoChainInfo(cc)
+
+		if err := info.Populate(ctx); err != nil {
+			return nil, err
+		}
+
+		chainInfos[cc.ChainID] = info
+	}
+
+	refundRequestProcessor := successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
 		[]core.CardanoTxSuccessProcessor{
 			successtxprocessors.NewBatchExecutedProcessor(logger),
-			successtxprocessors.NewBridgingRequestedProcessor(logger),
+			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger),
 			successtxprocessors.NewHotWalletIncrementProcessor(logger),
-			// tx_processors.NewRefundExecutedProcessor(logger),
+			refundRequestProcessor,
 		},
 		[]core.CardanoTxFailedProcessor{
 			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
-			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 		},
 	)
 
@@ -112,6 +125,7 @@ func NewCardanoOracle(
 		cardanoChainObservers:    cardanoChainObservers,
 		expectedTxsFetcher:       expectedTxsFetcher,
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
+		chainInfos:               chainInfos,
 		db:                       db,
 		logger:                   logger,
 	}, nil

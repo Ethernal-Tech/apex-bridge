@@ -1,7 +1,6 @@
 package successtxprocessors
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -29,7 +28,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
+	refundRequestProcessorMock := &core.CardanoTxSuccessProcessorMock{}
+	proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
@@ -61,8 +62,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
 
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{}, appConfig).Return(nil)
+
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
@@ -73,12 +76,19 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &cCore.BridgeClaims{}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: irrelevantMetadata,
+			},
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: irrelevantMetadata,
 			},
 		}, appConfig)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
@@ -89,16 +99,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, relevantButNotFullMetadata)
 
 		claims := &cCore.BridgeClaims{}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: relevantButNotFullMetadata,
+			},
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 			},
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "validation failed for tx")
+		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -115,18 +131,25 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: primeBridgingAddr, Amount: 3},
 			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
+
+		tx := indexer.Tx{
+			Metadata: destinationChainNonRegisteredMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: destinationChainNonRegisteredMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
@@ -143,15 +166,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: primeBridgingAddr, Amount: 3},
 			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
+
+		tx := indexer.Tx{
+			Metadata: destinationChainNonRegisteredMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: "invalid",
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: destinationChainNonRegisteredMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: "invalid",
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "unsupported chain id found in tx")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
@@ -171,15 +201,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: vectorBridgingAddr, Amount: 3},
 			{Address: vectorBridgingAddr, Amount: 4},
 		}
+
+		tx := indexer.Tx{
+			Metadata: destinationChainNonRegisteredMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrVector,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: destinationChainNonRegisteredMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrVector,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
@@ -197,15 +234,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: "addr1", Amount: 1},
 			{Address: "addr2", Amount: 2},
 		}
+
+		tx := indexer.Tx{
+			Metadata: bridgingAddrNotFoundInUtxosMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: bridgingAddrNotFoundInUtxosMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, fmt.Sprintf("bridging address %s on %s", primeBridgingAddr, common.ChainIDStrPrime))
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
@@ -223,18 +267,25 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: primeBridgingAddr, Amount: 1},
 			{Address: primeBridgingAddr, Amount: 2},
 		}
+
+		tx := indexer.Tx{
+			Metadata: multipleUtxosToBridgingAddrMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: multipleUtxosToBridgingAddrMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
+		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
@@ -253,15 +304,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: 1},
 		}
+
+		tx := indexer.Tx{
+			Metadata: feeAddrNotInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: feeAddrNotInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
@@ -281,15 +339,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
 		}
+
+		tx := indexer.Tx{
+			Metadata: feeAddrNotInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: feeAddrNotInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
@@ -337,15 +402,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
 		}
+
+		tx := indexer.Tx{
+			Metadata: utxoValueBelowMinInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: utxoValueBelowMinInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
+		require.NoError(t, err)
 	})
 
 	//nolint:dupl
@@ -367,15 +439,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
 		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: invalidAddrInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+		require.NoError(t, err)
 	})
 
 	//nolint:dupl
@@ -397,15 +476,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
 		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: invalidAddrInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
@@ -425,15 +511,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue + 1},
 		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: invalidAddrInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -453,15 +546,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue*2 + 1},
 		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: invalidAddrInReceiversMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -480,15 +580,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: minFeeForBridging - 1},
 		}
+
+		tx := indexer.Tx{
+			Metadata: feeInReceiversLessThanMinMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: feeInReceiversLessThanMinMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
@@ -513,16 +620,23 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: minFeeForBridging + maxAmountAllowedToBridge.Uint64()},
 		}
+
+		tx := indexer.Tx{
+			Hash:     txHash,
+			Metadata: validMetadata,
+			Outputs:  txOutputs,
+		}
+
+		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig).Return(nil)
+
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Hash:     txHash,
-				Metadata: validMetadata,
-				Outputs:  txOutputs,
-			},
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "greater than maximum allowed")
+		require.NoError(t, err)
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
