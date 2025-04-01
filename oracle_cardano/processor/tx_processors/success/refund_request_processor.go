@@ -67,7 +67,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
-	unknownTokenOutputIndexes := make([]int, 0, unknownNativeTokensUtxoCntMax)
+	unknownTokenOutputIndexes := make([]uint16, 0, unknownNativeTokensUtxoCntMax)
 
 	for idx, out := range tx.Outputs {
 		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
@@ -75,7 +75,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		}
 
 		if len(out.Tokens) > 0 {
-			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, idx)
+			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, uint16(idx))
 		}
 
 		amount.Add(amount, new(big.Int).SetUint64(out.Amount))

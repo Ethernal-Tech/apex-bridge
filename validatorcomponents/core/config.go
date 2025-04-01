@@ -59,6 +59,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			UtxoMinAmount:         ccConfig.UtxoMinAmount,
 			MaxFeeUtxoCount:       ccConfig.MaxFeeUtxoCount,
 			MaxUtxoCount:          ccConfig.MaxUtxoCount,
+			MinFeeForBridging:     ccConfig.MinFeeForBridging,
 			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 		}).Serialize()
 

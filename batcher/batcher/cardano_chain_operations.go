@@ -3,6 +3,7 @@ package batcher
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -181,10 +183,16 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, err
 	}
 
-	txOutputs := getOutputs(confirmedTransactions, cco.config.NetworkID, cco.logger)
+	txOutputs := getOutputs(
+		confirmedTransactions, cco.config.NetworkID, multisigFeeAddress, cco.config.MinFeeForBridging, cco.logger)
+
+	refundUtxos, err := cco.getUtxosFromRefundTransactions(confirmedTransactions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve utxos for refund txs: %w", err)
+	}
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOs(
-		multisigAddress, multisigFeeAddress, txOutputs)
+		multisigAddress, multisigFeeAddress, refundUtxos, txOutputs.Sum[cardanowallet.AdaTokenName])
 	if err != nil {
 		return nil, err
 	}
@@ -413,16 +421,18 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 }
 
 func (cco *CardanoChainOperations) getUTXOs(
-	multisigAddress, multisigFeeAddress string, txOutputs cardano.TxOutputs,
+	multisigAddress, multisigFeeAddress string,
+	refundUtxos []*indexer.TxInputOutput,
+	desiredSum uint64,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, err error) {
 	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
-		return
+		return nil, nil, fmt.Errorf("failed to retrieve tx outputs for multisig address: %w", err)
 	}
 
 	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
 	if err != nil {
-		return
+		return nil, nil, fmt.Errorf("failed to retrieve tx outputs for fee address: %w", err)
 	}
 
 	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
@@ -437,21 +447,67 @@ func (cco *CardanoChainOperations) getUTXOs(
 
 	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
 
+	// desiredSum should be reduced by amount of refund utxos
+	for _, utxo := range refundUtxos {
+		desiredSum -= utxo.Output.Amount
+	}
+
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum[cardanowallet.AdaTokenName],
+		desiredSum,
 		cco.config.UtxoMinAmount,
-		len(feeUtxos),
+		len(feeUtxos)+len(refundUtxos),
 		cco.config.MaxUtxoCount,
-		cco.config.TakeAtLeastUtxoCount,
+		max(0, cco.config.TakeAtLeastUtxoCount-len(refundUtxos)),
 	)
 	if err != nil {
 		return
 	}
 
-	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+	multisigUtxos = append(multisigUtxos, refundUtxos...) // add refund UTXOs to multisig UTXOs
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos, "refund", refundUtxos)
 
 	return
+}
+
+func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
+	confirmedTxs []eth.ConfirmedTransaction,
+) (multisigUtxos []*indexer.TxInputOutput, err error) {
+	for _, ct := range confirmedTxs {
+		if len(ct.OutputIndexes) == 0 {
+			continue
+		}
+
+		indexes, err := common.UnpackNumbersToBytes[[]uint16](ct.OutputIndexes)
+		if err != nil {
+			// this error could happen only if there is a bug in the smart contract (or oracle sent wrong values)
+			cco.logger.Warn("failed to unpack output indexes",
+				"err", err, "indxs", hex.EncodeToString(ct.OutputIndexes))
+
+			continue
+		}
+
+		for _, indx := range indexes {
+			txInput := indexer.TxInput{
+				Hash:  ct.ObservedTransactionHash,
+				Index: uint32(indx),
+			}
+
+			// TODO: should we return error or just skip?
+			txOutput, err := cco.db.GetTxOutput(txInput)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get tx output for %s: %w", txInput, err)
+			}
+
+			multisigUtxos = append(multisigUtxos, &indexer.TxInputOutput{
+				Input:  txInput,
+				Output: txOutput,
+			})
+		}
+	}
+
+	return multisigUtxos, nil
 }
 
 func filterOutTokenUtxos(utxos []*indexer.TxInputOutput) []*indexer.TxInputOutput {
@@ -566,13 +622,28 @@ func findMinUtxo(utxos []*indexer.TxInputOutput) (*indexer.TxInputOutput, int) {
 }
 
 func getOutputs(
-	txs []eth.ConfirmedTransaction, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction,
+	networkID cardanowallet.CardanoNetworkType,
+	feeAddr string,
+	minFeeForBridging uint64,
+	logger hclog.Logger,
 ) cardano.TxOutputs {
 	receiversMap := map[string]uint64{}
 
-	for _, transaction := range txs {
-		for _, receiver := range transaction.Receivers {
-			receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
+	for _, tx := range txs {
+		// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+		// to fee payer address, and the rest is transfered to the user.
+		if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
+			for _, receiver := range tx.Receivers {
+				amount := receiver.Amount.Uint64()
+
+				receiversMap[receiver.DestinationAddress] += amount - minFeeForBridging
+				receiversMap[feeAddr] += minFeeForBridging
+			}
+		} else {
+			for _, receiver := range tx.Receivers {
+				receiversMap[receiver.DestinationAddress] += receiver.Amount.Uint64()
+			}
 		}
 	}
 

@@ -726,7 +726,7 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
+	res := getOutputs(txs, cardanowallet.MainNetNetwork, "", 100, hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
@@ -767,19 +767,11 @@ func Test_getUTXOs(t *testing.T) {
 		},
 		logger: hclog.NewNullLogger(),
 	}
-	txOutputs := cardano.TxOutputs{
-		Outputs: []cardanowallet.TxOutput{
-			{}, {}, {},
-		},
-		Sum: map[string]uint64{
-			cardanowallet.AdaTokenName: 2_000_000,
-		},
-	}
 
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 		require.Error(t, err)
 	})
 
@@ -787,7 +779,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 		require.Error(t, err)
 	})
 
@@ -812,11 +804,45 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
+	})
+
+	t.Run("pass with refund", func(t *testing.T) {
+		expectedUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 1900},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAA"), Index: 100},
+				Output: indexer.TxOutput{Amount: 10},
+			},
+		}
+		refundUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAAEB"), Index: 121},
+				Output: indexer.TxOutput{Amount: 30},
+			},
+		}
+		allMultisigUtxos := expectedUtxos[0:2]
+		allFeeUtxos := expectedUtxos[2:]
+
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, refundUtxos, 2_000_000)
+
+		require.NoError(t, err)
+		require.Equal(t, expectedUtxos[2:], feeUtxos)
+		require.Equal(t, append(expectedUtxos[0:2], refundUtxos...), multisigUtxos)
 	})
 }
 
