@@ -220,7 +220,7 @@ func TestNumbersToString(t *testing.T) {
 
 func TestJoin(t *testing.T) {
 	data := [][]int{
-		{1, 2}, {3}, {}, {}, {4, 7, 6}, {},
+		{1, 2}, {3}, {}, nil, {4, 7, 6}, {},
 	}
 	assert.Equal(t, []int{1, 2, 3, 4, 7, 6}, Join(data))
 }
