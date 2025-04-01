@@ -71,6 +71,7 @@ type BatcherEVMChainConfig struct {
 	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
+	MinFeeForBridging      uint64  `json:"minFeeForBridging"`
 	TestMode               uint8   `json:"testMode"`
 }
 

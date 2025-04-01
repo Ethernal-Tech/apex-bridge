@@ -74,7 +74,7 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		dt, err := ops.GenerateBatchTransaction(ctx, nil, chainID, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
-		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs)
+		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
 
 		txsBytes, err := txs.Pack()
 		require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		},
 	}
 
-	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs)
+	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, big.NewInt(0))
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,

@@ -726,7 +726,8 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res := getOutputs(txs, cardanowallet.MainNetNetwork, "", 100, hclog.NewNullLogger())
+	res := getOutputs(txs, cardanowallet.MainNetNetwork,
+		[][]*indexer.TxInputOutput{}, "", 100, hclog.NewNullLogger())
 
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
