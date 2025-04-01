@@ -75,7 +75,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		}
 
 		if len(out.Tokens) > 0 {
-			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx))
+			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
 		}
 
 		amount.Add(amount, new(big.Int).SetUint64(out.Amount))

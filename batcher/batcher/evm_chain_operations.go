@@ -187,15 +187,22 @@ func newEVMSmartContractTransaction(
 		for _, recv := range tx.Receivers {
 			amount := common.DfmToWei(recv.Amount)
 			// In case a transaction is of type refund, batcher should transfer minFeeForBridging
-			// to fee payer address, and the rest is transfered to the user.
+			// to fee payer address, and the rest is transferred to the user.
+			// if else would be nicer but linter does not think the same way
 			if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
 				feeAmount.Add(feeAmount, minFeeForBridging)
 				updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount.Sub(amount, minFeeForBridging))
-			} else if recv.DestinationAddress == common.EthZeroAddr {
-				feeAmount.Add(feeAmount, amount)
-			} else {
-				updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount)
+
+				continue
 			}
+
+			if recv.DestinationAddress == common.EthZeroAddr {
+				feeAmount.Add(feeAmount, amount)
+
+				continue
+			}
+
+			updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount)
 		}
 	}
 

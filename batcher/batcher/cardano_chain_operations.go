@@ -482,6 +482,7 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 	confirmedTxs []eth.ConfirmedTransaction,
 ) ([][]*indexer.TxInputOutput, error) {
 	utxosPerConfirmedTxs := make([][]*indexer.TxInputOutput, len(confirmedTxs))
+
 	for i, ct := range confirmedTxs {
 		if len(ct.OutputIndexes) == 0 {
 			continue
@@ -653,7 +654,7 @@ func getOutputs(
 
 	for i, tx := range txs {
 		// In case a transaction is of type refund, batcher should transfer minFeeForBridging
-		// to fee payer address, and the rest is transfered to the user.
+		// to fee payer address, and the rest is transferred to the user.
 		if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
 			for _, receiver := range tx.Receivers {
 				amount := receiver.Amount.Uint64()
