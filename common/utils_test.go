@@ -218,9 +218,9 @@ func TestNumbersToString(t *testing.T) {
 	assert.Equal(t, "-1.01, 7, -3.56, 9090, 8.8", NumbersToString([]float32{-1.01, 7, -3.56, 9090, 8.8}))
 }
 
-func TestJoin(t *testing.T) {
+func TestFlattenMatrix(t *testing.T) {
 	data := [][]int{
 		{1, 2}, {3}, {}, nil, {4, 7, 6}, {},
 	}
-	assert.Equal(t, []int{1, 2, 3, 4, 7, 6}, Join(data))
+	assert.Equal(t, []int{1, 2, 3, 4, 7, 6}, FlattenMatrix(data))
 }

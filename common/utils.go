@@ -321,7 +321,7 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 	return sb.String()
 }
 
-func Join[T any](matrix [][]T) (result []T) {
+func FlattenMatrix[T any](matrix [][]T) (result []T) {
 	for _, row := range matrix {
 		result = append(result, row...)
 	}

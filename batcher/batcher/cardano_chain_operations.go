@@ -198,7 +198,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOs(
 		multisigAddress, multisigFeeAddress,
-		common.Join(refundUtxosPerConfirmedTx),
+		common.FlattenMatrix(refundUtxosPerConfirmedTx),
 		txOutputs.Sum[cardanowallet.AdaTokenName])
 	if err != nil {
 		return nil, err
