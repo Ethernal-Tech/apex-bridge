@@ -695,6 +695,11 @@ func getOutputs(
 		tokens, _ := cardanowallet.GetTokensFromSumMap(amountMap) // error can not happen here
 		if len(tokens) == 0 {
 			tokens = nil
+		} else {
+			// must sort tokens because each batcher should have same order of tokens
+			sort.Slice(tokens, func(i, j int) bool {
+				return tokens[i].TokenName() < tokens[j].TokenName()
+			})
 		}
 
 		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
