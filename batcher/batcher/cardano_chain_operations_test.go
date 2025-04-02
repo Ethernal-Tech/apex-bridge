@@ -768,7 +768,8 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			require.Empty(t, refundUtxo)
 		}
 	})
-	t.Run("getUtxosFromRefundTransactions with refund pass", func(t *testing.T) {
+
+	t.Run("getUtxosFromRefundTransactions with 1 output index pass", func(t *testing.T) {
 		refundTokenAmount := uint64(100)
 		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: refundTokenAmount}, nil).Once()
 
@@ -784,7 +785,52 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 
 		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
 		require.NoError(t, err)
+
+		for i, refundUtxo := range refundUtxosPerConfirmedTx {
+			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
+			if i == len(txs)-1 {
+				require.Equal(t, refundTokenAmount, refundUtxosPerConfirmedTx[i][0].Output.Amount)
+			} else {
+				require.Empty(t, refundUtxo)
+			}
+		}
+
 		require.Equal(t, refundTokenAmount, refundUtxosPerConfirmedTx[len(txs)-1][0].Output.Amount)
+
+		txs = txs[:len(txs)-1]
+	})
+
+	t.Run("getUtxosFromRefundTransactions with more output indexes pass", func(t *testing.T) {
+		refundTokenAmount := uint64(100)
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: refundTokenAmount}, nil).Once()
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 2 * refundTokenAmount}, nil).Once()
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 3 * refundTokenAmount}, nil).Once()
+
+		txs = append(txs, eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2, 3, 5}),
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				},
+			},
+		})
+
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		require.NoError(t, err)
+
+		for i, refundUtxo := range refundUtxosPerConfirmedTx {
+			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
+			if i == len(txs)-1 {
+				for j, txInputOutput := range refundUtxosPerConfirmedTx[i] {
+					require.Equal(t, (uint64(j)+1)*refundTokenAmount, txInputOutput.Output.Amount)
+				}
+			} else {
+				require.Empty(t, refundUtxo)
+			}
+		}
+
+		txs = txs[:len(txs)-1]
 	})
 }
 
