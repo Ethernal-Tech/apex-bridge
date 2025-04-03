@@ -23,6 +23,7 @@ type CardanoChainConfig struct {
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
 	MaxFeeUtxoCount       int                              `json:"maxFeeUtxoCount"`
 	MaxUtxoCount          int                              `json:"maxUtxoCount"`
+	MinFeeForBridging     uint64                           `json:"minFeeForBridging"`
 	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
 }
 
@@ -70,6 +71,7 @@ type BatcherEVMChainConfig struct {
 	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
+	MinFeeForBridging      uint64  `json:"minFeeForBridging"`
 	TestMode               uint8   `json:"testMode"`
 }
 
