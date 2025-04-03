@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const ethNodeURL = "https://lb.drpc.org/ogrpc?network=ethereum&dkey=Asw61vWBgEgGiV0n4Kq-zfq1GZCgZgMR75uYyp-Zw4Id"
+const ethNodeURL = "https://rpc.nexus.testnet.apexfusion.org"
 
 func TestEthChainObserver(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "boltdb-test")
@@ -133,10 +133,11 @@ func TestEthChainObserver(t *testing.T) {
 		testConfig := &oCore.EthChainConfig{
 			ChainID:                 "nexus",
 			NodeURL:                 ethNodeURL,
-			PoolIntervalMiliseconds: 1 * time.Second,
+			PoolIntervalMiliseconds: 1000,
 			SyncBatchSize:           10,
 			NumBlockConfirmations:   1,
-			StartBlockNumber:        uint64(20588829),
+			StartBlockNumber:        uint64(5462655),
+			RestartTrackerPullCheck: restartTrackerWaitTime,
 		}
 
 		oracleDB.On("ClearAllTxs", mock.Anything).Return(error(nil))
@@ -151,14 +152,14 @@ func TestEthChainObserver(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
-		scAddress := ethgo.HexToAddress("0x8A796072784aaD48Bf321fBF98725Fb825E3e567")
-		eventSigs := []ethgo.Hash{
-			ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"),
-		}
+		scAddress := ethgo.HexToAddress("0xc68221AD72397d85084f2D5C7089e4e9487c118c")
+
+		eventSigs, err := eth.GetNexusEventSignatures()
+		require.NoError(t, err)
 
 		trackerConfig := &eventTracker.EventTrackerConfig{
 			RPCEndpoint:            testConfig.NodeURL,
-			PollInterval:           1 * time.Second,
+			PollInterval:           testConfig.PoolIntervalMiliseconds * time.Millisecond,
 			SyncBatchSize:          testConfig.SyncBatchSize,
 			NumBlockConfirmations:  testConfig.NumBlockConfirmations,
 			NumOfBlocksToReconcile: uint64(0),
@@ -174,9 +175,6 @@ func TestEthChainObserver(t *testing.T) {
 		}
 
 		chainObserver.tracker, err = eventTracker.NewEventTracker(trackerConfig, indexerDB, testConfig.StartBlockNumber)
-		require.NoError(t, err)
-
-		err = chainObserver.Start()
 		require.NoError(t, err)
 
 		err = chainObserver.Start()
