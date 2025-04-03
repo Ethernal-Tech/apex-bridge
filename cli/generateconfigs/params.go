@@ -694,10 +694,17 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
-				LogFilePath:   filepath.Join(p.logsPath, "validator-components.log"),
-				LogLevel:      hclog.Debug,
-				JSONLogFormat: false,
-				AppendFile:    true,
+				LogFilePath:         filepath.Join(p.logsPath, "validator-components.log"),
+				LogLevel:            hclog.Debug,
+				JSONLogFormat:       false,
+				AppendFile:          true,
+				RotatingLogsEnabled: false,
+				RotatingLogerConfig: logger.RotatingLoggerConfig{
+					MaxSize:    5,
+					MaxBackups: 10,
+					MaxAge:     30,
+					Compress:   false,
+				},
 			},
 			DbsPath: filepath.Join(p.dbsPath, "validatorcomponents"),
 		},
