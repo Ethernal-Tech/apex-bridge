@@ -60,6 +60,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 		},
+		RefundEnabled: true,
 	}
 	appConfig.FillOut()
 

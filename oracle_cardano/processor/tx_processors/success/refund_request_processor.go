@@ -45,6 +45,10 @@ func (*RefundRequestProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cC
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
+	if !appConfig.RefundEnabled {
+		return fmt.Errorf("refund is not enabled")
+	}
+
 	metadata, err := common.UnmarshalMetadata[common.RefundBridgingRequestMetadata](
 		common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {

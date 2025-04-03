@@ -34,6 +34,10 @@ func (*RefundRequestProcessorImpl) PreValidate(tx *core.EthTx, appConfig *cCore.
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
 ) error {
+	if !appConfig.RefundEnabled {
+		return fmt.Errorf("refund is not enabled")
+	}
+
 	metadata, err := core.UnmarshalEthMetadata[core.RefundBridgingRequestEthMetadata](
 		tx.Metadata)
 	if err != nil {
