@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -773,7 +774,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		refundTokenAmount := uint64(100)
 		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: refundTokenAmount}, nil).Once()
 
-		txs = append(txs, eth.ConfirmedTransaction{
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2}),
 			Receivers: []eth.BridgeReceiver{
@@ -796,8 +797,6 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		}
 
 		require.Equal(t, refundTokenAmount, refundUtxosPerConfirmedTx[len(txs)-1][0].Output.Amount)
-
-		txs = txs[:len(txs)-1]
 	})
 
 	t.Run("getUtxosFromRefundTransactions with more output indexes pass", func(t *testing.T) {
@@ -806,7 +805,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 2 * refundTokenAmount}, nil).Once()
 		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 3 * refundTokenAmount}, nil).Once()
 
-		txs = append(txs, eth.ConfirmedTransaction{
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2, 3, 5}),
 			Receivers: []eth.BridgeReceiver{
@@ -829,8 +828,6 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 				require.Empty(t, refundUtxo)
 			}
 		}
-
-		txs = txs[:len(txs)-1]
 	})
 }
 
@@ -933,7 +930,7 @@ func Test_getOutputs(t *testing.T) {
 
 	t.Run("getOutputs with refund pass", func(t *testing.T) {
 		refundTxAmount := uint64(300)
-		txs = append(txs, eth.ConfirmedTransaction{
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
@@ -981,8 +978,6 @@ func Test_getOutputs(t *testing.T) {
 				Amount: 220,
 			},
 		}, res.Outputs)
-
-		txs = txs[:len(txs)-1]
 	})
 
 	t.Run("getOutputs with refund pass with tokens", func(t *testing.T) {
