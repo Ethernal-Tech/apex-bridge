@@ -1,8 +1,6 @@
 module github.com/Ethernal-Tech/apex-bridge
 
-go 1.22
-
-toolchain go1.23.1
+go 1.23.1
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250131082129-26f286625815
