@@ -789,10 +789,17 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
-			LogFilePath:   filepath.Join(p.logsPath, "relayer.log"),
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
+			LogFilePath:         filepath.Join(p.logsPath, "relayer.log"),
+			LogLevel:            hclog.Debug,
+			JSONLogFormat:       false,
+			AppendFile:          true,
+			RotatingLogsEnabled: false,
+			RotatingLogerConfig: logger.RotatingLoggerConfig{
+				MaxSizeInMB:  100,
+				MaxBackups:   30,
+				MaxAgeInDays: 30,
+				Compress:     false,
+			},
 		},
 	}
 
