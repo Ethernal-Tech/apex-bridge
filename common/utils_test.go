@@ -109,7 +109,7 @@ func TestGetRequiredSignaturesForConsensus(t *testing.T) {
 	t.Parallel()
 
 	assert.Equal(t, 3, int(GetRequiredSignaturesForConsensus(4)))
-	assert.Equal(t, 4, int(GetRequiredSignaturesForConsensus(6)))
+	assert.Equal(t, 5, int(GetRequiredSignaturesForConsensus(6)))
 	assert.Equal(t, 7, int(GetRequiredSignaturesForConsensus(10)))
 	assert.Equal(t, 14, int(GetRequiredSignaturesForConsensus(20)))
 }
