@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -228,6 +230,42 @@ func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
 }
 
 var _ EthTxSuccessProcessor = (*EthTxSuccessProcessorMock)(nil)
+
+type EthTxSuccessRefundProcessorMock struct {
+	mock.Mock
+	SuccessProc EthTxSuccessProcessorMock
+}
+
+// GetType implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
+	return m.SuccessProc.GetType()
+}
+
+// HandleBridgingProcessorError implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) HandleBridgingProcessorError(
+	claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig,
+	err error, errContext string) error {
+	if appConfig.RefundEnabled {
+		args := m.Called(claims, tx, appConfig)
+
+		return args.Error(0)
+	}
+
+	return fmt.Errorf("%s. tx: %v, err: %w", errContext, tx, err)
+}
+
+// PreValidate implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) PreValidate(tx *EthTx, appConfig *oCore.AppConfig) error {
+	return m.SuccessProc.PreValidate(tx, appConfig)
+}
+
+// ValidateAndAddClaim implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) ValidateAndAddClaim(
+	claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig) error {
+	return m.SuccessProc.ValidateAndAddClaim(claims, tx, appConfig)
+}
+
+var _ EthTxSuccessRefundProcessor = (*EthTxSuccessRefundProcessorMock)(nil)
 
 type EthTxFailedProcessorMock struct {
 	mock.Mock

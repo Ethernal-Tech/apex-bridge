@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -58,15 +59,62 @@ func TestRefundRequestedProcessor(t *testing.T) {
 	}
 
 	proc := NewRefundRequestProcessor(hclog.NewNullLogger())
+	disabledProc := NewRefundDisabledProcessor()
 
-	t.Run("ValidateAndAddClaim empty tx - refund disabled", func(t *testing.T) {
-		claims := &oCore.BridgeClaims{}
-
+	t.Run("Refund disabled - PreValidate", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
+		err := disabledProc.PreValidate(&core.EthTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("Refund disabled - HandleBridgingProcessorError", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.HandleBridgingProcessorError(
+			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, fmt.Errorf("test err"), "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("Refund disabled - ValidateAndAddClaim", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.ValidateAndAddClaim(&oCore.BridgeClaims{}, &core.EthTx{}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "refund is not enabled")
+	})
+
+	t.Run("PreValidate - empty tx", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.EthTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("PreValidate - batchTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.EthTx{BatchTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("PreValidate - submitTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.EthTx{SubmitTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("HandleBridgingProcessorError - empty ty", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorError(
+			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, nil, "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected end of JSON input")
 	})
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {

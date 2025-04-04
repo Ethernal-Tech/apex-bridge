@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -272,6 +274,44 @@ func (m *CardanoTxSuccessProcessorMock) ValidateAndAddClaim(
 }
 
 var _ CardanoTxSuccessProcessor = (*CardanoTxSuccessProcessorMock)(nil)
+
+type CardanoTxSuccessRefundProcessorMock struct {
+	mock.Mock
+	SuccessProc *CardanoTxSuccessProcessorMock
+}
+
+// GetType implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
+	return m.SuccessProc.GetType()
+}
+
+// HandleBridgingProcessorError implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) HandleBridgingProcessorError(
+	claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig,
+	err error, errContext string,
+) error {
+	if appConfig.RefundEnabled {
+		args := m.Called(claims, tx, appConfig)
+
+		return args.Error(0)
+	}
+
+	return fmt.Errorf("%s. tx: %v, err: %w", errContext, tx, err)
+}
+
+// PreValidate implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) PreValidate(
+	tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	return m.SuccessProc.PreValidate(tx, appConfig)
+}
+
+// ValidateAndAddClaim implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) ValidateAndAddClaim(
+	claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	return m.SuccessProc.ValidateAndAddClaim(claims, tx, appConfig)
+}
+
+var _ CardanoTxSuccessRefundProcessor = (*CardanoTxSuccessRefundProcessorMock)(nil)
 
 type CardanoTxFailedProcessorMock struct {
 	mock.Mock

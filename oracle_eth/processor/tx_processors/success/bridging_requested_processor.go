@@ -15,12 +15,12 @@ import (
 var _ core.EthTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	refundRequestProcessor core.EthTxSuccessProcessor
+	refundRequestProcessor core.EthTxSuccessRefundProcessor
 	logger                 hclog.Logger
 }
 
 func NewEthBridgingRequestedProcessor(
-	refundRequestProcessor core.EthTxSuccessProcessor, logger hclog.Logger,
+	refundRequestProcessor core.EthTxSuccessRefundProcessor, logger hclog.Logger,
 ) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
 		refundRequestProcessor: refundRequestProcessor,
@@ -42,11 +42,13 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	metadata, err := core.UnmarshalEthMetadata[core.BridgingRequestEthMetadata](
 		tx.Metadata)
 	if err != nil {
-		return p.onError(claims, tx, appConfig, err, "failed to unmarshal metadata")
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
 	if metadata.BridgingTxType != p.GetType() {
-		return p.onError(claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -55,24 +57,11 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		return p.onError(claims, tx, appConfig, err, "validation failed for tx")
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "validation failed for tx")
 	}
 
 	return nil
-}
-
-func (p *BridgingRequestedProcessorImpl) onError(
-	claims *oCore.BridgeClaims, tx *core.EthTx, appConfig *oCore.AppConfig,
-	err error, errContext string,
-) error {
-	if appConfig.RefundEnabled {
-		p.logger.Warn(fmt.Sprintf("%s. handing over to refund processor", errContext),
-			"tx", tx, "err", err)
-
-		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
-	} else {
-		return fmt.Errorf("%s. tx: %v, err: %w", errContext, tx, err)
-	}
 }
 
 func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
@@ -127,12 +116,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
-	if appConfig.RefundEnabled && (tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
-		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount) {
-		return fmt.Errorf(
-			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
-			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
-			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	if err := p.refundRequestProcessor.PreValidate(tx, appConfig); err != nil {
+		return err
 	}
 
 	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {

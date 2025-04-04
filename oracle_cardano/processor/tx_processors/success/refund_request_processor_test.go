@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -84,15 +85,62 @@ func TestRefundRequestedProcessor(t *testing.T) {
 	}
 
 	proc := NewRefundRequestProcessor(hclog.NewNullLogger(), getChainInfos())
+	disabledProc := NewRefundDisabledProcessor()
 
-	t.Run("ValidateAndAddClaim empty tx - refund disabled", func(t *testing.T) {
-		claims := &cCore.BridgeClaims{}
-
+	t.Run("Refund disabled - PreValidate", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		err := disabledProc.PreValidate(&core.CardanoTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("Refund disabled - HandleBridgingProcessorError", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.HandleBridgingProcessorError(
+			&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig, fmt.Errorf("test err"), "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("Refund disabled - ValidateAndAddClaim", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.ValidateAndAddClaim(&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "refund is not enabled")
+	})
+
+	t.Run("PreValidate - empty tx", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.CardanoTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("PreValidate - batchTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.CardanoTx{BatchTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("PreValidate - submitTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.PreValidate(&core.CardanoTx{SubmitTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("HandleBridgingProcessorError - empty ty", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorError(
+			&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig, nil, "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to unmarshal metadata, err: EOF")
 	})
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
