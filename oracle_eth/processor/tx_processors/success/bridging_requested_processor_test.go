@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -24,44 +25,77 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
-	proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
+		config := &oCore.AppConfig{
+			CardanoChains: map[string]*oCore.CardanoChainConfig{
+				common.ChainIDStrPrime: {
+					NetworkID: wallet.TestNetNetwork,
+					BridgingAddresses: oCore.BridgingAddresses{
+						BridgingAddress: primeBridgingAddr,
+						FeeAddress:      primeBridgingFeeAddr,
+					},
+					UtxoMinAmount:     utxoMinValue,
+					MinFeeForBridging: minFeeForBridging,
+				},
+			},
+			EthChains: map[string]*oCore.EthChainConfig{
+				common.ChainIDStrNexus: {
+					BridgingAddresses: oCore.EthBridgingAddresses{
+						BridgingAddress: nexusBridgingAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
+				},
+			},
+			BridgingSettings: oCore.BridgingSettings{
+				MaxReceiversPerBridgingRequest: 3,
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			},
+			RefundEnabled: refundEnabled,
+		}
+		config.FillOut()
 
-	appConfig := &oCore.AppConfig{
-		CardanoChains: map[string]*oCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				NetworkID: wallet.TestNetNetwork,
-				BridgingAddresses: oCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
-				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
-			},
-		},
-		EthChains: map[string]*oCore.EthChainConfig{
-			common.ChainIDStrNexus: {
-				BridgingAddresses: oCore.EthBridgingAddresses{
-					BridgingAddress: nexusBridgingAddr,
-				},
-				MinFeeForBridging: minFeeForBridging,
-			},
-		},
-		BridgingSettings: oCore.BridgingSettings{
-			MaxReceiversPerBridgingRequest: 3,
-			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-		},
-		RefundEnabled: true,
+		return config
 	}
-	appConfig.FillOut()
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected end of JSON input")
+	})
+
+	t.Run("ValidateAndAddClaim empty tx with refund", func(t *testing.T) {
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
 		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{}, appConfig).Return(nil)
 
 		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
 		require.NoError(t, err)
+	})
+
+	t.Run("ValidateAndAddClaim empty tx with refund err", func(t *testing.T) {
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		refundRequestProcessorMock.On(
+			"ValidateAndAddClaim", claims, &core.EthTx{}, appConfig).Return(
+			fmt.Errorf("test err"))
+
+		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
@@ -72,6 +106,30 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Metadata: irrelevantMetadata,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "ValidateAndAddClaim called for irrelevant tx")
+	})
+
+	t.Run("ValidateAndAddClaim irrelevant metadata with refund", func(t *testing.T) {
+		irrelevantMetadata, err := core.MarshalEthMetadata(core.BaseEthMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, irrelevantMetadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
 		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata: irrelevantMetadata,
@@ -91,6 +149,30 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NotNil(t, relevantButNotFullMetadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Metadata: relevantButNotFullMetadata,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "origin chain not registered")
+	})
+
+	t.Run("ValidateAndAddClaim insufficient metadata with refund", func(t *testing.T) {
+		relevantButNotFullMetadata, err := core.MarshalEthMetadata(core.BaseEthMetadata{
+			BridgingTxType: common.BridgingTxTypeBridgingRequest,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, relevantButNotFullMetadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.EthTxSuccessProcessorMock{}
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
 		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
 			Metadata: relevantButNotFullMetadata,
@@ -115,16 +197,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      metadata,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "origin chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -140,16 +221,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      destinationChainNonRegisteredMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      destinationChainNonRegisteredMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
@@ -165,16 +245,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      destinationChainNonRegisteredMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      destinationChainNonRegisteredMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim more than max receivers in metadata", func(t *testing.T) {
@@ -195,16 +274,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      moreThanMaxReceiversReceiversMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      moreThanMaxReceiversReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
@@ -222,16 +300,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      metadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
@@ -250,11 +327,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      metadata,
-			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -280,16 +354,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      utxoValueBelowMinInReceiversMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      utxoValueBelowMinInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
@@ -308,16 +381,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      invalidAddrInReceiversMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      invalidAddrInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
@@ -336,16 +408,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      invalidAddrInReceiversMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      invalidAddrInReceiversMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	//nolint:dupl
@@ -370,12 +441,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Hash:          txHash,
-			Metadata:      validMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging - 1)),
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Hash:          txHash,
@@ -384,7 +451,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging - 1)),
 		}, appConfig)
 
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
 	})
 
 	//nolint:dupl
@@ -409,12 +477,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Hash:          txHash,
-			Metadata:      validMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 1)),
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Hash:          txHash,
@@ -423,7 +487,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 1)),
 		}, appConfig)
 
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "tx value is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -441,16 +506,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Metadata:      feeInReceiversLessThanMinMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      feeInReceiversLessThanMinMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
@@ -474,12 +538,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.EthTx{
-			Hash:          txHash,
-			Metadata:      validMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
-		}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Hash:          txHash,
@@ -487,7 +547,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
 		}, appConfig)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "sum of receiver amounts + fee")
+		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
@@ -508,6 +570,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
+
+		appConfig := getAppConfig(false)
+		proc := NewEthBridgingRequestedProcessor(&core.EthTxSuccessProcessorMock{}, hclog.NewNullLogger())
 
 		claims := &oCore.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{

@@ -24,38 +24,55 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	appConfig := &oCore.AppConfig{
-		CardanoChains: map[string]*oCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				NetworkID: wallet.TestNetNetwork,
-				BridgingAddresses: oCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
+	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
+		appConfig := &oCore.AppConfig{
+			CardanoChains: map[string]*oCore.CardanoChainConfig{
+				common.ChainIDStrPrime: {
+					NetworkID: wallet.TestNetNetwork,
+					BridgingAddresses: oCore.BridgingAddresses{
+						BridgingAddress: primeBridgingAddr,
+						FeeAddress:      primeBridgingFeeAddr,
+					},
+					UtxoMinAmount:     utxoMinValue,
+					MinFeeForBridging: minFeeForBridging,
 				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
 			},
-		},
-		EthChains: map[string]*oCore.EthChainConfig{
-			common.ChainIDStrNexus: {
-				BridgingAddresses: oCore.EthBridgingAddresses{
-					BridgingAddress: nexusBridgingAddr,
+			EthChains: map[string]*oCore.EthChainConfig{
+				common.ChainIDStrNexus: {
+					BridgingAddresses: oCore.EthBridgingAddresses{
+						BridgingAddress: nexusBridgingAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
 				},
-				MinFeeForBridging: minFeeForBridging,
 			},
-		},
-		BridgingSettings: oCore.BridgingSettings{
-			MaxReceiversPerBridgingRequest: 3,
-			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-		},
-		RefundEnabled: true,
+			BridgingSettings: oCore.BridgingSettings{
+				MaxReceiversPerBridgingRequest: 3,
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			},
+			RefundEnabled: refundEnabled,
+		}
+
+		appConfig.FillOut()
+
+		return appConfig
 	}
-	appConfig.FillOut()
 
 	proc := NewRefundRequestProcessor(hclog.NewNullLogger())
 
+	t.Run("ValidateAndAddClaim empty tx - refund disabled", func(t *testing.T) {
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+
+		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "refund is not enabled")
+	})
+
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
 		require.Error(t, err)
@@ -74,6 +91,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -95,6 +114,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -118,6 +139,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -143,6 +166,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,

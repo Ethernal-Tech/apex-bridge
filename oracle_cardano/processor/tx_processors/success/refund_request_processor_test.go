@@ -34,50 +34,71 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	token, _ := wallet.NewTokenAmountWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", 2_000_000, true)
 
-	appConfig := &cCore.AppConfig{
-		CardanoChains: map[string]*cCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				NetworkID: wallet.TestNetNetwork,
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
+	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
+		appConfig := &cCore.AppConfig{
+			CardanoChains: map[string]*cCore.CardanoChainConfig{
+				common.ChainIDStrPrime: {
+					NetworkID: wallet.TestNetNetwork,
+					BridgingAddresses: cCore.BridgingAddresses{
+						BridgingAddress: primeBridgingAddr,
+						FeeAddress:      primeBridgingFeeAddr,
+					},
+					UtxoMinAmount:     utxoMinValue,
+					MinFeeForBridging: minFeeForBridging,
 				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
-			},
-			common.ChainIDStrVector: {
-				NetworkID: wallet.VectorTestNetNetwork,
-				OgmiosURL: "http://ogmios.vector.testnet.apexfusion.org:1337",
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: vectorBridgingAddr,
-					FeeAddress:      vectorBridgingFeeAddr,
+				common.ChainIDStrVector: {
+					NetworkID: wallet.VectorTestNetNetwork,
+					OgmiosURL: "http://ogmios.vector.testnet.apexfusion.org:1337",
+					BridgingAddresses: cCore.BridgingAddresses{
+						BridgingAddress: vectorBridgingAddr,
+						FeeAddress:      vectorBridgingFeeAddr,
+					},
+					UtxoMinAmount:     utxoMinValue,
+					MinFeeForBridging: minFeeForBridging,
 				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
 			},
-		},
-		BridgingSettings: cCore.BridgingSettings{
-			MaxReceiversPerBridgingRequest: 3,
-			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-		},
-		RefundEnabled: true,
-	}
-	appConfig.FillOut()
+			BridgingSettings: cCore.BridgingSettings{
+				MaxReceiversPerBridgingRequest: 3,
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			},
+			RefundEnabled: refundEnabled,
+		}
+		appConfig.FillOut()
 
-	chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
-
-	for _, cc := range appConfig.CardanoChains {
-		info := chain.NewCardanoChainInfo(cc)
-
-		info.ProtocolParams = protocolParameters
-
-		chainInfos[cc.ChainID] = info
+		return appConfig
 	}
 
-	proc := NewRefundRequestProcessor(hclog.NewNullLogger(), chainInfos)
+	getChainInfos := func() map[string]*chain.CardanoChainInfo {
+		appConfig := getAppConfig(true)
+		chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
+
+		for _, cc := range appConfig.CardanoChains {
+			info := chain.NewCardanoChainInfo(cc)
+
+			info.ProtocolParams = protocolParameters
+
+			chainInfos[cc.ChainID] = info
+		}
+
+		return chainInfos
+	}
+
+	proc := NewRefundRequestProcessor(hclog.NewNullLogger(), getChainInfos())
+
+	t.Run("ValidateAndAddClaim empty tx - refund disabled", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "refund is not enabled")
+	})
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
 		require.Error(t, err)
@@ -92,6 +113,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, relevantButNotFullMetadata)
 
 		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -111,6 +134,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
+
+		appConfig := getAppConfig(true)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -143,6 +168,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 
+		appConfig := getAppConfig(true)
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 1},
@@ -173,6 +200,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
+
+		appConfig := getAppConfig(true)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -258,6 +287,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 
+		appConfig := getAppConfig(true)
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: "addr1", Amount: 500_000},
@@ -298,6 +329,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
+
+		appConfig := getAppConfig(true)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
