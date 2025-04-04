@@ -18,7 +18,7 @@ const (
 	unknownNativeTokensUtxoCntMax = 3
 )
 
-var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
+var _ core.CardanoTxSuccessRefundProcessor = (*RefundRequestProcessorImpl)(nil)
 
 type RefundRequestProcessorImpl struct {
 	logger     hclog.Logger
@@ -40,6 +40,29 @@ func (*RefundRequestProcessorImpl) GetType() common.BridgingTxType {
 
 func (*RefundRequestProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return nil
+}
+
+func (*RefundRequestProcessorImpl) HandleBridgingProcessorPreValidate(
+	tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
+		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
+		return fmt.Errorf(
+			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
+			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
+			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	}
+
+	return nil
+}
+
+func (p *RefundRequestProcessorImpl) HandleBridgingProcessorError(
+	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
+	err error, errContext string,
+) error {
+	p.logger.Warn(fmt.Sprintf("%s. handing over to refund processor", errContext),
+		"tx", tx, "err", err)
+
+	return p.ValidateAndAddClaim(claims, tx, appConfig)
 }
 
 func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(

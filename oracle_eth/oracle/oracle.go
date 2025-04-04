@@ -58,14 +58,24 @@ func NewEthOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("eth_expected_txs_fetcher"))
 
-	refundRequestProcessor := successtxprocessors.NewRefundRequestProcessor(logger)
+	var (
+		refundRequestProcessor core.EthTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
+		successProcessors                                       = []core.EthTxSuccessProcessor{}
+	)
+
+	if appConfig.RefundEnabled {
+		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		successProcessors = append(successProcessors, refundRequestProcessor)
+	}
+
+	successProcessors = append(successProcessors,
+		successtxprocessors.NewEthBatchExecutedProcessor(logger),
+		successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger),
+		successtxprocessors.NewHotWalletIncrementProcessor(logger),
+	)
+
 	txProcessors := ethtxsprocessor.NewTxProcessorsCollection(
-		[]core.EthTxSuccessProcessor{
-			successtxprocessors.NewEthBatchExecutedProcessor(logger),
-			successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger),
-			successtxprocessors.NewHotWalletIncrementProcessor(logger),
-			refundRequestProcessor,
-		},
+		successProcessors,
 		[]core.EthTxFailedProcessor{
 			failedtxprocessors.NewEthBatchExecutionFailedProcessor(logger),
 		},
