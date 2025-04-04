@@ -163,6 +163,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -187,6 +189,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -215,6 +219,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -244,6 +250,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -273,6 +281,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -307,6 +317,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -338,6 +350,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -371,6 +385,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -402,6 +418,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -434,6 +452,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -466,6 +486,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -506,6 +528,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -547,6 +571,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -579,6 +605,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -618,6 +646,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
 
 		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -646,18 +676,22 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
-		appConfig := getAppConfig(false)
-		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
-
-		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
-
-		claims := &oCore.BridgeClaims{}
-		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+		ethTx := &core.EthTx{
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging)),
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		claims := &oCore.BridgeClaims{}
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)

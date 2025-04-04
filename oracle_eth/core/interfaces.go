@@ -62,6 +62,9 @@ type EthTxSuccessRefundProcessor interface {
 	HandleBridgingProcessorError(
 		claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig,
 		err error, errContext string) error
+
+	HandleBridgingProcessorPreValidate(
+		tx *EthTx, appConfig *oCore.AppConfig) error
 }
 
 type EthChainObserver interface {

@@ -116,7 +116,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
-	if err := p.refundRequestProcessor.PreValidate(tx, appConfig); err != nil {
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
 		return err
 	}
 

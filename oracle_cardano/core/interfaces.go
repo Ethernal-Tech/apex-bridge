@@ -69,6 +69,9 @@ type CardanoTxSuccessRefundProcessor interface {
 	HandleBridgingProcessorError(
 		claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig,
 		err error, errContext string) error
+
+	HandleBridgingProcessorPreValidate(
+		tx *CardanoTx, appConfig *cCore.AppConfig) error
 }
 
 type CardanoBridgeDataFetcher interface {

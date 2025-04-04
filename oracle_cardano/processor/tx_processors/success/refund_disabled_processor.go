@@ -24,6 +24,11 @@ func (*RefundDisabledProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *c
 	return nil
 }
 
+func (*RefundDisabledProcessorImpl) HandleBridgingProcessorPreValidate(
+	tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	return nil
+}
+
 func (p *RefundDisabledProcessorImpl) HandleBridgingProcessorError(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 	err error, errContext string,

@@ -280,6 +280,14 @@ type CardanoTxSuccessRefundProcessorMock struct {
 	SuccessProc *CardanoTxSuccessProcessorMock
 }
 
+// HandleBridgingProcessorPreValidate implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) HandleBridgingProcessorPreValidate(
+	tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	args := m.Called(tx, appConfig)
+
+	return args.Error(0)
+}
+
 // GetType implements CardanoTxSuccessRefundProcessor.
 func (m *CardanoTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
 	return m.SuccessProc.GetType()

@@ -87,10 +87,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 	proc := NewRefundRequestProcessor(hclog.NewNullLogger(), getChainInfos())
 	disabledProc := NewRefundDisabledProcessor()
 
-	t.Run("Refund disabled - PreValidate", func(t *testing.T) {
+	t.Run("Refund disabled - HandleBridgingProcessorPreValidate", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := disabledProc.PreValidate(&core.CardanoTx{}, appConfig)
+		err := disabledProc.HandleBridgingProcessorPreValidate(&core.CardanoTx{}, appConfig)
 		require.NoError(t, err)
 	})
 
@@ -111,25 +111,25 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "refund is not enabled")
 	})
 
-	t.Run("PreValidate - empty tx", func(t *testing.T) {
+	t.Run("HandleBridgingProcessorPreValidate - empty tx", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := proc.PreValidate(&core.CardanoTx{}, appConfig)
+		err := proc.HandleBridgingProcessorPreValidate(&core.CardanoTx{}, appConfig)
 		require.NoError(t, err)
 	})
 
-	t.Run("PreValidate - batchTryCount over", func(t *testing.T) {
+	t.Run("HandleBridgingProcessorPreValidate - batchTryCount over", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := proc.PreValidate(&core.CardanoTx{BatchTryCount: 1}, appConfig)
+		err := proc.HandleBridgingProcessorPreValidate(&core.CardanoTx{BatchTryCount: 1}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})
 
-	t.Run("PreValidate - submitTryCount over", func(t *testing.T) {
+	t.Run("HandleBridgingProcessorPreValidate - submitTryCount over", func(t *testing.T) {
 		appConfig := getAppConfig(false)
 
-		err := proc.PreValidate(&core.CardanoTx{SubmitTryCount: 1}, appConfig)
+		err := proc.HandleBridgingProcessorPreValidate(&core.CardanoTx{SubmitTryCount: 1}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})

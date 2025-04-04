@@ -236,6 +236,14 @@ type EthTxSuccessRefundProcessorMock struct {
 	SuccessProc EthTxSuccessProcessorMock
 }
 
+// HandleBridgingProcessorPreValidate implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) HandleBridgingProcessorPreValidate(
+	tx *EthTx, appConfig *oCore.AppConfig) error {
+	args := m.Called(tx, appConfig)
+
+	return args.Error(0)
+}
+
 // GetType implements EthTxSuccessRefundProcessor.
 func (m *EthTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
 	return m.SuccessProc.GetType()

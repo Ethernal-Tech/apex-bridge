@@ -39,6 +39,11 @@ func (*RefundRequestProcessorImpl) GetType() common.BridgingTxType {
 }
 
 func (*RefundRequestProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	return nil
+}
+
+func (*RefundRequestProcessorImpl) HandleBridgingProcessorPreValidate(
+	tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
 		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
 		return fmt.Errorf(
