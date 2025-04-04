@@ -82,7 +82,8 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	txs := newEVMSmartContractTransaction(
 		batchNonceID,
 		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
-		confirmedTransactions)
+		confirmedTransactions,
+		common.DfmToWei(new(big.Int).SetUint64(cco.config.MinFeeForBridging)))
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -162,28 +163,46 @@ func (cco *EVMChainOperations) Submit(
 }
 
 func newEVMSmartContractTransaction(
-	batchNonceID uint64, ttl uint64, confirmedTransactions []eth.ConfirmedTransaction,
+	batchNonceID uint64,
+	ttl uint64,
+	confirmedTransactions []eth.ConfirmedTransaction,
+	minFeeForBridging *big.Int,
 ) eth.EVMSmartContractTransaction {
 	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
 	feeAmount := new(big.Int).SetUint64(0)
 
+	updateAmount := func(mp map[string]eth.EVMSmartContractTransactionReceiver, addr string, amount *big.Int) {
+		val, exists := mp[addr]
+		if !exists {
+			val.Amount = amount
+			val.Address = common.HexToAddress(addr)
+		} else {
+			val.Amount.Add(val.Amount, amount)
+		}
+
+		mp[addr] = val
+	}
+
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
-			if recv.DestinationAddress == common.EthZeroAddr {
-				feeAmount.Add(feeAmount, common.DfmToWei(recv.Amount))
+			amount := common.DfmToWei(recv.Amount)
+			// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+			// to fee payer address, and the rest is transferred to the user.
+			// if else would be nicer but linter does not think the same way
+			if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
+				feeAmount.Add(feeAmount, minFeeForBridging)
+				updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount.Sub(amount, minFeeForBridging))
 
 				continue
 			}
 
-			val, exists := sourceAddrTxMap[recv.DestinationAddress]
-			if !exists {
-				val.Amount = common.DfmToWei(new(big.Int).Set(recv.Amount))
-				val.Address = common.HexToAddress(recv.DestinationAddress)
-			} else {
-				val.Amount.Add(val.Amount, common.DfmToWei(recv.Amount))
+			if recv.DestinationAddress == common.EthZeroAddr {
+				feeAmount.Add(feeAmount, amount)
+
+				continue
 			}
 
-			sourceAddrTxMap[recv.DestinationAddress] = val
+			updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount)
 		}
 	}
 

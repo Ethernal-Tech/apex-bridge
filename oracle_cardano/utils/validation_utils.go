@@ -44,8 +44,7 @@ func ValidateOutputsHaveTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) e
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 
 	for _, out := range tx.Outputs {
-		if len(out.Tokens) > 0 && (out.Address == chainConfig.BridgingAddresses.BridgingAddress ||
-			out.Address == chainConfig.BridgingAddresses.FeeAddress) {
+		if len(out.Tokens) > 0 && out.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			return fmt.Errorf("tx %s has output (%s, %d), with token count %d",
 				tx.Hash, out.Address, out.Amount, len(out.Tokens))
 		}

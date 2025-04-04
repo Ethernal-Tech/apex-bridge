@@ -129,38 +129,4 @@ func TestMetadata(t *testing.T) {
 		require.NotNil(t, metadata)
 		require.Equal(t, BridgingTxType("test"), metadata.BridgingTxType)
 	})
-
-	t.Run("Json Marshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJSON, RefundExecutedMetadata{BridgingTxType: "test"})
-
-		require.NoError(t, err)
-		require.NotNil(t, result)
-	})
-
-	t.Run("Json Unmarshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, RefundExecutedMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-		require.NotNil(t, result)
-
-		metadata, err := UnmarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeJSON, result)
-		require.NoError(t, err)
-		require.NotNil(t, metadata)
-	})
-
-	t.Run("Cbor Marshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := MarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeCbor, RefundExecutedMetadata{BridgingTxType: "test"})
-
-		require.NoError(t, err)
-		require.NotNil(t, result)
-	})
-
-	t.Run("Cbor Unmarshal RefundExecutedMetadata", func(t *testing.T) {
-		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, RefundExecutedMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-		require.NotNil(t, result)
-
-		metadata, err := UnmarshalMetadata[RefundExecutedMetadata](MetadataEncodingTypeCbor, result)
-		require.NoError(t, err)
-		require.NotNil(t, metadata)
-	})
 }
