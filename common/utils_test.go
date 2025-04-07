@@ -108,10 +108,22 @@ func TestSplitString(t *testing.T) {
 func TestGetRequiredSignaturesForConsensus(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, 3, int(GetRequiredSignaturesForConsensus(4)))
-	assert.Equal(t, 5, int(GetRequiredSignaturesForConsensus(6)))
-	assert.Equal(t, 7, int(GetRequiredSignaturesForConsensus(10)))
-	assert.Equal(t, 14, int(GetRequiredSignaturesForConsensus(20)))
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, 3, int(GetRequiredSignaturesForConsensus(4)))
+		assert.Equal(t, 5, int(GetRequiredSignaturesForConsensus(6)))
+		assert.Equal(t, 7, int(GetRequiredSignaturesForConsensus(10)))
+		assert.Equal(t, 14, int(GetRequiredSignaturesForConsensus(20)))
+	})
+
+	t.Run("1-65535", func(t *testing.T) {
+		t.Parallel()
+
+		for i := uint64(1); i <= 65535; i++ {
+			assert.Equal(t, i*2/3+1, GetRequiredSignaturesForConsensus(i))
+		}
+	})
 }
 
 func TestKeccak256(t *testing.T) {
