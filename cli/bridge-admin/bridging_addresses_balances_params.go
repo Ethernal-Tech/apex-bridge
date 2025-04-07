@@ -3,6 +3,7 @@ package clibridgeadmin
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -117,88 +118,37 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		return nil, err
 	}
 
+	if appConfig.RunMode != common.ReactorMode {
+		return nil, fmt.Errorf("running command for the wrong run mode: %s", appConfig.RunMode)
+	}
+
 	chainWalletAddr := map[string]string{
 		common.ChainIDStrPrime:  b.primeWalletAddress,
 		common.ChainIDStrVector: b.vectorWalletAddress,
 		common.ChainIDStrNexus:  b.nexusWalletAddress,
 	}
 
-	multisigUtxos := make(map[string][]cardanowallet.Utxo)
-
-	if b.indexerDbsPath != "" { // Retrieve Cardano balances from the database
-		cardanoIndexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
-
-		// Open connections to the DB for Cardano chains
-		for chainID := range appConfig.CardanoChains {
-			indexerDB, err := indexerDb.NewDatabaseInit("",
-				filepath.Join(b.indexerDbsPath, chainID+".db"))
-			if err != nil {
-				return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", chainID, err)
-			}
-
-			cardanoIndexerDbs[chainID] = indexerDB
-		}
-
-		// Retrieve UTXOs for Cardano BridgingAddresses from the DB
-		for chainID, cardanoIndexerDB := range cardanoIndexerDbs {
-			bridgingAddress := chainWalletAddr[chainID]
-
-			indexerUtxos, err := cardanoIndexerDB.GetAllTxOutputs(bridgingAddress, true)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, utxo := range indexerUtxos {
-				walletUtxo := cardanowallet.Utxo{
-					Amount: utxo.Output.Amount,
-					Tokens: make([]cardanowallet.TokenAmount, len(utxo.Output.Tokens)),
-				}
-				for i, token := range utxo.Output.Tokens {
-					walletUtxo.Tokens[i] = cardanowallet.TokenAmount{
-						Token:  cardanowallet.NewToken(token.PolicyID, token.Name),
-						Amount: token.Amount,
-					}
-				}
-
-				multisigUtxos[chainID] = append(multisigUtxos[chainID], walletUtxo)
-			}
-		}
-
-		for chainID, indexerDB := range cardanoIndexerDbs {
-			err := indexerDB.Close()
-			if err != nil {
-				return nil, fmt.Errorf("failed to close the indexer db for chain: %s. err: %w", chainID, err)
-			}
-		}
-	} else { // Retrieve Cardano balances via Ogmios
-		for chainID, cardanoConfig := range appConfig.CardanoChains {
-			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
-
-			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
-			if err != nil {
-				return nil, err
-			}
-
-			multisigUtxos[chainID] = append(multisigUtxos[chainID], ogmiosUtxos...)
-		}
+	multisigUtxos, err := getAllUtxos(appConfig, chainWalletAddr, b.indexerDbsPath)
+	if err != nil {
+		return nil, err
 	}
 
 	for chainID, utxos := range multisigUtxos {
 		var (
-			multisigBalance uint64
+			lovelaceBalance = big.NewInt(0)
 			filteredCount   int
 		)
 
 		for _, utxo := range utxos {
 			if len(utxo.Tokens) == 0 {
-				multisigBalance += utxo.Amount
+				lovelaceBalance.Add(lovelaceBalance, new(big.Int).SetUint64(utxo.Amount))
 				filteredCount++
 			}
 		}
 
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", chainWalletAddr[chainID])))
-		_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", multisigBalance)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %v\n", lovelaceBalance)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(utxos))))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 		outputter.WriteOutput()
@@ -231,3 +181,72 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 var (
 	_ common.CliCommandExecutor = (*bridgingAddressesBalancesParams)(nil)
 )
+
+func getAllUtxos(
+	appConfig *vcCore.AppConfig, chainWalletAddr map[string]string, indexerDbsPath string,
+) (map[string][]indexer.TxOutput, error) {
+	multisigUtxos := make(map[string][]indexer.TxOutput)
+
+	if indexerDbsPath != "" { // Retrieve Cardano balances from the database
+		cardanoIndexerDbs := make(map[string]indexer.Database, len(appConfig.CardanoChains))
+
+		// Open connections to the DB for Cardano chains
+		for chainID := range appConfig.CardanoChains {
+			indexerDB, err := indexerDb.NewDatabaseInit("",
+				filepath.Join(indexerDbsPath, chainID+".db"))
+			if err != nil {
+				return nil, fmt.Errorf("failed to open oracle indexer db for `%s`: %w", chainID, err)
+			}
+
+			cardanoIndexerDbs[chainID] = indexerDB
+		}
+
+		// Retrieve UTXOs for Cardano BridgingAddresses from the DB
+		for chainID, cardanoIndexerDB := range cardanoIndexerDbs {
+			bridgingAddress := chainWalletAddr[chainID]
+
+			indexerUtxos, err := cardanoIndexerDB.GetAllTxOutputs(bridgingAddress, true)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, txOut := range indexerUtxos {
+				multisigUtxos[chainID] = append(multisigUtxos[chainID], txOut.Output)
+			}
+		}
+
+		for chainID, indexerDB := range cardanoIndexerDbs {
+			err := indexerDB.Close()
+			if err != nil {
+				return nil, fmt.Errorf("failed to close the indexer db for chain: %s. err: %w", chainID, err)
+			}
+		}
+	} else { // Retrieve Cardano balances via Ogmios
+		for chainID, cardanoConfig := range appConfig.CardanoChains {
+			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
+
+			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
+			if err != nil {
+				return nil, err
+			}
+
+			for _, utxo := range ogmiosUtxos {
+				walletUtxo := indexer.TxOutput{
+					Amount: utxo.Amount,
+					Tokens: make([]indexer.TokenAmount, len(utxo.Tokens)),
+				}
+				for i, token := range utxo.Tokens {
+					walletUtxo.Tokens[i] = indexer.TokenAmount{
+						PolicyID: token.PolicyID,
+						Name:     token.Name,
+						Amount:   token.Amount,
+					}
+				}
+
+				multisigUtxos[chainID] = append(multisigUtxos[chainID], walletUtxo)
+			}
+		}
+	}
+
+	return multisigUtxos, nil
+}

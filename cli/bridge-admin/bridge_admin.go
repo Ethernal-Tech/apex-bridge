@@ -5,14 +5,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const skylineUse = "skyline"
+
 var (
-	getChainTokenQuantityParamsData    = &getChainTokenQuantityParams{}
-	updateChainTokenQuantityParamsData = &updateChainTokenQuantityParams{}
-	defundParamsData                   = &defundParams{}
-	setAdditionalDataParamsData        = &setAdditionalDataParams{}
-	setMinAmountsParamsData            = &setMinAmountsParams{}
-	validatorsDataParamsData           = &validatorsDataParams{}
-	bridgingAddressesBalancesData      = &bridgingAddressesBalancesParams{}
+	getChainTokenQuantityParamsData      = &getChainTokenQuantityParams{}
+	updateChainTokenQuantityParamsData   = &updateChainTokenQuantityParams{}
+	defundParamsData                     = &defundParams{}
+	setAdditionalDataParamsData          = &setAdditionalDataParams{}
+	setMinAmountsParamsData              = &setMinAmountsParams{}
+	validatorsDataParamsData             = &validatorsDataParams{}
+	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
+	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -66,11 +69,19 @@ func GetBridgeAdminCommand() *cobra.Command {
 	}
 	bridgingAddressesBalancesCmd := &cobra.Command{
 		Use:   "get-bridging-addresses-balances",
-		Short: "get-bridging-addresses-balances",
+		Short: "get bridging addresses balances",
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return bridgingAddressesBalancesData.ValidateFlags()
 		},
 		Run: common.GetCliRunCommand(bridgingAddressesBalancesData),
+	}
+	bridgingAddressesBalancesSkylineCmd := &cobra.Command{
+		Use:   skylineUse,
+		Short: "get bridging addresses balances for skyline",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return bridgingAddressesBalancesSkylineData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(bridgingAddressesBalancesSkylineData),
 	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
@@ -80,6 +91,9 @@ func GetBridgeAdminCommand() *cobra.Command {
 	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
 	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
+	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
+
+	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",

@@ -9,8 +9,9 @@ import (
 )
 
 type chainTokenQuantity struct {
-	chainID string
-	amount  *big.Int
+	chainID        string
+	amount         *big.Int
+	isWrappedToken bool
 }
 type chainTokenQuantityResult struct {
 	results []chainTokenQuantity
@@ -23,7 +24,8 @@ func (r chainTokenQuantityResult) GetOutput() string {
 
 	for _, x := range r.results {
 		data = append(data, fmt.Sprintf("chainID|%s", x.chainID),
-			fmt.Sprintf("amount|%s", x.amount))
+			fmt.Sprintf("amount|%s", x.amount),
+			fmt.Sprintf("isWrappedToken|%v", x.isWrappedToken))
 	}
 
 	buffer.WriteString(common.FormatKV(data))

@@ -334,6 +334,7 @@ $ apex-bridge bridge-admin get-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain prime --chain nexus --chain vector
 ```
+- optional `--is-wrapped-token` bool flag
 
 ```shell
 $ apex-bridge bridge-admin update-chain-token-quantity \
@@ -341,6 +342,7 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
+- optional `--is-wrapped-token` bool flag
 
 ```shell
 $ apex-bridge bridge-admin set-min-amounts \
@@ -383,5 +385,13 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \
         --prime-wallet-addr addr_test1wrapsqy073nhdx7tz4j54q4aanhzqqgfpydftysvqyqw50cgz9hpl \
         --vector-wallet-addr vector_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
-        --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
+        --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4
+```
+
+```shell
+$ apex-bridge bridge-admin get-bridging-addresses-balances skyline \
+        --config ./config.json \
+        --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunSkylineBridge/validator_1/bridging-dbs/validatorcomponents \
+        --prime-wallet-addr addr_test1wpg8ayttfkr2gvj47p2qkekhrx7w0ecjfdedh6ewrzjhnyg0t7rzg \
+        --cardano-wallet-addr addr_test1wrzslpc4stfp78r774k96gxgv4nl2nluc84nv8xkdm0pv7cp4j05f
 ```
