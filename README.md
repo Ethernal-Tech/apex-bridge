@@ -334,7 +334,6 @@ $ apex-bridge bridge-admin get-chain-token-quantity \
         --bridge-url http://localhost:12013 \
         --chain prime --chain nexus --chain vector
 ```
-- optional `--is-wrapped-token` bool flag
 
 ```shell
 $ apex-bridge bridge-admin update-chain-token-quantity \

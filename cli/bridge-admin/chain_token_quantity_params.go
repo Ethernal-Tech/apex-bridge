@@ -24,9 +24,8 @@ const (
 )
 
 type getChainTokenQuantityParams struct {
-	bridgeNodeURL  string
-	chainIDs       []string
-	isWrappedToken bool
+	bridgeNodeURL string
+	chainIDs      []string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -59,25 +58,20 @@ func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.
 	results := make([]chainTokenQuantity, len(g.chainIDs))
 
 	for i, chainID := range g.chainIDs {
-		var (
-			amount *big.Int
-			err    error
-		)
-
-		if g.isWrappedToken {
-			amount, err = contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
-		} else {
-			amount, err = contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+		if err != nil {
+			return nil, err
 		}
 
+		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
 		if err != nil {
 			return nil, err
 		}
 
 		results[i] = chainTokenQuantity{
-			chainID:        chainID,
-			amount:         amount,
-			isWrappedToken: g.isWrappedToken,
+			chainID:       chainID,
+			amount:        amount,
+			wrappedAmount: wrappedAmount,
 		}
 	}
 
@@ -98,12 +92,6 @@ func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		chainIDFlag,
 		nil,
 		chainIDFlagDesc,
-	)
-	cmd.Flags().BoolVar(
-		&g.isWrappedToken,
-		isWrappedTokenFlag,
-		false,
-		isWrappedTokenFlagDesc,
 	)
 }
 
