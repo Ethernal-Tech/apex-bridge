@@ -3,7 +3,6 @@ package clibridgeadmin
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 
@@ -135,20 +134,20 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 
 	for chainID, utxos := range multisigUtxos {
 		var (
-			lovelaceBalance = big.NewInt(0)
+			lovelaceBalance = uint64(0)
 			filteredCount   int
 		)
 
 		for _, utxo := range utxos {
 			if len(utxo.Tokens) == 0 {
-				lovelaceBalance.Add(lovelaceBalance, new(big.Int).SetUint64(utxo.Amount))
+				lovelaceBalance += utxo.Amount
 				filteredCount++
 			}
 		}
 
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", chainWalletAddr[chainID])))
-		_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %v\n", lovelaceBalance)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Balance = %d\n", lovelaceBalance)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(utxos))))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 		outputter.WriteOutput()

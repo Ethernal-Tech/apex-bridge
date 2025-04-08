@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"fmt"
-	"math/big"
 	"os"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -113,8 +112,8 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 
 	for chainID, utxos := range multisigUtxos {
 		var (
-			lovelaceBalance     = big.NewInt(0)
-			wrappedTokenBalance = big.NewInt(0)
+			lovelaceBalance     = uint64(0)
+			wrappedTokenBalance = uint64(0)
 			filteredCount       int
 		)
 
@@ -129,7 +128,7 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 			if !cardanotx.UtxoContainsUnknownTokens(utxo, knownTokens...) {
 				filteredCount++
 
-				lovelaceBalance.Add(lovelaceBalance, new(big.Int).SetUint64(utxo.Amount))
+				lovelaceBalance += utxo.Amount
 
 				if len(chainConfig.NativeTokens) == 0 {
 					continue
@@ -143,14 +142,14 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 				multisigWrappedTokenAmount := cardanotx.GetTokenAmount(
 					&utxo, nativeToken.String())
 
-				wrappedTokenBalance.Add(wrappedTokenBalance, new(big.Int).SetUint64(multisigWrappedTokenAmount))
+				wrappedTokenBalance += multisigWrappedTokenAmount
 			}
 		}
 
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Balances on %s chain: \n", chainID)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging Address = %s\n", chainWalletAddr[chainID])))
-		_, _ = outputter.Write([]byte(fmt.Sprintf("Lovelace Balance = %v\n", lovelaceBalance)))
-		_, _ = outputter.Write([]byte(fmt.Sprintf("Wrapped Token Balance = %v\n", wrappedTokenBalance)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Lovelace Balance = %d\n", lovelaceBalance)))
+		_, _ = outputter.Write([]byte(fmt.Sprintf("Wrapped Token Balance = %d\n", wrappedTokenBalance)))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("All UTXOs = %d\n", len(utxos))))
 		_, _ = outputter.Write([]byte(fmt.Sprintf("Filtered UTXOs = %d\n", filteredCount)))
 		outputter.WriteOutput()
