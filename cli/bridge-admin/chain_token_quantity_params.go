@@ -17,6 +17,9 @@ import (
 )
 
 const (
+	isWrappedTokenFlag = "is-wrapped-token"
+
+	isWrappedTokenFlagDesc           = "should refer to wrapped token"
 	chainTokenQuantityAmountFlagDesc = "amount to add or subtract"
 )
 
@@ -60,9 +63,15 @@ func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.
 			return nil, err
 		}
 
+		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+		if err != nil {
+			return nil, err
+		}
+
 		results[i] = chainTokenQuantity{
-			chainID: chainID,
-			amount:  amount,
+			chainID:       chainID,
+			amount:        amount,
+			wrappedAmount: wrappedAmount,
 		}
 	}
 
@@ -87,10 +96,11 @@ func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 type updateChainTokenQuantityParams struct {
-	bridgeNodeURL string
-	chainID       string
-	amountStr     string
-	privateKeyRaw string
+	bridgeNodeURL  string
+	chainID        string
+	amountStr      string
+	privateKeyRaw  string
+	isWrappedToken bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -150,10 +160,15 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 		return nil, err
 	}
 
+	methodName := "updateChainTokenQuantity"
+	if g.isWrappedToken {
+		methodName = "updateChainWrappedTokenQuantity"
+	}
+
 	tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
 		estimatedGas, _, err := txHelper.EstimateGas(
 			ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-			"updateChainTokenQuantity", chainIDInt, increment, amount)
+			methodName, chainIDInt, increment, amount)
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +176,10 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 		return txHelper.SendTx(
 			ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 				opts.GasLimit = estimatedGas
+
+				if g.isWrappedToken {
+					return contract.UpdateChainWrappedTokenQuantity(opts, chainIDInt, increment, amount)
+				}
 
 				return contract.UpdateChainTokenQuantity(opts, chainIDInt, increment, amount)
 			})
@@ -206,6 +225,12 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		amountFlag,
 		"0",
 		chainTokenQuantityAmountFlagDesc,
+	)
+	cmd.Flags().BoolVar(
+		&g.isWrappedToken,
+		isWrappedTokenFlag,
+		false,
+		isWrappedTokenFlagDesc,
 	)
 }
 

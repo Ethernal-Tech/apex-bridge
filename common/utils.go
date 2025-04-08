@@ -78,7 +78,7 @@ func DecodeHex(s string) ([]byte, error) {
 }
 
 func GetRequiredSignaturesForConsensus(cnt uint64) uint64 {
-	return (cnt*2 + 2) / 3
+	return cnt*2/3 + 1
 }
 
 // the context is cancelled or expired.

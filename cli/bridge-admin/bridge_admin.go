@@ -5,12 +5,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const skylineUse = "skyline"
+
 var (
-	getChainTokenQuantityParamsData    = &getChainTokenQuantityParams{}
-	updateChainTokenQuantityParamsData = &updateChainTokenQuantityParams{}
-	defundParamsData                   = &defundParams{}
-	setAdditionalDataParamsData        = &setAdditionalDataParams{}
-	setMinAmountsParamsData            = &setMinAmountsParams{}
+	getChainTokenQuantityParamsData      = &getChainTokenQuantityParams{}
+	updateChainTokenQuantityParamsData   = &updateChainTokenQuantityParams{}
+	defundParamsData                     = &defundParams{}
+	setAdditionalDataParamsData          = &setAdditionalDataParams{}
+	setMinAmountsParamsData              = &setMinAmountsParams{}
+	validatorsDataParamsData             = &validatorsDataParams{}
+	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
+	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -54,12 +59,41 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(setMinAmountsParamsData),
 	}
+	validatorDataCmd := &cobra.Command{
+		Use:   "get-validators-data",
+		Short: "get validators data",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validatorsDataParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(validatorsDataParamsData),
+	}
+	bridgingAddressesBalancesCmd := &cobra.Command{
+		Use:   "get-bridging-addresses-balances",
+		Short: "get bridging addresses balances",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return bridgingAddressesBalancesData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(bridgingAddressesBalancesData),
+	}
+	bridgingAddressesBalancesSkylineCmd := &cobra.Command{
+		Use:   skylineUse,
+		Short: "get bridging addresses balances for skyline",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return bridgingAddressesBalancesSkylineData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(bridgingAddressesBalancesSkylineData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
 	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
 	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
+	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
+	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
+	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
+
+	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
@@ -72,6 +106,8 @@ func GetBridgeAdminCommand() *cobra.Command {
 		defundCmd,
 		setAdditionalDataCmd,
 		setMinAmountsCmd,
+		validatorDataCmd,
+		bridgingAddressesBalancesCmd,
 	)
 
 	return cmd

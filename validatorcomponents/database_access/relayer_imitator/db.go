@@ -10,7 +10,7 @@ import (
 
 func NewDatabase(pathToFile string) (core.Database, error) {
 	if err := common.CreateDirectoryIfNotExists(filepath.Dir(pathToFile), 0770); err != nil {
-		return nil, fmt.Errorf("failed to create directory for validator components database: %w", err)
+		return nil, fmt.Errorf("failed to create directory for relayer imitator database: %w", err)
 	}
 
 	db := &BBoltDatabase{}
