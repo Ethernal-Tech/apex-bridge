@@ -263,11 +263,6 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	changeOutputMinUtxo, err := cardanowallet.GetTokenCostSum(builder, senderAddr, allUtxos)
-	if err != nil {
-		return nil, "", err
-	}
-
 	mintOutputMinUtxo, err := cardanowallet.GetTokenCostSum(
 		builder, senderAddr, []cardanowallet.Utxo{
 			{
@@ -280,9 +275,18 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	minUtxoAmount := max(mintOutputMinUtxo, changeOutputMinUtxo, common.MinUtxoAmountDefault)
+	potentialMinUtxo, err := cardanowallet.GetTokenCostSum(
+		builder, senderAddr,
+		append(allUtxos, cardanowallet.Utxo{
+			Amount: mintOutputMinUtxo,
+			Tokens: []cardanowallet.TokenAmount{token},
+		}),
+	)
+	if err != nil {
+		return nil, "", err
+	}
 
-	desiredLovelaceAmount := common.PotentialFeeDefault + 2*minUtxoAmount
+	desiredLovelaceAmount := common.PotentialFeeDefault + max(potentialMinUtxo, common.MinUtxoAmountDefault)
 
 	inputs, err := cardanowallet.GetUTXOsForAmount(
 		allUtxos, cardanowallet.AdaTokenName, desiredLovelaceAmount, maxInputs)
@@ -295,18 +299,13 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	txOutput := cardanowallet.TxOutput{
-		Addr:   senderAddr,
-		Amount: minUtxoAmount,
-		Tokens: append(senderTokens, token),
-	}
-
 	builder.AddInputs(inputs.Inputs...).AddTokenMints(
 		[]cardanowallet.IPolicyScript{tokenPolicyScript},
 		[]cardanowallet.TokenAmount{token},
 	)
-	builder.AddOutputs(txOutput, cardanowallet.TxOutput{
-		Addr: senderAddr,
+	builder.AddOutputs(cardanowallet.TxOutput{
+		Addr:   senderAddr,
+		Tokens: append(senderTokens, token),
 	})
 
 	fee, err := builder.CalculateFee(1)
@@ -314,14 +313,11 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	outputsSumMap := cardanowallet.GetOutputsSum([]cardanowallet.TxOutput{txOutput})
-	outputsSumMap[cardanowallet.AdaTokenName] += fee
-
 	lovelaceInputAmount := inputs.Sum[cardanowallet.AdaTokenName]
 
-	change := lovelaceInputAmount - minUtxoAmount - fee
+	change := lovelaceInputAmount - fee
 	// handle overflow or insufficient amount
-	if change > lovelaceInputAmount || change < minUtxoAmount {
+	if change > lovelaceInputAmount || change < mintOutputMinUtxo {
 		return []byte{}, "", fmt.Errorf("insufficient amount: %d", change)
 	}
 
