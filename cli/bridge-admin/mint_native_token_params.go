@@ -187,35 +187,14 @@ func mintTokenOnAddr(
 	mintToken := cardanowallet.NewTokenAmount(
 		cardanowallet.NewToken(pid, tokenName), mintAmount)
 
-	txHash, err := mintTokens(
-		ctx, outputter, networkType, networkMagic, txProvider, minterWallet,
-		mintToken, policy,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	return txHash, nil
-}
-
-func mintTokens(
-	ctx context.Context,
-	outputter common.OutputFormatter,
-	networkType cardanowallet.CardanoNetworkType,
-	networkMagic uint,
-	txProvider cardanowallet.ITxProvider,
-	wallet *cardanowallet.Wallet,
-	token cardanowallet.TokenAmount,
-	tokenPolicyScript cardanowallet.IPolicyScript,
-) (string, error) {
-	walletAddr, err := cardanotx.GetAddress(networkType, wallet)
+	walletAddr, err := cardanotx.GetAddress(networkType, minterWallet)
 	if err != nil {
 		return "", err
 	}
 
 	txRaw, txHash, err := createMintTx(
-		ctx, networkType, networkMagic, txProvider, wallet,
-		token, tokenPolicyScript,
+		ctx, networkType, networkMagic, txProvider, minterWallet,
+		mintToken, policy,
 	)
 	if err != nil {
 		return "", err
@@ -263,22 +242,10 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	mintOutputMinUtxo, err := cardanowallet.GetTokenCostSum(
-		builder, senderAddr, []cardanowallet.Utxo{
-			{
-				Amount: 0,
-				Tokens: []cardanowallet.TokenAmount{token},
-			},
-		},
-	)
-	if err != nil {
-		return nil, "", err
-	}
-
 	potentialMinUtxo, err := cardanowallet.GetTokenCostSum(
 		builder, senderAddr,
-		append(allUtxos, cardanowallet.Utxo{
-			Amount: mintOutputMinUtxo,
+		append(append([]cardanowallet.Utxo(nil), allUtxos...), cardanowallet.Utxo{
+			Amount: 0,
 			Tokens: []cardanowallet.TokenAmount{token},
 		}),
 	)
@@ -317,7 +284,7 @@ func createMintTx(
 
 	change := lovelaceInputAmount - fee
 	// handle overflow or insufficient amount
-	if change > lovelaceInputAmount || change < mintOutputMinUtxo {
+	if change > lovelaceInputAmount || change < potentialMinUtxo {
 		return []byte{}, "", fmt.Errorf("insufficient amount: %d", change)
 	}
 
