@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	// privateKeyFlag      = "key"
 	stakePrivateKeyFlag = "stake-key"
 	ogmiosURLFlag       = "ogmios"
 	networkIDFlag       = "network-id"
@@ -22,7 +21,6 @@ const (
 	tokenNameFlag       = "token-name"
 	mintAmountFlag      = "amount"
 
-	// privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLFlagDesc       = "ogmios url"
 	networkIDFlagDesc       = "network id"
@@ -76,7 +74,7 @@ func (m *mintNativeTokenParams) ValidateFlags() error {
 	}
 
 	if m.mintAmount <= 0 {
-		return fmt.Errorf("invalid --%s value %s", mintAmountFlag, m.mintAmount)
+		return fmt.Errorf("invalid --%s value %d", mintAmountFlag, m.mintAmount)
 	}
 
 	return nil
@@ -135,7 +133,7 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 
 // Execute implements common.CliCommandExecutor.
 func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	txHash, err := fundAddressWithToken(
+	txHash, err := mintTokenOnAddr(
 		context.Background(),
 		cardanowallet.CardanoNetworkType(m.networkID),
 		m.testnetMagic,
@@ -149,7 +147,8 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf(
+		"Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash)))
 
 	return nil, nil
 }
@@ -158,7 +157,7 @@ var (
 	_ common.CliCommandExecutor = (*mintNativeTokenParams)(nil)
 )
 
-func fundAddressWithToken(ctx context.Context,
+func mintTokenOnAddr(ctx context.Context,
 	networkType cardanowallet.CardanoNetworkType,
 	networkMagic uint,
 	txProvider cardanowallet.ITxProvider,
