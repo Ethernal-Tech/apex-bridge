@@ -135,6 +135,7 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	txHash, err := mintTokenOnAddr(
 		context.Background(),
+		outputter,
 		cardanowallet.CardanoNetworkType(m.networkID),
 		m.testnetMagic,
 		cardanowallet.NewTxProviderOgmios(m.ogmiosURL),
@@ -157,7 +158,9 @@ var (
 	_ common.CliCommandExecutor = (*mintNativeTokenParams)(nil)
 )
 
-func mintTokenOnAddr(ctx context.Context,
+func mintTokenOnAddr(
+	ctx context.Context,
+	outputter common.OutputFormatter,
 	networkType cardanowallet.CardanoNetworkType,
 	networkMagic uint,
 	txProvider cardanowallet.ITxProvider,
@@ -185,7 +188,7 @@ func mintTokenOnAddr(ctx context.Context,
 		cardanowallet.NewToken(pid, tokenName), mintAmount)
 
 	txHash, err := mintTokens(
-		ctx, networkType, networkMagic, txProvider, minterWallet,
+		ctx, outputter, networkType, networkMagic, txProvider, minterWallet,
 		mintToken, policy,
 	)
 	if err != nil {
@@ -197,6 +200,7 @@ func mintTokenOnAddr(ctx context.Context,
 
 func mintTokens(
 	ctx context.Context,
+	outputter common.OutputFormatter,
 	networkType cardanowallet.CardanoNetworkType,
 	networkMagic uint,
 	txProvider cardanowallet.ITxProvider,
@@ -217,7 +221,7 @@ func mintTokens(
 		return "", err
 	}
 
-	err = submitTokenTx(ctx, txProvider, txRaw, txHash, walletAddr.String())
+	err = submitTokenTx(ctx, outputter, txProvider, txRaw, txHash, walletAddr.String())
 	if err != nil {
 		return "", err
 	}
@@ -344,6 +348,7 @@ func createMintTx(
 
 func submitTokenTx(
 	ctx context.Context,
+	outputter common.OutputFormatter,
 	txProvider cardanowallet.ITxProvider,
 	txRaw []byte,
 	txHash string,
@@ -353,7 +358,8 @@ func submitTokenTx(
 		return err
 	}
 
-	fmt.Println("transaction has been submitted. hash =", txHash)
+	_, _ = outputter.Write([]byte(fmt.Sprintf(
+		"transaction has been submitted. hash = %s\n", txHash)))
 
 	newAmounts, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (map[string]uint64, error) {
 		utxos, err := txProvider.GetUtxos(ctx, receiverAddr)
@@ -373,7 +379,8 @@ func submitTokenTx(
 		return err
 	}
 
-	fmt.Printf("transaction has been included in block. hash = %s, balance = %v\n", txHash, newAmounts)
+	_, _ = outputter.Write([]byte(fmt.Sprintf(
+		"transaction has been included in block. hash = %s, balance = %v\n", txHash, newAmounts)))
 
 	return nil
 }
