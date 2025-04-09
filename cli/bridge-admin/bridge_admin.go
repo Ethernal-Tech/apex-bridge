@@ -14,6 +14,7 @@ var (
 	setAdditionalDataParamsData          = &setAdditionalDataParams{}
 	setMinAmountsParamsData              = &setMinAmountsParams{}
 	validatorsDataParamsData             = &validatorsDataParams{}
+	mintNativeTokenParamsData            = &mintNativeTokenParams{}
 	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
 	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 )
@@ -67,6 +68,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(validatorsDataParamsData),
 	}
+	mintNativeTokenCmd := &cobra.Command{
+		Use:   "mint-native-token",
+		Short: "mint native token",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return mintNativeTokenParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(mintNativeTokenParamsData),
+	}
 	bridgingAddressesBalancesCmd := &cobra.Command{
 		Use:   "get-bridging-addresses-balances",
 		Short: "get bridging addresses balances",
@@ -89,6 +98,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	defundParamsData.RegisterFlags(defundCmd)
 	setAdditionalDataParamsData.RegisterFlags(setAdditionalDataCmd)
 	setMinAmountsParamsData.RegisterFlags(setMinAmountsCmd)
+	mintNativeTokenParamsData.RegisterFlags(mintNativeTokenCmd)
 	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
 	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
@@ -106,6 +116,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		defundCmd,
 		setAdditionalDataCmd,
 		setMinAmountsCmd,
+		mintNativeTokenCmd,
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
 	)

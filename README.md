@@ -379,6 +379,18 @@ $ apex-bridge bridge-admin get-validators-data \
 ```
 
 ```shell
+$ apex-bridge bridge-admin mint-native-token \
+        --key PRIME_WALLET_PRIVATE_KEY \
+        --stake-key asd \
+        --ogmios http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --network-id 1 \
+        --testnet-magic 3311 \
+        --token-name testt \
+        --amount 10
+```
+- optional `--stake-key` flag
+
+```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --config ./config.json \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \
