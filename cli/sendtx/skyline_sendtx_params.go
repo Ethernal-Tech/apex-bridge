@@ -25,6 +25,7 @@ const (
 
 type sendSkylineTxParams struct {
 	privateKeyRaw      string
+	stakePrivateKeyRaw string
 	receivers          []string
 	chainIDSrc         string
 	chainIDDst         string
@@ -129,7 +130,15 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
 	}
 
-	p.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+	var stakeBytes []byte
+	if len(p.stakePrivateKeyRaw) > 0 {
+		stakeBytes, err = getCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, p.stakePrivateKeyRaw)
+		}
+	}
+
+	p.wallet = cardanowallet.NewWallet(bytes, stakeBytes)
 
 	if !common.IsValidHTTPURL(p.ogmiosURLSrc) {
 		return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, p.ogmiosURLSrc)
@@ -181,6 +190,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		privateKeyFlag,
 		"",
 		privateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.stakePrivateKeyRaw,
+		stakePrivateKeyFlag,
+		"",
+		stakePrivateKeyFlagDesc,
 	)
 
 	cmd.Flags().StringArrayVar(
