@@ -349,7 +349,7 @@ func (p *sendSkylineTxParams) Execute(
 		return nil, err
 	}
 
-	txRaw, txHash, _, err := txSender.CreateBridgingTx(
+	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
@@ -361,12 +361,12 @@ func (p *sendSkylineTxParams) Execute(
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SubmitTx(ctx, p.chainIDSrc, txRaw, p.wallet)
+	err = txSender.SubmitTx(ctx, p.chainIDSrc, txInfo.TxRaw, p.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
 	err = waitForSkylineTx(
@@ -382,7 +382,7 @@ func (p *sendSkylineTxParams) Execute(
 		SenderAddr: senderAddr.String(),
 		ChainID:    p.chainIDDst,
 		Receipts:   p.receiversParsed,
-		TxHash:     txHash,
+		TxHash:     txInfo.TxHash,
 	}, nil
 }
 

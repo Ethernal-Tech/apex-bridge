@@ -1,5 +1,7 @@
 package response
 
+import "encoding/hex"
+
 type BridgingTxResponse struct {
 	TxRaw             string `json:"txRaw"`
 	TxHash            string `json:"txHash"`
@@ -9,10 +11,10 @@ type BridgingTxResponse struct {
 }
 
 func NewBridgingTxResponse(
-	txRaw string, txHash string, bridgingFee uint64, amount uint64, nativeTokenAmount uint64,
+	txRaw []byte, txHash string, bridgingFee uint64, amount uint64, nativeTokenAmount uint64,
 ) *BridgingTxResponse {
 	return &BridgingTxResponse{
-		TxRaw:             txRaw,
+		TxRaw:             hex.EncodeToString(txRaw),
 		TxHash:            txHash,
 		BridgingFee:       bridgingFee,
 		Amount:            amount,

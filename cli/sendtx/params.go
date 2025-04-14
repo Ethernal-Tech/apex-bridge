@@ -386,7 +386,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		return nil, err
 	}
 
-	txRaw, txHash, _, err := txSender.CreateBridgingTx(
+	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
@@ -399,12 +399,12 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txRaw, ip.wallet)
+	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txInfo.TxRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
@@ -441,7 +441,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
 		Receipts:   ip.receiversParsed,
-		TxHash:     txHash,
+		TxHash:     txInfo.TxHash,
 	}, nil
 }
 

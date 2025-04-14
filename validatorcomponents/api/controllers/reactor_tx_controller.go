@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -68,7 +67,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txRaw, txHash, err := c.createTx(requestBody)
+	txInfo, err := c.createTx(requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
@@ -82,7 +81,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewBridgingTxResponse(txRaw, txHash, requestBody.BridgingFee, amount, 0), c.logger)
+		response.NewBridgingTxResponse(txInfo.TxRaw, txInfo.TxHash, requestBody.BridgingFee, amount, 0), c.logger)
 }
 
 func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
@@ -181,11 +180,11 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 }
 
 func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
-	string, string, error,
+	*sendtx.TxInfo, error,
 ) {
 	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create configuration")
+		return nil, fmt.Errorf("failed to create configuration")
 	}
 
 	txSender := sendtx.NewTxSender(txSenderChainsConfig)
@@ -199,15 +198,15 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 		}
 	}
 
-	txRawBytes, txHash, _, err := txSender.CreateBridgingTx(
+	txInfo, _, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 		0,
 	)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to build tx: %w", err)
+		return nil, fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	return hex.EncodeToString(txRawBytes), txHash, nil
+	return txInfo, nil
 }

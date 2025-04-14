@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -67,7 +66,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 		return
 	}
 
-	txRaw, txHash, bridgingRequestMetadata, err := sc.createTx(requestBody)
+	txInfo, bridgingRequestMetadata, err := sc.createTx(requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
 
@@ -76,9 +75,14 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 
 	currencyOutput, tokenOutput, bridgingFee := getOutputAmounts(bridgingRequestMetadata)
 
+	if txInfo.ReceiverMinUtxoAmount > currencyOutput+bridgingFee {
+		bridgingFee = txInfo.ReceiverMinUtxoAmount - currencyOutput
+	}
+
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+		response.NewBridgingTxResponse(
+			txInfo.TxRaw, txInfo.TxHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
 	)
 }
 
@@ -186,11 +190,11 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 }
 
 func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
-	string, string, *sendtx.BridgingRequestMetadata, error,
+	*sendtx.TxInfo, *sendtx.BridgingRequestMetadata, error,
 ) {
 	txSenderChainsConfig, err := sc.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to generate configuration")
+		return nil, nil, fmt.Errorf("failed to generate configuration")
 	}
 
 	txSender := sendtx.NewTxSender(txSenderChainsConfig)
@@ -208,17 +212,17 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 		}
 	}
 
-	txRawBytes, txHash, metadata, err := txSender.CreateBridgingTx(
+	txInfo, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 		requestBody.OperationFee,
 	)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)
+		return nil, nil, fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	return hex.EncodeToString(txRawBytes), txHash, metadata, nil
+	return txInfo, metadata, nil
 }
 
 func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
