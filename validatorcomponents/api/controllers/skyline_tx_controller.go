@@ -73,16 +73,12 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 		return
 	}
 
-	currencyOutput, tokenOutput, bridgingFee := getOutputAmounts(bridgingRequestMetadata)
-
-	if txInfo.ReceiverMinUtxoAmount > currencyOutput+bridgingFee {
-		bridgingFee = txInfo.ReceiverMinUtxoAmount - currencyOutput
-	}
+	currencyOutput, tokenOutput := getOutputAmounts(bridgingRequestMetadata)
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
 		response.NewBridgingTxResponse(
-			txInfo.TxRaw, txInfo.TxHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+			txInfo.TxRaw, txInfo.TxHash, bridgingRequestMetadata.BridgingFee, currencyOutput, tokenOutput), sc.logger,
 	)
 }
 
@@ -226,10 +222,8 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 }
 
 func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
-	outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64,
+	outputCurrencyLovelace uint64, outputNativeToken uint64,
 ) {
-	bridgingFee = metadata.BridgingFee + metadata.OperationFee
-
 	for _, x := range metadata.Transactions {
 		if x.IsNativeTokenOnSource() {
 			// WADA/WAPEX to ADA/APEX
@@ -240,5 +234,5 @@ func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
 		}
 	}
 
-	return outputCurrencyLovelace, outputNativeToken, bridgingFee
+	return outputCurrencyLovelace, outputNativeToken
 }
