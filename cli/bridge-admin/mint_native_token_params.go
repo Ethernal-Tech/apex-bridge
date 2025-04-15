@@ -242,13 +242,12 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	potentialMinUtxo, err := cardanowallet.GetTokenCostSum(
-		builder, senderAddr,
-		append(append([]cardanowallet.Utxo(nil), allUtxos...), cardanowallet.Utxo{
-			Amount: 0,
-			Tokens: []cardanowallet.TokenAmount{token},
-		}),
-	)
+	potentialMinUtxo, err := cardanowallet.GetMinUtxoForSumMap(
+		builder,
+		senderAddr,
+		cardanowallet.AddSumMaps(
+			cardanowallet.GetUtxosSum(allUtxos),
+			cardanowallet.GetTokensSumMap(token)))
 	if err != nil {
 		return nil, "", err
 	}

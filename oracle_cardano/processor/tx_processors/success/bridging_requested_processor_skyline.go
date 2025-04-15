@@ -333,15 +333,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 		return 0, err
 	}
 
-	potentialTokenCost, err := cardanowallet.GetTokenCostSum(
-		builder, receiverAddr, []cardanowallet.Utxo{
-			{
-				Amount: 0,
-				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(nativeToken, wrappedAmount),
-				},
-			},
-		},
+	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
+		builder,
+		receiverAddr,
+		cardanowallet.GetTokensSumMap(cardanowallet.NewTokenAmount(nativeToken, wrappedAmount)),
 	)
 	if err != nil {
 		return 0, err
