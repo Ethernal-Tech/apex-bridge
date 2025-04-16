@@ -233,11 +233,16 @@ func createMintTx(
 
 	builder.SetTestNetMagic(networkMagic)
 
-	if err := builder.SetProtocolParametersAndTTL(ctx, txProvider, 0); err != nil {
+	_, err = infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
+		return true, builder.SetProtocolParametersAndTTL(ctx, txProvider, 0)
+	})
+	if err != nil {
 		return nil, "", err
 	}
 
-	allUtxos, err := txProvider.GetUtxos(ctx, senderAddr)
+	allUtxos, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) ([]cardanowallet.Utxo, error) {
+		return txProvider.GetUtxos(ctx, senderAddr)
+	})
 	if err != nil {
 		return nil, "", err
 	}
