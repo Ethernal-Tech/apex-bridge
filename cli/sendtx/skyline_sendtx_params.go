@@ -70,7 +70,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 				fullSrcTokenNameFlag, fullDstTokenNameFlag)
 		}
 
-		token, err := getToken(p.tokenFullNameSrc)
+		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameSrc)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
 		}
@@ -79,7 +79,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		p.tokenFullNameDst = cardanowallet.AdaTokenName
 
 	case p.tokenFullNameDst != "":
-		token, err := getToken(p.tokenFullNameDst)
+		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameDst)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullDstTokenNameFlag, p.tokenFullNameDst)
 		}
@@ -414,18 +414,4 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 	}
 
 	return metadataReceivers
-}
-
-func getToken(fullName string) (token cardanowallet.Token, err error) {
-	token, err = cardanowallet.NewTokenWithFullName(fullName, false)
-	if err == nil {
-		return token, nil
-	}
-
-	token, err = cardanowallet.NewTokenWithFullName(fullName, true)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, err
 }

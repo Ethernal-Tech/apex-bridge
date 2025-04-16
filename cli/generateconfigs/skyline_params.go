@@ -207,18 +207,14 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 
 	if p.primeCardanoWrappedTokenName == "" {
 		return fmt.Errorf("missing %s", primeCardanoWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullName(p.primeCardanoWrappedTokenName, true); err != nil {
-		if _, err := wallet.NewTokenWithFullName(p.primeCardanoWrappedTokenName, false); err != nil {
-			return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
-		}
+	} else if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
+		return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
 	}
 
 	if p.cardanoPrimeWrappedTokenName == "" {
 		return fmt.Errorf("missing %s", cardanoPrimeWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullName(p.cardanoPrimeWrappedTokenName, true); err != nil {
-		if _, err := wallet.NewTokenWithFullName(p.cardanoPrimeWrappedTokenName, false); err != nil {
-			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
-		}
+	} else if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
+		return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
 	}
 
 	return nil
