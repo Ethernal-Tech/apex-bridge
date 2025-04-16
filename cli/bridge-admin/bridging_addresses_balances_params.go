@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -224,12 +225,15 @@ func getAllUtxos(
 		for chainID, cardanoConfig := range appConfig.CardanoChains {
 			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
 
-			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
+			allUtxos, err := infracommon.ExecuteWithRetry(context.Background(),
+				func(ctx context.Context) ([]cardanowallet.Utxo, error) {
+					return txProvider.GetUtxos(ctx, chainWalletAddr[chainID])
+				})
 			if err != nil {
 				return nil, err
 			}
 
-			for _, utxo := range ogmiosUtxos {
+			for _, utxo := range allUtxos {
 				walletUtxo := indexer.TxOutput{
 					Amount: utxo.Amount,
 					Tokens: make([]indexer.TokenAmount, len(utxo.Tokens)),
