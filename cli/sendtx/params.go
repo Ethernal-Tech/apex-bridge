@@ -2,7 +2,6 @@ package clisendtx
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -170,14 +169,14 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
-		bytes, err := getCardanoPrivateKeyBytes(ip.privateKeyRaw)
+		bytes, err := cardanotx.GetCardanoPrivateKeyBytes(ip.privateKeyRaw)
 		if err != nil {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 		}
 
 		var stakeBytes []byte
 		if len(ip.stakePrivateKeyRaw) > 0 {
-			stakeBytes, err = getCardanoPrivateKeyBytes(ip.stakePrivateKeyRaw)
+			stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(ip.stakePrivateKeyRaw)
 			if err != nil {
 				return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, ip.stakePrivateKeyRaw)
 			}
@@ -586,18 +585,4 @@ func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
-}
-
-func getCardanoPrivateKeyBytes(str string) ([]byte, error) {
-	bytes, err := cardanowallet.GetKeyBytes(str)
-	if err != nil {
-		bytes, err = hex.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-
-		bytes = cardanowallet.PadKeyToSize(bytes)
-	}
-
-	return bytes, nil
 }

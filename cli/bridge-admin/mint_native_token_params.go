@@ -2,7 +2,6 @@ package clibridgeadmin
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -50,14 +49,14 @@ func (m *mintNativeTokenParams) ValidateFlags() error {
 		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
 	}
 
-	bytes, err := getCardanoPrivateKeyBytes(m.privateKeyRaw)
+	bytes, err := cardanotx.GetCardanoPrivateKeyBytes(m.privateKeyRaw)
 	if err != nil {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, m.privateKeyRaw)
 	}
 
 	var stakeBytes []byte
 	if len(m.stakePrivateKeyRaw) > 0 {
-		stakeBytes, err = getCardanoPrivateKeyBytes(m.stakePrivateKeyRaw)
+		stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(m.stakePrivateKeyRaw)
 		if err != nil {
 			return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, m.stakePrivateKeyRaw)
 		}
@@ -350,18 +349,4 @@ func submitTokenTx(
 		"transaction has been included in block. hash = %s, balance = %v\n", txHash, newAmounts)))
 
 	return nil
-}
-
-func getCardanoPrivateKeyBytes(str string) ([]byte, error) {
-	bytes, err := cardanowallet.GetKeyBytes(str)
-	if err != nil {
-		bytes, err = hex.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-
-		bytes = cardanowallet.PadKeyToSize(bytes)
-	}
-
-	return bytes, nil
 }

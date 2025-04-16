@@ -125,14 +125,14 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 	}
 
-	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
+	bytes, err := cardanotx.GetCardanoPrivateKeyBytes(p.privateKeyRaw)
 	if err != nil {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
 	}
 
 	var stakeBytes []byte
 	if len(p.stakePrivateKeyRaw) > 0 {
-		stakeBytes, err = getCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
+		stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
 		if err != nil {
 			return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, p.stakePrivateKeyRaw)
 		}
