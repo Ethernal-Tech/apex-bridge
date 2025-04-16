@@ -258,6 +258,7 @@ $ apex-bridge sendtx skyline \
 
 ```
 - optional `--src-token-name` which can be used instead of `--dst-token-name`
+- there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
