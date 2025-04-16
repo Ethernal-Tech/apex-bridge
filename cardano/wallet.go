@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -73,12 +74,26 @@ func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, erro
 }
 
 func GetAddress(
-	networkID cardanowallet.CardanoNetworkType, cardanoWallet *cardanowallet.Wallet,
+	networkID cardanowallet.CardanoNetworkType, wallet *cardanowallet.Wallet,
 ) (*cardanowallet.CardanoAddress, error) {
-	if len(cardanoWallet.StakeVerificationKey) > 0 {
+	if len(wallet.StakeVerificationKey) > 0 {
 		return cardanowallet.NewBaseAddress(networkID,
-			cardanoWallet.VerificationKey, cardanoWallet.StakeVerificationKey)
+			wallet.VerificationKey, wallet.StakeVerificationKey)
 	}
 
-	return cardanowallet.NewEnterpriseAddress(networkID, cardanoWallet.VerificationKey)
+	return cardanowallet.NewEnterpriseAddress(networkID, wallet.VerificationKey)
+}
+
+func GetCardanoPrivateKeyBytes(str string) ([]byte, error) {
+	bytes, err := cardanowallet.GetKeyBytes(str)
+	if err != nil {
+		bytes, err = hex.DecodeString(str)
+		if err != nil {
+			return nil, err
+		}
+
+		bytes = cardanowallet.PadKeyToSize(bytes)
+	}
+
+	return bytes, nil
 }

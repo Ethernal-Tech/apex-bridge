@@ -284,11 +284,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			metadata.BridgingFee, cardanoSrcConfig.MinFeeForBridging, metadata)
 	}
 
-	if nativeCurrencyAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
-		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
-			multisigUtxo.Amount, nativeCurrencyAmountSum)
-	}
-
 	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
 	if err != nil {
 		return err
@@ -306,6 +301,11 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		nativeCurrencyAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
 			nativeCurrencyAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+	}
+
+	if nativeCurrencyAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
+		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
+			multisigUtxo.Amount, nativeCurrencyAmountSum)
 	}
 
 	return nil
@@ -333,15 +333,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 		return 0, err
 	}
 
-	potentialTokenCost, err := cardanowallet.GetTokenCostSum(
-		builder, receiverAddr, []cardanowallet.Utxo{
-			{
-				Amount: 0,
-				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(nativeToken, wrappedAmount),
-				},
-			},
-		},
+	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
+		builder,
+		receiverAddr,
+		cardanowallet.GetTokensSumMap(cardanowallet.NewTokenAmount(nativeToken, wrappedAmount)),
 	)
 	if err != nil {
 		return 0, err

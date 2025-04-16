@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -67,18 +66,21 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 		return
 	}
 
-	txRaw, txHash, bridgingRequestMetadata, err := sc.createTx(requestBody)
+	txInfo, bridgingRequestMetadata, err := sc.createTx(requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
 
 		return
 	}
 
-	currencyOutput, tokenOutput, bridgingFee := getOutputAmounts(bridgingRequestMetadata)
+	currencyOutput, tokenOutput := bridgingRequestMetadata.GetOutputAmounts()
+	// web does not need bridging fee and operation fee included in currency output
+	currencyOutput -= bridgingRequestMetadata.BridgingFee + bridgingRequestMetadata.OperationFee
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
-		response.NewBridgingTxResponse(txRaw, txHash, bridgingFee, currencyOutput, tokenOutput), sc.logger,
+		response.NewBridgingTxResponse(
+			txInfo.TxRaw, txInfo.TxHash, bridgingRequestMetadata.BridgingFee, currencyOutput, tokenOutput), sc.logger,
 	)
 }
 
@@ -186,11 +188,11 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 }
 
 func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
-	string, string, *sendtx.BridgingRequestMetadata, error,
+	*sendtx.TxInfo, *sendtx.BridgingRequestMetadata, error,
 ) {
 	txSenderChainsConfig, err := sc.oracleConfig.ToSendTxChainConfigs()
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to generate configuration")
+		return nil, nil, fmt.Errorf("failed to generate configuration")
 	}
 
 	txSender := sendtx.NewTxSender(txSenderChainsConfig)
@@ -208,33 +210,15 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 		}
 	}
 
-	txRawBytes, txHash, metadata, err := txSender.CreateBridgingTx(
+	txInfo, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 		requestBody.OperationFee,
 	)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to build tx: %w", err)
+		return nil, nil, fmt.Errorf("failed to build tx: %w", err)
 	}
 
-	return hex.EncodeToString(txRawBytes), txHash, metadata, nil
-}
-
-func getOutputAmounts(metadata *sendtx.BridgingRequestMetadata) (
-	outputCurrencyLovelace uint64, outputNativeToken uint64, bridgingFee uint64,
-) {
-	bridgingFee = metadata.BridgingFee + metadata.OperationFee
-
-	for _, x := range metadata.Transactions {
-		if x.IsNativeTokenOnSource() {
-			// WADA/WAPEX to ADA/APEX
-			outputNativeToken += x.Amount
-		} else {
-			// ADA/APEX to WADA/WAPEX or reactor
-			outputCurrencyLovelace += x.Amount
-		}
-	}
-
-	return outputCurrencyLovelace, outputNativeToken, bridgingFee
+	return txInfo, metadata, nil
 }

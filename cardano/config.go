@@ -99,17 +99,7 @@ func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token car
 }
 
 func GetNativeTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
-	token, err = cardanowallet.NewTokenWithFullName(tokenName, true)
-	if err == nil {
-		return token, nil
-	}
-
-	token, err = cardanowallet.NewTokenWithFullName(tokenName, false)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, fmt.Errorf("invalid token name: %s", tokenName)
+	return cardanowallet.NewTokenWithFullNameTry(tokenName)
 }
 
 var (

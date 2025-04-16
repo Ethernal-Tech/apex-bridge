@@ -2,7 +2,6 @@ package clisendtx
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -170,14 +169,14 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, ip.feeAmount)
 		}
 
-		bytes, err := getCardanoPrivateKeyBytes(ip.privateKeyRaw)
+		bytes, err := cardanotx.GetCardanoPrivateKeyBytes(ip.privateKeyRaw)
 		if err != nil {
 			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, ip.privateKeyRaw)
 		}
 
 		var stakeBytes []byte
 		if len(ip.stakePrivateKeyRaw) > 0 {
-			stakeBytes, err = getCardanoPrivateKeyBytes(ip.stakePrivateKeyRaw)
+			stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(ip.stakePrivateKeyRaw)
 			if err != nil {
 				return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, ip.stakePrivateKeyRaw)
 			}
@@ -386,7 +385,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		return nil, err
 	}
 
-	txRaw, txHash, _, err := txSender.CreateBridgingTx(
+	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
 		senderAddr.String(), receivers,
@@ -399,12 +398,12 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txRaw, ip.wallet)
+	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txInfo.TxRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
@@ -441,7 +440,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
 		Receipts:   ip.receiversParsed,
-		TxHash:     txHash,
+		TxHash:     txInfo.TxHash,
 	}, nil
 }
 
@@ -586,18 +585,4 @@ func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
-}
-
-func getCardanoPrivateKeyBytes(str string) ([]byte, error) {
-	bytes, err := cardanowallet.GetKeyBytes(str)
-	if err != nil {
-		bytes, err = hex.DecodeString(str)
-		if err != nil {
-			return nil, err
-		}
-
-		bytes = cardanowallet.PadKeyToSize(bytes)
-	}
-
-	return bytes, nil
 }

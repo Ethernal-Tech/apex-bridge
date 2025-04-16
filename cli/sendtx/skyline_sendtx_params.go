@@ -25,6 +25,7 @@ const (
 
 type sendSkylineTxParams struct {
 	privateKeyRaw      string
+	stakePrivateKeyRaw string
 	receivers          []string
 	chainIDSrc         string
 	chainIDDst         string
@@ -69,7 +70,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 				fullSrcTokenNameFlag, fullDstTokenNameFlag)
 		}
 
-		token, err := getToken(p.tokenFullNameSrc)
+		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameSrc)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
 		}
@@ -78,7 +79,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		p.tokenFullNameDst = cardanowallet.AdaTokenName
 
 	case p.tokenFullNameDst != "":
-		token, err := getToken(p.tokenFullNameDst)
+		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameDst)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullDstTokenNameFlag, p.tokenFullNameDst)
 		}
@@ -124,12 +125,20 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 	}
 
-	bytes, err := getCardanoPrivateKeyBytes(p.privateKeyRaw)
+	bytes, err := cardanotx.GetCardanoPrivateKeyBytes(p.privateKeyRaw)
 	if err != nil {
 		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
 	}
 
-	p.wallet = cardanowallet.NewWallet(cardanowallet.GetVerificationKeyFromSigningKey(bytes), bytes)
+	var stakeBytes []byte
+	if len(p.stakePrivateKeyRaw) > 0 {
+		stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, p.stakePrivateKeyRaw)
+		}
+	}
+
+	p.wallet = cardanowallet.NewWallet(bytes, stakeBytes)
 
 	if !common.IsValidHTTPURL(p.ogmiosURLSrc) {
 		return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, p.ogmiosURLSrc)
@@ -181,6 +190,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		privateKeyFlag,
 		"",
 		privateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.stakePrivateKeyRaw,
+		stakePrivateKeyFlag,
+		"",
+		stakePrivateKeyFlagDesc,
 	)
 
 	cmd.Flags().StringArrayVar(
@@ -333,7 +349,7 @@ func (p *sendSkylineTxParams) Execute(
 		return nil, err
 	}
 
-	txRaw, txHash, _, err := txSender.CreateBridgingTx(
+	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
 		senderAddr.String(), receivers,
@@ -345,12 +361,12 @@ func (p *sendSkylineTxParams) Execute(
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SubmitTx(ctx, p.chainIDSrc, txRaw, p.wallet)
+	err = txSender.SubmitTx(ctx, p.chainIDSrc, txInfo.TxRaw, p.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
 	err = waitForSkylineTx(
@@ -366,7 +382,7 @@ func (p *sendSkylineTxParams) Execute(
 		SenderAddr: senderAddr.String(),
 		ChainID:    p.chainIDDst,
 		Receipts:   p.receiversParsed,
-		TxHash:     txHash,
+		TxHash:     txInfo.TxHash,
 	}, nil
 }
 
@@ -398,18 +414,4 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 	}
 
 	return metadataReceivers
-}
-
-func getToken(fullName string) (token cardanowallet.Token, err error) {
-	token, err = cardanowallet.NewTokenWithFullName(fullName, false)
-	if err == nil {
-		return token, nil
-	}
-
-	token, err = cardanowallet.NewTokenWithFullName(fullName, true)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, err
 }

@@ -171,7 +171,7 @@ func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet
 
 	for tokenName, amount := range sumMap {
 		if tokenName != cardanowallet.AdaTokenName {
-			newToken, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+			newToken, err := cardanowallet.NewTokenWithFullNameTry(tokenName)
 			if err != nil {
 				return cardanowallet.TxOutput{}, err
 			}
