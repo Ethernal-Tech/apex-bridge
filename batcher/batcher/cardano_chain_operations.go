@@ -10,6 +10,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -419,7 +420,10 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		return nil, err
 	}
 
-	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceID:   batchNonceID,
+	})
 	if err != nil {
 		return nil, err
 	}
