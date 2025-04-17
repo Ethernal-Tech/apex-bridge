@@ -81,13 +81,6 @@ func CreateTx(
 	return builder.Build()
 }
 
-func CreateBatchMetaData(v uint64) ([]byte, error) {
-	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
-		BridgingTxType: common.BridgingTxTypeBatchExecution,
-		BatchNonceID:   v,
-	})
-}
-
 func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uint64) {
 	for i, x := range outputs {
 		if x.Addr == addr {
