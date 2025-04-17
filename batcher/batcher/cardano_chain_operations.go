@@ -30,6 +30,16 @@ const (
 	maxTxSize = 16000
 )
 
+type batchInitialData struct {
+	BatchNonceID            uint64
+	Metadata                []byte
+	ProtocolParams          []byte
+	MultisigPolicyScript    *cardanowallet.PolicyScript
+	MultisigFeePolicyScript *cardanowallet.PolicyScript
+	MultisigAddress         string
+	MultisigFeeAddress      string
+}
+
 type CardanoChainOperations struct {
 	config           *cardano.CardanoChainConfig
 	wallet           *cardano.CardanoWallet
@@ -594,14 +604,4 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		MultisigAddress:         multisigAddress,
 		MultisigFeeAddress:      multisigFeeAddress,
 	}, nil
-}
-
-type batchInitialData struct {
-	BatchNonceID            uint64
-	Metadata                []byte
-	ProtocolParams          []byte
-	MultisigPolicyScript    *cardanowallet.PolicyScript
-	MultisigFeePolicyScript *cardanowallet.PolicyScript
-	MultisigAddress         string
-	MultisigFeeAddress      string
 }
