@@ -22,6 +22,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -317,6 +318,129 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 }
 
+func Test_createBatchInitialData(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	cco.txProvider = txProviderMock
+
+	getValidatorsCardanoDataRetGood := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+			},
+		},
+	}
+
+	testError := errors.New("test err")
+	batchID := uint64(1)
+	destinationChain := common.ChainIDStrVector
+
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
+
+	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("no vkey for multisig address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("GetProtocolParameters error", func(t *testing.T) {
+		desiredErr := errors.New("hello")
+
+		txProviderMock.On("GetProtocolParameters", ctx).Return(nil, desiredErr)
+
+		txProviderMock.ReturnDefaultParameters = false
+		defer func() {
+			txProviderMock.ReturnDefaultParameters = true
+		}()
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
+			Return(getValidatorsCardanoDataRetGood, nil).Once()
+
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.ErrorIs(t, err, desiredErr)
+	})
+
+	t.Run("good", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
+			Return(getValidatorsCardanoDataRetGood, nil).Once()
+
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.NoError(t, err)
+
+		assert.Contains(t, data.MultisigAddress, "addr_test1")
+		assert.Contains(t, data.MultisigFeeAddress, "addr_test1")
+		assert.NotEqual(t, data.MultisigAddress, data.MultisigFeeAddress)
+		assert.Equal(t, batchID, data.BatchNonceID)
+		assert.Greater(t, len(data.Metadata), 5)
+	})
+}
+
 func TestGenerateConsolidationTransaction(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
@@ -360,49 +484,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
-
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("no vkey for multisig address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
-	})
-
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
@@ -428,8 +509,10 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.Error(t, err)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.NoError(t, err)
+
+		_, err = cco.generateConsolidationTransaction(data)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -449,8 +532,10 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.Error(t, err)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.NoError(t, err)
+
+		_, err = cco.generateConsolidationTransaction(data)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -481,7 +566,10 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.NoError(t, err)
+
+		_, err = cco.generateConsolidationTransaction(data)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -521,7 +609,11 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		result, err := cco.generateConsolidationTransaction(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		require.NoError(t, err)
+
+		result, err := cco.generateConsolidationTransaction(data)
+
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)

@@ -1,7 +1,6 @@
 package cardanotx
 
 import (
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -86,13 +85,6 @@ func CreateTx(
 	}
 
 	return builder.Build()
-}
-
-func CreateBatchMetaData(v uint64) ([]byte, error) {
-	return common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
-		BridgingTxType: common.BridgingTxTypeBatchExecution,
-		BatchNonceID:   v,
-	})
 }
 
 func getOutputForAddress(outputs []cardanowallet.TxOutput, addr string) (cardanowallet.TxOutput, int) {
