@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -26,6 +27,16 @@ var (
 const (
 	maxTxSize = 16000
 )
+
+type batchInitialData struct {
+	BatchNonceID            uint64
+	Metadata                []byte
+	ProtocolParams          []byte
+	MultisigPolicyScript    *cardanowallet.PolicyScript
+	MultisigFeePolicyScript *cardanowallet.PolicyScript
+	MultisigAddress         string
+	MultisigFeeAddress      string
+}
 
 type CardanoChainOperations struct {
 	config           *cardano.CardanoChainConfig
@@ -78,13 +89,17 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	txData, err := cco.generateBatchTransaction(
-		ctx, bridgeSmartContract, chainID, confirmedTransactions, batchNonceID)
+	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID)
+	if err != nil {
+		return nil, err
+	}
+
+	txData, err := cco.generateBatchTransaction(data, confirmedTransactions)
 
 	if cco.shouldConsolidate(err) {
 		cco.logger.Warn("consolidation batch generation started", "err", err)
 
-		txData, err = cco.generateConsolidationTransaction(ctx, bridgeSmartContract, chainID, batchNonceID)
+		txData, err = cco.generateConsolidationTransaction(data)
 		if err != nil {
 			err = fmt.Errorf("consolidation batch failed: %w", err)
 		}
@@ -146,45 +161,15 @@ func (cco *CardanoChainOperations) Submit(
 }
 
 func (cco *CardanoChainOperations) generateBatchTransaction(
-	ctx context.Context,
-	bridgeSmartContract eth.IBridgeSmartContract,
-	chainID string,
-	confirmedTransactions []eth.ConfirmedTransaction,
-	batchNonceID uint64,
+	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
 ) (*core.GeneratedBatchTxData, error) {
-	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
-	if err != nil {
-		return nil, err
-	}
-
-	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
-		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
-	if err != nil {
-		return nil, err
-	}
-
 	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, err
 	}
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
-		multisigAddress, multisigFeeAddress, protocolParams, txOutputs)
+		data.MultisigAddress, data.MultisigFeeAddress, data.ProtocolParams, txOutputs)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +179,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, err
 	}
 
-	cco.logger.Info("Creating batch tx", "batchID", batchNonceID,
+	cco.logger.Info("Creating batch tx", "batchID", data.BatchNonceID,
 		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
@@ -202,18 +187,18 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
 		uint(cco.config.NetworkMagic),
-		protocolParams,
+		data.ProtocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
-		metadata,
+		data.Metadata,
 		cardano.TxInputInfos{
 			MultiSig: &cardano.TxInputInfo{
-				PolicyScript: multisigPolicyScript,
-				Address:      multisigAddress,
+				PolicyScript: data.MultisigPolicyScript,
+				Address:      data.MultisigAddress,
 				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 			},
 			MultiSigFee: &cardano.TxInputInfo{
-				PolicyScript: multisigFeePolicyScript,
-				Address:      multisigFeeAddress,
+				PolicyScript: data.MultisigFeePolicyScript,
+				Address:      data.MultisigFeeAddress,
 				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
 		},
@@ -239,43 +224,14 @@ func (cco *CardanoChainOperations) shouldConsolidate(err error) bool {
 }
 
 func (cco *CardanoChainOperations) generateConsolidationTransaction(
-	ctx context.Context,
-	bridgeSmartContract eth.IBridgeSmartContract,
-	chainID string,
-	batchNonceID uint64,
+	data *batchInitialData,
 ) (*core.GeneratedBatchTxData, error) {
-	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(data.MultisigAddress, data.MultisigFeeAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	metadata, err := cardano.CreateBatchMetaData(batchNonceID)
-	if err != nil {
-		return nil, err
-	}
-
-	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
-		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(multisigAddress, multisigFeeAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigTxOutput, err := getTxOutputFromSumMap(multisigAddress, getSumMapFromTxInputOutput(multisigUtxos))
+	multisigTxOutput, err := getTxOutputFromSumMap(data.MultisigAddress, getSumMapFromTxInputOutput(multisigUtxos))
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +241,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		return nil, err
 	}
 
-	cco.logger.Info("Creating consolidation tx", "consolidationTxID", batchNonceID,
+	cco.logger.Info("Creating consolidation tx", "consolidationTxID", data.BatchNonceID,
 		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos))
 
@@ -293,18 +249,18 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
 		uint(cco.config.NetworkMagic),
-		protocolParams,
+		data.ProtocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
-		metadata,
+		data.Metadata,
 		cardano.TxInputInfos{
 			MultiSig: &cardano.TxInputInfo{
-				PolicyScript: multisigPolicyScript,
-				Address:      multisigAddress,
+				PolicyScript: data.MultisigPolicyScript,
+				Address:      data.MultisigAddress,
 				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 			},
 			MultiSigFee: &cardano.TxInputInfo{
-				PolicyScript: multisigFeePolicyScript,
-				Address:      multisigFeeAddress,
+				PolicyScript: data.MultisigFeePolicyScript,
+				Address:      data.MultisigFeeAddress,
 				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
 		},
@@ -465,4 +421,50 @@ func (cco *CardanoChainOperations) getCardanoData(
 	}
 
 	return validatorsData, nil
+}
+
+func (cco *CardanoChainOperations) createBatchInitialData(
+	ctx context.Context,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	chainID string,
+	batchNonceID uint64,
+) (*batchInitialData, error) {
+	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceID:   batchNonceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
+	if err != nil {
+		return nil, err
+	}
+
+	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
+		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
+	if err != nil {
+		return nil, err
+	}
+
+	return &batchInitialData{
+		BatchNonceID:            batchNonceID,
+		Metadata:                metadata,
+		ProtocolParams:          protocolParams,
+		MultisigPolicyScript:    multisigPolicyScript,
+		MultisigFeePolicyScript: multisigFeePolicyScript,
+		MultisigAddress:         multisigAddress,
+		MultisigFeeAddress:      multisigFeeAddress,
+	}, nil
 }
