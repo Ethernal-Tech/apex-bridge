@@ -5,8 +5,6 @@ lint: check-lint
 .PHONY: build
 build: check-go check-git
 	$(eval COMMIT_HASH = $(shell git rev-parse HEAD))
-#   $(eval VERSION = $(shell git describe --tags --abbrev=0 ${COMMIT_HASH}))
-#       -X 'github.com/Ethernal-Tech/apex-bridge/versioning.Version=$(VERSION)'
 	$(eval BRANCH = $(shell git rev-parse --abbrev-ref HEAD | tr -d '\040\011\012\015\n'))
 	$(eval TIME = $(shell date))
 	go build -o apex-bridge -ldflags="\
@@ -17,7 +15,7 @@ build: check-go check-git
 
 .PHONY: unit-test
 unit-test: check-go
-	go test -race -shuffle=on -coverprofile coverage.out -timeout 20m `go list ./... | grep -v e2e`	
+	go test -tags testenv -race -shuffle=on -coverprofile coverage.out -timeout 20m `go list ./... | grep -v e2e`	
 
 .PHONY: check-lint
 check-lint:
