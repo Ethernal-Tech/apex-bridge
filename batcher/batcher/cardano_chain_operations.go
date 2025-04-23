@@ -313,23 +313,20 @@ func (cco *CardanoChainOperations) getCardanoData(
 		return nil, err
 	}
 
-	hasVerificationKey, hasFeeVerificationKey := false, false
+	hasKeys := false
 
 	for _, validator := range validatorsData {
-		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.VerificationKey,
-			cardanowallet.PadKeyToSize(validator.Key[0].Bytes()))
-		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.VerificationKey,
-			cardanowallet.PadKeyToSize(validator.Key[1].Bytes()))
+		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(validator.Key[0])) &&
+			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(validator.Key[1])) {
+			hasKeys = true
+
+			break
+		}
 	}
 
-	if !hasVerificationKey {
+	if !hasKeys {
 		return nil, fmt.Errorf(
-			"verifying key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	if !hasFeeVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+			"verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	}
 
 	return validatorsData, nil
