@@ -1,7 +1,6 @@
 package batcher
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -164,22 +163,24 @@ func newEVMSmartContractTransaction(
 	batchNonceID uint64, ttl uint64, confirmedTransactions []eth.ConfirmedTransaction,
 ) eth.EVMSmartContractTransaction {
 	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
-	feeAmount := new(big.Int).SetUint64(0)
+	feeAmount := big.NewInt(0)
 
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
+			weiAmount := common.DfmToWei(recv.Amount)
+
 			if recv.DestinationAddress == common.EthZeroAddr {
-				feeAmount.Add(feeAmount, common.DfmToWei(recv.Amount))
+				feeAmount.Add(feeAmount, weiAmount)
 
 				continue
 			}
 
 			val, exists := sourceAddrTxMap[recv.DestinationAddress]
 			if !exists {
-				val.Amount = common.DfmToWei(new(big.Int).Set(recv.Amount))
+				val.Amount = weiAmount
 				val.Address = common.HexToAddress(recv.DestinationAddress)
 			} else {
-				val.Amount.Add(val.Amount, common.DfmToWei(recv.Amount))
+				val.Amount.Add(val.Amount, weiAmount)
 			}
 
 			sourceAddrTxMap[recv.DestinationAddress] = val
@@ -194,7 +195,7 @@ func newEVMSmartContractTransaction(
 
 	// every batcher should have same order
 	sort.Slice(receivers, func(i, j int) bool {
-		return bytes.Compare(receivers[i].Address[:], receivers[j].Address[:]) < 0
+		return receivers[i].Address.Cmp(receivers[j].Address) < 0
 	})
 
 	return eth.EVMSmartContractTransaction{
