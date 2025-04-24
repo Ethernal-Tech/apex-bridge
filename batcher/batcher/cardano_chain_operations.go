@@ -313,10 +313,9 @@ func (cco *CardanoChainOperations) getCardanoData(
 		return nil, err
 	}
 
-	for _, validator := range validatorsData {
-		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(validator.Key[0])) &&
-			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(validator.Key[1])) {
-
+	for _, data := range validatorsData {
+		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(data.Key[0])) &&
+			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(data.Key[1])) {
 			return validatorsData, nil
 		}
 	}
