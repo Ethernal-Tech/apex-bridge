@@ -161,7 +161,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
 	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
@@ -379,7 +379,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
 				Key: [4]*big.Int{
-					new(big.Int), new(big.Int),
+					new(big.Int), new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
 				},
 			},
 		}
@@ -387,7 +387,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
 		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.ErrorContains(t, err, "verifying key of current batcher wasn't found in validators data queried from smart contract")
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
 	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
@@ -403,7 +403,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
 		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.ErrorContains(t, err, "verifying fee key of current batcher wasn't found in validators data queried from smart contract")
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
 	t.Run("GetProtocolParameters error", func(t *testing.T) {

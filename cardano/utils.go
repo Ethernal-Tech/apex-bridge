@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -67,4 +68,8 @@ func AddrToMetaDataAddr(addr string) []string {
 	addr = strings.TrimPrefix(strings.TrimPrefix(addr, "0x"), "0X")
 
 	return common.SplitString(addr, splitStringLength)
+}
+
+func BigIntToKey(a *big.Int) []byte {
+	return wallet.PadKeyToSize(a.Bytes())
 }

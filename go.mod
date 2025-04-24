@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250131082129-26f286625815
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250404190543-a18fec845058
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250424083057-18c61b632d8a
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
@@ -134,7 +134,6 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
@@ -147,7 +146,6 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	github.com/supranational/blst v0.3.11 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
