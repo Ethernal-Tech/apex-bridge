@@ -313,23 +313,16 @@ func (cco *CardanoChainOperations) getCardanoData(
 		return nil, err
 	}
 
-	hasKeys := false
-
 	for _, validator := range validatorsData {
 		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(validator.Key[0])) &&
 			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(validator.Key[1])) {
-			hasKeys = true
 
-			break
+			return validatorsData, nil
 		}
 	}
 
-	if !hasKeys {
-		return nil, fmt.Errorf(
-			"verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	return validatorsData, nil
+	return nil, fmt.Errorf(
+		"verifying keys of current batcher wasn't found in validators data queried from smart contract")
 }
 
 func (cco *CardanoChainOperations) getUTXOsForConsolidation(
