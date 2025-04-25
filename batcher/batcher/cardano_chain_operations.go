@@ -532,7 +532,7 @@ func getNeededUtxos(
 	}
 
 	if !isUtxosOk {
-		if totalUTXOsSum >= txCostWithMinChange {
+		if totalUTXOsSum >= txCostWithMinChange || totalUTXOsSum == desiredAmount {
 			return nil, fmt.Errorf("%w: %d vs %d", errUTXOsLimitReached, totalUTXOsSum, txCostWithMinChange)
 		}
 
