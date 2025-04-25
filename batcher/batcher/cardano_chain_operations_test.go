@@ -751,8 +751,13 @@ func Test_getNeededUtxos(t *testing.T) {
 		require.ErrorIs(t, err, errUTXOsCouldNotSelect)
 	})
 
-	t.Run("not enough sum", func(t *testing.T) {
-		_, err := getNeededUtxos(inputs, 160, 5, 25, 1)
+	t.Run("errUTXOsLimitReached case change", func(t *testing.T) {
+		_, err := getNeededUtxos(inputs, 66, 14, 3, 1)
+		require.ErrorIs(t, err, errUTXOsLimitReached)
+	})
+
+	t.Run("errUTXOsLimitReached case exactly", func(t *testing.T) {
+		_, err := getNeededUtxos(inputs, 80, 20, 3, 1)
 		require.ErrorIs(t, err, errUTXOsLimitReached)
 	})
 }
