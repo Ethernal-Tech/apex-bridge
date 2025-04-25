@@ -305,7 +305,7 @@ func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 	return newSlot, nil
 }
 
-func (cco *CardanoChainOperations) getCardanoData(
+func (cco *CardanoChainOperations) getValidatorsChainData(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 ) ([]eth.ValidatorChainData, error) {
 	validatorsData, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
@@ -348,9 +348,10 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	// do not take more than maxFeeUtxoCount
-	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))]
+	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
 	// do not take more than maxUtxoCount - length of chosen fee utxos
-	multisigUtxos = multisigUtxos[:min(cco.config.MaxUtxoCount-len(feeUtxos), len(multisigUtxos))]
+	maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))
+	multisigUtxos = multisigUtxos[:maxUtxosCnt]
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
@@ -380,15 +381,14 @@ func (cco *CardanoChainOperations) getUTXOs(
 	cco.logger.Debug("UTXOs retrieved",
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
-	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
 		txOutputs.Sum[cardanowallet.AdaTokenName],
 		cco.config.UtxoMinAmount,
-		len(feeUtxos),
-		cco.config.MaxUtxoCount,
-		cco.config.TakeAtLeastUtxoCount,
+		getMaxUtxoCount(cco.config, len(feeUtxos)),
+		int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 	)
 	if err != nil {
 		return
@@ -404,7 +404,7 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	chainID string,
 	batchNonceID uint64,
 ) (*batchInitialData, error) {
-	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	validatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -486,15 +486,16 @@ func getNeededUtxos(
 	inputUTXOs []*indexer.TxInputOutput,
 	desiredAmount uint64,
 	minUtxoAmount uint64,
-	utxoCount int,
 	maxUtxoCount int,
 	takeAtLeastUtxoCount int,
 ) (chosenUTXOs []*indexer.TxInputOutput, err error) {
-	txCostWithMinChange := minUtxoAmount + desiredAmount // if we have change then it must be greater than this amount
+	// if there is a change then it must be greater than this amount
+	txCostWithMinChange := minUtxoAmount + desiredAmount
 
 	// algorithm that chooses multisig UTXOs
 	chosenUTXOsSum := uint64(0)
 	totalUTXOsSum := uint64(0)
+	utxoCount := 0
 	isUtxosOk := false
 
 	for i, utxo := range inputUTXOs {
@@ -596,4 +597,8 @@ func getOutputs(
 	})
 
 	return result
+}
+
+func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
+	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
 }
