@@ -17,6 +17,8 @@ import (
 	"unsafe"
 
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
@@ -319,4 +321,13 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 	}
 
 	return sb.String()
+}
+
+func ParseTxInfo(txRaw []byte) (indexer.TxInfo, error) {
+	txInfo, err := gouroboros.ParseTxInfo(txRaw, false)
+	if err != nil {
+		return indexer.TxInfo{}, fmt.Errorf("failed to parse tx info: %w", err)
+	}
+
+	return txInfo, nil
 }

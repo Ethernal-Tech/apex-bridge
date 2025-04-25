@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -68,7 +69,7 @@ func NewCardanoChainObserver(
 	}
 
 	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := indexer.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
@@ -118,7 +119,7 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
 }
 
-func loadSyncerConfigs(config *cCore.CardanoChainConfig) (*indexer.BlockIndexerConfig, *indexer.BlockSyncerConfig) {
+func loadSyncerConfigs(config *cCore.CardanoChainConfig) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
@@ -138,7 +139,7 @@ func loadSyncerConfigs(config *cCore.CardanoChainConfig) (*indexer.BlockIndexerC
 		AddressesOfInterest:    addressesOfInterest,
 		SoftDeleteUtxo:         false,
 	}
-	syncerConfig := &indexer.BlockSyncerConfig{
+	syncerConfig := &gouroboros.BlockSyncerConfig{
 		NetworkMagic:   config.NetworkMagic,
 		NodeAddress:    networkAddress,
 		RestartOnError: true,

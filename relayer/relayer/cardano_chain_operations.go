@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -71,7 +71,7 @@ func (cco *CardanoChainOperations) SendTx(
 			"block", tip.Block, "slot", tip.Slot, "hash", tip.Hash)
 	}
 
-	info, err := indexer.ParseTxInfo(txSigned)
+	info, err := common.ParseTxInfo(txSigned)
 	if err == nil {
 		cco.logger.Info("confirmed batch - sending tx",
 			"hash", info.Hash, "ttl", info.TTL, "fee", info.Fee, "metadata", info.MetaData)
