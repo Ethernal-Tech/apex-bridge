@@ -19,6 +19,7 @@ import (
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
+	runner    *indexer.BlockIndexerRunner
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
@@ -33,7 +34,7 @@ func NewCardanoChainObserver(
 	indexerDB indexer.Database,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, syncerConfig := loadSyncerConfigs(config)
+	indexerConfig, runnerConfig, syncerConfig := loadSyncerConfigs(config)
 
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
@@ -69,12 +70,14 @@ func NewCardanoChainObserver(
 	}
 
 	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	runner := indexer.NewBlockIndexerRunner(blockIndexer, runnerConfig, logger.Named("block_runner"))
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, runner, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
 		indexerDB: indexerDB,
 		syncer:    syncer,
+		runner:    runner,
 		logger:    logger,
 		config:    config,
 	}, nil
@@ -103,6 +106,8 @@ func (co *CardanoChainObserverImpl) Start() error {
 }
 
 func (co *CardanoChainObserverImpl) Dispose() error {
+	co.runner.Close()
+
 	err := co.syncer.Close()
 	if err != nil {
 		return fmt.Errorf("syncer close failed. err: %w", err)
@@ -119,7 +124,9 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
 }
 
-func loadSyncerConfigs(config *cCore.CardanoChainConfig) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
+func loadSyncerConfigs(
+	config *cCore.CardanoChainConfig,
+) (*indexer.BlockIndexerConfig, *indexer.BlockIndexerRunnerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
@@ -147,8 +154,12 @@ func loadSyncerConfigs(config *cCore.CardanoChainConfig) (*indexer.BlockIndexerC
 		KeepAlive:      true,
 		SyncStartTries: math.MaxInt,
 	}
+	runnerConfig := &indexer.BlockIndexerRunnerConfig{
+		AutoStart:        true,
+		QueueChannelSize: 1000,
+	}
 
-	return indexerConfig, syncerConfig
+	return indexerConfig, runnerConfig, syncerConfig
 }
 
 func initOracleState(
