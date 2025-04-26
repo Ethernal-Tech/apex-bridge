@@ -19,7 +19,7 @@ import (
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
-	runner    *indexer.BlockIndexerRunner
+	runner    indexer.Service
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
@@ -89,6 +89,8 @@ func (co *CardanoChainObserverImpl) Start() error {
 		co.logger.Debug("Started...", "hash", bp.BlockHash, "slot", bp.BlockSlot)
 	}
 
+	co.runner.Start() // start the indexer runner; spawns a new goroutine.
+
 	go func() {
 		_ = common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
 			err = co.syncer.Sync()
@@ -106,10 +108,11 @@ func (co *CardanoChainObserverImpl) Start() error {
 }
 
 func (co *CardanoChainObserverImpl) Dispose() error {
-	co.runner.Close()
+	if err := co.runner.Close(); err != nil {
+		return fmt.Errorf("runner close failed. err: %w", err)
+	}
 
-	err := co.syncer.Close()
-	if err != nil {
+	if err := co.syncer.Close(); err != nil {
 		return fmt.Errorf("syncer close failed. err: %w", err)
 	}
 
@@ -155,8 +158,7 @@ func loadSyncerConfigs(
 		SyncStartTries: math.MaxInt,
 	}
 	runnerConfig := &indexer.BlockIndexerRunnerConfig{
-		AutoStart:        true,
-		QueueChannelSize: 1000,
+		QueueChannelSize: 200,
 	}
 
 	return indexerConfig, runnerConfig, syncerConfig
