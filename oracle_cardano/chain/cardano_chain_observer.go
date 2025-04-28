@@ -16,6 +16,13 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const (
+	indexerQueueChannelSize = 1024
+	indexerRestartDelay     = time.Second * 5
+	indexerKeepAlive        = true
+	indexerSyncStartTries   = math.MaxInt
+)
+
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
@@ -147,18 +154,17 @@ func loadSyncerConfigs(
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
 		AddressesOfInterest:    addressesOfInterest,
-		SoftDeleteUtxo:         false,
 	}
 	syncerConfig := &gouroboros.BlockSyncerConfig{
 		NetworkMagic:   config.NetworkMagic,
 		NodeAddress:    networkAddress,
-		RestartOnError: true,
-		RestartDelay:   time.Second * 5,
-		KeepAlive:      true,
-		SyncStartTries: math.MaxInt,
+		RestartOnError: true, // always try to restart on non-fatal errors
+		RestartDelay:   indexerRestartDelay,
+		KeepAlive:      indexerKeepAlive,
+		SyncStartTries: indexerSyncStartTries,
 	}
 	runnerConfig := &indexer.BlockIndexerRunnerConfig{
-		QueueChannelSize: 200,
+		QueueChannelSize: indexerQueueChannelSize,
 	}
 
 	return indexerConfig, runnerConfig, syncerConfig
