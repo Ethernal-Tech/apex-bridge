@@ -6,7 +6,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +99,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -141,7 +140,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -186,7 +185,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -231,7 +230,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -276,7 +275,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -321,7 +320,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -370,7 +369,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := gouroboros.ParseTxInfo(rawTx, true)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 1)
