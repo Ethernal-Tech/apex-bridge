@@ -67,6 +67,48 @@ func TestCreateTx(t *testing.T) {
 		return 0
 	}
 
+	t.Run("empty multisig inputs", func(t *testing.T) {
+		old := txInputsInfos.MultiSig.TxInputs
+		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{}
+
+		defer func() {
+			txInputsInfos.MultiSig.TxInputs = old
+		}()
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   outputAddr,
+				Amount: common.MinUtxoAmountDefault,
+			},
+		}
+
+		_, _, err := CreateTx(
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.Error(t, err, "no inputs found for multisig (0) or fee multisig (1)")
+	})
+
+	t.Run("empty fee multisig inputs", func(t *testing.T) {
+		old := txInputsInfos.MultiSigFee.TxInputs
+		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{}
+
+		defer func() {
+			txInputsInfos.MultiSigFee.TxInputs = old
+		}()
+
+		outputs := []wallet.TxOutput{
+			{
+				Addr:   outputAddr,
+				Amount: common.MinUtxoAmountDefault,
+			},
+		}
+
+		_, _, err := CreateTx(
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs)
+
+		require.Error(t, err, "no inputs found for multisig (1) or fee multisig (0)")
+	})
+
 	t.Run("multisig and fee not in outputs with change for multisig", func(t *testing.T) {
 		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{

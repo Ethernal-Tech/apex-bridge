@@ -1,6 +1,8 @@
 package cardanotx
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -15,6 +17,11 @@ func CreateTx(
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
+	// ensure there is at least one input for both the multisig and fee multisig.
+	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 || feeLn == 0 {
+		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", ln, feeLn)
+	}
+
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
