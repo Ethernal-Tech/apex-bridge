@@ -323,11 +323,6 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 	return sb.String()
 }
 
-func ParseTxInfo(txRaw []byte) (indexer.TxInfo, error) {
-	txInfo, err := gouroboros.ParseTxInfo(txRaw, false)
-	if err != nil {
-		return indexer.TxInfo{}, fmt.Errorf("failed to parse tx info: %w", err)
-	}
-
-	return txInfo, nil
+func ParseTxInfo(txRaw []byte, full bool) (indexer.TxInfo, error) {
+	return gouroboros.ParseTxInfo(txRaw, full)
 }

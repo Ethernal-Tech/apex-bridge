@@ -71,7 +71,7 @@ func (cco *CardanoChainOperations) SendTx(
 			"block", tip.Block, "slot", tip.Slot, "hash", tip.Hash)
 	}
 
-	info, err := common.ParseTxInfo(txSigned)
+	info, err := common.ParseTxInfo(txSigned, false)
 	if err == nil {
 		cco.logger.Info("confirmed batch - sending tx",
 			"hash", info.Hash, "ttl", info.TTL, "fee", info.Fee, "metadata", info.MetaData)

@@ -92,7 +92,7 @@ func (df *CardanoBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.B
 				return nil, nil
 			}
 
-			info, err := common.ParseTxInfo(lastBatchRawTx)
+			info, err := common.ParseTxInfo(lastBatchRawTx, false)
 			if err != nil {
 				df.logger.Error("Failed to ParseTxInfo", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
 
