@@ -40,7 +40,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	t.Run("creation fails - invalid operations", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			RunMode: common.ReactorMode,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,
@@ -62,7 +61,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	t.Run("creation fails - database for chain not exists", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			RunMode: common.ReactorMode,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,
@@ -81,7 +79,6 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 	t.Run("pass", func(t *testing.T) {
 		invalidConfig := &core.BatcherManagerConfiguration{
-			RunMode: common.SkylineMode,
 			Chains: []core.ChainConfig{
 				{
 					ChainID:       common.ChainIDStrPrime,

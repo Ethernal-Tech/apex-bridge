@@ -662,7 +662,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		batchNonceID := uint64(1)
 
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10000, 100)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(30_010, 100)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
@@ -671,7 +671,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			BlockHeight: big.NewInt(1),
 			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
-				Amount:             new(big.Int).SetUint64(10000),
+				Amount:             new(big.Int).SetUint64(2_000_000),
 			}},
 		}
 

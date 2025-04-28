@@ -45,7 +45,7 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, config.RunMode, logger)
+			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -86,7 +86,7 @@ func (bm *BatchManagerImpl) Start() {
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, runMode common.VCRunMode, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
