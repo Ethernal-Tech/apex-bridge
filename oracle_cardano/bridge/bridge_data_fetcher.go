@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -91,7 +92,7 @@ func (df *CardanoBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.B
 				return nil, nil
 			}
 
-			tx, err := indexer.ParseTxInfo(lastBatchRawTx)
+			info, err := common.ParseTxInfo(lastBatchRawTx, false)
 			if err != nil {
 				df.logger.Error("Failed to ParseTxInfo", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
 
@@ -100,9 +101,9 @@ func (df *CardanoBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.B
 
 			expectedTx := &core.BridgeExpectedCardanoTx{
 				ChainID:  chainID,
-				Hash:     indexer.NewHashFromHexString(tx.Hash),
-				TTL:      tx.TTL,
-				Metadata: tx.MetaData,
+				Hash:     indexer.NewHashFromHexString(info.Hash),
+				TTL:      info.TTL,
+				Metadata: info.MetaData,
 				Priority: 0,
 			}
 

@@ -47,7 +47,7 @@ func TestCreateTx(t *testing.T) {
 		},
 	}
 
-	isInOutputs := func(ots []indexer.TxOutput, addr string) bool {
+	isInOutputs := func(ots []*indexer.TxOutput, addr string) bool {
 		for _, x := range ots {
 			if x.Address == addr {
 				return true
@@ -57,7 +57,7 @@ func TestCreateTx(t *testing.T) {
 		return false
 	}
 
-	getAmountFromOutputs := func(ots []indexer.TxOutput, addr string) uint64 {
+	getAmountFromOutputs := func(ots []*indexer.TxOutput, addr string) uint64 {
 		for _, x := range ots {
 			if x.Address == addr {
 				return x.Amount
@@ -99,7 +99,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -140,7 +140,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -185,7 +185,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -230,7 +230,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -275,7 +275,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 3)
@@ -320,7 +320,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 2)
@@ -369,7 +369,7 @@ func TestCreateTx(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
-		info, err := indexer.ParseTxFull(rawTx)
+		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 
 		require.Len(t, info.Outputs, 1)
