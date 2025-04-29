@@ -283,7 +283,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2000000,
+						Amount: 2_000_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -294,7 +294,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0xFF"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 20000,
+						Amount: 300_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -592,7 +592,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2000000,
+						Amount: 2_000_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -603,7 +603,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0xFF"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 20000,
+						Amount: 300_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -662,7 +662,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		batchNonceID := uint64(1)
 
 		multisigUtxoOutputs, multisigUtxoOutputsSum := generateSmallUtxoOutputs(1000, 100)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(2000, 10)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(1_000_000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{

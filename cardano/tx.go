@@ -1,7 +1,8 @@
 package cardanotx
 
 import (
-	"github.com/Ethernal-Tech/apex-bridge/common"
+	"fmt"
+
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -15,11 +16,23 @@ func CreateTx(
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
+	// ensure there is at least one input for both the multisig and fee multisig.
+	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 || feeLn == 0 {
+		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", ln, feeLn)
+	}
+
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
+	lovelaceOutputsAmount := outputsAmount[cardanowallet.AdaTokenName]
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
 	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
-	changeAmount := common.SafeSubtract(
-		txInputInfos.MultiSig.Sum[cardanowallet.AdaTokenName]+multisigAmount, outputsAmount[cardanowallet.AdaTokenName], 0)
+	multisigAmount += txInputInfos.MultiSig.Sum[cardanowallet.AdaTokenName]
+	feeAmount += txInputInfos.MultiSigFee.Sum[cardanowallet.AdaTokenName]
+
+	if multisigAmount < lovelaceOutputsAmount {
+		return nil, "", fmt.Errorf("not enough funds on multisig: %d vs %vs", multisigAmount, lovelaceOutputsAmount)
+	}
+
+	changeAmount := multisigAmount - lovelaceOutputsAmount
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
@@ -62,14 +75,18 @@ func CreateTx(
 	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
 		AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
-	fee, err := builder.CalculateFee(0)
+	calcFee, err := builder.CalculateFee(0)
 	if err != nil {
 		return nil, "", err
 	}
 
-	builder.SetFee(fee)
+	builder.SetFee(calcFee)
 
-	feeAmountFinal := common.SafeSubtract(txInputInfos.MultiSigFee.Sum[cardanowallet.AdaTokenName]+feeAmount, fee, 0)
+	if feeAmount < calcFee {
+		return nil, "", fmt.Errorf("not enough funds on fee multisig: %d vs %vs", feeAmount, calcFee)
+	}
+
+	feeAmountFinal := feeAmount - calcFee
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeAmountFinal > 0 {
