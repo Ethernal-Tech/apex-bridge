@@ -78,7 +78,6 @@ func (appConfig *AppConfig) SeparateConfigs() (
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
-		RunMode:       appConfig.RunMode,
 		PullTimeMilis: appConfig.BatcherPullTimeMilis,
 		Chains:        batcherChains,
 	}

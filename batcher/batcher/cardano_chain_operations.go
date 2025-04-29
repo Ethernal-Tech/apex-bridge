@@ -312,7 +312,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	// do not take more than maxFeeUtxoCount
 	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))]
 	// do not take more than maxUtxoCount - length of chosen fee utxos
-	multisigUtxos = multisigUtxos[:min(cco.config.MaxUtxoCount-len(feeUtxos), len(multisigUtxos))]
+	multisigUtxos = multisigUtxos[:min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))]
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
@@ -359,7 +359,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		multisigUtxos,
 		txOutputs.Sum,
 		minUtxoLovelaceAmount,
-		cco.config.MaxUtxoCount-len(feeUtxos),
+		getMaxUtxoCount(cco.config, len(feeUtxos)),
 		cco.config.TakeAtLeastUtxoCount,
 	)
 	if err != nil {
@@ -467,4 +467,8 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		MultisigAddress:         multisigAddress,
 		MultisigFeeAddress:      multisigFeeAddress,
 	}, nil
+}
+
+func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
+	return max(config.MaxUtxoCount-prevUtxosCnt, 0)
 }

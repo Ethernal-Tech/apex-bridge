@@ -98,7 +98,6 @@ func getNeededUtxos(
 	takeAtLeastUtxoCount int,
 ) ([]*indexer.TxInputOutput, error) {
 	inputUtxos := make([]cardanowallet.Utxo, len(txInputOutputs))
-	desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
 
 	for i, utxo := range txInputOutputs {
 		inputUtxos[i] = cardanowallet.Utxo{
@@ -113,7 +112,8 @@ func getNeededUtxos(
 		}
 	}
 
-	outputUTXOs, err := txsend.GetUTXOsForAmounts(inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
+	outputUTXOs, err := txsend.GetUTXOsForAmounts(
+		inputUtxos, desiredAmounts, minUtxoLovelaceAmount, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
