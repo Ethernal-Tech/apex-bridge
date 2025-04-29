@@ -125,15 +125,6 @@ func MulPercentage(value *big.Int, percentage uint64) *big.Int {
 	return res.Div(res, big.NewInt(100))
 }
 
-// SafeSubtract subtracts safely two uint64 value and return default value if we have overflow
-func SafeSubtract(a, b, def uint64) uint64 {
-	if a >= b {
-		return a - b
-	}
-
-	return def
-}
-
 // Keccak256 calculates the Keccak256
 func Keccak256(v ...[]byte) ([]byte, error) {
 	h := sha3.NewLegacyKeccak256()
