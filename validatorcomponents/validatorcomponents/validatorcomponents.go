@@ -10,6 +10,7 @@ import (
 
 	api "github.com/Ethernal-Tech/apex-bridge/api"
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	"github.com/Ethernal-Tech/apex-bridge/api/utils"
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -190,16 +191,21 @@ func NewValidatorComponents(
 	var apiObj *api.APIImpl
 
 	if shouldRunAPI {
-		apiControllers := []apiCore.APIController{
-			controllers.NewBridgingRequestStateController(
-				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
-			controllers.NewOracleStateController(
-				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
-				getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
-			controllers.NewSettingsController(appConfig, logger.Named("settings_controller")),
+		apiLogger, err := utils.NewAPILogger(appConfig)
+		if err != nil {
+			return nil, err
 		}
 
-		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
+		apiControllers := []apiCore.APIController{
+			controllers.NewBridgingRequestStateController(
+				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),
+			controllers.NewOracleStateController(
+				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
+				getAddressesMap(oracleConfig.CardanoChains), apiLogger.Named("oracle_state")),
+			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
+		}
+
+		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
 		}

@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 
 	"github.com/Ethernal-Tech/apex-bridge/api/model/response"
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	loggerInfra "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -73,4 +76,18 @@ func ProcessOnPort(port uint32) (string, error) {
 	}
 
 	return "", nil
+}
+
+func NewAPILogger(appConfig *core.AppConfig) (hclog.Logger, error) {
+	logDir := filepath.Dir(appConfig.Settings.Logger.LogFilePath)
+
+	apiLoggerConfig := appConfig.Settings.Logger
+	apiLoggerConfig.LogFilePath = filepath.Join(logDir, "api.log")
+
+	apiLogger, err := loggerInfra.NewLogger(apiLoggerConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create apiLogger. err: %w", err)
+	}
+
+	return apiLogger, nil
 }
