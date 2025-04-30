@@ -31,6 +31,7 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	loggerInfra "github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
@@ -66,7 +67,6 @@ func NewValidatorComponents(
 	appConfig *core.AppConfig,
 	shouldRunAPI bool,
 	logger hclog.Logger,
-	apiLogger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
 	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
@@ -185,6 +185,16 @@ func NewValidatorComponents(
 	var apiObj *api.APIImpl
 
 	if shouldRunAPI {
+		logDir := filepath.Dir(appConfig.Settings.Logger.LogFilePath)
+
+		apiLoggerConfig := appConfig.Settings.Logger
+		apiLoggerConfig.LogFilePath = filepath.Join(logDir, "api.log")
+
+		apiLogger, err := loggerInfra.NewLogger(apiLoggerConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create apiLogger. err: %w", err)
+		}
+
 		apiControllers := []core.APIController{
 			controllers.NewBridgingRequestStateController(
 				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),

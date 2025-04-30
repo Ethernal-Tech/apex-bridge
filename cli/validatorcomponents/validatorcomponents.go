@@ -51,16 +51,6 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	apiLoggerConfig := config.Settings.Logger
-	apiLoggerConfig.LogFilePath = "logs/api.log"
-
-	apiLogger, err := loggerInfra.NewLogger(apiLoggerConfig)
-	if err != nil {
-		outputter.SetError(err)
-
-		return
-	}
-
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("PANIC", "err", r)
@@ -71,7 +61,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, vcParams.runAPI, logger, apiLogger)
+	validatorComponents, err := validatorcomponents.NewValidatorComponents(ctx, config, vcParams.runAPI, logger)
 	if err != nil {
 		logger.Error("validator components creation failed", "err", err)
 		outputter.SetError(err)
