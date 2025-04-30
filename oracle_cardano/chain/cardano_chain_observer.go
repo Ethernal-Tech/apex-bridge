@@ -17,16 +17,14 @@ import (
 )
 
 const (
-	indexerQueueChannelSize = 1024
-	indexerRestartDelay     = time.Second * 5
-	indexerKeepAlive        = true
-	indexerSyncStartTries   = math.MaxInt
+	indexerRestartDelay   = time.Second * 5
+	indexerKeepAlive      = true
+	indexerSyncStartTries = math.MaxInt
 )
 
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
-	runner    indexer.Service
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
@@ -41,7 +39,7 @@ func NewCardanoChainObserver(
 	indexerDB indexer.Database,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, runnerConfig, syncerConfig := loadSyncerConfigs(config)
+	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
@@ -77,14 +75,12 @@ func NewCardanoChainObserver(
 	}
 
 	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	runner := indexer.NewBlockIndexerRunner(blockIndexer, runnerConfig, logger.Named("block_runner"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, runner, logger.Named("block_syncer"))
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
 		indexerDB: indexerDB,
 		syncer:    syncer,
-		runner:    runner,
 		logger:    logger,
 		config:    config,
 	}, nil
@@ -95,8 +91,6 @@ func (co *CardanoChainObserverImpl) Start() error {
 	if err == nil && bp != nil {
 		co.logger.Debug("Started...", "hash", bp.BlockHash, "slot", bp.BlockSlot)
 	}
-
-	co.runner.Start() // start the indexer runner; spawns a new goroutine.
 
 	go func() {
 		_ = common.RetryForever(co.ctx, 5*time.Second, func(context.Context) (err error) {
@@ -115,10 +109,6 @@ func (co *CardanoChainObserverImpl) Start() error {
 }
 
 func (co *CardanoChainObserverImpl) Dispose() error {
-	if err := co.runner.Close(); err != nil {
-		return fmt.Errorf("runner close failed. err: %w", err)
-	}
-
 	if err := co.syncer.Close(); err != nil {
 		return fmt.Errorf("syncer close failed. err: %w", err)
 	}
@@ -136,7 +126,7 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 
 func loadSyncerConfigs(
 	config *cCore.CardanoChainConfig,
-) (*indexer.BlockIndexerConfig, *indexer.BlockIndexerRunnerConfig, *gouroboros.BlockSyncerConfig) {
+) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
@@ -163,11 +153,8 @@ func loadSyncerConfigs(
 		KeepAlive:      indexerKeepAlive,
 		SyncStartTries: indexerSyncStartTries,
 	}
-	runnerConfig := &indexer.BlockIndexerRunnerConfig{
-		QueueChannelSize: indexerQueueChannelSize,
-	}
 
-	return indexerConfig, runnerConfig, syncerConfig
+	return indexerConfig, syncerConfig
 }
 
 func initOracleState(
