@@ -497,7 +497,7 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 			// for now return error
 			txOutput, err := cco.db.GetTxOutput(txInput)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get tx output for %s: %w", txInput, err)
+				return nil, fmt.Errorf("failed to get tx output for %v: %w", txInput, err)
 			}
 
 			utxosPerConfirmedTxs[i][j] = &indexer.TxInputOutput{
