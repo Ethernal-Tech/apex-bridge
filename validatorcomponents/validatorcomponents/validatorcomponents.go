@@ -66,6 +66,7 @@ func NewValidatorComponents(
 	appConfig *core.AppConfig,
 	shouldRunAPI bool,
 	logger hclog.Logger,
+	apiLogger hclog.Logger,
 ) (*ValidatorComponentsImpl, error) {
 	db, err := databaseaccess.NewDatabase(filepath.Join(appConfig.Settings.DbsPath, MainComponentName+".db"))
 	if err != nil {
@@ -186,14 +187,14 @@ func NewValidatorComponents(
 	if shouldRunAPI {
 		apiControllers := []core.APIController{
 			controllers.NewBridgingRequestStateController(
-				bridgingRequestStateManager, logger.Named("bridging_request_state_controller")),
+				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),
 			controllers.NewOracleStateController(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
-				getAddressesMap(oracleConfig.CardanoChains), logger.Named("oracle_state")),
-			controllers.NewSettingsController(appConfig, logger.Named("settings_controller")),
+				getAddressesMap(oracleConfig.CardanoChains), apiLogger.Named("oracle_state")),
+			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 		}
 
-		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, logger.Named("api"))
+		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create api: %w", err)
 		}
