@@ -105,6 +105,29 @@ func (co *CardanoChainObserverImpl) Start() error {
 		})
 	}()
 
+	go func() {
+		for {
+			select {
+			case <-co.ctx.Done():
+				return
+			case err, ok := <-co.syncer.ErrorCh():
+				if !ok {
+					return
+				}
+
+				co.logger.Error("Syncer fatal error", "chainID", co.config.ChainID, "err", err)
+
+				if err := co.syncer.Close(); err != nil {
+					co.logger.Error("Failed to close syncer", "err", err)
+				}
+
+				if err := co.indexerDB.Close(); err != nil {
+					co.logger.Error("Failed to close indexerDB", "err", err)
+				}
+			}
+		}
+	}()
+
 	return nil
 }
 
