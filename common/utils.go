@@ -85,7 +85,7 @@ func RetryForever(ctx context.Context, interval time.Duration, fn func(context.C
 	err := retry.Do(ctx, retry.NewConstant(interval), func(context.Context) error {
 		// Execute function and end retries if no error or context done
 		err := fn(ctx)
-		if IsContextDoneErr(err) {
+		if IsContextDoneErr(err) || errors.Is(err, indexer.ErrBlockIndexerFatal) {
 			return err
 		}
 
