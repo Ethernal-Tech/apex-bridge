@@ -53,6 +53,7 @@ func NewTelemetryWorker(
 		latestBlockEvm:         map[string]uint64{},
 		latestHotWalletState:   map[string]*big.Int{},
 		latestFeeMultisigState: map[string]uint64{},
+		waitTime:               waitTime,
 		logger:                 logger,
 	}
 }
