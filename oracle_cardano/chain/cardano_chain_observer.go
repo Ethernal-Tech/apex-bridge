@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -17,17 +18,21 @@ import (
 )
 
 const (
-	indexerRestartDelay   = time.Second * 5
-	indexerKeepAlive      = true
-	indexerSyncStartTries = math.MaxInt
+	runnerQueueChannelSize = 200
+	indexerRestartDelay    = time.Second * 5
+	indexerKeepAlive       = true
+	indexerSyncStartTries  = math.MaxInt
 )
 
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
+	errorCh   chan error
+	runner    indexer.Service
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
+	isClosed  uint32
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
@@ -75,12 +80,17 @@ func NewCardanoChainObserver(
 	}
 
 	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	runner := indexer.NewBlockIndexerRunner(blockIndexer, &indexer.BlockIndexerRunnerConfig{
+		QueueChannelSize: runnerQueueChannelSize,
+	}, logger)
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, runner, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
 		indexerDB: indexerDB,
+		runner:    runner,
 		syncer:    syncer,
+		errorCh:   make(chan error, 2),
 		logger:    logger,
 		config:    config,
 	}, nil
@@ -103,14 +113,41 @@ func (co *CardanoChainObserverImpl) Start() error {
 
 			return err
 		})
+
+		var ok bool
+
+		for {
+			select {
+			case <-co.ctx.Done():
+				return
+			case err, ok = <-co.syncer.ErrorCh():
+			case err, ok = <-co.runner.ErrorCh():
+			}
+
+			if !ok {
+				return
+			}
+
+			co.logger.Error("Fatal error", "chainID", co.config.ChainID, "err", err)
+
+			if err := co.Dispose(); err != nil {
+				co.logger.Error("cardano chain observer dispose failed", "err", err)
+			}
+		}
 	}()
 
 	return nil
 }
 
 func (co *CardanoChainObserverImpl) Dispose() error {
-	if err := co.syncer.Close(); err != nil {
-		return fmt.Errorf("syncer close failed. err: %w", err)
+	if atomic.CompareAndSwapUint32(&co.isClosed, 0, 1) {
+		if err := co.syncer.Close(); err != nil {
+			co.logger.Error("Failed to close syncer", "err", err)
+		}
+
+		if err := co.indexerDB.Close(); err != nil {
+			co.logger.Error("Failed to close indexerDB", "err", err)
+		}
 	}
 
 	return nil
@@ -121,7 +158,7 @@ func (co *CardanoChainObserverImpl) GetConfig() *cCore.CardanoChainConfig {
 }
 
 func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
-	return co.syncer.ErrorCh()
+	return co.errorCh
 }
 
 func loadSyncerConfigs(
