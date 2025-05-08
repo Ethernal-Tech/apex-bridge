@@ -12,6 +12,7 @@ import (
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
 	clisendtx "github.com/Ethernal-Tech/apex-bridge/cli/sendtx"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
+	cliversion "github.com/Ethernal-Tech/apex-bridge/cli/version"
 	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +44,7 @@ func (rc *RootCommand) registerSubCommands() {
 		clisendtx.GetSendTxCommand(),
 		clideployevm.GetDeployEVMCommand(),
 		clibridgeadmin.GetBridgeAdminCommand(),
+		cliversion.GetVersionCommand(),
 	)
 }
 
