@@ -56,6 +56,7 @@ func NewTelemetryWorker(
 		latestHotWalletState:               map[string]*big.Int{},
 		latestHotWalletStateForNativeToken: map[string]*big.Int{},
 		latestFeeMultisigState:             map[string]uint64{},
+		waitTime:                           waitTime,
 		logger:                             logger,
 	}
 }

@@ -143,8 +143,10 @@ type IBridgeStructsTxDataInfo struct {
 
 // IBridgeStructsValidatorAddressChainData is an auto generated low-level Go binding around an user-defined struct.
 type IBridgeStructsValidatorAddressChainData struct {
-	Addr common.Address
-	Data IBridgeStructsValidatorChainData
+	Addr            common.Address
+	Data            IBridgeStructsValidatorChainData
+	KeySignature    []byte
+	KeyFeeSignature []byte
 }
 
 // IBridgeStructsValidatorChainData is an auto generated low-level Go binding around an user-defined struct.
@@ -651,6 +653,37 @@ func (_BridgeContract *BridgeContractSession) ShouldCreateBatch(_destinationChai
 // Solidity: function shouldCreateBatch(uint8 _destinationChain) view returns(bool _batch)
 func (_BridgeContract *BridgeContractCallerSession) ShouldCreateBatch(_destinationChain uint8) (bool, error) {
 	return _BridgeContract.Contract.ShouldCreateBatch(&_BridgeContract.CallOpts, _destinationChain)
+}
+
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
+//
+// Solidity: function version() pure returns(string)
+func (_BridgeContract *BridgeContractCaller) Version(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "version")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
+//
+// Solidity: function version() pure returns(string)
+func (_BridgeContract *BridgeContractSession) Version() (string, error) {
+	return _BridgeContract.Contract.Version(&_BridgeContract.CallOpts)
+}
+
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
+//
+// Solidity: function version() pure returns(string)
+func (_BridgeContract *BridgeContractCallerSession) Version() (string, error) {
+	return _BridgeContract.Contract.Version(&_BridgeContract.CallOpts)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x485cc955.

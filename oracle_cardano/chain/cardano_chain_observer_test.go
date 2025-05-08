@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -138,20 +138,11 @@ func TestCardanoChainObserver(t *testing.T) {
 		require.NotNil(t, chainObserver)
 
 		doneCh := make(chan bool, 1)
-		closed := false
-
-		var mu sync.Mutex
+		closed := uint32(0)
 
 		txsReceiverMock.NewUnprocessedTxsFn = func(originChainId string, txs []*indexer.Tx) error {
-			t.Helper()
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if !closed {
+			if atomic.CompareAndSwapUint32(&closed, 0, 1) {
 				close(doneCh)
-
-				closed = true
 			}
 
 			return nil
