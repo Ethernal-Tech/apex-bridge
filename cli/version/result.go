@@ -16,7 +16,7 @@ type versionCmdResult struct {
 func (v versionCmdResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString("\n[VERSION INFO]\n")
+	buffer.WriteString("[VERSION INFO]\n")
 	buffer.WriteString(common.FormatKV([]string{
 		fmt.Sprintf("Git branch|%s", v.Branch),
 		fmt.Sprintf("Commit hash|%s", v.Commit),
