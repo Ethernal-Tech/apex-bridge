@@ -605,7 +605,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfig := &vcCore.AppConfig{
-		RefundEnabled:       false,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
