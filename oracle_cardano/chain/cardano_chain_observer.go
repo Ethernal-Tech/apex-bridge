@@ -105,9 +105,7 @@ func (co *CardanoChainObserverImpl) Start() error {
 
 			return err
 		})
-	}()
 
-	go func() {
 		for {
 			select {
 			case <-co.ctx.Done():
