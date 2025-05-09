@@ -49,6 +49,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NetworkID:             ccConfig.NetworkID,
 			TestNetMagic:          ccConfig.NetworkMagic,
 			OgmiosURL:             ccConfig.OgmiosURL,
+			CatsURL:               ccConfig.CatsURL,
+			CatsAPIKey:            ccConfig.CatsAPIKey,
 			BlockfrostURL:         ccConfig.BlockfrostURL,
 			BlockfrostAPIKey:      ccConfig.BlockfrostAPIKey,
 			SocketPath:            ccConfig.SocketPath,
