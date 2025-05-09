@@ -3,7 +3,6 @@ package chain
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -21,50 +20,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testBlockSyncerMock struct {
-	*indexer.BlockSyncerMock
-	errorCh     chan error
-	closeCalled bool
-	closeChan   chan struct{}
+type MockSyncer struct {
+	mock.Mock
+	indexer.BlockSyncer
 }
 
-func (tm *testBlockSyncerMock) Close() error {
-	fmt.Println("Syncer Close() called!")
-	tm.closeCalled = true
-	if tm.closeChan != nil {
-		close(tm.closeChan)
-	}
-	return tm.BlockSyncerMock.Close()
+func (m *MockSyncer) Close() error {
+	args := m.Called()
+
+	return args.Error(0)
 }
 
-func (tm *testBlockSyncerMock) Sync() error {
-	return tm.BlockSyncerMock.Sync()
+func (m *MockSyncer) ErrorCh() <-chan error {
+	args := m.Called()
+
+	return args.Get(0).(chan error)
 }
 
-func (tm *testBlockSyncerMock) ErrorCh() <-chan error {
-	if tm.errorCh == nil {
-		tm.errorCh = make(chan error)
-	}
-	return tm.errorCh
-}
-
-func (tm *testBlockSyncerMock) SetErrorCh(ch chan error) {
-	tm.errorCh = ch
-}
-
-type testIndexerDBMock struct {
+type MockIndexerDB struct {
+	mock.Mock
 	indexer.Database
-	closeCalled bool
-	closeChan   chan struct{}
 }
 
-func (tim *testIndexerDBMock) Close() error {
-	fmt.Println("Syncer Close() called!")
-	tim.closeCalled = true
-	if tim.closeChan != nil {
-		close(tim.closeChan)
-	}
-	return tim.Database.Close()
+func (m *MockIndexerDB) Close() error {
+	args := m.Called()
+
+	return args.Error(0)
+}
+
+// Implement other required indexer.Database methods
+func (m *MockIndexerDB) GetLatestBlockPoint() (*indexer.BlockPoint, error) {
+	args := m.Called()
+
+	return args.Get(0).(*indexer.BlockPoint), args.Error(1)
 }
 
 func TestCardanoChainObserver(t *testing.T) {
@@ -163,6 +151,9 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
+
+		err = chainObserver.Dispose()
+		require.NoError(t, err)
 	})
 
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
@@ -205,9 +196,9 @@ func TestCardanoChainObserver(t *testing.T) {
 	})
 
 	t.Run("errorCh fatal error", func(t *testing.T) {
-		syncerMock := &testBlockSyncerMock{}
+		syncerMock := &MockSyncer{}
 		errCh := make(chan error, 1)
-		syncerMock.SetErrorCh(errCh)
+		syncerMock.On("ErrorCh").Return(errCh)
 
 		errCh <- indexer.ErrBlockIndexerFatal
 
@@ -227,60 +218,42 @@ func TestCardanoChainObserver(t *testing.T) {
 		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
 		// setup syncer mocks
-		mockInnerSyncer := indexer.BlockSyncerMock{}
-		mockInnerSyncer.On("Sync").Return(nil)
+		syncerMock := &MockSyncer{}
 
-		syncerMock := &testBlockSyncerMock{
-			BlockSyncerMock: &mockInnerSyncer,
-			errorCh:         make(chan error, 1),
-			closeChan:       make(chan struct{}),
-		}
+		errorCh := make(chan error, 1)
+		syncerMock.On("ErrorCh").Return(errorCh)
+		syncerMock.On("Close").Return(nil)
 
 		testErr := indexer.ErrBlockIndexerFatal
 
 		// setup indexerDB mocks
-		innerIndexerDB := initDB(t)
-
-		indexerDbMock := &testIndexerDBMock{
-			Database: innerIndexerDB,
+		indexerDBMock := &MockIndexerDB{
+			Database: initDB(t),
 		}
+
+		indexerDBMock.On("Close").Return(nil)
+		indexerDBMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDbMock, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDBMock, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
-
-		chainObserver.syncer = syncerMock
-
-		require.NotNil(t, indexerDbMock)
-		require.NotNil(t, chainObserver.syncer)
+		require.Same(t, indexerDBMock, chainObserver.indexerDB)
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
 
-		syncerMock.errorCh <- testErr
+		errorCh <- testErr
 
 		select {
 		case err := <-syncerMock.ErrorCh():
 			require.Error(t, err)
 			require.ErrorIs(t, err, indexer.ErrBlockIndexerFatal)
-
-			// Wait for close to complete or timeout
-			select {
-			case <-syncerMock.closeChan:
-				require.True(t, syncerMock.closeCalled)
-			case <-indexerDbMock.closeChan:
-				require.True(t, indexerDbMock.closeCalled)
-			case <-time.After(2 * time.Second):
-				t.Fatal("Timeout waiting for resources to close")
-			}
-
 		case <-time.After(time.Second):
 			t.Fatal("Expected error not received from ErrorCh")
 		}
-
 	})
 }
 
