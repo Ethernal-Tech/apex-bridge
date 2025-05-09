@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -28,6 +29,7 @@ type CardanoChainObserverImpl struct {
 	syncer    indexer.BlockSyncer
 	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
+	isClosed  uint32
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
@@ -103,16 +105,38 @@ func (co *CardanoChainObserverImpl) Start() error {
 
 			return err
 		})
+
+		for {
+			select {
+			case <-co.ctx.Done():
+				return
+			case err, ok := <-co.syncer.ErrorCh():
+				if !ok {
+					return
+				}
+
+				co.logger.Error("Syncer fatal error", "chainID", co.config.ChainID, "err", err)
+
+				if err := co.Dispose(); err != nil {
+					co.logger.Error("cardano chain observer dispose failed", "err", err)
+				}
+			}
+		}
 	}()
 
 	return nil
 }
 
 func (co *CardanoChainObserverImpl) Dispose() error {
-	if err := co.syncer.Close(); err != nil {
-		return fmt.Errorf("syncer close failed. err: %w", err)
-	}
+	if atomic.CompareAndSwapUint32(&co.isClosed, 0, 1) {
+		if err := co.syncer.Close(); err != nil {
+			co.logger.Error("Failed to close syncer", "err", err)
+		}
 
+		if err := co.indexerDB.Close(); err != nil {
+			co.logger.Error("Failed to close indexerDB", "err", err)
+		}
+	}
 	return nil
 }
 
