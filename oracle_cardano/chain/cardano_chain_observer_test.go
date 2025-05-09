@@ -28,16 +28,11 @@ type MockSyncer struct {
 }
 
 func (m *MockSyncer) Sync() error {
-	args := m.Called()
-
-	return args.Error(0)
+	return m.Called().Error(0)
 }
 
 func (m *MockSyncer) Close() error {
-	args := m.Called()
-	close(m.disposeCalled)
-
-	return args.Error(0)
+	return m.Called().Error(0)
 }
 
 func (m *MockSyncer) ErrorCh() <-chan error {
@@ -57,10 +52,7 @@ func (m *MockIndexerDB) GetLatestBlockPoint() (*indexer.BlockPoint, error) {
 }
 
 func (m *MockIndexerDB) Close() error {
-	args := m.Called()
-	close(m.disposeCalled)
-
-	return args.Error(0)
+	return m.Called().Error(0)
 }
 
 func TestCardanoChainObserver(t *testing.T) {
@@ -248,10 +240,14 @@ func TestCardanoChainObserver(t *testing.T) {
 		indexerDB.disposeCalled = make(chan struct{})
 
 		syncer.On("Sync").Return(nil)
-		syncer.On("Close").Return(nil)
+		syncer.On("Close").Run(func(args mock.Arguments) {
+			close(syncer.disposeCalled)
+		}).Return(nil)
 
 		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil).Once()
-		indexerDB.On("Close").Return(nil)
+		indexerDB.On("Close").Run(func(args mock.Arguments) {
+			close(indexerDB.disposeCalled)
+		}).Return(nil)
 
 		chainObserver := &CardanoChainObserverImpl{
 			ctx:       ctx,
