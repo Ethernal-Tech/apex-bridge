@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -19,6 +20,38 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type MockSyncer struct {
+	mock.Mock
+	errCh chan error
+}
+
+func (m *MockSyncer) Sync() error {
+	return m.Called().Error(0)
+}
+
+func (m *MockSyncer) Close() error {
+	return m.Called().Error(0)
+}
+
+func (m *MockSyncer) ErrorCh() <-chan error {
+	return m.errCh
+}
+
+type MockIndexerDB struct {
+	mock.Mock
+	indexer.Database
+}
+
+func (m *MockIndexerDB) GetLatestBlockPoint() (*indexer.BlockPoint, error) {
+	args := m.Called()
+
+	return args.Get(0).(*indexer.BlockPoint), args.Error(1)
+}
+
+func (m *MockIndexerDB) Close() error {
+	return m.Called().Error(0)
+}
 
 func TestCardanoChainObserver(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "boltdb-test")
@@ -107,15 +140,29 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
+		var logBuffer bytes.Buffer
+		logger := hclog.New(&hclog.LoggerOptions{
+			Name:       "test",
+			Level:      hclog.Debug,
+			Output:     &logBuffer,
+			JSONFormat: false,
+		})
+
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
 		err = chainObserver.Start()
 		require.NoError(t, err)
+
+		_ = chainObserver.Dispose()
+
+		output := logBuffer.String()
+		require.NotContains(t, output, "Failed to close syncer")
+		require.NotContains(t, output, "Failed to close indexerDB")
 	})
 
 	t.Run("check newConfirmedTxs called", func(t *testing.T) {
@@ -154,6 +201,77 @@ func TestCardanoChainObserver(t *testing.T) {
 		case <-timer.C:
 			t.Fatal("timeout")
 		case <-doneCh:
+		}
+	})
+
+	t.Run("errorCh fatal error", func(t *testing.T) {
+		syncerMock := &MockSyncer{}
+		syncerMock.errCh = make(chan error, 1)
+
+		syncerMock.errCh <- indexer.ErrBlockIndexerFatal
+
+		select {
+		case err := <-syncerMock.ErrorCh():
+			require.Error(t, err)
+			require.ErrorIs(t, err, indexer.ErrBlockIndexerFatal)
+		case <-time.After(time.Second):
+			t.Fatal("Expected error not received from ErrorCh")
+		}
+	})
+
+	t.Run("check close called", func(t *testing.T) {
+		t.Cleanup(foldersCleanup)
+
+		db := &core.CardanoTxsProcessorDBMock{}
+		db.On("ClearAllTxs", mock.Anything).Return(error(nil))
+
+		syncer := &MockSyncer{}
+		indexerDB := &MockIndexerDB{}
+
+		testErr := indexer.ErrBlockIndexerFatal
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		syncer.errCh = make(chan error, 1)
+		syncerDisposeCalled := make(chan struct{})
+		indexerDBDisposeCalled := make(chan struct{})
+
+		syncer.On("Sync").Return(nil)
+		syncer.On("Close").Run(func(args mock.Arguments) {
+			close(syncerDisposeCalled)
+		}).Return(nil)
+
+		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil).Once()
+		indexerDB.On("Close").Run(func(args mock.Arguments) {
+			close(indexerDBDisposeCalled)
+		}).Return(nil)
+
+		chainObserver := &CardanoChainObserverImpl{
+			ctx:       ctx,
+			indexerDB: indexerDB,
+			syncer:    syncer,
+			logger:    hclog.NewNullLogger(),
+			config:    &cCore.CardanoChainConfig{ChainID: "test"},
+		}
+
+		err := chainObserver.Start()
+		require.NoError(t, err)
+
+		syncer.errCh <- testErr
+
+		select {
+		case <-syncerDisposeCalled:
+			syncer.AssertCalled(t, "Close")
+		case <-time.After(time.Second):
+			t.Fatal("Syncer was not closed")
+		}
+
+		select {
+		case <-indexerDBDisposeCalled:
+			indexerDB.AssertCalled(t, "Close")
+		case <-time.After(time.Second):
+			t.Fatal("IndexerDB was not closed")
 		}
 	})
 }
