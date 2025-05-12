@@ -27,9 +27,9 @@ type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
 	syncer    indexer.BlockSyncer
-	logger    hclog.Logger
 	config    *cCore.CardanoChainConfig
 	isClosed  uint32
+	logger    hclog.Logger
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
