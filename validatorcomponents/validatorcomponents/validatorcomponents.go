@@ -57,7 +57,6 @@ type ValidatorComponentsImpl struct {
 	api               apiCore.API
 	telemetry         *telemetry.Telemetry
 	telemetryWorker   *TelemetryWorker
-	errorCh           chan error
 	logger            hclog.Logger
 }
 
@@ -261,10 +260,6 @@ func (v *ValidatorComponentsImpl) Start() error {
 		go v.telemetryWorker.Start(v.ctx)
 	}
 
-	v.errorCh = make(chan error, 1)
-
-	go v.errorHandler()
-
 	v.logger.Debug("Started ValidatorComponents")
 
 	return nil
@@ -325,27 +320,6 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	v.logger.Info("ValidatorComponents disposed")
 
 	return nil
-}
-
-func (v *ValidatorComponentsImpl) ErrorCh() <-chan error {
-	return v.errorCh
-}
-
-func (v *ValidatorComponentsImpl) errorHandler() {
-outsideloop:
-	for {
-		select {
-		case err := <-v.oracle.ErrorCh():
-			if err != nil {
-				v.logger.Error("oracle error", "err", err)
-				v.errorCh <- err
-			}
-		case <-v.ctx.Done():
-			break outsideloop
-		}
-	}
-
-	v.logger.Debug("Exiting validatorcomponents error handler")
 }
 
 func fixChainsAndAddresses(

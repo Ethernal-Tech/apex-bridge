@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -22,10 +21,6 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-var (
-	errBlockSyncerFatal = errors.New("block syncer fatal error")
-)
-
 type OracleImpl struct {
 	ctx                      context.Context
 	appConfig                *cCore.AppConfig
@@ -36,8 +31,6 @@ type OracleImpl struct {
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
 	chainInfos               map[string]*chain.CardanoChainInfo
 	logger                   hclog.Logger
-
-	errorCh chan error
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -164,9 +157,6 @@ func (o *OracleImpl) Start() error {
 		}
 	}
 
-	o.errorCh = make(chan error, 1)
-	go o.errorHandler()
-
 	o.logger.Debug("Started CardanoOracle")
 
 	return nil
@@ -191,48 +181,7 @@ func (o *OracleImpl) Dispose() error {
 	return nil
 }
 
-func (o *OracleImpl) ErrorCh() <-chan error {
-	return o.errorCh
-}
-
 type ErrorOrigin struct {
 	err    error
 	origin string
-}
-
-func (o *OracleImpl) errorHandler() {
-	agg := make(chan ErrorOrigin)
-
-	for _, co := range o.cardanoChainObservers {
-		go func(errChan <-chan error, origin string) {
-		outsideloop:
-			for {
-				select {
-				case err := <-errChan:
-					if err != nil {
-						o.logger.Error("chain observer error", "origin", origin, "err", err)
-						if strings.Contains(err.Error(), errBlockSyncerFatal.Error()) {
-							agg <- ErrorOrigin{
-								err:    err,
-								origin: origin,
-							}
-
-							break outsideloop
-						}
-					}
-				case <-o.ctx.Done():
-					break outsideloop
-				}
-			}
-			o.logger.Debug("Exiting error handler", "origin", origin)
-		}(co.ErrorCh(), co.GetConfig().ChainID)
-	}
-
-	select {
-	case errorOrigin := <-agg:
-		o.logger.Error("Cardano chain observer critical error", "origin", errorOrigin.origin, "err", errorOrigin.err)
-		o.errorCh <- errorOrigin.err
-	case <-o.ctx.Done():
-	}
-	o.logger.Debug("Exiting oracle_cardano error handler")
 }
