@@ -37,7 +37,6 @@ type Database interface {
 type Oracle interface {
 	Start() error
 	Dispose() error
-	ErrorCh() <-chan error
 }
 
 type CardanoChainObserver interface {

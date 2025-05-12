@@ -90,8 +90,6 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	select {
 	case <-signalChannel:
-	case err = <-validatorComponents.ErrorCh():
-		outputter.SetError(err)
 	}
 
 	outputter.SetCommandResult(&CmdResult{})
