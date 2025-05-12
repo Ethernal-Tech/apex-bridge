@@ -88,9 +88,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case <-signalChannel:
-	}
+	<-signalChannel
 
 	outputter.SetCommandResult(&CmdResult{})
 }

@@ -137,6 +137,7 @@ func (co *CardanoChainObserverImpl) Dispose() error {
 			co.logger.Error("Failed to close indexerDB", "err", err)
 		}
 	}
+
 	return nil
 }
 

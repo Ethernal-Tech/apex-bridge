@@ -21,10 +21,6 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-var (
-	errBlockSyncerFatal = errors.New("block syncer fatal error")
-)
-
 type OracleImpl struct {
 	ctx                      context.Context
 	appConfig                *cCore.AppConfig

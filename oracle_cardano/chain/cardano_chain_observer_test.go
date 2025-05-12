@@ -23,8 +23,7 @@ import (
 
 type MockSyncer struct {
 	mock.Mock
-	errCh         chan error
-	disposeCalled chan struct{}
+	errCh chan error
 }
 
 func (m *MockSyncer) Sync() error {
@@ -42,7 +41,6 @@ func (m *MockSyncer) ErrorCh() <-chan error {
 type MockIndexerDB struct {
 	mock.Mock
 	indexer.Database
-	disposeCalled chan struct{}
 }
 
 func (m *MockIndexerDB) GetLatestBlockPoint() (*indexer.BlockPoint, error) {
@@ -236,17 +234,17 @@ func TestCardanoChainObserver(t *testing.T) {
 		defer cancel()
 
 		syncer.errCh = make(chan error, 1)
-		syncer.disposeCalled = make(chan struct{})
-		indexerDB.disposeCalled = make(chan struct{})
+		syncerDisposeCalled := make(chan struct{})
+		indexerDBDisposeCalled := make(chan struct{})
 
 		syncer.On("Sync").Return(nil)
 		syncer.On("Close").Run(func(args mock.Arguments) {
-			close(syncer.disposeCalled)
+			close(syncerDisposeCalled)
 		}).Return(nil)
 
 		indexerDB.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{}, nil).Once()
 		indexerDB.On("Close").Run(func(args mock.Arguments) {
-			close(indexerDB.disposeCalled)
+			close(indexerDBDisposeCalled)
 		}).Return(nil)
 
 		chainObserver := &CardanoChainObserverImpl{
@@ -263,14 +261,14 @@ func TestCardanoChainObserver(t *testing.T) {
 		syncer.errCh <- testErr
 
 		select {
-		case <-syncer.disposeCalled:
+		case <-syncerDisposeCalled:
 			syncer.AssertCalled(t, "Close")
 		case <-time.After(time.Second):
 			t.Fatal("Syncer was not closed")
 		}
 
 		select {
-		case <-indexerDB.disposeCalled:
+		case <-indexerDBDisposeCalled:
 			indexerDB.AssertCalled(t, "Close")
 		case <-time.After(time.Second):
 			t.Fatal("IndexerDB was not closed")
