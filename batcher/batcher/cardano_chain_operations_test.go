@@ -760,7 +760,7 @@ func TestSkylineConsolidation(t *testing.T) {
 
 		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation("aaa", "bbb")
 		require.NoError(t, err)
-		require.Equal(t, int(cco.config.MaxUtxoCount)-len(feeUtxos), len(multisigUtxos)) //nolint:gosec
+		require.Equal(t, int(cco.config.MaxUtxoCount)-len(feeUtxos), len(multisigUtxos))
 		require.Equal(t, 4, len(feeUtxos))
 	})
 
