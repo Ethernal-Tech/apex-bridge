@@ -147,3 +147,34 @@ func Test_GetKnownTokens(t *testing.T) {
 	require.Equal(t, 1, len(retTokens))
 	require.Equal(t, token2, retTokens[0])
 }
+
+func Test_BigIntToKey(t *testing.T) {
+	t.Run("less than 32 bytes", func(t *testing.T) {
+		b := BigIntToKey(big.NewInt(1))
+
+		require.Equal(t, 32, len(b))
+		require.Equal(t, append(make([]byte, 31), 1), b)
+	})
+
+	t.Run("exactly 32 bytes", func(t *testing.T) {
+		bytes := make([]byte, 32)
+		bytes[31] = 1
+		bytes[0] = 0xFF
+
+		b := BigIntToKey(new(big.Int).SetBytes(bytes))
+
+		require.Equal(t, 32, len(b))
+		require.Equal(t, bytes, b)
+	})
+
+	t.Run("more than 32 bytes", func(t *testing.T) {
+		bytes := make([]byte, 34)
+		bytes[31] = 1
+		bytes[0] = 0xFF
+
+		b := BigIntToKey(new(big.Int).SetBytes(bytes))
+
+		require.Equal(t, 32, len(b))
+		require.Equal(t, bytes[:32], b)
+	})
+}

@@ -20,6 +20,8 @@ import (
 	"unsafe"
 
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sethvargo/go-retry"
@@ -86,7 +88,7 @@ func RetryForever(ctx context.Context, interval time.Duration, fn func(context.C
 	err := retry.Do(ctx, retry.NewConstant(interval), func(context.Context) error {
 		// Execute function and end retries if no error or context done
 		err := fn(ctx)
-		if IsContextDoneErr(err) {
+		if IsContextDoneErr(err) || errors.Is(err, indexer.ErrBlockIndexerFatal) {
 			return err
 		}
 
@@ -121,15 +123,6 @@ func MulPercentage(value *big.Int, percentage uint64) *big.Int {
 	res := new(big.Int).Mul(value, new(big.Int).SetUint64(percentage))
 
 	return res.Div(res, big.NewInt(100))
-}
-
-// SafeSubtract subtracts safely two uint64 value and return default value if we have overflow
-func SafeSubtract(a, b, def uint64) uint64 {
-	if a >= b {
-		return a - b
-	}
-
-	return def
 }
 
 // Keccak256 calculates the Keccak256
@@ -350,4 +343,8 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 	}
 
 	return sb.String()
+}
+
+func ParseTxInfo(txRaw []byte, full bool) (indexer.TxInfo, error) {
+	return gouroboros.ParseTxInfo(txRaw, full)
 }

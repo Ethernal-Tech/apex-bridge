@@ -22,9 +22,9 @@ type CardanoChainConfig struct {
 	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
 	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
-	MaxFeeUtxoCount       int                              `json:"maxFeeUtxoCount"`
-	MaxUtxoCount          int                              `json:"maxUtxoCount"`
-	TakeAtLeastUtxoCount  int                              `json:"takeAtLeastUtxoCount"`
+	MaxFeeUtxoCount       uint                             `json:"maxFeeUtxoCount"`
+	MaxUtxoCount          uint                             `json:"maxUtxoCount"`
+	TakeAtLeastUtxoCount  uint                             `json:"takeAtLeastUtxoCount"`
 	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
 }
 
@@ -111,7 +111,7 @@ type BatcherEVMChainConfig struct {
 	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
 	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
 	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
-	TestMode               uint8   `json:"testMode"`
+	TestMode               uint8   `json:"testMode,omitempty"` // only functional in test mode (`-tags testenv`)
 }
 
 func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {

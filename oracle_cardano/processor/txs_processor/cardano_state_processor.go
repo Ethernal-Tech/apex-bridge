@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -254,8 +255,7 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 	event *cCore.NotEnoughFundsEvent, claims *cCore.BridgeClaims,
 	allPendingMap map[string]*core.CardanoTx,
 ) (*core.CardanoTx, error) {
-	switch event.ClaimeType {
-	case cCore.BRCClaimType:
+	if strings.HasPrefix(event.ClaimeType, cCore.BRCClaimType) {
 		brcIndex := event.Index.Uint64()
 		if brcIndex >= uint64(len(claims.BridgingRequestClaims)) {
 			return nil, fmt.Errorf(
@@ -272,10 +272,10 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 		}
 
 		return tx, nil
-	default:
-		return nil, fmt.Errorf(
-			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 	}
+
+	return nil, fmt.Errorf(
+		"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 }
 
 func (sp *CardanoStateProcessor) PersistNew() {

@@ -30,7 +30,8 @@ type TelemetryWorker struct {
 	ethDBs                             map[string]eventTrackerStore.EventTrackerStore
 	config                             *oracleCommonCore.AppConfig
 	waitTime                           time.Duration
-	latestBlock                        map[string]*indexer.BlockPoint
+	latestBlockCardano                 map[string]*indexer.BlockPoint
+	latestBlockEvm                     map[string]uint64
 	latestHotWalletState               map[string]*big.Int
 	latestHotWalletStateForNativeToken map[string]*big.Int
 	latestFeeMultisigState             map[string]uint64
@@ -50,10 +51,12 @@ func NewTelemetryWorker(
 		cardanoDBs:                         cardanoDBs,
 		ethDBs:                             ethDBs,
 		config:                             config,
-		latestBlock:                        map[string]*indexer.BlockPoint{},
+		latestBlockCardano:                 map[string]*indexer.BlockPoint{},
+		latestBlockEvm:                     map[string]uint64{},
 		latestHotWalletState:               map[string]*big.Int{},
 		latestHotWalletStateForNativeToken: map[string]*big.Int{},
 		latestFeeMultisigState:             map[string]uint64{},
+		waitTime:                           waitTime,
 		logger:                             logger,
 	}
 }
@@ -74,9 +77,9 @@ func (ti *TelemetryWorker) execute() {
 		bp, err := db.GetLatestBlockPoint()
 		if err != nil {
 			ti.logger.Warn("failed to retrieve block point", "chain", chainID, "err", err)
-		} else if cache := ti.latestBlock[chainID]; cache == nil ||
+		} else if cache := ti.latestBlockCardano[chainID]; cache == nil ||
 			cache.BlockHash != bp.BlockHash || cache.BlockSlot != bp.BlockSlot {
-			ti.latestBlock[chainID] = bp
+			ti.latestBlockCardano[chainID] = bp
 
 			telemetry.UpdateIndexersBlockCounter(chainID, 1)
 		}
@@ -88,10 +91,8 @@ func (ti *TelemetryWorker) execute() {
 		blockNumber, err := db.GetLastProcessedBlock()
 		if err != nil {
 			ti.logger.Warn("failed to retrieve latest processed block", "chain", chainID, "err", err)
-		} else if cache := ti.latestBlock[chainID]; cache == nil || cache.BlockNumber != blockNumber {
-			ti.latestBlock[chainID] = &indexer.BlockPoint{
-				BlockNumber: blockNumber,
-			}
+		} else if cache := ti.latestBlockEvm[chainID]; cache != blockNumber {
+			ti.latestBlockEvm[chainID] = blockNumber
 
 			telemetry.UpdateIndexersBlockCounter(chainID, 1)
 		}

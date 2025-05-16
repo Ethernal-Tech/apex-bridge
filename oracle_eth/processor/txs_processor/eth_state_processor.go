@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -257,8 +258,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 	event *oracleCore.NotEnoughFundsEvent, claims *oracleCore.BridgeClaims,
 	allPendingMap map[string]*core.EthTx,
 ) (*core.EthTx, error) {
-	switch event.ClaimeType {
-	case oracleCore.BRCClaimType:
+	if strings.HasPrefix(event.ClaimeType, oracleCore.BRCClaimType) {
 		brcIndex := event.Index.Uint64()
 		if brcIndex >= uint64(len(claims.BridgingRequestClaims)) {
 			return nil, fmt.Errorf(
@@ -275,10 +275,10 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		}
 
 		return tx, nil
-	default:
-		return nil, fmt.Errorf(
-			"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 	}
+
+	return nil, fmt.Errorf(
+		"unsupported NotEnoughFundsEvent.claimType: %s", event.ClaimeType)
 }
 
 func (sp *EthStateProcessor) PersistNew() {

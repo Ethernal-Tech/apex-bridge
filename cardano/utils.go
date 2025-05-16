@@ -2,6 +2,7 @@ package cardanotx
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -105,4 +106,8 @@ func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {
 	}
 
 	return 0
+}
+
+func BigIntToKey(a *big.Int) []byte {
+	return wallet.PadKeyToSize(a.Bytes())
 }

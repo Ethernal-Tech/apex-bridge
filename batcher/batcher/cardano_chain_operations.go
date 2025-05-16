@@ -310,9 +310,10 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		"multisig", multisigAddress, "utxos", multisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
 
 	// do not take more than maxFeeUtxoCount
-	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))]
+	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
 	// do not take more than maxUtxoCount - length of chosen fee utxos
-	multisigUtxos = multisigUtxos[:min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))]
+	maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))
+	multisigUtxos = multisigUtxos[:maxUtxosCnt]
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
 
@@ -347,7 +348,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
-	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, len(feeUtxos))] // do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
 
 	minUtxoLovelaceAmount, err := calculateMinUtxoLovelaceAmount(
 		cco.cardanoCliBinary, protocolParams, multisigAddress, multisigUtxos, txOutputs.Outputs)
@@ -360,7 +361,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		txOutputs.Sum,
 		minUtxoLovelaceAmount,
 		getMaxUtxoCount(cco.config, len(feeUtxos)),
-		cco.config.TakeAtLeastUtxoCount,
+		int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 	)
 	if err != nil {
 		return nil, nil, err
@@ -393,7 +394,7 @@ func (cco *CardanoChainOperations) getSlotNumber() (uint64, error) {
 	return newSlot, nil
 }
 
-func (cco *CardanoChainOperations) getCardanoData(
+func (cco *CardanoChainOperations) getValidatorsChainData(
 	ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 ) ([]eth.ValidatorChainData, error) {
 	validatorsData, err := bridgeSmartContract.GetValidatorsChainData(ctx, chainID)
@@ -401,26 +402,15 @@ func (cco *CardanoChainOperations) getCardanoData(
 		return nil, err
 	}
 
-	hasVerificationKey, hasFeeVerificationKey := false, false
-
-	for _, validator := range validatorsData {
-		hasVerificationKey = hasVerificationKey || bytes.Equal(cco.wallet.MultiSig.VerificationKey,
-			cardanowallet.PadKeyToSize(validator.Key[0].Bytes()))
-		hasFeeVerificationKey = hasFeeVerificationKey || bytes.Equal(cco.wallet.MultiSigFee.VerificationKey,
-			cardanowallet.PadKeyToSize(validator.Key[1].Bytes()))
+	for _, data := range validatorsData {
+		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(data.Key[0])) &&
+			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(data.Key[1])) {
+			return validatorsData, nil
+		}
 	}
 
-	if !hasVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	if !hasFeeVerificationKey {
-		return nil, fmt.Errorf(
-			"verifying fee key of current batcher wasn't found in validators data queried from smart contract")
-	}
-
-	return validatorsData, nil
+	return nil, fmt.Errorf(
+		"verifying keys of current batcher wasn't found in validators data queried from smart contract")
 }
 
 func (cco *CardanoChainOperations) createBatchInitialData(
@@ -429,7 +419,7 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	chainID string,
 	batchNonceID uint64,
 ) (*batchInitialData, error) {
-	validatorsData, err := cco.getCardanoData(ctx, bridgeSmartContract, chainID)
+	validatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -470,5 +460,5 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
-	return max(config.MaxUtxoCount-prevUtxosCnt, 0)
+	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
 }

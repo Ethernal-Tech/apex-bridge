@@ -1,6 +1,8 @@
 package cardanotx
 
 import (
+	"fmt"
+
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -14,6 +16,11 @@ func CreateTx(
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 ) ([]byte, string, error) {
+	// ensure there is at least one input for both the multisig and fee multisig.
+	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 || feeLn == 0 {
+		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", ln, feeLn)
+	}
+
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	multisigOutput, multiSigIndex := getOutputForAddress(outputs, txInputInfos.MultiSig.Address)
 	feeOutput, feeIndex := getOutputForAddress(outputs, txInputInfos.MultiSigFee.Address)
@@ -62,16 +69,16 @@ func CreateTx(
 	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
 		AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
-	fee, err := builder.CalculateFee(0)
+	calcFee, err := builder.CalculateFee(0)
 	if err != nil {
 		return nil, "", err
 	}
 
-	builder.SetFee(fee)
+	builder.SetFee(calcFee)
 
 	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 		feeOutput, txInputInfos.MultiSigFee.Sum, map[string]uint64{
-			cardanowallet.AdaTokenName: fee,
+			cardanowallet.AdaTokenName: calcFee,
 		})
 	if err != nil {
 		return nil, "", err
