@@ -112,8 +112,12 @@ func getNeededUtxos(
 		}
 	}
 
+	// Change outputs require minUtxoLovelace (protocol rule)
+	// Exact spends without change are rare (especially with tokens)
+	desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+
 	outputUTXOs, err := txsend.GetUTXOsForAmounts(
-		inputUtxos, desiredAmounts, minUtxoLovelaceAmount, maxUtxoCount, takeAtLeastUtxoCount)
+		inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
