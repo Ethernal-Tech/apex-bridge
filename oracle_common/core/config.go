@@ -53,6 +53,7 @@ type CardanoChainConfig struct {
 	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
 	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
+	UseIndexerRunner         bool                             `json:"useIndexerRunner"`
 
 	OgmiosURL             string  `json:"ogmiosUrl"`
 	BlockfrostURL         string  `json:"blockfrostUrl"`

@@ -13,19 +13,25 @@ import (
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/ogmios"
 
 	"github.com/hashicorp/go-hclog"
 )
 
 const (
-	indexerRestartDelay   = time.Second * 5
-	indexerKeepAlive      = true
-	indexerSyncStartTries = math.MaxInt
+	syncerForceOgmios      = true
+	runnerQueueChannelSize = 200
+	runnerRetryDelay       = time.Second * 5
+	indexerRestartDelay    = time.Second * 5
+	indexerKeepAlive       = true
+	indexerSyncStartTries  = math.MaxInt
 )
 
 type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
+	errorCh   chan error
+	runner    indexer.Service
 	syncer    indexer.BlockSyncer
 	config    *cCore.CardanoChainConfig
 	isClosed  uint32
@@ -41,8 +47,6 @@ func NewCardanoChainObserver(
 	indexerDB indexer.Database,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, syncerConfig := loadSyncerConfigs(config)
-
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
 	if err != nil {
@@ -76,13 +80,27 @@ func NewCardanoChainObserver(
 		return nil
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	var (
+		runner       indexer.Service
+		syncer       indexer.BlockSyncer
+		blockIndexer = newBlockIndexer(config, indexerDB, confirmedBlockHandler, logger)
+	)
+
+	if config.UseIndexerRunner {
+		syncer = newBlockSyncer(config, indexer.NewBlockIndexerRunner(blockIndexer, &indexer.BlockIndexerRunnerConfig{
+			QueueChannelSize: runnerQueueChannelSize,
+			RetryDelay:       runnerRetryDelay,
+		}, logger), logger)
+	} else {
+		syncer = newBlockSyncer(config, blockIndexer, logger)
+	}
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
 		indexerDB: indexerDB,
+		runner:    runner,
 		syncer:    syncer,
+		errorCh:   make(chan error, 2),
 		logger:    logger,
 		config:    config,
 	}, nil
@@ -106,20 +124,31 @@ func (co *CardanoChainObserverImpl) Start() error {
 			return err
 		})
 
+		var (
+			ok       bool
+			runnerCh <-chan error
+		)
+
+		if co.runner != nil {
+			runnerCh = co.runner.ErrorCh()
+		}
+
 		for {
 			select {
 			case <-co.ctx.Done():
 				return
-			case err, ok := <-co.syncer.ErrorCh():
-				if !ok {
-					return
-				}
+			case err, ok = <-co.syncer.ErrorCh():
+			case err, ok = <-runnerCh:
+			}
 
-				co.logger.Error("Syncer fatal error", "chainID", co.config.ChainID, "err", err)
+			if !ok {
+				return
+			}
 
-				if err := co.Dispose(); err != nil {
-					co.logger.Error("cardano chain observer dispose failed", "err", err)
-				}
+			co.logger.Error("Syncer fatal error", "chainID", co.config.ChainID, "err", err)
+
+			if err := co.Dispose(); err != nil {
+				co.logger.Error("cardano chain observer dispose failed", "err", err)
 			}
 		}
 	}()
@@ -129,6 +158,12 @@ func (co *CardanoChainObserverImpl) Start() error {
 
 func (co *CardanoChainObserverImpl) Dispose() error {
 	if atomic.CompareAndSwapUint32(&co.isClosed, 0, 1) {
+		if co.runner != nil {
+			if err := co.runner.Close(); err != nil {
+				co.logger.Error("Failed to close runner", "err", err)
+			}
+		}
+
 		if err := co.syncer.Close(); err != nil {
 			co.logger.Error("Failed to close syncer", "err", err)
 		}
@@ -146,21 +181,15 @@ func (co *CardanoChainObserverImpl) GetConfig() *cCore.CardanoChainConfig {
 }
 
 func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
-	return co.syncer.ErrorCh()
+	return co.errorCh
 }
 
-func loadSyncerConfigs(
+func newBlockIndexer(
 	config *cCore.CardanoChainConfig,
-) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
-	networkAddress := strings.TrimPrefix(
-		strings.TrimPrefix(config.NetworkAddress, "http://"),
-		"https://")
-
-	addressesOfInterest := append([]string{
-		config.BridgingAddresses.BridgingAddress,
-		config.BridgingAddresses.FeeAddress,
-	}, config.OtherAddressesOfInterest...)
-
+	indexerDB indexer.Database,
+	confirmedBlockHandler indexer.NewConfirmedBlockHandler,
+	logger hclog.Logger,
+) indexer.BlockSyncerHandler {
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
 			BlockSlot: config.StartSlot,
@@ -168,18 +197,39 @@ func loadSyncerConfigs(
 		},
 		AddressCheck:           indexer.AddressCheckAll,
 		ConfirmationBlockCount: config.ConfirmationBlockCount,
-		AddressesOfInterest:    addressesOfInterest,
-	}
-	syncerConfig := &gouroboros.BlockSyncerConfig{
-		NetworkMagic:   config.NetworkMagic,
-		NodeAddress:    networkAddress,
-		RestartOnError: true, // always try to restart on non-fatal errors
-		RestartDelay:   indexerRestartDelay,
-		KeepAlive:      indexerKeepAlive,
-		SyncStartTries: indexerSyncStartTries,
+		AddressesOfInterest: append([]string{
+			config.BridgingAddresses.BridgingAddress,
+			config.BridgingAddresses.FeeAddress,
+		}, config.OtherAddressesOfInterest...),
 	}
 
-	return indexerConfig, syncerConfig
+	return indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
+}
+
+func newBlockSyncer(
+	config *cCore.CardanoChainConfig,
+	blockSyncerHandler indexer.BlockSyncerHandler,
+	logger hclog.Logger,
+) indexer.BlockSyncer {
+	if config.NetworkAddress != "" && !syncerForceOgmios {
+		return gouroboros.NewBlockSyncer(&gouroboros.BlockSyncerConfig{
+			NetworkMagic: config.NetworkMagic,
+			NodeAddress: strings.TrimPrefix(
+				strings.TrimPrefix(config.NetworkAddress, "http://"), "https://"),
+			RestartOnError: true, // always try to restart on non-fatal errors
+			RestartDelay:   indexerRestartDelay,
+			KeepAlive:      indexerKeepAlive,
+			SyncStartTries: indexerSyncStartTries,
+		}, blockSyncerHandler, logger.Named("block_syncer"))
+	}
+
+	return ogmios.NewBlockSyncer(&ogmios.BlockSyncerConfig{
+		URL: "ws://" + strings.TrimPrefix(
+			strings.TrimPrefix(config.OgmiosURL, "http://"), "https://"),
+		RestartOnError: true, // always try to restart on non-fatal errors
+		RestartDelay:   indexerRestartDelay,
+		SyncStartTries: indexerSyncStartTries,
+	}, blockSyncerHandler, logger.Named("block_syncer"))
 }
 
 func initOracleState(
