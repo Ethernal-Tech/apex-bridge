@@ -129,6 +129,7 @@ func (bts *BridgingTxSender) CreateTx(
 		Amount: outputsSumLovelace,
 	}, cardanowallet.TxOutput{
 		Addr:   senderAddr,
+		Amount: inputs.Sum[cardanowallet.AdaTokenName] - outputsSumLovelace,
 		Tokens: tokens,
 	})
 
