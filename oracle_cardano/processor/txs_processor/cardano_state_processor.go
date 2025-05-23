@@ -163,7 +163,6 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
 			skippedEvents = append(skippedEvents, event)
-			sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
 
 			continue
 		}
@@ -183,6 +182,10 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 				newProcessedTxs = append(newProcessedTxs, processedTx)
 			}
 		}
+	}
+
+	if len(skippedEvents) > 0 {
+		sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent events", "cnt", len(skippedEvents))
 	}
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
