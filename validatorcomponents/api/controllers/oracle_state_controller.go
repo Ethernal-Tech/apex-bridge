@@ -298,7 +298,7 @@ func (c *OracleStateControllerImpl) findCardanoTx(chainID string, txHash string)
 
 func (c *OracleStateControllerImpl) findBridgingRequestState(
 	chainID string, txHash string,
-) (*core.BridgingRequestState, error) {
+) (*common.BridgingRequestState, error) {
 	hashBytes, err := hex.DecodeString(txHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode txHash string. err: %w", err)

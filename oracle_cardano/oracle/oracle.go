@@ -66,25 +66,26 @@ func NewCardanoOracle(
 		chainInfos[cc.ChainID] = info
 	}
 
+	refundRequestProcessor := successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
 	successTxProcessors := []core.CardanoTxSuccessProcessor{
 		successtxprocessors.NewBatchExecutedProcessor(logger),
+		successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger),
 		successtxprocessors.NewHotWalletIncrementProcessor(logger),
-		// tx_processors.NewRefundExecutedProcessor(logger),
+		refundRequestProcessor,
 	}
 
 	if appConfig.RunMode == common.ReactorMode {
 		successTxProcessors = append(successTxProcessors,
-			successtxprocessors.NewBridgingRequestedProcessor(logger))
+			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger))
 	} else {
 		successTxProcessors = append(successTxProcessors,
-			successtxprocessors.NewSkylineBridgingRequestedProcessor(logger, chainInfos))
+			successtxprocessors.NewSkylineBridgingRequestedProcessor(refundRequestProcessor, logger, chainInfos))
 	}
 
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
 		successTxProcessors,
 		[]core.CardanoTxFailedProcessor{
 			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
-			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 		},
 	)
 

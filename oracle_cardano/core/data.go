@@ -67,9 +67,9 @@ func (tx *CardanoTx) SetLastTimeTried(lastTimeTried time.Time) {
 	tx.LastTimeTried = lastTimeTried
 }
 
-// IncrementSubmitTryCount implements core.BaseTx.
-func (tx *CardanoTx) IncrementSubmitTryCount() {
-	tx.SubmitTryCount++
+// ResetSubmitTryCount implements core.BaseTx.
+func (tx *CardanoTx) ResetSubmitTryCount() {
+	tx.SubmitTryCount = 0
 }
 
 // IncrementBatchTryCount implements core.BaseTx.

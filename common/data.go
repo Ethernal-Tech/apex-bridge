@@ -42,17 +42,20 @@ type Hash [HashSize]byte
 type BridgingRequestStateKey struct {
 	SourceChainID string
 	SourceTxHash  Hash
+	IsRefund      bool
 }
 
-func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash) BridgingRequestStateKey {
+func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash, isRefund bool) BridgingRequestStateKey {
 	return BridgingRequestStateKey{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
+		IsRefund:      isRefund,
 	}
 }
 
 type NewBridgingRequestStateModel struct {
 	SourceTxHash Hash
+	IsRefund     bool
 }
 
 type ConfirmedTxType uint8
