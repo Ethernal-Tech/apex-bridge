@@ -73,7 +73,7 @@ func (sp *CardanoStateProcessor) ProcessSavedEvents() {
 	}
 
 	if len(batchEvents) > 0 {
-		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "events", batchEvents)
+		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "cnt", len(batchEvents))
 
 		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
 
@@ -197,9 +197,9 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	event *cCore.DBBatchInfoEvent,
 ) ([]cCore.BaseTx, error) {
-	result := make([]cCore.BaseTx, len(event.TxHashes))
+	result := make([]cCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
+	for _, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			cCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -207,10 +207,21 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 			},
 		)
 		if err != nil {
-			return nil, err
+			processedTx, pErr := sp.db.GetProcessedTx(
+				cCore.DBTxID{
+					ChainID: common.ToStrChainID(hash.SourceChainID),
+					DBKey:   hash.ObservedTransactionHash[:],
+				},
+			)
+
+			if processedTx == nil || pErr != nil {
+				return nil, err
+			}
+
+			continue
 		}
 
-		result[idx] = tx
+		result = append(result, tx)
 	}
 
 	return result, nil

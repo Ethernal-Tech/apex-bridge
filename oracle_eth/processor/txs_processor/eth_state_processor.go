@@ -76,7 +76,7 @@ func (sp *EthStateProcessor) ProcessSavedEvents() {
 	}
 
 	if len(batchEvents) > 0 {
-		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "events", batchEvents)
+		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "cnt", len(batchEvents))
 
 		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
 
@@ -200,9 +200,9 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, len(event.TxHashes))
+	result := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
+	for _, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -210,10 +210,21 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 			},
 		)
 		if err != nil {
-			return nil, err
+			processedTx, pErr := sp.db.GetProcessedTx(
+				oracleCore.DBTxID{
+					ChainID: common.ToStrChainID(hash.SourceChainID),
+					DBKey:   hash.ObservedTransactionHash[:],
+				},
+			)
+
+			if processedTx == nil || pErr != nil {
+				return nil, err
+			}
+
+			continue
 		}
 
-		result[idx] = tx
+		result = append(result, tx)
 	}
 
 	return result, nil
