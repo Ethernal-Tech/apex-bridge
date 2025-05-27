@@ -122,13 +122,13 @@ func (m *BridgeSmartContractMock) SetChainAdditionalData(
 	return m.Called(ctx, chainID, multisigAddr, feeAddr).Error(0)
 }
 
-// GetBatchTransactions implements IOracleBridgeSmartContract.
-func (m *BridgeSmartContractMock) GetBatchTransactions(
+// GetBatchStatusAndTransactions implements IOracleBridgeSmartContract.
+func (m *BridgeSmartContractMock) GetBatchStatusAndTransactions(
 	ctx context.Context, chainID string, batchID uint64,
-) ([]TxDataInfo, uint8, error) {
+) (uint8, []TxDataInfo, error) {
 	args := m.Called(ctx, chainID, batchID)
-	txs, _ := args.Get(0).([]TxDataInfo)
-	status, _ := args.Get(1).(uint8)
+	status, _ := args.Get(0).(uint8)
+	txs, _ := args.Get(1).([]TxDataInfo)
 
-	return txs, status, args.Error(2)
+	return status, txs, args.Error(2)
 }

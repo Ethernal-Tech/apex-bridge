@@ -40,7 +40,7 @@ func NewEthBridgeDataFetcher(
 func (df *EthBridgeDataFetcherImpl) GetBatchTransactions(
 	chainID string, batchID uint64,
 ) ([]eth.TxDataInfo, error) {
-	txs, _, err := df.bridgeSC.GetBatchTransactions(df.ctx, chainID, batchID)
+	_, txs, err := df.bridgeSC.GetBatchStatusAndTransactions(df.ctx, chainID, batchID)
 	if err != nil {
 		df.logger.Error("Failed to retrieve batch transactions", "chainID", chainID, "batchID", batchID, "err", err)
 

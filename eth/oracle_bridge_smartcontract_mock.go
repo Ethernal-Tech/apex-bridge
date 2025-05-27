@@ -12,15 +12,15 @@ type OracleBridgeSmartContractMock struct {
 	mock.Mock
 }
 
-// GetBatchTransactions implements IOracleBridgeSmartContract.
-func (m *OracleBridgeSmartContractMock) GetBatchTransactions(
+// GetBatchStatusAndTransactions implements IOracleBridgeSmartContract.
+func (m *OracleBridgeSmartContractMock) GetBatchStatusAndTransactions(
 	ctx context.Context, chainID string, batchID uint64,
-) ([]contractbinding.IBridgeStructsTxDataInfo, uint8, error) {
+) (uint8, []contractbinding.IBridgeStructsTxDataInfo, error) {
 	args := m.Called(ctx, chainID, batchID)
-	txs, _ := args.Get(0).([]contractbinding.IBridgeStructsTxDataInfo)
-	status, _ := args.Get(1).(uint8)
+	status, _ := args.Get(0).(uint8)
+	txs, _ := args.Get(1).([]contractbinding.IBridgeStructsTxDataInfo)
 
-	return txs, status, args.Error(2)
+	return status, txs, args.Error(2)
 }
 
 // GetLastObservedBlock implements IOracleBridgeSmartContract.
