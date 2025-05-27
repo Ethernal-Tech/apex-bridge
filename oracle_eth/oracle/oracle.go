@@ -100,7 +100,7 @@ func NewEthOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		eco, err := eth_chain.NewEthChainObserver(
-			ctx, ethChainConfig, ethTxsReceiver, db, indexerDB,
+			ethChainConfig, ethTxsReceiver, db, indexerDB,
 			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create eth chain observer for `%s`: %w", ethChainConfig.ChainID, err)
@@ -149,9 +149,11 @@ func (o *OracleImpl) Dispose() error {
 	for _, eco := range o.ethChainObservers {
 		err := eco.Dispose()
 		if err != nil {
-			o.logger.Error("error while disposing eth chain observer", "chainId", eco.GetConfig().ChainID, "err", err)
+			chainID := eco.GetConfig().ChainID
+
+			o.logger.Error("error while disposing eth chain observer", "chainId", chainID, "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing eth chain observer. chainId: %v, err: %w",
-				eco.GetConfig().ChainID, err))
+				chainID, err))
 		}
 	}
 
