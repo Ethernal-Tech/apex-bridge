@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type evtErr struct {
+	evt *oracleCore.DBBatchInfoEvent
+	err error
+}
+
 const (
 	TTLInsuranceOffset             = 2
 	logLastNBatchInfoSkippedEvents = 10
@@ -164,21 +169,13 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 		processedEvents      = make([]*oracleCore.DBBatchInfoEvent, 0, len(events))
 		newProcessedTxs      []oracleCore.BaseProcessedTx
 		newUnprocessedTxs    []oracleCore.BaseTx
-		skippedEventsWithErr []struct {
-			evt *oracleCore.DBBatchInfoEvent
-			err error
-		}
+		skippedEventsWithErr []evtErr
 	)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
-			skippedEventsWithErr = append(
-				skippedEventsWithErr,
-				struct {
-					evt *oracleCore.DBBatchInfoEvent
-					err error
-				}{evt: event, err: err})
+			skippedEventsWithErr = append(skippedEventsWithErr, evtErr{evt: event, err: err})
 
 			continue
 		}
