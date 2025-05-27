@@ -323,7 +323,7 @@ func LastN[T any](arr []T, n int) []T {
 		return nil
 	}
 
-	if len(arr) < n {
+	if len(arr) <= n {
 		return arr
 	}
 
