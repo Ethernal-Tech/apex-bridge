@@ -276,17 +276,12 @@ func Test_LoadTrackerConfig(t *testing.T) {
 }
 
 func TestEthChainObserver_ExecuteIsTrackerAlive(t *testing.T) {
-	trackerConfig := &eventTracker.EventTrackerConfig{
-		RPCEndpoint:     ethNodeURL,
-		EventSubscriber: confirmedEventHandler{},
-	}
-
 	indexerDB := &core.EventStoreMock{}
 
 	co := &EthChainObserverImpl{
-		indexerDB:     indexerDB,
-		trackerConfig: trackerConfig,
-		logger:        hclog.NewNullLogger(),
+		indexerDB:   indexerDB,
+		txsReceiver: &core.EthTxsReceiverMock{},
+		logger:      hclog.NewNullLogger(),
 	}
 
 	t.Run("everything is normal", func(t *testing.T) {

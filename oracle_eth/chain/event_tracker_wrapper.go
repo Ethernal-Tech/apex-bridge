@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"time"
 
 	eventStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
@@ -20,8 +19,6 @@ func newEventTrackerWrapper(
 ) (*eventTrackerWrapper, <-chan struct{}, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	notifyClosedCh := make(chan struct{})
-	// add timestamp to the logger to differentiate between multiple instances
-	config.Logger = config.Logger.Named(time.Now().UTC().String())
 
 	et, err := tracker.NewEventTracker(config, store)
 

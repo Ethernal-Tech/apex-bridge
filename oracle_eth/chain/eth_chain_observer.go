@@ -15,12 +15,12 @@ import (
 )
 
 type EthChainObserverImpl struct {
-	config        *oCore.EthChainConfig
-	indexerDB     eventTrackerStore.EventTrackerStore
-	trackerConfig *eventTracker.EventTrackerConfig
-	lastBlock     uint64
-	closedCh      chan struct{}
-	logger        hclog.Logger
+	config      *oCore.EthChainConfig
+	indexerDB   eventTrackerStore.EventTrackerStore
+	txsReceiver ethOracleCore.EthTxsReceiver
+	lastBlock   uint64
+	closedCh    chan struct{}
+	logger      hclog.Logger
 }
 
 var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
@@ -32,24 +32,24 @@ func NewEthChainObserver(
 	indexerDB eventTrackerStore.EventTrackerStore,
 	logger hclog.Logger,
 ) (*EthChainObserverImpl, error) {
-	trackerConfig := loadTrackerConfigs(config, txsReceiver, logger)
-
 	err := initOracleState(indexerDB, oracleDB, config.StartBlockNumber, config.ChainID, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return &EthChainObserverImpl{
-		config:        config,
-		indexerDB:     indexerDB,
-		trackerConfig: trackerConfig,
-		closedCh:      make(chan struct{}),
-		logger:        logger,
+		config:      config,
+		indexerDB:   indexerDB,
+		txsReceiver: txsReceiver,
+		closedCh:    make(chan struct{}),
+		logger:      logger,
 	}, nil
 }
 
 func (co *EthChainObserverImpl) Start() error {
-	tracker, notifyClosedCh, err := newEventTrackerWrapper(co.trackerConfig, co.indexerDB)
+	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.logger)
+
+	tracker, notifyClosedCh, err := newEventTrackerWrapper(trackerConfig, co.indexerDB)
 	if err != nil {
 		co.logger.Error("Failed to create event tracker", "error", err)
 	}
@@ -142,7 +142,8 @@ func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.
 		},
 		StartBlockFromGenesis: config.StartBlockNumber,
 		LogFilter:             logFilter,
-		Logger:                logger,
+		// add timestamp to the logger to differentiate between multiple instances
+		Logger: logger.Named(time.Now().UTC().String()),
 	}
 }
 
