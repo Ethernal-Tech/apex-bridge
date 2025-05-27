@@ -137,7 +137,7 @@ func TestEthChainObserver(t *testing.T) {
 			SyncBatchSize:           10,
 			NumBlockConfirmations:   1,
 			StartBlockNumber:        uint64(5462655),
-			RestartTrackerPullCheck: restartTrackerWaitTime,
+			RestartTrackerPullCheck: time.Second * 30,
 		}
 
 		oracleDB.On("ClearAllTxs", mock.Anything).Return(error(nil))
@@ -347,7 +347,7 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 	t.Run("everything is normal", func(t *testing.T) {
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(1), nil).Once()
 
-		co.executeIsTrackerAlive(time.Millisecond)
+		co.executeIsTrackerAlive()
 
 		require.Equal(t, ethChainObserverStateCreated, co.trackerState)
 	})
@@ -357,7 +357,8 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 
 		co.lastBlock = 2
 
-		co.executeIsTrackerAlive(time.Millisecond)
+		require.NoError(t, co.tracker.Start())
+		co.executeIsTrackerAlive()
 
 		require.Equal(t, ethChainObserverStateCreated, co.trackerState)
 	})
@@ -365,7 +366,7 @@ func Test_executeIsTrackerAlive(t *testing.T) {
 	t.Run("already closed", func(t *testing.T) {
 		require.NoError(t, co.Dispose())
 
-		co.executeIsTrackerAlive(time.Millisecond)
+		co.executeIsTrackerAlive()
 
 		require.Equal(t, ethChainObserverStateFinished, co.trackerState)
 	})

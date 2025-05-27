@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	TTLInsuranceOffset = 2
+	TTLInsuranceOffset             = 2
+	logLastNBatchInfoSkippedEvents = 10
 )
 
 var _ cCore.SpecificChainTxsProcessorState = (*CardanoStateProcessor)(nil)
@@ -73,7 +74,7 @@ func (sp *CardanoStateProcessor) ProcessSavedEvents() {
 	}
 
 	if len(batchEvents) > 0 {
-		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "events", batchEvents)
+		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "cnt", len(batchEvents))
 
 		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
 
@@ -147,7 +148,7 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.BatchExecutionInfo) > 0 {
 		_, skippedEvents := sp.processBatchExecutionInfoEvents(events.BatchExecutionInfo)
 		if len(skippedEvents) > 0 {
-			sp.logger.Debug("Storing BatchExecutionInfoEvent events", "events", skippedEvents)
+			sp.logger.Debug("Storing BatchExecutionInfoEvent events", "cnt", len(skippedEvents))
 			sp.state.updateData.AddBatchInfoEvents = skippedEvents
 		}
 	}
@@ -155,15 +156,26 @@ func (sp *CardanoStateProcessor) ProcessSubmitClaimsEvents(
 
 func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 	events []*cCore.DBBatchInfoEvent,
-) (processedEvents []*cCore.DBBatchInfoEvent, skippedEvents []*cCore.DBBatchInfoEvent) {
-	newProcessedTxs := make([]cCore.BaseProcessedTx, 0)
-	newUnprocessedTxs := make([]cCore.BaseTx, 0)
+) ([]*cCore.DBBatchInfoEvent, []*cCore.DBBatchInfoEvent) {
+	var (
+		processedEvents      = make([]*cCore.DBBatchInfoEvent, 0, len(events))
+		newProcessedTxs      []cCore.BaseProcessedTx
+		newUnprocessedTxs    []cCore.BaseTx
+		skippedEventsWithErr []struct {
+			evt *cCore.DBBatchInfoEvent
+			err error
+		}
+	)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
-			skippedEvents = append(skippedEvents, event)
-			sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+			skippedEventsWithErr = append(
+				skippedEventsWithErr,
+				struct {
+					evt *cCore.DBBatchInfoEvent
+					err error
+				}{evt: event, err: err})
 
 			continue
 		}
@@ -183,6 +195,25 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 				newProcessedTxs = append(newProcessedTxs, processedTx)
 			}
 		}
+	}
+
+	if len(skippedEventsWithErr) > 0 {
+		lastNSkippedEventsWithErr := common.LastN(skippedEventsWithErr, logLastNBatchInfoSkippedEvents)
+
+		sp.logger.Info(
+			fmt.Sprintf("couldn't find txs for some BatchExecutionInfoEvent events. listing last %d",
+				logLastNBatchInfoSkippedEvents))
+
+		for _, item := range lastNSkippedEventsWithErr {
+			sp.logger.Info(
+				"couldn't find txs for BatchExecutionInfoEvent event",
+				"event", item.evt, "err", item.err)
+		}
+	}
+
+	skippedEvents := make([]*cCore.DBBatchInfoEvent, len(skippedEventsWithErr))
+	for idx, item := range skippedEventsWithErr {
+		skippedEvents[idx] = item.evt
 	}
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs

@@ -125,9 +125,10 @@ func (m *BridgeSmartContractMock) SetChainAdditionalData(
 // GetBatchTransactions implements IOracleBridgeSmartContract.
 func (m *BridgeSmartContractMock) GetBatchTransactions(
 	ctx context.Context, chainID string, batchID uint64,
-) ([]TxDataInfo, error) {
+) ([]TxDataInfo, uint8, error) {
 	args := m.Called(ctx, chainID, batchID)
-	result, _ := args.Get(0).([]TxDataInfo)
+	txs, _ := args.Get(0).([]TxDataInfo)
+	status, _ := args.Get(1).(uint8)
 
-	return result, args.Error(1)
+	return txs, status, args.Error(2)
 }

@@ -22,8 +22,6 @@ const (
 	ethChainObserverStateDisposed ethChainObserverState = iota
 	ethChainObserverStateCreated
 	ethChainObserverStateFinished
-
-	restartTrackerWaitTime = time.Second * 30
 )
 
 type EthChainObserverImpl struct {
@@ -83,7 +81,7 @@ func (co *EthChainObserverImpl) Start() error {
 			case <-co.ctx.Done():
 				return
 			case <-time.After(co.config.RestartTrackerPullCheck):
-				co.executeIsTrackerAlive(restartTrackerWaitTime)
+				co.executeIsTrackerAlive()
 			}
 		}
 	}()
@@ -108,7 +106,7 @@ func (co *EthChainObserverImpl) GetConfig() *oCore.EthChainConfig {
 	return co.config
 }
 
-func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime time.Duration) {
+func (co *EthChainObserverImpl) executeIsTrackerAlive() {
 	co.lastBlockLock.Lock()
 	defer co.lastBlockLock.Unlock()
 
@@ -136,14 +134,13 @@ func (co *EthChainObserverImpl) executeIsTrackerAlive(restartTrackerWaitTime tim
 	if co.trackerState == ethChainObserverStateCreated {
 		co.tracker.Close()
 
-		co.trackerState = ethChainObserverStateDisposed
-	}
+		select {
+		case <-co.ctx.Done():
+			return
+		case <-co.tracker.GetFinishClosingCh():
+		}
 
-	// wait some time before restart
-	select {
-	case <-co.ctx.Done():
-		return
-	case <-time.After(restartTrackerWaitTime):
+		co.trackerState = ethChainObserverStateDisposed
 	}
 
 	ethTracker, err := eventTracker.NewEventTracker(co.trackerConfig, co.indexerDB, block)

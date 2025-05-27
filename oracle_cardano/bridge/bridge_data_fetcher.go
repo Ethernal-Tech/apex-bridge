@@ -40,7 +40,7 @@ func NewCardanoBridgeDataFetcher(
 func (df *CardanoBridgeDataFetcherImpl) GetBatchTransactions(
 	chainID string, batchID uint64,
 ) ([]eth.TxDataInfo, error) {
-	txs, err := df.bridgeSC.GetBatchTransactions(df.ctx, chainID, batchID)
+	txs, _, err := df.bridgeSC.GetBatchTransactions(df.ctx, chainID, batchID)
 	if err != nil {
 		df.logger.Error("Failed to retrieve batch transactions", "chainID", chainID, "batchID", batchID, "err", err)
 
