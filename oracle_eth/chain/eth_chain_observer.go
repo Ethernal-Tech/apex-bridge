@@ -71,11 +71,11 @@ func (co *EthChainObserverImpl) Start() error {
 
 					select {
 					case <-co.closedCh:
-						return
-
 					case <-notifyClosedCh:
 						_ = co.Start()
 					}
+
+					return
 				}
 			}
 		}
