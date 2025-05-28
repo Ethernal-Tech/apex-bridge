@@ -224,6 +224,7 @@ func ExecuteCLICommand(binary string, args []string, workingDir string) (string,
 
 func WaitForAmount(
 	ctx context.Context, receivedAmount *big.Int, getBalanceFn func(ctx context.Context) (*big.Int, error),
+	options ...infracommon.RetryConfigOption,
 ) (*big.Int, error) {
 	originalAmount, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
 		return getBalanceFn(ctx)
@@ -245,7 +246,12 @@ func WaitForAmount(
 		}
 
 		return balance, nil
-	}, infracommon.WithRetryCount(waitForAmountRetryCount), infracommon.WithRetryWaitTime(waitForAmountWaitTime))
+	}, append(
+		[]infracommon.RetryConfigOption{
+			infracommon.WithRetryCount(waitForAmountRetryCount),
+			infracommon.WithRetryWaitTime(waitForAmountWaitTime),
+		}, options...)...,
+	)
 }
 
 func IsValidAddress(chainID string, addr string) bool {

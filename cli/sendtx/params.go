@@ -14,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -53,10 +54,11 @@ const (
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
-	gasLimitMultiplier       = 1.6
-	amountCheckRetryWaitTime = time.Second * 5
-	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
-	potentialFee             = 500_000
+	gasLimitMultiplier = 1.6
+	potentialFee       = 500_000
+
+	waitForAmountRetryCount = 216 // 216 * 10 = 36 min
+	waitForAmountWaitTime   = time.Second * 10
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -374,7 +376,10 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(context.Background(), receivers, cardanowallet.AdaTokenName)
+		err = txSender.WaitForTx(
+			context.Background(), receivers, cardanowallet.AdaTokenName,
+			infracommon.WithRetryCount(waitForAmountRetryCount),
+			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		if err != nil {
 			return nil, err
 		}
@@ -472,7 +477,9 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 
 		err = cardanotx.WaitForTx(
 			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-			cardanoReceivers, cardanowallet.AdaTokenName)
+			cardanoReceivers, cardanowallet.AdaTokenName,
+			infracommon.WithRetryCount(waitForAmountRetryCount),
+			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		if err != nil {
 			return nil, err
 		}
@@ -503,7 +510,8 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 			_, errs[idx] = common.WaitForAmount(
 				ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
 					return client.BalanceAt(ctx, addr, nil)
-				})
+				}, infracommon.WithRetryCount(waitForAmountRetryCount),
+				infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		}(i, x)
 	}
 
