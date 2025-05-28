@@ -47,6 +47,8 @@ func NewEthChainObserver(
 }
 
 func (co *EthChainObserverImpl) Start() error {
+	co.logger.Debug("Starting eth chain observer", "ednpoint", co.config.NodeURL)
+
 	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.logger)
 
 	tracker, notifyClosedCh, err := newEventTrackerWrapper(trackerConfig, co.indexerDB)
@@ -66,7 +68,11 @@ func (co *EthChainObserverImpl) Start() error {
 
 			case <-time.After(co.config.RestartTrackerPullCheck):
 				// restart tracker if it is not alive
+				co.logger.Debug("Check if tracker is alive", "endpoint", trackerConfig.RPCEndpoint)
+
 				if !co.updateIsTrackerAlive() {
+					co.logger.Debug("Tracker is not alive anymore", "endpoint", trackerConfig.RPCEndpoint)
+
 					tracker.Close() // close old tracker
 
 					select {
