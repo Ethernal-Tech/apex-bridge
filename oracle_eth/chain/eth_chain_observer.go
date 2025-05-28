@@ -47,7 +47,7 @@ func NewEthChainObserver(
 }
 
 func (co *EthChainObserverImpl) Start() error {
-	co.logger.Debug("Starting eth chain observer", "ednpoint", co.config.NodeURL)
+	co.logger.Debug("Starting eth chain observer", "endpoint", co.config.NodeURL)
 
 	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.logger)
 
