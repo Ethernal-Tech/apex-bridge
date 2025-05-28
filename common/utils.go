@@ -317,3 +317,15 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 func ParseTxInfo(txRaw []byte, full bool) (indexer.TxInfo, error) {
 	return gouroboros.ParseTxInfo(txRaw, full)
 }
+
+func LastN[T any](arr []T, n int) []T {
+	if n < 0 {
+		return nil
+	}
+
+	if len(arr) <= n {
+		return arr
+	}
+
+	return arr[len(arr)-n:]
+}
