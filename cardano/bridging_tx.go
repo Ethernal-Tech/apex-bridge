@@ -182,8 +182,9 @@ func (bts *BridgingTxSender) SendTx(
 
 func (bts *BridgingTxSender) WaitForTx(
 	ctx context.Context, receivers []cardanowallet.TxOutput, tokenName string,
+	options ...infracommon.RetryConfigOption,
 ) error {
-	return WaitForTx(ctx, bts.txUtxoRetrieverDst, receivers, tokenName)
+	return WaitForTx(ctx, bts.txUtxoRetrieverDst, receivers, tokenName, options...)
 }
 
 func (bts *BridgingTxSender) createMetadata(
@@ -209,7 +210,7 @@ func (bts *BridgingTxSender) createMetadata(
 
 func WaitForTx(
 	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever,
-	receivers []cardanowallet.TxOutput, tokenName string,
+	receivers []cardanowallet.TxOutput, tokenName string, options ...infracommon.RetryConfigOption,
 ) error {
 	errs := make([]error, len(receivers))
 	wg := sync.WaitGroup{}
@@ -230,7 +231,7 @@ func WaitForTx(
 					sum := cardanowallet.GetUtxosSum(utxos)
 
 					return new(big.Int).SetUint64(sum[tokenName]), nil
-				})
+				}, options...)
 		}(i, x)
 	}
 
