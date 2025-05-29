@@ -24,31 +24,33 @@ import (
 )
 
 const (
-	primeNetworkAddressFlag        = "prime-network-address"
-	primeNetworkMagicFlag          = "prime-network-magic"
-	primeNetworkIDFlag             = "prime-network-id"
-	primeOgmiosURLFlag             = "prime-ogmios-url"
-	primeBlockfrostURLFlag         = "prime-blockfrost-url"
-	primeBlockfrostAPIKeyFlag      = "prime-blockfrost-api-key"
-	primeSocketPathFlag            = "prime-socket-path"
-	primeTTLSlotIncFlag            = "prime-ttl-slot-inc"
-	primeSlotRoundingThresholdFlag = "prime-slot-rounding-threshold"
-	primeStartingBlockFlag         = "prime-starting-block"
-	primeUtxoMinAmountFlag         = "prime-utxo-min-amount"
-	primeMinFeeForBridgingFlag     = "prime-min-fee-for-bridging"
+	primeNetworkAddressFlag         = "prime-network-address"
+	primeNetworkMagicFlag           = "prime-network-magic"
+	primeNetworkIDFlag              = "prime-network-id"
+	primeOgmiosURLFlag              = "prime-ogmios-url"
+	primeBlockfrostURLFlag          = "prime-blockfrost-url"
+	primeBlockfrostAPIKeyFlag       = "prime-blockfrost-api-key"
+	primeSocketPathFlag             = "prime-socket-path"
+	primeTTLSlotIncFlag             = "prime-ttl-slot-inc"
+	primeSlotRoundingThresholdFlag  = "prime-slot-rounding-threshold"
+	primeStartingBlockFlag          = "prime-starting-block"
+	primeUtxoMinAmountFlag          = "prime-utxo-min-amount"
+	primeMinFeeForBridgingFlag      = "prime-min-fee-for-bridging"
+	primeBlockConfirmationCountFlag = "prime-block-confirmation-count"
 
-	vectorNetworkAddressFlag        = "vector-network-address"
-	vectorNetworkMagicFlag          = "vector-network-magic"
-	vectorNetworkIDFlag             = "vector-network-id"
-	vectorOgmiosURLFlag             = "vector-ogmios-url"
-	vectorBlockfrostURLFlag         = "vector-blockfrost-url"
-	vectorBlockfrostAPIKeyFlag      = "vector-blockfrost-api-key"
-	vectorSocketPathFlag            = "vector-socket-path"
-	vectorTTLSlotIncFlag            = "vector-ttl-slot-inc"
-	vectorSlotRoundingThresholdFlag = "vector-slot-rounding-threshold"
-	vectorStartingBlockFlag         = "vector-starting-block"
-	vectorUtxoMinAmountFlag         = "vector-utxo-min-amount"
-	vectorMinFeeForBridgingFlag     = "vector-min-fee-for-bridging"
+	vectorNetworkAddressFlag         = "vector-network-address"
+	vectorNetworkMagicFlag           = "vector-network-magic"
+	vectorNetworkIDFlag              = "vector-network-id"
+	vectorOgmiosURLFlag              = "vector-ogmios-url"
+	vectorBlockfrostURLFlag          = "vector-blockfrost-url"
+	vectorBlockfrostAPIKeyFlag       = "vector-blockfrost-api-key"
+	vectorSocketPathFlag             = "vector-socket-path"
+	vectorTTLSlotIncFlag             = "vector-ttl-slot-inc"
+	vectorSlotRoundingThresholdFlag  = "vector-slot-rounding-threshold"
+	vectorStartingBlockFlag          = "vector-starting-block"
+	vectorUtxoMinAmountFlag          = "vector-utxo-min-amount"
+	vectorMinFeeForBridgingFlag      = "vector-min-fee-for-bridging"
+	vectorBlockConfirmationCountFlag = "vector-block-confirmation-count"
 
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
@@ -76,31 +78,33 @@ const (
 	relayerDataDirFlag              = "relayer-data-dir"
 	relayerConfigPathFlag           = "relayer-config"
 
-	primeNetworkAddressFlagDesc        = "(mandatory) address of prime network"
-	primeNetworkMagicFlagDesc          = "prime network magic (default 0)"
-	primeNetworkIDFlagDesc             = "prime network id"
-	primeOgmiosURLFlagDesc             = "ogmios URL for prime network"
-	primeBlockfrostURLFlagDesc         = "blockfrost URL for prime network"
-	primeBlockfrostAPIKeyFlagDesc      = "blockfrost API key for prime network" //nolint:gosec
-	primeSocketPathFlagDesc            = "socket path for prime network"
-	primeTTLSlotIncFlagDesc            = "TTL slot increment for prime"
-	primeSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	primeStartingBlockFlagDesc         = "slot: hash of the block from where to start prime oracle"
-	primeUtxoMinAmountFlagDesc         = "minimal UTXO value for prime"
-	primeMinFeeForBridgingFlagDesc     = "minimal bridging fee for prime"
+	primeNetworkAddressFlagDesc         = "(mandatory) address of prime network"
+	primeNetworkMagicFlagDesc           = "prime network magic (default 0)"
+	primeNetworkIDFlagDesc              = "prime network id"
+	primeOgmiosURLFlagDesc              = "ogmios URL for prime network"
+	primeBlockfrostURLFlagDesc          = "blockfrost URL for prime network"
+	primeBlockfrostAPIKeyFlagDesc       = "blockfrost API key for prime network" //nolint:gosec
+	primeSocketPathFlagDesc             = "socket path for prime network"
+	primeTTLSlotIncFlagDesc             = "TTL slot increment for prime"
+	primeSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	primeStartingBlockFlagDesc          = "slot: hash of the block from where to start prime oracle"
+	primeUtxoMinAmountFlagDesc          = "minimal UTXO value for prime"
+	primeMinFeeForBridgingFlagDesc      = "minimal bridging fee for prime"
+	primeBlockConfirmationCountFlagDesc = "block confirmation count for prime"
 
-	vectorNetworkAddressFlagDesc        = "(mandatory) address of vector network"
-	vectorNetworkMagicFlagDesc          = "vector network magic (default 0)"
-	vectorNetworkIDFlagDesc             = "vector network id"
-	vectorOgmiosURLFlagDesc             = "ogmios URL for vector network"
-	vectorBlockfrostURLFlagDesc         = "blockfrost URL for vector network"
-	vectorBlockfrostAPIKeyFlagDesc      = "blockfrost API key for vector network" //nolint:gosec
-	vectorSocketPathFlagDesc            = "socket path for vector network"
-	vectorTTLSlotIncFlagDesc            = "TTL slot increment for vector"
-	vectorSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	vectorStartingBlockFlagDesc         = "slot: hash of the block from where to start vector oracle"
-	vectorUtxoMinAmountFlagDesc         = "minimal UTXO value for vector"
-	vectorMinFeeForBridgingFlagDesc     = "minimal bridging fee for vector"
+	vectorNetworkAddressFlagDesc         = "(mandatory) address of vector network"
+	vectorNetworkMagicFlagDesc           = "vector network magic (default 0)"
+	vectorNetworkIDFlagDesc              = "vector network id"
+	vectorOgmiosURLFlagDesc              = "ogmios URL for vector network"
+	vectorBlockfrostURLFlagDesc          = "blockfrost URL for vector network"
+	vectorBlockfrostAPIKeyFlagDesc       = "blockfrost API key for vector network" //nolint:gosec
+	vectorSocketPathFlagDesc             = "socket path for vector network"
+	vectorTTLSlotIncFlagDesc             = "TTL slot increment for vector"
+	vectorSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	vectorStartingBlockFlagDesc          = "slot: hash of the block from where to start vector oracle"
+	vectorUtxoMinAmountFlagDesc          = "minimal UTXO value for vector"
+	vectorMinFeeForBridgingFlagDesc      = "minimal bridging fee for vector"
+	vectorBlockConfirmationCountFlagDesc = "block confirmation count for vector"
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
@@ -159,31 +163,33 @@ var (
 )
 
 type generateConfigsParams struct {
-	primeNetworkAddress        string
-	primeNetworkMagic          uint32
-	primeNetworkID             uint32
-	primeOgmiosURL             string
-	primeBlockfrostURL         string
-	primeBlockfrostAPIKey      string
-	primeSocketPath            string
-	primeTTLSlotInc            uint64
-	primeSlotRoundingThreshold uint64
-	primeStartingBlock         string
-	primeUtxoMinAmount         uint64
-	primeMinFeeForBridging     uint64
+	primeNetworkAddress         string
+	primeNetworkMagic           uint32
+	primeNetworkID              uint32
+	primeOgmiosURL              string
+	primeBlockfrostURL          string
+	primeBlockfrostAPIKey       string
+	primeSocketPath             string
+	primeTTLSlotInc             uint64
+	primeSlotRoundingThreshold  uint64
+	primeStartingBlock          string
+	primeUtxoMinAmount          uint64
+	primeMinFeeForBridging      uint64
+	primeBlockConfirmationCount uint
 
-	vectorNetworkAddress        string
-	vectorNetworkMagic          uint32
-	vectorNetworkID             uint32
-	vectorOgmiosURL             string
-	vectorBlockfrostURL         string
-	vectorBlockfrostAPIKey      string
-	vectorSocketPath            string
-	vectorTTLSlotInc            uint64
-	vectorSlotRoundingThreshold uint64
-	vectorStartingBlock         string
-	vectorUtxoMinAmount         uint64
-	vectorMinFeeForBridging     uint64
+	vectorNetworkAddress         string
+	vectorNetworkMagic           uint32
+	vectorNetworkID              uint32
+	vectorOgmiosURL              string
+	vectorBlockfrostURL          string
+	vectorBlockfrostAPIKey       string
+	vectorSocketPath             string
+	vectorTTLSlotInc             uint64
+	vectorSlotRoundingThreshold  uint64
+	vectorStartingBlock          string
+	vectorUtxoMinAmount          uint64
+	vectorMinFeeForBridging      uint64
+	vectorBlockConfirmationCount uint
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -380,6 +386,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		common.MinFeeForBridgingDefault,
 		primeMinFeeForBridgingFlagDesc,
 	)
+	cmd.Flags().UintVar(
+		&p.primeBlockConfirmationCount,
+		primeBlockConfirmationCountFlag,
+		defaultPrimeBlockConfirmationCount,
+		primeBlockConfirmationCountFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.vectorNetworkAddress,
@@ -452,6 +464,12 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorMinFeeForBridgingFlag,
 		common.MinFeeForBridgingDefault,
 		vectorMinFeeForBridgingFlagDesc,
+	)
+	cmd.Flags().UintVar(
+		&p.vectorBlockConfirmationCount,
+		vectorBlockConfirmationCountFlag,
+		defaultVectorBlockConfirmationCount,
+		vectorBlockConfirmationCountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -633,7 +651,7 @@ func (p *generateConfigsParams) Execute(
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
 				StartSlot:                primeStartingSlot,
-				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
+				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
 			},
@@ -657,7 +675,7 @@ func (p *generateConfigsParams) Execute(
 				NetworkAddress:           p.vectorNetworkAddress,
 				StartBlockHash:           vectorStartingHash,
 				StartSlot:                vectorStartingSlot,
-				ConfirmationBlockCount:   defaultVectorBlockConfirmationCount,
+				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
 			},
