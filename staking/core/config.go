@@ -16,11 +16,11 @@ type ChainConfig struct {
 
 type StakingConfiguration struct {
 	Chain         ChainConfig `json:"chain"`
-	PullTimeMilis uint64      `json:"pullTime"`
+	PullTimeMilis int64       `json:"pullTime"`
 }
 
 type StakingManagerConfiguration struct {
 	Chains        map[string]ChainConfig `json:"chains"`
 	Logger        logger.LoggerConfig    `json:"logger"`
-	PullTimeMilis uint64                 `json:"pullTime"`
+	PullTimeMilis int64                  `json:"pullTime"`
 }
