@@ -67,7 +67,7 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	if len(c.OutputIndexes) > 0 {
 		sb.WriteString("\nOutputIndexes = ")
 
-		indexes, err := common.UnpackNumbersToBytes[[]uint16](c.OutputIndexes)
+		indexes, err := common.UnpackNumbersToBytes[[]common.TxOutputIndex](c.OutputIndexes)
 		if err != nil {
 			sb.WriteString(err.Error())
 		} else {

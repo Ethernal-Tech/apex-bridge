@@ -68,7 +68,9 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
 	tokenAmount := big.NewInt(0)
-	unknownTokenOutputIndexes := make([]int, 0, unknownNativeTokensUtxoCntMax)
+	unknownTokenOutputIndexes := make([]common.TxOutputIndex, 0, unknownNativeTokensUtxoCntMax)
+
+	var recognizeToken bool
 
 	for idx, out := range tx.Outputs {
 		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
@@ -77,21 +79,25 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 		if len(out.Tokens) > 0 {
 			for _, token := range out.Tokens {
+				recognizeToken = false
+
 				for _, tExc := range chainConfig.NativeTokens {
-					if tExc.TokenName != token.Name {
-						unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, idx)
-					} else {
-						tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
+					if tExc.TokenName == token.TokenName() {
+						recognizeToken = true
+
+						break
 					}
+				}
+
+				if !recognizeToken {
+					unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
+				} else {
+					tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
 				}
 			}
 		}
 
 		amount.Add(amount, new(big.Int).SetUint64(out.Amount))
-	}
-
-	if len(unknownTokenOutputIndexes) > 0 {
-		amount = big.NewInt(0)
 	}
 
 	claim := cCore.RefundRequestClaim{
@@ -132,6 +138,8 @@ func (p *RefundRequestProcessorImpl) validate(
 	amountSum := big.NewInt(0)
 	unknownNativeTokensUtxoCnt := uint(0)
 
+	var recognizeToken bool
+
 	for _, out := range tx.Outputs {
 		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
 			continue
@@ -144,10 +152,18 @@ func (p *RefundRequestProcessorImpl) validate(
 				unknownNativeTokensUtxoCnt++
 			} else {
 				for _, token := range out.Tokens {
-					for _, tExC := range chainConfig.NativeTokens {
-						if tExC.TokenName != token.Name {
-							unknownNativeTokensUtxoCnt++
+					recognizeToken = false
+
+					for _, tExc := range chainConfig.NativeTokens {
+						if tExc.TokenName == token.TokenName() {
+							recognizeToken = true
+
+							break
 						}
+					}
+
+					if !recognizeToken {
+						unknownNativeTokensUtxoCnt++
 					}
 				}
 			}

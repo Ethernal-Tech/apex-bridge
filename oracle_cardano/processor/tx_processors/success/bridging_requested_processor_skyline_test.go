@@ -59,6 +59,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			common.ChainIDStrCardano: {ProtocolParams: protocolParameters},
 		})
 
+	//nolint:dupl
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {

@@ -39,6 +39,8 @@ var (
 
 type Hash [HashSize]byte
 
+type TxOutputIndex uint16
+
 type BridgingRequestStateKey struct {
 	SourceChainID string
 	SourceTxHash  Hash

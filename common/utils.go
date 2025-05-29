@@ -348,3 +348,11 @@ func NumbersToString[Slice ~[]T, T constraints.Integer | constraints.Float](nums
 func ParseTxInfo(txRaw []byte, full bool) (indexer.TxInfo, error) {
 	return gouroboros.ParseTxInfo(txRaw, full)
 }
+
+func FlattenMatrix[T any](matrix [][]T) (result []T) {
+	for _, row := range matrix {
+		result = append(result, row...)
+	}
+
+	return result
+}

@@ -1,6 +1,8 @@
 package successtxprocessors
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -108,6 +110,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim unsuported sender chainID", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -317,6 +320,439 @@ func TestRefundRequestedProcessor(t *testing.T) {
 						PolicyID: token.PolicyID,
 						Name:     token.Name,
 						Amount:   tokenAmount.Amount,
+					},
+				},
+			},
+			{Address: primeBridgingFeeAddr, Amount: 1_000_000},
+		}
+
+		tx := indexer.Tx{
+			Metadata: validMetadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.NoError(t, err)
+	})
+}
+
+func TestSkylineRefundRequestedProcessor(t *testing.T) {
+	const (
+		utxoMinValue            = 1000000
+		minFeeForBridging       = 1000010
+		minOperationFee         = 1000010
+		primeBridgingAddr       = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingFeeAddr    = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		cardanoBridgingAddr     = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		cardanoBridgingFeeAddr  = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
+		validPrimeTestAddress   = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		validCardanoTestAddress = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+
+		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
+	)
+
+	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+
+	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("wrappedApex"))), true,
+	)
+	require.NoError(t, err)
+
+	wrappedTokenAmountPrime := wallet.NewTokenAmount(wrappedTokenPrime, 2_000_000)
+
+	wrappedTokenCardano, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("wrappedCardano"))), true,
+	)
+	require.NoError(t, err)
+
+	//nolint:dupl
+	appConfig := &cCore.AppConfig{
+		CardanoChains: map[string]*cCore.CardanoChainConfig{
+			common.ChainIDStrPrime: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.TestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+					NativeTokens: []sendtx.TokenExchangeConfig{
+						{
+							DstChainID: common.ChainIDStrVector,
+							TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
+						},
+						{
+							DstChainID: common.ChainIDStrCardano,
+							TokenName:  wrappedTokenPrime.String(),
+						},
+					},
+				},
+				BridgingAddresses: cCore.BridgingAddresses{
+					BridgingAddress: primeBridgingAddr,
+				},
+				MinFeeForBridging: minFeeForBridging,
+				MinOperationFee:   minOperationFee,
+			},
+			common.ChainIDStrCardano: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.TestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+					NativeTokens: []sendtx.TokenExchangeConfig{
+						{
+							DstChainID: common.ChainIDStrPrime,
+							TokenName:  wrappedTokenCardano.String(),
+						},
+					},
+				},
+				BridgingAddresses: cCore.BridgingAddresses{
+					BridgingAddress: cardanoBridgingAddr,
+					FeeAddress:      cardanoBridgingFeeAddr,
+				},
+				MinFeeForBridging: minFeeForBridging,
+				MinOperationFee:   minOperationFee,
+			},
+		},
+		BridgingSettings: cCore.BridgingSettings{
+			MaxReceiversPerBridgingRequest: 3,
+			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+		},
+	}
+	appConfig.FillOut()
+
+	chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
+
+	for _, cc := range appConfig.CardanoChains {
+		info := chain.NewCardanoChainInfo(cc)
+
+		info.ProtocolParams = protocolParameters
+
+		chainInfos[cc.ChainID] = info
+	}
+
+	proc := NewRefundRequestProcessor(hclog.NewNullLogger(), chainInfos)
+
+	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to unmarshal metadata")
+	})
+
+	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
+		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBridgingRequest,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, relevantButNotFullMetadata)
+
+		claims := &cCore.BridgeClaims{}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: relevantButNotFullMetadata,
+			},
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim unsuported sender chainID", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: "invalid",
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
+
+	t.Run("ValidateAndAddClaim invalid sender address", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{"invalid_address"},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "invalid sender addr")
+	})
+
+	t.Run("ValidateAndAddClaim outputs contains more unknown tokens than allowed", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  1,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   1_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   2_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "3",
+						Amount:   3_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   2_000_000,
+					},
+				},
+			},
+			{Address: "addr2", Amount: 2_000_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  3_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "3",
+						Amount:   100_000,
+					},
+				},
+			},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "more UTxOs with unknown tokens than allowed")
+	})
+
+	t.Run("ValidateAndAddClaim sum of amounts less than the minimum required", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 500_000},
+			{Address: "addr2", Amount: 500_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  500_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenPrime.PolicyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   wrappedTokenAmountPrime.Amount,
+					},
+				},
+			},
+			{Address: primeBridgingFeeAddr, Amount: 600_000},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "less than the minimum required for refund")
+	})
+
+	t.Run("ValidateAndAddClaim outputs contains both valid and invalid UTXOs", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  1,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenAmountPrime.PolicyID,
+						Name:     wrappedTokenAmountPrime.Name,
+						Amount:   1_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenAmountPrime.PolicyID,
+						Name:     wrappedTokenAmountPrime.Name,
+						Amount:   2_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenAmountPrime.PolicyID,
+						Name:     wrappedTokenAmountPrime.Name,
+						Amount:   3_000_000,
+					},
+				},
+			},
+			{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenAmountPrime.PolicyID,
+						Name:     wrappedTokenAmountPrime.Name,
+						Amount:   2_000_000,
+					},
+				},
+			},
+			{Address: "addr2", Amount: 2_000_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  3_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenCardano.PolicyID,
+						Name:     wrappedTokenCardano.Name, // invalid for sender chain
+						Amount:   100_000,
+					},
+				},
+			},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 500_000},
+			{Address: "addr2", Amount: 500_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  2_500_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenPrime.PolicyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   wrappedTokenAmountPrime.Amount,
 					},
 				},
 			},
