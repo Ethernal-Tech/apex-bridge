@@ -116,6 +116,7 @@ $ go run ./main.go generate-configs \
         --prime-starting-block <slot:hash> \
         --prime-utxo-min-amount <minimal UTXO value for prime> \
         --prime-min-fee-for-bridging <minimal bridging fee for prime> \
+        --prime-block-confirmation-count <block confirmation count for prime> \
         --vector-network-address <address of vector network> \
         --vector-network-magic <network magic of vector network> \
         --vector-network-id <network id of vector network> \
@@ -128,6 +129,7 @@ $ go run ./main.go generate-configs \
         --vector-starting-block <slot:hash> \
         --vector-utxo-min-amount <minimal UTXO value for vector> \
         --vector-min-fee-for-bridging<minimal bridging fee for vector> \
+        --vector-block-confirmation-count <block confirmation count for vector> \
         --nexus-node-url <nexus node URL> \
         --nexus-ttl-block-inc <nexus ttl block increment> \
         --nexus-block-rounding-threshold <nexus block rounding threshold> \
