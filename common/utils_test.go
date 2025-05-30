@@ -227,3 +227,29 @@ func TestFlattenMatrix(t *testing.T) {
 	}
 	assert.Equal(t, []int{1, 2, 3, 4, 7, 6}, FlattenMatrix(data))
 }
+
+func TestLastN(t *testing.T) {
+	var (
+		ns   = []int{-1, 0, 1, 2, 9, 10, 11, 20, 100}
+		arrs = [][]int{
+			{},
+			{1},
+			{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+			{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+		}
+	)
+
+	for _, n := range ns {
+		for _, arr := range arrs {
+			lastNArr := LastN(arr, n)
+
+			require.LessOrEqual(t, len(lastNArr), max(n, 0))
+
+			for i := range len(lastNArr) {
+				require.Equal(t, lastNArr[len(lastNArr)-i-1], arr[len(arr)-i-1])
+			}
+		}
+	}
+}

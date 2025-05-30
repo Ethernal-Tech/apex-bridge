@@ -31,33 +31,35 @@ const (
 	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
 	cardanoPrimeWrappedTokenNameFlagDesc = "wrapped token name for Prime Apex"
 
-	cardanoNetworkAddressFlag        = "cardano-network-address"
-	cardanoNetworkMagicFlag          = "cardano-network-magic"
-	cardanoNetworkIDFlag             = "cardano-network-id"
-	cardanoOgmiosURLFlag             = "cardano-ogmios-url"
-	cardanoBlockfrostURLFlag         = "cardano-blockfrost-url"
-	cardanoBlockfrostAPIKeyFlag      = "cardano-blockfrost-api-key" //nolint:gosec
-	cardanoSocketPathFlag            = "cardano-socket-path"
-	cardanoTTLSlotIncFlag            = "cardano-ttl-slot-inc"
-	cardanoSlotRoundingThresholdFlag = "cardano-slot-rounding-threshold"
-	cardanoStartingBlockFlag         = "cardano-starting-block"
-	cardanoUtxoMinAmountFlag         = "cardano-utxo-min-amount"
-	cardanoMinFeeForBridgingFlag     = "cardano-min-fee-for-bridging"
-	cardanoMinOperationFeeFlag       = "cardano-min-operation-fee"
+	cardanoNetworkAddressFlag         = "cardano-network-address"
+	cardanoNetworkMagicFlag           = "cardano-network-magic"
+	cardanoNetworkIDFlag              = "cardano-network-id"
+	cardanoOgmiosURLFlag              = "cardano-ogmios-url"
+	cardanoBlockfrostURLFlag          = "cardano-blockfrost-url"
+	cardanoBlockfrostAPIKeyFlag       = "cardano-blockfrost-api-key" //nolint:gosec
+	cardanoSocketPathFlag             = "cardano-socket-path"
+	cardanoTTLSlotIncFlag             = "cardano-ttl-slot-inc"
+	cardanoSlotRoundingThresholdFlag  = "cardano-slot-rounding-threshold"
+	cardanoStartingBlockFlag          = "cardano-starting-block"
+	cardanoUtxoMinAmountFlag          = "cardano-utxo-min-amount"
+	cardanoMinFeeForBridgingFlag      = "cardano-min-fee-for-bridging"
+	cardanoMinOperationFeeFlag        = "cardano-min-operation-fee"
+	cardanoBlockConfirmationCountFlag = "cardano-block-confirmation-count"
 
-	cardanoNetworkAddressFlagDesc        = "(mandatory) address of cardano network"
-	cardanoNetworkMagicFlagDesc          = "cardano network magic (default 0)"
-	cardanoNetworkIDFlagDesc             = "cardano network id"
-	cardanoOgmiosURLFlagDesc             = "ogmios URL for cardano network"
-	cardanoBlockfrostURLFlagDesc         = "blockfrost URL for cardano network"
-	cardanoBlockfrostAPIKeyFlagDesc      = "blockfrost API key for cardano network" //nolint:gosec
-	cardanoSocketPathFlagDesc            = "socket path for cardano network"
-	cardanoTTLSlotIncFlagDesc            = "TTL slot increment for cardano"
-	cardanoSlotRoundingThresholdFlagDesc = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	cardanoStartingBlockFlagDesc         = "slot: hash of the block from where to start cardano oracle"
-	cardanoUtxoMinAmountFlagDesc         = "minimal UTXO value for cardano"
-	cardanoMinFeeForBridgingFlagDesc     = "minimal bridging fee for cardano"
-	cardanoMinOperationFeeFlagDesc       = "minimal operation fee for cardano"
+	cardanoNetworkAddressFlagDesc         = "(mandatory) address of cardano network"
+	cardanoNetworkMagicFlagDesc           = "cardano network magic (default 0)"
+	cardanoNetworkIDFlagDesc              = "cardano network id"
+	cardanoOgmiosURLFlagDesc              = "ogmios URL for cardano network"
+	cardanoBlockfrostURLFlagDesc          = "blockfrost URL for cardano network"
+	cardanoBlockfrostAPIKeyFlagDesc       = "blockfrost API key for cardano network" //nolint:gosec
+	cardanoSocketPathFlagDesc             = "socket path for cardano network"
+	cardanoTTLSlotIncFlagDesc             = "TTL slot increment for cardano"
+	cardanoSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle"
+	cardanoUtxoMinAmountFlagDesc          = "minimal UTXO value for cardano"
+	cardanoMinFeeForBridgingFlagDesc      = "minimal bridging fee for cardano"
+	cardanoMinOperationFeeFlagDesc        = "minimal operation fee for cardano"
+	cardanoBlockConfirmationCountFlagDesc = "block confirmation count for cardano"
 
 	defaultCardanoBlockConfirmationCount = 10
 	defaultCardanoTTLSlotNumberInc       = 1800 + defaultCardanoBlockConfirmationCount*10 // BlockTimeSeconds
@@ -65,33 +67,35 @@ const (
 )
 
 type skylineGenerateConfigsParams struct {
-	primeNetworkAddress        string
-	primeNetworkMagic          uint32
-	primeNetworkID             uint32
-	primeOgmiosURL             string
-	primeBlockfrostURL         string
-	primeBlockfrostAPIKey      string
-	primeSocketPath            string
-	primeTTLSlotInc            uint64
-	primeSlotRoundingThreshold uint64
-	primeStartingBlock         string
-	primeUtxoMinAmount         uint64
-	primeMinFeeForBridging     uint64
-	primeMinOperationFee       uint64
+	primeNetworkAddress         string
+	primeNetworkMagic           uint32
+	primeNetworkID              uint32
+	primeOgmiosURL              string
+	primeBlockfrostURL          string
+	primeBlockfrostAPIKey       string
+	primeSocketPath             string
+	primeTTLSlotInc             uint64
+	primeSlotRoundingThreshold  uint64
+	primeStartingBlock          string
+	primeUtxoMinAmount          uint64
+	primeMinFeeForBridging      uint64
+	primeMinOperationFee        uint64
+	primeBlockConfirmationCount uint
 
-	cardanoNetworkAddress        string
-	cardanoNetworkMagic          uint32
-	cardanoNetworkID             uint32
-	cardanoOgmiosURL             string
-	cardanoBlockfrostURL         string
-	cardanoBlockfrostAPIKey      string
-	cardanoSocketPath            string
-	cardanoTTLSlotInc            uint64
-	cardanoSlotRoundingThreshold uint64
-	cardanoStartingBlock         string
-	cardanoUtxoMinAmount         uint64
-	cardanoMinFeeForBridging     uint64
-	cardanoMinOperationFee       uint64
+	cardanoNetworkAddress         string
+	cardanoNetworkMagic           uint32
+	cardanoNetworkID              uint32
+	cardanoOgmiosURL              string
+	cardanoBlockfrostURL          string
+	cardanoBlockfrostAPIKey       string
+	cardanoSocketPath             string
+	cardanoTTLSlotInc             uint64
+	cardanoSlotRoundingThreshold  uint64
+	cardanoStartingBlock          string
+	cardanoUtxoMinAmount          uint64
+	cardanoMinFeeForBridging      uint64
+	cardanoMinOperationFee        uint64
+	cardanoBlockConfirmationCount uint
 
 	bridgeNodeURL   string
 	bridgeSCAddress string
@@ -299,6 +303,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		common.MinOperationFeeOnPrime,
 		primeMinOperationFeeFlagDesc,
 	)
+	cmd.Flags().UintVar(
+		&p.primeBlockConfirmationCount,
+		primeBlockConfirmationCountFlag,
+		defaultPrimeBlockConfirmationCount,
+		primeBlockConfirmationCountFlagDesc,
+	)
 
 	cmd.Flags().StringVar(
 		&p.cardanoNetworkAddress,
@@ -377,6 +387,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoMinOperationFeeFlag,
 		common.MinOperationFeeOnCardano,
 		cardanoMinOperationFeeFlagDesc,
+	)
+	cmd.Flags().UintVar(
+		&p.cardanoBlockConfirmationCount,
+		cardanoBlockConfirmationCountFlag,
+		defaultCardanoBlockConfirmationCount,
+		cardanoBlockConfirmationCountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -546,7 +562,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
 				StartSlot:                primeStartingSlot,
-				ConfirmationBlockCount:   defaultPrimeBlockConfirmationCount,
+				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
 				MinOperationFee:          p.primeMinOperationFee,
@@ -577,7 +593,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				NetworkAddress:           p.cardanoNetworkAddress,
 				StartBlockHash:           cardanoStartingHash,
 				StartSlot:                cardanoStartingSlot,
-				ConfirmationBlockCount:   defaultCardanoBlockConfirmationCount,
+				ConfirmationBlockCount:   p.cardanoBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.cardanoMinFeeForBridging,
 				MinOperationFee:          p.cardanoMinOperationFee,

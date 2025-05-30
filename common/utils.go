@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	WaitForAmountRetryCount = 144 // 144 * 5 = 12 min
-	WaitForAmountWaitTime   = time.Second * 5
+	waitForAmountRetryCount = 144 // 144 * 5 = 12 min
+	waitForAmountWaitTime   = time.Second * 5
 )
 
 func IsValidHTTPURL(input string) bool {
@@ -227,6 +227,7 @@ func ExecuteCLICommand(binary string, args []string, workingDir string) (string,
 
 func WaitForAmount(
 	ctx context.Context, receivedAmount *big.Int, getBalanceFn func(ctx context.Context) (*big.Int, error),
+	options ...infracommon.RetryConfigOption,
 ) (*big.Int, error) {
 	originalAmount, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*big.Int, error) {
 		return getBalanceFn(ctx)
@@ -248,7 +249,12 @@ func WaitForAmount(
 		}
 
 		return balance, nil
-	}, infracommon.WithRetryCount(WaitForAmountRetryCount), infracommon.WithRetryWaitTime(WaitForAmountWaitTime))
+	}, append(
+		[]infracommon.RetryConfigOption{
+			infracommon.WithRetryCount(waitForAmountRetryCount),
+			infracommon.WithRetryWaitTime(waitForAmountWaitTime),
+		}, options...)...,
+	)
 }
 
 func IsValidAddress(chainID string, addr string) bool {
@@ -355,4 +361,16 @@ func FlattenMatrix[T any](matrix [][]T) (result []T) {
 	}
 
 	return result
+}
+
+func LastN[T any](arr []T, n int) []T {
+	if n < 0 {
+		return nil
+	}
+
+	if len(arr) <= n {
+		return arr
+	}
+
+	return arr[len(arr)-n:]
 }
