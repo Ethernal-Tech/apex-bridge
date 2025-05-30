@@ -66,24 +66,31 @@ func NewCardanoOracle(
 		chainInfos[cc.ChainID] = info
 	}
 
-	refundRequestProcessor := successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
-	successTxProcessors := []core.CardanoTxSuccessProcessor{
-		successtxprocessors.NewBatchExecutedProcessor(logger),
-		successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger),
-		successtxprocessors.NewHotWalletIncrementProcessor(logger),
-		refundRequestProcessor,
+	var (
+		refundRequestProcessor core.CardanoTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
+		successProcessors                                           = []core.CardanoTxSuccessProcessor{}
+	)
+
+	if appConfig.RefundEnabled {
+		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
+		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
 
+	successProcessors = append(successProcessors,
+		successtxprocessors.NewBatchExecutedProcessor(logger),
+		successtxprocessors.NewHotWalletIncrementProcessor(logger),
+	)
+
 	if appConfig.RunMode == common.ReactorMode {
-		successTxProcessors = append(successTxProcessors,
+		successProcessors = append(successProcessors,
 			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger))
 	} else {
-		successTxProcessors = append(successTxProcessors,
+		successProcessors = append(successProcessors,
 			successtxprocessors.NewSkylineBridgingRequestedProcessor(refundRequestProcessor, logger, chainInfos))
 	}
 
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
-		successTxProcessors,
+		successProcessors,
 		[]core.CardanoTxFailedProcessor{
 			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
 		},

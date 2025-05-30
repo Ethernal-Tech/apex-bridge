@@ -18,12 +18,12 @@ import (
 var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	refundRequestProcessor core.CardanoTxSuccessProcessor
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor
 	logger                 hclog.Logger
 }
 
 func NewBridgingRequestedProcessor(
-	refundRequestProcessor core.CardanoTxSuccessProcessor,
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor,
 	logger hclog.Logger,
 ) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
@@ -45,17 +45,13 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		p.logger.Warn("failed to unmarshal metadata. handing over to refund processor",
-			"tx", tx, "err", err)
-
-		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
 	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
-		p.logger.Warn("ValidateAndAddClaim called for irrelevant tx. handing over to refund processor",
-			"tx", tx, "err", err)
-
-		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -64,10 +60,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		p.logger.Warn("validation failed for tx. handing over to refund processor",
-			"tx", tx, "err", err)
-
-		return p.refundRequestProcessor.ValidateAndAddClaim(claims, tx, appConfig)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "validation failed for tx")
 	}
 
 	return nil
@@ -146,12 +140,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
-	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
-		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
-		return fmt.Errorf(
-			"try count exceeded. BatchTryCount: (current, max)=(%d, %d), SubmitTryCount: (current, max)=(%d, %d)",
-			tx.BatchTryCount, appConfig.TryCountLimits.MaxBatchTryCount,
-			tx.SubmitTryCount, appConfig.TryCountLimits.MaxSubmitTryCount)
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
+		return err
 	}
 
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]

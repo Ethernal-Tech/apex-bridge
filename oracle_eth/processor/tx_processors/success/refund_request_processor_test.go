@@ -1,6 +1,7 @@
 package successtxprocessors
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -25,39 +26,104 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	appConfig := &oCore.AppConfig{
-		CardanoChains: map[string]*oCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkID:     wallet.TestNetNetwork,
-					UtxoMinAmount: utxoMinValue,
+	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
+		appConfig := &oCore.AppConfig{
+			CardanoChains: map[string]*oCore.CardanoChainConfig{
+				common.ChainIDStrPrime: {
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+					},
+					BridgingAddresses: oCore.BridgingAddresses{
+						BridgingAddress: primeBridgingAddr,
+						FeeAddress:      primeBridgingFeeAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
 				},
-				BridgingAddresses: oCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
-				},
-				MinFeeForBridging: minFeeForBridging,
 			},
-		},
-		EthChains: map[string]*oCore.EthChainConfig{
-			common.ChainIDStrNexus: {
-				BridgingAddresses: oCore.EthBridgingAddresses{
-					BridgingAddress: nexusBridgingAddr,
+			EthChains: map[string]*oCore.EthChainConfig{
+				common.ChainIDStrNexus: {
+					BridgingAddresses: oCore.EthBridgingAddresses{
+						BridgingAddress: nexusBridgingAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
 				},
-				MinFeeForBridging: minFeeForBridging,
 			},
-		},
-		BridgingSettings: oCore.BridgingSettings{
-			MaxReceiversPerBridgingRequest: 3,
-			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-		},
+			BridgingSettings: oCore.BridgingSettings{
+				MaxReceiversPerBridgingRequest: 3,
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			},
+			RefundEnabled: refundEnabled,
+		}
+
+		appConfig.FillOut()
+
+		return appConfig
 	}
-	appConfig.FillOut()
 
 	proc := NewRefundRequestProcessor(hclog.NewNullLogger())
+	disabledProc := NewRefundDisabledProcessor()
+
+	t.Run("Refund disabled - HandleBridgingProcessorPreValidate", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.HandleBridgingProcessorPreValidate(&core.EthTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("Refund disabled - HandleBridgingProcessorError", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.HandleBridgingProcessorError(
+			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, fmt.Errorf("test err"), "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("Refund disabled - ValidateAndAddClaim", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := disabledProc.ValidateAndAddClaim(&oCore.BridgeClaims{}, &core.EthTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "refund is not enabled")
+	})
+
+	t.Run("HandleBridgingProcessorPreValidate - empty tx", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorPreValidate(&core.EthTx{}, appConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("HandleBridgingProcessorPreValidate - batchTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorPreValidate(&core.EthTx{BatchTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("HandleBridgingProcessorPreValidate - submitTryCount over", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorPreValidate(&core.EthTx{SubmitTryCount: 1}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "try count exceeded")
+	})
+
+	t.Run("HandleBridgingProcessorError - empty ty", func(t *testing.T) {
+		appConfig := getAppConfig(false)
+
+		err := proc.HandleBridgingProcessorError(
+			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, nil, "")
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected end of JSON input")
+	})
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
 		require.Error(t, err)
@@ -76,6 +142,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -97,6 +165,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -120,6 +190,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,
@@ -145,6 +217,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NotNil(t, metadata)
 
 		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
 			Metadata:      metadata,

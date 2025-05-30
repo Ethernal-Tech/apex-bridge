@@ -50,72 +50,123 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	refundRequestProcessorMock := &core.CardanoTxSuccessProcessorMock{}
-	proc := NewSkylineBridgingRequestedProcessor(
-		refundRequestProcessorMock,
-		hclog.NewNullLogger(),
-		map[string]*chain.CardanoChainInfo{
-			common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
-			common.ChainIDStrCardano: {ProtocolParams: protocolParameters},
-		})
+	//nolint: dupl
+	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
+		appConfig := &cCore.AppConfig{
+			CardanoChains: map[string]*cCore.CardanoChainConfig{
+				common.ChainIDStrPrime: {
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+						NativeTokens: []sendtx.TokenExchangeConfig{
+							{
+								DstChainID: common.ChainIDStrVector,
+								TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
+							},
+							{
+								DstChainID: common.ChainIDStrCardano,
+								TokenName:  wrappedTokenPrime.String(),
+							},
+						},
+					},
+					BridgingAddresses: cCore.BridgingAddresses{
+						BridgingAddress: primeBridgingAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
+					MinOperationFee:   minOperationFee,
+				},
+				common.ChainIDStrCardano: {
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+						NativeTokens: []sendtx.TokenExchangeConfig{
+							{
+								DstChainID: common.ChainIDStrPrime,
+								TokenName:  wrappedTokenCardano.String(),
+							},
+						},
+					},
+					BridgingAddresses: cCore.BridgingAddresses{
+						BridgingAddress: cardanoBridgingAddr,
+						FeeAddress:      cardanoBridgingFeeAddr,
+					},
+					MinFeeForBridging: minFeeForBridging,
+					MinOperationFee:   minOperationFee,
+				},
+			},
+			BridgingSettings: cCore.BridgingSettings{
+				MaxReceiversPerBridgingRequest: 3,
+				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			},
+			RefundEnabled: refundEnabled,
+		}
+		appConfig.FillOut()
 
-	//nolint:dupl
-	appConfig := &cCore.AppConfig{
-		CardanoChains: map[string]*cCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkID:     wallet.TestNetNetwork,
-					UtxoMinAmount: utxoMinValue,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrVector,
-							TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
-						},
-						{
-							DstChainID: common.ChainIDStrCardano,
-							TokenName:  wrappedTokenPrime.String(),
-						},
-					},
-				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-				},
-				MinFeeForBridging: minFeeForBridging,
-				MinOperationFee:   minOperationFee,
-			},
-			common.ChainIDStrCardano: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkID:     wallet.TestNetNetwork,
-					UtxoMinAmount: utxoMinValue,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrPrime,
-							TokenName:  wrappedTokenCardano.String(),
-						},
-					},
-				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: cardanoBridgingAddr,
-					FeeAddress:      cardanoBridgingFeeAddr,
-				},
-				MinFeeForBridging: minFeeForBridging,
-				MinOperationFee:   minOperationFee,
-			},
-		},
-		BridgingSettings: cCore.BridgingSettings{
-			MaxReceiversPerBridgingRequest: 3,
-			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-		},
+		return appConfig
 	}
-	appConfig.FillOut()
+
+	chainInfos := map[string]*chain.CardanoChainInfo{
+		common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
+		common.ChainIDStrCardano: {ProtocolParams: protocolParameters},
+	}
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{}, appConfig).Return(nil)
+		appConfig := getAppConfig(false)
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"ValidateAndAddClaim", claims, &core.CardanoTx{}, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to unmarshal metadata, err: EOF")
+	})
+
+	t.Run("ValidateAndAddClaim empty tx with refund", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
 
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
 		require.NoError(t, err)
+	})
+
+	t.Run("ValidateAndAddClaim empty tx with refund err", func(t *testing.T) {
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(
+			fmt.Errorf("test err"))
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("ValidateAndAddClaim irrelevant metadata", func(t *testing.T) {
@@ -126,6 +177,51 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NotNil(t, irrelevantMetadata)
 
 		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: irrelevantMetadata,
+			},
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "ValidateAndAddClaim called for irrelevant tx")
+	})
+
+	t.Run("ValidateAndAddClaim irrelevant metadata with refund", func(t *testing.T) {
+		irrelevantMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, irrelevantMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: irrelevantMetadata,
+			},
+		}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
 
 		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -150,21 +246,67 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		claims := &cCore.BridgeClaims{}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 			},
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
+
+	t.Run("ValidateAndAddClaim insufficient metadata with refund", func(t *testing.T) {
+		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
+			BridgingTxType: common.BridgingTxTypeBridgingRequest,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, relevantButNotFullMetadata)
+
+		claims := &cCore.BridgeClaims{}
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 			},
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(true)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
@@ -187,58 +329,31 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
-
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: destinationChainNonRegisteredMetadata,
-				Outputs:  txOutputs,
-			},
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
-	})
-
-	//nolint:dupl
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
-			DestinationChainID: common.ChainIDStrCardano,
-			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
-		})
-		require.NoError(t, err)
-		require.NotNil(t, destinationChainNonRegisteredMetadata)
-
-		claims := &cCore.BridgeClaims{}
-		txOutputs := []*indexer.TxOutput{
-			{Address: "addr1", Amount: 1},
-			{Address: "addr2", Amount: 2},
-			{Address: primeBridgingAddr, Amount: 3},
-			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
 
-		tx := indexer.Tx{
-			Metadata: destinationChainNonRegisteredMetadata,
-			Outputs:  txOutputs,
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: "invalid",
-		}, appConfig).Return(nil)
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: "invalid",
-		}, appConfig)
-		require.NoError(t, err)
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -262,19 +377,31 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: "invalid",
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: "invalid",
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -296,16 +423,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging address")
+		require.ErrorContains(t, err, "not found in tx outputs")
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
@@ -329,16 +470,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found multiple tx outputs to the bridging address")
 	})
 
 	t.Run("ValidateAndAddClaim unknown tokens", func(t *testing.T) {
@@ -372,19 +526,32 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unknown tokens")
 	})
 
-	t.Run("ValidateAndAddClaim 6", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
@@ -410,16 +577,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "number of receivers in metadata greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
@@ -453,16 +633,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
@@ -495,13 +688,31 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  utxoMinValue + minOperationFee + minFeeForBridging*2 + 200,
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Metadata: metadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 	})
 
@@ -528,16 +739,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
 	})
 
 	//nolint:dupl
@@ -573,16 +797,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	//nolint:dupl
@@ -618,16 +855,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
@@ -662,16 +912,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -706,16 +969,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts + fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -745,16 +1021,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
@@ -798,16 +1087,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "sum of receiver amounts + fee")
+		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
@@ -851,14 +1154,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
@@ -914,14 +1233,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
@@ -977,14 +1312,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
@@ -999,7 +1350,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim - native token - valid #3", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrCardano
 
@@ -1037,14 +1387,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
@@ -1093,16 +1459,27 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
 	t.Run("ValidateAndAddClaim - native token - invalid #2", func(t *testing.T) {
@@ -1139,23 +1516,29 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Outputs:  txOutputs,
 		}
 
-		refundRequestProcessorMock.On("ValidateAndAddClaim", claims, &core.CardanoTx{
+		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig).Return(nil)
+		}
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Hash:     txHash,
-				Metadata: validMetadata,
-				Outputs:  txOutputs,
-			},
-			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
-		require.NoError(t, err)
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim - native token - valid #4", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrPrime
 
@@ -1193,14 +1576,32 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Hash:     txHash,
-				Metadata: validMetadata,
-				Outputs:  txOutputs,
-			},
+
+		tx := indexer.Tx{
+			Hash:     txHash,
+			Metadata: validMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
 			OriginChainID: common.ChainIDStrCardano,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
