@@ -288,8 +288,9 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			metadata.BridgingFee, cardanoSrcConfig.MinFeeForBridging, metadata)
 	}
 
-	// if there is at least one native token on source transfer -> native token on source should be defined
-	if hasNativeTokenOnSource {
+	// if there is at least one native token on source transfer or multi sig has tokens
+	// -> native token on source should be defined
+	if hasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0 {
 		nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
 		if err != nil {
 			return err
