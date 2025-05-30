@@ -16,8 +16,14 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type evtErr struct {
+	evt *oracleCore.DBBatchInfoEvent
+	err error
+}
+
 const (
-	TTLInsuranceOffset = 2
+	TTLInsuranceOffset             = 2
+	logLastNBatchInfoSkippedEvents = 10
 )
 
 var _ oracleCore.SpecificChainTxsProcessorState = (*EthStateProcessor)(nil)
@@ -77,7 +83,7 @@ func (sp *EthStateProcessor) ProcessSavedEvents() {
 	}
 
 	if len(batchEvents) > 0 {
-		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "events", batchEvents)
+		sp.logger.Debug("Processing stored BatchExecutionInfoEvent events", "cnt", len(batchEvents))
 
 		processedBatchEvents, _ := sp.processBatchExecutionInfoEvents(batchEvents)
 
@@ -151,7 +157,7 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 	if len(events.BatchExecutionInfo) > 0 {
 		_, skippedEvents := sp.processBatchExecutionInfoEvents(events.BatchExecutionInfo)
 		if len(skippedEvents) > 0 {
-			sp.logger.Debug("Storing BatchExecutionInfoEvent events", "events", skippedEvents)
+			sp.logger.Debug("Storing BatchExecutionInfoEvent events", "cnt", len(skippedEvents))
 			sp.state.updateData.AddBatchInfoEvents = skippedEvents
 		}
 	}
@@ -159,15 +165,18 @@ func (sp *EthStateProcessor) ProcessSubmitClaimsEvents(
 
 func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 	events []*oracleCore.DBBatchInfoEvent,
-) (processedEvents []*oracleCore.DBBatchInfoEvent, skippedEvents []*oracleCore.DBBatchInfoEvent) {
-	newProcessedTxs := make([]oracleCore.BaseProcessedTx, 0)
-	newUnprocessedTxs := make([]oracleCore.BaseTx, 0)
+) ([]*oracleCore.DBBatchInfoEvent, []*oracleCore.DBBatchInfoEvent) {
+	var (
+		processedEvents      = make([]*oracleCore.DBBatchInfoEvent, 0, len(events))
+		newProcessedTxs      []oracleCore.BaseProcessedTx
+		newUnprocessedTxs    []oracleCore.BaseTx
+		skippedEventsWithErr []evtErr
+	)
 
 	for _, event := range events {
 		txs, err := sp.getTxsFromBatchEvent(event)
 		if err != nil {
-			skippedEvents = append(skippedEvents, event)
-			sp.logger.Info("couldn't find txs for BatchExecutionInfoEvent event", "event", event, "err", err)
+			skippedEventsWithErr = append(skippedEventsWithErr, evtErr{evt: event, err: err})
 
 			continue
 		}
@@ -187,6 +196,25 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 				newProcessedTxs = append(newProcessedTxs, processedTx)
 			}
 		}
+	}
+
+	if len(skippedEventsWithErr) > 0 {
+		lastNSkippedEventsWithErr := common.LastN(skippedEventsWithErr, logLastNBatchInfoSkippedEvents)
+
+		sp.logger.Info(
+			fmt.Sprintf("couldn't find txs for some BatchExecutionInfoEvent events. listing last %d",
+				logLastNBatchInfoSkippedEvents))
+
+		for _, item := range lastNSkippedEventsWithErr {
+			sp.logger.Info(
+				"couldn't find txs for BatchExecutionInfoEvent event",
+				"event", item.evt, "err", item.err)
+		}
+	}
+
+	skippedEvents := make([]*oracleCore.DBBatchInfoEvent, len(skippedEventsWithErr))
+	for idx, item := range skippedEventsWithErr {
+		skippedEvents[idx] = item.evt
 	}
 
 	sp.state.updateData.MovePendingToProcessed = newProcessedTxs
