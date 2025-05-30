@@ -609,7 +609,7 @@ func (p *generateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.ReactorMode,
-		RefundEnabled:       false,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{

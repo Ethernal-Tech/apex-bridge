@@ -159,7 +159,6 @@ func (bc BridgeClaims) String() string {
 		sbBEC  strings.Builder
 		sbBEFC strings.Builder
 		sbRRC  strings.Builder
-		sbREC  strings.Builder
 		sbHWIC strings.Builder
 	)
 
@@ -225,10 +224,6 @@ func (bc BridgeClaims) String() string {
 
 	sb.WriteString("\nRefundRequestClaims = \n[")
 	sb.WriteString(sbRRC.String())
-	sb.WriteString("]")
-
-	sb.WriteString("\nRefundExecutedClaims = \n[")
-	sb.WriteString(sbREC.String())
 	sb.WriteString("]")
 
 	sb.WriteString("\nHotWalletIncrementClaims = [")
