@@ -65,11 +65,13 @@ func (r *CardanoTxsReceiverImpl) NewUnprocessedTxs(originChainID string, txs []*
 
 		relevantTxs = append(relevantTxs, cardanoTx)
 
-		if txProcessorType == common.BridgingTxTypeBridgingRequest {
+		if txProcessorType == common.BridgingTxTypeBridgingRequest ||
+			txProcessorType == common.TxTypeRefundRequest {
 			bridgingRequests = append(
 				bridgingRequests,
 				&common.NewBridgingRequestStateModel{
 					SourceTxHash: common.Hash(tx.Hash),
+					IsRefund:     txProcessorType == common.TxTypeRefundRequest,
 				},
 			)
 		}
