@@ -222,6 +222,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 	nativeCurrencyAmountSum := new(big.Int).SetUint64(metadata.OperationFee)
 	wrappedTokenAmountSum := big.NewInt(0)
+	hasNativeTokenOnSource := false
+	hasCurrencyOnSource := false
 
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
@@ -247,6 +249,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		}
 
 		if receiver.IsNativeTokenOnSource() {
+			hasNativeTokenOnSource = true
 			// amount_to_bridge must be >= minUtxoAmount on destination
 			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
@@ -256,6 +259,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 			wrappedTokenAmountSum.Add(wrappedTokenAmountSum, new(big.Int).SetUint64(receiver.Amount))
 		} else {
+			hasCurrencyOnSource = true
 			// amount_to_bridge must be >= minUtxoAmount on source
 			if receiver.Amount < cardanoSrcConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
@@ -284,16 +288,26 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			metadata.BridgingFee, cardanoSrcConfig.MinFeeForBridging, metadata)
 	}
 
-	nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
-	if err != nil {
-		return err
+	// if there is at least one native token on source transfer or multi sig has tokens
+	// -> native token on source should be defined
+	if hasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0 {
+		nativeToken, err := cardanoSrcConfig.GetNativeToken(metadata.DestinationChainID)
+		if err != nil {
+			return err
+		}
+
+		multisigWrappedTokenAmount := new(big.Int).SetUint64(cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String()))
+
+		if wrappedTokenAmountSum.Cmp(multisigWrappedTokenAmount) != 0 {
+			return fmt.Errorf("multisig wrapped token is not equal to receiver wrapped token amount: expected %v but got %v",
+				multisigWrappedTokenAmount, wrappedTokenAmountSum)
+		}
 	}
-
-	multisigWrappedTokenAmount := cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String())
-
-	if wrappedTokenAmountSum.Cmp(new(big.Int).SetUint64(multisigWrappedTokenAmount)) != 0 {
-		return fmt.Errorf("multisig wrapped token is not equal to receiver wrapped token amount: expected %v but got %v",
-			multisigWrappedTokenAmount, wrappedTokenAmountSum)
+	// if there is at least one currency on source transfer -> native token on destination should be defined
+	if hasCurrencyOnSource {
+		if _, err := cardanoDestConfig.GetNativeToken(tx.OriginChainID); err != nil {
+			return err
+		}
 	}
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&

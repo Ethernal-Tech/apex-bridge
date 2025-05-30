@@ -209,16 +209,16 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
-	if p.primeCardanoWrappedTokenName == "" {
-		return fmt.Errorf("missing %s", primeCardanoWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
-		return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
+	if p.primeCardanoWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
+		}
 	}
 
-	if p.cardanoPrimeWrappedTokenName == "" {
-		return fmt.Errorf("missing %s", cardanoPrimeWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
-		return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
+	if p.cardanoPrimeWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
+		}
 	}
 
 	return nil
@@ -531,6 +531,29 @@ func (p *skylineGenerateConfigsParams) Execute(
 		return nil, err
 	}
 
+	var (
+		nativeTokensPrime   []sendtx.TokenExchangeConfig
+		nativeTokensCardano []sendtx.TokenExchangeConfig
+	)
+
+	if p.primeCardanoWrappedTokenName != "" {
+		nativeTokensPrime = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrCardano,
+				TokenName:  p.primeCardanoWrappedTokenName,
+			},
+		}
+	}
+
+	if p.cardanoPrimeWrappedTokenName != "" {
+		nativeTokensCardano = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrPrime,
+				TokenName:  p.cardanoPrimeWrappedTokenName,
+			},
+		}
+	}
+
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
@@ -552,12 +575,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrCardano,
-							TokenName:  p.primeCardanoWrappedTokenName,
-						},
-					},
+					NativeTokens:          nativeTokensPrime,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
@@ -583,12 +601,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrPrime,
-							TokenName:  p.cardanoPrimeWrappedTokenName,
-						},
-					},
+					NativeTokens:          nativeTokensCardano,
 				},
 				NetworkAddress:           p.cardanoNetworkAddress,
 				StartBlockHash:           cardanoStartingHash,
