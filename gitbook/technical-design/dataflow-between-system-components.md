@@ -1,10 +1,10 @@
 # Dataflow between System Components
 
-Deposit and withdrawal dataflows operate similarly, so 'source' and 'destination' are used as terms to describe Apex Fusion and Cardano sides:
+Deposit and withdrawal dataflows operate similarly, so “source” and “destination” are used as terms to describe Apex Fusion and Cardano sides:
 
 1.  **Bridging initiation**
 
-    The sender initiates bridging by creating a transaction on the source chain. The input will be UTXO which belongs to the sender address. This UTXO is used to cover the fees and the funds to be bridged. The funds that will be bridged will be locked at the multisig address owned by the bridge. Transaction metadata will contain information required to complete the bridging (e.g. destination address, chain id, amount, etc.)
+    The sender initiates bridging by creating a transaction on the source chain. The input will be UTXO which belongs to the sender address. This UTXO is used to cover the fees and the funds to be bridged. The funds that will be bridged will be locked at the multisig address owned by the bridge. Transaction metadata will contain information required to complete the bridging (e.g., destination address, chain id, amount, etc.)
 2.  **Bridging transactions detection**
 
     Each validator runs an off-chain component (Oracle) responsible for monitoring bridging requests. This will be done by observing transactions on the source chain that are producing output UTXO related to the bridge multisig address.
