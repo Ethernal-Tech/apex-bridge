@@ -33,12 +33,12 @@ Below is a comprehensive breakdown of the Skyline Bridge workflow:
     This structured and clearly-defined validation workflow enhances the bridge’s operational efficiency, ensures rigorous security standards, and maintains full decentralization and transparency throughout the asset bridging process.
 4.  **Relaying Signed Transactions**
 
-    Once a Batch is successfully signed by the validators, the Skyline bridge activates specialized blockchain entities known as Relayers. These Relayers perform a critical role within the bridging workflow—securely submitting Batches to the destination blockchain.
+    Once a Batch is successfully signed by the validators, the Skyline bridge activates specialized blockchain entities known as Relayers. These Relayers perform a critical role within the bridging workflow - securely submitting Batches to the destination blockchain.
 
     Relayers operate as neutral entities within the network. Skyline’s system requires the existence of at least one trustworthy Relayer at any time, ensuring reliable execution of validated transactions. Relayers facilitate prompt and efficient communication between blockchains, ensuring bridging transactions are finalized without delays.
 5.  **Token Unlocking**
 
-    Once a Batch—containing multiple validated bridging requests—successfully reaches the destination blockchain (either Cardano or Apex Fusion), the automatic unlocking mechanism for the corresponding wrapped tokens is initiated. Upon the Batch transaction's successful execution on the destination blockchain, all tokens represented by bridging requests within that Batch become immediately accessible to the end-users. This automated and secure unlocking process ensures seamless finalization of each bridging request contained within the Batch, promptly making the wrapped assets available and effectively completing the cross-chain transfer:
+    Once a Batch - containing multiple validated bridging requests - successfully reaches the destination blockchain (either Cardano or Apex Fusion), the automatic unlocking mechanism for the corresponding wrapped tokens is initiated. Upon the Batch transaction's successful execution on the destination blockchain, all tokens represented by bridging requests within that Batch become immediately accessible to the end-users. This automated and secure unlocking process ensures seamless finalization of each bridging request contained within the Batch, promptly making the wrapped assets available and effectively completing the cross-chain transfer:
 
     1. If bridging ADA from Cardano to Apex Fusion:
        1. Locked ADA tokens remain securely held on Cardano.
