@@ -12,4 +12,4 @@
   * [Components](technical-design/components.md)
   * [Dataflow between System Components](technical-design/dataflow-between-system-components.md)
 * [Security and Decentralization](security-and-decentralization.md)
-* [Conclusion](conclusion.md)
+* [Key Takeaways](key-takeaways.md)
