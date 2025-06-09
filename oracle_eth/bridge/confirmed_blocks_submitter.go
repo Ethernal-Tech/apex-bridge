@@ -45,6 +45,18 @@ func NewConfirmedBlocksSubmitter(
 		latestInfo.CounterEmpty = 0
 	}
 
+	if appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB {
+		blockNum, err := indexerDB.GetLastProcessedBlock()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create block submitter for %s: %w", chainID, err)
+		}
+
+		if latestInfo.BlockNumOrSlot < blockNum {
+			latestInfo.BlockNumOrSlot = blockNum
+			latestInfo.CounterEmpty = 0
+		}
+	}
+
 	return &ConfirmedBlocksSubmitterImpl{
 		bridgeSubmitter: bridgeSubmitter,
 		appConfig:       appConfig,
