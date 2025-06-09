@@ -14,12 +14,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	cardanoOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/bridge"
 	cardanoOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cardanoOracle "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/oracle"
+	oracleCommonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
-	ethOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -142,7 +141,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
-	cardanoBridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
+	cardanoBridgeSubmitter := oracleCommonBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_cardano"))
 
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
@@ -155,7 +154,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
 
-	ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
+	ethBridgeSubmitter := oracleCommonBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
 
 	ethOracle, err := ethOracle.NewEthOracle(

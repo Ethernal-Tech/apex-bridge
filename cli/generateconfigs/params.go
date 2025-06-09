@@ -141,9 +141,9 @@ const (
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
 	defaultPrimeTTLSlotNumberInc             = 1800 + defaultPrimeBlockConfirmationCount*10 // BlockTimeSeconds
-	defaultPrimeSlotRoundingThreshold        = 60
+	defaultPrimeSlotRoundingThreshold        = 180
 	defaultVectorTTLSlotNumberInc            = 1800 + defaultVectorBlockConfirmationCount*10 // BlockTimeSeconds
-	defaultVectorSlotRoundingThreshold       = 60
+	defaultVectorSlotRoundingThreshold       = 180
 	defaultNexusBlockConfirmationCount       = 1 // try zero also because nexus is instant finality chain
 	defaultNexusSyncBatchSize                = 20
 	defaultNexusPoolIntervalMiliseconds      = 1500
@@ -694,6 +694,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
+				EmptyBlocksThreshold:      250,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
