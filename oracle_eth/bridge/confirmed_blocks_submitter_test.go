@@ -144,7 +144,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[4].Bytes()}).Return((*ethCore.ProcessedEthTx)(nil), nil).Once()
 
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
-			BlockNumOrSlot: 12,
+			BlockNumOrSlot: 14,
 			CounterEmpty:   0,
 		}).Return(nil).Once()
 		bridgeSubmitter.On("SubmitBlocks", chainID, submittedBlocks).Return(nil).Once()
@@ -155,7 +155,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		require.NoError(t, blocksSubmitter.execute())
 
-		require.Equal(t, uint64(12), blocksSubmitter.latestInfo.BlockNumOrSlot)
+		require.Equal(t, uint64(14), blocksSubmitter.latestInfo.BlockNumOrSlot)
 		require.Equal(t, 0, blocksSubmitter.latestInfo.CounterEmpty)
 	})
 

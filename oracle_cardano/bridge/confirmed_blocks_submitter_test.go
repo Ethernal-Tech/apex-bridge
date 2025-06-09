@@ -166,7 +166,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[2].Bytes()}).Return((*core.ProcessedCardanoTx)(nil), nil).Once()
 
 		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
-			BlockNumOrSlot: 9,
+			BlockNumOrSlot: 10,
 			CounterEmpty:   0,
 		}).Return(nil).Once()
 		bridgeSubmitter.On("SubmitBlocks", chainID, submittedBlocks).Return(nil).Once()
@@ -177,7 +177,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		require.NoError(t, blocksSubmitter.execute())
 
-		require.Equal(t, uint64(9), blocksSubmitter.latestInfo.BlockNumOrSlot)
+		require.Equal(t, uint64(10), blocksSubmitter.latestInfo.BlockNumOrSlot)
 		require.Equal(t, 0, blocksSubmitter.latestInfo.CounterEmpty)
 	})
 
