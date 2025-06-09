@@ -138,6 +138,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		}
 
 		if len(logs) == 0 {
+			latestInfo.BlockNumOrSlot = blockNum
 			latestInfo.CounterEmpty++
 			// add empty block only if threshold is reached
 			if latestInfo.CounterEmpty < bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold {
