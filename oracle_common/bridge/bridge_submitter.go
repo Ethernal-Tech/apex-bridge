@@ -2,7 +2,9 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -50,16 +52,21 @@ func (bs *BridgeSubmitterImpl) SubmitBlocks(chainID string, blocks []eth.Cardano
 		latestSlot = blocks[len(blocks)-1].BlockSlot
 	}
 
-	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, blocks)
-	if err != nil {
-		bs.logger.Error("Failed to submit confirmed blocks",
-			"chainID", chainID, "latestBlock", latestSlot)
+	if bs.logger.IsDebug() {
+		slots := make([]string, len(blocks))
+		for i, x := range blocks {
+			slots[i] = x.BlockSlot.String()
+		}
 
-		return err
+		bs.logger.Info("Submitting blocks", "chainID", chainID, "slots", strings.Join(slots, ", "))
 	}
 
-	bs.logger.Info("Confirmed blocks submitted successfully",
-		"chainID", chainID, "latestBlock", latestSlot)
+	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, blocks)
+	if err != nil {
+		return fmt.Errorf("failed to submit blocks for %s (%d): %w", chainID, latestSlot, err)
+	}
+
+	bs.logger.Info("Blocks has been submitted successfully", "chainID", chainID, "latestBlock", latestSlot)
 
 	return nil
 }

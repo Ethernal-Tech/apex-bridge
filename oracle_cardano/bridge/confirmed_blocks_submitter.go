@@ -85,8 +85,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return nil
 	}
 
-	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
-
 	if err := bs.bridgeSubmitter.SubmitBlocks(bs.chainID, blocksToSubmit); err != nil {
 		return fmt.Errorf("error submitting blocks: %w", err)
 	}

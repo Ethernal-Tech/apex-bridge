@@ -61,7 +61,7 @@ type EthTxsProcessorDBMock struct {
 func (m *EthTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (oCore.BlocksSubmitterInfo, error) {
 	args := m.Called(chainID)
 
-	return args.Get(0).(oCore.BlocksSubmitterInfo), args.Error(1)
+	return args.Get(0).(oCore.BlocksSubmitterInfo), args.Error(1) //nolint
 }
 
 // SetBlocksSubmitterInfo implements EthTxsProcessorDB.

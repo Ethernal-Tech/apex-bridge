@@ -74,7 +74,7 @@ type CardanoTxsProcessorDBMock struct {
 func (m *CardanoTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (cCore.BlocksSubmitterInfo, error) {
 	args := m.Called(chainID)
 
-	return args.Get(0).(cCore.BlocksSubmitterInfo), args.Error(1)
+	return args.Get(0).(cCore.BlocksSubmitterInfo), args.Error(1) //nolint
 }
 
 // SetBlocksSubmitterInfo implements CardanoTxsProcessorDB.

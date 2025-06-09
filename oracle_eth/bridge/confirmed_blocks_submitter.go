@@ -87,8 +87,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return nil
 	}
 
-	bs.logger.Debug("Submitting blocks", "chainID", bs.chainID, "blocks", blocksToSubmit)
-
 	if err := bs.bridgeSubmitter.SubmitBlocks(bs.chainID, blocksToSubmit); err != nil {
 		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
 	}
@@ -122,7 +120,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 	}
 
 	//nolint:gosec
-	to := min(lastProcessedBlock, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold))
+	to := min(lastProcessedBlock, from+uint64(bs.appConfig.Bridge.SubmitConfig.ConfirmedBlocksThreshold)-1)
 
 	for blockNum := from; blockNum <= to; blockNum++ {
 		logs, err := bs.indexerDB.GetLogsByBlockNumber(blockNum)
