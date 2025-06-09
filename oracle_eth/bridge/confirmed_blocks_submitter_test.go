@@ -51,7 +51,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		}
 
 		defer func() {
-			appConfig.CardanoChains = nil
+			appConfig.EthChains = nil
 		}()
 
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()

@@ -38,10 +38,8 @@ func NewConfirmedBlocksSubmitter(
 		return nil, err
 	}
 
-	if latestInfo.BlockNumOrSlot == 0 {
-		if config := appConfig.CardanoChains[chainID]; config != nil {
-			latestInfo.BlockNumOrSlot = config.StartSlot
-		}
+	if config := appConfig.CardanoChains[chainID]; config != nil && config.StartSlot > latestInfo.BlockNumOrSlot {
+		latestInfo.BlockNumOrSlot = config.StartSlot
 	}
 
 	return &ConfirmedBlocksSubmitterImpl{
