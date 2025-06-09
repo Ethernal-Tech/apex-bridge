@@ -42,6 +42,7 @@ func NewConfirmedBlocksSubmitter(
 
 	if config := appConfig.EthChains[chainID]; config != nil && config.StartBlockNumber > latestInfo.BlockNumOrSlot {
 		latestInfo.BlockNumOrSlot = config.StartBlockNumber
+		latestInfo.CounterEmpty = 0
 	}
 
 	return &ConfirmedBlocksSubmitterImpl{

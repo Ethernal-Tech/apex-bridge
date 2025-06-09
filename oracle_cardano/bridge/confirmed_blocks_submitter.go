@@ -40,6 +40,7 @@ func NewConfirmedBlocksSubmitter(
 
 	if config := appConfig.CardanoChains[chainID]; config != nil && config.StartSlot > latestInfo.BlockNumOrSlot {
 		latestInfo.BlockNumOrSlot = config.StartSlot
+		latestInfo.CounterEmpty = 0
 	}
 
 	return &ConfirmedBlocksSubmitterImpl{
