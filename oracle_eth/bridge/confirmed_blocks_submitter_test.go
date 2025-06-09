@@ -41,6 +41,28 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		require.ErrorIs(t, err, testErr)
 	})
 
+	t.Run("NewConfirmedBlocksSubmitter Start from chain config", func(t *testing.T) {
+		const startBlockNum = uint64(1044)
+
+		appConfig.EthChains = map[string]*oracleCommon.EthChainConfig{
+			chainID: {
+				StartBlockNumber: startBlockNum,
+			},
+		}
+
+		defer func() {
+			appConfig.CardanoChains = nil
+		}()
+
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
+
+		bs, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+
+		require.NoError(t, err)
+		require.Equal(t, startBlockNum, bs.latestInfo.BlockNumOrSlot)
+	})
+
 	t.Run("Start ctx done", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
