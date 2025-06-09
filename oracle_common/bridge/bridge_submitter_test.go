@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -48,7 +49,7 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
-		err := bridgeSubmitter.SubmitBlocks(common.ChainIDStrPrime, []eth.CardanoBlock{})
+		err := bridgeSubmitter.SubmitBlocks(common.ChainIDStrPrime, []eth.CardanoBlock{{BlockSlot: big.NewInt(2)}})
 
 		require.NoError(t, err)
 	})

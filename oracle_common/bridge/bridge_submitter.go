@@ -3,7 +3,6 @@ package bridge
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -47,10 +46,11 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(
 }
 
 func (bs *BridgeSubmitterImpl) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
-	var latestSlot *big.Int
-	if len(blocks) > 0 {
-		latestSlot = blocks[len(blocks)-1].BlockSlot
+	if len(blocks) == 0 {
+		return nil
 	}
+
+	latestSlot := blocks[len(blocks)-1].BlockSlot
 
 	if bs.logger.IsDebug() {
 		slots := make([]string, len(blocks))

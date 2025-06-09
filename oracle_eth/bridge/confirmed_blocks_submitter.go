@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	eth_core "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	ethCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/ethgo"
 
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -16,21 +16,21 @@ import (
 )
 
 type ConfirmedBlocksSubmitterImpl struct {
-	bridgeSubmitter oCore.BridgeBlocksSubmitter
-	appConfig       *oCore.AppConfig
+	bridgeSubmitter oracleCommon.BridgeBlocksSubmitter
+	appConfig       *oracleCommon.AppConfig
 	chainID         string
-	oracleDB        eth_core.EthTxsProcessorDB
+	oracleDB        ethCore.EthTxsProcessorDB
 	indexerDB       eventTrackerStore.EventTrackerStore
-	latestInfo      oCore.BlocksSubmitterInfo
+	latestInfo      oracleCommon.BlocksSubmitterInfo
 	logger          hclog.Logger
 }
 
-var _ oCore.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
+var _ oracleCommon.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
 
 func NewConfirmedBlocksSubmitter(
-	bridgeSubmitter oCore.BridgeBlocksSubmitter,
-	appConfig *oCore.AppConfig,
-	oracleDB eth_core.EthTxsProcessorDB,
+	bridgeSubmitter oracleCommon.BridgeBlocksSubmitter,
+	appConfig *oracleCommon.AppConfig,
+	oracleDB ethCore.EthTxsProcessorDB,
 	indexerDB eventTrackerStore.EventTrackerStore,
 	chainID string,
 	logger hclog.Logger,
@@ -68,10 +68,6 @@ func (bs *ConfirmedBlocksSubmitterImpl) Start(ctx context.Context) {
 	}()
 }
 
-func (bs *ConfirmedBlocksSubmitterImpl) GetChainID() string {
-	return bs.chainID
-}
-
 func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 	from := bs.latestInfo.BlockNumOrSlot
 	if from != 0 {
@@ -83,12 +79,8 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 		return err
 	}
 
-	if len(blocksToSubmit) == 0 {
-		return nil
-	}
-
 	if err := bs.bridgeSubmitter.SubmitBlocks(bs.chainID, blocksToSubmit); err != nil {
-		return fmt.Errorf("error submitting confirmed blocks. err %w", err)
+		return fmt.Errorf("error submitting blocks: %w", err)
 	}
 
 	if err := bs.oracleDB.SetBlocksSubmitterInfo(bs.chainID, latestInfo); err != nil {
@@ -104,7 +96,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
-	result []eth.CardanoBlock, latestInfo oCore.BlocksSubmitterInfo, err error,
+	result []eth.CardanoBlock, latestInfo oracleCommon.BlocksSubmitterInfo, err error,
 ) {
 	bs.logger.Debug("Executing", "chainID", bs.chainID, "from", from)
 
@@ -139,6 +131,8 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 			if err != nil {
 				return result, latestInfo, err
 			} else if !allProccessed {
+				latestInfo.CounterEmpty = 0
+
 				break // do not process any more block until this block is fully processed
 			}
 		}
@@ -158,7 +152,7 @@ func (bs *ConfirmedBlocksSubmitterImpl) checkIfBlockIsProcessed(
 	logs []*ethgo.Log,
 ) (bool, error) {
 	for _, tx := range logs {
-		prTx, err := bs.oracleDB.GetProcessedTx(oCore.DBTxID{
+		prTx, err := bs.oracleDB.GetProcessedTx(oracleCommon.DBTxID{
 			ChainID: bs.chainID,
 			DBKey:   tx.TransactionHash[:],
 		})

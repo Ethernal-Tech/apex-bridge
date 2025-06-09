@@ -84,7 +84,6 @@ type ExpectedTxsFetcher interface {
 
 type ConfirmedBlocksSubmitter interface {
 	Start(ctx context.Context)
-	GetChainID() string
 }
 
 type BlockSubmitterDB interface {
