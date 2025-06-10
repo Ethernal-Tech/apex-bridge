@@ -27,6 +27,7 @@ type CardanoTxsDB interface {
 type CardanoTxsProcessorDB interface {
 	CardanoTxsDB
 	BridgeExpectedCardanoTxsDB
+	cCore.BlockSubmitterDB
 }
 
 type Database interface {
@@ -66,9 +67,4 @@ type CardanoBridgeDataFetcher interface {
 	cCore.BridgeDataFetcher
 	FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error)
 	FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error)
-}
-
-type BridgeSubmitter interface {
-	cCore.BridgeClaimsSubmitter
-	SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error
 }
