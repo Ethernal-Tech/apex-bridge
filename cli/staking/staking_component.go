@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	stakingCore "github.com/Ethernal-Tech/apex-bridge/staking/core"
+	databaseaccess "github.com/Ethernal-Tech/apex-bridge/staking/database_access"
 	stakingmanager "github.com/Ethernal-Tech/apex-bridge/staking/staking_manager"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 	"github.com/spf13/cobra"
 )
@@ -46,6 +50,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	config.FillOut()
+
 	logger, err := logger.NewLogger(config.Logger)
 	if err != nil {
 		outputter.SetError(err)
@@ -60,7 +66,30 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
-	stakingManager, err := stakingmanager.NewStakingManager(context.Background(), config, logger)
+	stakingDB, err := databaseaccess.NewDatabase(filepath.Join(config.DbsPath, "staking_component.db"), config)
+	if err != nil {
+		logger.Error("failed to open staking_component database", "err", err)
+		outputter.SetError(err)
+
+		return
+	}
+
+	indexerDbs := make(map[string]indexer.Database, len(config.Chains))
+
+	for _, chainConfig := range config.Chains {
+		indexerDB, err := indexerDb.NewDatabaseInit("",
+			filepath.Join(config.DbsPath, chainConfig.ChainID+".db"))
+		if err != nil {
+			logger.Error("failed to open staking_component indexer db", "chainID", chainConfig.ChainID, "err", err)
+			outputter.SetError(err)
+
+			return
+		}
+
+		indexerDbs[chainConfig.ChainID] = indexerDB
+	}
+
+	stakingManager, err := stakingmanager.NewStakingManager(context.Background(), config, stakingDB, indexerDbs, logger)
 	if err != nil {
 		logger.Error("staking manager creation failed", "err", err)
 		outputter.SetError(err)
