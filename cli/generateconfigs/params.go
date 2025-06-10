@@ -141,9 +141,9 @@ const (
 	defaultOutputValidatorComponentsFileName = "config.json"
 	defaultOutputRelayerFileName             = "relayer_config.json"
 	defaultPrimeTTLSlotNumberInc             = 1800 + defaultPrimeBlockConfirmationCount*10 // BlockTimeSeconds
-	defaultPrimeSlotRoundingThreshold        = 180
+	defaultPrimeSlotRoundingThreshold        = 60
 	defaultVectorTTLSlotNumberInc            = 1800 + defaultVectorBlockConfirmationCount*10 // BlockTimeSeconds
-	defaultVectorSlotRoundingThreshold       = 180
+	defaultVectorSlotRoundingThreshold       = 60
 	defaultNexusBlockConfirmationCount       = 1 // try zero also because nexus is instant finality chain
 	defaultNexusSyncBatchSize                = 20
 	defaultNexusPoolIntervalMiliseconds      = 1500
