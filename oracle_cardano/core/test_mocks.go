@@ -70,6 +70,20 @@ type CardanoTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// GetBlocksSubmitterInfo implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (cCore.BlocksSubmitterInfo, error) {
+	args := m.Called(chainID)
+
+	return args.Get(0).(cCore.BlocksSubmitterInfo), args.Error(1) //nolint
+}
+
+// SetBlocksSubmitterInfo implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) SetBlocksSubmitterInfo(chainID string, info cCore.BlocksSubmitterInfo) error {
+	args := m.Called(chainID, info)
+
+	return args.Error(0)
+}
+
 // GetUnprocessedBatchEvents implements EthTxsProcessorDB.
 func (m *CardanoTxsProcessorDBMock) GetUnprocessedBatchEvents(chainID string) ([]*cCore.DBBatchInfoEvent, error) {
 	args := m.Called(chainID)
@@ -196,7 +210,7 @@ var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
 type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
-	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
+	OnSubmitConfirmedBlocks func(chainID string, blocks []eth.CardanoBlock)
 }
 
 // SubmitClaims implements BridgeSubmitter.
@@ -217,7 +231,7 @@ func (m *BridgeSubmitterMock) SubmitClaims(
 }
 
 // SubmitConfirmedBlocks implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error {
+func (m *BridgeSubmitterMock) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
 	if m.OnSubmitConfirmedBlocks != nil {
 		m.OnSubmitConfirmedBlocks(chainID, blocks)
 	}
@@ -234,7 +248,7 @@ func (m *BridgeSubmitterMock) Dispose() error {
 	return args.Error(0)
 }
 
-var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
+var _ cCore.BridgeBlocksSubmitter = (*BridgeSubmitterMock)(nil)
 
 type CardanoTxSuccessProcessorMock struct {
 	mock.Mock

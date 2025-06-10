@@ -3,93 +3,163 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	eth_core "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
-
+	"github.com/Ethernal-Tech/apex-bridge/eth"
+	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	ethCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfirmedBlocksSubmitter(t *testing.T) {
 	chainID := common.ChainIDStrPrime
-	appConfig := &oCore.AppConfig{
-		Bridge: oCore.BridgeConfig{
-			SubmitConfig: oCore.SubmitConfig{
-				ConfirmedBlocksThreshold:  10,
+	appConfig := &oracleCommon.AppConfig{
+		Bridge: oracleCommon.BridgeConfig{
+			SubmitConfig: oracleCommon.SubmitConfig{
+				ConfirmedBlocksThreshold:  30,
 				ConfirmedBlocksSubmitTime: 10,
+				EmptyBlocksThreshold:      4,
 			},
 		},
 	}
 
-	t.Run("NewConfirmedBlocksSubmitter 1", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		indexerDB := &eth_core.EventStoreMock{}
+	bridgeSubmitter := &ethCore.BridgeSubmitterMock{}
+	indexerDB := &ethCore.EventStoreMock{}
+	oracleDB := &ethCore.EthTxsProcessorDBMock{}
+	testErr := fmt.Errorf("test err")
 
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), fmt.Errorf("test err"))
+	t.Run("NewConfirmedBlocksSubmitter GetBlocksSubmitterInfo error", func(t *testing.T) {
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, testErr).Once()
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-		require.Nil(t, bs)
+		_, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+		require.ErrorIs(t, err, testErr)
 	})
 
-	t.Run("NewConfirmedBlocksSubmitter 2", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		indexerDB := &eth_core.EventStoreMock{}
+	t.Run("NewConfirmedBlocksSubmitter Start from chain config", func(t *testing.T) {
+		const startBlockNum = uint64(1044)
 
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil)
+		appConfig.EthChains = map[string]*oracleCommon.EthChainConfig{
+			chainID: {
+				StartBlockNumber: startBlockNum,
+			},
+		}
 
-		bs, err := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
+		defer func() {
+			appConfig.EthChains = nil
+		}()
+
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
+
+		bs, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+
 		require.NoError(t, err)
-		require.NotNil(t, bs)
+		require.Equal(t, startBlockNum, bs.latestInfo.BlockNumOrSlot)
 	})
 
-	t.Run("execute 1", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		indexerDB := &eth_core.EventStoreMock{}
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
+	t.Run("NewConfirmedBlocksSubmitter UpdateFromIndexerDB", func(t *testing.T) {
+		const startSlot = uint64(1044)
 
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
+		appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB = true
 
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), fmt.Errorf("test err"))
+		defer func() {
+			appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB = false
+		}()
 
-		err := bs.execute()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "error getting latest confirmed blocks")
-	})
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{BlockNumOrSlot: startSlot - 1}, nil).Once()
+		indexerDB.On("GetLastProcessedBlock").Return(startSlot, nil).Once()
 
-	t.Run("execute 2", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("test err"))
+		bs, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
 
-		indexerDB := &eth_core.EventStoreMock{}
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
-
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
-
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
-
-		err := bs.execute()
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("execute 3", func(t *testing.T) {
-		bridgeSubmitter := &eth_core.BridgeSubmitterMock{}
-		bridgeSubmitter.On("SubmitConfirmedBlocks", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		indexerDB := &eth_core.EventStoreMock{}
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(10), nil).Once()
-
-		bs, _ := NewConfirmedBlocksSubmitter(context.Background(), bridgeSubmitter, appConfig, indexerDB, chainID, hclog.NewNullLogger())
-
-		indexerDB.On("GetLastProcessedBlock").Return(uint64(11), nil)
-
-		err := bs.execute()
 		require.NoError(t, err)
+		require.Equal(t, startSlot, bs.latestInfo.BlockNumOrSlot)
 	})
+
+	t.Run("Start ctx done", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		cancel()
+
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
+
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+		require.NoError(t, err)
+
+		blocksSubmitter.Start(ctx)
+
+		time.Sleep(time.Second)
+
+		require.Equal(t, uint64(0), blocksSubmitter.latestInfo.BlockNumOrSlot)
+	})
+
+	t.Run("Execute", func(t *testing.T) {
+		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
+		indexerDB.On("GetLastProcessedBlock").Return(uint64(20), nil).Once()
+
+		hashes := [6]ethgo.Hash{
+			ethgo.HexToHash("F1"), ethgo.HexToHash("F2"), ethgo.HexToHash("F3"),
+			ethgo.HexToHash("F4"), ethgo.HexToHash("F5"), ethgo.HexToHash("F6"),
+		}
+
+		for i := uint64(0); i <= 15; i++ {
+			logs := []*ethgo.Log(nil)
+
+			switch i {
+			case 6:
+				logs = []*ethgo.Log{
+					{TransactionHash: hashes[0]},
+					{TransactionHash: hashes[1]},
+				}
+			case 8:
+				logs = []*ethgo.Log{
+					{TransactionHash: hashes[2]},
+				}
+			case 15:
+				logs = []*ethgo.Log{
+					{TransactionHash: hashes[3]},
+					{TransactionHash: hashes[4]},
+					{TransactionHash: hashes[5]},
+				}
+			}
+
+			indexerDB.On("GetLogsByBlockNumber", i).Return(logs, nil).Once()
+		}
+
+		submittedBlocks := []eth.CardanoBlock{
+			{BlockSlot: big.NewInt(3)}, {BlockSlot: big.NewInt(6)}, {BlockSlot: big.NewInt(8)}, {BlockSlot: big.NewInt(12)},
+		}
+
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[0].Bytes()}).Return(&ethCore.ProcessedEthTx{}, nil).Once()
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[1].Bytes()}).Return(&ethCore.ProcessedEthTx{}, nil).Once()
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[2].Bytes()}).Return(&ethCore.ProcessedEthTx{}, nil).Once()
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[3].Bytes()}).Return(&ethCore.ProcessedEthTx{}, nil).Once()
+		oracleDB.On("GetProcessedTx", oracleCommon.DBTxID{ChainID: chainID, DBKey: hashes[4].Bytes()}).Return((*ethCore.ProcessedEthTx)(nil), nil).Once()
+
+		oracleDB.On("SetBlocksSubmitterInfo", chainID, oracleCommon.BlocksSubmitterInfo{
+			BlockNumOrSlot: 14,
+			CounterEmpty:   0,
+		}).Return(nil).Once()
+		bridgeSubmitter.On("SubmitBlocks", chainID, submittedBlocks).Return(nil).Once()
+
+		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+		require.NoError(t, err)
+
+		require.NoError(t, blocksSubmitter.execute())
+
+		require.Equal(t, uint64(14), blocksSubmitter.latestInfo.BlockNumOrSlot)
+		require.Equal(t, 0, blocksSubmitter.latestInfo.CounterEmpty)
+	})
+
+	bridgeSubmitter.AssertExpectations(t)
+	oracleDB.AssertExpectations(t)
+	indexerDB.AssertExpectations(t)
 }
