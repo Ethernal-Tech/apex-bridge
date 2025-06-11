@@ -377,33 +377,34 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
 			}
 
-			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData)
+			keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
 			if err != nil {
-				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
+				return err
 			}
+
+			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
 
 			logger.Debug("Validators chain data retrieved",
 				"data", eth.GetChainValidatorsDataInfoString(chainID, validatorsData))
 
-			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
-				multisigPolicyScript, multisigFeePolicyScript)
+			addrs, err := cardanotx.NewApexAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
 			if err != nil {
 				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
 			if regChain.AddressMultisig != "" &&
-				(multisigAddr != regChain.AddressMultisig || feeAddr != regChain.AddressFeePayer) {
-				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)", multisigAddr, feeAddr,
-					regChain.AddressMultisig, regChain.AddressFeePayer)
+				(addrs.Multisig.Payment != regChain.AddressMultisig || addrs.Fee.Payment != regChain.AddressFeePayer) {
+				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)",
+					addrs.Multisig.Payment, addrs.Fee.Payment, regChain.AddressMultisig, regChain.AddressFeePayer)
 			} else {
-				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
+				logger.Debug("Addresses are matching", "multisig", addrs.Multisig.Payment, "fee", addrs.Fee.Payment)
 			}
 
 			chainConfig.ChainID = chainID
 			chainConfig.BridgingAddresses = oracleCommonCore.BridgingAddresses{
-				BridgingAddress: multisigAddr,
-				FeeAddress:      feeAddr,
+				BridgingAddress: addrs.Multisig.Payment,
+				FeeAddress:      addrs.Fee.Payment,
 			}
 			cardanoChains[chainID] = chainConfig
 		case common.ChainTypeEVM:
