@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
@@ -26,15 +27,32 @@ type ConfirmedBatch struct {
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
-) *ConfirmedBatch {
+) (*ConfirmedBatch, error) {
+	bytesType, _ := abi.NewType("bytes", "[]byte", nil)
+	arguments := abi.Arguments{{Type: bytesType}, {Type: bytesType}}
+	signaturesCount := len(contractConfirmedBatch.Signatures)
+	signatures := make([][]byte, signaturesCount)
+	feeSignatures := make([][]byte, signaturesCount)
+
+	// because of solidity limitations, multiple signatures are abi.encoded into bytes
+	for i, sig := range contractConfirmedBatch.Signatures {
+		result, err := arguments.Unpack(sig)
+		if err != nil {
+			return nil, err
+		}
+
+		signatures[i] = result[0].([]byte)    //nolint:forcetypeassert
+		feeSignatures[i] = result[1].([]byte) //nolint:forcetypeassert
+	}
+
 	return &ConfirmedBatch{
 		ID:              contractConfirmedBatch.Id,
 		RawTransaction:  contractConfirmedBatch.RawTransaction,
-		Signatures:      contractConfirmedBatch.Signatures,
-		FeeSignatures:   contractConfirmedBatch.FeeSignatures,
+		Signatures:      signatures,
+		FeeSignatures:   feeSignatures,
 		Bitmap:          contractConfirmedBatch.Bitmap,
 		IsConsolidation: contractConfirmedBatch.IsConsolidation,
-	}
+	}, nil
 }
 
 func (b ConfirmedBatch) String() string {

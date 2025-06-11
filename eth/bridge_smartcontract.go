@@ -71,7 +71,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 		return nil, fmt.Errorf("error while GetConfirmedBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	return NewConfirmedBatch(result), nil
+	return NewConfirmedBatch(result)
 }
 
 func (bsc *BridgeSmartContractImpl) SubmitSignedBatch(
