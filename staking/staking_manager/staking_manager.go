@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Ethernal-Tech/apex-bridge/staking/chain"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/staking/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/staking/database_access"
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/staking/processor/txs_processor"
@@ -19,6 +19,7 @@ type StakingManagerImpl struct {
 	ctx               context.Context
 	config            *core.StakingManagerConfiguration
 	stakingComponents []core.StakingComponent
+	logger            hclog.Logger
 }
 
 var _ core.StakingManager = (*StakingManagerImpl)(nil)
@@ -43,8 +44,15 @@ func NewStakingManager(
 
 		cardanoTxsReceiver := cardanotxsprocessor.NewCardanoTxsReceiverImpl(config, stakingDB, txsProcessorLogger)
 
-		cco, err :=
-			chain.NewCardanoChainObserver(ctx, chainConfig, cardanoTxsReceiver, stakingDB, indexerDB, chainObserverLogger)
+		cco, err := chain.NewCardanoChainObserver(
+			ctx,
+			chainConfig,
+			cardanoTxsReceiver,
+			stakingDB,
+			indexerDB,
+			chainObserverLogger,
+			"staking",
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create staking Cardano chain observer for `%s`: %w", chainConfig.ChainID, err)
 		}
@@ -64,11 +72,16 @@ func NewStakingManager(
 		ctx:               ctx,
 		config:            config,
 		stakingComponents: stakingComponents,
+		logger:            logger.Named("staking_manager"),
 	}, nil
 }
 
 func (sm *StakingManagerImpl) Start() {
 	for _, sc := range sm.stakingComponents {
-		go sc.Start(sm.ctx)
+		go func() {
+			if err := sc.Start(sm.ctx); err != nil {
+				sm.logger.Error("Staking component exited with error", "err", err)
+			}
+		}()
 	}
 }

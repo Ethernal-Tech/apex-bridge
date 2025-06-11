@@ -12,13 +12,7 @@ type StakingManager interface {
 }
 
 type StakingComponent interface {
-	Start(ctx context.Context)
-}
-
-type CardanoChainObserver interface {
-	Start()
-	Dispose() error
-	GetConfig() *ChainConfig
+	Start(ctx context.Context) error
 }
 
 type CardanoTxsReceiver interface {

@@ -119,7 +119,7 @@ func NewCardanoOracle(
 
 		cco, err := chain.NewCardanoChainObserver(
 			ctx, cardanoChainConfig, cardanoTxsReceiver, db, indexerDB,
-			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID))
+			logger.Named("cardano_chain_observer_"+cardanoChainConfig.ChainID), "oracle")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
@@ -153,7 +153,7 @@ func (o *OracleImpl) Start() error {
 	for _, co := range o.cardanoChainObservers {
 		err := co.Start()
 		if err != nil {
-			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().ChainID, err)
+			return fmt.Errorf("failed to start observer for %s: %w", co.GetConfig().GetChainID(), err)
 		}
 	}
 
@@ -168,9 +168,9 @@ func (o *OracleImpl) Dispose() error {
 	for _, cco := range o.cardanoChainObservers {
 		err := cco.Dispose()
 		if err != nil {
-			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().ChainID, "err", err)
+			o.logger.Error("error while disposing cardano chain observer", "chainId", cco.GetConfig().GetChainID(), "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing cardano chain observer. chainId: %v, err: %w",
-				cco.GetConfig().ChainID, err))
+				cco.GetConfig().GetChainID(), err))
 		}
 	}
 

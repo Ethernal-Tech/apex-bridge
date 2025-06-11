@@ -1,8 +1,8 @@
 package core
 
 import (
+	ocCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type StakingBridgingAddresses struct {
@@ -10,38 +10,35 @@ type StakingBridgingAddresses struct {
 	FeeAddress          string `json:"feeAddress"`
 }
 
-type CardanoChainConfigUtxo struct {
-	Hash    [32]byte                    `json:"id"`
-	Index   uint32                      `json:"index"`
-	Address string                      `json:"address"`
-	Amount  uint64                      `json:"amount"`
-	Tokens  []cardanowallet.TokenAmount `json:"tokens,omitempty"`
-	Slot    uint64                      `json:"slot"`
+type CardanoChainConfig struct {
+	ocCore.BaseCardanoChainConfig
+	ChainType           string                   `json:"type"`
+	NetworkMagic        uint32                   `json:"testnetMagic"`
+	StakingAddresses    []string                 `json:"stakingAddresses"`
+	StakingBridgingAddr StakingBridgingAddresses `json:"stakingBridgingAddrs"`
 }
 
-type ChainConfig struct {
-	ChainID                string                   `json:"-"`
-	ChainType              string                   `json:"type"`
-	NetworkAddress         string                   `json:"networkAddress"`
-	NetworkMagic           uint32                   `json:"testnetMagic"`
-	StartBlockHash         string                   `json:"startBlockHash"`
-	StartSlot              uint64                   `json:"startSlot"`
-	InitialUtxos           []CardanoChainConfigUtxo `json:"initialUtxos"`
-	ConfirmationBlockCount uint                     `json:"confirmationBlockCount"`
-	StakingAddresses       []string                 `json:"stakingAddresses"`
-	StakingBridgingAddr    StakingBridgingAddresses `json:"stakingBridgingAddrs"`
+func (c CardanoChainConfig) GetNetworkMagic() uint32 {
+	return c.NetworkMagic
+}
+
+func (c CardanoChainConfig) GetAddressesOfInterest() []string {
+	return append([]string{
+		c.StakingBridgingAddr.StakingBridgingAddr,
+		c.StakingBridgingAddr.FeeAddress,
+	}, c.StakingAddresses...)
 }
 
 type StakingConfiguration struct {
-	Chain         ChainConfig `json:"chain"`
-	PullTimeMilis int64       `json:"pullTime"`
+	Chain         CardanoChainConfig `json:"chain"`
+	PullTimeMilis int64              `json:"pullTime"`
 }
 
 type StakingManagerConfiguration struct {
-	Chains        map[string]*ChainConfig `json:"chains"`
-	Logger        logger.LoggerConfig     `json:"logger"`
-	DbsPath       string                  `json:"dbsPath"`
-	PullTimeMilis int64                   `json:"pullTime"`
+	Chains        map[string]*CardanoChainConfig `json:"chains"`
+	Logger        logger.LoggerConfig            `json:"logger"`
+	DbsPath       string                         `json:"dbsPath"`
+	PullTimeMilis int64                          `json:"pullTime"`
 }
 
 func (config *StakingManagerConfiguration) FillOut() {
