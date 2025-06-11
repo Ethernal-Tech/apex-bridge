@@ -40,6 +40,18 @@ func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoi
 	}
 }
 
+// @Summary Get state of bridging request
+// @Description Returns the current status of a bridging request, along with the destination chain ID and transaction hash, based on the given source chain ID and transaction hash.
+// @Tags BridgingRequestState
+// @Produce json
+// @Param chainId query string true "Source chain ID"
+// @Param txHash query string true "Source transaction hash"
+// @Success 200 {object} response.BridgingRequestStateResponse
+// @Failure 400 {object} response.ErrorResponse "Bad Request – One or more query parameters are missing, or the bridging request state could not be retrieved."
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Failure 404 {object} response.ErrorResponse "Not Found - No bridging request found for the given parameters."
+// @Security ApiKeyAuth
+// @Router /BridgingRequestState/Get [get]
 func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	c.logger.Debug("get request", "query values", queryValues, "url", r.URL)
@@ -85,6 +97,17 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewBridgingRequestStateResponse(state), c.logger)
 }
 
+// @Summary Get states of multiple bridging requests
+// @Description Returns statuses and related data for one or more bridging requests, based on the given source chain ID and transaction hash(es).
+// @Tags BridgingRequestState
+// @Produce json
+// @Param chainId query string true "Source chain ID"
+// @Param txHash query []string true "Source transaction hashes"
+// @Success 200 {object} map[string]response.BridgingRequestStateResponse "OK – Returns a map with source transaction hashes as keys and the associated bridging request data as values."
+// @Failure 400 {object} response.ErrorResponse "Bad Request – chainId is missing from the query or the bridging request states could not be retrieved."
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Security ApiKeyAuth
+// @Router /BridgingRequestState/GetMultiple [get]
 func (c *BridgingRequestStateControllerImpl) getMultiple(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	c.logger.Debug("query values", queryValues, "url", r.URL)
