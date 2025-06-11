@@ -102,7 +102,7 @@ func NewAddressContainer(
 			return addr, fmt.Errorf("payment address: %w", err)
 		}
 	} else {
-		addr.Stake, err = cliUtils.GetPolicyScriptAddress(networkMagic, policyScripts.Stake)
+		addr.Stake, err = cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScripts.Stake)
 		if err != nil {
 			return addr, fmt.Errorf("stake address: %w", err)
 		}
