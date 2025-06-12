@@ -55,7 +55,7 @@ const (
 	cardanoSocketPathFlagDesc             = "socket path for cardano network"
 	cardanoTTLSlotIncFlagDesc             = "TTL slot increment for cardano"
 	cardanoSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle"
+	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle / cardano block submitter"                                                                                   //nolint:lll
 	cardanoUtxoMinAmountFlagDesc          = "minimal UTXO value for cardano"
 	cardanoMinFeeForBridgingFlagDesc      = "minimal bridging fee for cardano"
 	cardanoMinOperationFeeFlagDesc        = "minimal operation fee for cardano"
@@ -619,6 +619,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
+				EmptyBlocksThreshold:      200,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{

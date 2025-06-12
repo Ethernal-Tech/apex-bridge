@@ -2,11 +2,12 @@ package bridge
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -19,17 +20,17 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
-		_, err := bridgeSubmitter.SubmitClaims(&core.BridgeClaims{
-			ContractClaims: core.ContractClaims{
-				BridgingRequestClaims: []core.BridgingRequestClaim{
+		_, err := bridgeSubmitter.SubmitClaims(&cCore.BridgeClaims{
+			ContractClaims: cCore.ContractClaims{
+				BridgingRequestClaims: []cCore.BridgingRequestClaim{
 					{
 						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
 						SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
 						DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
-						Receivers:               []core.BridgingRequestReceiver{},
+						Receivers:               []cCore.BridgingRequestReceiver{},
 					},
 				},
-				BatchExecutedClaims: []core.BatchExecutedClaim{
+				BatchExecutedClaims: []cCore.BatchExecutedClaim{
 					{
 						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
 						BatchNonceId:            1,
@@ -48,7 +49,7 @@ func TestBridgeSubmitter(t *testing.T) {
 		bridgeSubmitter := NewBridgeSubmitter(context.Background(), &bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeSubmitter)
 
-		err := bridgeSubmitter.SubmitConfirmedBlocks(common.ChainIDStrPrime, 0, 1)
+		err := bridgeSubmitter.SubmitBlocks(common.ChainIDStrPrime, []eth.CardanoBlock{{BlockSlot: big.NewInt(2)}})
 
 		require.NoError(t, err)
 	})

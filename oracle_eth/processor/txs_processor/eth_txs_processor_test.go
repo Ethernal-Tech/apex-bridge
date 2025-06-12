@@ -35,7 +35,7 @@ func newEthTxsProcessor(
 	successTxProcessors []ethcore.EthTxSuccessProcessor,
 	failedTxProcessors []ethcore.EthTxFailedProcessor,
 	bridgeDataFetcher ethcore.EthBridgeDataFetcher,
-	bridgeSubmitter ethcore.BridgeSubmitter,
+	bridgeSubmitter oCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {
@@ -65,7 +65,7 @@ func newValidProcessor(
 	successTxProcessor ethcore.EthTxSuccessProcessor,
 	failedTxProcessor ethcore.EthTxFailedProcessor,
 	bridgeDataFetcher ethcore.EthBridgeDataFetcher,
-	bridgeSubmitter ethcore.BridgeSubmitter,
+	bridgeSubmitter oCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {

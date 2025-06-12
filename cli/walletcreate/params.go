@@ -139,28 +139,44 @@ func (ip *initParams) Execute() (common.ICommandResult, error) {
 		}, nil
 
 	default:
-		wallet, err := cardanotx.GenerateWallet(secretsManager, ip.chainID, walletType == "stake", ip.forceRegenerate)
+		isStake := walletType == "stake"
+
+		wallet, err := cardanotx.GenerateWallet(secretsManager, ip.chainID, isStake, ip.forceRegenerate)
 		if err != nil {
 			return nil, err
 		}
+
+		var stakeKeyHash, stakeKeyHashFee string
 
 		keyHash, err := cardanowallet.GetKeyHash(wallet.MultiSig.VerificationKey)
 		if err != nil {
 			return nil, err
 		}
 
-		keyHashFee, err := cardanowallet.GetKeyHash(wallet.MultiSigFee.VerificationKey)
+		keyHashFee, err := cardanowallet.GetKeyHash(wallet.Fee.VerificationKey)
 		if err != nil {
 			return nil, err
 		}
 
+		if isStake {
+			stakeKeyHash, err = cardanowallet.GetKeyHash(wallet.MultiSig.StakeVerificationKey)
+			if err != nil {
+				return nil, err
+			}
+
+			stakeKeyHashFee, err = cardanowallet.GetKeyHash(wallet.Fee.StakeVerificationKey)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		return &cardanoCmdResult{
-			SigningKey:      wallet.MultiSig.SigningKey,
-			VerifyingKey:    wallet.MultiSig.VerificationKey,
+			Multisig:        wallet.MultiSig,
+			Fee:             wallet.Fee,
 			KeyHash:         keyHash,
-			SigningKeyFee:   wallet.MultiSigFee.SigningKey,
-			VerifyingKeyFee: wallet.MultiSigFee.VerificationKey,
 			KeyHashFee:      keyHashFee,
+			StakeKeyHash:    stakeKeyHash,
+			StakeKeyHashFee: stakeKeyHashFee,
 			showPrivateKey:  ip.showPrivateKey,
 			ChainID:         ip.chainID,
 		}, nil

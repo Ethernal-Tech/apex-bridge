@@ -87,7 +87,7 @@ const (
 	primeSocketPathFlagDesc             = "socket path for prime network"
 	primeTTLSlotIncFlagDesc             = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	primeStartingBlockFlagDesc          = "slot: hash of the block from where to start prime oracle"
+	primeStartingBlockFlagDesc          = "slot: hash of the block from where to start prime oracle / prime block submitter"                                                                                     //nolint:lll
 	primeUtxoMinAmountFlagDesc          = "minimal UTXO value for prime"
 	primeMinFeeForBridgingFlagDesc      = "minimal bridging fee for prime"
 	primeBlockConfirmationCountFlagDesc = "block confirmation count for prime"
@@ -101,7 +101,7 @@ const (
 	vectorSocketPathFlagDesc             = "socket path for vector network"
 	vectorTTLSlotIncFlagDesc             = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	vectorStartingBlockFlagDesc          = "slot: hash of the block from where to start vector oracle"
+	vectorStartingBlockFlagDesc          = "slot: hash of the block from where to start vector oracle / vector block submitter"                                                                                    //nolint:lll
 	vectorUtxoMinAmountFlagDesc          = "minimal UTXO value for vector"
 	vectorMinFeeForBridgingFlagDesc      = "minimal bridging fee for vector"
 	vectorBlockConfirmationCountFlagDesc = "block confirmation count for vector"
@@ -129,7 +129,7 @@ const (
 	nexusBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for nexus. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
 	relayerDataDirFlagDesc              = "path to relayer secret directory when using local secrets manager"
 	relayerConfigPathFlagDesc           = "path to relayer secrets manager config file"
-	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle"
+	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle / nexus block submitter"
 	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
 
 	defaultPrimeBlockConfirmationCount       = 10
@@ -702,6 +702,7 @@ func (p *generateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
+				EmptyBlocksThreshold:      250,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{

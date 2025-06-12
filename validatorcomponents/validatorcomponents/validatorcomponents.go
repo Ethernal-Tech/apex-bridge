@@ -17,12 +17,11 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	cardanoOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/bridge"
 	cardanoOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cardanoOracle "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/oracle"
+	oracleCommonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
-	ethOracleBridge "github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	ethOracle "github.com/Ethernal-Tech/apex-bridge/oracle_eth/oracle"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -143,7 +142,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to open oracle database: %w", err)
 	}
 
-	cardanoBridgeSubmitter := cardanoOracleBridge.NewBridgeSubmitter(
+	cardanoBridgeSubmitter := oracleCommonBridge.NewBridgeSubmitter(
 		ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_cardano"))
 
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
@@ -160,7 +159,7 @@ func NewValidatorComponents(
 	var ethOracleObj *ethOracle.OracleImpl
 
 	if len(appConfig.EthChains) > 0 {
-		ethBridgeSubmitter := ethOracleBridge.NewBridgeSubmitter(
+		ethBridgeSubmitter := oracleCommonBridge.NewBridgeSubmitter(
 			ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
 
 		ethOracleObj, err = ethOracle.NewEthOracle(
@@ -378,33 +377,34 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
 			}
 
-			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData)
+			keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
 			if err != nil {
-				return fmt.Errorf("error while executing GetPolicyScripts. err: %w", err)
+				return err
 			}
+
+			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
 
 			logger.Debug("Validators chain data retrieved",
 				"data", eth.GetChainValidatorsDataInfoString(chainID, validatorsData))
 
-			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
-				multisigPolicyScript, multisigFeePolicyScript)
+			addrs, err := cardanotx.NewApexAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
 			if err != nil {
 				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
 			}
 
 			if regChain.AddressMultisig != "" &&
-				(multisigAddr != regChain.AddressMultisig || feeAddr != regChain.AddressFeePayer) {
-				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)", multisigAddr, feeAddr,
-					regChain.AddressMultisig, regChain.AddressFeePayer)
+				(addrs.Multisig.Payment != regChain.AddressMultisig || addrs.Fee.Payment != regChain.AddressFeePayer) {
+				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)",
+					addrs.Multisig.Payment, addrs.Fee.Payment, regChain.AddressMultisig, regChain.AddressFeePayer)
 			} else {
-				logger.Debug("Addresses are matching", "multisig", multisigAddr, "fee", feeAddr)
+				logger.Debug("Addresses are matching", "multisig", addrs.Multisig.Payment, "fee", addrs.Fee.Payment)
 			}
 
 			chainConfig.ChainID = chainID
 			chainConfig.BridgingAddresses = oracleCommonCore.BridgingAddresses{
-				BridgingAddress: multisigAddr,
-				FeeAddress:      feeAddr,
+				BridgingAddress: addrs.Multisig.Payment,
+				FeeAddress:      addrs.Fee.Payment,
 			}
 			cardanoChains[chainID] = chainConfig
 		case common.ChainTypeEVM:
