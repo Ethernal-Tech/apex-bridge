@@ -52,12 +52,12 @@ type ApexAddresses struct {
 func NewApexKeyHashes(
 	validatorsData []eth.ValidatorChainData,
 ) (ApexKeyHashes, error) {
-	multisig, err := getKeyHashes(validatorsData, 0)
+	multisig, err := getKeyHashes(validatorsData, false)
 	if err != nil {
 		return ApexKeyHashes{}, fmt.Errorf("failed to create key hashes for multisig: %w", err)
 	}
 
-	fee, err := getKeyHashes(validatorsData, 1)
+	fee, err := getKeyHashes(validatorsData, true)
 	if err != nil {
 		return ApexKeyHashes{}, fmt.Errorf("failed to create key hashes for fee: %w", err)
 	}
@@ -145,11 +145,16 @@ func AreVerifyingKeysTheSame(w *ApexCardanoWallet, data eth.ValidatorChainData) 
 		bytes.Equal(w.Fee.StakeVerificationKey, bigIntToKey(data.Key[3]))
 }
 
-func getKeyHashes(validatorsData []eth.ValidatorChainData, indx int) (KeyHashesContainer, error) {
+func getKeyHashes(validatorsData []eth.ValidatorChainData, isFee bool) (KeyHashesContainer, error) {
 	paymentKeyHashes := make([]string, len(validatorsData))
 	stakeKeyHashes := make([]string, len(validatorsData))
 	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))) //nolint:gosec
 	countWithStake := 0
+
+	indx := 0
+	if isFee {
+		indx = 1
+	}
 
 	for i, x := range validatorsData {
 		payment, stake, err := getKeyHashPair(x.Key[indx], x.Key[indx+2])

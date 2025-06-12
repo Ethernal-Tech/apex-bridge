@@ -24,7 +24,7 @@ func (r CmdResult) GetOutput() string {
 		args = append(args, fmt.Sprintf("Multisig Stake Address|%s", r.Multisig.Stake))
 	}
 
-	if r.Multisig.Stake != "" {
+	if r.Fee.Stake != "" {
 		args = append(args, fmt.Sprintf("Fee Payer Stake Address|%s", r.Fee.Stake))
 	}
 
