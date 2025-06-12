@@ -28,6 +28,7 @@ type EthTxsDB interface {
 type EthTxsProcessorDB interface {
 	EthTxsDB
 	BridgeExpectedEthTxsDB
+	oCore.BlockSubmitterDB
 }
 
 type Database interface {
@@ -76,14 +77,4 @@ type EthChainObserver interface {
 type EthBridgeDataFetcher interface {
 	oCore.BridgeDataFetcher
 	FetchExpectedTx(chainID string) (*BridgeExpectedEthTx, error)
-}
-
-type BridgeSubmitter interface {
-	oCore.BridgeClaimsSubmitter
-	SubmitConfirmedBlocks(chainID string, from uint64, to uint64) error
-}
-
-type EthConfirmedBlocksSubmitter interface {
-	StartSubmit()
-	GetChainID() string
 }

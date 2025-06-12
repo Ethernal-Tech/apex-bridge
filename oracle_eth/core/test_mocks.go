@@ -59,6 +59,20 @@ type EthTxsProcessorDBMock struct {
 	mock.Mock
 }
 
+// GetBlocksSubmitterInfo implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (oCore.BlocksSubmitterInfo, error) {
+	args := m.Called(chainID)
+
+	return args.Get(0).(oCore.BlocksSubmitterInfo), args.Error(1) //nolint
+}
+
+// SetBlocksSubmitterInfo implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) SetBlocksSubmitterInfo(chainID string, info oCore.BlocksSubmitterInfo) error {
+	args := m.Called(chainID, info)
+
+	return args.Error(0)
+}
+
 // GetUnprocessedBatchEvents implements EthTxsProcessorDB.
 func (m *EthTxsProcessorDBMock) GetUnprocessedBatchEvents(chainID string) ([]*oCore.DBBatchInfoEvent, error) {
 	args := m.Called(chainID)
@@ -312,7 +326,18 @@ var _ EthTxFailedProcessor = (*EthTxFailedProcessorMock)(nil)
 type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *oCore.BridgeClaims) (*types.Receipt, error)
-	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
+	OnSubmitConfirmedBlocks func(chainID string, blocks []eth.CardanoBlock)
+}
+
+// SubmitBlocks implements core.BridgeBlocksSubmitter.
+func (m *BridgeSubmitterMock) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
+	if m.OnSubmitConfirmedBlocks != nil {
+		m.OnSubmitConfirmedBlocks(chainID, blocks)
+	}
+
+	args := m.Called(chainID, blocks)
+
+	return args.Error(0)
 }
 
 // SubmitClaims implements BridgeSubmitter.
@@ -332,17 +357,6 @@ func (m *BridgeSubmitterMock) SubmitClaims(
 	return nil, args.Error(1)
 }
 
-// SubmitConfirmedBlocks implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, from uint64, to uint64) error {
-	if m.OnSubmitConfirmedBlocks != nil {
-		m.OnSubmitConfirmedBlocks(chainID, from, to)
-	}
-
-	args := m.Called(chainID, from, to)
-
-	return args.Error(0)
-}
-
 // Dispose implements BridgeSubmitter.
 func (m *BridgeSubmitterMock) Dispose() error {
 	args := m.Called()
@@ -350,7 +364,7 @@ func (m *BridgeSubmitterMock) Dispose() error {
 	return args.Error(0)
 }
 
-var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
+var _ oCore.BridgeBlocksSubmitter = (*BridgeSubmitterMock)(nil)
 
 type EventStoreMock struct {
 	mock.Mock

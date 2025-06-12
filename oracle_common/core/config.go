@@ -71,8 +71,10 @@ type CardanoChainConfig struct {
 }
 
 type SubmitConfig struct {
-	ConfirmedBlocksThreshold  int `json:"confirmedBlocksThreshold"`
-	ConfirmedBlocksSubmitTime int `json:"confirmedBlocksSubmitTime"`
+	ConfirmedBlocksThreshold  int  `json:"confirmedBlocksThreshold"`
+	ConfirmedBlocksSubmitTime int  `json:"confirmedBlocksSubmitTime"`
+	EmptyBlocksThreshold      int  `json:"emptyBlocksThreshold"`
+	UpdateFromIndexerDB       bool `json:"updateFromIndexerDb"`
 }
 
 type BridgeConfig struct {

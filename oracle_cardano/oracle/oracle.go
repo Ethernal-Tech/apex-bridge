@@ -41,7 +41,7 @@ func NewCardanoOracle(
 	typeRegister common.TypeRegister,
 	appConfig *cCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
-	bridgeSubmitter core.BridgeSubmitter,
+	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -111,7 +111,7 @@ func NewCardanoOracle(
 		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, indexerDB, cardanoChainConfig.ChainID, logger)
+			bridgeSubmitter, appConfig, db, indexerDB, cardanoChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
@@ -148,7 +148,7 @@ func (o *OracleImpl) Start() error {
 	go o.expectedTxsFetcher.Start()
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		cbs.StartSubmit()
+		cbs.Start(o.ctx)
 	}
 
 	for _, co := range o.cardanoChainObservers {
@@ -180,9 +180,4 @@ func (o *OracleImpl) Dispose() error {
 	}
 
 	return nil
-}
-
-type ErrorOrigin struct {
-	err    error
-	origin string
 }
