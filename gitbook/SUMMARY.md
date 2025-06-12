@@ -13,3 +13,10 @@
   * [Dataflow between System Components](technical-design/dataflow-between-system-components.md)
 * [Security and Decentralization](security-and-decentralization.md)
 * [Key Takeaways](key-takeaways.md)
+
+## Oracle API
+
+* [BridgingRequestState](oracle-api/bridgingrequeststate.md)
+* [OracleState](oracle-api/oraclestate.md)
+* [Settings](oracle-api/settings.md)
+* [Models](oracle-api/models.md)
