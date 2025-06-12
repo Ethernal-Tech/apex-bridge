@@ -39,6 +39,7 @@ func runPreRun(_ *cobra.Command, _ []string) error {
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	stakingDbsSubdir := "staking"
+
 	outputter := common.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
@@ -67,7 +68,9 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
-	stakingDB, err := databaseaccess.NewDatabase(filepath.Join(config.DbsPath, stakingDbsSubdir, "staking_component.db"), config)
+	dbPath := filepath.Join(config.DbsPath, stakingDbsSubdir, "staking_component.db")
+	stakingDB, err := databaseaccess.NewDatabase(dbPath, config)
+
 	if err != nil {
 		logger.Error("failed to open staking_component database", "err", err)
 		outputter.SetError(err)
