@@ -5,9 +5,9 @@ import (
 )
 
 type BridgingRequestStateDB interface {
-	AddBridgingRequestState(state *BridgingRequestState) error
-	UpdateBridgingRequestState(state *BridgingRequestState) error
-	GetBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) (*BridgingRequestState, error)
+	AddBridgingRequestState(state *common.BridgingRequestState) error
+	UpdateBridgingRequestState(state *common.BridgingRequestState) error
+	GetBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) (*common.BridgingRequestState, error)
 }
 
 type Database interface {
@@ -29,8 +29,8 @@ type API interface {
 type BridgingRequestStateManager interface {
 	common.BridgingRequestStateUpdater
 
-	Get(sourceChainID string, sourceTxHash common.Hash) (*BridgingRequestState, error)
-	GetMultiple(sourceChainID string, sourceTxHashes []common.Hash) ([]*BridgingRequestState, error)
+	Get(sourceChainID string, sourceTxHash common.Hash) (*common.BridgingRequestState, error)
+	GetMultiple(sourceChainID string, sourceTxHashes []common.Hash) ([]*common.BridgingRequestState, error)
 }
 
 type RelayerImitator interface {

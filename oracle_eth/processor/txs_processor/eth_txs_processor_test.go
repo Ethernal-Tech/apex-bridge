@@ -1546,7 +1546,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		pendingTx1, _ = oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx1.GetChainID(), DBKey: ethTx1.GetTxHash()})
 		require.NotNil(t, pendingTx1)
-		require.Equal(t, pendingTx1.GetSubmitTryCount(), uint32(1))
+		require.Equal(t, uint32(0), pendingTx1.GetSubmitTryCount())
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
 		require.NoError(t, err)

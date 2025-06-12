@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -762,7 +763,41 @@ func Test_getNeededUtxos(t *testing.T) {
 	})
 }
 
-func Test_getOutputs(t *testing.T) {
+func Test_getUtxosFromRefundTransactions(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	cco.txProvider = txProviderMock
+	cco.config.SlotRoundingThreshold = 100
+	cco.config.MaxFeeUtxoCount = 4
+	cco.config.MaxUtxoCount = 50
 	txs := []eth.ConfirmedTransaction{
 		{
 			Receivers: []eth.BridgeReceiver{
@@ -827,31 +862,298 @@ func Test_getOutputs(t *testing.T) {
 		},
 	}
 
-	res := getOutputs(txs, cardanowallet.MainNetNetwork, hclog.NewNullLogger())
+	t.Run("getUtxosFromRefundTransactions no refund pass", func(t *testing.T) {
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		require.NoError(t, err)
 
-	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
-	assert.Equal(t, []cardanowallet.TxOutput{
+		for _, refundUtxo := range refundUtxosPerConfirmedTx {
+			require.Empty(t, refundUtxo)
+		}
+	})
+
+	t.Run("getUtxosFromRefundTransactions with 1 output index pass", func(t *testing.T) {
+		refundTokenAmount := uint64(100)
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: refundTokenAmount}, nil).Once()
+
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2}),
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				},
+			},
+		})
+
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		require.NoError(t, err)
+
+		for i, refundUtxo := range refundUtxosPerConfirmedTx {
+			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
+			if i == len(txs)-1 {
+				require.Equal(t, refundTokenAmount, refundUtxosPerConfirmedTx[i][0].Output.Amount)
+			} else {
+				require.Empty(t, refundUtxo)
+			}
+		}
+
+		require.Equal(t, refundTokenAmount, refundUtxosPerConfirmedTx[len(txs)-1][0].Output.Amount)
+	})
+
+	t.Run("getUtxosFromRefundTransactions with more output indexes pass", func(t *testing.T) {
+		refundTokenAmount := uint64(100)
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: refundTokenAmount}, nil).Once()
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 2 * refundTokenAmount}, nil).Once()
+		dbMock.On("GetTxOutput", mock.Anything).Return(indexer.TxOutput{Amount: 3 * refundTokenAmount}, nil).Once()
+
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2, 3, 5}),
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				},
+			},
+		})
+
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		require.NoError(t, err)
+
+		for i, refundUtxo := range refundUtxosPerConfirmedTx {
+			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
+			if i == len(txs)-1 {
+				for j, txInputOutput := range refundUtxosPerConfirmedTx[i] {
+					require.Equal(t, (uint64(j)+1)*refundTokenAmount, txInputOutput.Output.Amount)
+				}
+			} else {
+				require.Empty(t, refundUtxo)
+			}
+		}
+	})
+}
+
+func Test_getOutputs(t *testing.T) {
+	feeAddr := "0x002"
+	minFeeForBridging := uint64(100)
+	//nolint:dupl
+	txs := []eth.ConfirmedTransaction{
 		{
-			Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
-			Amount: 200,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					Amount:             big.NewInt(100),
+				},
+				{
+					DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+					Amount:             big.NewInt(200),
+				},
+				{
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+					Amount:             big.NewInt(400),
+				},
+			},
 		},
 		{
-			Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
-			Amount: 2100,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+					Amount:             big.NewInt(50),
+				},
+				{
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+					Amount:             big.NewInt(900),
+				},
+				{
+					DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
+					Amount:             big.NewInt(0),
+				},
+			},
 		},
 		{
-			Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
-			Amount: 3000,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+					Amount:             big.NewInt(3000),
+				},
+				{
+					// this one will be skipped
+					DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
+					Amount:             big.NewInt(3000),
+				},
+			},
 		},
 		{
-			Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-			Amount: 1310,
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					Amount:             big.NewInt(2000),
+				},
+				{
+					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+					Amount:             big.NewInt(170),
+				},
+				{
+					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+					Amount:             big.NewInt(10),
+				},
+			},
 		},
-		{
-			Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
-			Amount: 220,
-		},
-	}, res.Outputs)
+	}
+
+	t.Run("getOutputs pass", func(t *testing.T) {
+		res := getOutputs(txs, cardanowallet.MainNetNetwork,
+			[][]*indexer.TxInputOutput{}, "", 100, hclog.NewNullLogger())
+
+		assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
+		assert.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+				Amount: 200,
+			},
+			{
+				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				Amount: 2100,
+			},
+			{
+				Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+				Amount: 3000,
+			},
+			{
+				Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+				Amount: 1310,
+			},
+			{
+				Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+				Amount: 220,
+			},
+		}, res.Outputs)
+	})
+
+	t.Run("getOutputs with refund pass", func(t *testing.T) {
+		refundTxAmount := uint64(300)
+		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					Amount:             new(big.Int).SetUint64(refundTxAmount),
+				},
+			},
+		})
+
+		refundUtxos := make([][]*indexer.TxInputOutput, len(txs))
+		refundUtxos[len(refundUtxos)-1] = []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
+				Output: indexer.TxOutput{Amount: 250},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x2"), Index: 2},
+				Output: indexer.TxOutput{Amount: 50},
+			},
+		}
+
+		res := getOutputs(txs, cardanowallet.MainNetNetwork,
+			refundUtxos, feeAddr, minFeeForBridging, hclog.NewNullLogger())
+
+		assert.Equal(t, uint64(7030), res.Sum[cardanowallet.AdaTokenName])
+		assert.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+				Amount: 200,
+			},
+			{
+				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				Amount: 2100 + refundTxAmount - minFeeForBridging,
+			},
+			{
+				Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+				Amount: 3000,
+			},
+			{
+				Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+				Amount: 1310,
+			},
+			{
+				Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+				Amount: 220,
+			},
+		}, res.Outputs)
+	})
+
+	t.Run("getOutputs with refund pass with tokens", func(t *testing.T) {
+		refundTxAmount := uint64(300)
+		txs = append(txs, eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			Receivers: []eth.BridgeReceiver{
+				{
+					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					Amount:             new(big.Int).SetUint64(refundTxAmount),
+				},
+			},
+		})
+
+		refundUtxos := make([][]*indexer.TxInputOutput, len(txs))
+		refundUtxos[len(refundUtxos)-1] = []*indexer.TxInputOutput{
+			{
+				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
+				Output: indexer.TxOutput{
+					Amount: 200,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: "1",
+							Name:     "1",
+							Amount:   15,
+						},
+					},
+				},
+			},
+			{
+				Input: indexer.TxInput{Hash: indexer.NewHashFromHexString("0x21"), Index: 2},
+				Output: indexer.TxOutput{
+					Amount: 100,
+					Tokens: []indexer.TokenAmount{
+						{
+							PolicyID: "1",
+							Name:     "3",
+							Amount:   15,
+						},
+					},
+				},
+			},
+		}
+
+		res := getOutputs(txs, cardanowallet.MainNetNetwork,
+			refundUtxos, feeAddr, minFeeForBridging, hclog.NewNullLogger())
+
+		assert.Equal(t, uint64(7030), res.Sum[cardanowallet.AdaTokenName])
+		assert.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
+				Amount: 200,
+			},
+			{
+				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+				Amount: 2100 + refundTxAmount - minFeeForBridging,
+				Tokens: []cardanowallet.TokenAmount{
+					cardanowallet.NewTokenAmount("1", "1", 15),
+					cardanowallet.NewTokenAmount("1", "3", 15),
+				},
+			},
+			{
+				Addr:   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
+				Amount: 3000,
+			},
+			{
+				Addr:   "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
+				Amount: 1310,
+			},
+			{
+				Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
+				Amount: 220,
+			},
+		}, res.Outputs)
+	})
 }
 
 func Test_getUTXOs(t *testing.T) {
@@ -868,19 +1170,11 @@ func Test_getUTXOs(t *testing.T) {
 		},
 		logger: hclog.NewNullLogger(),
 	}
-	txOutputs := cardano.TxOutputs{
-		Outputs: []cardanowallet.TxOutput{
-			{}, {}, {},
-		},
-		Sum: map[string]uint64{
-			cardanowallet.AdaTokenName: 2_000_000,
-		},
-	}
 
 	t.Run("GetAllTxOutputs multisig error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 		require.Error(t, err)
 	})
 
@@ -888,7 +1182,7 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(([]*indexer.TxInputOutput)(nil), testErr).Once()
 
-		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		_, _, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 		require.Error(t, err)
 	})
 
@@ -913,11 +1207,45 @@ func Test_getUTXOs(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, txOutputs)
+		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, nil, 2_000_000)
 
 		require.NoError(t, err)
 		require.Equal(t, expectedUtxos[0:2], multisigUtxos)
 		require.Equal(t, expectedUtxos[2:], feeUtxos)
+	})
+
+	t.Run("pass with refund", func(t *testing.T) {
+		expectedUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 2},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 80},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0x1"), Index: 3},
+				Output: indexer.TxOutput{Amount: 1_000_000, Slot: 1900},
+			},
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAA"), Index: 100},
+				Output: indexer.TxOutput{Amount: 10},
+			},
+		}
+		refundUtxos := []*indexer.TxInputOutput{
+			{
+				Input:  indexer.TxInput{Hash: indexer.NewHashFromHexString("0xAAEB"), Index: 121},
+				Output: indexer.TxOutput{Amount: 30},
+			},
+		}
+		allMultisigUtxos := expectedUtxos[0:2]
+		allFeeUtxos := expectedUtxos[2:]
+
+		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(allMultisigUtxos, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(allFeeUtxos, error(nil)).Once()
+
+		multisigUtxos, feeUtxos, err := ops.getUTXOs(multisigAddr, feeAddr, refundUtxos, 2_000_000)
+
+		require.NoError(t, err)
+		require.Equal(t, expectedUtxos[2:], feeUtxos)
+		require.Equal(t, append(expectedUtxos[0:2], refundUtxos...), multisigUtxos)
 	})
 }
 

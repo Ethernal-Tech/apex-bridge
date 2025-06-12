@@ -14,7 +14,7 @@ type BaseTx interface {
 	GetTxHash() []byte
 	UnprocessedDBKey() []byte
 	SetLastTimeTried(lastTimeTried time.Time)
-	IncrementSubmitTryCount()
+	ResetSubmitTryCount()
 	IncrementBatchTryCount()
 	IncrementRefundTryCount()
 	ToProcessed(isInvalid bool) BaseProcessedTx
