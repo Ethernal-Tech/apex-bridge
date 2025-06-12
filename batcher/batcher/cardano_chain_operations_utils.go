@@ -46,10 +46,12 @@ func getOutputs(
 					// In case of refund, destChainID will be equal to srcChainID
 					// to get the correct token name, originalDestinationChainID is needed.
 					originalDestinationChainID := getOriginalDestination(destChainID)
-					tokenName := cardanoConfig.GetNativeTokenName(originalDestinationChainID)
 
-					if tokenName != "" {
+					if tokenName := cardanoConfig.GetNativeTokenName(originalDestinationChainID); tokenName != "" {
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					} else {
+						logger.Error("token is not defined for original destination chain",
+							"src", tx.SourceChainId, "dst", originalDestinationChainID)
 					}
 				}
 
