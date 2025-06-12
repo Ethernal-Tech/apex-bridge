@@ -107,9 +107,3 @@ func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uin
 
 	return -1, 0
 }
-
-func GetAddressFromPolicyScript(
-	cardanoCliBinary string, testNetMagic uint, ps *cardanowallet.PolicyScript,
-) (string, error) {
-	return cardanowallet.NewCliUtils(cardanoCliBinary).GetPolicyScriptAddress(testNetMagic, ps)
-}
