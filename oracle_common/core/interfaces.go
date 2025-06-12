@@ -76,3 +76,14 @@ type ConfirmedBlocksSubmitter interface {
 	StartSubmit()
 	GetChainID() string
 }
+
+type ChainConfigReader interface {
+	GetChainID() string
+	GetNetworkAddress() string
+	GetNetworkMagic() uint32
+	GetStartBlockHash() string
+	GetStartSlot() uint64
+	GetInitialUtxos() []CardanoChainConfigUtxo
+	GetConfirmationBlockCount() uint
+	GetAddressesOfInterest() []string
+}

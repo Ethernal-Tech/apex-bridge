@@ -27,7 +27,7 @@ type CardanoChainObserverImpl struct {
 	ctx       context.Context
 	indexerDB indexer.Database
 	syncer    indexer.BlockSyncer
-	config    *cCore.CardanoChainConfig
+	config    cCore.ChainConfigReader
 	isClosed  uint32
 	logger    hclog.Logger
 }
@@ -36,15 +36,22 @@ var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
 
 func NewCardanoChainObserver(
 	ctx context.Context,
-	config *cCore.CardanoChainConfig,
-	txsReceiver core.CardanoTxsReceiver, oracleDB core.CardanoTxsProcessorDB,
+	config cCore.ChainConfigReader,
+	txsReceiver core.CardanoTxsReceiver, txsProcessorDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
-	logger hclog.Logger,
+	logger hclog.Logger, loggerNamePrefix string,
 ) (*CardanoChainObserverImpl, error) {
 	indexerConfig, syncerConfig := loadSyncerConfigs(config)
 
-	err := initOracleState(indexerDB,
-		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
+	err := initOracleState(
+		indexerDB,
+		txsProcessorDB,
+		config.GetStartBlockHash(),
+		config.GetStartSlot(),
+		config.GetInitialUtxos(),
+		config.GetChainID(),
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +68,7 @@ func NewCardanoChainObserver(
 		}
 
 		// Process confirmed Txs
-		err = txsReceiver.NewUnprocessedTxs(config.ChainID, txs)
+		err = txsReceiver.NewUnprocessedTxs(config.GetChainID(), txs)
 		if err != nil {
 			return err
 		}
@@ -76,8 +83,13 @@ func NewCardanoChainObserver(
 		return nil
 	}
 
-	blockIndexer := indexer.NewBlockIndexer(indexerConfig, confirmedBlockHandler, indexerDB, logger.Named("block_indexer"))
-	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
+	blockIndexer := indexer.NewBlockIndexer(
+		indexerConfig,
+		confirmedBlockHandler,
+		indexerDB,
+		logger.Named(loggerNamePrefix+"_block_indexer"),
+	)
+	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named(loggerNamePrefix+"_block_syncer"))
 
 	return &CardanoChainObserverImpl{
 		ctx:       ctx,
@@ -100,7 +112,7 @@ func (co *CardanoChainObserverImpl) Start() error {
 			if err != nil {
 				co.logger.Error(
 					"Failed to Start syncer while starting CardanoChainObserver. Retrying...",
-					"chainId", co.config.ChainID, "err", err)
+					"chainId", co.config.GetChainID(), "err", err)
 			}
 
 			return err
@@ -115,7 +127,7 @@ func (co *CardanoChainObserverImpl) Start() error {
 					return
 				}
 
-				co.logger.Error("Syncer fatal error", "chainID", co.config.ChainID, "err", err)
+				co.logger.Error("Syncer fatal error", "chainID", co.config.GetChainID(), "err", err)
 
 				if err := co.Dispose(); err != nil {
 					co.logger.Error("cardano chain observer dispose failed", "err", err)
@@ -141,7 +153,7 @@ func (co *CardanoChainObserverImpl) Dispose() error {
 	return nil
 }
 
-func (co *CardanoChainObserverImpl) GetConfig() *cCore.CardanoChainConfig {
+func (co *CardanoChainObserverImpl) GetConfig() cCore.ChainConfigReader {
 	return co.config
 }
 
@@ -150,28 +162,23 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 }
 
 func loadSyncerConfigs(
-	config *cCore.CardanoChainConfig,
+	config cCore.ChainConfigReader,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
-		strings.TrimPrefix(config.NetworkAddress, "http://"),
+		strings.TrimPrefix(config.GetNetworkAddress(), "http://"),
 		"https://")
-
-	addressesOfInterest := append([]string{
-		config.BridgingAddresses.BridgingAddress,
-		config.BridgingAddresses.FeeAddress,
-	}, config.OtherAddressesOfInterest...)
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
-			BlockSlot: config.StartSlot,
-			BlockHash: indexer.NewHashFromHexString(config.StartBlockHash),
+			BlockSlot: config.GetStartSlot(),
+			BlockHash: indexer.NewHashFromHexString(config.GetStartBlockHash()),
 		},
 		AddressCheck:           indexer.AddressCheckAll,
-		ConfirmationBlockCount: config.ConfirmationBlockCount,
-		AddressesOfInterest:    addressesOfInterest,
+		ConfirmationBlockCount: config.GetConfirmationBlockCount(),
+		AddressesOfInterest:    config.GetAddressesOfInterest(),
 	}
 	syncerConfig := &gouroboros.BlockSyncerConfig{
-		NetworkMagic:   config.NetworkMagic,
+		NetworkMagic:   config.GetNetworkMagic(),
 		NodeAddress:    networkAddress,
 		RestartOnError: true, // always try to restart on non-fatal errors
 		RestartDelay:   indexerRestartDelay,

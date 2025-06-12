@@ -1,26 +1,48 @@
 package core
 
-import "github.com/Ethernal-Tech/cardano-infrastructure/logger"
+import (
+	ocCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
+)
 
 type StakingBridgingAddresses struct {
 	StakingBridgingAddr string `json:"address"`
 	FeeAddress          string `json:"feeAddress"`
 }
 
-type ChainConfig struct {
-	ChainID             string                   `json:"id"`
+type CardanoChainConfig struct {
+	ocCore.BaseCardanoChainConfig
 	ChainType           string                   `json:"type"`
+	NetworkMagic        uint32                   `json:"testnetMagic"`
 	StakingAddresses    []string                 `json:"stakingAddresses"`
-	StakingBridgingAddr StakingBridgingAddresses `json:"-"`
+	StakingBridgingAddr StakingBridgingAddresses `json:"stakingBridgingAddrs"`
+}
+
+func (c CardanoChainConfig) GetNetworkMagic() uint32 {
+	return c.NetworkMagic
+}
+
+func (c CardanoChainConfig) GetAddressesOfInterest() []string {
+	return append([]string{
+		c.StakingBridgingAddr.StakingBridgingAddr,
+		c.StakingBridgingAddr.FeeAddress,
+	}, c.StakingAddresses...)
 }
 
 type StakingConfiguration struct {
-	Chain         ChainConfig `json:"chain"`
-	PullTimeMilis int64       `json:"pullTime"`
+	Chain         CardanoChainConfig `json:"chain"`
+	PullTimeMilis int64              `json:"pullTime"`
 }
 
 type StakingManagerConfiguration struct {
-	Chains        map[string]ChainConfig `json:"chains"`
-	Logger        logger.LoggerConfig    `json:"logger"`
-	PullTimeMilis int64                  `json:"pullTime"`
+	Chains        map[string]*CardanoChainConfig `json:"chains"`
+	Logger        logger.LoggerConfig            `json:"logger"`
+	DbsPath       string                         `json:"dbsPath"`
+	PullTimeMilis int64                          `json:"pullTime"`
+}
+
+func (config *StakingManagerConfiguration) FillOut() {
+	for chainID, chainConfig := range config.Chains {
+		chainConfig.ChainID = chainID
+	}
 }
