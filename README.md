@@ -81,14 +81,7 @@ $ go run ./main.go register-chain \
 ```shell
 $ go run ./main.go create-address \
         --network-id network_ID \
-        --key 582068fc463c29900b00122423c7e6a39469987786314e07a5e7f5eae76a5fe671bf \
-        --key 58209a9cefaa636d75dffa3a3a5ab446a191beac92b09ac82da513640e8e35935202
-        ...
-```
-or if you want to generate via bridge
-```shell
-$ go run ./main.go create-address \
-        --network-id network_ID \
+        --testnet-magic 3311 \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
