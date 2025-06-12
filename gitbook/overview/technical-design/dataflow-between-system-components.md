@@ -26,4 +26,4 @@ Deposit and withdrawal dataflows operate similarly, so “source” and “desti
 
 Figure 3 provides a visual representation of the data flow described in the preceding text.
 
-<figure><img src="../.gitbook/assets/components-dataflow.png" alt=""><figcaption><p>Figure 3 - System Components Dataflow</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/components-dataflow.png" alt=""><figcaption><p>Figure 3 - System Components Dataflow</p></figcaption></figure>
