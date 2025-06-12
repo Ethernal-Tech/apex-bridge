@@ -97,21 +97,23 @@ func NewAddressContainer(
 	cliUtils := wallet.NewCliUtils(cardanoCliBinary)
 
 	if policyScripts.Stake == nil {
-		addr.Payment, err = cliUtils.GetPolicyScriptAddress(networkMagic, policyScripts.Payment)
+		addr.Payment, err = cliUtils.GetPolicyScriptEnterpriseAddress(networkMagic, policyScripts.Payment)
 		if err != nil {
 			return addr, fmt.Errorf("payment address: %w", err)
-		}
-	} else {
-		addr.Stake, err = cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScripts.Stake)
-		if err != nil {
-			return addr, fmt.Errorf("stake address: %w", err)
 		}
 
-		addr.Payment, err = cliUtils.GetPolicyScriptAddress(
-			networkMagic, policyScripts.Payment, policyScripts.Stake)
-		if err != nil {
-			return addr, fmt.Errorf("payment address: %w", err)
-		}
+		return addr, nil
+	}
+
+	addr.Stake, err = cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScripts.Stake)
+	if err != nil {
+		return addr, fmt.Errorf("stake address: %w", err)
+	}
+
+	addr.Payment, err = cliUtils.GetPolicyScriptBaseAddress(
+		networkMagic, policyScripts.Payment, policyScripts.Stake)
+	if err != nil {
+		return addr, fmt.Errorf("payment address: %w", err)
 	}
 
 	return addr, nil
