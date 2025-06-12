@@ -42,6 +42,17 @@ func getOutputs(
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount-cardanoConfig.MinFeeForBridging)
 				updateMap(feeAddr, cardanowallet.AdaTokenName, cardanoConfig.MinFeeForBridging)
 
+				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+					// In case of refund, destChainID will be equal to srcChainID
+					// to get the correct token name, originalDestinationChainID is needed.
+					originalDestinationChainID := getOriginalDestination(destChainID)
+					tokenName := cardanoConfig.GetNativeTokenName(originalDestinationChainID)
+
+					if tokenName != "" {
+						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					}
+				}
+
 				for _, utxo := range refundUtxosPerConfirmedTx[i] {
 					for _, token := range utxo.Output.Tokens {
 						updateMap(receiver.DestinationAddress, token.TokenName(), token.Amount)
@@ -276,4 +287,14 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	}
 
 	return result
+}
+
+func getOriginalDestination(srcChainID string) string {
+	if srcChainID == common.ChainIDStrCardano {
+		return common.ChainIDStrPrime
+	} else if srcChainID == common.ChainIDStrPrime {
+		return common.ChainIDStrCardano
+	}
+
+	return ""
 }
