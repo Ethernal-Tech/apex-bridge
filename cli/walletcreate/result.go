@@ -20,60 +20,44 @@ type cardanoCmdResult struct {
 	showPrivateKey  bool
 }
 
-func (r cardanoCmdResult) GetOutput() string {
-	var (
-		buffer  bytes.Buffer
-		vals    []string
-		valsFee []string
-	)
-
-	if r.showPrivateKey {
-		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.Multisig.SigningKey)))
-
-		if len(r.Multisig.StakeSigningKey) > 0 {
-			vals = append(vals, fmt.Sprintf("Stake Signing Key|%s", hex.EncodeToString(r.Multisig.StakeSigningKey)))
-		}
-	}
-
-	vals = append(vals,
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.Multisig.VerificationKey)),
-		fmt.Sprintf("Key Hash|%s", r.KeyHash))
-
-	if len(r.Multisig.StakeVerificationKey) > 0 && r.StakeKeyHash != "" {
-		vals = append(vals,
-			fmt.Sprintf("Stake Verifying Key|%s", hex.EncodeToString(r.Multisig.StakeVerificationKey)),
-			fmt.Sprintf("Stake Key Hash|%s", r.StakeKeyHash))
-	}
-
-	if r.showPrivateKey {
-		valsFee = append(valsFee, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.Fee.SigningKey)))
-
-		if len(r.Fee.StakeSigningKey) > 0 {
-			vals = append(vals, fmt.Sprintf("Stake Signing Key|%s", hex.EncodeToString(r.Fee.StakeSigningKey)))
-		}
-	}
-
-	valsFee = append(valsFee,
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.Fee.VerificationKey)),
-		fmt.Sprintf("Key Hash|%s", r.KeyHashFee))
-
-	if len(r.Fee.StakeVerificationKey) > 0 && r.StakeKeyHashFee != "" {
-		vals = append(vals,
-			fmt.Sprintf("Stake Verifying Key|%s", hex.EncodeToString(r.Fee.StakeVerificationKey)),
-			fmt.Sprintf("Stake Key Hash|%s", r.StakeKeyHashFee))
-	}
+func (res cardanoCmdResult) GetOutput() string {
+	var buffer bytes.Buffer
 
 	buffer.WriteString("\n[SECRETS ")
-	buffer.WriteString(r.ChainID)
+	buffer.WriteString(res.ChainID)
 	buffer.WriteString("]\n")
 	buffer.WriteString("[Multisig]\n")
-	buffer.WriteString(common.FormatKV(vals))
+	buffer.WriteString(common.FormatKV(res.getColumnData(res.Multisig, res.KeyHash, res.StakeKeyHash)))
 	buffer.WriteString("\n")
 	buffer.WriteString("[MultisigFee]\n")
-	buffer.WriteString(common.FormatKV(valsFee))
+	buffer.WriteString(common.FormatKV(res.getColumnData(res.Fee, res.KeyHashFee, res.StakeKeyHashFee)))
 	buffer.WriteString("\n")
 
 	return buffer.String()
+}
+
+func (res cardanoCmdResult) getColumnData(
+	wallet *cardanowallet.Wallet, keyHash, stakeKeyHash string,
+) (vals []string) {
+	if res.showPrivateKey {
+		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(wallet.SigningKey)))
+	}
+
+	vals = append(vals,
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(wallet.VerificationKey)),
+		fmt.Sprintf("Key Hash|%s", keyHash))
+
+	if len(wallet.StakeVerificationKey) > 0 {
+		if res.showPrivateKey {
+			vals = append(vals, fmt.Sprintf("Stake Signing Key|%s", hex.EncodeToString(wallet.StakeSigningKey)))
+		}
+
+		vals = append(vals,
+			fmt.Sprintf("Stake Verifying Key|%s", hex.EncodeToString(wallet.StakeVerificationKey)),
+			fmt.Sprintf("Stake Key Hash|%s", stakeKeyHash))
+	}
+
+	return vals
 }
 
 type evmCmdResult struct {
