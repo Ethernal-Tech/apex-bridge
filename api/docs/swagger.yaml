@@ -160,7 +160,8 @@ paths:
         name: chainId
         required: true
         type: string
-      - description: Source transaction hashes
+      - collectionFormat: multi
+        description: Source transaction hashes
         in: query
         items:
           type: string
