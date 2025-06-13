@@ -1,0 +1,294 @@
+basePath: /api
+definitions:
+  core.BridgingRequestStatus:
+    enum:
+    - DiscoveredOnSource
+    - InvalidRequest
+    - SubmittedToBridge
+    - IncludedInBatch
+    - SubmittedToDestination
+    - FailedToExecuteOnDestination
+    - ExecutedOnDestination
+    type: string
+    x-enum-varnames:
+    - BridgingRequestStatusDiscoveredOnSource
+    - BridgingRequestStatusInvalidRequest
+    - BridgingRequestStatusSubmittedToBridge
+    - BridgingRequestStatusIncludedInBatch
+    - BridgingRequestStatusSubmittedToDestination
+    - BridgingRequestStatusFailedToExecuteOnDestination
+    - BridgingRequestStatusExecutedOnDestination
+  core.CardanoChainConfigUtxo:
+    properties:
+      address:
+        type: string
+      amount:
+        type: integer
+      id:
+        items:
+          type: integer
+        type: array
+      index:
+        type: integer
+      slot:
+        type: integer
+      tokens:
+        items:
+          $ref: '#/definitions/wallet.TokenAmount'
+        type: array
+    type: object
+  response.BridgingRequestStateResponse:
+    properties:
+      destinationChainId:
+        type: string
+      destinationTxHash:
+        type: string
+      sourceChainId:
+        type: string
+      sourceTxHash:
+        type: string
+      status:
+        $ref: '#/definitions/core.BridgingRequestStatus'
+    type: object
+  response.ErrorResponse:
+    properties:
+      err:
+        type: string
+    type: object
+  response.HasTxFailedResponse:
+    properties:
+      failed:
+        type: boolean
+    type: object
+  response.OracleStateResponse:
+    properties:
+      chainID:
+        type: string
+      hash:
+        type: string
+      slot:
+        type: integer
+      utxos:
+        items:
+          $ref: '#/definitions/core.CardanoChainConfigUtxo'
+        type: array
+    type: object
+  response.SettingsResponse:
+    properties:
+      maxAmountAllowedToBridge:
+        type: string
+      maxReceiversPerBridgingRequest:
+        type: integer
+      minChainFeeForBridging:
+        additionalProperties:
+          type: integer
+        type: object
+      minOperationFee:
+        additionalProperties:
+          type: integer
+        type: object
+      minUtxoChainValue:
+        additionalProperties:
+          type: integer
+        type: object
+      minValueToBridge:
+        type: integer
+    type: object
+  wallet.TokenAmount:
+    properties:
+      nam:
+        description: name must plain name and not be hex encoded
+        type: string
+      pid:
+        type: string
+      val:
+        type: integer
+    type: object
+info:
+  contact: {}
+  title: Oracle API
+  version: "1.0"
+paths:
+  /BridgingRequestState/Get:
+    get:
+      description: Returns the current status of a bridging request, along with the
+        destination chain ID and transaction hash, based on the given source chain
+        ID and transaction hash.
+      parameters:
+      - description: Source chain ID
+        in: query
+        name: chainId
+        required: true
+        type: string
+      - description: Source transaction hash
+        in: query
+        name: txHash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.BridgingRequestStateResponse'
+        "400":
+          description: Bad Request – One or more query parameters are missing, or
+            the bridging request state could not be retrieved.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found - No bridging request found for the given parameters.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get state of bridging request
+      tags:
+      - BridgingRequestState
+  /BridgingRequestState/GetMultiple:
+    get:
+      description: Returns statuses and related data for one or more bridging requests,
+        based on the given source chain ID and transaction hash(es).
+      parameters:
+      - description: Source chain ID
+        in: query
+        name: chainId
+        required: true
+        type: string
+      - collectionFormat: multi
+        description: Source transaction hashes
+        in: query
+        items:
+          type: string
+        name: txHash
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK – Returns a map with source transaction hashes as keys and
+            the associated bridging request data as values.
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/response.BridgingRequestStateResponse'
+            type: object
+        "400":
+          description: Bad Request – chainId is missing from the query or the bridging
+            request states could not be retrieved.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get states of multiple bridging requests
+      tags:
+      - BridgingRequestState
+  /OracleState/Get:
+    get:
+      description: Returns all unspent transaction outputs of bridging addresses for
+        the given chain ID. Each UTXO includes the address it belongs to, along with
+        amount and other relevant data.
+      parameters:
+      - description: Chain ID
+        in: query
+        name: chainId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.OracleStateResponse'
+        "400":
+          description: Bad Request – chainId is missing from the query or invalid,
+            or the transaction outputs could not be retrieved.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get unspent transaction outputs of bridging addresses on specific chain
+      tags:
+      - OracleState
+  /OracleState/GetHasTxFailed:
+    get:
+      description: Returns whether the transaction failed. A transaction is considered
+        failed if it is not found on Oracle and if its TTL has expired.
+      parameters:
+      - description: Source chain ID
+        in: query
+        name: chainId
+        required: true
+        type: string
+      - description: Source transaction hash
+        in: query
+        name: txHash
+        required: true
+        type: string
+      - description: Transaction TTL
+        in: query
+        name: ttl
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.HasTxFailedResponse'
+        "400":
+          description: Bad Request – One or more query parameters are missing or invalid,
+            or the transaction could not be retrieved.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get transaction failure status
+      tags:
+      - OracleState
+  /Settings/Get:
+    get:
+      description: Returns configuration settings for the bridge, including global
+        parameters such as minimum and maximum bridging amounts, as well as any per-chain
+        specific settings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.SettingsResponse'
+        "401":
+          description: Unauthorized – API key missing or invalid.
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get bridge settings for all supported chains
+      tags:
+      - Settings
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

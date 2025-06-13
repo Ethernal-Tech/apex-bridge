@@ -1,3 +1,9 @@
+// @title Oracle API
+// @version 1.0
+// @BasePath /api
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 package api
 
 import (
