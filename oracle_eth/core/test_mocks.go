@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -55,6 +57,20 @@ var _ EthBridgeDataFetcher = (*EthBridgeDataFetcherMock)(nil)
 
 type EthTxsProcessorDBMock struct {
 	mock.Mock
+}
+
+// GetBlocksSubmitterInfo implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (oCore.BlocksSubmitterInfo, error) {
+	args := m.Called(chainID)
+
+	return args.Get(0).(oCore.BlocksSubmitterInfo), args.Error(1) //nolint
+}
+
+// SetBlocksSubmitterInfo implements EthTxsProcessorDB.
+func (m *EthTxsProcessorDBMock) SetBlocksSubmitterInfo(chainID string, info oCore.BlocksSubmitterInfo) error {
+	args := m.Called(chainID, info)
+
+	return args.Error(0)
 }
 
 // GetUnprocessedBatchEvents implements EthTxsProcessorDB.
@@ -229,6 +245,50 @@ func (m *EthTxSuccessProcessorMock) ValidateAndAddClaim(
 
 var _ EthTxSuccessProcessor = (*EthTxSuccessProcessorMock)(nil)
 
+type EthTxSuccessRefundProcessorMock struct {
+	mock.Mock
+	SuccessProc EthTxSuccessProcessorMock
+}
+
+// HandleBridgingProcessorPreValidate implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) HandleBridgingProcessorPreValidate(
+	tx *EthTx, appConfig *oCore.AppConfig) error {
+	args := m.Called(tx, appConfig)
+
+	return args.Error(0)
+}
+
+// GetType implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
+	return m.SuccessProc.GetType()
+}
+
+// HandleBridgingProcessorError implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) HandleBridgingProcessorError(
+	claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig,
+	err error, errContext string) error {
+	if appConfig.RefundEnabled {
+		args := m.Called(claims, tx, appConfig)
+
+		return args.Error(0)
+	}
+
+	return fmt.Errorf("%s. tx: %v, err: %w", errContext, tx, err)
+}
+
+// PreValidate implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) PreValidate(tx *EthTx, appConfig *oCore.AppConfig) error {
+	return m.SuccessProc.PreValidate(tx, appConfig)
+}
+
+// ValidateAndAddClaim implements EthTxSuccessRefundProcessor.
+func (m *EthTxSuccessRefundProcessorMock) ValidateAndAddClaim(
+	claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig) error {
+	return m.SuccessProc.ValidateAndAddClaim(claims, tx, appConfig)
+}
+
+var _ EthTxSuccessRefundProcessor = (*EthTxSuccessRefundProcessorMock)(nil)
+
 type EthTxFailedProcessorMock struct {
 	mock.Mock
 	ShouldAddClaim bool
@@ -266,7 +326,18 @@ var _ EthTxFailedProcessor = (*EthTxFailedProcessorMock)(nil)
 type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *oCore.BridgeClaims) (*types.Receipt, error)
-	OnSubmitConfirmedBlocks func(chainID string, from uint64, to uint64)
+	OnSubmitConfirmedBlocks func(chainID string, blocks []eth.CardanoBlock)
+}
+
+// SubmitBlocks implements core.BridgeBlocksSubmitter.
+func (m *BridgeSubmitterMock) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
+	if m.OnSubmitConfirmedBlocks != nil {
+		m.OnSubmitConfirmedBlocks(chainID, blocks)
+	}
+
+	args := m.Called(chainID, blocks)
+
+	return args.Error(0)
 }
 
 // SubmitClaims implements BridgeSubmitter.
@@ -286,17 +357,6 @@ func (m *BridgeSubmitterMock) SubmitClaims(
 	return nil, args.Error(1)
 }
 
-// SubmitConfirmedBlocks implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, from uint64, to uint64) error {
-	if m.OnSubmitConfirmedBlocks != nil {
-		m.OnSubmitConfirmedBlocks(chainID, from, to)
-	}
-
-	args := m.Called(chainID, from, to)
-
-	return args.Error(0)
-}
-
 // Dispose implements BridgeSubmitter.
 func (m *BridgeSubmitterMock) Dispose() error {
 	args := m.Called()
@@ -304,7 +364,7 @@ func (m *BridgeSubmitterMock) Dispose() error {
 	return args.Error(0)
 }
 
-var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
+var _ oCore.BridgeBlocksSubmitter = (*BridgeSubmitterMock)(nil)
 
 type EventStoreMock struct {
 	mock.Mock

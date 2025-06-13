@@ -46,8 +46,7 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 
 	for _, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress &&
-			out.Address != chainConfig.BridgingAddresses.FeeAddress {
+		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
 			continue
 		}
 

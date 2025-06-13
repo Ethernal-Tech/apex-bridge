@@ -6,16 +6,17 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type cardanoCmdResult struct {
-	SigningKey      []byte `json:"signingKey"`
-	VerifyingKey    []byte `json:"verifyingKey"`
-	SigningKeyFee   []byte `json:"signingKeyFee"`
-	VerifyingKeyFee []byte `json:"verifyingKeyFee"`
-	KeyHash         string `json:"keyHash"`
-	KeyHashFee      string `json:"keyHashFee"`
-	ChainID         string `json:"chainID"`
+	Multisig        *cardanowallet.Wallet `json:"multisig"`
+	Fee             *cardanowallet.Wallet `json:"fee"`
+	KeyHash         string                `json:"keyHash"`
+	StakeKeyHash    string                `json:"stakeKeyHash"`
+	KeyHashFee      string                `json:"keyHashFee"`
+	StakeKeyHashFee string                `json:"stakeKeyHashFee"`
+	ChainID         string                `json:"chainID"`
 	showPrivateKey  bool
 }
 
@@ -27,20 +28,40 @@ func (r cardanoCmdResult) GetOutput() string {
 	)
 
 	if r.showPrivateKey {
-		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.SigningKey)))
+		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.Multisig.SigningKey)))
+
+		if len(r.Multisig.StakeSigningKey) > 0 {
+			vals = append(vals, fmt.Sprintf("Stake Signing Key|%s", hex.EncodeToString(r.Multisig.StakeSigningKey)))
+		}
 	}
 
 	vals = append(vals,
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKey)),
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.Multisig.VerificationKey)),
 		fmt.Sprintf("Key Hash|%s", r.KeyHash))
 
+	if len(r.Multisig.StakeVerificationKey) > 0 && r.StakeKeyHash != "" {
+		vals = append(vals,
+			fmt.Sprintf("Stake Verifying Key|%s", hex.EncodeToString(r.Multisig.StakeVerificationKey)),
+			fmt.Sprintf("Stake Key Hash|%s", r.StakeKeyHash))
+	}
+
 	if r.showPrivateKey {
-		valsFee = append(valsFee, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.SigningKeyFee)))
+		valsFee = append(valsFee, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.Fee.SigningKey)))
+
+		if len(r.Fee.StakeSigningKey) > 0 {
+			vals = append(vals, fmt.Sprintf("Stake Signing Key|%s", hex.EncodeToString(r.Fee.StakeSigningKey)))
+		}
 	}
 
 	valsFee = append(valsFee,
-		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.VerifyingKeyFee)),
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.Fee.VerificationKey)),
 		fmt.Sprintf("Key Hash|%s", r.KeyHashFee))
+
+	if len(r.Fee.StakeVerificationKey) > 0 && r.StakeKeyHashFee != "" {
+		vals = append(vals,
+			fmt.Sprintf("Stake Verifying Key|%s", hex.EncodeToString(r.Fee.StakeVerificationKey)),
+			fmt.Sprintf("Stake Key Hash|%s", r.StakeKeyHashFee))
+	}
 
 	buffer.WriteString("\n[SECRETS ")
 	buffer.WriteString(r.ChainID)

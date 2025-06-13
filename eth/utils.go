@@ -142,8 +142,14 @@ func GetChainValidatorsDataInfoString(
 		default:
 			sb.WriteRune('(')
 			sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())))
-			sb.WriteRune(',')
-			sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(x.Key[1].Bytes())))
+
+			for i := 1; i < len(x.Key); i++ {
+				if value := x.Key[i]; value != nil && value.BitLen() != 0 {
+					sb.WriteRune(',')
+					sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(value.Bytes())))
+				}
+			}
+
 			sb.WriteRune(')')
 		}
 	}

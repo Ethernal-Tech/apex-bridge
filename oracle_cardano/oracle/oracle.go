@@ -41,7 +41,7 @@ func NewCardanoOracle(
 	typeRegister common.TypeRegister,
 	appConfig *cCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
-	bridgeSubmitter core.BridgeSubmitter,
+	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -66,25 +66,33 @@ func NewCardanoOracle(
 		chainInfos[cc.ChainID] = info
 	}
 
-	successTxProcessors := []core.CardanoTxSuccessProcessor{
-		successtxprocessors.NewBatchExecutedProcessor(logger),
-		successtxprocessors.NewHotWalletIncrementProcessor(logger),
-		// tx_processors.NewRefundExecutedProcessor(logger),
+	var (
+		refundRequestProcessor core.CardanoTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
+		successProcessors                                           = []core.CardanoTxSuccessProcessor{}
+	)
+
+	if appConfig.RefundEnabled {
+		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
+		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
 
+	successProcessors = append(successProcessors,
+		successtxprocessors.NewBatchExecutedProcessor(logger),
+		successtxprocessors.NewHotWalletIncrementProcessor(logger),
+	)
+
 	if appConfig.RunMode == common.ReactorMode {
-		successTxProcessors = append(successTxProcessors,
-			successtxprocessors.NewBridgingRequestedProcessor(logger))
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger))
 	} else {
-		successTxProcessors = append(successTxProcessors,
-			successtxprocessors.NewSkylineBridgingRequestedProcessor(logger, chainInfos))
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewSkylineBridgingRequestedProcessor(refundRequestProcessor, logger, chainInfos))
 	}
 
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
-		successTxProcessors,
+		successProcessors,
 		[]core.CardanoTxFailedProcessor{
 			failedtxprocessors.NewBatchExecutionFailedProcessor(logger),
-			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 		},
 	)
 
@@ -110,7 +118,7 @@ func NewCardanoOracle(
 		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, indexerDB, cardanoChainConfig.ChainID, logger)
+			bridgeSubmitter, appConfig, db, indexerDB, cardanoChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cardano block submitter for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
@@ -147,7 +155,7 @@ func (o *OracleImpl) Start() error {
 	go o.expectedTxsFetcher.Start()
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		cbs.StartSubmit()
+		cbs.Start(o.ctx)
 	}
 
 	for _, co := range o.cardanoChainObservers {
@@ -179,9 +187,4 @@ func (o *OracleImpl) Dispose() error {
 	}
 
 	return nil
-}
-
-type ErrorOrigin struct {
-	err    error
-	origin string
 }

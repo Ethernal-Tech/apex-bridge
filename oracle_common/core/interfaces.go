@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -13,7 +14,7 @@ type BaseTx interface {
 	GetTxHash() []byte
 	UnprocessedDBKey() []byte
 	SetLastTimeTried(lastTimeTried time.Time)
-	IncrementSubmitTryCount()
+	ResetSubmitTryCount()
 	IncrementBatchTryCount()
 	IncrementRefundTryCount()
 	ToProcessed(isInvalid bool) BaseProcessedTx
@@ -64,6 +65,15 @@ type BridgeClaimsSubmitter interface {
 	SubmitClaims(claims *BridgeClaims, submitOpts *eth.SubmitOpts) (*types.Receipt, error)
 }
 
+type BridgeBlocksSubmitter interface {
+	SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error
+}
+
+type BridgeSubmitter interface {
+	BridgeClaimsSubmitter
+	BridgeBlocksSubmitter
+}
+
 type BridgeDataFetcher interface {
 	GetBatchTransactions(chainID string, batchID uint64) ([]eth.TxDataInfo, error)
 }
@@ -73,6 +83,10 @@ type ExpectedTxsFetcher interface {
 }
 
 type ConfirmedBlocksSubmitter interface {
-	StartSubmit()
-	GetChainID() string
+	Start(ctx context.Context)
+}
+
+type BlockSubmitterDB interface {
+	GetBlocksSubmitterInfo(chainID string) (BlocksSubmitterInfo, error)
+	SetBlocksSubmitterInfo(chainID string, info BlocksSubmitterInfo) error
 }

@@ -27,11 +27,12 @@ func TestCreateTx(t *testing.T) {
 	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes))
 	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
 	cardanoCliBinary := wallet.ResolveCardanoCliBinary(networkID)
+	cliUtils := wallet.NewCliUtils(cardanoCliBinary)
 
-	multiSigAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, testnetMagic, policyScriptMultiSig)
+	multiSigAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)
 
-	feeAddr, err := GetAddressFromPolicyScript(cardanoCliBinary, testnetMagic, policyScriptFee)
+	feeAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(testnetMagic, policyScriptFee)
 	require.NoError(t, err)
 
 	txInputsInfos := TxInputInfos{

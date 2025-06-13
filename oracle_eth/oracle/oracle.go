@@ -31,7 +31,7 @@ type OracleImpl struct {
 	ethTxsProcessor          oCore.TxsProcessor
 	expectedTxsFetcher       oCore.ExpectedTxsFetcher
 	ethChainObservers        []core.EthChainObserver
-	confirmedBlockSubmitters []core.EthConfirmedBlocksSubmitter
+	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
 	db                       core.Database
 	logger                   hclog.Logger
 }
@@ -44,7 +44,7 @@ func NewEthOracle(
 	typeRegister common.TypeRegister,
 	appConfig *oCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
-	bridgeSubmitter core.BridgeSubmitter,
+	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -58,16 +58,26 @@ func NewEthOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("eth_expected_txs_fetcher"))
 
+	var (
+		refundRequestProcessor core.EthTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
+		successProcessors                                       = []core.EthTxSuccessProcessor{}
+	)
+
+	if appConfig.RefundEnabled {
+		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		successProcessors = append(successProcessors, refundRequestProcessor)
+	}
+
+	successProcessors = append(successProcessors,
+		successtxprocessors.NewEthBatchExecutedProcessor(logger),
+		successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger),
+		successtxprocessors.NewHotWalletIncrementProcessor(logger),
+	)
+
 	txProcessors := ethtxsprocessor.NewTxProcessorsCollection(
-		[]core.EthTxSuccessProcessor{
-			successtxprocessors.NewEthBatchExecutedProcessor(logger),
-			successtxprocessors.NewEthBridgingRequestedProcessor(logger),
-			successtxprocessors.NewHotWalletIncrementProcessor(logger),
-			// tx_processors.NewRefundExecutedProcessor(logger),
-		},
+		successProcessors,
 		[]core.EthTxFailedProcessor{
 			failedtxprocessors.NewEthBatchExecutionFailedProcessor(logger),
-			// failed_tx_processors.NewRefundExecutionFailedProcessor(logger),
 		},
 	)
 
@@ -86,13 +96,13 @@ func NewEthOracle(
 		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))
-	confirmedBlockSubmitters := make([]core.EthConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
+	confirmedBlockSubmitters := make([]oCore.ConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
 
 	for _, ethChainConfig := range appConfig.EthChains {
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, indexerDB, ethChainConfig.ChainID, logger)
+			bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create evm block submitter for `%s`: %w", ethChainConfig.ChainID, err)
 		}
@@ -128,7 +138,7 @@ func (o *OracleImpl) Start() error {
 	go o.expectedTxsFetcher.Start()
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		cbs.StartSubmit()
+		cbs.Start(o.ctx)
 	}
 
 	for _, eco := range o.ethChainObservers {

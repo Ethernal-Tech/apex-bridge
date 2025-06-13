@@ -4,29 +4,31 @@ import (
 	"bytes"
 	"fmt"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 type CmdResult struct {
-	address         string
-	multisigAddress string
+	cardanotx.ApexAddresses
 }
 
 func (r CmdResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	if r.multisigAddress != "" {
-		buffer.WriteString(common.FormatKV(
-			[]string{
-				fmt.Sprintf("Multisig Address|%s", r.multisigAddress),
-				fmt.Sprintf("Fee Payer Address|%s", r.address),
-			}))
-	} else {
-		buffer.WriteString(common.FormatKV(
-			[]string{
-				fmt.Sprintf("Address|%s", r.address),
-			}))
+	args := []string{
+		fmt.Sprintf("Multisig Address|%s", r.Multisig.Payment),
+		fmt.Sprintf("Fee Payer Address|%s", r.Fee.Payment),
 	}
+
+	if r.Multisig.Stake != "" {
+		args = append(args, fmt.Sprintf("Multisig Stake Address|%s", r.Multisig.Stake))
+	}
+
+	if r.Fee.Stake != "" {
+		args = append(args, fmt.Sprintf("Fee Payer Stake Address|%s", r.Fee.Stake))
+	}
+
+	buffer.WriteString(common.FormatKV(args))
 
 	return buffer.String()
 }

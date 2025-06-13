@@ -95,9 +95,9 @@ func (tx *EthTx) SetLastTimeTried(lastTimeTried time.Time) {
 	tx.LastTimeTried = lastTimeTried
 }
 
-// IncrementSubmitTryCount implements core.BaseTx.
-func (tx *EthTx) IncrementSubmitTryCount() {
-	tx.SubmitTryCount++
+// ResetSubmitTryCount implements core.BaseTx.
+func (tx *EthTx) ResetSubmitTryCount() {
+	tx.SubmitTryCount = 0
 }
 
 // IncrementBatchTryCount implements core.BaseTx.

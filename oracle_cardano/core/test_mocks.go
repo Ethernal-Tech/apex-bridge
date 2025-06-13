@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -68,6 +70,20 @@ var _ CardanoBridgeDataFetcher = (*CardanoBridgeDataFetcherMock)(nil)
 
 type CardanoTxsProcessorDBMock struct {
 	mock.Mock
+}
+
+// GetBlocksSubmitterInfo implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) GetBlocksSubmitterInfo(chainID string) (cCore.BlocksSubmitterInfo, error) {
+	args := m.Called(chainID)
+
+	return args.Get(0).(cCore.BlocksSubmitterInfo), args.Error(1) //nolint
+}
+
+// SetBlocksSubmitterInfo implements CardanoTxsProcessorDB.
+func (m *CardanoTxsProcessorDBMock) SetBlocksSubmitterInfo(chainID string, info cCore.BlocksSubmitterInfo) error {
+	args := m.Called(chainID, info)
+
+	return args.Error(0)
 }
 
 // GetUnprocessedBatchEvents implements EthTxsProcessorDB.
@@ -196,7 +212,7 @@ var _ CardanoTxsProcessorDB = (*CardanoTxsProcessorDBMock)(nil)
 type BridgeSubmitterMock struct {
 	mock.Mock
 	OnSubmitClaims          func(claims *cCore.BridgeClaims) (*types.Receipt, error)
-	OnSubmitConfirmedBlocks func(chainID string, blocks []*indexer.CardanoBlock)
+	OnSubmitConfirmedBlocks func(chainID string, blocks []eth.CardanoBlock)
 }
 
 // SubmitClaims implements BridgeSubmitter.
@@ -217,7 +233,7 @@ func (m *BridgeSubmitterMock) SubmitClaims(
 }
 
 // SubmitConfirmedBlocks implements BridgeSubmitter.
-func (m *BridgeSubmitterMock) SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error {
+func (m *BridgeSubmitterMock) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
 	if m.OnSubmitConfirmedBlocks != nil {
 		m.OnSubmitConfirmedBlocks(chainID, blocks)
 	}
@@ -234,7 +250,7 @@ func (m *BridgeSubmitterMock) Dispose() error {
 	return args.Error(0)
 }
 
-var _ BridgeSubmitter = (*BridgeSubmitterMock)(nil)
+var _ cCore.BridgeBlocksSubmitter = (*BridgeSubmitterMock)(nil)
 
 type CardanoTxSuccessProcessorMock struct {
 	mock.Mock
@@ -272,6 +288,52 @@ func (m *CardanoTxSuccessProcessorMock) ValidateAndAddClaim(
 }
 
 var _ CardanoTxSuccessProcessor = (*CardanoTxSuccessProcessorMock)(nil)
+
+type CardanoTxSuccessRefundProcessorMock struct {
+	mock.Mock
+	SuccessProc *CardanoTxSuccessProcessorMock
+}
+
+// HandleBridgingProcessorPreValidate implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) HandleBridgingProcessorPreValidate(
+	tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	args := m.Called(tx, appConfig)
+
+	return args.Error(0)
+}
+
+// GetType implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) GetType() common.BridgingTxType {
+	return m.SuccessProc.GetType()
+}
+
+// HandleBridgingProcessorError implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) HandleBridgingProcessorError(
+	claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig,
+	err error, errContext string,
+) error {
+	if appConfig.RefundEnabled {
+		args := m.Called(claims, tx, appConfig)
+
+		return args.Error(0)
+	}
+
+	return fmt.Errorf("%s. tx: %v, err: %w", errContext, tx, err)
+}
+
+// PreValidate implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) PreValidate(
+	tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	return m.SuccessProc.PreValidate(tx, appConfig)
+}
+
+// ValidateAndAddClaim implements CardanoTxSuccessRefundProcessor.
+func (m *CardanoTxSuccessRefundProcessorMock) ValidateAndAddClaim(
+	claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig) error {
+	return m.SuccessProc.ValidateAndAddClaim(claims, tx, appConfig)
+}
+
+var _ CardanoTxSuccessRefundProcessor = (*CardanoTxSuccessRefundProcessorMock)(nil)
 
 type CardanoTxFailedProcessorMock struct {
 	mock.Mock

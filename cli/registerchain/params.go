@@ -15,7 +15,6 @@ import (
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
@@ -194,16 +193,16 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		}
 
 		validatorChainData.Key[0] = new(big.Int).SetBytes(walletCardano.MultiSig.VerificationKey)
-		validatorChainData.Key[1] = new(big.Int).SetBytes(walletCardano.MultiSigFee.VerificationKey)
-		validatorChainData.Key[2] = new(big.Int)
-		validatorChainData.Key[3] = new(big.Int)
+		validatorChainData.Key[1] = new(big.Int).SetBytes(walletCardano.Fee.VerificationKey)
+		validatorChainData.Key[2] = new(big.Int).SetBytes(walletCardano.MultiSig.StakeVerificationKey)
+		validatorChainData.Key[3] = new(big.Int).SetBytes(walletCardano.Fee.StakeVerificationKey)
 
 		signatureMultisig, err = signMessageByWallet(walletCardano.MultiSig, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create multisig signature: %w", err)
 		}
 
-		signatureFee, err = signMessageByWallet(walletCardano.MultiSigFee, messageHash)
+		signatureFee, err = signMessageByWallet(walletCardano.Fee, messageHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create fee signature: %w", err)
 		}
@@ -281,17 +280,6 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 		chainID:   ip.chainID,
 		blockHash: receipt.BlockHash.String(),
 	}, nil
-}
-
-func createMessage(msg string, addr ethcommon.Address) ([]byte, error) {
-	messageBytes := []byte(msg + string(addr.Bytes()))
-
-	messageHash, err := common.Keccak256(messageBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create message hash: %w", err)
-	}
-
-	return messageHash, nil
 }
 
 func signMessageByWallet(w *wallet.Wallet, msg []byte) ([]byte, error) {

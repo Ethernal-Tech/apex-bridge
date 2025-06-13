@@ -16,6 +16,7 @@ var (
 	ExpectedTxsBucket               = "ExpectedTxs"
 	UnprocessedBatchEventsBucket    = "UnprocessedBatchEvents"
 	ProcessedTxsByInnerActionBucket = "ProcessedTxsByInnerAction"
+	BlocksSubmitterBucket           = "BlocksSubmitterBucket"
 )
 
 func NewDatabase(pathToFile string, appConfig *core.AppConfig) (*bbolt.DB, error) {
@@ -27,7 +28,7 @@ func NewDatabase(pathToFile string, appConfig *core.AppConfig) (*bbolt.DB, error
 }
 
 func ChainBucket(bucket string, chainID string) []byte {
-	return []byte(fmt.Sprintf("%s_%s", bucket, chainID))
+	return fmt.Appendf(nil, "%s_%s", bucket, chainID)
 }
 
 func initDB(filePath string, appConfig *core.AppConfig) (*bbolt.DB, error) {
@@ -73,5 +74,6 @@ func defaultChainBuckets(chainID string) [][]byte {
 		ChainBucket(ProcessedTxsBucket, chainID),
 		ChainBucket(ExpectedTxsBucket, chainID),
 		ChainBucket(UnprocessedBatchEventsBucket, chainID),
+		ChainBucket(BlocksSubmitterBucket, chainID),
 	}
 }

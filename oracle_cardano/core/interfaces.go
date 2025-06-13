@@ -27,6 +27,7 @@ type CardanoTxsDB interface {
 type CardanoTxsProcessorDB interface {
 	CardanoTxsDB
 	BridgeExpectedCardanoTxsDB
+	cCore.BlockSubmitterDB
 }
 
 type Database interface {
@@ -62,13 +63,19 @@ type CardanoTxFailedProcessor interface {
 	ValidateAndAddClaim(claims *cCore.BridgeClaims, tx *BridgeExpectedCardanoTx, appConfig *cCore.AppConfig) error
 }
 
+type CardanoTxSuccessRefundProcessor interface {
+	CardanoTxSuccessProcessor
+
+	HandleBridgingProcessorError(
+		claims *cCore.BridgeClaims, tx *CardanoTx, appConfig *cCore.AppConfig,
+		err error, errContext string) error
+
+	HandleBridgingProcessorPreValidate(
+		tx *CardanoTx, appConfig *cCore.AppConfig) error
+}
+
 type CardanoBridgeDataFetcher interface {
 	cCore.BridgeDataFetcher
 	FetchLatestBlockPoint(chainID string) (*indexer.BlockPoint, error)
 	FetchExpectedTx(chainID string) (*BridgeExpectedCardanoTx, error)
-}
-
-type BridgeSubmitter interface {
-	cCore.BridgeClaimsSubmitter
-	SubmitConfirmedBlocks(chainID string, blocks []*indexer.CardanoBlock) error
 }
