@@ -102,7 +102,7 @@ func (c *BridgingRequestStateControllerImpl) get(w http.ResponseWriter, r *http.
 // @Tags BridgingRequestState
 // @Produce json
 // @Param chainId query string true "Source chain ID"
-// @Param txHash query []string true "Source transaction hashes"
+// @Param txHash query []string true "Source transaction hashes" collectionFormat(multi)
 // @Success 200 {object} map[string]response.BridgingRequestStateResponse "OK – Returns a map with source transaction hashes as keys and the associated bridging request data as values."
 // @Failure 400 {object} response.ErrorResponse "Bad Request – chainId is missing from the query or the bridging request states could not be retrieved."
 // @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."

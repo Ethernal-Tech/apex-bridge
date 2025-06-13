@@ -94,6 +94,7 @@
                         "items": {
                             "type": "string"
                         },
+                        "collectionFormat": "multi",
                         "description": "Source transaction hashes",
                         "name": "txHash",
                         "in": "query",
