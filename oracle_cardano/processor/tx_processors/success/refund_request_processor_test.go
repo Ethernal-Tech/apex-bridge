@@ -107,7 +107,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 		err := disabledProc.HandleBridgingProcessorError(
 			&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig, fmt.Errorf("test err"), "")
-		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -115,7 +114,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := disabledProc.ValidateAndAddClaim(&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "refund is not enabled")
 	})
 
@@ -130,7 +128,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := proc.HandleBridgingProcessorPreValidate(&core.CardanoTx{BatchTryCount: 1}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})
 
@@ -138,7 +135,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := proc.HandleBridgingProcessorPreValidate(&core.CardanoTx{SubmitTryCount: 1}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})
 
@@ -147,7 +143,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 		err := proc.HandleBridgingProcessorError(
 			&cCore.BridgeClaims{}, &core.CardanoTx{}, appConfig, nil, "")
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal metadata, err: EOF")
 	})
 
@@ -157,7 +152,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal metadata")
 	})
 
@@ -177,7 +171,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 				Metadata: relevantButNotFullMetadata,
 			},
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
@@ -212,7 +205,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: "invalid",
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
@@ -246,7 +238,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "invalid sender addr")
 	})
 
@@ -333,7 +324,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "more UTxOs with unknown tokens than allowed")
 	})
 
@@ -377,8 +367,50 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "less than the minimum required for refund")
+	})
+
+	t.Run("ValidateAndAddClaim unsupported destination chain id found in metadata", func(t *testing.T) {
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: "dzambolaja",
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 500_000},
+			{Address: "addr2", Amount: 500_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  2_500_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: token.PolicyID,
+						Name:     token.Name,
+						Amount:   tokenAmount.Amount,
+					},
+				},
+			},
+			{Address: primeBridgingFeeAddr, Amount: 1_000_000},
+		}
+
+		tx := indexer.Tx{
+			Metadata: validMetadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.ErrorContains(t, err, "unsupported destination chain id found in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
@@ -536,7 +568,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.CardanoTx{}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal metadata")
 	})
 
@@ -556,7 +587,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 				Metadata: relevantButNotFullMetadata,
 			},
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
@@ -591,7 +621,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: "invalid",
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
@@ -625,7 +654,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "invalid sender addr")
 	})
 
@@ -712,7 +740,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "more UTxOs with unknown tokens than allowed")
 	})
 
@@ -756,7 +783,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "less than the minimum required for refund")
 	})
 

@@ -100,23 +100,21 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			continue
 		}
 
-		if len(out.Tokens) > 0 {
-			for _, token := range out.Tokens {
-				recognizeToken = false
+		for _, token := range out.Tokens {
+			recognizeToken = false
 
-				for _, tExc := range chainConfig.NativeTokens {
-					if tExc.TokenName == token.TokenName() {
-						recognizeToken = true
+			for _, tExc := range chainConfig.NativeTokens {
+				if tExc.TokenName == token.TokenName() {
+					recognizeToken = true
 
-						break
-					}
+					break
 				}
+			}
 
-				if !recognizeToken {
-					unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
-				} else {
-					tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
-				}
+			if !recognizeToken {
+				unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
+			} else {
+				tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
 			}
 		}
 
@@ -125,6 +123,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             amount,
@@ -206,6 +205,11 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf(
 			"sum of amounts to the bridging address: %v is less than the minimum required for refund: %v",
 			amountSum, chainConfig.MinFeeForBridging+calculatedMinUtxo)
+	}
+
+	if appConfig.EthChains[metadata.DestinationChainID] == nil &&
+		appConfig.CardanoChains[metadata.DestinationChainID] == nil {
+		return fmt.Errorf("unsupported destination chain id found in metadata: %s", metadata.DestinationChainID)
 	}
 
 	return nil

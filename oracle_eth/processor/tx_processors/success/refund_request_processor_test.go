@@ -76,7 +76,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 		err := disabledProc.HandleBridgingProcessorError(
 			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, fmt.Errorf("test err"), "")
-		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -84,7 +83,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := disabledProc.ValidateAndAddClaim(&oCore.BridgeClaims{}, &core.EthTx{}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "refund is not enabled")
 	})
 
@@ -99,7 +97,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := proc.HandleBridgingProcessorPreValidate(&core.EthTx{BatchTryCount: 1}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})
 
@@ -107,7 +104,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(false)
 
 		err := proc.HandleBridgingProcessorPreValidate(&core.EthTx{SubmitTryCount: 1}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "try count exceeded")
 	})
 
@@ -116,7 +112,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 		err := proc.HandleBridgingProcessorError(
 			&oCore.BridgeClaims{}, &core.EthTx{}, appConfig, nil, "")
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unexpected end of JSON input")
 	})
 
@@ -126,7 +121,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(true)
 
 		err := proc.ValidateAndAddClaim(claims, &core.EthTx{}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal metadata")
 	})
 
@@ -149,7 +143,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
@@ -172,7 +165,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Metadata:      metadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "invalid sender addr")
 	})
 
@@ -198,8 +190,33 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         new(big.Int).SetUint64(utxoMinValue - 1),
 		}, appConfig)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "less than the minimum required for refund")
+	})
+
+	t.Run("ValidateAndAddClaim unsupported destination chain id found in metadata", func(t *testing.T) {
+		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.TxTypeRefundRequest,
+			DestinationChainID: "",
+			SenderAddr:         nexusBridgingAddr,
+			Transactions: []core.BridgingRequestEthMetadataTransaction{
+				{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).SetUint64(utxoMinValue))},
+				{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+			},
+			BridgingFee: common.DfmToWei(new(big.Int).SetUint64(100)),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+
+		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
+			Metadata:      metadata,
+			OriginChainID: common.ChainIDStrNexus,
+			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
+		}, appConfig)
+		require.ErrorContains(t, err, "unsupported destination chain id found in metadata")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {

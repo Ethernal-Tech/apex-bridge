@@ -45,7 +45,7 @@ func getOutputs(
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 					// In case of refund, destChainID will be equal to srcChainID
 					// to get the correct token name, originalDestinationChainID is needed.
-					originalDestinationChainID := getOriginalDestination(destChainID)
+					originalDestinationChainID := common.ToStrChainID(tx.DestinationChainId)
 
 					if tokenName := cardanoConfig.GetNativeTokenName(originalDestinationChainID); tokenName != "" {
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
@@ -289,14 +289,4 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	}
 
 	return result
-}
-
-func getOriginalDestination(srcChainID string) string {
-	if srcChainID == common.ChainIDStrCardano {
-		return common.ChainIDStrPrime
-	} else if srcChainID == common.ChainIDStrPrime {
-		return common.ChainIDStrCardano
-	}
-
-	return ""
 }

@@ -78,6 +78,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 ) {
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             common.WeiToDfm(tx.Value),
@@ -113,6 +114,11 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
 			tx.Value, chainConfig.MinFeeForBridging+1)
+	}
+
+	if appConfig.EthChains[metadata.DestinationChainID] == nil &&
+		appConfig.CardanoChains[metadata.DestinationChainID] == nil {
+		return fmt.Errorf("unsupported destination chain id found in metadata: %s", metadata.DestinationChainID)
 	}
 
 	return nil

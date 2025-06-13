@@ -46,8 +46,9 @@ type BridgingRequestMetadataV1 struct {
 }
 
 type RefundBridgingRequestMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
-	SenderAddr     []string       `cbor:"s" json:"s"`
+	BridgingTxType     BridgingTxType `cbor:"t" json:"t"`
+	SenderAddr         []string       `cbor:"s" json:"s"`
+	DestinationChainID string         `cbor:"d" json:"d"`
 }
 
 type BatchExecutedMetadata struct {

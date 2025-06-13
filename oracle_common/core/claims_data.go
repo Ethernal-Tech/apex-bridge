@@ -53,6 +53,8 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString(hex.EncodeToString(c.RefundTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
 	sb.WriteString(common.ToStrChainID(c.OriginChainId))
+	sb.WriteString("\nDstChainID = ")
+	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.OriginSenderAddress)
 	sb.WriteString("\nAmount = ")

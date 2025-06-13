@@ -86,7 +86,8 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 			sb.WriteString("\n")
 		}
 
-		sb.WriteString(fmt.Sprintf("Chain ID = %s, ", common.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Src ChainID = %s, ", common.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Dst ChainID = %s, ", common.ToStrChainID(tx.DestinationChainId)))
 		sb.WriteString(fmt.Sprintf("Tx Hash = %s, ", hex.EncodeToString(tx.ObservedTransactionHash[:])))
 		sb.WriteString(fmt.Sprintf("Block = %s, ", tx.BlockHeight))
 		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
