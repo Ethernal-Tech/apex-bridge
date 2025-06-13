@@ -10,6 +10,8 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+const defaultKey = "defaultKey"
+
 type BBoltDBBase[
 	TTx core.BaseTx,
 	TProcessedTx core.BaseProcessedTx,
@@ -382,6 +384,51 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetUnprocessedBatchEvents
 	}
 
 	return result, nil
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetBlocksSubmitterInfo(
+	chainID string,
+) (result core.BlocksSubmitterInfo, err error) {
+	if supported := bd.SupportedChains[chainID]; !supported {
+		return result, fmt.Errorf("unsupported chain: %s", chainID)
+	}
+
+	err = bd.DB.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(ChainBucket(BlocksSubmitterBucket, chainID))
+
+		if data := bucket.Get([]byte(defaultKey)); len(data) > 0 {
+			if err := json.Unmarshal(data, &result); err != nil {
+				return fmt.Errorf("could not read blocks submitter info for chain %s: %w", chainID, err)
+			}
+		}
+
+		return nil
+	})
+
+	return result, err
+}
+
+func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) SetBlocksSubmitterInfo(
+	chainID string, info core.BlocksSubmitterInfo,
+) error {
+	if supported := bd.SupportedChains[chainID]; !supported {
+		return fmt.Errorf("unsupported chain: %s", chainID)
+	}
+
+	bytes, err := json.Marshal(info)
+	if err != nil {
+		return fmt.Errorf("could not serialize blocks submitter info for chain %s: %w", chainID, err)
+	}
+
+	return bd.DB.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(ChainBucket(BlocksSubmitterBucket, chainID))
+
+		if err := bucket.Put([]byte(defaultKey), bytes); err != nil {
+			return fmt.Errorf("could not save block submitter info for chain %s: %w", chainID, err)
+		}
+
+		return nil
+	})
 }
 
 func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) UpdateTxs(

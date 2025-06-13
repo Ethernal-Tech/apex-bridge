@@ -135,3 +135,8 @@ func IsTxReady(triesCount uint32, lastTimeTried time.Time, settings RetryUnproce
 
 	return lastTimeTried.Add(timeout).Before(time.Now().UTC())
 }
+
+type BlocksSubmitterInfo struct {
+	BlockNumOrSlot uint64 `json:"blockNumOrSlot"`
+	CounterEmpty   int    `json:"counterEmpty"`
+}

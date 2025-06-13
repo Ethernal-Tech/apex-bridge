@@ -171,7 +171,7 @@ func mintTokenOnAddr(
 		return "", err
 	}
 
-	policy := cardanowallet.PolicyScript{
+	policy := &cardanowallet.PolicyScript{
 		Type:    cardanowallet.PolicyScriptSigType,
 		KeyHash: keyHash,
 	}
