@@ -702,7 +702,7 @@ func (p *generateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold:      250,
+				EmptyBlocksThreshold:      1000,
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
