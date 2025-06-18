@@ -383,7 +383,7 @@ $ apex-bridge bridge-admin mint-native-token \
         --token-name testt \
         --amount 10
 ```
-- optional `--stake-key` flag
+- optional `--stake-key` and `--show-policy-script` flags
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \

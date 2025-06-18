@@ -19,6 +19,7 @@ const (
 	testnetMagicFlag    = "testnet-magic"
 	tokenNameFlag       = "token-name"
 	mintAmountFlag      = "amount"
+	showPolicyScrFlag   = "show-policy-script"
 
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLFlagDesc       = "ogmios url"
@@ -26,6 +27,7 @@ const (
 	testnetMagicFlagDesc    = "testnet magic number. leave 0 for mainnet"
 	tokenNameFlagDesc       = "name of the token to mint"
 	mintAmountFlagDesc      = "amount to mint"
+	showPolicyScrFlagDesc   = "show policy script"
 
 	maxInputs            = 40
 	testNetProtocolMagic = uint(2)
@@ -39,6 +41,7 @@ type mintNativeTokenParams struct {
 	testnetMagic       uint
 	tokenName          string
 	mintAmount         uint64
+	showPolicyScript   bool
 
 	wallet *cardanowallet.Wallet
 }
@@ -128,11 +131,18 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 		0,
 		mintAmountFlagDesc,
 	)
+
+	cmd.Flags().BoolVar(
+		&m.showPolicyScript,
+		showPolicyScrFlag,
+		false,
+		showPolicyScrFlagDesc,
+	)
 }
 
 // Execute implements common.CliCommandExecutor.
 func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	txHash, err := mintTokenOnAddr(
+	txHash, policyScript, err := mintTokenOnAddr(
 		context.Background(),
 		outputter,
 		cardanowallet.CardanoNetworkType(m.networkID),
@@ -142,13 +152,21 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 		m.tokenName,
 		m.mintAmount,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	_, _ = outputter.Write([]byte(fmt.Sprintf(
 		"Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash)))
+
+	if m.showPolicyScript {
+		policyBytes, err := policyScript.GetPolicyScriptJSON()
+		if err != nil {
+			_, _ = outputter.Write(fmt.Appendf(nil, "Failed to output policy script: %s", err.Error()))
+		} else {
+			_, _ = outputter.Write(fmt.Appendf(nil, "Policy script generated:\n%s\n", policyBytes))
+		}
+	}
 
 	return nil, nil
 }
@@ -165,10 +183,10 @@ func mintTokenOnAddr(
 	txProvider cardanowallet.ITxProvider,
 	minterWallet *cardanowallet.Wallet, tokenName string,
 	mintAmount uint64,
-) (string, error) {
+) (string, cardanowallet.IPolicyScript, error) {
 	keyHash, err := cardanowallet.GetKeyHash(minterWallet.VerificationKey)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	policy := &cardanowallet.PolicyScript{
@@ -180,7 +198,7 @@ func mintTokenOnAddr(
 
 	pid, err := cardanowallet.NewCliUtils(cardanoCliBinary).GetPolicyID(policy)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	mintToken := cardanowallet.NewTokenAmount(
@@ -188,7 +206,7 @@ func mintTokenOnAddr(
 
 	walletAddr, err := cardanotx.GetAddress(networkType, minterWallet)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	txRaw, txHash, err := createMintTx(
@@ -196,15 +214,15 @@ func mintTokenOnAddr(
 		mintToken, policy,
 	)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	err = submitTokenTx(ctx, outputter, txProvider, txRaw, txHash, walletAddr.String())
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return txHash, nil
+	return txHash, policy, nil
 }
 
 func createMintTx(
