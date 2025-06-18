@@ -23,7 +23,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 			SubmitConfig: oracleCommon.SubmitConfig{
 				ConfirmedBlocksThreshold:  30,
 				ConfirmedBlocksSubmitTime: 10,
-				EmptyBlocksThreshold: map[string]int{
+				EmptyBlocksThreshold: map[string]uint{
 					common.ChainIDStrPrime:  4,
 					common.ChainIDStrVector: 4,
 					common.ChainIDStrNexus:  4,

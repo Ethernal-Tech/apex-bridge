@@ -133,7 +133,7 @@ const (
 	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle / nexus block submitter"
 	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
 
-	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks"
+	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks for blocks submitter to skip"
 
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
@@ -223,7 +223,7 @@ type generateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 
-	emptyBlocksThreshold int
+	emptyBlocksThreshold uint
 }
 
 func (p *generateConfigsParams) validateFlags() error {
@@ -600,7 +600,7 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		nexusMinFeeForBridgingFlagDesc,
 	)
 
-	cmd.Flags().IntVar(
+	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
 		defaultEmptyBlocksThreshold,
@@ -709,7 +709,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold: map[string]int{
+				EmptyBlocksThreshold: map[string]uint{
 					common.ChainIDStrPrime:  p.emptyBlocksThreshold,
 					common.ChainIDStrVector: p.emptyBlocksThreshold,
 					common.ChainIDStrNexus:  p.emptyBlocksThreshold,
