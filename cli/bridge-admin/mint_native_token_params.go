@@ -162,7 +162,7 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 	if m.showPolicyScript {
 		policyBytes, err := policyScript.GetPolicyScriptJSON()
 		if err != nil {
-			_, _ = outputter.Write(fmt.Appendf(nil, "Failed to output policy script: %s", err.Error()))
+			_, _ = outputter.Write(fmt.Appendf(nil, "Failed to generate policy script: %s", err.Error()))
 		} else {
 			_, _ = outputter.Write(fmt.Appendf(nil, "Policy script generated:\n%s\n", policyBytes))
 		}

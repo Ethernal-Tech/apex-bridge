@@ -21,6 +21,7 @@ const (
 	bridgeNodeURLFlag    = "bridge-url"
 	bridgeSCAddrFlag     = "bridge-addr"
 	bridgePrivateKeyFlag = "bridge-key"
+	showPolicyScrFlag    = "show-policy-script"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
@@ -28,6 +29,7 @@ const (
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
 	chainIDFlagDesc          = "cardano chain ID (prime, vector, etc)"
 	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
+	showPolicyScrFlagDesc    = "show policy script"
 )
 
 type createAddressParams struct {
@@ -38,6 +40,7 @@ type createAddressParams struct {
 	bridgeSCAddr     string
 	chainID          string
 	bridgePrivateKey string
+	showPolicyScript bool
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -98,6 +101,13 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		"",
 		bridgePrivateKeyFlagDesc,
 	)
+
+	cmd.Flags().BoolVar(
+		&ip.showPolicyScript,
+		showPolicyScrFlag,
+		false,
+		showPolicyScrFlagDesc,
+	)
 }
 
 func (ip *createAddressParams) Execute(
@@ -118,6 +128,7 @@ func (ip *createAddressParams) Execute(
 
 	_, _ = outputter.Write([]byte("Validators chain data retrieved:\n"))
 	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(ip.chainID, validatorsData)))
+	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 
 	keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
@@ -143,7 +154,9 @@ func (ip *createAddressParams) Execute(
 	}
 
 	return &CmdResult{
-		ApexAddresses: addrs,
+		ApexAddresses:     addrs,
+		PolicyScripts:     policyScripts,
+		ShowPolicyScripts: ip.showPolicyScript,
 	}, nil
 }
 

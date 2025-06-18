@@ -88,6 +88,7 @@ $ go run ./main.go create-address \
         --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
         --chain prime
 ```
+- optional `--show-policy-script` flag
 
 # How to generate config files
 All options
