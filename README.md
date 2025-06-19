@@ -136,7 +136,8 @@ $ go run ./main.go generate-configs \
         --logs-path <path to where logs will be stored> \
         --api-port <port at which API should run> \
         --api-keys <api key 1> \
-        --api-keys <api key 2>
+        --api-keys <api key 2> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip>
 ```
 optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used if telemetry is desired
 
