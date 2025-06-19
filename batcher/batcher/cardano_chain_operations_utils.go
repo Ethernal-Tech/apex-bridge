@@ -21,7 +21,6 @@ func getOutputs(
 	logger hclog.Logger,
 ) cardano.TxOutputs {
 	receiversMap := map[string]map[string]uint64{}
-
 	updateMap := func(addr string, tokenName string, value uint64) {
 		subMap, exists := receiversMap[addr]
 		if !exists {
@@ -33,6 +32,7 @@ func getOutputs(
 	}
 
 	for i, tx := range txs {
+		srcChainID := common.ToStrChainID(tx.SourceChainId)
 		// In case a transaction is of type refund, batcher should transfer minFeeForBridging
 		// to fee payer address, and the rest is transferred to the user.
 		if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
@@ -51,8 +51,7 @@ func getOutputs(
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 					} else {
 						logger.Error("token is not defined for refund original destination chain",
-							"src", common.ToStrChainID(tx.SourceChainId), "dst", origDstChainID,
-							"config", cardanoConfig.NativeTokens)
+							"src", srcChainID, "dst", origDstChainID, "config", cardanoConfig.NativeTokens)
 					}
 				}
 
@@ -67,12 +66,11 @@ func getOutputs(
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, receiver.Amount.Uint64())
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-					if tokenName := cardanoConfig.GetNativeTokenName(destChainID); tokenName != "" {
+					if tokenName := cardanoConfig.GetNativeTokenName(srcChainID); tokenName != "" {
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 					} else {
 						logger.Error("token is not defined for destination chain",
-							"src", common.ToStrChainID(tx.SourceChainId), "dst", destChainID,
-							"config", cardanoConfig.NativeTokens)
+							"src", srcChainID, "dst", destChainID, "config", cardanoConfig.NativeTokens)
 					}
 				}
 			}
