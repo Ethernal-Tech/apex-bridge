@@ -88,6 +88,7 @@ $ go run ./main.go create-address \
         --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
         --chain prime
 ```
+- optional `--show-policy-script` flag
 
 # How to generate config files
 All options
@@ -383,7 +384,7 @@ $ apex-bridge bridge-admin mint-native-token \
         --token-name testt \
         --amount 10
 ```
-- optional `--stake-key` flag
+- optional `--stake-key` and `--show-policy-script` flags
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \
