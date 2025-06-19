@@ -44,14 +44,15 @@ func getOutputs(
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 					// In case of refund, destChainID will be equal to srcChainID
-					// to get the correct token name, originalDestinationChainID is needed.
-					originalDestinationChainID := common.ToStrChainID(tx.DestinationChainId)
+					// to get the correct token name, original destination chain is needed.
+					origDstChainID := common.ToStrChainID(tx.DestinationChainId)
 
-					if tokenName := cardanoConfig.GetNativeTokenName(originalDestinationChainID); tokenName != "" {
+					if tokenName := cardanoConfig.GetNativeTokenName(origDstChainID); tokenName != "" {
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 					} else {
-						logger.Error("token is not defined for original destination chain",
-							"src", tx.SourceChainId, "dst", originalDestinationChainID)
+						logger.Error("token is not defined for refund original destination chain",
+							"src", common.ToStrChainID(tx.SourceChainId), "dst", origDstChainID,
+							"config", cardanoConfig.NativeTokens)
 					}
 				}
 
@@ -66,10 +67,12 @@ func getOutputs(
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, receiver.Amount.Uint64())
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-					tokenName := cardanoConfig.GetNativeTokenName(destChainID)
-
-					if tokenName != "" {
+					if tokenName := cardanoConfig.GetNativeTokenName(destChainID); tokenName != "" {
 						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					} else {
+						logger.Error("token is not defined for destination chain",
+							"src", common.ToStrChainID(tx.SourceChainId), "dst", destChainID,
+							"config", cardanoConfig.NativeTokens)
 					}
 				}
 			}
