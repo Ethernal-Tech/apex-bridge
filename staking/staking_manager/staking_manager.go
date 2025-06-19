@@ -3,6 +3,7 @@ package stakingmanager
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
@@ -18,7 +19,7 @@ import (
 type StakingManagerImpl struct {
 	ctx               context.Context
 	config            *core.StakingManagerConfiguration
-	stakingComponents []core.StakingComponent
+	stakingComponents map[string]core.StakingComponent
 	logger            hclog.Logger
 }
 
@@ -34,7 +35,7 @@ func NewStakingManager(
 	stakingDB := &databaseaccess.BBoltDatabase{}
 	stakingDB.Init(boltDB, config)
 
-	stakingComponents := make([]core.StakingComponent, 0, len(config.Chains))
+	stakingComponents := make(map[string]core.StakingComponent, len(config.Chains))
 
 	for _, chainConfig := range config.Chains {
 		indexerDB := indexerDbs[chainConfig.ChainID]
@@ -57,15 +58,20 @@ func NewStakingManager(
 			return nil, fmt.Errorf("failed to create staking Cardano chain observer for `%s`: %w", chainConfig.ChainID, err)
 		}
 
-		stakingComponent := stakingcomponent.NewStakingComponent(
+		stakingComponent, err := stakingcomponent.NewStakingComponent(
 			&core.StakingConfiguration{
-				Chain:         *chainConfig,
-				PullTimeMilis: config.PullTimeMilis,
+				Chain:                  *chainConfig,
+				UsersRewardsPercentage: config.UsersRewardsPercentage,
+				PullTimeMilis:          config.PullTimeMilis,
 			},
 			cco,
 			logger.Named(strings.ToUpper(chainConfig.ChainID)),
 		)
-		stakingComponents = append(stakingComponents, stakingComponent)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create staking component for chain `%s`: %w", chainConfig.ChainID, err)
+		}
+
+		stakingComponents[chainConfig.ChainID] = stakingComponent
 	}
 
 	return &StakingManagerImpl{
@@ -84,4 +90,67 @@ func (sm *StakingManagerImpl) Start() {
 			}
 		}()
 	}
+}
+
+func (sm *StakingManagerImpl) GetExchangeRate(chainID string) (float64, error) {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return 0, fmt.Errorf("failed to get exchange rate: staking component not found for chainID: %s", chainID)
+	}
+
+	return sc.GetExchangeRate(), nil
+}
+
+func (sm *StakingManagerImpl) ChooseStakeAddrForStaking(chainID string, amount *big.Int) (string, error) {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return "", fmt.Errorf(
+			"failed to choose stake address for staking: "+
+				"staking component not found for chainID: %s",
+			chainID,
+		)
+	}
+
+	return sc.ChooseStakeAddrForStaking(amount)
+}
+
+func (sm *StakingManagerImpl) ChooseStakeAddrForUnstaking(
+	chainID string, amount *big.Int) (map[string]*big.Int, error) {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return nil, fmt.Errorf(
+			"failed to choose stake address for unstaking: "+
+				"staking component not found for chainID: %s",
+			chainID,
+		)
+	}
+
+	return sc.ChooseStakeAddrForUnstaking(amount)
+}
+
+func (sm *StakingManagerImpl) Stake(chainID string, amount *big.Int, stakingAddress string) error {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return fmt.Errorf("staking failed: staking component not found for chainID: %s", chainID)
+	}
+
+	return sc.Stake(amount, stakingAddress)
+}
+
+func (sm *StakingManagerImpl) Unstake(chainID string, amount *big.Int, stakingAddress string) error {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return fmt.Errorf("unstaking failed: staking component not found for chainID: %s", chainID)
+	}
+
+	return sc.Unstake(amount, stakingAddress)
+}
+
+func (sm *StakingManagerImpl) ReceiveReward(chainID string, reward *big.Int, stakingAddress string) error {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return fmt.Errorf("receive reward failed: staking component not found for chainID: %s", chainID)
+	}
+
+	return sc.ReceiveReward(reward, stakingAddress)
 }
