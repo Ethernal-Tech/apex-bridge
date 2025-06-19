@@ -30,7 +30,7 @@ func GetPolicyScripts(
 		}
 	}
 
-	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData))))
+	atLeastSignersCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(validatorsData)))) //nolint:gosec
 	multisigPolicyScript = wallet.NewPolicyScript(multisigKeyHashes, atLeastSignersCount)
 	feePolicyScript = wallet.NewPolicyScript(multisigFeeKeyHashes, atLeastSignersCount)
 
