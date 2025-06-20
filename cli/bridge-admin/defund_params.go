@@ -69,7 +69,7 @@ func (g *defundParams) ValidateFlags() error {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
 	}
 
-	if g.bridgePrivateKey == "" || g.privateKeyConfig == "" {
+	if g.bridgePrivateKey == "" && g.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 

@@ -122,7 +122,7 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag must be greater or lower than zero", amountFlag)
 	}
 
-	if g.bridgePrivateKey == "" || g.privateKeyConfig == "" {
+	if g.bridgePrivateKey == "" && g.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 

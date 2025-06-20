@@ -57,7 +57,7 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", feeAddrFlag)
 	}
 
-	if ip.bridgePrivateKey == "" || ip.privateKeyConfig == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", bridgePrivateKeyFlag, privateKeyConfigFlag)
 	}
 
