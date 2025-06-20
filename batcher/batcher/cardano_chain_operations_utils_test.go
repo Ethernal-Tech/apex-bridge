@@ -674,7 +674,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		NetworkID: cardanowallet.MainNetNetwork,
 		NativeTokens: []sendtx.TokenExchangeConfig{
 			{
-				DstChainID: common.ChainIDStrCardano,
+				DstChainID: common.ChainIDStrPrime,
 				TokenName:  token.String(),
 			},
 		},
