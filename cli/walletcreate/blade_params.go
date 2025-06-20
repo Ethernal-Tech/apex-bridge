@@ -15,7 +15,7 @@ const (
 	keyFlag       = "key"
 	adminTypeFlag = "type"
 
-	keyConfigFlagDesc = "path to secrets manager config file" //nolint:lll
+	keyConfigFlagDesc = "path to secrets manager config file"
 	keyFlagDesc       = "hexadecimal representation of ECDSA key"
 	adminTypeFlagDesc = "type of wallet (admin or proxy)"
 )
@@ -72,8 +72,7 @@ func (ip *walletCreateBladeParams) Execute(outputter common.OutputFormatter) (co
 		return nil, err
 	}
 
-	isProxy := strings.ToLower(ip.adminType) == "proxy"
-	keyName := eth.GetKeyNameForBladeAdmin(isProxy)
+	keyName := eth.GetKeyNameForBladeAdmin(strings.ToLower(ip.adminType) == "proxy")
 
 	if secretsManager.HasSecret(keyName) {
 		if err := secretsManager.RemoveSecret(keyName); err != nil {

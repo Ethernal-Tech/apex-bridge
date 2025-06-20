@@ -65,6 +65,16 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
+# How to generate key for blade admin
+```shell
+$ go run ./main.go wallet-create blade --type admin --key KEY --config CONFIG_PATTH
+```
+
+# How to generate key for blade proxy admin
+```shell
+$ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PATTH
+```
+
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
@@ -89,6 +99,7 @@ $ go run ./main.go create-address \
         --chain prime
 ```
 - optional `--show-policy-script` flag
+- instead of `--bridge-key` it is possible to set key secret manager configuration file with `--bridge-key-config /path/config.json`.
 
 # How to generate config files
 All options
@@ -339,6 +350,7 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - optional `--is-wrapped-token` bool flag
+- instead of `--key` it is possible to set key secret manager configuration file with `--bridge-key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin set-min-amounts \
@@ -358,6 +370,7 @@ $ apex-bridge bridge-admin defund \
         --native-token-amount 200 \
         --addr 0xeefcd00000000000000000000000000000000000
 ```
+- instead of `--key` it is possible to set key secret manager configuration file with `--bridge-key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
@@ -367,6 +380,7 @@ $ apex-bridge bridge-admin set-additional-data \
         --bridging-addr 0xeefcd00000000000000000000000000000000022 \
         --fee-addr 0xeefcd00000000000000000000000000000000021
 ```
+- instead of `--bridge-key` it is possible to set key secret manager configuration file with `--bridge-key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin get-validators-data \

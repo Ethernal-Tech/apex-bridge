@@ -3,15 +3,18 @@ package clibridgeadmin
 import "github.com/Ethernal-Tech/apex-bridge/common"
 
 const (
-	bridgeNodeURLFlag = "bridge-url"
-	chainIDFlag       = "chain"
-	amountFlag        = "amount"
-	privateKeyFlag    = "key"
-	addressFlag       = "addr"
+	bridgeNodeURLFlag          = "bridge-url"
+	chainIDFlag                = "chain"
+	amountFlag                 = "amount"
+	privateKeyFlag             = "key" // once these two key flags should be joined into one...
+	bridgePrivateKeyFlag       = "bridge-key"
+	bridgePrivateKeyConfigFlag = "bridge-key-config"
+	addressFlag                = "addr"
 
-	bridgeNodeURLFlagDesc = "node URL of bridge chain"
-	chainIDFlagDesc       = "chain ID (prime, vector, nexus, etc)"
-	privateKeyFlagDesc    = "wallet private signing key"
+	bridgeNodeURLFlagDesc          = "node URL of bridge chain"
+	chainIDFlagDesc                = "chain ID (prime, vector, nexus, etc)"
+	bridgePrivateKeyFlagDesc       = "bridge admin private key"
+	bridgePrivateKeyConfigFlagDesc = "path to secrets manager config file"
 
 	gasLimitMultiplier = 2.0
 )

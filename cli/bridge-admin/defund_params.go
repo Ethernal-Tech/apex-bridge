@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,12 +25,13 @@ const (
 )
 
 type defundParams struct {
-	bridgeNodeURL        string
-	chainID              string
-	currencyAmountStr    string
-	nativeTokenAmountStr string
-	privateKeyRaw        string
-	address              string
+	chainID                string
+	currencyAmountStr      string
+	nativeTokenAmountStr   string
+	bridgeNodeURL          string
+	bridgePrivateKey       string
+	bridgePrivateKeyConfig string
+	address                string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -63,12 +65,12 @@ func (g *defundParams) ValidateFlags() error {
 			amountFlag, common.MinUtxoAmountDefault)
 	}
 
-	if g.privateKeyRaw == "" {
-		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
-	}
-
 	if !common.IsValidAddress(g.chainID, g.address) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
+	}
+
+	if g.bridgePrivateKey == "" || g.bridgePrivateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, bridgePrivateKeyConfigFlag)
 	}
 
 	return nil
@@ -84,9 +86,9 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
 
-	wallet, err := ethtxhelper.NewEthTxWallet(g.privateKeyRaw)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, g.bridgePrivateKey, g.bridgePrivateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(g.bridgeNodeURL))
@@ -150,10 +152,16 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.privateKeyRaw,
+		&g.bridgePrivateKey,
 		privateKeyFlag,
 		"",
-		privateKeyFlagDesc,
+		bridgePrivateKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.bridgePrivateKeyConfig,
+		bridgePrivateKeyConfigFlag,
+		"",
+		bridgePrivateKeyConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&g.currencyAmountStr,
@@ -173,6 +181,8 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		"0",
 		defundAddressFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyConfigFlag, privateKeyFlag)
 }
 
 var (
