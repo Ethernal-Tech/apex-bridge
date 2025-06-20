@@ -279,7 +279,10 @@ $ apex-bridge deploy-evm \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
+- instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 -- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+
 Example with explicit bls keys:
 ```shell
 $ apex-bridge deploy-evm \
@@ -294,6 +297,7 @@ $ apex-bridge deploy-evm \
 ```
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to upgrade bridge/gateway contracts
 ```shell
@@ -308,6 +312,7 @@ $ apex-bridge deploy-evm upgrade \
 ```
 - optional `--dynamic-tx`
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to Set validators data on Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge):
@@ -321,6 +326,8 @@ $ apex-bridge deploy-evm set-validators-chain-data \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
 ```
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 Example with explicit bls keys:
 ```shell
@@ -335,6 +342,8 @@ $ apex-bridge deploy-evm set-validators-chain-data \
         --bls-key 0x.... \
         --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
 ```
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # Bridge admin commands
 ```shell
