@@ -15,35 +15,35 @@ import (
 )
 
 const (
-	networkIDFlag              = "network-id"
-	testnetMagicFlag           = "testnet-magic"
-	chainIDFlag                = "chain"
-	bridgeNodeURLFlag          = "bridge-url"
-	bridgeSCAddrFlag           = "bridge-addr"
-	bridgePrivateKeyFlag       = "bridge-key"
-	bridgePrivateKeyConfigFlag = "bridge-key-config"
-	showPolicyScrFlag          = "show-policy-script"
+	networkIDFlag        = "network-id"
+	testnetMagicFlag     = "testnet-magic"
+	chainIDFlag          = "chain"
+	bridgeNodeURLFlag    = "bridge-url"
+	bridgeSCAddrFlag     = "bridge-addr"
+	bridgePrivateKeyFlag = "bridge-key"
+	privateKeyConfigFlag = "key-config"
+	showPolicyScrFlag    = "show-policy-script"
 
-	networkIDFlagDesc              = "network ID"
-	testnetMagicFlagDesc           = "testnet magic number. leave 0 for mainnet"
-	bridgeNodeURLFlagDesc          = "bridge node url"
-	bridgeSCAddrFlagDesc           = "bridge smart contract address"
-	chainIDFlagDesc                = "cardano chain ID (prime, vector, etc)"
-	bridgePrivateKeyFlagDesc       = "private key for bridge admin"
-	bridgePrivateKeyConfigFlagDesc = "path to secrets manager config file"
-	showPolicyScrFlagDesc          = "show policy script"
+	networkIDFlagDesc        = "network ID"
+	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
+	bridgeNodeURLFlagDesc    = "bridge node url"
+	bridgeSCAddrFlagDesc     = "bridge smart contract address"
+	chainIDFlagDesc          = "cardano chain ID (prime, vector, etc)"
+	bridgePrivateKeyFlagDesc = "private key for bridge admin"
+	privateKeyConfigFlagDesc = "path to secrets manager config file"
+	showPolicyScrFlagDesc    = "show policy script"
 )
 
 type createAddressParams struct {
 	networkID    uint
 	testnetMagic uint
 
-	bridgeNodeURL          string
-	bridgeSCAddr           string
-	chainID                string
-	bridgePrivateKey       string
-	bridgePrivateKeyConfig string
-	showPolicyScript       bool
+	bridgeNodeURL    string
+	bridgeSCAddr     string
+	chainID          string
+	bridgePrivateKey string
+	privateKeyConfig string
+	showPolicyScript bool
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -106,10 +106,10 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.bridgePrivateKeyConfig,
-		bridgePrivateKeyConfigFlag,
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
 		"",
-		bridgePrivateKeyConfigFlagDesc,
+		privateKeyConfigFlagDesc,
 	)
 
 	cmd.Flags().BoolVar(
@@ -119,7 +119,7 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		showPolicyScrFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyConfigFlag, bridgePrivateKeyFlag)
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
 func (ip *createAddressParams) Execute(
@@ -173,7 +173,7 @@ func (ip *createAddressParams) Execute(
 }
 
 func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
-	if ip.bridgePrivateKey == "" && ip.bridgePrivateKeyConfig == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return eth.NewEthHelperWrapper(
 			hclog.NewNullLogger(),
 			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
@@ -181,7 +181,7 @@ func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error
 			ethtxhelper.WithDynamicTx(false)), nil
 	}
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.bridgePrivateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}

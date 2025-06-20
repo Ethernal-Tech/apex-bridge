@@ -97,12 +97,12 @@ func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 type updateChainTokenQuantityParams struct {
-	bridgeNodeURL          string
-	chainID                string
-	amountStr              string
-	bridgePrivateKey       string
-	bridgePrivateKeyConfig string
-	isWrappedToken         bool
+	bridgeNodeURL    string
+	chainID          string
+	amountStr        string
+	bridgePrivateKey string
+	privateKeyConfig string
+	isWrappedToken   bool
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -122,8 +122,8 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag must be greater or lower than zero", amountFlag)
 	}
 
-	if g.bridgePrivateKey == "" || g.bridgePrivateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, bridgePrivateKeyConfigFlag)
+	if g.bridgePrivateKey == "" || g.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
 	return nil
@@ -140,7 +140,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(false, g.bridgePrivateKey, g.bridgePrivateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, g.bridgePrivateKey, g.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}
@@ -223,10 +223,10 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		bridgePrivateKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.bridgePrivateKeyConfig,
-		bridgePrivateKeyConfigFlag,
+		&g.privateKeyConfig,
+		privateKeyConfigFlag,
 		"",
-		bridgePrivateKeyConfigFlagDesc,
+		privateKeyConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&g.amountStr,
@@ -241,7 +241,7 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		isWrappedTokenFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyConfigFlag, privateKeyFlag)
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)
 }
 
 var (

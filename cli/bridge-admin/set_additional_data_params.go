@@ -25,13 +25,13 @@ const (
 )
 
 type setAdditionalDataParams struct {
-	chainID                string
-	bridgeNodeURL          string
-	bridgeSCAddr           string
-	bridgePrivateKey       string
-	bridgePrivateKeyConfig string
-	bridgingAddr           string
-	feeAddr                string
+	chainID          string
+	bridgeNodeURL    string
+	bridgeSCAddr     string
+	bridgePrivateKey string
+	privateKeyConfig string
+	bridgingAddr     string
+	feeAddr          string
 }
 
 func (ip *setAdditionalDataParams) ValidateFlags() error {
@@ -57,8 +57,8 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", feeAddrFlag)
 	}
 
-	if ip.bridgePrivateKey == "" || ip.bridgePrivateKeyConfig == "" {
-		return fmt.Errorf("specify at least one: --%s or --%s", bridgePrivateKeyFlag, bridgePrivateKeyConfigFlag)
+	if ip.bridgePrivateKey == "" || ip.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", bridgePrivateKeyFlag, privateKeyConfigFlag)
 	}
 
 	return nil
@@ -94,10 +94,10 @@ func (ip *setAdditionalDataParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.bridgePrivateKeyConfig,
-		bridgePrivateKeyConfigFlag,
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
 		"",
-		bridgePrivateKeyConfigFlagDesc,
+		privateKeyConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -114,7 +114,7 @@ func (ip *setAdditionalDataParams) RegisterFlags(cmd *cobra.Command) {
 		feeAddrFlagDesc,
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyConfigFlag, bridgePrivateKeyFlag)
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
 func (ip *setAdditionalDataParams) Execute(
@@ -122,7 +122,7 @@ func (ip *setAdditionalDataParams) Execute(
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.bridgePrivateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}
