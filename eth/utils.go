@@ -157,6 +157,14 @@ func GetChainValidatorsDataInfoString(
 	return sb.String()
 }
 
+func GetKeyNameForBladeAdmin(isProxy bool) string {
+	if isProxy {
+		return secrets.OtherKeyLocalPrefix + "blade_proxy"
+	}
+
+	return secrets.OtherKeyLocalPrefix + "blade_admin"
+}
+
 func getBLSKeyName(chainID string) string {
 	if ForceBladeBlsKey {
 		return secrets.ValidatorBLSKey
