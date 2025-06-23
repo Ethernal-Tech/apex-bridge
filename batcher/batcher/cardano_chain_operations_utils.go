@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"fmt"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -12,14 +13,13 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func getOutputs(
+func getReceiversMap(
 	txs []eth.ConfirmedTransaction,
 	cardanoConfig *cardano.CardanoChainConfig,
 	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
 	feeAddr string,
 	destChainID string,
-	logger hclog.Logger,
-) cardano.TxOutputs {
+) (map[string]map[string]uint64, error) {
 	receiversMap := map[string]map[string]uint64{}
 	updateMap := func(addr string, tokenName string, value uint64) {
 		subMap, exists := receiversMap[addr]
@@ -31,14 +31,15 @@ func getOutputs(
 		subMap[tokenName] += value
 	}
 
-	for i, tx := range txs {
+	for txIndx, tx := range txs {
 		srcChainID := common.ToStrChainID(tx.SourceChainId)
-		// In case a transaction is of type refund, batcher should transfer minFeeForBridging
-		// to fee payer address, and the rest is transferred to the user.
-		if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
-			for _, receiver := range tx.Receivers {
-				amount := receiver.Amount.Uint64()
+		for _, receiver := range tx.Receivers {
+			amount := receiver.Amount.Uint64()
 
+			switch tx.TransactionType {
+			case uint8(common.RefundConfirmedTxType):
+				// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+				// to fee payer address, and the rest is transferred to the user.
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount-cardanoConfig.MinFeeForBridging)
 				updateMap(feeAddr, cardanowallet.AdaTokenName, cardanoConfig.MinFeeForBridging)
 
@@ -46,48 +47,56 @@ func getOutputs(
 					// In case of refund, destChainID will be equal to srcChainID
 					// to get the correct token name, original destination chain is needed.
 					origDstChainID := common.ToStrChainID(tx.DestinationChainId)
+					tokenName := cardanoConfig.GetNativeTokenName(origDstChainID)
 
-					if tokenName := cardanoConfig.GetNativeTokenName(origDstChainID); tokenName != "" {
-						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
-					} else {
-						logger.Error("token is not defined for refund original destination chain",
-							"src", srcChainID, "dst", origDstChainID, "config", cardanoConfig.NativeTokens)
+					if tokenName == "" {
+						return nil, fmt.Errorf("token is not defined for refund original destination chain: (%s -> %s)", srcChainID, origDstChainID) //nolint:lll
 					}
+
+					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 				}
 
-				for _, utxo := range refundUtxosPerConfirmedTx[i] {
+				for _, utxo := range refundUtxosPerConfirmedTx[txIndx] {
 					for _, token := range utxo.Output.Tokens {
 						updateMap(receiver.DestinationAddress, token.TokenName(), token.Amount)
 					}
 				}
-			}
-		} else {
-			for _, receiver := range tx.Receivers {
-				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, receiver.Amount.Uint64())
+
+			case uint8(common.DefundConfirmedTxType):
+				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-					if tx.TransactionType == uint8(common.DefundConfirmedTxType) {
-						// defund tx should have correct destination chain id set.
-						// this is hacky solution that will work for now
-						token, err := cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
-						if err != nil {
-							logger.Error("token is not defined for defund",
-								"src", srcChainID, "config", cardanoConfig.NativeTokens)
-						} else {
-							updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
-						}
-					} else {
-						if tokenName := cardanoConfig.GetNativeTokenName(srcChainID); tokenName != "" {
-							updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
-						} else {
-							logger.Error("token is not defined for destination chain",
-								"src", srcChainID, "dst", destChainID, "config", cardanoConfig.NativeTokens)
-						}
+					// defund tx should have correct destination chain id set.
+					// this is hacky solution that will work for now
+					token, err := cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+					if err != nil {
+						return nil, fmt.Errorf("token is not defined for defund: %s", srcChainID)
 					}
+
+					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
+
+				}
+			default:
+				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
+
+				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+					tokenName := cardanoConfig.GetNativeTokenName(srcChainID)
+					if tokenName == "" {
+						return nil, fmt.Errorf("token is not defined for destination chain: (%s -> %s)", srcChainID, destChainID) //nolint:lll
+					}
+
+					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 				}
 			}
 		}
 	}
+
+	return receiversMap, nil
+}
+
+func getOutputs(
+	receiversMap map[string]map[string]uint64, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
+) cardano.TxOutputs {
 
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
@@ -99,7 +108,7 @@ func getOutputs(
 			logger.Warn("skipped output with zero amount", "addr", addr)
 
 			continue
-		} else if !cardano.IsValidOutputAddress(addr, cardanoConfig.NetworkID) {
+		} else if !cardano.IsValidOutputAddress(addr, networkID) {
 			logger.Warn("skipped output because it is invalid", "addr", addr)
 
 			continue

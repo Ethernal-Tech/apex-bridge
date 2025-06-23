@@ -168,13 +168,18 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, fmt.Errorf("failed to retrieve utxos for refund txs: %w", err)
 	}
 
-	txOutputs := getOutputs(
+	receiversMap, err := getReceiversMap(
 		confirmedTransactions,
 		cco.config,
 		refundUtxosPerConfirmedTx,
 		data.FeeAddr,
 		destChainID,
-		cco.logger)
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	txOutputs := getOutputs(receiversMap, cco.config.NetworkID, cco.logger)
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
 		data.MultisigAddr, data.FeeAddr, data.ProtocolParams,
