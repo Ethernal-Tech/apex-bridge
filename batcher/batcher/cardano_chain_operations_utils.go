@@ -14,11 +14,11 @@ import (
 )
 
 func getReceiversMap(
-	txs []eth.ConfirmedTransaction,
-	cardanoConfig *cardano.CardanoChainConfig,
-	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
-	feeAddr string,
 	destChainID string,
+	cardanoConfig *cardano.CardanoChainConfig,
+	feeAddr string,
+	txs []eth.ConfirmedTransaction,
+	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
 ) (map[string]map[string]uint64, error) {
 	receiversMap := map[string]map[string]uint64{}
 	updateMap := func(addr string, tokenName string, value uint64) {
@@ -33,6 +33,7 @@ func getReceiversMap(
 
 	for txIndx, tx := range txs {
 		srcChainID := common.ToStrChainID(tx.SourceChainId)
+
 		for _, receiver := range tx.Receivers {
 			amount := receiver.Amount.Uint64()
 
@@ -74,8 +75,8 @@ func getReceiversMap(
 					}
 
 					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
-
 				}
+
 			default:
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
 
@@ -95,9 +96,8 @@ func getReceiversMap(
 }
 
 func getOutputs(
-	receiversMap map[string]map[string]uint64, networkID cardanowallet.CardanoNetworkType, logger hclog.Logger,
+	networkID cardanowallet.CardanoNetworkType, receiversMap map[string]map[string]uint64, logger hclog.Logger,
 ) cardano.TxOutputs {
-
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
 		Sum:     map[string]uint64{},
