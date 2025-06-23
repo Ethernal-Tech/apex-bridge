@@ -10,17 +10,12 @@ import (
 
 type StakingManager interface {
 	Start()
-	GetExchangeRate(chainID string) (float64, error)
-	ChooseStakeAddrForStaking(chainID string, amount *big.Int) (string, error)
-	ChooseStakeAddrForUnstaking(chainID string, amount *big.Int) (map[string]*big.Int, error)
-	Stake(chainID string, amount *big.Int, stakingAddress string) error
-	Unstake(chainID string, amount *big.Int, stakingAddress string) error
-	ReceiveReward(chainID string, reward *big.Int, stakingAddress string) error
+	GetStakingComponent(chainID string) (StakingComponent, error)
 }
 
 type StakingComponent interface {
 	Start(ctx context.Context) error
-	GetExchangeRate() float64
+	GetLastExchangeRate() (float64, error)
 	ChooseStakeAddrForStaking(amount *big.Int) (string, error)
 	ChooseStakeAddrForUnstaking(amount *big.Int) (map[string]*big.Int, error)
 	Stake(amount *big.Int, stakingAddress string) error
@@ -48,4 +43,6 @@ type CardanoTxsDB interface {
 type Database interface {
 	CardanoTxsDB
 	Init(db *bbolt.DB, smConfig *StakingManagerConfiguration)
+	UpdateExchangeRate(chainID string, exchangeRate float64) error
+	GetLastExchangeRate(chainID string) (float64, error)
 }

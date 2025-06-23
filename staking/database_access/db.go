@@ -16,6 +16,7 @@ var (
 	ExpectedTxsBucket               = "ExpectedTxs"
 	UnprocessedBatchEventsBucket    = "UnprocessedBatchEvents"
 	ProcessedTxsByInnerActionBucket = "ProcessedTxsByInnerAction"
+	ExchangeRateBucket              = "ExchangeRate"
 )
 
 func NewDatabase(pathToFile string, smConfig *core.StakingManagerConfiguration) (*bbolt.DB, error) {
@@ -28,6 +29,10 @@ func NewDatabase(pathToFile string, smConfig *core.StakingManagerConfiguration) 
 
 func ChainBucket(bucket string, chainID string) []byte {
 	return fmt.Appendf(nil, "%s_%s", bucket, chainID)
+}
+
+func Bucket(bucket string) []byte {
+	return []byte(bucket)
 }
 
 func initDB(filePath string, smConfig *core.StakingManagerConfiguration) (*bbolt.DB, error) {
@@ -66,5 +71,6 @@ func defaultChainBuckets(chainID string) [][]byte {
 		ChainBucket(ProcessedTxsBucket, chainID),
 		ChainBucket(ExpectedTxsBucket, chainID),
 		ChainBucket(UnprocessedBatchEventsBucket, chainID),
+		Bucket(ExchangeRateBucket),
 	}
 }

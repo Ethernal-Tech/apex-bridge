@@ -113,7 +113,7 @@ func (sa *StakingAddressImpl) Unstake(amount *big.Int, exchangeRate float64) err
 // It calculates the portion of the reward allocated to users (based on usersRewardsPercentage)
 // and adds it to the total tokens including rewards.
 func (sa *StakingAddressImpl) ReceiveReward(reward *big.Int) error {
-	if sa.totalStTokens.Cmp(big.NewInt(0)) == 0 {
+	if sa.totalStTokens.Sign() == 0 {
 		return fmt.Errorf("no staked tokens: reward cannot be distributed to users")
 	}
 

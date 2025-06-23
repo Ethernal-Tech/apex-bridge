@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"slices"
 	"sort"
-	"sync"
+	"strings"
 	"time"
 
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
@@ -16,9 +17,8 @@ import (
 type StakingComponentImpl struct {
 	config               *core.StakingConfiguration
 	cardanoChainObserver oCore.CardanoChainObserver
-	stakingAddresses     map[string]core.StakingAddress
-	exchangeRate         float64
-	mutex                sync.RWMutex
+	stakingAddresses     []core.StakingAddress
+	stakingDB            core.Database
 	logger               hclog.Logger
 }
 
@@ -27,9 +27,12 @@ var _ core.StakingComponent = (*StakingComponentImpl)(nil)
 func NewStakingComponent(
 	config *core.StakingConfiguration,
 	cardanoChainObserver oCore.CardanoChainObserver,
+	stakingDB core.Database,
 	logger hclog.Logger,
 ) (*StakingComponentImpl, error) {
-	stakingAddresses := make(map[string]core.StakingAddress, len(config.Chain.StakingAddresses))
+	stakingAddresses := make([]core.StakingAddress, 0, len(config.Chain.StakingAddresses))
+
+	slices.Sort(config.Chain.StakingAddresses)
 
 	for _, addr := range config.Chain.StakingAddresses {
 		sa, err := NewStakingAddress(addr, config.UsersRewardsPercentage)
@@ -37,14 +40,29 @@ func NewStakingComponent(
 			return nil, fmt.Errorf("failed to create staking address %s: %w", addr, err)
 		}
 
-		stakingAddresses[addr] = sa
+		stakingAddresses = append(stakingAddresses, sa)
 	}
+
+	chainID := config.Chain.ChainID
+
+	exchangeRate, err := stakingDB.GetLastExchangeRate(chainID)
+	if err != nil {
+		logger.Info("Could not get last exchange rate, initializing to 1", "chainID", chainID, "error", err)
+
+		if err := stakingDB.UpdateExchangeRate(chainID, 1); err != nil {
+			return nil, fmt.Errorf("failed to update initial exchange rate for chainID %s: %w", chainID, err)
+		}
+
+		exchangeRate = 1
+	}
+
+	logger.Info("Creating new staking component", "exchangeRate", exchangeRate)
 
 	return &StakingComponentImpl{
 		config:               config,
 		cardanoChainObserver: cardanoChainObserver,
 		stakingAddresses:     stakingAddresses,
-		exchangeRate:         1,
+		stakingDB:            stakingDB,
 		logger:               logger,
 	}, nil
 }
@@ -77,12 +95,9 @@ func (sc *StakingComponentImpl) Start(ctx context.Context) error {
 	}
 }
 
-// GetExchangeRate returns the current exchange rate between the native tokens and stTokens.
-func (sc *StakingComponentImpl) GetExchangeRate() float64 {
-	sc.mutex.RLock()
-	defer sc.mutex.RUnlock()
-
-	return sc.exchangeRate
+// GetLastExchangeRate returns the current exchange rate between the native tokens and stTokens.
+func (sc *StakingComponentImpl) GetLastExchangeRate() (float64, error) {
+	return sc.stakingDB.GetLastExchangeRate(sc.config.Chain.ChainID)
 }
 
 // ChooseStakeAddrForStaking selects the staking address with the lowest current load.
@@ -94,11 +109,11 @@ func (sc *StakingComponentImpl) ChooseStakeAddrForStaking(amount *big.Int) (stri
 	minTotalTokens := new(big.Int)
 	addrForStaking := ""
 
-	for addr, stakeAddr := range sc.stakingAddresses {
+	for _, stakeAddr := range sc.stakingAddresses {
 		totalTokens := stakeAddr.GetTotalTokensWithRewards()
 		if addrForStaking == "" || totalTokens.Cmp(minTotalTokens) < 0 {
 			minTotalTokens = totalTokens
-			addrForStaking = addr
+			addrForStaking = stakeAddr.GetAddress()
 		}
 	}
 
@@ -113,9 +128,7 @@ func (sc *StakingComponentImpl) ChooseStakeAddrForUnstaking(amount *big.Int) (ma
 	}
 
 	sorted := make([]core.StakingAddress, 0, len(sc.stakingAddresses))
-	for _, addr := range sc.stakingAddresses {
-		sorted = append(sorted, addr)
-	}
+	sorted = append(sorted, sc.stakingAddresses...)
 
 	// Sort in descending order by total tokens with rewards
 	sort.Slice(sorted, func(i, j int) bool {
@@ -126,7 +139,7 @@ func (sc *StakingComponentImpl) ChooseStakeAddrForUnstaking(amount *big.Int) (ma
 	addrsForUnstake := make(map[string]*big.Int)
 
 	for _, addr := range sorted {
-		if remaining.Cmp(big.NewInt(0)) == 0 || addr.GetTotalTokensWithRewards().Cmp(big.NewInt(0)) == 0 {
+		if remaining.Sign() == 0 || addr.GetTotalTokensWithRewards().Sign() == 0 {
 			break
 		}
 
@@ -136,7 +149,7 @@ func (sc *StakingComponentImpl) ChooseStakeAddrForUnstaking(amount *big.Int) (ma
 		remaining.Sub(remaining, toUnstake)
 	}
 
-	if remaining.Cmp(big.NewInt(0)) > 0 {
+	if remaining.Sign() > 0 {
 		available := new(big.Int).Sub(amount, remaining)
 
 		return nil, fmt.Errorf(
@@ -152,30 +165,52 @@ func (sc *StakingComponentImpl) ChooseStakeAddrForUnstaking(amount *big.Int) (ma
 //
 // This function assumes the staking address has already received the actual tokens.
 func (sc *StakingComponentImpl) Stake(amount *big.Int, stakingAddress string) error {
-	sa, ok := sc.stakingAddresses[stakingAddress]
-	if !ok {
-		return fmt.Errorf("staking address %s not found for chainID %s", stakingAddress, sc.config.Chain.ChainID)
+	if amount == nil || amount.Sign() <= 0 {
+		return fmt.Errorf("stake amount must be greater than zero")
 	}
 
-	return sa.Stake(amount, sc.GetExchangeRate())
+	sa, err := sc.findStakingAddress(stakingAddress)
+	if err != nil {
+		return fmt.Errorf("failed to stake: %w", err)
+	}
+
+	exchangeRate, err := sc.GetLastExchangeRate()
+	if err != nil {
+		return fmt.Errorf("failed to get exchange rate: %w", err)
+	}
+
+	return sa.Stake(amount, exchangeRate)
 }
 
 // Unstake processes a user's request to withdraw staked tokens from a specific staking address.
 func (sc *StakingComponentImpl) Unstake(amount *big.Int, stakingAddress string) error {
-	sa, ok := sc.stakingAddresses[stakingAddress]
-	if !ok {
-		return fmt.Errorf("staking address %s not found for chainID %s", stakingAddress, sc.config.Chain.ChainID)
+	if amount == nil || amount.Sign() <= 0 {
+		return fmt.Errorf("unstake amount must be greater than zero")
 	}
 
-	return sa.Unstake(amount, sc.GetExchangeRate())
+	sa, err := sc.findStakingAddress(stakingAddress)
+	if err != nil {
+		return fmt.Errorf("failed to unstake: %w", err)
+	}
+
+	exchangeRate, err := sc.GetLastExchangeRate()
+	if err != nil {
+		return fmt.Errorf("failed to get exchange rate: %w", err)
+	}
+
+	return sa.Unstake(amount, exchangeRate)
 }
 
 // ReceiveReward adds a reward amount to the specified staking address
 // and updates the global exchange rate accordingly.
 func (sc *StakingComponentImpl) ReceiveReward(reward *big.Int, stakingAddress string) error {
-	sa, ok := sc.stakingAddresses[stakingAddress]
-	if !ok {
-		return fmt.Errorf("staking address %s not found for chainID %s", stakingAddress, sc.config.Chain.ChainID)
+	if reward == nil || reward.Sign() <= 0 {
+		return fmt.Errorf("reward must be greater than zero")
+	}
+
+	sa, err := sc.findStakingAddress(stakingAddress)
+	if err != nil {
+		return fmt.Errorf("failed to receive reward: %w", err)
 	}
 
 	if err := sa.ReceiveReward(reward); err != nil {
@@ -187,9 +222,10 @@ func (sc *StakingComponentImpl) ReceiveReward(reward *big.Int, stakingAddress st
 		return fmt.Errorf("failed to calculate exchange rate: %w", err)
 	}
 
-	sc.mutex.Lock()
-	sc.exchangeRate = newExchangeRate
-	sc.mutex.Unlock()
+	err = sc.stakingDB.UpdateExchangeRate(sc.config.Chain.ChainID, newExchangeRate)
+	if err != nil {
+		return fmt.Errorf("failed to update exchange rate in db: %w", err)
+	}
 
 	return nil
 }
@@ -205,8 +241,13 @@ func (sc *StakingComponentImpl) calculateExchangeRate() (float64, error) {
 	}
 
 	totalStTokens := sc.totalStTokens()
-	if totalStTokens.Cmp(big.NewInt(0)) == 0 {
-		return sc.GetExchangeRate(), nil
+	if totalStTokens.Sign() == 0 {
+		exchangeRate, err := sc.GetLastExchangeRate()
+		if err != nil {
+			return 0, fmt.Errorf("no staked tokens, failed to get last exchange rate: %w", err)
+		}
+
+		return exchangeRate, nil
 	}
 
 	// Convert integers to floats for division
@@ -238,6 +279,18 @@ func (sc *StakingComponentImpl) totalStTokens() *big.Int {
 	}
 
 	return sum
+}
+
+func (sc *StakingComponentImpl) findStakingAddress(stakingAddress string) (core.StakingAddress, error) {
+	idx, found := slices.BinarySearchFunc(sc.stakingAddresses, stakingAddress, func(a core.StakingAddress, b string) int {
+		return strings.Compare(a.GetAddress(), b)
+	})
+
+	if found {
+		return sc.stakingAddresses[idx], nil
+	} else {
+		return nil, fmt.Errorf("staking address %s not found for chainID %s", stakingAddress, sc.config.Chain.ChainID)
+	}
 }
 
 func minBigInt(a, b *big.Int) *big.Int {

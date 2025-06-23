@@ -2,6 +2,8 @@ package stakingcomponent
 
 import (
 	"math/big"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -12,17 +14,29 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ocCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	databaseaccess "github.com/Ethernal-Tech/apex-bridge/staking/database_access"
 )
 
 const usersRewardsPercentage = 0.2
 
 var stakingAddresses = []string{
-	"addr_test1wpphktxx847q52fzn5g7efu2ftwxzuwwjkgsuvgwn2m7sdgn0z1z1",
-	"addr_test1wpphktxx847q52fzn5g7efu2ftwxzuwwjkgsuvgwn2m7sdgn0z8z2",
+	"addr_test1wpphktxx847q52fzn5g7efu2ftwxzuwwjkgsuvgwn2m7sdgn0z8z5",
 	"addr_test1wpphktxx847q52fzn5g7efu2ftwxzuwwjkgsuvgwn2m7sdgn0z8z3",
+	"addr_test1wpphktxx847q52fzn5g7efu2ftwxzuwwjkgsuvgwn2m7sdgn0z8z4",
 }
 
 func TestCalculateExchangeRate(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	stakeAmounts := []*big.Int{
 		big.NewInt(50_000_000_000_000_000),
 		big.NewInt(20_000_000_000_000_000),
@@ -79,7 +93,10 @@ func TestCalculateExchangeRate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			stakingComponent := newStakingComponent(t, test.configBuilder)
+			t.Cleanup(dbCleanup)
+			stakingDB := createStakingDB(t, dbPath)
+
+			stakingComponent := newStakingComponent(t, stakingDB, test.configBuilder)
 			assert.NotNil(t, stakingComponent)
 
 			for addr, amount := range test.stakeAmount {
@@ -99,7 +116,10 @@ func TestCalculateExchangeRate(t *testing.T) {
 	}
 
 	t.Run("calculate exchange rate after rewards are received", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		expectedRates := calculateExpectedExchangeRates(stakeAmounts, rewards)
@@ -118,7 +138,10 @@ func TestCalculateExchangeRate(t *testing.T) {
 	})
 
 	t.Run("exchange rate after stake, rewards, and unstake", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		expectedRates := calculateExpectedExchangeRates(stakeAmounts, rewards)
@@ -142,11 +165,22 @@ func TestCalculateExchangeRate(t *testing.T) {
 		}
 
 		remainingTotalTokens := sc.totalTokensWithRewards()
-		assert.Zero(t, remainingTotalTokens.Cmp(big.NewInt(0)))
+		assert.Zero(t, remainingTotalTokens.Sign())
 	})
 }
 
 func TestChooseAddrForStaking(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	tests := []struct {
 		name            string
 		configBuilder   func() core.StakingConfiguration
@@ -194,7 +228,10 @@ func TestChooseAddrForStaking(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			stakingComponent := newStakingComponent(t, test.configBuilder)
+			t.Cleanup(dbCleanup)
+			stakingDB := createStakingDB(t, dbPath)
+
+			stakingComponent := newStakingComponent(t, stakingDB, test.configBuilder)
 			assert.NotNil(t, stakingComponent)
 
 			stakeTokens(t, stakingComponent, test.stakeTokens)
@@ -218,6 +255,17 @@ func TestChooseAddrForStaking(t *testing.T) {
 }
 
 func TestChooseAddrForUnstaking(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	tests := []struct {
 		name           string
 		configBuilder  func() core.StakingConfiguration
@@ -298,7 +346,10 @@ func TestChooseAddrForUnstaking(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			stakingComponent := newStakingComponent(t, test.configBuilder)
+			t.Cleanup(dbCleanup)
+			stakingDB := createStakingDB(t, dbPath)
+
+			stakingComponent := newStakingComponent(t, stakingDB, test.configBuilder)
 			assert.NotNil(t, stakingComponent)
 
 			stakeTokens(t, stakingComponent, test.stakeTokens)
@@ -317,26 +368,46 @@ func TestChooseAddrForUnstaking(t *testing.T) {
 }
 
 func TestStake(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	t.Run("stake to valid address updates state correctly", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		amount := big.NewInt(1_000_000_000_000_000) // 1 token
 		addr := stakingAddresses[0]
 
-		initialExchangeRate := sc.GetExchangeRate()
+		initialExchangeRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
 		assert.Equal(t, float64(1), initialExchangeRate)
 
-		err := sc.Stake(amount, addr)
+		err = sc.Stake(amount, addr)
 		require.NoError(t, err)
 
-		sa := sc.stakingAddresses[addr]
+		sa, err := sc.findStakingAddress(addr)
+		assert.Nil(t, err)
+
 		assert.Equal(t, amount.String(), sa.GetTotalTokensWithRewards().String())
 		assert.Equal(t, amount.String(), sa.GetTotalStTokens().String()) // 1:1 exchange rate
 	})
 
 	t.Run("stake fails with unknown staking address", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		err := sc.Stake(big.NewInt(1_000), "unknown_address")
@@ -345,15 +416,16 @@ func TestStake(t *testing.T) {
 	})
 
 	t.Run("stake fails when exchange rate is 0", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		addr := stakingAddresses[0]
 
 		// manually override exchange rate to simulate 0
-		sc.mutex.Lock()
-		sc.exchangeRate = 0
-		sc.mutex.Unlock()
+		require.NoError(t, sc.stakingDB.UpdateExchangeRate(sc.config.Chain.ChainID, 0))
 
 		err := sc.Stake(big.NewInt(1_000), addr)
 		assert.Error(t, err)
@@ -362,8 +434,22 @@ func TestStake(t *testing.T) {
 }
 
 func TestUnstake(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	t.Run("unstake successfully with valid address and sufficient balance", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		assert.NotNil(t, sc)
 
 		addr := stakingAddresses[0]
@@ -375,29 +461,35 @@ func TestUnstake(t *testing.T) {
 		// Unstake the same amount of stTokens (1:1 exchange rate)
 		require.NoError(t, sc.Unstake(stakeAmount, addr))
 
-		sa := sc.stakingAddresses[addr]
-		assert.Zero(t, sa.GetTotalTokensWithRewards().Cmp(big.NewInt(0)))
-		assert.Zero(t, sa.GetTotalStTokens().Cmp(big.NewInt(0)))
+		sa, err := sc.findStakingAddress(addr)
+		assert.Nil(t, err)
+
+		assert.Zero(t, sa.GetTotalTokensWithRewards().Sign())
+		assert.Zero(t, sa.GetTotalStTokens().Sign())
 	})
 
 	t.Run("fail to unstake from unknown address", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		err := sc.Unstake(big.NewInt(1000), "unknown_address")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
 
 	t.Run("fail to unstake with zero exchange rate", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		addr := stakingAddresses[0]
 
 		// Simulate staking
 		require.NoError(t, sc.Stake(big.NewInt(1_000), addr))
 
 		// Force exchange rate to 0
-		sc.mutex.Lock()
-		sc.exchangeRate = 0
-		sc.mutex.Unlock()
+		require.NoError(t, sc.stakingDB.UpdateExchangeRate(sc.config.Chain.ChainID, 0))
 
 		err := sc.Unstake(big.NewInt(100), addr)
 		require.Error(t, err)
@@ -405,7 +497,10 @@ func TestUnstake(t *testing.T) {
 	})
 
 	t.Run("fail to unstake more stTokens than available", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		addr := stakingAddresses[0]
 
 		require.NoError(t, sc.Stake(big.NewInt(1_000), addr))
@@ -417,49 +512,73 @@ func TestUnstake(t *testing.T) {
 	})
 
 	t.Run("fail to unstake if underlying tokens with rewards are insufficient", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		addr := stakingAddresses[0]
 
 		// Stake 1000 tokens
 		require.NoError(t, sc.Stake(big.NewInt(1_000), addr))
 
 		// Simulate reduction of totalTokensWithRewards to a small value
-		sa := sc.stakingAddresses[addr]
+		sa, err := sc.findStakingAddress(addr)
+		assert.Nil(t, err)
+
 		sa.(*StakingAddressImpl).totalTokensWithRewards = big.NewInt(500)
 
-		err := sc.Unstake(big.NewInt(1_000), addr)
+		err = sc.Unstake(big.NewInt(1_000), addr)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "exceed available tokens with rewards")
 	})
 }
 
 func TestReceiveReward(t *testing.T) {
+	testDir := createTempDir(t)
+	defer os.RemoveAll(testDir)
+
+	dbPath := filepath.Join(testDir, "temp_test.db")
+
+	dbCleanup := func() {
+		if _, err := os.Stat(dbPath); err == nil {
+			os.Remove(dbPath)
+		}
+	}
+
 	t.Run("successfully distribute reward and update exchange rate", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		addr := stakingAddresses[0]
 		stakeAmount := big.NewInt(1_000_000_000_000_000)
 		reward := big.NewInt(1_000_000_000)
 
 		// Stake first
 		require.NoError(t, sc.Stake(stakeAmount, addr))
-		initialRate := sc.GetExchangeRate()
+		initialRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
 		assert.Equal(t, 1.0, initialRate)
 
 		// Receive reward
-		err := sc.ReceiveReward(reward, addr)
-		require.NoError(t, err)
+		require.NoError(t, sc.ReceiveReward(reward, addr))
 
 		// Check exchange rate increased
-		newRate := sc.GetExchangeRate()
+		newRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
 		assert.Greater(t, newRate, initialRate)
 
 		// Check that tokens with rewards increased
-		sa := sc.stakingAddresses[addr]
+		sa, err := sc.findStakingAddress(addr)
+		assert.Nil(t, err)
 		assert.True(t, sa.GetTotalTokensWithRewards().Cmp(stakeAmount) > 0)
 	})
 
 	t.Run("fail to distribute reward if no stTokens are present", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		addr := stakingAddresses[0]
 		reward := big.NewInt(1_000_000_000)
 
@@ -469,7 +588,10 @@ func TestReceiveReward(t *testing.T) {
 	})
 
 	t.Run("fail to distribute reward to unknown address", func(t *testing.T) {
-		sc := newStakingComponent(t, createConfigWithStAddrs)
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
 		reward := big.NewInt(1_000_000_000)
 
 		err := sc.ReceiveReward(reward, "nonexistent_address")
@@ -478,13 +600,37 @@ func TestReceiveReward(t *testing.T) {
 	})
 }
 
-func newStakingComponent(t *testing.T, configBuilder func() core.StakingConfiguration) *StakingComponentImpl {
+func createTempDir(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.MkdirTemp("", "staking-test-*")
+	require.NoError(t, err)
+
+	return dir
+}
+
+func createStakingDB(t *testing.T, dbPath string) *databaseaccess.BBoltDatabase {
+	t.Helper()
+
+	cfg := createConfigWithStAddrs()
+
+	smConfig := createSMConfig(&cfg)
+	boltDB, err := databaseaccess.NewDatabase(dbPath, &smConfig)
+	require.NoError(t, err)
+
+	stakingDB := &databaseaccess.BBoltDatabase{}
+	stakingDB.Init(boltDB, &smConfig)
+
+	return stakingDB
+}
+
+func newStakingComponent(t *testing.T, stakingDB *databaseaccess.BBoltDatabase, configBuilder func() core.StakingConfiguration) *StakingComponentImpl {
 	t.Helper()
 
 	observer := core.CardanoChainObserverMock{}
 	cfg := configBuilder()
 
-	sc, err := NewStakingComponent(&cfg, &observer, hclog.Default())
+	sc, err := NewStakingComponent(&cfg, &observer, stakingDB, hclog.Default())
 	require.NoError(t, err)
 
 	return sc
@@ -497,6 +643,20 @@ func stakeTokens(t *testing.T, sc *StakingComponentImpl, tokens map[string]*big.
 		if amount, ok := tokens[addr.GetAddress()]; ok {
 			require.NoError(t, addr.Stake(amount, 1))
 		}
+	}
+}
+
+func createSMConfig(stakingConfig *core.StakingConfiguration) core.StakingManagerConfiguration {
+	chains := map[string]*core.CardanoChainConfig{
+		stakingConfig.Chain.ChainID: {
+			BaseCardanoChainConfig: ocCore.BaseCardanoChainConfig{
+				ChainID: stakingConfig.Chain.ChainID,
+			},
+		},
+	}
+
+	return core.StakingManagerConfiguration{
+		Chains: chains,
 	}
 }
 

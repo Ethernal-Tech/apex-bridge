@@ -88,7 +88,7 @@ func TestGetExchangeRate(t *testing.T) {
 			configBuilder:  createConfigWithStAddrs,
 			chainID:        common.ChainIDStrNexus,
 			expectError:    true,
-			expectedErrMsg: "failed to get exchange rate: staking component not found",
+			expectedErrMsg: "failed to get staking component for chainID",
 		},
 	}
 
@@ -106,13 +106,17 @@ func TestGetExchangeRate(t *testing.T) {
 			stakingManager, err := NewStakingManager(ctx, &smConfig, stakingDB, indexerDbs, hclog.Default())
 			require.NoError(t, err)
 
-			rate, err := stakingManager.GetExchangeRate(test.chainID)
+			stakingComponent, err := stakingManager.GetStakingComponent(test.chainID)
 
 			if test.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), test.expectedErrMsg)
 			} else {
 				require.NoError(t, err)
+
+				rate, err := stakingComponent.GetLastExchangeRate()
+				require.NoError(t, err)
+
 				assert.Equal(t, test.expectedRate, rate)
 			}
 		})
@@ -149,13 +153,6 @@ func TestChooseAddrForStaking(t *testing.T) {
 			chainID:       common.ChainIDStrPrime,
 		},
 		{
-			name:           "choose address for staking fails for non-existing chain",
-			configBuilder:  createConfigWithStAddrs,
-			chainID:        common.ChainIDStrNexus,
-			expectError:    true,
-			expectedErrMsg: "failed to choose stake address for staking: staking component not found",
-		},
-		{
 			name:           "choose address for staking fails when no staking addresses configured",
 			configBuilder:  createConfigWithoutStAddrs,
 			chainID:        common.ChainIDStrPrime,
@@ -178,7 +175,10 @@ func TestChooseAddrForStaking(t *testing.T) {
 			stakingManager, err := NewStakingManager(ctx, &smConfig, stakingDB, indexerDbs, hclog.Default())
 			require.NoError(t, err)
 
-			stakeAddr, err := stakingManager.ChooseStakeAddrForStaking(test.chainID, big.NewInt(5))
+			stakingComponent, err := stakingManager.GetStakingComponent(test.chainID)
+			require.NoError(t, err)
+
+			stakeAddr, err := stakingComponent.ChooseStakeAddrForStaking(big.NewInt(5))
 
 			if test.expectError {
 				require.Error(t, err)
@@ -223,12 +223,6 @@ func TestChooseAddrForUnstaking(t *testing.T) {
 			expectedErrMsg: "insufficient funds to unstake",
 		},
 		{
-			name:           "choose address for unstaking fails for non-existing chain",
-			configBuilder:  createConfigWithStAddrs,
-			chainID:        common.ChainIDStrNexus,
-			expectedErrMsg: "failed to choose stake address for unstaking: staking component not found",
-		},
-		{
 			name:           "choose address for unstaking fails when no staking addresses configured",
 			configBuilder:  createConfigWithoutStAddrs,
 			chainID:        common.ChainIDStrPrime,
@@ -250,7 +244,10 @@ func TestChooseAddrForUnstaking(t *testing.T) {
 			stakingManager, err := NewStakingManager(ctx, &smConfig, stakingDB, indexerDbs, hclog.Default())
 			require.NoError(t, err)
 
-			_, err = stakingManager.ChooseStakeAddrForUnstaking(test.chainID, big.NewInt(5))
+			stakingComponent, err := stakingManager.GetStakingComponent(test.chainID)
+			require.NoError(t, err)
+
+			_, err = stakingComponent.ChooseStakeAddrForUnstaking(big.NewInt(5))
 
 			require.Error(t, err)
 			require.Contains(t, err.Error(), test.expectedErrMsg)
