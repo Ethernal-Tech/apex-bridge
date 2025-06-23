@@ -66,11 +66,23 @@ func getOutputs(
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, receiver.Amount.Uint64())
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-					if tokenName := cardanoConfig.GetNativeTokenName(srcChainID); tokenName != "" {
-						updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					if tx.TransactionType == uint8(common.DefundConfirmedTxType) {
+						// defund tx should have correct destination chain id set.
+						// this is hacky solution that will work for now
+						token, err := cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+						if err != nil {
+							logger.Error("token is not defined for defund",
+								"src", srcChainID, "config", cardanoConfig.NativeTokens)
+						} else {
+							updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
+						}
 					} else {
-						logger.Error("token is not defined for destination chain",
-							"src", srcChainID, "dst", destChainID, "config", cardanoConfig.NativeTokens)
+						if tokenName := cardanoConfig.GetNativeTokenName(srcChainID); tokenName != "" {
+							updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+						} else {
+							logger.Error("token is not defined for destination chain",
+								"src", srcChainID, "dst", destChainID, "config", cardanoConfig.NativeTokens)
+						}
 					}
 				}
 			}
