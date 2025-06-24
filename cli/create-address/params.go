@@ -21,13 +21,17 @@ const (
 	bridgeNodeURLFlag    = "bridge-url"
 	bridgeSCAddrFlag     = "bridge-addr"
 	bridgePrivateKeyFlag = "bridge-key"
+	privateKeyConfigFlag = "key-config"
+	showPolicyScrFlag    = "show-policy-script"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
 	chainIDFlagDesc          = "cardano chain ID (prime, vector, etc)"
-	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
+	bridgePrivateKeyFlagDesc = "private key for bridge admin"
+	privateKeyConfigFlagDesc = "path to secrets manager config file"
+	showPolicyScrFlagDesc    = "show policy script"
 )
 
 type createAddressParams struct {
@@ -38,6 +42,8 @@ type createAddressParams struct {
 	bridgeSCAddr     string
 	chainID          string
 	bridgePrivateKey string
+	privateKeyConfig string
+	showPolicyScript bool
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -98,6 +104,22 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		"",
 		bridgePrivateKeyFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().BoolVar(
+		&ip.showPolicyScript,
+		showPolicyScrFlag,
+		false,
+		showPolicyScrFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
 func (ip *createAddressParams) Execute(
@@ -118,6 +140,7 @@ func (ip *createAddressParams) Execute(
 
 	_, _ = outputter.Write([]byte("Validators chain data retrieved:\n"))
 	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(ip.chainID, validatorsData)))
+	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 
 	keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
@@ -143,12 +166,14 @@ func (ip *createAddressParams) Execute(
 	}
 
 	return &CmdResult{
-		ApexAddresses: addrs,
+		ApexAddresses:     addrs,
+		PolicyScripts:     policyScripts,
+		ShowPolicyScripts: ip.showPolicyScript,
 	}, nil
 }
 
 func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
-	if ip.bridgePrivateKey == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return eth.NewEthHelperWrapper(
 			hclog.NewNullLogger(),
 			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
@@ -156,9 +181,9 @@ func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error
 			ethtxhelper.WithDynamicTx(false)), nil
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}
 
 	return eth.NewEthHelperWrapperWithWallet(

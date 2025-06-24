@@ -20,15 +20,15 @@ const (
 	forceRegenerateFlag  = "force"
 	showPrivateKeyFlag   = "show-pk"
 
-	validatorDataDirFlagDesc = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
-	validatorConfigFlagDesc  = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
+	validatorDataDirFlagDesc = "(mandatory validator-config not specified) path to bridge chain data directory when using local secrets manager" //nolint:lll
+	validatorConfigFlagDesc  = "(mandatory validator-data not specified) path to bridge chain secrets manager config file"                       //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
 	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, etc)"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
 	showPrivateKeyFlagDesc   = "show private key in output"
 )
 
-type initParams struct {
+type walletCreateParams struct {
 	validatorDataDir string
 	validatorConfig  string
 	chainID          string
@@ -37,7 +37,7 @@ type initParams struct {
 	showPrivateKey   bool
 }
 
-func (ip *initParams) validateFlags() error {
+func (ip *walletCreateParams) validateFlags() error {
 	if ip.validatorDataDir == "" && ip.validatorConfig == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", validatorDataDirFlag, validatorConfigFlag)
 	}
@@ -49,7 +49,7 @@ func (ip *initParams) validateFlags() error {
 	return nil
 }
 
-func (ip *initParams) setFlags(cmd *cobra.Command) {
+func (ip *walletCreateParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.validatorDataDir,
 		validatorDataDirFlag,
@@ -95,7 +95,7 @@ func (ip *initParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
 
-func (ip *initParams) Execute() (common.ICommandResult, error) {
+func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	secretsManager, err := common.GetSecretsManager(ip.validatorDataDir, ip.validatorConfig, true)
 	if err != nil {
 		return nil, err
