@@ -40,7 +40,7 @@ func NewEthHelperWrapper(
 }
 
 func NewEthHelperWrapperWithWallet(
-	wallet *ethtxhelper.EthTxWallet, logger hclog.Logger,
+	wallet ethtxhelper.IEthTxWallet, logger hclog.Logger,
 	opts ...ethtxhelper.TxRelayerOption,
 ) *EthHelperWrapper {
 	return &EthHelperWrapper{

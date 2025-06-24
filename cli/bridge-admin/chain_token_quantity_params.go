@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -87,10 +88,11 @@ func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 type updateChainTokenQuantityParams struct {
-	bridgeNodeURL string
-	chainID       string
-	amountStr     string
-	privateKeyRaw string
+	bridgeNodeURL    string
+	chainID          string
+	amountStr        string
+	bridgePrivateKey string
+	privateKeyConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -110,8 +112,8 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag must be greater or lower than zero", amountFlag)
 	}
 
-	if g.privateKeyRaw == "" {
-		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
+	if g.bridgePrivateKey == "" && g.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
 	return nil
@@ -128,9 +130,9 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
 
-	wallet, err := ethtxhelper.NewEthTxWallet(g.privateKeyRaw)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, g.bridgePrivateKey, g.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create bridge admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(g.bridgeNodeURL))
@@ -196,10 +198,16 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.privateKeyRaw,
+		&g.bridgePrivateKey,
 		privateKeyFlag,
 		"",
-		privateKeyFlagDesc,
+		bridgePrivateKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&g.amountStr,
@@ -207,6 +215,8 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		"0",
 		chainTokenQuantityAmountFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)
 }
 
 var (
