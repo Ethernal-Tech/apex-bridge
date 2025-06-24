@@ -3,6 +3,7 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strings"
 	"time"
@@ -65,6 +66,8 @@ const (
 	defaultCardanoTTLSlotNumberInc       = 1800 + defaultCardanoBlockConfirmationCount*10 // BlockTimeSeconds
 	defaultCardanoSlotRoundingThreshold  = 60
 )
+
+var defaultMaxTokenAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
 
 type skylineGenerateConfigsParams struct {
 	primeNetworkAddress         string
@@ -624,6 +627,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
+			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},
