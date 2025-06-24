@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -28,8 +29,8 @@ func (ip *setValidatorsChainDataEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if ip.evmPrivateKey == "" {
-		return fmt.Errorf("invalid --%s flag", evmPrivateKeyFlag)
+	if ip.evmPrivateKey == "" && ip.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
 	if ip.bridgeNodeURL != "" {
@@ -71,6 +72,13 @@ func (ip *setValidatorsChainDataEVMParams) setFlags(cmd *cobra.Command) {
 		evmPrivateKeyFlag,
 		"",
 		evmPrivateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -129,6 +137,8 @@ func (ip *setValidatorsChainDataEVMParams) setFlags(cmd *cobra.Command) {
 		validatorsProxyAddrFlagDesc,
 	)
 
+	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
 }
@@ -162,9 +172,9 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		return nil, err
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.evmPrivateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.evmPrivateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(

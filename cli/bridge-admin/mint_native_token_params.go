@@ -28,6 +28,7 @@ const (
 	tokenNameFlagDesc       = "name of the token to mint"
 	mintAmountFlagDesc      = "amount to mint"
 	showPolicyScrFlagDesc   = "show policy script"
+	privateKeyFlagDesc      = "wallet private signing key"
 
 	maxInputs            = 40
 	testNetProtocolMagic = uint(2)
