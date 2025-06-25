@@ -123,6 +123,8 @@ type skylineGenerateConfigsParams struct {
 
 	cardanoPrimeWrappedTokenName string
 	primeCardanoWrappedTokenName string
+
+	emptyBlocksThreshold uint
 }
 
 func (p *skylineGenerateConfigsParams) validateFlags() error {
@@ -502,6 +504,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoPrimeWrappedTokenNameFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&p.emptyBlocksThreshold,
+		emptyBlocksThresholdFlag,
+		defaultEmptyBlocksThreshold,
+		emptyBlocksThresholdFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -623,8 +632,8 @@ func (p *skylineGenerateConfigsParams) Execute(
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
 				EmptyBlocksThreshold: map[string]uint{
-					common.ChainIDStrPrime:   200,
-					common.ChainIDStrCardano: 200,
+					common.ChainIDStrPrime:   p.emptyBlocksThreshold,
+					common.ChainIDStrCardano: p.emptyBlocksThreshold,
 				},
 			},
 		},
