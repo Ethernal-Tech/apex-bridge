@@ -622,7 +622,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold:      200,
+				EmptyBlocksThreshold: map[string]uint{
+					common.ChainIDStrPrime:   200,
+					common.ChainIDStrCardano: 200,
+				},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
