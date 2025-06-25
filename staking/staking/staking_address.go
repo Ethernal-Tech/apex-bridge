@@ -17,10 +17,10 @@ import (
 //   - usersRewardsPercentage: The percentage of rewards allocated to users
 //     staking through this address (value between 0 and 1).
 type StakingAddressImpl struct {
-	address                string
-	totalTokensWithRewards *big.Int
-	totalStTokens          *big.Int
-	usersRewardsPercentage float64
+	Address                string   `json:"address"`
+	TotalTokensWithRewards *big.Int `json:"totalTokensWithRewards"`
+	TotalStTokens          *big.Int `json:"totalStTokens"`
+	UsersRewardsPercentage float64  `json:"usersRewardsPercentage"`
 }
 
 var _ core.StakingAddress = (*StakingAddressImpl)(nil)
@@ -33,23 +33,23 @@ func NewStakingAddress(address string, usersRewardsPercentage float64) (*Staking
 	}
 
 	return &StakingAddressImpl{
-		address:                address,
-		totalTokensWithRewards: big.NewInt(0),
-		totalStTokens:          big.NewInt(0),
-		usersRewardsPercentage: usersRewardsPercentage,
+		Address:                address,
+		TotalTokensWithRewards: big.NewInt(0),
+		TotalStTokens:          big.NewInt(0),
+		UsersRewardsPercentage: usersRewardsPercentage,
 	}, nil
 }
 
 func (sa *StakingAddressImpl) GetAddress() string {
-	return sa.address
+	return sa.Address
 }
 
 func (sa *StakingAddressImpl) GetTotalStTokens() *big.Int {
-	return sa.totalStTokens
+	return sa.TotalStTokens
 }
 
 func (sa *StakingAddressImpl) GetTotalTokensWithRewards() *big.Int {
-	return sa.totalTokensWithRewards
+	return sa.TotalTokensWithRewards
 }
 
 // Staking address state is updated after receiving users' staked tokens.
@@ -61,14 +61,14 @@ func (sa *StakingAddressImpl) Stake(amount *big.Int, exchangeRate float64) error
 		return fmt.Errorf("cannot stake tokens: exchange rate cannot be zero")
 	}
 
-	sa.totalTokensWithRewards.Add(sa.totalTokensWithRewards, amount)
+	sa.TotalTokensWithRewards.Add(sa.TotalTokensWithRewards, amount)
 
 	amountFloat := new(big.Float).SetInt(amount)
 	stTokensToMintFloat := new(big.Float).Quo(amountFloat, big.NewFloat(exchangeRate))
 	stTokensToMint := new(big.Int)
 	stTokensToMint, _ = stTokensToMintFloat.Int(stTokensToMint)
 
-	sa.totalStTokens.Add(sa.totalStTokens, stTokensToMint)
+	sa.TotalStTokens.Add(sa.TotalStTokens, stTokensToMint)
 
 	return nil
 }
@@ -82,11 +82,11 @@ func (sa *StakingAddressImpl) Unstake(amount *big.Int, exchangeRate float64) err
 		return fmt.Errorf("cannot unstake tokens: exchange rate cannot be zero")
 	}
 
-	if sa.totalStTokens.Cmp(amount) < 0 {
+	if sa.TotalStTokens.Cmp(amount) < 0 {
 		return fmt.Errorf(
 			"cannot unstake: requested stTokens (%s) exceeds available stTokens (%s)",
 			amount.String(),
-			sa.totalStTokens.String(),
+			sa.TotalStTokens.String(),
 		)
 	}
 
@@ -95,16 +95,16 @@ func (sa *StakingAddressImpl) Unstake(amount *big.Int, exchangeRate float64) err
 	tokensToUnstake := new(big.Int)
 	tokensToUnstake, _ = stTokensToUnstakeFloat.Int(tokensToUnstake)
 
-	if sa.totalTokensWithRewards.Cmp(tokensToUnstake) < 0 {
+	if sa.TotalTokensWithRewards.Cmp(tokensToUnstake) < 0 {
 		return fmt.Errorf(
 			"cannot unstake: required tokens (%s) exceed available tokens with rewards (%s)",
 			tokensToUnstake.String(),
-			sa.totalTokensWithRewards.String(),
+			sa.TotalTokensWithRewards.String(),
 		)
 	}
 
-	sa.totalTokensWithRewards.Sub(sa.totalTokensWithRewards, tokensToUnstake)
-	sa.totalStTokens.Sub(sa.totalStTokens, amount)
+	sa.TotalTokensWithRewards.Sub(sa.TotalTokensWithRewards, tokensToUnstake)
+	sa.TotalStTokens.Sub(sa.TotalStTokens, amount)
 
 	return nil
 }
@@ -113,17 +113,17 @@ func (sa *StakingAddressImpl) Unstake(amount *big.Int, exchangeRate float64) err
 // It calculates the portion of the reward allocated to users (based on usersRewardsPercentage)
 // and adds it to the total tokens including rewards.
 func (sa *StakingAddressImpl) ReceiveReward(reward *big.Int) error {
-	if sa.totalStTokens.Sign() == 0 {
+	if sa.TotalStTokens.Sign() == 0 {
 		return fmt.Errorf("no staked tokens: reward cannot be distributed to users")
 	}
 
 	// Calculate user's share of the reward
 	rewardFloat := new(big.Float).SetInt(reward)
-	userRewardFloat := new(big.Float).Mul(rewardFloat, big.NewFloat(sa.usersRewardsPercentage))
+	userRewardFloat := new(big.Float).Mul(rewardFloat, big.NewFloat(sa.UsersRewardsPercentage))
 	userReward := new(big.Int)
 	userReward, _ = userRewardFloat.Int(userReward)
 
-	sa.totalTokensWithRewards.Add(sa.totalTokensWithRewards, userReward)
+	sa.TotalTokensWithRewards.Add(sa.TotalTokensWithRewards, userReward)
 
 	return nil
 }

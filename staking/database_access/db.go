@@ -16,6 +16,7 @@ var (
 	ExpectedTxsBucket               = "ExpectedTxs"
 	UnprocessedBatchEventsBucket    = "UnprocessedBatchEvents"
 	ProcessedTxsByInnerActionBucket = "ProcessedTxsByInnerAction"
+	StakingAddressesBucket          = "StakingAddresses"
 	ExchangeRateBucket              = "ExchangeRate"
 )
 
@@ -41,7 +42,7 @@ func initDB(filePath string, smConfig *core.StakingManagerConfiguration) (*bbolt
 		return nil, fmt.Errorf("could not open db: %w", err)
 	}
 
-	var allBuckets [][]byte
+	allBuckets := [][]byte{Bucket(ExchangeRateBucket)}
 	for _, chain := range smConfig.Chains {
 		allBuckets = append(allBuckets, defaultChainBuckets(chain.ChainID)...)
 	}
@@ -71,6 +72,7 @@ func defaultChainBuckets(chainID string) [][]byte {
 		ChainBucket(ProcessedTxsBucket, chainID),
 		ChainBucket(ExpectedTxsBucket, chainID),
 		ChainBucket(UnprocessedBatchEventsBucket, chainID),
-		Bucket(ExchangeRateBucket),
+		ChainBucket(UnprocessedBatchEventsBucket, chainID),
+		ChainBucket(StakingAddressesBucket, chainID),
 	}
 }

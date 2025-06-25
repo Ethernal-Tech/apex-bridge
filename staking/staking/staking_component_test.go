@@ -164,7 +164,10 @@ func TestCalculateExchangeRate(t *testing.T) {
 			checkExchangeRate(t, sc, expectedRates[len(expectedRates)-1], false, "")
 		}
 
-		remainingTotalTokens := sc.totalTokensWithRewards()
+		stakingAddresses, err := sc.stakingDB.GetAllStakingAddresses(sc.config.Chain.ChainID)
+		require.NoError(t, err)
+
+		remainingTotalTokens := totalTokensWithRewards(stakingAddresses)
 		assert.Zero(t, remainingTotalTokens.Sign())
 	})
 }
@@ -396,8 +399,8 @@ func TestStake(t *testing.T) {
 		err = sc.Stake(amount, addr)
 		require.NoError(t, err)
 
-		sa, err := sc.findStakingAddress(addr)
-		assert.Nil(t, err)
+		sa, err := sc.stakingDB.GetStakingAddress(sc.config.Chain.ChainID, addr)
+		require.NoError(t, err)
 
 		assert.Equal(t, amount.String(), sa.GetTotalTokensWithRewards().String())
 		assert.Equal(t, amount.String(), sa.GetTotalStTokens().String()) // 1:1 exchange rate
@@ -461,8 +464,8 @@ func TestUnstake(t *testing.T) {
 		// Unstake the same amount of stTokens (1:1 exchange rate)
 		require.NoError(t, sc.Unstake(stakeAmount, addr))
 
-		sa, err := sc.findStakingAddress(addr)
-		assert.Nil(t, err)
+		sa, err := sc.stakingDB.GetStakingAddress(sc.config.Chain.ChainID, addr)
+		require.NoError(t, err)
 
 		assert.Zero(t, sa.GetTotalTokensWithRewards().Sign())
 		assert.Zero(t, sa.GetTotalStTokens().Sign())
@@ -516,16 +519,18 @@ func TestUnstake(t *testing.T) {
 		stakingDB := createStakingDB(t, dbPath)
 
 		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
+		chainID := sc.config.Chain.ChainID
 		addr := stakingAddresses[0]
 
 		// Stake 1000 tokens
 		require.NoError(t, sc.Stake(big.NewInt(1_000), addr))
 
 		// Simulate reduction of totalTokensWithRewards to a small value
-		sa, err := sc.findStakingAddress(addr)
-		assert.Nil(t, err)
+		sa, err := sc.stakingDB.GetStakingAddress(chainID, addr)
+		require.NoError(t, err)
 
-		sa.(*StakingAddressImpl).totalTokensWithRewards = big.NewInt(500)
+		sa.(*StakingAddressImpl).TotalTokensWithRewards = big.NewInt(500)
+		require.NoError(t, sc.stakingDB.UpdateStakingAddress(chainID, sa))
 
 		err = sc.Unstake(big.NewInt(1_000), addr)
 		require.Error(t, err)
@@ -569,9 +574,38 @@ func TestReceiveReward(t *testing.T) {
 		assert.Greater(t, newRate, initialRate)
 
 		// Check that tokens with rewards increased
-		sa, err := sc.findStakingAddress(addr)
-		assert.Nil(t, err)
+		sa, err := sc.stakingDB.GetStakingAddress(sc.config.Chain.ChainID, addr)
+		require.NoError(t, err)
 		assert.True(t, sa.GetTotalTokensWithRewards().Cmp(stakeAmount) > 0)
+	})
+
+	t.Run("successfully distribute zero reward without updating exchange rate", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		sc := newStakingComponent(t, stakingDB, createConfigWithStAddrs)
+		addr := stakingAddresses[0]
+		stakeAmount := big.NewInt(1_000_000_000_000_000)
+		reward := big.NewInt(0)
+
+		// Stake first
+		require.NoError(t, sc.Stake(stakeAmount, addr))
+		initialRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
+		assert.Equal(t, 1.0, initialRate)
+
+		// Receive reward
+		require.NoError(t, sc.ReceiveReward(reward, addr))
+
+		// Check that exchange rate  does not change
+		newRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
+		assert.True(t, newRate == initialRate)
+
+		// Check that tokens with rewards  does not change
+		sa, err := sc.stakingDB.GetStakingAddress(sc.config.Chain.ChainID, addr)
+		require.NoError(t, err)
+		assert.True(t, sa.GetTotalTokensWithRewards().Cmp(stakeAmount) == 0)
 	})
 
 	t.Run("fail to distribute reward if no stTokens are present", func(t *testing.T) {
@@ -618,7 +652,7 @@ func createStakingDB(t *testing.T, dbPath string) *databaseaccess.BBoltDatabase 
 	boltDB, err := databaseaccess.NewDatabase(dbPath, &smConfig)
 	require.NoError(t, err)
 
-	stakingDB := &databaseaccess.BBoltDatabase{}
+	stakingDB := databaseaccess.NewBBoltDatabase(DecodeStakingAddress)
 	stakingDB.Init(boltDB, &smConfig)
 
 	return stakingDB
@@ -639,9 +673,14 @@ func newStakingComponent(t *testing.T, stakingDB *databaseaccess.BBoltDatabase, 
 func stakeTokens(t *testing.T, sc *StakingComponentImpl, tokens map[string]*big.Int) {
 	t.Helper()
 
-	for _, addr := range sc.stakingAddresses {
+	chainID := sc.config.Chain.ChainID
+	stakingAddresses, err := sc.stakingDB.GetAllStakingAddresses(chainID)
+	require.NoError(t, err)
+
+	for _, addr := range stakingAddresses {
 		if amount, ok := tokens[addr.GetAddress()]; ok {
 			require.NoError(t, addr.Stake(amount, 1))
+			require.NoError(t, sc.stakingDB.UpdateStakingAddress(chainID, addr))
 		}
 	}
 }
@@ -694,7 +733,9 @@ func createStakingConfig(stakingAddresses []string) core.StakingConfiguration {
 func checkExchangeRate(t *testing.T, stakingComponent *StakingComponentImpl, expectedRate float64, expectError bool, expectedErrMsg string) {
 	t.Helper()
 
-	rate, err := stakingComponent.calculateExchangeRate()
+	stakingAddresses, err := stakingComponent.stakingDB.GetAllStakingAddresses(stakingComponent.config.Chain.ChainID)
+	require.NoError(t, err)
+	rate, err := stakingComponent.calculateExchangeRate(stakingAddresses)
 
 	if expectError {
 		require.Error(t, err)

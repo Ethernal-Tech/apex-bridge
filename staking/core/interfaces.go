@@ -40,9 +40,17 @@ type CardanoTxsDB interface {
 	ClearAllTxs(chainID string) error
 }
 
-type Database interface {
-	CardanoTxsDB
-	Init(db *bbolt.DB, smConfig *StakingManagerConfiguration)
+type StakingAddressDB interface {
 	UpdateExchangeRate(chainID string, exchangeRate float64) error
 	GetLastExchangeRate(chainID string) (float64, error)
+	UpdateStakingAddress(chainID string, stakingAddress StakingAddress) error
+	GetStakingAddress(chainID string, address string) (result StakingAddress, err error)
+	GetAllStakingAddresses(chainID string) (result []StakingAddress, err error)
+	UpdateStakingAddressAndExRate(chainID string, stakingAddress StakingAddress, exchangeRate *float64) error
+}
+
+type Database interface {
+	CardanoTxsDB
+	StakingAddressDB
+	Init(db *bbolt.DB, smConfig *StakingManagerConfiguration)
 }

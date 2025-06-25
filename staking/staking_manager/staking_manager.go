@@ -31,7 +31,7 @@ func NewStakingManager(
 	indexerDbs map[string]indexer.Database,
 	logger hclog.Logger,
 ) (*StakingManagerImpl, error) {
-	stakingDB := &databaseaccess.BBoltDatabase{}
+	stakingDB := databaseaccess.NewBBoltDatabase(stakingcomponent.DecodeStakingAddress)
 	stakingDB.Init(boltDB, config)
 
 	stakingComponents := make(map[string]core.StakingComponent, len(config.Chains))
