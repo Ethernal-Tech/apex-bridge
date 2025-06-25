@@ -500,8 +500,10 @@ func Test_reactorGetOutputs(t *testing.T) {
 	}
 
 	t.Run("getOutputs pass", func(t *testing.T) {
-		res := getOutputs(txs, cco.config,
-			[][]*indexer.TxInputOutput{}, "", common.ChainIDStrPrime, hclog.NewNullLogger())
+		receiversMap, err := getReceiversMap(common.ChainIDStrPrime, cco.config, feeAddr, txs, [][]*indexer.TxInputOutput{})
+		assert.NoError(t, err)
+
+		res := getOutputs(cco.config.NetworkID, receiversMap, hclog.NewNullLogger())
 
 		assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 		assert.Equal(t, []cardanowallet.TxOutput{
@@ -552,8 +554,10 @@ func Test_reactorGetOutputs(t *testing.T) {
 			},
 		}
 
-		res := getOutputs(txs, cco.config,
-			refundUtxos, feeAddr, common.ChainIDStrPrime, hclog.NewNullLogger())
+		receiversMap, err := getReceiversMap(common.ChainIDStrPrime, cco.config, feeAddr, txs, refundUtxos)
+		assert.NoError(t, err)
+
+		res := getOutputs(cco.config.NetworkID, receiversMap, hclog.NewNullLogger())
 
 		assert.Equal(t, uint64(7030), res.Sum[cardanowallet.AdaTokenName])
 		assert.Equal(t, []cardanowallet.TxOutput{
@@ -622,8 +626,10 @@ func Test_reactorGetOutputs(t *testing.T) {
 			},
 		}
 
-		res := getOutputs(txs, cco.config,
-			refundUtxos, feeAddr, common.ChainIDStrPrime, hclog.NewNullLogger())
+		receiversMap, err := getReceiversMap(common.ChainIDStrPrime, cco.config, feeAddr, txs, refundUtxos)
+		assert.NoError(t, err)
+
+		res := getOutputs(cco.config.NetworkID, receiversMap, hclog.NewNullLogger())
 
 		assert.Equal(t, uint64(7030), res.Sum[cardanowallet.AdaTokenName])
 		assert.Equal(t, []cardanowallet.TxOutput{
@@ -667,15 +673,24 @@ func Test_skylineGetOutputs(t *testing.T) {
 
 	feeAddr := "0x002"
 
-	policyID := "584ffccecba8a7c6a18037152119907b6b5c2ed063798ee68b012c41"
-	tokenName, _ := hex.DecodeString("526f75746533")
-	token := cardanowallet.NewToken(policyID, string(tokenName))
+	primePolicyID := "584ffccecba8a7c6a18037152119907b6b5c2ed063798ee68b012c41"
+	primeTokenName, _ := hex.DecodeString("526f75746533")
+	primeToken := cardanowallet.NewToken(primePolicyID, string(primeTokenName))
+
+	cardanoPolicyID := "472ccefa58a8a7b6b12087752119907b6c5c2ae0d37b8e66c30a2c85"
+	cardanoTokenName, _ := hex.DecodeString("8a3b65736583")
+	cardanoToken := cardanowallet.NewToken(cardanoPolicyID, string(cardanoTokenName))
+
 	config := &cardano.CardanoChainConfig{
 		NetworkID: cardanowallet.MainNetNetwork,
 		NativeTokens: []sendtx.TokenExchangeConfig{
 			{
 				DstChainID: common.ChainIDStrPrime,
-				TokenName:  token.String(),
+				TokenName:  primeToken.String(),
+			},
+			{
+				DstChainID: common.ChainIDStrCardano,
+				TokenName:  cardanoToken.String(),
 			},
 		},
 		MinFeeForBridging: 100,
@@ -683,7 +698,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 
 	txs := []eth.ConfirmedTransaction{
 		{
-			SourceChainId: common.ChainIDIntPrime,
+			SourceChainId:      common.ChainIDIntPrime,
+			DestinationChainId: common.ChainIDIntCardano,
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr1,
@@ -698,7 +714,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 			},
 		},
 		{
-			SourceChainId: common.ChainIDIntPrime,
+			SourceChainId:      common.ChainIDIntPrime,
+			DestinationChainId: common.ChainIDIntCardano,
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr3,
@@ -714,21 +731,24 @@ func Test_skylineGetOutputs(t *testing.T) {
 	}
 
 	t.Run("getOutputs pass", func(t *testing.T) {
-		outputs := getOutputs(txs, config, [][]*indexer.TxInputOutput{}, addr1, common.ChainIDStrCardano, hclog.NewNullLogger())
+		receiversMap, err := getReceiversMap(common.ChainIDStrCardano, config, addr1, txs, [][]*indexer.TxInputOutput{})
+		assert.NoError(t, err)
+
+		outputs := getOutputs(config.NetworkID, receiversMap, hclog.NewNullLogger())
 
 		require.Equal(t, []cardanowallet.TxOutput{
 			{
 				Addr:   addr2,
 				Amount: 51,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 102),
+					cardanowallet.NewTokenAmount(primeToken, 102),
 				},
 			},
 			{
 				Addr:   addr1,
 				Amount: 102,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 205),
+					cardanowallet.NewTokenAmount(primeToken, 205),
 				},
 			},
 			{
@@ -737,7 +757,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			},
 		}, outputs.Outputs)
 		require.Len(t, outputs.Sum, 2)
-		require.Equal(t, uint64(307), outputs.Sum[token.String()])
+		require.Equal(t, uint64(307), outputs.Sum[primeToken.String()])
 		require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
 	})
 
@@ -753,6 +773,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 					AmountWrapped:      new(big.Int).SetUint64(refundTxWrappedAmount),
 				},
 			},
+			//SourceChainId:      common.ChainIDIntCardano,
+			DestinationChainId: common.ChainIDIntPrime,
 		})
 
 		refundUtxos := make([][]*indexer.TxInputOutput, len(txs))
@@ -763,8 +785,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 					Amount: 250,
 					Tokens: []indexer.TokenAmount{
 						{
-							PolicyID: token.PolicyID,
-							Name:     token.Name,
+							PolicyID: primeToken.PolicyID,
+							Name:     primeToken.Name,
 							Amount:   300,
 						},
 					},
@@ -776,8 +798,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 					Amount: 50,
 					Tokens: []indexer.TokenAmount{
 						{
-							PolicyID: token.PolicyID,
-							Name:     token.Name,
+							PolicyID: primeToken.PolicyID,
+							Name:     primeToken.Name,
 							Amount:   200,
 						},
 					},
@@ -785,22 +807,24 @@ func Test_skylineGetOutputs(t *testing.T) {
 			},
 		}
 
-		outputs := getOutputs(txs, config,
-			refundUtxos, feeAddr, common.ChainIDStrCardano, hclog.NewNullLogger())
+		receiversMap, err := getReceiversMap(common.ChainIDStrCardano, config, feeAddr, txs, refundUtxos)
+		assert.NoError(t, err)
+
+		outputs := getOutputs(config.NetworkID, receiversMap, hclog.NewNullLogger())
 
 		require.Equal(t, []cardanowallet.TxOutput{
 			{
 				Addr:   addr2,
 				Amount: 51,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 102),
+					cardanowallet.NewTokenAmount(primeToken, 102),
 				},
 			},
 			{
 				Addr:   addr1,
 				Amount: 102 + refundTxAmount - config.MinFeeForBridging,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 205+refundTxWrappedAmount),
+					cardanowallet.NewTokenAmount(primeToken, 205+refundTxWrappedAmount+300+200),
 				},
 			},
 			{
