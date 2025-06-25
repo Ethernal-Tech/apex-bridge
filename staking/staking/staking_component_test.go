@@ -608,6 +608,41 @@ func TestReceiveReward(t *testing.T) {
 		assert.True(t, sa.GetTotalTokensWithRewards().Cmp(stakeAmount) == 0)
 	})
 
+	t.Run("successfully distribute reward with zero rewards percentage without updating exchange rate", func(t *testing.T) {
+		t.Cleanup(dbCleanup)
+		stakingDB := createStakingDB(t, dbPath)
+
+		observer := core.CardanoChainObserverMock{}
+		cfg := createConfigWithStAddrs()
+		cfg.UsersRewardsPercentage = 0
+
+		sc, err := NewStakingComponent(&cfg, &observer, stakingDB, hclog.Default())
+		require.NoError(t, err)
+
+		addr := stakingAddresses[0]
+		stakeAmount := big.NewInt(1_000_000_000_000_000)
+		reward := big.NewInt(1_000_000_000)
+
+		// Stake first
+		require.NoError(t, sc.Stake(stakeAmount, addr))
+		initialRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
+		assert.Equal(t, 1.0, initialRate)
+
+		// Receive reward
+		require.NoError(t, sc.ReceiveReward(reward, addr))
+
+		// Check that exchange rate  does not change
+		newRate, err := sc.GetLastExchangeRate()
+		require.NoError(t, err)
+		assert.True(t, newRate == initialRate)
+
+		// Check that tokens with rewards  does not change
+		sa, err := sc.stakingDB.GetStakingAddress(sc.config.Chain.ChainID, addr)
+		require.NoError(t, err)
+		assert.True(t, sa.GetTotalTokensWithRewards().Cmp(stakeAmount) == 0)
+	})
+
 	t.Run("fail to distribute reward if no stTokens are present", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 		stakingDB := createStakingDB(t, dbPath)
