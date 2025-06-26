@@ -10,6 +10,7 @@ type SettingsResponse struct {
 	MinUtxoChainValue              map[string]uint64 `json:"minUtxoChainValue"`
 	MinValueToBridge               uint64            `json:"minValueToBridge"`
 	MaxAmountAllowedToBridge       string            `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  string            `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
 }
 
@@ -42,6 +43,7 @@ func NewSettingsResponse(
 		MinUtxoChainValue:              minUtxoMap,
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
+		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
 	}
 }

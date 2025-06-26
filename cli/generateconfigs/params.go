@@ -78,6 +78,8 @@ const (
 	relayerDataDirFlag              = "relayer-data-dir"
 	relayerConfigPathFlag           = "relayer-config"
 
+	emptyBlocksThresholdFlag = "empty-blocks-threshold"
+
 	primeNetworkAddressFlagDesc         = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc           = "prime network magic (default 0)"
 	primeNetworkIDFlagDesc              = "prime network id"
@@ -132,6 +134,8 @@ const (
 	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle / nexus block submitter"
 	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
 
+	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks for blocks submitter to skip"
+
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
 	defaultNetworkMagic                      = uint32(wallet.MainNetProtocolMagic)
@@ -156,6 +160,8 @@ const (
 	defaultMaxFeeUtxoCount      = 4
 	defaultMaxUtxoCount         = 50
 	defaultTakeAtLeastUtxoCount = 6
+
+	defaultEmptyBlocksThreshold = 1000
 )
 
 var (
@@ -217,6 +223,8 @@ type generateConfigsParams struct {
 
 	relayerDataDir    string
 	relayerConfigPath string
+
+	emptyBlocksThreshold uint
 }
 
 func (p *generateConfigsParams) validateFlags() error {
@@ -593,6 +601,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		nexusMinFeeForBridgingFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&p.emptyBlocksThreshold,
+		emptyBlocksThresholdFlag,
+		defaultEmptyBlocksThreshold,
+		emptyBlocksThresholdFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -702,7 +717,11 @@ func (p *generateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold:      1000,
+				EmptyBlocksThreshold: map[string]uint{
+					common.ChainIDStrPrime:  p.emptyBlocksThreshold,
+					common.ChainIDStrVector: p.emptyBlocksThreshold,
+					common.ChainIDStrNexus:  p.emptyBlocksThreshold,
+				},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
