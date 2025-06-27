@@ -18,6 +18,20 @@ type CardanoChainConfig struct {
 	StakingBridgingAddr StakingBridgingAddresses `json:"stakingBridgingAddrs"`
 }
 
+type StakingConfiguration struct {
+	Chain                  CardanoChainConfig `json:"chain"`
+	UsersRewardsPercentage float64            `json:"usersRewardsPercentage"`
+	PullTimeMilis          int64              `json:"pullTime"`
+}
+
+type StakingManagerConfiguration struct {
+	Chains                 map[string]*CardanoChainConfig `json:"chains"`
+	Logger                 logger.LoggerConfig            `json:"logger"`
+	DbsPath                string                         `json:"dbsPath"`
+	UsersRewardsPercentage float64                        `json:"usersRewardsPercentage"`
+	PullTimeMilis          int64                          `json:"pullTime"`
+}
+
 func (c CardanoChainConfig) GetNetworkMagic() uint32 {
 	return c.NetworkMagic
 }
@@ -27,18 +41,6 @@ func (c CardanoChainConfig) GetAddressesOfInterest() []string {
 		c.StakingBridgingAddr.StakingBridgingAddr,
 		c.StakingBridgingAddr.FeeAddress,
 	}, c.StakingAddresses...)
-}
-
-type StakingConfiguration struct {
-	Chain         CardanoChainConfig `json:"chain"`
-	PullTimeMilis int64              `json:"pullTime"`
-}
-
-type StakingManagerConfiguration struct {
-	Chains        map[string]*CardanoChainConfig `json:"chains"`
-	Logger        logger.LoggerConfig            `json:"logger"`
-	DbsPath       string                         `json:"dbsPath"`
-	PullTimeMilis int64                          `json:"pullTime"`
 }
 
 func (config *StakingManagerConfiguration) FillOut() {

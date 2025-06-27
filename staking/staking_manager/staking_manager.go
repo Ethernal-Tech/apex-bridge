@@ -18,7 +18,7 @@ import (
 type StakingManagerImpl struct {
 	ctx               context.Context
 	config            *core.StakingManagerConfiguration
-	stakingComponents []core.StakingComponent
+	stakingComponents map[string]core.StakingComponent
 	logger            hclog.Logger
 }
 
@@ -31,10 +31,10 @@ func NewStakingManager(
 	indexerDbs map[string]indexer.Database,
 	logger hclog.Logger,
 ) (*StakingManagerImpl, error) {
-	stakingDB := &databaseaccess.BBoltDatabase{}
+	stakingDB := databaseaccess.NewBBoltDatabase(stakingcomponent.DecodeStakingAddress)
 	stakingDB.Init(boltDB, config)
 
-	stakingComponents := make([]core.StakingComponent, 0, len(config.Chains))
+	stakingComponents := make(map[string]core.StakingComponent, len(config.Chains))
 
 	for _, chainConfig := range config.Chains {
 		indexerDB := indexerDbs[chainConfig.ChainID]
@@ -57,15 +57,21 @@ func NewStakingManager(
 			return nil, fmt.Errorf("failed to create staking Cardano chain observer for `%s`: %w", chainConfig.ChainID, err)
 		}
 
-		stakingComponent := stakingcomponent.NewStakingComponent(
+		stakingComponent, err := stakingcomponent.NewStakingComponent(
 			&core.StakingConfiguration{
-				Chain:         *chainConfig,
-				PullTimeMilis: config.PullTimeMilis,
+				Chain:                  *chainConfig,
+				UsersRewardsPercentage: config.UsersRewardsPercentage,
+				PullTimeMilis:          config.PullTimeMilis,
 			},
 			cco,
+			stakingDB,
 			logger.Named(strings.ToUpper(chainConfig.ChainID)),
 		)
-		stakingComponents = append(stakingComponents, stakingComponent)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create staking component for chain `%s`: %w", chainConfig.ChainID, err)
+		}
+
+		stakingComponents[chainConfig.ChainID] = stakingComponent
 	}
 
 	return &StakingManagerImpl{
@@ -84,4 +90,13 @@ func (sm *StakingManagerImpl) Start() {
 			}
 		}()
 	}
+}
+
+func (sm *StakingManagerImpl) GetStakingComponent(chainID string) (core.StakingComponent, error) {
+	sc, ok := sm.stakingComponents[chainID]
+	if !ok {
+		return nil, fmt.Errorf("failed to get staking component for chainID: %s", chainID)
+	}
+
+	return sc, nil
 }
