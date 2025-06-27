@@ -411,7 +411,7 @@ $ apex-bridge bridge-admin mint-native-token \
         --amount 10
 ```
 - optional `--stake-key` and `--show-policy-script` flags
-- optional `--validity-slot NUMBER` flag
+- optional `--validity-slot NUMBER` or `--validity-slot-inc NUMBER` flag. Second one uses ogmios `getTipData`.slot + inc
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \
