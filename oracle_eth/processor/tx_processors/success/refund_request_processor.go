@@ -82,6 +82,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             common.WeiToDfm(tx.Value),
+		OriginWrappedAmount:      big.NewInt(0),
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
