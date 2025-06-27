@@ -57,8 +57,8 @@ func (sa *StakingAddressImpl) GetTotalTokensWithRewards() *big.Int {
 // It increases the total tokens (including rewards) by the staked amount,
 // and mints the corresponding amount of stTokens based on the provided exchange rate.
 func (sa *StakingAddressImpl) Stake(amount *big.Int, exchangeRate float64) error {
-	if exchangeRate == 0 {
-		return fmt.Errorf("cannot stake tokens: exchange rate cannot be zero")
+	if exchangeRate < 1 {
+		return fmt.Errorf("cannot stake tokens: exchange rate cannot be less than 1")
 	}
 
 	sa.TotalTokensWithRewards.Add(sa.TotalTokensWithRewards, amount)
@@ -78,8 +78,8 @@ func (sa *StakingAddressImpl) Stake(amount *big.Int, exchangeRate float64) error
 // It decreases the total stTokens by the specified amount and deducts the equivalent
 // underlying tokens (including rewards) based on the current exchange rate.
 func (sa *StakingAddressImpl) Unstake(amount *big.Int, exchangeRate float64) error {
-	if exchangeRate == 0 {
-		return fmt.Errorf("cannot unstake tokens: exchange rate cannot be zero")
+	if exchangeRate < 1 {
+		return fmt.Errorf("cannot unstake tokens: exchange rate cannot be less than 1")
 	}
 
 	if sa.TotalStTokens.Cmp(amount) < 0 {

@@ -72,7 +72,6 @@ func defaultChainBuckets(chainID string) [][]byte {
 		ChainBucket(ProcessedTxsBucket, chainID),
 		ChainBucket(ExpectedTxsBucket, chainID),
 		ChainBucket(UnprocessedBatchEventsBucket, chainID),
-		ChainBucket(UnprocessedBatchEventsBucket, chainID),
 		ChainBucket(StakingAddressesBucket, chainID),
 	}
 }

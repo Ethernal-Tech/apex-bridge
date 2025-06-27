@@ -432,7 +432,7 @@ func TestStake(t *testing.T) {
 
 		err := sc.Stake(big.NewInt(1_000), addr)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "exchange rate cannot be zero")
+		assert.Contains(t, err.Error(), "exchange rate cannot be less than 1")
 	})
 }
 
@@ -496,7 +496,7 @@ func TestUnstake(t *testing.T) {
 
 		err := sc.Unstake(big.NewInt(100), addr)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exchange rate cannot be zero")
+		assert.Contains(t, err.Error(), "exchange rate cannot be less than 1")
 	})
 
 	t.Run("fail to unstake more stTokens than available", func(t *testing.T) {
