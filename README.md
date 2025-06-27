@@ -411,6 +411,7 @@ $ apex-bridge bridge-admin mint-native-token \
         --amount 10
 ```
 - optional `--stake-key` and `--show-policy-script` flags
+- optional `--validity-slot NUMBER` flag
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \

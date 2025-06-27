@@ -20,6 +20,7 @@ const (
 	tokenNameFlag       = "token-name"
 	mintAmountFlag      = "amount"
 	showPolicyScrFlag   = "show-policy-script"
+	validitySlotFlag    = "validity-slot"
 
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLFlagDesc       = "ogmios url"
@@ -29,6 +30,7 @@ const (
 	mintAmountFlagDesc      = "amount to mint"
 	showPolicyScrFlagDesc   = "show policy script"
 	privateKeyFlagDesc      = "wallet private signing key"
+	validitySlotFlagDesc    = "slot until policy script for token is valid"
 
 	maxInputs            = 40
 	testNetProtocolMagic = uint(2)
@@ -43,6 +45,7 @@ type mintNativeTokenParams struct {
 	tokenName          string
 	mintAmount         uint64
 	showPolicyScript   bool
+	validitySlot       uint64
 
 	wallet *cardanowallet.Wallet
 }
@@ -139,6 +142,13 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 		false,
 		showPolicyScrFlagDesc,
 	)
+
+	cmd.Flags().Uint64Var(
+		&m.validitySlot,
+		validitySlotFlag,
+		0,
+		validitySlotFlagDesc,
+	)
 }
 
 // Execute implements common.CliCommandExecutor.
@@ -149,6 +159,7 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 		cardanowallet.CardanoNetworkType(m.networkID),
 		m.testnetMagic,
 		cardanowallet.NewTxProviderOgmios(m.ogmiosURL),
+		m.validitySlot,
 		m.wallet,
 		m.tokenName,
 		m.mintAmount,
@@ -177,13 +188,9 @@ var (
 )
 
 func mintTokenOnAddr(
-	ctx context.Context,
-	outputter common.OutputFormatter,
-	networkType cardanowallet.CardanoNetworkType,
-	networkMagic uint,
-	txProvider cardanowallet.ITxProvider,
-	minterWallet *cardanowallet.Wallet, tokenName string,
-	mintAmount uint64,
+	ctx context.Context, outputter common.OutputFormatter,
+	networkType cardanowallet.CardanoNetworkType, networkMagic uint, txProvider cardanowallet.ITxProvider,
+	validitySlot uint64, minterWallet *cardanowallet.Wallet, tokenName string, mintAmount uint64,
 ) (string, cardanowallet.IPolicyScript, error) {
 	keyHash, err := cardanowallet.GetKeyHash(minterWallet.VerificationKey)
 	if err != nil {
@@ -193,6 +200,19 @@ func mintTokenOnAddr(
 	policy := &cardanowallet.PolicyScript{
 		Type:    cardanowallet.PolicyScriptSigType,
 		KeyHash: keyHash,
+	}
+
+	if validitySlot > 0 {
+		policy = &cardanowallet.PolicyScript{
+			Type: "all",
+			Scripts: []cardanowallet.PolicyScript{
+				{
+					Type: "before",
+					Slot: validitySlot,
+				},
+				*policy,
+			},
+		}
 	}
 
 	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkType)
