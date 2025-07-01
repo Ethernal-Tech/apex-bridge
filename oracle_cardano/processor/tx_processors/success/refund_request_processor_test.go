@@ -490,7 +490,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	//nolint:dupl
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
