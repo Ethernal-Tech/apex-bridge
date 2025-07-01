@@ -294,6 +294,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			nativeCurrencyAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
+	if appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge != nil &&
+		appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.Sign() > 0 &&
+		wrappedTokenAmountSum.Cmp(appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of wrapped token: %v greater than maximum allowed: %v",
+			wrappedTokenAmountSum, appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge)
+	}
+
 	if nativeCurrencyAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
 		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
 			multisigUtxo.Amount, nativeCurrencyAmountSum)

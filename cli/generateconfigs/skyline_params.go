@@ -3,6 +3,7 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strings"
 	"time"
@@ -66,6 +67,8 @@ const (
 	defaultCardanoSlotRoundingThreshold  = 60
 )
 
+var defaultMaxTokenAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
+
 type skylineGenerateConfigsParams struct {
 	primeNetworkAddress         string
 	primeNetworkMagic           uint32
@@ -120,6 +123,8 @@ type skylineGenerateConfigsParams struct {
 
 	cardanoPrimeWrappedTokenName string
 	primeCardanoWrappedTokenName string
+
+	emptyBlocksThreshold uint
 }
 
 func (p *skylineGenerateConfigsParams) validateFlags() error {
@@ -499,6 +504,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoPrimeWrappedTokenNameFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&p.emptyBlocksThreshold,
+		emptyBlocksThresholdFlag,
+		defaultEmptyBlocksThreshold,
+		emptyBlocksThresholdFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -620,11 +632,15 @@ func (p *skylineGenerateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold:      200,
+				EmptyBlocksThreshold: map[string]uint{
+					common.ChainIDStrPrime:   p.emptyBlocksThreshold,
+					common.ChainIDStrCardano: p.emptyBlocksThreshold,
+				},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
+			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},

@@ -49,8 +49,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	require.NoError(t, err)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	//nolint: dupl
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
@@ -97,6 +97,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
 			},
 			RefundEnabled: refundEnabled,
 		}
@@ -1202,6 +1203,75 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "sum of receiver amounts + fee")
+		require.ErrorContains(t, err, "greater than maximum allowed")
+	})
+
+	t.Run("ValidateAndAddClaim more tokens than allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:             minFeeForBridging * 2,
+				IsNativeTokenOnSrc: 0,
+			},
+			{
+				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
+				IsNativeTokenOnSrc: 1,
+				Amount:             maxTokenAmountAllowedToBridge.Uint64() * 2,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridging*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   maxTokenAmountAllowedToBridge.Uint64() * 2,
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
 		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 

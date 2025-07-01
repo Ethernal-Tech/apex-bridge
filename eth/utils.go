@@ -157,6 +157,32 @@ func GetChainValidatorsDataInfoString(
 	return sb.String()
 }
 
+func GetEthWalletForBladeAdmin(isProxy bool, key, config string) (ethtxhelper.IEthTxWallet, error) {
+	if key != "" {
+		return ethtxhelper.NewEthTxWallet(key)
+	}
+
+	secretsManager, err := common.GetSecretsManager("", config, false)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKey, err := secretsManager.GetSecret(GetKeyNameForBladeAdmin(isProxy))
+	if err != nil {
+		return nil, err
+	}
+
+	return ethtxhelper.NewEthTxWallet(string(privateKey))
+}
+
+func GetKeyNameForBladeAdmin(isProxy bool) string {
+	if isProxy {
+		return secrets.OtherKeyLocalPrefix + "blade_proxy"
+	}
+
+	return secrets.OtherKeyLocalPrefix + "blade_admin"
+}
+
 func getBLSKeyName(chainID string) string {
 	if ForceBladeBlsKey {
 		return secrets.ValidatorBLSKey

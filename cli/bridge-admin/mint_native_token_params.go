@@ -20,6 +20,8 @@ const (
 	tokenNameFlag       = "token-name"
 	mintAmountFlag      = "amount"
 	showPolicyScrFlag   = "show-policy-script"
+	validitySlotFlag    = "validity-slot"
+	validitySlotIncFlag = "validity-slot-inc"
 
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLFlagDesc       = "ogmios url"
@@ -28,9 +30,11 @@ const (
 	tokenNameFlagDesc       = "name of the token to mint"
 	mintAmountFlagDesc      = "amount to mint"
 	showPolicyScrFlagDesc   = "show policy script"
+	privateKeyFlagDesc      = "wallet private signing key"
+	validitySlotFlagDesc    = "the absolute slot until which the policy script for the token remains valid"
+	validitySlotIncFlagDesc = "the slot will be fetched from Ogmios and then incremented by this value. the resulting sum will represent the absolute slot until which the policy script for the token remains valid" //nolint:lll
 
-	maxInputs            = 40
-	testNetProtocolMagic = uint(2)
+	maxInputs = 40
 )
 
 type mintNativeTokenParams struct {
@@ -42,6 +46,8 @@ type mintNativeTokenParams struct {
 	tokenName          string
 	mintAmount         uint64
 	showPolicyScript   bool
+	validitySlot       uint64
+	validitySlotInc    uint64
 
 	wallet *cardanowallet.Wallet
 }
@@ -138,16 +144,46 @@ func (m *mintNativeTokenParams) RegisterFlags(cmd *cobra.Command) {
 		false,
 		showPolicyScrFlagDesc,
 	)
+
+	cmd.Flags().Uint64Var(
+		&m.validitySlot,
+		validitySlotFlag,
+		0,
+		validitySlotFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&m.validitySlotInc,
+		validitySlotIncFlag,
+		0,
+		validitySlotIncFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(validitySlotIncFlag, validitySlotFlag)
 }
 
 // Execute implements common.CliCommandExecutor.
 func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	ctx := context.Background()
+	txProvider := cardanowallet.NewTxProviderOgmios(m.ogmiosURL)
+	validitySlot := m.validitySlot
+
+	if m.validitySlotInc > 0 {
+		tipData, err := txProvider.GetTip(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve tip data: %w", err)
+		}
+
+		validitySlot = tipData.Slot + m.validitySlotInc
+	}
+
 	txHash, policyScript, err := mintTokenOnAddr(
-		context.Background(),
+		ctx,
 		outputter,
 		cardanowallet.CardanoNetworkType(m.networkID),
 		m.testnetMagic,
-		cardanowallet.NewTxProviderOgmios(m.ogmiosURL),
+		txProvider,
+		validitySlot,
 		m.wallet,
 		m.tokenName,
 		m.mintAmount,
@@ -156,8 +192,8 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf(
-		"Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash)))
+	_, _ = outputter.Write(fmt.Appendf(nil,
+		"Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash))
 
 	if m.showPolicyScript {
 		policyBytes, err := policyScript.GetPolicyScriptJSON()
@@ -176,13 +212,9 @@ var (
 )
 
 func mintTokenOnAddr(
-	ctx context.Context,
-	outputter common.OutputFormatter,
-	networkType cardanowallet.CardanoNetworkType,
-	networkMagic uint,
-	txProvider cardanowallet.ITxProvider,
-	minterWallet *cardanowallet.Wallet, tokenName string,
-	mintAmount uint64,
+	ctx context.Context, outputter common.OutputFormatter,
+	networkType cardanowallet.CardanoNetworkType, networkMagic uint, txProvider cardanowallet.ITxProvider,
+	validitySlot uint64, minterWallet *cardanowallet.Wallet, tokenName string, mintAmount uint64,
 ) (string, cardanowallet.IPolicyScript, error) {
 	keyHash, err := cardanowallet.GetKeyHash(minterWallet.VerificationKey)
 	if err != nil {
@@ -192,6 +224,19 @@ func mintTokenOnAddr(
 	policy := &cardanowallet.PolicyScript{
 		Type:    cardanowallet.PolicyScriptSigType,
 		KeyHash: keyHash,
+	}
+
+	if validitySlot > 0 {
+		policy = &cardanowallet.PolicyScript{
+			Type: "all",
+			Scripts: []cardanowallet.PolicyScript{
+				{
+					Type: "before",
+					Slot: validitySlot,
+				},
+				*policy,
+			},
+		}
 	}
 
 	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkType)
@@ -342,8 +387,8 @@ func submitTokenTx(
 		return err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf(
-		"transaction has been submitted. hash = %s\n", txHash)))
+	_, _ = outputter.Write(fmt.Appendf(nil,
+		"transaction has been submitted. hash = %s\n", txHash))
 
 	newAmounts, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (map[string]uint64, error) {
 		utxos, err := txProvider.GetUtxos(ctx, receiverAddr)
@@ -363,8 +408,8 @@ func submitTokenTx(
 		return err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf(
-		"transaction has been included in block. hash = %s, balance = %v\n", txHash, newAmounts)))
+	_, _ = outputter.Write(fmt.Appendf(nil,
+		"transaction has been included in block. hash = %s, balance = %v\n", txHash, newAmounts))
 
 	return nil
 }
