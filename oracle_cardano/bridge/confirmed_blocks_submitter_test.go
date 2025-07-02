@@ -51,7 +51,9 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 
 		appConfig.CardanoChains = map[string]*oracleCommon.CardanoChainConfig{
 			chainID: {
-				StartSlot: startSlot,
+				BaseCardanoChainConfig: oracleCommon.BaseCardanoChainConfig{
+					StartSlot: startSlot,
+				},
 			},
 		}
 
