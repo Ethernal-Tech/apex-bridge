@@ -31,7 +31,7 @@ type OracleImpl struct {
 	ethTxsProcessor          oCore.TxsProcessor
 	expectedTxsFetcher       oCore.ExpectedTxsFetcher
 	ethChainObservers        []core.EthChainObserver
-	confirmedBlockSubmitters []core.EthConfirmedBlocksSubmitter
+	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
 	db                       core.Database
 	logger                   hclog.Logger
 }
@@ -44,7 +44,7 @@ func NewEthOracle(
 	typeRegister common.TypeRegister,
 	appConfig *oCore.AppConfig,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
-	bridgeSubmitter core.BridgeSubmitter,
+	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
@@ -86,13 +86,13 @@ func NewEthOracle(
 		bridgingRequestStateUpdater, txsProcessorLogger)
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))
-	confirmedBlockSubmitters := make([]core.EthConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
+	confirmedBlockSubmitters := make([]oCore.ConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
 
 	for _, ethChainConfig := range appConfig.EthChains {
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			ctx, bridgeSubmitter, appConfig, indexerDB, ethChainConfig.ChainID, logger)
+			bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create evm block submitter for `%s`: %w", ethChainConfig.ChainID, err)
 		}
@@ -100,7 +100,7 @@ func NewEthOracle(
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
 		eco, err := eth_chain.NewEthChainObserver(
-			ctx, ethChainConfig, ethTxsReceiver, db, indexerDB,
+			ethChainConfig, ethTxsReceiver, db, indexerDB,
 			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create eth chain observer for `%s`: %w", ethChainConfig.ChainID, err)
@@ -128,7 +128,7 @@ func (o *OracleImpl) Start() error {
 	go o.expectedTxsFetcher.Start()
 
 	for _, cbs := range o.confirmedBlockSubmitters {
-		cbs.StartSubmit()
+		cbs.Start(o.ctx)
 	}
 
 	for _, eco := range o.ethChainObservers {
@@ -149,9 +149,11 @@ func (o *OracleImpl) Dispose() error {
 	for _, eco := range o.ethChainObservers {
 		err := eco.Dispose()
 		if err != nil {
-			o.logger.Error("error while disposing eth chain observer", "chainId", eco.GetConfig().ChainID, "err", err)
+			chainID := eco.GetConfig().ChainID
+
+			o.logger.Error("error while disposing eth chain observer", "chainId", chainID, "err", err)
 			errs = append(errs, fmt.Errorf("error while disposing eth chain observer. chainId: %v, err: %w",
-				eco.GetConfig().ChainID, err))
+				chainID, err))
 		}
 	}
 

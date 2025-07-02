@@ -2,6 +2,7 @@ package successtxprocessors
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -53,6 +54,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	require.NoError(t, err)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
 	proc := NewSkylineBridgingRequestedProcessor(hclog.NewNullLogger(), map[string]*chain.CardanoChainInfo{
 		common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
@@ -77,6 +79,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
+					FeeAddress:      primeBridgingFeeAddr,
 				},
 				MinFeeForBridging: minFeeForBridging,
 				MinOperationFee:   minOperationFee,
@@ -103,6 +106,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		BridgingSettings: cCore.BridgingSettings{
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
 		},
 	}
 	appConfig.FillOut()
@@ -305,6 +309,44 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					PolicyID: "111",
 					Name:     "222",
+					Amount:   utxoMinValue,
+				},
+			}},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: metadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "with some unknown tokens")
+	})
+
+	t.Run("ValidateAndAddClaim unknown tokens 2", func(t *testing.T) {
+		oldNativeTokens := appConfig.CardanoChains[common.ChainIDStrPrime].NativeTokens
+		appConfig.CardanoChains[common.ChainIDStrPrime].NativeTokens = nil
+
+		defer func() {
+			appConfig.CardanoChains[common.ChainIDStrPrime].NativeTokens = oldNativeTokens
+		}()
+
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1, Tokens: []indexer.TokenAmount{
+				{
+					PolicyID: policyID,
+					Name:     wrappedTokenPrime.Name,
 					Amount:   utxoMinValue,
 				},
 			}},
@@ -637,6 +679,63 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "bridging fee in metadata receivers is less than minimum")
 	})
 
+	t.Run("ValidateAndAddClaim direction not allowed currency+native", func(t *testing.T) {
+		for _, isNativeTokenOnSource := range []byte{0, 1} {
+			// deep copy (clone) with json marshalling
+			var newAppConfig *cCore.AppConfig
+
+			bytes, err := json.Marshal(appConfig)
+			require.NoError(t, err)
+
+			require.NoError(t, json.Unmarshal(bytes, &newAppConfig))
+			// because of `json:"-"`
+			newAppConfig.CardanoChains[common.ChainIDStrCardano].BridgingAddresses =
+				appConfig.CardanoChains[common.ChainIDStrCardano].BridgingAddresses
+			newAppConfig.CardanoChains[common.ChainIDStrPrime].BridgingAddresses =
+				appConfig.CardanoChains[common.ChainIDStrPrime].BridgingAddresses
+			newAppConfig.CardanoChains[common.ChainIDStrCardano].NativeTokens = nil
+
+			srcChainID, dstChainID := common.ChainIDStrPrime, common.ChainIDStrCardano
+			txOutput := &indexer.TxOutput{
+				Address: primeBridgingAddr,
+				Amount:  1_000_000,
+			}
+
+			if isNativeTokenOnSource == 1 {
+				srcChainID, dstChainID = dstChainID, srcChainID
+				txOutput.Address = cardanoBridgingAddr
+			}
+
+			validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: dstChainID,
+				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+				Transactions: []sendtx.BridgingRequestMetadataTransaction{
+					{
+						Address:            common.SplitString(validTestAddress, 40),
+						Amount:             1_000_000,
+						IsNativeTokenOnSrc: isNativeTokenOnSource,
+					},
+				},
+				OperationFee: minOperationFee,
+				BridgingFee:  2_000_000,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, validMetadata)
+
+			err = proc.ValidateAndAddClaim(&cCore.BridgeClaims{}, &core.CardanoTx{
+				Tx: indexer.Tx{
+					Hash:     [32]byte(common.NewHashFromHexString("0x2244FF")),
+					Metadata: validMetadata,
+					Outputs:  []*indexer.TxOutput{txOutput},
+				},
+				OriginChainID: srcChainID,
+			}, newAppConfig)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "no native token specified for destination: "+common.ChainIDStrPrime)
+		}
+	})
+
 	t.Run("ValidateAndAddClaim more than allowed", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrCardano
 
@@ -669,6 +768,59 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: primeBridgingAddr,
 				Amount:  minOperationFee + minFeeForBridging*2 + maxAmountAllowedToBridge.Uint64(),
+			},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "greater than maximum allowed")
+	})
+
+	t.Run("ValidateAndAddClaim more tokens than allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:             minFeeForBridging * 2,
+				IsNativeTokenOnSrc: 0,
+			},
+			{
+				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
+				IsNativeTokenOnSrc: 1,
+				Amount:             maxTokenAmountAllowedToBridge.Uint64() * 2,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridging*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   maxTokenAmountAllowedToBridge.Uint64() * 2,
+					},
+				},
 			},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{

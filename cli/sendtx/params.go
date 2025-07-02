@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -55,10 +56,11 @@ const (
 	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
-	gasLimitMultiplier       = 1.6
-	amountCheckRetryWaitTime = time.Second * 5
-	amountCheckRetryCount    = 144 // 12 minutes = 5 seconds * 144
-	potentialFee             = 500_000
+	gasLimitMultiplier = 1.6
+	potentialFee       = 500_000
+
+	waitForAmountRetryCount = 240 // 240 * 10 = 40 min
+	waitForAmountWaitTime   = time.Second * 10
 )
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
@@ -572,7 +574,8 @@ func waitForTx(ctx context.Context, receivers []*receiverAmount,
 
 			_, errs[idx] = common.WaitForAmount(ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
 				return getBalanceFn(ctx, recv.ReceiverAddr)
-			})
+			}, infracommon.WithRetryCount(waitForAmountRetryCount),
+				infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		}(i, x)
 	}
 

@@ -65,6 +65,16 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
+# How to generate key for blade admin
+```shell
+$ go run ./main.go wallet-create blade --type admin --key KEY --config CONFIG_PATTH
+```
+
+# How to generate key for blade proxy admin
+```shell
+$ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PATTH
+```
+
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
@@ -82,19 +92,14 @@ $ go run ./main.go register-chain \
 ```shell
 $ go run ./main.go create-address \
         --network-id network_ID \
-        --key 582068fc463c29900b00122423c7e6a39469987786314e07a5e7f5eae76a5fe671bf \
-        --key 58209a9cefaa636d75dffa3a3a5ab446a191beac92b09ac82da513640e8e35935202
-        ...
-```
-or if you want to generate via bridge
-```shell
-$ go run ./main.go create-address \
-        --network-id network_ID \
+        --testnet-magic 3311 \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
         --chain prime
 ```
+- optional `--show-policy-script` flag
+- instead of `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to generate config files
 All options
@@ -117,6 +122,7 @@ $ go run ./main.go generate-configs \
         --prime-starting-block <slot:hash> \
         --prime-utxo-min-amount <minimal UTXO value for prime> \
         --prime-min-fee-for-bridging <minimal bridging fee for prime> \
+        --prime-block-confirmation-count <block confirmation count for prime> \
         --vector-network-address <address of vector network> \
         --vector-network-magic <network magic of vector network> \
         --vector-network-id <network id of vector network> \
@@ -129,6 +135,7 @@ $ go run ./main.go generate-configs \
         --vector-starting-block <slot:hash> \
         --vector-utxo-min-amount <minimal UTXO value for vector> \
         --vector-min-fee-for-bridging<minimal bridging fee for vector> \
+        --vector-block-confirmation-count <block confirmation count for vector> \
         --nexus-node-url <nexus node URL> \
         --nexus-ttl-block-inc <nexus ttl block increment> \
         --nexus-block-rounding-threshold <nexus block rounding threshold> \
@@ -142,7 +149,8 @@ $ go run ./main.go generate-configs \
         --logs-path <path to where logs will be stored> \
         --api-port <port at which API should run> \
         --api-keys <api key 1> \
-        --api-keys <api key 2>
+        --api-keys <api key 2> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip>
 ```
 optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used if telemetry is desired
 
@@ -272,7 +280,10 @@ $ apex-bridge deploy-evm \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
+- instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 -- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+
 Example with explicit bls keys:
 ```shell
 $ apex-bridge deploy-evm \
@@ -287,6 +298,7 @@ $ apex-bridge deploy-evm \
 ```
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to upgrade bridge/gateway contracts
 ```shell
@@ -301,6 +313,7 @@ $ apex-bridge deploy-evm upgrade \
 ```
 - optional `--dynamic-tx`
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to Set validators data on Nexus Smart Contracts
 Default example (bls keys are retrieved from bridge):
@@ -314,6 +327,8 @@ $ apex-bridge deploy-evm set-validators-chain-data \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
 ```
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 Example with explicit bls keys:
 ```shell
@@ -328,6 +343,8 @@ $ apex-bridge deploy-evm set-validators-chain-data \
         --bls-key 0x.... \
         --validators-proxy-addr 0x157E8D7DA7A2282aDe8678390A4ad6ba83B0FD9E \
 ```
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # Bridge admin commands
 ```shell
@@ -343,6 +360,7 @@ $ apex-bridge bridge-admin update-chain-token-quantity \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - optional `--is-wrapped-token` bool flag
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin set-min-amounts \
@@ -352,6 +370,8 @@ $ apex-bridge bridge-admin set-min-amounts \
         --min-fee 200 \
         --min-bridging-amount 100 
 ```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
 
 ```shell
 $ apex-bridge bridge-admin defund \
@@ -362,6 +382,7 @@ $ apex-bridge bridge-admin defund \
         --native-token-amount 200 \
         --addr 0xeefcd00000000000000000000000000000000000
 ```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
@@ -371,6 +392,7 @@ $ apex-bridge bridge-admin set-additional-data \
         --bridging-addr 0xeefcd00000000000000000000000000000000022 \
         --fee-addr 0xeefcd00000000000000000000000000000000021
 ```
+- instead of `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin get-validators-data \
@@ -388,7 +410,8 @@ $ apex-bridge bridge-admin mint-native-token \
         --token-name testt \
         --amount 10
 ```
-- optional `--stake-key` flag
+- optional `--stake-key` and `--show-policy-script` flags
+- optional `--validity-slot NUMBER` or `--validity-slot-inc NUMBER` flag. Second one uses ogmios `getTipData`.slot + inc
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \

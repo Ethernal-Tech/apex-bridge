@@ -2,11 +2,11 @@ package bridge
 
 import (
 	"context"
-	"math/big"
+	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -17,7 +17,7 @@ type BridgeSubmitterImpl struct {
 	logger   hclog.Logger
 }
 
-var _ core.BridgeSubmitter = (*BridgeSubmitterImpl)(nil)
+var _ oCore.BridgeBlocksSubmitter = (*BridgeSubmitterImpl)(nil)
 
 func NewBridgeSubmitter(
 	ctx context.Context,
@@ -45,25 +45,28 @@ func (bs *BridgeSubmitterImpl) SubmitClaims(
 	return receipt, nil
 }
 
-func (bs *BridgeSubmitterImpl) SubmitConfirmedBlocks(chainID string, from uint64, to uint64,
-) error {
-	contractBlocks := make([]eth.CardanoBlock, 0, to-from+1)
-	for blockNumber := from; blockNumber <= to; blockNumber++ {
-		contractBlocks = append(contractBlocks, eth.CardanoBlock{
-			BlockSlot: new(big.Int).SetUint64(blockNumber),
-		})
+func (bs *BridgeSubmitterImpl) SubmitBlocks(chainID string, blocks []eth.CardanoBlock) error {
+	if len(blocks) == 0 {
+		return nil
 	}
 
-	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, contractBlocks)
+	latestSlot := blocks[len(blocks)-1].BlockSlot
+
+	if bs.logger.IsDebug() {
+		slots := make([]string, len(blocks))
+		for i, x := range blocks {
+			slots[i] = x.BlockSlot.String()
+		}
+
+		bs.logger.Info("Submitting blocks", "chainID", chainID, "slots", strings.Join(slots, ", "))
+	}
+
+	err := bs.bridgeSC.SubmitLastObservedBlocks(bs.ctx, chainID, blocks)
 	if err != nil {
-		bs.logger.Error("Failed to submit confirmed blocks", "for chainID", "chainID", chainID, "from block", from,
-			"to block", to, "err", err)
-
-		return err
+		return fmt.Errorf("failed to submit blocks for %s (%d): %w", chainID, latestSlot, err)
 	}
 
-	bs.logger.Info("Confirmed blocks submitted successfully", "for chainID", chainID, "from block", from,
-		"to block", to)
+	bs.logger.Info("Blocks has been submitted successfully", "chainID", chainID, "latestBlock", latestSlot)
 
 	return nil
 }
