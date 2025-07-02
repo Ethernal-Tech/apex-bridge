@@ -128,7 +128,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		})
 	}
 
-	feeCurrencyDst := cardanoDestConfig.UtxoMinAmount
+	feeCurrencyDst := cardanoDestConfig.FeeAddrBridgingAmount
 	totalAmountCurrencyDst += feeCurrencyDst
 	totalAmountCurrencySrc += metadata.BridgingFee + metadata.OperationFee
 
