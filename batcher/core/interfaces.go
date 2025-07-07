@@ -23,7 +23,8 @@ type Batcher interface {
 type ChainOperations interface {
 	GenerateBatchTransaction(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
-		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
+		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction,
+		stakeKeyRegDelegTransactions []eth.StakeDelegationTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
 	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) ([]byte, []byte, error)
 	IsSynchronized(

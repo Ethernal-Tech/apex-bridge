@@ -28,13 +28,15 @@ const (
 )
 
 type batchInitialData struct {
-	BatchNonceID         uint64
-	Metadata             []byte
-	ProtocolParams       []byte
-	MultisigPolicyScript *cardanowallet.PolicyScript
-	FeePolicyScript      *cardanowallet.PolicyScript
-	MultisigAddr         string
-	FeeAddr              string
+	BatchNonceID              uint64
+	Metadata                  []byte
+	ProtocolParams            []byte
+	MultisigPolicyScript      *cardanowallet.PolicyScript
+	FeePolicyScript           *cardanowallet.PolicyScript
+	MultisigAddr              string
+	FeeAddr                   string
+	MultisigStakePolicyScript *cardanowallet.PolicyScript
+	MultisigStakeAddr         string
 }
 
 type CardanoChainOperations struct {
@@ -86,11 +88,16 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	confirmedTransactions []eth.ConfirmedTransaction,
+	stakeKeyRegDelegTransactions []eth.StakeDelegationTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(stakeKeyRegDelegTransactions) > 0 {
+		return cco.generateStakeKeyRegDelegBatchTransaction(data, stakeKeyRegDelegTransactions)
 	}
 
 	txData, err := cco.generateBatchTransaction(data, confirmedTransactions)
@@ -159,6 +166,63 @@ func (cco *CardanoChainOperations) Submit(
 	return err
 }
 
+func (cco *CardanoChainOperations) generateStakeKeyRegDelegBatchTransaction(
+	data *batchInitialData,
+	stakeKeyRegDelegTransactions []eth.StakeDelegationTransaction,
+) (*core.GeneratedBatchTxData, error) {
+	/*
+		certificates := make([]*cardano.CertificatesWithScript, 0)
+		keyRegistrationFee := uint64(0)
+		for _, tx := range stakeKeyRegDelegTransactions {
+			// Generate policy script
+			keyHashes, err := cardano.NewApexKeyHashes(tx.ValidatorStakingKeys)
+			keyHashes := make([][]byte, len(tx.ValidatorStakingKeys))
+			for _, key := range tx.ValidatorStakingKeys {
+				keyBytes, err := keyFrom
+			}
+
+			quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(tx.ValidatorStakingKeys)))) //nolint:gosec
+			policyScript := cardanowallet.NewPolicyScript(keyHashes, quorumCount)
+
+			// Generate certificates
+			keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
+			if err != nil {
+				return nil, err
+			}
+
+			keyRegistrationFee += keyRegDepositAmount
+
+			cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
+			registrationCert, err := cliUtils.CreateRegistrationCertificate(data.MultisigStakeAddr, keyRegDepositAmount)
+			if err != nil {
+				return nil, err
+			}
+
+			// TODO: Get poolID from smart contract
+			poolID := ""
+			delegationCert, err := cliUtils.CreateDelegationCertificate(data.MultisigStakeAddr, poolID)
+			if err != nil {
+				return nil, err
+			}
+
+			certificates = append(certificates, &cardano.CertificatesWithScript{
+				PolicyScript: data.MultisigStakePolicyScript,
+				Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+			})
+
+		}
+
+		if len(certificates) > 0 {
+			return &cardano.CertificatesData{
+				Certificates:    certificates,
+				RegistrationFee: keyRegistrationFee,
+			}, nil
+		}
+	*/
+
+	return nil, nil
+}
+
 func (cco *CardanoChainOperations) generateBatchTransaction(
 	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
 ) (*core.GeneratedBatchTxData, error) {
@@ -202,6 +266,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			},
 		},
 		txOutputs.Outputs,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -264,6 +329,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 			},
 		},
 		[]cardanowallet.TxOutput{multisigTxOutput},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -448,13 +514,15 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	}
 
 	return &batchInitialData{
-		BatchNonceID:         batchNonceID,
-		Metadata:             metadata,
-		ProtocolParams:       protocolParams,
-		MultisigPolicyScript: policyScripts.Multisig.Payment,
-		FeePolicyScript:      policyScripts.Fee.Payment,
-		MultisigAddr:         addresses.Multisig.Payment,
-		FeeAddr:              addresses.Fee.Payment,
+		BatchNonceID:              batchNonceID,
+		Metadata:                  metadata,
+		ProtocolParams:            protocolParams,
+		MultisigPolicyScript:      policyScripts.Multisig.Payment,
+		FeePolicyScript:           policyScripts.Fee.Payment,
+		MultisigAddr:              addresses.Multisig.Payment,
+		FeeAddr:                   addresses.Fee.Payment,
+		MultisigStakePolicyScript: policyScripts.Multisig.Stake,
+		MultisigStakeAddr:         addresses.Multisig.Stake,
 	}, nil
 }
 

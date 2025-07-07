@@ -15,6 +15,7 @@ func CreateTx(
 	metadataBytes []byte,
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
+	certificatesData *CertificatesData,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 || feeLn == 0 {
@@ -34,6 +35,14 @@ func CreateTx(
 
 	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
 		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
+
+	stakeKeyRegistrationFee := uint64(0)
+	if certificatesData != nil {
+		for _, cert := range certificatesData.Certificates {
+			builder.AddCertificates(cert.PolicyScript, cert.Certificates...)
+		}
+		stakeKeyRegistrationFee += certificatesData.RegistrationFee
+	}
 
 	// add multisigFee output
 	if feeIndex == -1 {

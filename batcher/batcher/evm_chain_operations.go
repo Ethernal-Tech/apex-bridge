@@ -64,6 +64,7 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	confirmedTransactions []eth.ConfirmedTransaction,
+	_stakeKeyRegDelegTransactions []eth.StakeDelegationTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
 	lastProcessedBlock, err := cco.db.GetLastProcessedBlock()

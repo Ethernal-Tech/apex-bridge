@@ -133,6 +133,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			Amount:             minUtxoAmount,
 		}},
 	}
+	stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
 	validValidatorsChainData := []eth.ValidatorChainData{
@@ -153,7 +154,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -170,7 +171,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -187,7 +188,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -209,7 +210,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -222,7 +223,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -246,7 +247,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -278,7 +279,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
@@ -620,6 +621,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				Amount:             new(big.Int).SetUint64(2_000_000),
 			}},
 		}
+		stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
@@ -635,7 +637,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.Equal(t, true, result.IsConsolidation)
 		require.NotNil(t, result.TxRaw)
@@ -752,7 +754,7 @@ func TestSkylineConsolidation(t *testing.T) {
 				AmountWrapped:      big.NewInt(2_500_000),
 			}},
 		}
-
+		stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -767,7 +769,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.Equal(t, true, result.IsConsolidation)
 		require.NotNil(t, result.TxRaw)

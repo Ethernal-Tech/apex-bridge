@@ -12,6 +12,11 @@ import (
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
+type StakeDelegationTransaction struct {
+	//ChainId              uint8
+	StakePoolId          string
+	ValidatorStakingKeys []*big.Int
+}
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 type BridgeReceiver = contractbinding.IBridgeStructsReceiver
 
