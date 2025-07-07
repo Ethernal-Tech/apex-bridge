@@ -128,7 +128,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		})
 	}
 
-	feeCurrencyDst := cardanoDestConfig.UtxoMinAmount
+	feeCurrencyDst := cardanoDestConfig.FeeAddrBridgingAmount
 	totalAmountCurrencyDst += feeCurrencyDst
 	totalAmountCurrencySrc += metadata.BridgingFee + metadata.OperationFee
 
@@ -308,6 +308,22 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		if _, err := cardanoDestConfig.GetNativeToken(tx.OriginChainID); err != nil {
 			return err
 		}
+	}
+
+	srcMinUtxo := cardanoSrcConfig.UtxoMinAmount
+	if wrappedTokenAmountSum.BitLen() > 0 {
+		srcMinUtxo, err = p.calculateMinUtxo(
+			cardanoSrcConfig, metadata.DestinationChainID, multisigUtxo.Address, wrappedTokenAmountSum.Uint64())
+		if err != nil {
+			return fmt.Errorf("failed to calculate src minUtxo for chainID: %s. err: %w",
+				cardanoSrcConfig.ChainID, err)
+		}
+	}
+
+	minCurrency := srcMinUtxo + cardanoSrcConfig.MinFeeForBridging
+	if new(big.Int).SetUint64(minCurrency).Cmp(nativeCurrencyAmountSum) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee is under the minimum allowed: min %v but got %v",
+			minCurrency, nativeCurrencyAmountSum)
 	}
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&

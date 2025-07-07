@@ -21,6 +21,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
 		utxoMinValue          = 1000000
 		minFeeForBridging     = 1000010
+		feeAddrBridgingAmount = uint64(1000001)
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
@@ -42,7 +43,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
-				MinFeeForBridging: minFeeForBridging,
+				MinFeeForBridging:     minFeeForBridging,
+				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -53,7 +55,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
-				MinFeeForBridging: minFeeForBridging,
+				MinFeeForBridging:     minFeeForBridging,
+				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},
 		},
 		BridgingSettings: cCore.BridgingSettings{
@@ -602,6 +605,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 }
