@@ -61,6 +61,16 @@ func (c *OracleStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
 	}
 }
 
+// @Summary Get unspent transaction outputs of bridging addresses on specific chain
+// @Description Returns all unspent transaction outputs of bridging addresses for the given chain ID. Each UTXO includes the address it belongs to, along with amount and other relevant data.
+// @Tags OracleState
+// @Produce json
+// @Param chainId query string true "Chain ID"
+// @Success 200 {object} response.OracleStateResponse
+// @Failure 400 {object} response.ErrorResponse "Bad Request – chainId is missing from the query or invalid, or the transaction outputs could not be retrieved."
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Security ApiKeyAuth
+// @Router /OracleState/Get [get]
 func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 
@@ -142,6 +152,18 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 		chainID, outputUtxos, latestBlockPoint.BlockSlot, latestBlockPoint.BlockHash), c.logger)
 }
 
+// @Summary Get transaction failure status
+// @Description Returns whether the transaction failed. A transaction is considered failed if it is not found on Oracle and if its TTL has expired.
+// @Tags OracleState
+// @Produce json
+// @Param chainId query string true "Source chain ID"
+// @Param txHash query string true "Source transaction hash"
+// @Param ttl query string true "Transaction TTL"
+// @Success 200 {object} response.HasTxFailedResponse
+// @Failure 400 {object} response.ErrorResponse "Bad Request – One or more query parameters are missing or invalid, or the transaction could not be retrieved."
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Security ApiKeyAuth
+// @Router /OracleState/GetHasTxFailed [get]
 func (c *OracleStateControllerImpl) getHasTxFailed(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 

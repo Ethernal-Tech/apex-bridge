@@ -135,6 +135,16 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
+	validValidatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
+			},
+		},
+	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -184,16 +194,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -214,16 +216,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
@@ -235,16 +229,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
@@ -266,16 +252,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
@@ -351,18 +329,19 @@ func Test_createBatchInitialData(t *testing.T) {
 
 	cco.txProvider = txProviderMock
 
-	getValidatorsCardanoDataRetGood := []eth.ValidatorChainData{
-		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-			},
-		},
-	}
-
 	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
+	validValidatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
+			},
+		},
+	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -380,7 +359,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
 			{
 				Key: [4]*big.Int{
-					new(big.Int), new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
+					new(big.Int), new(big.Int).SetBytes(wallet.Fee.VerificationKey),
 				},
 			},
 		}
@@ -419,7 +398,7 @@ func Test_createBatchInitialData(t *testing.T) {
 
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
-			Return(getValidatorsCardanoDataRetGood, nil).Once()
+			Return(validValidatorsChainData, nil).Once()
 
 		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorIs(t, err, desiredErr)
@@ -428,14 +407,14 @@ func Test_createBatchInitialData(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
-			Return(getValidatorsCardanoDataRetGood, nil).Once()
+			Return(validValidatorsChainData, nil).Once()
 
 		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
-		assert.Contains(t, data.MultisigAddress, "addr_test1")
-		assert.Contains(t, data.MultisigFeeAddress, "addr_test1")
-		assert.NotEqual(t, data.MultisigAddress, data.MultisigFeeAddress)
+		assert.Contains(t, data.MultisigAddr, "addr_test1")
+		assert.Contains(t, data.FeeAddr, "addr_test1")
+		assert.NotEqual(t, data.MultisigAddr, data.FeeAddr)
 		assert.Equal(t, batchID, data.BatchNonceID)
 		assert.Greater(t, len(data.Metadata), 5)
 	})
@@ -456,7 +435,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", false, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -480,22 +459,22 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
+	validValidatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+			},
+		},
+	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -518,16 +497,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
@@ -541,16 +512,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 	t.Run("GenerateConsolidationTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
@@ -575,16 +538,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 	t.Run("GenerateConsolidationTransaction should pass", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
@@ -651,15 +606,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
-
 		batchNonceID := uint64(1)
 
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(30_010, 100)
@@ -675,14 +621,14 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}},
 		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
@@ -712,7 +658,7 @@ func TestSkylineConsolidation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", false, false)
 	require.NoError(t, err)
 
 	_ = wallet
@@ -743,6 +689,14 @@ func TestSkylineConsolidation(t *testing.T) {
 		{
 			DstChainID: destinationChain,
 			TokenName:  token1.String(),
+		},
+	}
+	validValidatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+			},
 		},
 	}
 
@@ -781,14 +735,6 @@ func TestSkylineConsolidation(t *testing.T) {
 
 	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-					new(big.Int).SetBytes(wallet.MultiSigFee.VerificationKey),
-				},
-			},
-		}
 
 		batchNonceID := uint64(1)
 
@@ -807,14 +753,14 @@ func TestSkylineConsolidation(t *testing.T) {
 			}},
 		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()

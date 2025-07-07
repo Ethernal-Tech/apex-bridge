@@ -103,6 +103,7 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	}
 
 	receiverAmountSum := big.NewInt(0)
+	wrappedTokenAmountSum := big.NewInt(0)
 	feeSum := uint64(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
@@ -141,6 +142,8 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 			if !receiver.IsNativeToken {
 				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))
+			} else {
+				wrappedTokenAmountSum.Add(wrappedTokenAmountSum, new(big.Int).SetUint64(receiver.Amount))
 			}
 		}
 	}
@@ -182,6 +185,13 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		receiverAmountSum.Cmp(sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee greater than maximum allowed: %v, for request: %v",
 			sc.oracleConfig.BridgingSettings.MaxAmountAllowedToBridge, requestBody)
+	}
+
+	if sc.oracleConfig.BridgingSettings.MaxTokenAmountAllowedToBridge != nil &&
+		sc.oracleConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.Sign() > 0 &&
+		wrappedTokenAmountSum.Cmp(sc.oracleConfig.BridgingSettings.MaxTokenAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of wrapped token: %v greater than maximum allowed: %v",
+			wrappedTokenAmountSum, sc.oracleConfig.BridgingSettings.MaxTokenAmountAllowedToBridge)
 	}
 
 	return nil

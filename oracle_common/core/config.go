@@ -100,8 +100,10 @@ func (config CardanoChainConfig) GetAddressesOfInterest() []string {
 }
 
 type SubmitConfig struct {
-	ConfirmedBlocksThreshold  int `json:"confirmedBlocksThreshold"`
-	ConfirmedBlocksSubmitTime int `json:"confirmedBlocksSubmitTime"`
+	ConfirmedBlocksThreshold  int             `json:"confirmedBlocksThreshold"`
+	ConfirmedBlocksSubmitTime int             `json:"confirmedBlocksSubmitTime"`
+	EmptyBlocksThreshold      map[string]uint `json:"emptyBlocksThreshold"`
+	UpdateFromIndexerDB       bool            `json:"updateFromIndexerDb"`
 }
 
 type BridgeConfig struct {
@@ -118,6 +120,7 @@ type AppSettings struct {
 
 type BridgingSettings struct {
 	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
 }

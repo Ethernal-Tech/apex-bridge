@@ -26,7 +26,7 @@ type IOracleBridgeSmartContract interface {
 	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
 	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) (*types.Receipt, error)
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
-	GetBatchTransactions(ctx context.Context, chainID string, batchID uint64) ([]TxDataInfo, error)
+	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
 }
 
 type OracleBridgeSmartContractImpl struct {
@@ -150,27 +150,27 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	return nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetBatchTransactions(
+func (bsc *OracleBridgeSmartContractImpl) GetBatchStatusAndTransactions(
 	ctx context.Context, chainID string, batchID uint64,
-) ([]TxDataInfo, error) {
+) (uint8, []TxDataInfo, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
+		return 0, nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+		return 0, nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	result, err := contract.GetBatchTransactions(&bind.CallOpts{
+	result, err := contract.GetBatchStatusAndTransactions(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(chainID), batchID)
 	if err != nil {
-		return nil, fmt.Errorf("error while GetBatchTransactions: %w", bsc.ethHelper.ProcessError(err))
+		return 0, nil, fmt.Errorf("error while GetBatchStatusAndTransactions: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	return result, nil
+	return result.Status, result.Txs, nil
 }
