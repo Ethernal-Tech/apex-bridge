@@ -35,4 +35,4 @@ swag-install:
 
 .PHONY: swag-generate
 swag-generate:
-	swag init --parseDependency -g api/api.go -o api/docs
+	swag init --parseDependency -g api/api.go -o docs/oracle-api

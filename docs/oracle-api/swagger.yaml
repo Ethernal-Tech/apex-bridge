@@ -79,6 +79,8 @@ definitions:
         type: string
       maxReceiversPerBridgingRequest:
         type: integer
+      maxTokenAmountAllowedToBridge:
+        type: string
       minChainFeeForBridging:
         additionalProperties:
           type: integer
