@@ -86,12 +86,11 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmountDfm)
 	}
 
-	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
-	totalAmount.Add(totalAmount, feeAmountDfm)
+	totalAmount.Add(totalAmount, common.WeiToDfm(metadata.FeeAmount))
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
-		Amount:             feeAmountDfm,
+		Amount:             new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount),
 	})
 
 	claim := oCore.BridgingRequestClaim{

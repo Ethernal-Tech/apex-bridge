@@ -66,17 +66,21 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
-	totalAmount := big.NewInt(0)
-
-	var feeAddress string
+	var (
+		totalAmount    = big.NewInt(0)
+		feeCurrencyDst *big.Int
+		feeAddress     string
+	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 
 	switch {
 	case cardanoDestConfig != nil:
 		feeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+		feeCurrencyDst = new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
+		feeCurrencyDst = new(big.Int).SetUint64(ethDestConfig.FeeAddrBridgingAmount)
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -102,13 +106,11 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
-
-	totalAmount.Add(totalAmount, feeAmount)
+	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
-		Amount:             feeAmount,
+		Amount:             feeCurrencyDst,
 	})
 
 	claim := cCore.BridgingRequestClaim{
