@@ -669,6 +669,7 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -693,6 +694,7 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -708,6 +710,7 @@ func (p *generateConfigsParams) Execute(
 				DynamicTx:               true,
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
+				FeeAddrBridgingAmount:   p.nexusMinFeeForBridging,
 			},
 		},
 		Bridge: oCore.BridgeConfig{

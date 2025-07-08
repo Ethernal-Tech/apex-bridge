@@ -597,6 +597,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
 				MinOperationFee:          p.primeMinOperationFee,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrCardano: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -623,6 +624,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.cardanoMinFeeForBridging,
 				MinOperationFee:          p.cardanoMinOperationFee,
+				FeeAddrBridgingAmount:    p.cardanoUtxoMinAmount,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
