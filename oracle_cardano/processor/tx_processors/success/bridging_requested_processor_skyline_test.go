@@ -1314,14 +1314,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				},
 			},
 		}
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+
+		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
 				Hash:     txHash,
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
-		}, appConfig)
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "sum of receiver amounts + fee is under the minimum allowed")
 	})
