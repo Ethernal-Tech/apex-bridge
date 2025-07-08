@@ -169,7 +169,7 @@ func TestRelayerExecute(t *testing.T) {
 
 func TestRelayerGetChainSpecificOperations(t *testing.T) {
 	jsonData := []byte(`{
-		"socketPath": "./socket",
+		"txProvider": {"socketPath": "./socket"},
 		"testnetMagic": 2,
 		"potentialFee": 300000
 		}`)

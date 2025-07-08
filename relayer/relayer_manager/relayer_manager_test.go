@@ -26,7 +26,7 @@ func TestRelayerManagerConfig(t *testing.T) {
 	defer os.RemoveAll(testDir)
 
 	jsonData := []byte(`{
-		"blockFrostUrl": "http://hello.com",
+		"txProvider": {"blockFrostUrl": "http://hello.com"},
 		"testnetMagic": 2,
 		"potentialFee": 300000
 		}`)
@@ -119,7 +119,7 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 				ChainType: common.ChainTypeCardanoStr,
 				DbsPath:   testDir,
 				ChainSpecific: json.RawMessage([]byte(`{
-					"blockFrostUrl": "http://hello.com"
+					"txProvider": {"blockFrostUrl": "http://hello.com"}
 				}`)),
 			},
 			common.ChainIDStrVector: {

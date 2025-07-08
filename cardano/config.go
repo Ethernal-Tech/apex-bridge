@@ -10,13 +10,19 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+type TxProviderConfig struct {
+	OgmiosURL           string `json:"ogmiosUrl,omitempty"`
+	BlockfrostURL       string `json:"blockfrostUrl,omitempty"`
+	BlockfrostAPIKey    string `json:"blockfrostApiKey,omitempty"`
+	DemeterSubmitAPIURL string `json:"demeterSubmitAPIURL,omitempty"`
+	DemeterSubmitAPIKey string `json:"demeterSubmitAPIKey,omitempty"`
+	SocketPath          string `json:"socketPath,omitempty"`
+}
+
 type CardanoChainConfig struct {
 	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
 	NetworkMagic          uint32                           `json:"testnetMagic"`
-	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
-	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
-	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
-	SocketPath            string                           `json:"socketPath,omitempty"`
+	TxProvider            *TxProviderConfig                `json:"txProvider,omitempty"`
 	PotentialFee          uint64                           `json:"potentialFee"`
 	TTLSlotNumberInc      uint64                           `json:"ttlSlotNumberIncrement"`
 	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
@@ -47,20 +53,31 @@ func (config CardanoChainConfig) Serialize() ([]byte, error) {
 }
 
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
-	if config.OgmiosURL != "" {
-		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
+	providerConfig := config.TxProvider
+	if providerConfig == nil {
+		return nil, errors.New("no tx provider specified")
 	}
 
-	if config.SocketPath != "" {
+	if providerConfig.OgmiosURL != "" {
+		return cardanowallet.NewTxProviderOgmios(providerConfig.OgmiosURL), nil
+	}
+
+	if providerConfig.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(
-			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+			uint(config.NetworkMagic), providerConfig.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	}
 
-	if config.BlockfrostURL != "" {
-		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostURL, config.BlockfrostAPIKey), nil
+	if providerConfig.BlockfrostURL != "" {
+		if providerConfig.DemeterSubmitAPIURL != "" {
+			return cardanowallet.NewTxProviderDemeter(
+				providerConfig.BlockfrostURL, providerConfig.BlockfrostAPIKey,
+				providerConfig.DemeterSubmitAPIURL, providerConfig.DemeterSubmitAPIKey), nil
+		}
+
+		return cardanowallet.NewTxProviderBlockFrost(providerConfig.BlockfrostURL, providerConfig.BlockfrostAPIKey), nil
 	}
 
-	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
+	return nil, errors.New("no tx provider specified")
 }
 
 func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {

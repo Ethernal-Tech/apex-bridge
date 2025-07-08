@@ -116,6 +116,8 @@ $ go run ./main.go generate-configs \
         --prime-ogmios-url <ogmios URL for prime network> \
         --prime-blockfrost-url <blockfrost URL for prime network> \
         --prime-blockfrost-api-key <blockfrost API key for prime network> \
+        --prime-demeter-submit-url <demeter API URL for prime network> \
+        --prime-demeter-submit-api-key <demeter API key for prime network> \
         --prime-socket-path <socket path for prime network> \
         --prime-ttl-slot-inc <ttl slot increment for prime> \
         --prime-slot-rounding-threshold <prime slot rounding threshold> \
@@ -129,6 +131,8 @@ $ go run ./main.go generate-configs \
         --vector-blockfrost-url <blockfrost URL for vector network> \
         --vector-ogmios-url <ogmios URL for vector network> \
         --vector-blockfrost-api-key <blockfrost API key for vector network> \
+        --vector-demeter-submit-url <demeter API URL for vector network> \
+        --vector-demeter-submit-api-key <demeter API key for vector network> \
         --vector-socket-path <socket path for vector network> \
         --vector-ttl-slot-inc <ttl slot increment for vector> \
         --vector-slot-rounding-threshold <vector slot rounding threshold> \

@@ -19,8 +19,10 @@ func TestConfig(t *testing.T) {
 		config, err := NewCardanoChainConfig(json.RawMessage(
 			[]byte(`{
 				"testnetMagic": 2,
-				"blockfrostUrl": "pera",
-				"blockfrostApiKey": "zdera",
+				"txProvider": {
+					"blockfrostUrl": "pera",
+					"blockfrostApiKey": "zdera"
+				},
 				"potentialFee": 300000
 				}`),
 		))
@@ -28,8 +30,8 @@ func TestConfig(t *testing.T) {
 		require.NotNil(t, config)
 		require.Equal(t, "cardano", config.GetChainType())
 		require.Equal(t, uint32(2), config.NetworkMagic)
-		require.Equal(t, "pera", config.BlockfrostURL)
-		require.Equal(t, "zdera", config.BlockfrostAPIKey)
+		require.Equal(t, "pera", config.TxProvider.BlockfrostURL)
+		require.Equal(t, "zdera", config.TxProvider.BlockfrostAPIKey)
 		require.Equal(t, uint64(300000), config.PotentialFee)
 	})
 }

@@ -38,6 +38,8 @@ const (
 	cardanoOgmiosURLFlag              = "cardano-ogmios-url"
 	cardanoBlockfrostURLFlag          = "cardano-blockfrost-url"
 	cardanoBlockfrostAPIKeyFlag       = "cardano-blockfrost-api-key" //nolint:gosec
+	cardanoDemeterSubmitAPIURLFlag    = "cardano-demeter-submit-url"
+	cardanoDemeterSubmitAPIKeyFlag    = "cardano-demeter-submit-api-key"
 	cardanoSocketPathFlag             = "cardano-socket-path"
 	cardanoTTLSlotIncFlag             = "cardano-ttl-slot-inc"
 	cardanoSlotRoundingThresholdFlag  = "cardano-slot-rounding-threshold"
@@ -53,6 +55,8 @@ const (
 	cardanoOgmiosURLFlagDesc              = "ogmios URL for cardano network"
 	cardanoBlockfrostURLFlagDesc          = "blockfrost URL for cardano network"
 	cardanoBlockfrostAPIKeyFlagDesc       = "blockfrost API key for cardano network" //nolint:gosec
+	cardanoDemeterSubmitAPIURLFlagDesc    = "demeter submit URL for cardano network"
+	cardanoDemeterSubmitAPIKeyFlagDesc    = "demeter API key for cardano network" //nolint:gosec
 	cardanoSocketPathFlagDesc             = "socket path for cardano network"
 	cardanoTTLSlotIncFlagDesc             = "TTL slot increment for cardano"
 	cardanoSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
@@ -76,6 +80,8 @@ type skylineGenerateConfigsParams struct {
 	primeOgmiosURL              string
 	primeBlockfrostURL          string
 	primeBlockfrostAPIKey       string
+	primeDemeterSubmitAPIURL    string
+	primeDemeterSubmitAPIKey    string
 	primeSocketPath             string
 	primeTTLSlotInc             uint64
 	primeSlotRoundingThreshold  uint64
@@ -91,6 +97,8 @@ type skylineGenerateConfigsParams struct {
 	cardanoOgmiosURL              string
 	cardanoBlockfrostURL          string
 	cardanoBlockfrostAPIKey       string
+	cardanoDemeterSubmitAPIURL    string
+	cardanoDemeterSubmitAPIKey    string
 	cardanoSocketPath             string
 	cardanoTTLSlotInc             uint64
 	cardanoSlotRoundingThreshold  uint64
@@ -141,6 +149,10 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
 	}
 
+	if p.primeDemeterSubmitAPIURL != "" && !common.IsValidHTTPURL(p.primeDemeterSubmitAPIURL) {
+		return fmt.Errorf("invalid prime demeter submit api url: %s", p.primeDemeterSubmitAPIURL)
+	}
+
 	if p.primeOgmiosURL != "" && !common.IsValidHTTPURL(p.primeOgmiosURL) {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
@@ -152,6 +164,10 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if p.cardanoBlockfrostURL == "" && p.cardanoSocketPath == "" && p.cardanoOgmiosURL == "" {
 		return fmt.Errorf("specify at least one of: %s, %s, %s",
 			cardanoBlockfrostURLFlag, cardanoSocketPathFlag, cardanoOgmiosURLFlag)
+	}
+
+	if p.cardanoDemeterSubmitAPIURL != "" && !common.IsValidHTTPURL(p.cardanoDemeterSubmitAPIURL) {
+		return fmt.Errorf("invalid cardano demeter submit api url: %s", p.cardanoDemeterSubmitAPIURL)
 	}
 
 	if p.cardanoBlockfrostURL != "" && !common.IsValidHTTPURL(p.cardanoBlockfrostURL) {
@@ -261,6 +277,18 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeBlockfrostURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
+		&p.primeDemeterSubmitAPIURL,
+		primeDemeterSubmitAPIURLFlag,
+		"",
+		primeDemeterSubmitAPIURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.primeDemeterSubmitAPIKey,
+		primeDemeterSubmitAPIKeyFlag,
+		"",
+		primeDemeterSubmitAPIKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&p.primeBlockfrostAPIKey,
 		primeBlockfrostAPIKeyFlag,
 		"",
@@ -344,6 +372,18 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoBlockfrostURLFlag,
 		"",
 		cardanoBlockfrostURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.cardanoDemeterSubmitAPIURL,
+		cardanoDemeterSubmitAPIURLFlag,
+		"",
+		cardanoDemeterSubmitAPIURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.cardanoDemeterSubmitAPIKey,
+		cardanoDemeterSubmitAPIKeyFlag,
+		"",
+		cardanoDemeterSubmitAPIKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.cardanoBlockfrostAPIKey,
@@ -573,13 +613,17 @@ func (p *skylineGenerateConfigsParams) Execute(
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.primeNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.primeNetworkID),
-					TTLSlotNumberInc:      p.primeTTLSlotInc,
-					OgmiosURL:             p.primeOgmiosURL,
-					BlockfrostURL:         p.primeBlockfrostURL,
-					BlockfrostAPIKey:      p.primeBlockfrostAPIKey,
-					SocketPath:            p.primeSocketPath,
+					NetworkMagic:     p.primeNetworkMagic,
+					NetworkID:        wallet.CardanoNetworkType(p.primeNetworkID),
+					TTLSlotNumberInc: p.primeTTLSlotInc,
+					TxProvider: &cardanotx.TxProviderConfig{
+						OgmiosURL:           p.primeOgmiosURL,
+						BlockfrostURL:       p.primeBlockfrostURL,
+						BlockfrostAPIKey:    p.primeBlockfrostAPIKey,
+						DemeterSubmitAPIURL: p.primeDemeterSubmitAPIURL,
+						DemeterSubmitAPIKey: p.primeDemeterSubmitAPIKey,
+						SocketPath:          p.primeSocketPath,
+					},
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
@@ -600,13 +644,17 @@ func (p *skylineGenerateConfigsParams) Execute(
 			},
 			common.ChainIDStrCardano: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.cardanoNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.cardanoNetworkID),
-					TTLSlotNumberInc:      p.cardanoTTLSlotInc,
-					OgmiosURL:             p.cardanoOgmiosURL,
-					BlockfrostURL:         p.cardanoBlockfrostURL,
-					BlockfrostAPIKey:      p.cardanoBlockfrostAPIKey,
-					SocketPath:            p.cardanoSocketPath,
+					NetworkMagic:     p.cardanoNetworkMagic,
+					NetworkID:        wallet.CardanoNetworkType(p.cardanoNetworkID),
+					TTLSlotNumberInc: p.cardanoTTLSlotInc,
+					TxProvider: &cardanotx.TxProviderConfig{
+						OgmiosURL:           p.cardanoOgmiosURL,
+						BlockfrostURL:       p.cardanoBlockfrostURL,
+						BlockfrostAPIKey:    p.cardanoBlockfrostAPIKey,
+						DemeterSubmitAPIURL: p.cardanoDemeterSubmitAPIURL,
+						DemeterSubmitAPIKey: p.cardanoDemeterSubmitAPIKey,
+						SocketPath:          p.cardanoSocketPath,
+					},
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.cardanoSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,

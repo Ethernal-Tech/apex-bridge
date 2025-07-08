@@ -30,6 +30,8 @@ const (
 	primeOgmiosURLFlag              = "prime-ogmios-url"
 	primeBlockfrostURLFlag          = "prime-blockfrost-url"
 	primeBlockfrostAPIKeyFlag       = "prime-blockfrost-api-key"
+	primeDemeterSubmitAPIURLFlag    = "prime-demeter-submit-url"
+	primeDemeterSubmitAPIKeyFlag    = "prime-demeter-submit-api-key" //nolint:gosec
 	primeSocketPathFlag             = "prime-socket-path"
 	primeTTLSlotIncFlag             = "prime-ttl-slot-inc"
 	primeSlotRoundingThresholdFlag  = "prime-slot-rounding-threshold"
@@ -44,6 +46,8 @@ const (
 	vectorOgmiosURLFlag              = "vector-ogmios-url"
 	vectorBlockfrostURLFlag          = "vector-blockfrost-url"
 	vectorBlockfrostAPIKeyFlag       = "vector-blockfrost-api-key"
+	vectorDemeterSubmitAPIURLFlag    = "vector-demeter-submit-url"
+	vectorDemeterSubmitAPIKeyFlag    = "vector-demeter-submit-api-key"
 	vectorSocketPathFlag             = "vector-socket-path"
 	vectorTTLSlotIncFlag             = "vector-ttl-slot-inc"
 	vectorSlotRoundingThresholdFlag  = "vector-slot-rounding-threshold"
@@ -86,6 +90,8 @@ const (
 	primeOgmiosURLFlagDesc              = "ogmios URL for prime network"
 	primeBlockfrostURLFlagDesc          = "blockfrost URL for prime network"
 	primeBlockfrostAPIKeyFlagDesc       = "blockfrost API key for prime network" //nolint:gosec
+	primeDemeterSubmitAPIURLFlagDesc    = "demeter submit URL for prime network"
+	primeDemeterSubmitAPIKeyFlagDesc    = "demeter API key for prime network" //nolint:gosec
 	primeSocketPathFlagDesc             = "socket path for prime network"
 	primeTTLSlotIncFlagDesc             = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
@@ -100,6 +106,8 @@ const (
 	vectorOgmiosURLFlagDesc              = "ogmios URL for vector network"
 	vectorBlockfrostURLFlagDesc          = "blockfrost URL for vector network"
 	vectorBlockfrostAPIKeyFlagDesc       = "blockfrost API key for vector network" //nolint:gosec
+	vectorDemeterSubmitAPIURLFlagDesc    = "demeter submit URL for vector network"
+	vectorDemeterSubmitAPIKeyFlagDesc    = "demeter API key for vector network" //nolint:gosec
 	vectorSocketPathFlagDesc             = "socket path for vector network"
 	vectorTTLSlotIncFlagDesc             = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
@@ -175,6 +183,8 @@ type generateConfigsParams struct {
 	primeOgmiosURL              string
 	primeBlockfrostURL          string
 	primeBlockfrostAPIKey       string
+	primeDemeterSubmitAPIURL    string
+	primeDemeterSubmitAPIKey    string
 	primeSocketPath             string
 	primeTTLSlotInc             uint64
 	primeSlotRoundingThreshold  uint64
@@ -189,6 +199,8 @@ type generateConfigsParams struct {
 	vectorOgmiosURL              string
 	vectorBlockfrostURL          string
 	vectorBlockfrostAPIKey       string
+	vectorDemeterSubmitAPIURL    string
+	vectorDemeterSubmitAPIKey    string
 	vectorSocketPath             string
 	vectorTTLSlotInc             uint64
 	vectorSlotRoundingThreshold  uint64
@@ -241,6 +253,10 @@ func (p *generateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
 	}
 
+	if p.primeDemeterSubmitAPIURL != "" && !common.IsValidHTTPURL(p.primeDemeterSubmitAPIURL) {
+		return fmt.Errorf("invalid prime demeter submit api url: %s", p.primeDemeterSubmitAPIURL)
+	}
+
 	if p.primeOgmiosURL != "" && !common.IsValidHTTPURL(p.primeOgmiosURL) {
 		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
 	}
@@ -256,6 +272,10 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
 		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
+	}
+
+	if p.vectorDemeterSubmitAPIURL != "" && !common.IsValidHTTPURL(p.vectorDemeterSubmitAPIURL) {
+		return fmt.Errorf("invalid vector demeter submit api url: %s", p.vectorDemeterSubmitAPIURL)
 	}
 
 	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
@@ -353,6 +373,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		primeBlockfrostURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
+		&p.primeDemeterSubmitAPIURL,
+		primeDemeterSubmitAPIURLFlag,
+		"",
+		primeDemeterSubmitAPIURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.primeDemeterSubmitAPIKey,
+		primeDemeterSubmitAPIKeyFlag,
+		"",
+		primeDemeterSubmitAPIKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&p.primeBlockfrostAPIKey,
 		primeBlockfrostAPIKeyFlag,
 		"",
@@ -430,6 +462,18 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorBlockfrostURLFlag,
 		"",
 		vectorBlockfrostURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorDemeterSubmitAPIURL,
+		vectorDemeterSubmitAPIURLFlag,
+		"",
+		vectorDemeterSubmitAPIURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorDemeterSubmitAPIKey,
+		vectorDemeterSubmitAPIKeyFlag,
+		"",
+		vectorDemeterSubmitAPIKeyFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.vectorBlockfrostAPIKey,
@@ -648,13 +692,17 @@ func (p *generateConfigsParams) Execute(
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.primeNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.primeNetworkID),
-					TTLSlotNumberInc:      p.primeTTLSlotInc,
-					OgmiosURL:             p.primeOgmiosURL,
-					BlockfrostURL:         p.primeBlockfrostURL,
-					BlockfrostAPIKey:      p.primeBlockfrostAPIKey,
-					SocketPath:            p.primeSocketPath,
+					NetworkMagic:     p.primeNetworkMagic,
+					NetworkID:        wallet.CardanoNetworkType(p.primeNetworkID),
+					TTLSlotNumberInc: p.primeTTLSlotInc,
+					TxProvider: &cardanotx.TxProviderConfig{
+						OgmiosURL:           p.primeOgmiosURL,
+						BlockfrostURL:       p.primeBlockfrostURL,
+						BlockfrostAPIKey:    p.primeBlockfrostAPIKey,
+						DemeterSubmitAPIURL: p.primeDemeterSubmitAPIURL,
+						DemeterSubmitAPIKey: p.primeDemeterSubmitAPIKey,
+						SocketPath:          p.primeSocketPath,
+					},
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
@@ -673,13 +721,17 @@ func (p *generateConfigsParams) Execute(
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.vectorNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.vectorNetworkID),
-					TTLSlotNumberInc:      p.vectorTTLSlotInc,
-					OgmiosURL:             p.vectorOgmiosURL,
-					BlockfrostURL:         p.vectorBlockfrostURL,
-					BlockfrostAPIKey:      p.vectorBlockfrostAPIKey,
-					SocketPath:            p.vectorSocketPath,
+					NetworkMagic:     p.vectorNetworkMagic,
+					NetworkID:        wallet.CardanoNetworkType(p.vectorNetworkID),
+					TTLSlotNumberInc: p.vectorTTLSlotInc,
+					TxProvider: &cardanotx.TxProviderConfig{
+						OgmiosURL:           p.vectorOgmiosURL,
+						BlockfrostURL:       p.vectorBlockfrostURL,
+						BlockfrostAPIKey:    p.vectorBlockfrostAPIKey,
+						DemeterSubmitAPIURL: p.vectorDemeterSubmitAPIURL,
+						DemeterSubmitAPIKey: p.vectorDemeterSubmitAPIKey,
+						SocketPath:          p.vectorSocketPath,
+					},
 					PotentialFee:          300000,
 					SlotRoundingThreshold: p.vectorSlotRoundingThreshold,
 					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,

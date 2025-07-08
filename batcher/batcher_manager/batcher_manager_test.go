@@ -83,7 +83,7 @@ func TestBatcherManagerCreation(t *testing.T) {
 				{
 					ChainID:       common.ChainIDStrPrime,
 					ChainType:     "Cardano",
-					ChainSpecific: json.RawMessage([]byte(`{ "testnetMagic": 2, "socketPath": "./" }`)),
+					ChainSpecific: json.RawMessage([]byte(`{ "testnetMagic": 2, "txProvider": {"socketPath": "./socket"} }`)),
 				},
 			},
 		}

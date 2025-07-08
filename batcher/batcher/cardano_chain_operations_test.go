@@ -106,7 +106,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
+			"txProvider": {"socketPath": "./socket"},
 			"testnetMagic": 42,
 			"minUtxoAmount": 1000
 			}`))
@@ -315,7 +315,7 @@ func Test_createBatchInitialData(t *testing.T) {
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
+			"txProvider": {"socketPath": "./socket"},
 			"testnetMagic": 42,
 			"minUtxoAmount": 1000
 			}`))
@@ -439,7 +439,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
+			"txProvider": {"socketPath": "./socket"},
 			"testnetMagic": 42,
 			"minUtxoAmount": 1000
 			}`))
@@ -667,7 +667,7 @@ func TestSkylineConsolidation(t *testing.T) {
 	token2, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
 
 	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
+			"txProvider": {"socketPath": "./socket"},
 			"testnetMagic": 42,
 			"minUtxoAmount": 1000
 			}`))
