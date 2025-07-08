@@ -220,7 +220,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
-	nativeCurrencyAmountSum := new(big.Int).SetUint64(metadata.OperationFee)
+	nativeCurrencyAmountSum := big.NewInt(0)
 	wrappedTokenAmountSum := big.NewInt(0)
 	hasNativeTokenOnSource := false
 	hasCurrencyOnSource := false
@@ -279,9 +279,17 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
+		nativeCurrencyAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
+			nativeCurrencyAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+	}
+
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee += feeSum
 	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
+	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(metadata.OperationFee))
 
 	if metadata.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
@@ -324,13 +332,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	if new(big.Int).SetUint64(minCurrency).Cmp(nativeCurrencyAmountSum) == 1 {
 		return fmt.Errorf("sum of receiver amounts + fee is under the minimum allowed: min %v but got %v",
 			minCurrency, nativeCurrencyAmountSum)
-	}
-
-	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
-		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		nativeCurrencyAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
-		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			nativeCurrencyAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
 	if appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge != nil &&

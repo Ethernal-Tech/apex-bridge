@@ -536,7 +536,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
-			{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: maxAmountAllowedToBridge.Uint64()},
+			{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: maxAmountAllowedToBridge.Uint64() + 1},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
@@ -550,7 +550,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: minFeeForBridging + maxAmountAllowedToBridge.Uint64()},
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + maxAmountAllowedToBridge.Uint64() + 1},
 		}
 		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
 			Tx: indexer.Tx{

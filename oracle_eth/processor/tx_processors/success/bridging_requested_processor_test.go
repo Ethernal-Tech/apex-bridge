@@ -384,7 +384,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
-			{Address: validTestAddress, Amount: common.DfmToWei(maxAmountAllowedToBridge)},
+			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).Add(new(big.Int).SetUint64(1), maxAmountAllowedToBridge))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -402,7 +402,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
+			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + 1 + minFeeForBridging)),
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "greater than maximum allowed")
