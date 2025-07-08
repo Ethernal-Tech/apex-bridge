@@ -46,7 +46,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK - Returns the raw transaction data, transaction hash, and calculated bridging fees and amounts.",
+                        "description": "OK - Returns the raw transaction data, transaction hash, and calculated bridging fee and amounts.",
                         "schema": {
                             "$ref": "#/definitions/response.BridgingTxResponse"
                         }
@@ -217,6 +217,12 @@ const docTemplate = `{
         },
         "request.CreateBridgingTxRequest": {
             "type": "object",
+            "required": [
+                "destinationChainId",
+                "senderAddr",
+                "sourceChainId",
+                "transactions"
+            ],
             "properties": {
                 "bridgingFee": {
                     "description": "Fee covering the submission of the transaction on the destination chain, expressed in Lovelace",
@@ -264,6 +270,10 @@ const docTemplate = `{
         },
         "request.CreateBridgingTxTransactionRequest": {
             "type": "object",
+            "required": [
+                "addr",
+                "amount"
+            ],
             "properties": {
                 "addr": {
                     "description": "Receiver address",
@@ -274,7 +284,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "isNativeToken": {
-                    "description": "True if the amount is specified in a native token; false if in a regular currency on source chain",
+                    "description": "True if the amount is specified in a native token; false if in a currency on source chain",
                     "type": "boolean"
                 }
             }

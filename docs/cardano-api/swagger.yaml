@@ -76,6 +76,11 @@ definitions:
       utxoCacheKey:
         description: Key used to enable caching of spent UTXOs
         type: string
+    required:
+    - destinationChainId
+    - senderAddr
+    - sourceChainId
+    - transactions
     type: object
   request.CreateBridgingTxTransactionRequest:
     properties:
@@ -87,8 +92,11 @@ definitions:
         type: integer
       isNativeToken:
         description: True if the amount is specified in a native token; false if in
-          a regular currency on source chain
+          a currency on source chain
         type: boolean
+    required:
+    - addr
+    - amount
     type: object
   request.UtxoRequest:
     properties:
@@ -187,7 +195,7 @@ paths:
       responses:
         "200":
           description: OK - Returns the raw transaction data, transaction hash, and
-            calculated bridging fees and amounts.
+            calculated bridging fee and amounts.
           schema:
             $ref: '#/definitions/response.BridgingTxResponse'
         "400":
