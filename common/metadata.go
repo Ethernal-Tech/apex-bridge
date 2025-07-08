@@ -37,7 +37,7 @@ type BridgingRequestMetadata struct {
 	DestinationChainID string                               `cbor:"d" json:"d"`
 	SenderAddr         []string                             `cbor:"s" json:"s"`
 	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
-	FeeAmount          uint64                               `cbor:"fa" json:"fa"`
+	BridgingFee        uint64                               `cbor:"fa" json:"fa"`
 }
 
 type BatchExecutedMetadata struct {

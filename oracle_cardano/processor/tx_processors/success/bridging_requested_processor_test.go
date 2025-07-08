@@ -20,6 +20,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
 		utxoMinValue          = 1000000
 		minFeeForBridging     = 1000010
+		feeAddrBridgingAmount = uint64(1000001)
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
@@ -38,8 +39,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
+				UtxoMinAmount:         utxoMinValue,
+				MinFeeForBridging:     minFeeForBridging,
+				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},
 			common.ChainIDStrVector: {
 				NetworkID: wallet.VectorTestNetNetwork,
@@ -47,8 +49,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
-				UtxoMinAmount:     utxoMinValue,
-				MinFeeForBridging: minFeeForBridging,
+				UtxoMinAmount:         utxoMinValue,
+				MinFeeForBridging:     minFeeForBridging,
+				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},
 		},
 		BridgingSettings: cCore.BridgingSettings{
@@ -272,7 +275,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Transactions: []common.BridgingRequestMetadataTransaction{
 				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
-			FeeAmount: minFeeForBridging - 1,
+			BridgingFee: minFeeForBridging - 1,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
@@ -301,7 +304,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
 			},
-			FeeAmount: 100,
+			BridgingFee: 100,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -566,6 +569,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 }

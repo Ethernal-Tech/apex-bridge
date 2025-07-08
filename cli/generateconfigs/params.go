@@ -161,6 +161,8 @@ const (
 	defaultTakeAtLeastUtxoCount = 6
 
 	defaultEmptyBlocksThreshold = 1000
+
+	defaultNexusFeeAddrBridgingAmount = 1_000_000
 )
 
 var (
@@ -660,6 +662,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				UtxoMinAmount:            p.primeUtxoMinAmount,
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
 				MaxUtxoCount:             defaultMaxUtxoCount,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
@@ -682,6 +685,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
 				UtxoMinAmount:            p.vectorUtxoMinAmount,
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
 				MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
 				MaxUtxoCount:             defaultMaxUtxoCount,
 				TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
@@ -700,6 +704,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 				DynamicTx:               true,
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
+				FeeAddrBridgingAmount:   defaultNexusFeeAddrBridgingAmount,
 			},
 		},
 		Bridge: oCore.BridgeConfig{

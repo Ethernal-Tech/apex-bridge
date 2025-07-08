@@ -86,12 +86,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmountDfm)
 	}
 
-	feeAmountDfm := common.WeiToDfm(metadata.FeeAmount)
-	totalAmount.Add(totalAmount, feeAmountDfm)
+	feeCurrencyDfmDst := new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, common.WeiToDfm(metadata.FeeAmount))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDfmDst)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
-		Amount:             feeAmountDfm,
+		Amount:             feeCurrencyDfmDst,
 	})
 
 	claim := oCore.BridgingRequestClaim{
@@ -99,7 +100,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:               receivers,
-		TotalAmount:             totalAmount,
+		TotalAmountSrc:          totalAmountCurrencySrc,
+		TotalAmountDst:          totalAmountCurrencyDst,
 		RetryCounter:            big.NewInt(int64(tx.BatchTryCount)),
 	}
 

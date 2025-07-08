@@ -40,6 +40,7 @@ type EthChainConfig struct {
 	TestMode                uint8                `json:"testMode"`
 	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
 	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
 }
 
 type CardanoChainConfig struct {
@@ -64,6 +65,7 @@ type CardanoChainConfig struct {
 	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
 	UtxoMinAmount         uint64  `json:"utxoMinAmount"`
 	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
+	FeeAddrBridgingAmount uint64  `json:"feeAddressBridgingAmount"`
 	MaxFeeUtxoCount       uint    `json:"maxFeeUtxoCount"`
 	MaxUtxoCount          uint    `json:"maxUtxoCount"`
 	TakeAtLeastUtxoCount  uint    `json:"takeAtLeastUtxoCount"`
