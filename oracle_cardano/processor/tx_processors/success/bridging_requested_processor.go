@@ -106,7 +106,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	totalAmount.Add(totalAmount, new(big.Int).SetUint64(metadata.FeeAmount))
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, new(big.Int).SetUint64(metadata.BridgingFee))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDst)
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
@@ -118,7 +119,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:               receivers,
-		TotalAmount:             totalAmount,
+		TotalAmountSrc:          totalAmountCurrencySrc,
+		TotalAmountDst:          totalAmountCurrencyDst,
 		RetryCounter:            big.NewInt(int64(tx.BatchTryCount)),
 	}
 
@@ -244,11 +246,11 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount += feeSum
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
+	metadata.BridgingFee += feeSum
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
 
-	if (cardanoDestConfig != nil && metadata.FeeAmount < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && metadata.FeeAmount < ethDestConfig.MinFeeForBridging) {
+	if (cardanoDestConfig != nil && metadata.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
+		(ethDestConfig != nil && metadata.BridgingFee < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
