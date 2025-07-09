@@ -4,42 +4,24 @@ import (
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-// Validate if all tx inputs belong to the multisig address or fee address
-func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
-	foundBridgingAddress := false
-	foundFeeAddress := false
-
+func ValidateTxInputs(tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	for _, utxo := range tx.Tx.Inputs {
-		switch utxo.Output.Address {
-		case chainConfig.BridgingAddresses.BridgingAddress:
-			foundBridgingAddress = true
-		case chainConfig.BridgingAddresses.FeeAddress:
-			foundFeeAddress = true
-		default:
-			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
-		}
+	if metadata.IsStakeDelegation == 1 {
+		return validateStakeDelTxInputs(tx, chainConfig.BridgingAddresses.FeeAddress)
 	}
 
-	if !foundBridgingAddress {
-		return fmt.Errorf("bridging address not found in tx inputs")
-	}
-
-	if !foundFeeAddress {
-		return fmt.Errorf("fee address not found in tx inputs")
-	}
-
-	return nil
+	return validateTxInputs(tx, chainConfig.BridgingAddresses.BridgingAddress, chainConfig.BridgingAddresses.FeeAddress)
 }
 
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
@@ -95,4 +77,46 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	}
 
 	return multisigUtxoOutput, nil
+}
+
+// Validate if all tx inputs belong to the multisig address or fee address
+func validateTxInputs(tx *core.CardanoTx, bridgingAddress string, feeAddress string) error {
+	foundBridgingAddress := false
+	foundFeeAddress := false
+
+	for _, utxo := range tx.Tx.Inputs {
+		switch utxo.Output.Address {
+		case bridgingAddress:
+			foundBridgingAddress = true
+		case feeAddress:
+			foundFeeAddress = true
+		default:
+			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
+		}
+	}
+
+	if !foundBridgingAddress {
+		return fmt.Errorf("bridging address not found in tx inputs")
+	}
+
+	if !foundFeeAddress {
+		return fmt.Errorf("fee address not found in tx inputs")
+	}
+
+	return nil
+}
+
+// Validate if all tx inputs belong to the fee address
+func validateStakeDelTxInputs(tx *core.CardanoTx, feeAddress string) error {
+	if len(tx.Tx.Inputs) == 0 {
+		return fmt.Errorf("no inputs found in transaction")
+	}
+
+	for _, utxo := range tx.Tx.Inputs {
+		if utxo.Output.Address != feeAddress {
+			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
+		}
+	}
+
+	return nil
 }
