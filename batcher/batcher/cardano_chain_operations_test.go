@@ -133,7 +133,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			Amount:             minUtxoAmount,
 		}},
 	}
-	stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
+	stakeDelegTxs := []eth.StakeDelegationTransaction{}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
 	validValidatorsChainData := []eth.ValidatorChainData{
@@ -154,7 +154,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -171,7 +171,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -188,7 +188,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -210,7 +210,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -223,7 +223,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -247,7 +247,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -279,7 +279,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
@@ -297,8 +297,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 }
 
-func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+func TestGenerateStakeTransaction(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "stake-chain-ops-tx")
 	require.NoError(t, err)
 
 	defer func() {
@@ -335,12 +335,11 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 
 	testError := errors.New("test err")
 	confirmedTransactions := make([]eth.ConfirmedTransaction, 0)
-	stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{
+	stakeDelegTxs := []eth.StakeDelegationTransaction{
 		{
-			ChainId:           1,
-			StakeAddressIndex: 0,
-			StakePoolId:       "pool1ttxrlraudm8msm88x4pjz75xqwrug2qmkw2tfgfr7ddjgqfa43q",
-			Nonce:             1,
+			ChainId:     1,
+			StakePoolId: "pool1ttxrlraudm8msm88x4pjz75xqwrug2qmkw2tfgfr7ddjgqfa43q",
+			Nonce:       1,
 		},
 	}
 	batchNonceID := uint64(1)
@@ -363,7 +362,7 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -380,7 +379,7 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -397,7 +396,7 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
@@ -419,7 +418,7 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
@@ -432,12 +431,12 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("GenerateBatchTransaction multisig and fee multisig does not have any utxo", func(t *testing.T) {
+	t.Run("GenerateStakeTransaction multisig and fee multisig does not have any utxo", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
@@ -447,11 +446,11 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
-	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
+	t.Run("GenerateStakeTransaction fee doesn't have enought funds", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
@@ -465,12 +464,35 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0xFF"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 5_000_000,
+						Amount: 500000, // enought for just a tx fee
 					},
 				},
 			}, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
+		require.ErrorContains(t, err, "invalid amount")
+	})
+
+	t.Run("GenerateStakeTransaction should pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0xFF"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 500000 + 2000000, // add stake registration fee
+					},
+				},
+			}, error(nil)).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
@@ -494,7 +516,6 @@ func TestGenerateStakeKeyRegDelegBatchTransaction(t *testing.T) {
 		require.NotEqual(t, witnessMultiSig1, witnessMultiSig2)
 		require.Equal(t, witnessMultiSigFee1, witnessMultiSigFee2)
 	})
-
 }
 
 func Test_createBatchInitialData(t *testing.T) {
@@ -543,6 +564,7 @@ func Test_createBatchInitialData(t *testing.T) {
 			},
 		},
 	}
+	isStakeDelegation := false
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -551,7 +573,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -567,7 +589,7 @@ func Test_createBatchInitialData(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
@@ -583,7 +605,7 @@ func Test_createBatchInitialData(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
@@ -601,7 +623,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
 			Return(validValidatorsChainData, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.ErrorIs(t, err, desiredErr)
 	})
 
@@ -610,7 +632,22 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
 			Return(validValidatorsChainData, nil).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
+		require.NoError(t, err)
+
+		assert.Contains(t, data.MultisigAddr, "addr_test1")
+		assert.Contains(t, data.FeeAddr, "addr_test1")
+		assert.NotEqual(t, data.MultisigAddr, data.FeeAddr)
+		assert.Equal(t, batchID, data.BatchNonceID)
+		assert.Greater(t, len(data.Metadata), 5)
+	})
+
+	t.Run("is stake delegation good", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
+			Return(validValidatorsChainData, nil).Once()
+
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, true)
 		require.NoError(t, err)
 
 		assert.Contains(t, data.MultisigAddr, "addr_test1")
@@ -668,6 +705,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			},
 		},
 	}
+	isStakeDelegation := false
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -689,7 +727,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -704,7 +742,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -730,7 +768,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -765,7 +803,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, isStakeDelegation)
 		require.NoError(t, err)
 
 		result, err := cco.generateConsolidationTransaction(data)
@@ -821,7 +859,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				Amount:             new(big.Int).SetUint64(2_000_000),
 			}},
 		}
-		stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
+		stakeDelegTxs := []eth.StakeDelegationTransaction{}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
@@ -837,7 +875,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.NoError(t, err)
 		require.Equal(t, true, result.IsConsolidation)
 		require.NotNil(t, result.TxRaw)
@@ -954,7 +992,8 @@ func TestSkylineConsolidation(t *testing.T) {
 				AmountWrapped:      big.NewInt(2_500_000),
 			}},
 		}
-		stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
+		stakeDelegTxs := []eth.StakeDelegationTransaction{}
+
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -969,7 +1008,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeKeyRegDelegTransactions, batchNonceID)
+		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, stakeDelegTxs, batchNonceID)
 		require.NoError(t, err)
 		require.Equal(t, true, result.IsConsolidation)
 		require.NotNil(t, result.TxRaw)

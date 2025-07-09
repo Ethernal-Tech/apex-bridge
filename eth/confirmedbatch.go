@@ -127,7 +127,6 @@ func (st StakeDelegationTransactionWrapper) String() string {
 		}
 
 		sb.WriteString(fmt.Sprintf("Chain ID = %s, ", common.ToStrChainID(tx.ChainId)))
-		sb.WriteString(fmt.Sprintf("Stake Address Index = %d", tx.StakeAddressIndex))
 		sb.WriteString(fmt.Sprintf("Stake Pool ID = %s", tx.StakePoolId))
 		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
 	}

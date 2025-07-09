@@ -107,16 +107,17 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	b.logger.Info("Starting batch creation process", "batchID", batchID)
 
 	// 1. Get stake key registration/delegation transactions
-	stakeKeyDelegationTransactions, err := b.bridgeSmartContract.GetStakeDelegationTransactions(ctx, b.config.Chain.ChainID)
+	stakeDelegationTransactions, err := b.bridgeSmartContract.GetStakeDelegationTransactions(
+		ctx, b.config.Chain.ChainID)
 	if err != nil {
-		return batchID, fmt.Errorf("failed to query bridge.GetStakeKeyRegDelegTransactions for chainID: %s. err: %w",
+		return batchID, fmt.Errorf("failed to query bridge.GetStakeDelegationTransactions for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
 	}
 
 	// Get confirmed transactions from smart contract
 	// if there are no stake key delegation transactions
 	confirmedTransactions := []eth.ConfirmedTransaction{}
-	if len(stakeKeyDelegationTransactions) == 0 {
+	if len(stakeDelegationTransactions) == 0 {
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 		if err != nil {
 			return batchID, fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
@@ -124,14 +125,14 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		}
 	}
 
-	if len(confirmedTransactions) == 0 && len(stakeKeyDelegationTransactions) == 0 {
+	if len(confirmedTransactions) == 0 && len(stakeDelegationTransactions) == 0 {
 		return batchID, fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
 			b.config.Chain.ChainID)
 	}
 
-	if len(stakeKeyDelegationTransactions) > 0 {
+	if len(stakeDelegationTransactions) > 0 {
 		b.logger.Debug("Successfully queried smart contract for stake registration and delegation transactions",
-			"batchID", batchID, "txs", eth.StakeDelegationTransactionWrapper{Txs: stakeKeyDelegationTransactions})
+			"batchID", batchID, "txs", eth.StakeDelegationTransactionWrapper{Txs: stakeDelegationTransactions})
 	}
 
 	if len(confirmedTransactions) > 0 {
@@ -141,7 +142,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, stakeKeyDelegationTransactions, batchID)
+		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, stakeDelegationTransactions, batchID)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -160,7 +161,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	b.logger.Info("Created batch tx", "batchID", batchID, "txHash", generatedBatchData.TxHash,
 		"isConsolidation", generatedBatchData.IsConsolidation, "isStakeDelegation", generatedBatchData.IsStakeDelegation,
-		"txs", fmt.Sprintf("%d", len(confirmedTransactions)+len(stakeKeyDelegationTransactions)))
+		"txs", fmt.Sprintf("%d", len(confirmedTransactions)+len(stakeDelegationTransactions)))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
@@ -207,7 +208,7 @@ func (b *BatcherImpl) createSignedBatch(
 	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
-	if !generatedBatchData.IsConsolidation {
+	if !generatedBatchData.IsConsolidation && len(confirmedTxs) > 0 {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
 	}
 
@@ -227,7 +228,7 @@ func (b *BatcherImpl) createSignedBatch(
 func (b *BatcherImpl) updateBatchTxsStates(
 	batchID uint64, txs []eth.ConfirmedTransaction, signedBatch *eth.SignedBatch,
 ) []common.BridgingRequestStateKey {
-	if signedBatch.IsConsolidation {
+	if signedBatch.IsConsolidation && len(txs) > 0 {
 		return nil
 	}
 

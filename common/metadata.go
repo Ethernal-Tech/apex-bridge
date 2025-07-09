@@ -46,8 +46,9 @@ type BridgingRequestMetadataV1 struct {
 }
 
 type BatchExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
-	BatchNonceID   uint64         `cbor:"n" json:"n"`
+	BridgingTxType    BridgingTxType `cbor:"t" json:"t"`
+	BatchNonceID      uint64         `cbor:"n" json:"n"`
+	IsStakeDelegation uint8          `cbor:"s,omitempty" json:"s,omitempty"`
 }
 
 type RefundExecutedMetadata struct {

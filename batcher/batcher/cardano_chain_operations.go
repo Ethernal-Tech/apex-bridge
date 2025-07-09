@@ -87,16 +87,21 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	stakeKeyRegDelegTransactions []eth.StakeDelegationTransaction,
+	stakeDelegationTransactions []eth.StakeDelegationTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID)
+	isStakeDelegation := false
+	if len(stakeDelegationTransactions) > 0 {
+		isStakeDelegation = true
+	}
+
+	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID, isStakeDelegation)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(stakeKeyRegDelegTransactions) > 0 {
-		return cco.generateStakeKeyRegDelegBatchTransaction(data, stakeKeyRegDelegTransactions)
+	if len(stakeDelegationTransactions) > 0 {
+		return cco.generateStakeKeyRegDelegBatchTransaction(data, stakeDelegationTransactions)
 	}
 
 	txData, err := cco.generateBatchTransaction(data, confirmedTransactions)
@@ -179,10 +184,12 @@ func (cco *CardanoChainOperations) generateStakeKeyRegDelegBatchTransaction(
 ) (*core.GeneratedBatchTxData, error) {
 	certificates := make([]*cardano.CertificatesWithScript, 0)
 	keyRegistrationFee := uint64(0)
+
 	for _, tx := range stakeKeyRegDelegTransactions {
 		// Generate policy script
 		quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-		policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount, uint64(tx.StakeAddressIndex))
+		// 0 for now, to be updated later
+		policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount, 0)
 
 		// Generate certificates
 		keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
@@ -213,7 +220,6 @@ func (cco *CardanoChainOperations) generateStakeKeyRegDelegBatchTransaction(
 			PolicyScript: policyScript,
 			Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
 		})
-
 	}
 
 	certificatesData := &cardano.CertificatesData{
@@ -538,16 +544,23 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	batchNonceID uint64,
+	isStakeDelegation bool,
 ) (*batchInitialData, error) {
 	validatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
 
-	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
+	metadataObject := common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
 		BatchNonceID:   batchNonceID,
-	})
+	}
+
+	if isStakeDelegation {
+		metadataObject.IsStakeDelegation = 1
+	}
+
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataObject)
 	if err != nil {
 		return nil, err
 	}

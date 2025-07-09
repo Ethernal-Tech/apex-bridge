@@ -289,11 +289,16 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 		case uint64:
 			return v, nil
 		case int:
+			if v < 0 {
+				return 0, fmt.Errorf("cannot convert negative int %d to uint64", v)
+			}
+
 			return uint64(v), nil
 		case string:
 			// If it's a string, try to parse it as a number
 			var result uint64
 			_, err := fmt.Sscanf(v, "%d", &result)
+
 			return result, err
 		default:
 			return 0, fmt.Errorf("%s has unexpected type: %T", FieldName, stakeDeposit)

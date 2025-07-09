@@ -142,7 +142,6 @@ type IBridgeStructsSignedBatch struct {
 type IBridgeStructsStakeDelegationTransaction struct {
 	ChainId     uint8
 	StakePoolId string
-	StakeAddressIndex uint8
 	Nonce       uint64
 }
 
