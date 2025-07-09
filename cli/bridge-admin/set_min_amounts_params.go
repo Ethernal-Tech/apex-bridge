@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -32,9 +33,10 @@ const (
 )
 
 type setMinAmountsParams struct {
-	nodeURL         string
-	privateKey      string
-	contractAddress string
+	nodeURL          string
+	privateKey       string
+	privateKeyConfig string
+	contractAddress  string
 
 	minFeeString            string
 	minBridgingAmountString string
@@ -48,8 +50,8 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", nodeFlag)
 	}
 
-	if ip.privateKey == "" {
-		return fmt.Errorf("not specified --%s flag", evmPrivateKeyFlag)
+	if ip.privateKey == "" && ip.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
 	if !ethcommon.IsHexAddress(ip.contractAddress) {
@@ -96,6 +98,13 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&ip.contractAddress,
 		contractAddressFlag,
 		"",
@@ -115,6 +124,8 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
 		minBridgingAmountFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, evmPrivateKeyFlag)
 }
 
 func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -123,9 +134,9 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("preparing transaction to update minimum values..."))
 	outputter.WriteOutput()
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.privateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(

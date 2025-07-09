@@ -80,6 +80,7 @@ func (d *UpdateTxsData[TTx, TProcessedTx, TExpectedTx]) Count() int {
 type DBBatchTx struct {
 	SourceChainID           uint8       `json:"s_chain"`
 	ObservedTransactionHash common.Hash `json:"s_tx_hash"`
+	TransactionType         uint8       `json:"tx_type"`
 }
 
 type DBBatchInfoEvent struct {
@@ -98,6 +99,7 @@ func NewDBBatchInfoEvent(
 		dbBatchTxs[i] = DBBatchTx{
 			SourceChainID:           tx.SourceChainId,
 			ObservedTransactionHash: tx.ObservedTransactionHash,
+			TransactionType:         tx.TransactionType,
 		}
 	}
 
@@ -132,4 +134,9 @@ func IsTxReady(triesCount uint32, lastTimeTried time.Time, settings RetryUnproce
 		settings.MaxTimeout)
 
 	return lastTimeTried.Add(timeout).Before(time.Now().UTC())
+}
+
+type BlocksSubmitterInfo struct {
+	BlockNumOrSlot uint64 `json:"blockNumOrSlot"`
+	CounterEmpty   int    `json:"counterEmpty"`
 }

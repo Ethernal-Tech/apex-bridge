@@ -1,8 +1,8 @@
 package batcher
 
 import (
-	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,18 +29,18 @@ const (
 )
 
 type batchInitialData struct {
-	BatchNonceID            uint64
-	Metadata                []byte
-	ProtocolParams          []byte
-	MultisigPolicyScript    *cardanowallet.PolicyScript
-	MultisigFeePolicyScript *cardanowallet.PolicyScript
-	MultisigAddress         string
-	MultisigFeeAddress      string
+	BatchNonceID         uint64
+	Metadata             []byte
+	ProtocolParams       []byte
+	MultisigPolicyScript *cardanowallet.PolicyScript
+	FeePolicyScript      *cardanowallet.PolicyScript
+	MultisigAddr         string
+	FeeAddr              string
 }
 
 type CardanoChainOperations struct {
 	config           *cardano.CardanoChainConfig
-	wallet           *cardano.CardanoWallet
+	wallet           *cardano.ApexCardanoWallet
 	txProvider       cardanowallet.ITxDataRetriever
 	db               indexer.Database
 	gasLimiter       eth.GasLimitHolder
@@ -94,7 +94,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txData, err := cco.generateBatchTransaction(data, confirmedTransactions)
+	txData, err := cco.generateBatchTransaction(data, confirmedTransactions, chainID)
 
 	if cco.shouldConsolidate(err) {
 		cco.logger.Warn("consolidation batch generation started", "err", err)
@@ -123,7 +123,7 @@ func (cco *CardanoChainOperations) SignBatchTransaction(
 		return nil, nil, err
 	}
 
-	witnessMultiSigFee, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSigFee)
+	witnessMultiSigFee, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.Fee)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,15 +161,25 @@ func (cco *CardanoChainOperations) Submit(
 }
 
 func (cco *CardanoChainOperations) generateBatchTransaction(
-	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
+	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction, destChainID string,
 ) (*core.GeneratedBatchTxData, error) {
-	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
+	refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(confirmedTransactions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve utxos for refund txs: %w", err)
+	}
+
+	receiversMap, err := getReceiversMap(
+		destChainID, cco.config, data.FeeAddr,
+		confirmedTransactions, refundUtxosPerConfirmedTx)
 	if err != nil {
 		return nil, err
 	}
 
+	txOutputs := getOutputs(cco.config.NetworkID, receiversMap, cco.logger)
+
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
-		data.MultisigAddress, data.MultisigFeeAddress, data.ProtocolParams, txOutputs)
+		data.MultisigAddr, data.FeeAddr, data.ProtocolParams,
+		txOutputs, common.FlattenMatrix(refundUtxosPerConfirmedTx))
 	if err != nil {
 		return nil, err
 	}
@@ -193,12 +203,12 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		cardano.TxInputInfos{
 			MultiSig: &cardano.TxInputInfo{
 				PolicyScript: data.MultisigPolicyScript,
-				Address:      data.MultisigAddress,
+				Address:      data.MultisigAddr,
 				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 			},
 			MultiSigFee: &cardano.TxInputInfo{
-				PolicyScript: data.MultisigFeePolicyScript,
-				Address:      data.MultisigFeeAddress,
+				PolicyScript: data.FeePolicyScript,
+				Address:      data.FeeAddr,
 				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
 		},
@@ -226,12 +236,12 @@ func (cco *CardanoChainOperations) shouldConsolidate(err error) bool {
 func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	data *batchInitialData,
 ) (*core.GeneratedBatchTxData, error) {
-	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(data.MultisigAddress, data.MultisigFeeAddress)
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(data.MultisigAddr, data.FeeAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigTxOutput, err := getTxOutputFromSumMap(data.MultisigAddress, getSumMapFromTxInputOutput(multisigUtxos))
+	multisigTxOutput, err := getTxOutputFromSumMap(data.MultisigAddr, getSumMapFromTxInputOutput(multisigUtxos))
 	if err != nil {
 		return nil, err
 	}
@@ -255,12 +265,12 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		cardano.TxInputInfos{
 			MultiSig: &cardano.TxInputInfo{
 				PolicyScript: data.MultisigPolicyScript,
-				Address:      data.MultisigAddress,
+				Address:      data.MultisigAddr,
 				TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 			},
 			MultiSigFee: &cardano.TxInputInfo{
-				PolicyScript: data.MultisigFeePolicyScript,
-				Address:      data.MultisigFeeAddress,
+				PolicyScript: data.FeePolicyScript,
+				Address:      data.FeeAddr,
 				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
 		},
@@ -322,15 +332,16 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	multisigAddress, multisigFeeAddress string, protocolParams []byte, txOutputs cardano.TxOutputs,
+	refundUtxos []*indexer.TxInputOutput,
 ) ([]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
 	multisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to retrieve tx outputs for multisig address: %w", err)
 	}
 
 	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to retrieve tx outputs for fee address: %w", err)
 	}
 
 	knownTokens, err := cardano.GetKnownTokens(cco.config)
@@ -350,6 +361,16 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
 
+	desiredSum := txOutputs.Sum
+
+	// desiredSum should be reduced by amount of refund utxos
+	for _, utxo := range refundUtxos {
+		desiredSum[cardanowallet.AdaTokenName] -= utxo.Output.Amount
+		for _, token := range utxo.Output.Tokens {
+			desiredSum[token.TokenName()] -= token.Amount
+		}
+	}
+
 	minUtxoLovelaceAmount, err := calculateMinUtxoLovelaceAmount(
 		cco.cardanoCliBinary, protocolParams, multisigAddress, multisigUtxos, txOutputs.Outputs)
 	if err != nil {
@@ -358,16 +379,18 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 	multisigUtxos, err = getNeededUtxos(
 		multisigUtxos,
-		txOutputs.Sum,
+		desiredSum,
 		minUtxoLovelaceAmount,
-		getMaxUtxoCount(cco.config, len(feeUtxos)),
+		getMaxUtxoCount(cco.config, len(feeUtxos)+len(refundUtxos)),
 		int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+	multisigUtxos = append(multisigUtxos, refundUtxos...) // add refund UTXOs to multisig UTXOs
+
+	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos, "refund count", len(refundUtxos))
 
 	return multisigUtxos, feeUtxos, nil
 }
@@ -403,8 +426,7 @@ func (cco *CardanoChainOperations) getValidatorsChainData(
 	}
 
 	for _, data := range validatorsData {
-		if bytes.Equal(cco.wallet.MultiSig.VerificationKey, cardano.BigIntToKey(data.Key[0])) &&
-			bytes.Equal(cco.wallet.MultiSigFee.VerificationKey, cardano.BigIntToKey(data.Key[1])) {
+		if cardano.AreVerifyingKeysTheSame(cco.wallet, data) {
 			return validatorsData, nil
 		}
 	}
@@ -437,26 +459,70 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		return nil, err
 	}
 
-	multisigPolicyScript, multisigFeePolicyScript, err := cardano.GetPolicyScripts(validatorsData)
+	keyHashes, err := cardano.NewApexKeyHashes(validatorsData)
 	if err != nil {
 		return nil, err
 	}
 
-	multisigAddress, multisigFeeAddress, err := cardano.GetMultisigAddresses(
-		cco.cardanoCliBinary, uint(cco.config.NetworkMagic), multisigPolicyScript, multisigFeePolicyScript)
+	policyScripts := cardano.NewApexPolicyScripts(keyHashes)
+
+	addresses, err := cardano.NewApexAddresses(cco.cardanoCliBinary, uint(cco.config.NetworkMagic), policyScripts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &batchInitialData{
-		BatchNonceID:            batchNonceID,
-		Metadata:                metadata,
-		ProtocolParams:          protocolParams,
-		MultisigPolicyScript:    multisigPolicyScript,
-		MultisigFeePolicyScript: multisigFeePolicyScript,
-		MultisigAddress:         multisigAddress,
-		MultisigFeeAddress:      multisigFeeAddress,
+		BatchNonceID:         batchNonceID,
+		Metadata:             metadata,
+		ProtocolParams:       protocolParams,
+		MultisigPolicyScript: policyScripts.Multisig.Payment,
+		FeePolicyScript:      policyScripts.Fee.Payment,
+		MultisigAddr:         addresses.Multisig.Payment,
+		FeeAddr:              addresses.Fee.Payment,
 	}, nil
+}
+
+func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
+	confirmedTxs []eth.ConfirmedTransaction,
+) ([][]*indexer.TxInputOutput, error) {
+	utxosPerConfirmedTxs := make([][]*indexer.TxInputOutput, len(confirmedTxs))
+
+	for i, ct := range confirmedTxs {
+		if len(ct.OutputIndexes) == 0 {
+			continue
+		}
+
+		indexes, err := common.UnpackNumbersToBytes[[]common.TxOutputIndex](ct.OutputIndexes)
+		if err != nil {
+			// this error could happen only if there is a bug in the smart contract (or oracle sent wrong values)
+			cco.logger.Warn("failed to unpack output indexes",
+				"err", err, "indxs", hex.EncodeToString(ct.OutputIndexes))
+
+			continue
+		}
+
+		utxosPerConfirmedTxs[i] = make([]*indexer.TxInputOutput, len(indexes))
+
+		for j, indx := range indexes {
+			txInput := indexer.TxInput{
+				Hash:  ct.ObservedTransactionHash,
+				Index: uint32(indx),
+			}
+
+			// for now return error
+			txOutput, err := cco.db.GetTxOutput(txInput)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get tx output for %v: %w", txInput, err)
+			}
+
+			utxosPerConfirmedTxs[i][j] = &indexer.TxInputOutput{
+				Input:  txInput,
+				Output: txOutput,
+			}
+		}
+	}
+
+	return utxosPerConfirmedTxs, nil
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {

@@ -78,6 +78,8 @@ const (
 	relayerDataDirFlag              = "relayer-data-dir"
 	relayerConfigPathFlag           = "relayer-config"
 
+	emptyBlocksThresholdFlag = "empty-blocks-threshold"
+
 	primeNetworkAddressFlagDesc         = "(mandatory) address of prime network"
 	primeNetworkMagicFlagDesc           = "prime network magic (default 0)"
 	primeNetworkIDFlagDesc              = "prime network id"
@@ -87,7 +89,7 @@ const (
 	primeSocketPathFlagDesc             = "socket path for prime network"
 	primeTTLSlotIncFlagDesc             = "TTL slot increment for prime"
 	primeSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for prime. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	primeStartingBlockFlagDesc          = "slot: hash of the block from where to start prime oracle"
+	primeStartingBlockFlagDesc          = "slot: hash of the block from where to start prime oracle / prime block submitter"                                                                                     //nolint:lll
 	primeUtxoMinAmountFlagDesc          = "minimal UTXO value for prime"
 	primeMinFeeForBridgingFlagDesc      = "minimal bridging fee for prime"
 	primeBlockConfirmationCountFlagDesc = "block confirmation count for prime"
@@ -101,7 +103,7 @@ const (
 	vectorSocketPathFlagDesc             = "socket path for vector network"
 	vectorTTLSlotIncFlagDesc             = "TTL slot increment for vector"
 	vectorSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for vector. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	vectorStartingBlockFlagDesc          = "slot: hash of the block from where to start vector oracle"
+	vectorStartingBlockFlagDesc          = "slot: hash of the block from where to start vector oracle / vector block submitter"                                                                                    //nolint:lll
 	vectorUtxoMinAmountFlagDesc          = "minimal UTXO value for vector"
 	vectorMinFeeForBridgingFlagDesc      = "minimal bridging fee for vector"
 	vectorBlockConfirmationCountFlagDesc = "block confirmation count for vector"
@@ -129,8 +131,10 @@ const (
 	nexusBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for nexus. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
 	relayerDataDirFlagDesc              = "path to relayer secret directory when using local secrets manager"
 	relayerConfigPathFlagDesc           = "path to relayer secrets manager config file"
-	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle"
+	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle / nexus block submitter"
 	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
+
+	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks for blocks submitter to skip"
 
 	defaultPrimeBlockConfirmationCount       = 10
 	defaultVectorBlockConfirmationCount      = 10
@@ -156,6 +160,8 @@ const (
 	defaultMaxFeeUtxoCount      = 4
 	defaultMaxUtxoCount         = 50
 	defaultTakeAtLeastUtxoCount = 6
+
+	defaultEmptyBlocksThreshold = 1000
 )
 
 var (
@@ -217,6 +223,8 @@ type generateConfigsParams struct {
 
 	relayerDataDir    string
 	relayerConfigPath string
+
+	emptyBlocksThreshold uint
 }
 
 func (p *generateConfigsParams) validateFlags() error {
@@ -593,6 +601,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		nexusMinFeeForBridgingFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&p.emptyBlocksThreshold,
+		emptyBlocksThresholdFlag,
+		defaultEmptyBlocksThreshold,
+		emptyBlocksThresholdFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -627,7 +642,7 @@ func (p *generateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.ReactorMode,
-		RefundEnabled:       false,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -654,6 +669,7 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -678,6 +694,7 @@ func (p *generateConfigsParams) Execute(
 				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -693,6 +710,7 @@ func (p *generateConfigsParams) Execute(
 				DynamicTx:               true,
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
+				FeeAddrBridgingAmount:   p.nexusMinFeeForBridging,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -702,6 +720,11 @@ func (p *generateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
+				EmptyBlocksThreshold: map[string]uint{
+					common.ChainIDStrPrime:  p.emptyBlocksThreshold,
+					common.ChainIDStrVector: p.emptyBlocksThreshold,
+					common.ChainIDStrNexus:  p.emptyBlocksThreshold,
+				},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{

@@ -355,6 +355,14 @@ func ParseTxInfo(txRaw []byte, full bool) (indexer.TxInfo, error) {
 	return gouroboros.ParseTxInfo(txRaw, full)
 }
 
+func FlattenMatrix[T any](matrix [][]T) (result []T) {
+	for _, row := range matrix {
+		result = append(result, row...)
+	}
+
+	return result
+}
+
 func LastN[T any](arr []T, n int) []T {
 	if n < 0 {
 		return nil

@@ -3,6 +3,7 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strings"
 	"time"
@@ -55,7 +56,7 @@ const (
 	cardanoSocketPathFlagDesc             = "socket path for cardano network"
 	cardanoTTLSlotIncFlagDesc             = "TTL slot increment for cardano"
 	cardanoSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle"
+	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle / cardano block submitter"                                                                                   //nolint:lll
 	cardanoUtxoMinAmountFlagDesc          = "minimal UTXO value for cardano"
 	cardanoMinFeeForBridgingFlagDesc      = "minimal bridging fee for cardano"
 	cardanoMinOperationFeeFlagDesc        = "minimal operation fee for cardano"
@@ -65,6 +66,8 @@ const (
 	defaultCardanoTTLSlotNumberInc       = 1800 + defaultCardanoBlockConfirmationCount*10 // BlockTimeSeconds
 	defaultCardanoSlotRoundingThreshold  = 60
 )
+
+var defaultMaxTokenAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
 
 type skylineGenerateConfigsParams struct {
 	primeNetworkAddress         string
@@ -120,6 +123,8 @@ type skylineGenerateConfigsParams struct {
 
 	cardanoPrimeWrappedTokenName string
 	primeCardanoWrappedTokenName string
+
+	emptyBlocksThreshold uint
 }
 
 func (p *skylineGenerateConfigsParams) validateFlags() error {
@@ -209,16 +214,16 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
-	if p.primeCardanoWrappedTokenName == "" {
-		return fmt.Errorf("missing %s", primeCardanoWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
-		return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
+	if p.primeCardanoWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
+		}
 	}
 
-	if p.cardanoPrimeWrappedTokenName == "" {
-		return fmt.Errorf("missing %s", cardanoPrimeWrappedTokenNameFlag)
-	} else if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
-		return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
+	if p.cardanoPrimeWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
+		}
 	}
 
 	return nil
@@ -499,6 +504,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoPrimeWrappedTokenNameFlagDesc,
 	)
 
+	cmd.Flags().UintVar(
+		&p.emptyBlocksThreshold,
+		emptyBlocksThresholdFlag,
+		defaultEmptyBlocksThreshold,
+		emptyBlocksThresholdFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -531,8 +543,32 @@ func (p *skylineGenerateConfigsParams) Execute(
 		return nil, err
 	}
 
+	var (
+		nativeTokensPrime   []sendtx.TokenExchangeConfig
+		nativeTokensCardano []sendtx.TokenExchangeConfig
+	)
+
+	if p.primeCardanoWrappedTokenName != "" {
+		nativeTokensPrime = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrCardano,
+				TokenName:  p.primeCardanoWrappedTokenName,
+			},
+		}
+	}
+
+	if p.cardanoPrimeWrappedTokenName != "" {
+		nativeTokensCardano = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrPrime,
+				TokenName:  p.cardanoPrimeWrappedTokenName,
+			},
+		}
+	}
+
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -552,12 +588,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrCardano,
-							TokenName:  p.primeCardanoWrappedTokenName,
-						},
-					},
+					NativeTokens:          nativeTokensPrime,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
@@ -566,6 +597,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
 				MinOperationFee:          p.primeMinOperationFee,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrCardano: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -583,12 +615,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens: []sendtx.TokenExchangeConfig{
-						{
-							DstChainID: common.ChainIDStrPrime,
-							TokenName:  p.cardanoPrimeWrappedTokenName,
-						},
-					},
+					NativeTokens:          nativeTokensCardano,
 				},
 				NetworkAddress:           p.cardanoNetworkAddress,
 				StartBlockHash:           cardanoStartingHash,
@@ -597,6 +624,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.cardanoMinFeeForBridging,
 				MinOperationFee:          p.cardanoMinOperationFee,
+				FeeAddrBridgingAmount:    p.cardanoUtxoMinAmount,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
@@ -606,16 +634,26 @@ func (p *skylineGenerateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
+				EmptyBlocksThreshold: map[string]uint{
+					common.ChainIDStrPrime:   p.emptyBlocksThreshold,
+					common.ChainIDStrCardano: p.emptyBlocksThreshold,
+				},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
+			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
+		},
+		TryCountLimits: oCore.TryCountLimits{
+			MaxBatchTryCount:  70,
+			MaxSubmitTryCount: 50,
+			MaxRefundTryCount: 50,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{

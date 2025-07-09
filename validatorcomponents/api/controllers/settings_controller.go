@@ -37,6 +37,14 @@ func (c *SettingsControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
 	}
 }
 
+// @Summary Get bridge settings for all supported chains
+// @Description Returns configuration settings for the bridge, including global parameters such as minimum and maximum bridging amounts, as well as any per-chain specific settings.
+// @Tags Settings
+// @Produce json
+// @Success 200 {object} response.SettingsResponse
+// @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
+// @Security ApiKeyAuth
+// @Router /Settings/Get [get]
 func (c *SettingsControllerImpl) getSettings(w http.ResponseWriter, r *http.Request) {
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewSettingsResponse(c.appConfig), c.logger)
 }

@@ -18,12 +18,17 @@ import (
 var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	logger hclog.Logger
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor
+	logger                 hclog.Logger
 }
 
-func NewBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
+func NewBridgingRequestedProcessor(
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor,
+	logger hclog.Logger,
+) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
-		logger: logger.Named("bridging_requested_processor"),
+		refundRequestProcessor: refundRequestProcessor,
+		logger:                 logger.Named("bridging_requested_processor"),
 	}
 }
 
@@ -40,11 +45,13 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
 	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
-		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -53,10 +60,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		//nolint:godox
-		// TODO: Refund
-		// p.addRefundRequestClaim(claims, tx, metadata)
-		return fmt.Errorf("validation failed for tx: %s, err: %w", tx.Hash, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "validation failed for tx")
 	}
 
 	return nil
@@ -67,8 +72,9 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
 	var (
-		totalAmount = big.NewInt(0)
-		feeAddress  string
+		totalAmount    = big.NewInt(0)
+		feeCurrencyDst *big.Int
+		feeAddress     string
 	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
@@ -76,8 +82,10 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	switch {
 	case cardanoDestConfig != nil:
 		feeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+		feeCurrencyDst = new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
+		feeCurrencyDst = new(big.Int).SetUint64(ethDestConfig.FeeAddrBridgingAmount)
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -104,13 +112,12 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.BridgingFee)
-
-	totalAmount.Add(totalAmount, feeAmount)
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, new(big.Int).SetUint64(metadata.BridgingFee))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDst)
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
-		Amount:             feeAmount,
+		Amount:             feeCurrencyDst,
 		AmountWrapped:      big.NewInt(0),
 	})
 
@@ -119,8 +126,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:                       receivers,
-		NativeCurrencyAmountSource:      totalAmount,
-		NativeCurrencyAmountDestination: totalAmount,
+		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
+		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
 		WrappedTokenAmountSource:        big.NewInt(0),
 		WrappedTokenAmountDestination:   big.NewInt(0),
 		RetryCounter:                    big.NewInt(int64(tx.BatchTryCount)),
@@ -132,39 +139,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim))
 }
 
-/*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
-) {
-
-		var outputUtxos []core.Utxo
-		for _, output := range tx.Outputs {
-			outputUtxos = append(outputUtxos, core.Utxo{
-				Address: output.Address,
-				Amount:  output.Amount,
-			})
-		}
-
-		// what goes into UtxoTransaction
-		claim := core.RefundRequestClaim{
-			TxHash:             tx.Hash,
-			RetryCounter:       0,
-			RefundToAddress:    metadata.SenderAddr,
-			DestinationChainId: metadata.DestinationChainId,
-			OutputUtxos:        outputUtxos,
-			UtxoTransaction:    core.UtxoTransaction{},
-		}
-
-		claims.RefundRequest = append(claims.RefundRequest, claim)
-
-		p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
-}
-*/
-
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
+		return err
+	}
+
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)

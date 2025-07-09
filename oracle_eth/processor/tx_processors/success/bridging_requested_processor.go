@@ -15,12 +15,16 @@ import (
 var _ core.EthTxSuccessProcessor = (*BridgingRequestedProcessorImpl)(nil)
 
 type BridgingRequestedProcessorImpl struct {
-	logger hclog.Logger
+	refundRequestProcessor core.EthTxSuccessRefundProcessor
+	logger                 hclog.Logger
 }
 
-func NewEthBridgingRequestedProcessor(logger hclog.Logger) *BridgingRequestedProcessorImpl {
+func NewEthBridgingRequestedProcessor(
+	refundRequestProcessor core.EthTxSuccessRefundProcessor, logger hclog.Logger,
+) *BridgingRequestedProcessorImpl {
 	return &BridgingRequestedProcessorImpl{
-		logger: logger.Named("eth_bridging_requested_processor"),
+		refundRequestProcessor: refundRequestProcessor,
+		logger:                 logger.Named("eth_bridging_requested_processor"),
 	}
 }
 
@@ -38,11 +42,13 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	metadata, err := core.UnmarshalEthMetadata[core.BridgingRequestEthMetadata](
 		tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
 	if metadata.BridgingTxType != p.GetType() {
-		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -51,10 +57,8 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	if err == nil {
 		p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		//nolint:godox
-		// TODO: Refund
-		// p.addRefundRequestClaim(claims, tx, metadata)
-		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "validation failed for tx")
 	}
 
 	return nil
@@ -87,12 +91,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmountDfm)
 	}
 
-	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
-	totalAmount.Add(totalAmount, feeAmountDfm)
+	feeCurrencyDfmDst := new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, common.WeiToDfm(metadata.BridgingFee))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDfmDst)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
 		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
-		Amount:             feeAmountDfm,
+		Amount:             feeCurrencyDfmDst,
 		AmountWrapped:      big.NewInt(0),
 	})
 
@@ -101,8 +106,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:                       receivers,
-		NativeCurrencyAmountSource:      totalAmount,
-		NativeCurrencyAmountDestination: totalAmount,
+		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
+		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
 		WrappedTokenAmountSource:        big.NewInt(0),
 		WrappedTokenAmountDestination:   big.NewInt(0),
 		RetryCounter:                    big.NewInt(int64(tx.BatchTryCount)),
@@ -114,39 +119,13 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		"txHash", tx.Hash, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim))
 }
 
-/*
-func (*BridgingRequestedProcessorImpl) addRefundRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
-) {
-
-		var outputUtxos []core.Utxo
-		for _, output := range tx.Outputs {
-			outputUtxos = append(outputUtxos, core.Utxo{
-				Address: output.Address,
-				Amount:  output.Amount,
-			})
-		}
-
-		// what goes into UtxoTransaction
-		claim := core.RefundRequestClaim{
-			TxHash:             tx.Hash,
-			RetryCounter:       0,
-			RefundToAddress:    metadata.SenderAddr,
-			DestinationChainId: metadata.DestinationChainId,
-			OutputUtxos:        outputUtxos,
-			UtxoTransaction:    core.UtxoTransaction{},
-		}
-
-		claims.RefundRequest = append(claims.RefundRequest, claim)
-
-		p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
-}
-*/
-
 func (p *BridgingRequestedProcessorImpl) validate(
 	tx *core.EthTx, metadata *core.BridgingRequestEthMetadata, appConfig *oCore.AppConfig,
 ) error {
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
+		return err
+	}
+
 	if err := common.IsTxDirectionAllowed(tx.OriginChainID, metadata.DestinationChainID); err != nil {
 		return err
 	}
