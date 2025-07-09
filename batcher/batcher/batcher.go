@@ -107,18 +107,16 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	b.logger.Info("Starting batch creation process", "batchID", batchID)
 
 	// 1. Get stake key registration/delegation transactions
-	// stakeKeyRegDelegTransactions, err := b.bridgeSmartContract.GetStakeKeyRegDelegTransactions(ctx, b.config.Chain.ChainID)
-	// if err != nil {
-	// 	return batchID, fmt.Errorf("failed to query bridge.GetStakeKeyRegDelegTransactions for chainID: %s. err: %w",
-	// 		b.config.Chain.ChainID, err)
-	// }
-	stakeKeyRegDelegTransactions := []eth.StakeDelegationTransaction{}
-
-	// 2. If there are any, create StakeKeyRegDelegBatch
+	stakeKeyDelegationTransactions, err := b.bridgeSmartContract.GetStakeDelegationTransactions(ctx, b.config.Chain.ChainID)
+	if err != nil {
+		return batchID, fmt.Errorf("failed to query bridge.GetStakeKeyRegDelegTransactions for chainID: %s. err: %w",
+			b.config.Chain.ChainID, err)
+	}
 
 	// Get confirmed transactions from smart contract
+	// if there are no stake key delegation transactions
 	confirmedTransactions := []eth.ConfirmedTransaction{}
-	if len(stakeKeyRegDelegTransactions) == 0 {
+	if len(stakeKeyDelegationTransactions) == 0 {
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 		if err != nil {
 			return batchID, fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
@@ -126,17 +124,24 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		}
 	}
 
-	if len(confirmedTransactions) == 0 {
+	if len(confirmedTransactions) == 0 && len(stakeKeyDelegationTransactions) == 0 {
 		return batchID, fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
 			b.config.Chain.ChainID)
 	}
 
-	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
+	if len(stakeKeyDelegationTransactions) > 0 {
+		b.logger.Debug("Successfully queried smart contract for stake registration and delegation transactions",
+			"batchID", batchID, "txs", eth.StakeDelegationTransactionWrapper{Txs: stakeKeyDelegationTransactions})
+	}
+
+	if len(confirmedTransactions) > 0 {
+		b.logger.Debug("Successfully queried smart contract for confirmed transactions",
+			"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
+	}
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, stakeKeyRegDelegTransactions, batchID)
+		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, stakeKeyDelegationTransactions, batchID)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -146,13 +151,16 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
 			"batchID", batchID, "txHash", b.lastBatch.txHash,
-			"isConsolidation", generatedBatchData.IsConsolidation)
+			"isConsolidation", generatedBatchData.IsConsolidation,
+			"isStakeDelegation", generatedBatchData.IsStakeDelegation,
+		)
 
 		return batchID, nil
 	}
 
 	b.logger.Info("Created batch tx", "batchID", batchID, "txHash", generatedBatchData.TxHash,
-		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
+		"isConsolidation", generatedBatchData.IsConsolidation, "isStakeDelegation", generatedBatchData.IsStakeDelegation,
+		"txs", fmt.Sprintf("%d", len(confirmedTransactions)+len(stakeKeyDelegationTransactions)))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
@@ -212,6 +220,7 @@ func (b *BatcherImpl) createSignedBatch(
 		FirstTxNonceId:     firstTxNonceID,
 		LastTxNonceId:      lastTxNonceID,
 		IsConsolidation:    generatedBatchData.IsConsolidation,
+		IsStakeDelegation:  generatedBatchData.IsStakeDelegation,
 	}
 }
 

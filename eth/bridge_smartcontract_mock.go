@@ -58,6 +58,20 @@ func (m *BridgeSmartContractMock) GetConfirmedTransactions(
 	return arg0, args.Error(1)
 }
 
+func (m *BridgeSmartContractMock) GetStakeDelegationTransactions(
+	ctx context.Context, chainID string,
+) ([]StakeDelegationTransaction, error) {
+	args := m.Called(ctx, chainID)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	arg0, _ := args.Get(0).([]StakeDelegationTransaction)
+
+	return arg0, args.Error(1)
+}
+
 func (m *BridgeSmartContractMock) GetLastObservedBlock(
 	ctx context.Context, destinationChain string,
 ) (CardanoBlock, error) {

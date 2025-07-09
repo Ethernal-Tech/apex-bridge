@@ -18,7 +18,7 @@ func CreateTx(
 	certificatesData *CertificatesData,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
-	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 || feeLn == 0 {
+	if ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs); ln == 0 && feeLn == 0 {
 		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", ln, feeLn)
 	}
 
@@ -87,7 +87,7 @@ func CreateTx(
 
 	feeChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 		feeOutput, txInputInfos.MultiSigFee.Sum, map[string]uint64{
-			cardanowallet.AdaTokenName: calcFee,
+			cardanowallet.AdaTokenName: calcFee + stakeKeyRegistrationFee,
 		})
 	if err != nil {
 		return nil, "", err

@@ -12,11 +12,7 @@ import (
 
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
-type StakeDelegationTransaction struct {
-	//ChainId              uint8
-	StakePoolId          string
-	ValidatorStakingKeys []*big.Int
-}
+type StakeDelegationTransaction = contractbinding.IBridgeStructsStakeDelegationTransaction
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 type BridgeReceiver = contractbinding.IBridgeStructsReceiver
 
@@ -118,6 +114,27 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 	return sb.String()
 }
 
+type StakeDelegationTransactionWrapper struct {
+	Txs []StakeDelegationTransaction
+}
+
+func (st StakeDelegationTransactionWrapper) String() string {
+	var sb strings.Builder
+
+	for i, tx := range st.Txs {
+		if i > 0 {
+			sb.WriteString("\n")
+		}
+
+		sb.WriteString(fmt.Sprintf("Chain ID = %s, ", common.ToStrChainID(tx.ChainId)))
+		sb.WriteString(fmt.Sprintf("Stake Address Index = %d", tx.StakeAddressIndex))
+		sb.WriteString(fmt.Sprintf("Stake Pool ID = %s", tx.StakePoolId))
+		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
+	}
+
+	return sb.String()
+}
+
 type SignedBatchWrapper struct {
 	*SignedBatch
 }
@@ -129,6 +146,8 @@ func (sbw SignedBatchWrapper) String() string {
 	sb.WriteString(fmt.Sprint(sbw.Id))
 	sb.WriteString("\nisConsolidation = ")
 	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
+	sb.WriteString("\nisStakeDelegation = ")
+	sb.WriteString(fmt.Sprint(sbw.IsStakeDelegation))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")

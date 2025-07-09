@@ -31,6 +31,7 @@ type IBridgeSmartContract interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
+	GetStakeDelegationTransactions(ctx context.Context, chainID string) ([]StakeDelegationTransaction, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -164,6 +165,27 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 	return contract.GetConfirmedTransactions(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(destinationChain))
+}
+
+// GetStakeDelegationTransactions implements IBridgeSmartContract.
+func (bsc *BridgeSmartContractImpl) GetStakeDelegationTransactions(
+	ctx context.Context, chainID string,
+) ([]StakeDelegationTransaction, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return contract.GetStakeDelegationTransactions(&bind.CallOpts{
+		Context: ctx,
+	}, common.ToNumChainID(chainID))
 }
 
 // GetLastObservedBlock implements IBridgeSmartContract.

@@ -101,6 +101,10 @@ func getNeededUtxos(
 ) ([]*indexer.TxInputOutput, error) {
 	inputUtxos := make([]cardanowallet.Utxo, len(txInputOutputs))
 
+	if len(txInputOutputs) == 0 {
+		return nil, nil
+	}
+
 	for i, utxo := range txInputOutputs {
 		inputUtxos[i] = cardanowallet.Utxo{
 			Hash:   utxo.Input.Hash.String(),
