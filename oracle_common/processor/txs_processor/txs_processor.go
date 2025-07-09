@@ -162,8 +162,9 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 		filteredTxs := make([]eth.TxDataInfo, 0, len(txs))
 
 		for _, tx := range txs {
-			if tx.ObservedTransactionHash == [32]byte(common.DefundTxHash) {
-				p.logger.Info("Skipping defund tx",
+			if tx.ObservedTransactionHash == [32]byte(common.DefundTxHash) ||
+				tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+				p.logger.Info("Skipping defund and stake delegation tx",
 					"chainID", common.ToStrChainID(chainIDInt),
 					"batchID", batchID, "isFailedClaim", isFailedClaim,
 				)
