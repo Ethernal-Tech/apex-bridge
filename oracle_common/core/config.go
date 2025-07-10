@@ -27,7 +27,7 @@ type CardanoChainConfigUtxo struct {
 	Amount  uint64                      `json:"amount"`
 	Tokens  []cardanowallet.TokenAmount `json:"tokens,omitempty"`
 	Slot    uint64                      `json:"slot"`
-}
+} //@name CardanoChainConfigUtxo
 
 type EthChainConfig struct {
 	ChainID                 string               `json:"-"`

@@ -1,14 +1,6 @@
 basePath: /api
 definitions:
-  common.VCRunMode:
-    enum:
-    - reactor
-    - skyline
-    type: string
-    x-enum-varnames:
-    - ReactorMode
-    - SkylineMode
-  core.BridgingSettings:
+  BridgingSettings:
     properties:
       maxAmountAllowedToBridge:
         description: Maximum amount of currency allowed to be bridged
@@ -40,7 +32,36 @@ definitions:
         description: Minimum value allowed to be bridged
         type: integer
     type: object
-  request.CreateBridgingTxRequest:
+  BridgingTxFeeResponse:
+    properties:
+      bridgingFee:
+        description: Bridging fee for covering submission on the destination chain,
+          expressed in Lovelace
+        type: integer
+      fee:
+        description: Transaction fee on the source chain, expressed in Lovelace
+        type: integer
+    type: object
+  BridgingTxResponse:
+    properties:
+      amount:
+        description: Amount of currency to be bridged, expressed in Lovelace
+        type: integer
+      bridgingFee:
+        description: Bridging fee for covering submission on the destination chain,
+          expressed in Lovelace
+        type: integer
+      nativeTokenAmount:
+        description: Amount of native token to be bridged
+        type: integer
+      txHash:
+        description: Transaction hash
+        type: string
+      txRaw:
+        description: Raw transaction data, encoded as a hexadecimal string
+        type: string
+    type: object
+  CreateBridgingTxRequest:
     properties:
       bridgingFee:
         description: Fee covering the submission of the transaction on the destination
@@ -60,7 +81,7 @@ definitions:
         description: Specifies the UTXO to skip during transaction creation on the
           source chain
         items:
-          $ref: '#/definitions/request.UtxoRequest'
+          $ref: '#/definitions/UtxoRequest'
         type: array
       sourceChainId:
         description: Source chain ID
@@ -68,7 +89,7 @@ definitions:
       transactions:
         description: Array of transactions requested by the sender
         items:
-          $ref: '#/definitions/request.CreateBridgingTxTransactionRequest'
+          $ref: '#/definitions/CreateBridgingTxTransactionRequest'
         type: array
       useFallback:
         description: Indicates if fallback mechanism should be used
@@ -82,7 +103,7 @@ definitions:
     - sourceChainId
     - transactions
     type: object
-  request.CreateBridgingTxTransactionRequest:
+  CreateBridgingTxTransactionRequest:
     properties:
       addr:
         description: Receiver address
@@ -98,54 +119,16 @@ definitions:
     - addr
     - amount
     type: object
-  request.UtxoRequest:
-    properties:
-      hash:
-        description: Transaction hash
-        type: string
-      index:
-        description: Output index of UTXO
-        type: integer
-    type: object
-  response.BridgingTxFeeResponse:
-    properties:
-      bridgingFee:
-        description: Bridging fee for covering submission on the destination chain,
-          expressed in Lovelace
-        type: integer
-      fee:
-        description: Transaction fee on the source chain, expressed in Lovelace
-        type: integer
-    type: object
-  response.BridgingTxResponse:
-    properties:
-      amount:
-        description: Amount of currency to be bridged, expressed in Lovelace
-        type: integer
-      bridgingFee:
-        description: Bridging fee for covering submission on the destination chain,
-          expressed in Lovelace
-        type: integer
-      nativeTokenAmount:
-        description: Amount of native token to be bridged
-        type: integer
-      txHash:
-        description: Transaction hash
-        type: string
-      txRaw:
-        description: Raw transaction data, encoded as a hexadecimal string
-        type: string
-    type: object
-  response.ErrorResponse:
+  ErrorResponse:
     properties:
       err:
         type: string
     type: object
-  response.SettingsResponse:
+  SettingsResponse:
     properties:
       bridgingSettings:
         allOf:
-        - $ref: '#/definitions/core.BridgingSettings'
+        - $ref: '#/definitions/BridgingSettings'
         description: Settings for bridge
       cardanoChainsNativeTokens:
         additionalProperties:
@@ -162,9 +145,26 @@ definitions:
         type: array
       runMode:
         allOf:
-        - $ref: '#/definitions/common.VCRunMode'
+        - $ref: '#/definitions/VCRunMode'
         description: Specifies the current operating mode of the application
     type: object
+  UtxoRequest:
+    properties:
+      hash:
+        description: Transaction hash
+        type: string
+      index:
+        description: Output index of UTXO
+        type: integer
+    type: object
+  VCRunMode:
+    enum:
+    - reactor
+    - skyline
+    type: string
+    x-enum-varnames:
+    - ReactorMode
+    - SkylineMode
   sendtx.TokenExchangeConfig:
     properties:
       dstChainID:
@@ -189,7 +189,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/request.CreateBridgingTxRequest'
+          $ref: '#/definitions/CreateBridgingTxRequest'
       produces:
       - application/json
       responses:
@@ -197,20 +197,20 @@ paths:
           description: OK - Returns the raw transaction data, transaction hash, and
             calculated bridging fee and amounts.
           schema:
-            $ref: '#/definitions/response.BridgingTxResponse'
+            $ref: '#/definitions/BridgingTxResponse'
         "400":
           description: Bad Request – Validation error due to input data not meeting
             required conditions.
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "401":
           description: Unauthorized – API key missing or invalid.
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Create a bridging transaction
@@ -229,27 +229,27 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/request.CreateBridgingTxRequest'
+          $ref: '#/definitions/CreateBridgingTxRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK - Returns calculated fees.
           schema:
-            $ref: '#/definitions/response.BridgingTxFeeResponse'
+            $ref: '#/definitions/BridgingTxFeeResponse'
         "400":
           description: Bad Request – Validation error due to input data not meeting
             required conditions.
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "401":
           description: Unauthorized – API key missing or invalid.
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get fees required for a bridging transaction
@@ -267,11 +267,11 @@ paths:
         "200":
           description: OK - Returns the configuration settings.
           schema:
-            $ref: '#/definitions/response.SettingsResponse'
+            $ref: '#/definitions/SettingsResponse'
         "401":
           description: Unauthorized – API key missing or invalid.
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get bridge settings

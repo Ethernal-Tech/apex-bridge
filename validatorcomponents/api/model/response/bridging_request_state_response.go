@@ -10,7 +10,7 @@ type BridgingRequestStateResponse struct {
 	DestinationChainID string                     `json:"destinationChainId"`
 	Status             core.BridgingRequestStatus `json:"status"`
 	DestinationTxHash  string                     `json:"destinationTxHash"`
-}
+} //@name BridgingRequestStateResponse
 
 func NewBridgingRequestStateResponse(state *core.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{

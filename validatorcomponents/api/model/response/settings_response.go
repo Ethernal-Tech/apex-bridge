@@ -12,7 +12,7 @@ type SettingsResponse struct {
 	MaxAmountAllowedToBridge       string            `json:"maxAmountAllowedToBridge"`
 	MaxTokenAmountAllowedToBridge  string            `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
-}
+} //@name SettingsResponse
 
 func NewSettingsResponse(
 	appConfig *core.AppConfig,

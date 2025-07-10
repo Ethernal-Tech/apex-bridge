@@ -8,7 +8,7 @@ type BridgingTxResponse struct {
 	BridgingFee       uint64 `json:"bridgingFee"`
 	Amount            uint64 `json:"amount"`
 	NativeTokenAmount uint64 `json:"nativeTokenAmount"`
-}
+} //@name BridgingTxResponse
 
 func NewBridgingTxResponse(
 	txRaw []byte, txHash string, bridgingFee uint64, amount uint64, nativeTokenAmount uint64,
