@@ -245,6 +245,13 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
+			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+	}
+
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee += feeSum
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
@@ -257,13 +264,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
 		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
 			multisigUtxo.Amount, receiverAmountSum)
-	}
-
-	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
-		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
-		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
 	return nil
