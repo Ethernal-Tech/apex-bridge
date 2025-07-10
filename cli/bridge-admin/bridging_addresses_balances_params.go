@@ -173,7 +173,10 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		}
 	} else { // Retrieve Cardano balances via Ogmios
 		for chainID, cardanoConfig := range appConfig.CardanoChains {
-			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
+			txProvider, err := cardanoConfig.CreateTxProvider()
+			if err != nil {
+				return nil, err
+			}
 
 			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
 			if err != nil {

@@ -34,22 +34,26 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
-				NetworkID: wallet.TestNetNetwork,
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				},
-				UtxoMinAmount:         utxoMinValue,
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.TestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+				},
 				MinFeeForBridging:     minFeeForBridging,
 				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},
 			common.ChainIDStrVector: {
-				NetworkID: wallet.VectorTestNetNetwork,
 				BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
-				UtxoMinAmount:         utxoMinValue,
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.VectorTestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+				},
 				MinFeeForBridging:     minFeeForBridging,
 				FeeAddrBridgingAmount: feeAddrBridgingAmount,
 			},

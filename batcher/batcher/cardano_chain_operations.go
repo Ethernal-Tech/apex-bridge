@@ -179,13 +179,13 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	cco.logger.Info("Creating batch tx", "batchID", data.BatchNonceID,
-		"magic", cco.config.TestNetMagic, "binary", cco.cardanoCliBinary,
+		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
-		uint(cco.config.TestNetMagic),
+		uint(cco.config.NetworkMagic),
 		data.ProtocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
 		data.Metadata,
@@ -241,13 +241,13 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	cco.logger.Info("Creating consolidation tx", "consolidationTxID", data.BatchNonceID,
-		"magic", cco.config.TestNetMagic, "binary", cco.cardanoCliBinary,
+		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos))
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
-		uint(cco.config.TestNetMagic),
+		uint(cco.config.NetworkMagic),
 		data.ProtocolParams,
 		slotNumber+cco.config.TTLSlotNumberInc,
 		data.Metadata,
@@ -427,7 +427,7 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 
 	policyScripts := cardano.NewApexPolicyScripts(keyHashes)
 
-	addresses, err := cardano.NewApexAddresses(cco.cardanoCliBinary, uint(cco.config.TestNetMagic), policyScripts)
+	addresses, err := cardano.NewApexAddresses(cco.cardanoCliBinary, uint(cco.config.NetworkMagic), policyScripts)
 	if err != nil {
 		return nil, err
 	}
