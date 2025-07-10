@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"fmt"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -12,73 +13,120 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func getOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, error) {
-	receiversMap := map[string]cardanowallet.TxOutput{}
+func getReceiversMap(
+	destChainID string,
+	cardanoConfig *cardano.CardanoChainConfig,
+	feeAddr string,
+	txs []eth.ConfirmedTransaction,
+	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
+) (map[string]map[string]uint64, error) {
+	receiversMap := map[string]map[string]uint64{}
+	updateMap := func(addr string, tokenName string, value uint64) {
+		subMap, exists := receiversMap[addr]
+		if !exists {
+			subMap = map[string]uint64{}
+			receiversMap[addr] = subMap
+		}
 
-	for _, transaction := range txs {
-		for _, receiver := range transaction.Receivers {
-			data := receiversMap[receiver.DestinationAddress]
-			data.Amount += receiver.Amount.Uint64()
+		subMap[tokenName] += value
+	}
 
-			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-				if len(data.Tokens) == 0 {
-					var (
-						err   error
-						token cardanowallet.Token
-					)
+	for txIndx, tx := range txs {
+		srcChainID := common.ToStrChainID(tx.SourceChainId)
 
-					if (transaction.TransactionType == uint8(common.DefundConfirmedTxType)) ||
-						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
-						if err != nil {
-							return cardano.TxOutputs{}, err
-						}
-					} else {
-						token, err = cardanoConfig.GetNativeToken(
-							common.ToStrChainID(transaction.SourceChainId))
-						if err != nil {
-							return cardano.TxOutputs{}, err
-						}
+		for _, receiver := range tx.Receivers {
+			amount := receiver.Amount.Uint64()
+
+			switch tx.TransactionType {
+			case uint8(common.RefundConfirmedTxType):
+				// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+				// to fee payer address, and the rest is transferred to the user.
+				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount-cardanoConfig.MinFeeForBridging)
+				updateMap(feeAddr, cardanowallet.AdaTokenName, cardanoConfig.MinFeeForBridging)
+
+				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+					// In case of refund, destChainID will be equal to srcChainID
+					// to get the correct token name, original destination chain is needed.
+					origDstChainID := common.ToStrChainID(tx.DestinationChainId)
+					tokenName := cardanoConfig.GetNativeTokenName(origDstChainID)
+
+					if tokenName == "" {
+						return nil, fmt.Errorf("token is not defined for refund original destination chain: (%s -> %s)", srcChainID, origDstChainID) //nolint:lll
 					}
 
-					data.Tokens = []cardanowallet.TokenAmount{
-						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
+					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+				}
+
+				for _, utxo := range refundUtxosPerConfirmedTx[txIndx] {
+					for _, token := range utxo.Output.Tokens {
+						updateMap(receiver.DestinationAddress, token.TokenName(), token.Amount)
 					}
-				} else {
-					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+				}
+
+			case uint8(common.DefundConfirmedTxType):
+				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
+
+				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+					// defund tx should have correct destination chain id set.
+					// this is hacky solution that will work for now
+					token, err := cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+					if err != nil {
+						return nil, fmt.Errorf("token is not defined for defund: %s", srcChainID)
+					}
+
+					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
+				}
+
+			default:
+				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
+
+				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+					tokenName := cardanoConfig.GetNativeTokenName(srcChainID)
+					if tokenName == "" {
+						return nil, fmt.Errorf("token is not defined for destination chain: (%s -> %s)", srcChainID, destChainID) //nolint:lll
+					}
+
+					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
 				}
 			}
-
-			receiversMap[receiver.DestinationAddress] = data
 		}
 	}
 
+	return receiversMap, nil
+}
+
+func getOutputs(
+	networkID cardanowallet.CardanoNetworkType, receiversMap map[string]map[string]uint64, logger hclog.Logger,
+) cardano.TxOutputs {
 	result := cardano.TxOutputs{
 		Outputs: make([]cardanowallet.TxOutput, 0, len(receiversMap)),
 		Sum:     map[string]uint64{},
 	}
 
-	for addr, txOut := range receiversMap {
-		if txOut.Amount == 0 {
+	for addr, amountMap := range receiversMap {
+		if amountMap[cardanowallet.AdaTokenName] == 0 {
 			logger.Warn("skipped output with zero amount", "addr", addr)
 
 			continue
-		} else if !cardano.IsValidOutputAddress(addr, cardanoConfig.NetworkID) {
+		} else if !cardano.IsValidOutputAddress(addr, networkID) {
 			logger.Warn("skipped output because it is invalid", "addr", addr)
 
 			continue
 		}
 
-		txOut.Addr = addr
+		tokens, _ := cardanowallet.GetTokensFromSumMap(amountMap) // error can not happen here
+		if len(tokens) == 0 {
+			tokens = nil
+		}
 
-		result.Outputs = append(result.Outputs, txOut)
+		result.Outputs = append(result.Outputs, cardanowallet.TxOutput{
+			Addr:   addr,
+			Amount: amountMap[cardanowallet.AdaTokenName],
+			Tokens: tokens,
+		})
 
-		result.Sum[cardanowallet.AdaTokenName] += txOut.Amount
-
-		for _, token := range txOut.Tokens {
-			result.Sum[token.TokenName()] += token.Amount
+		for tokenName, amount := range amountMap {
+			result.Sum[tokenName] += amount
 		}
 	}
 
@@ -87,7 +135,7 @@ func getOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, nil
+	return result
 }
 
 func getNeededUtxos(

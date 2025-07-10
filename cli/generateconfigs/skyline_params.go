@@ -568,6 +568,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -648,6 +649,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
+		},
+		TryCountLimits: oCore.TryCountLimits{
+			MaxBatchTryCount:  70,
+			MaxSubmitTryCount: 50,
+			MaxRefundTryCount: 50,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{

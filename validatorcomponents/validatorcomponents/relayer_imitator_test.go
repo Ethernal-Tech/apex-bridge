@@ -98,7 +98,7 @@ func TestRelayerImitator(t *testing.T) {
 			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x1")),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x1"), false),
 		}
 		ctx := context.Background()
 
@@ -124,7 +124,7 @@ func TestRelayerImitator(t *testing.T) {
 			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5"), false),
 		}
 		ctx := context.Background()
 
@@ -151,7 +151,7 @@ func TestRelayerImitator(t *testing.T) {
 			{ObservedTransactionHash: common.NewHashFromHexString("0x5"), SourceChainId: common.ChainIDIntPrime},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5"), false),
 		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
@@ -178,8 +178,8 @@ func TestRelayerImitator(t *testing.T) {
 			{ObservedTransactionHash: common.NewHashFromHexString("0x1"), SourceChainId: common.ChainIDIntVector},
 		}
 		stateKeys := []common.BridgingRequestStateKey{
-			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5")),
-			common.NewBridgingRequestStateKey(common.ChainIDStrVector, common.NewHashFromHexString("0x1")),
+			common.NewBridgingRequestStateKey(common.ChainIDStrPrime, common.NewHashFromHexString("0x5"), false),
+			common.NewBridgingRequestStateKey(common.ChainIDStrVector, common.NewHashFromHexString("0x1"), false),
 		}
 
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}

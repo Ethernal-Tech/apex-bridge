@@ -16,8 +16,8 @@ type BridgingRequestMetadata sendtx.BridgingRequestMetadata
 const (
 	BridgingTxTypeBridgingRequest BridgingTxType = "bridge"
 	BridgingTxTypeBatchExecution  BridgingTxType = "batch"
-	BridgingTxTypeRefundExecution BridgingTxType = "refund"
 
+	TxTypeRefundRequest BridgingTxType = "refund"
 	TxTypeHotWalletFund BridgingTxType = "fund"
 
 	MetadataEncodingTypeJSON MetadataEncodingType = "json"
@@ -45,13 +45,15 @@ type BridgingRequestMetadataV1 struct {
 	FeeAmount          uint64                                 `cbor:"fa" json:"fa"`
 }
 
+type RefundBridgingRequestMetadata struct {
+	BridgingTxType     BridgingTxType `cbor:"t" json:"t"`
+	SenderAddr         []string       `cbor:"s" json:"s"`
+	DestinationChainID string         `cbor:"d" json:"d"`
+}
+
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 	BatchNonceID   uint64         `cbor:"n" json:"n"`
-}
-
-type RefundExecutedMetadata struct {
-	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
 type marshalFunc = func(v any) ([]byte, error)
@@ -79,7 +81,8 @@ func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) 
 }
 
 func MarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
 ) (
@@ -135,7 +138,8 @@ func mapV1ToCurrentBridgingRequest(metadataMap map[int]map[int]*BridgingRequestM
 }
 
 func UnmarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, data []byte,
 ) (
@@ -179,7 +183,8 @@ func UnmarshalMetadata[
 }
 
 func MarshalMetadataMap[
-	T BaseMetadata | BridgingRequestMetadata | BatchExecutedMetadata | RefundExecutedMetadata,
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
 ) (

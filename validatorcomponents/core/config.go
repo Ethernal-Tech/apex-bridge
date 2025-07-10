@@ -53,6 +53,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
 			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
+			MinFeeForBridging:      ecConfig.MinFeeForBridging,
 			TestMode:               ecConfig.TestMode,
 		}).Serialize()
 
