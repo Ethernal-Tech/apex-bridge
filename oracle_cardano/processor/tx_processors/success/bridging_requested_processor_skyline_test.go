@@ -1154,7 +1154,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
 				IsNativeTokenOnSrc: 0,
-				Amount:             maxAmountAllowedToBridge.Uint64(),
+				Amount:             maxAmountAllowedToBridge.Uint64() + 1,
 			},
 		}
 
@@ -1172,7 +1172,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridging*2 + maxAmountAllowedToBridge.Uint64(),
+				Amount:  minOperationFee + minFeeForBridging*2 + maxAmountAllowedToBridge.Uint64() + 1,
 			},
 		}
 
