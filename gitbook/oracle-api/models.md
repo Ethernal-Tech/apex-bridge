@@ -1,5 +1,5 @@
 # Models
 
-{% openapi-schemas spec="oracle-api" schemas="core.BridgingRequestStatus,core.CardanoChainConfigUtxo,response.BridgingRequestStateResponse,response.ErrorResponse,response.HasTxFailedResponse,response.OracleStateResponse,response.SettingsResponse,wallet.TokenAmount" grouped="true" %}
-[OpenAPI oracle-api](https://raw.githubusercontent.com/Ethernal-Tech/apex-bridge/refs/heads/skyline-oracle-api-docs/api/docs/swagger.yaml)
+{% openapi-schemas spec="oracle-api" schemas="BridgingRequestStateResponse,BridgingRequestStatus,CardanoChainConfigUtxo,ErrorResponse,HasTxFailedResponse,OracleStateResponse,SettingsResponse" grouped="true" %}
+[OpenAPI oracle-api](https://raw.githubusercontent.com/Ethernal-Tech/apex-bridge/refs/heads/skyline-docs/docs/oracle-api/swagger.yaml)
 {% endopenapi-schemas %}
