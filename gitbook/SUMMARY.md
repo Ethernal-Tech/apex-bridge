@@ -22,3 +22,11 @@
 
 * [CardanoTx](cardano-api/cardanotx.md)
 * [Models](cardano-api/models.md)
+
+## WEB API
+
+* [BridgeTransaction](web-api/bridgetransaction.md)
+* [Contact](web-api/contact.md)
+* [Settings](web-api/settings.md)
+* [Transaction](web-api/transaction.md)
+* [Models](web-api/models.md)
