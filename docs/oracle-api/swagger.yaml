@@ -3,15 +3,21 @@ definitions:
   BridgingRequestStateResponse:
     properties:
       destinationChainId:
+        description: Destination chain ID
         type: string
       destinationTxHash:
+        description: Destination transaction hash
         type: string
       sourceChainId:
+        description: Source chain ID
         type: string
       sourceTxHash:
+        description: Source transaction hash
         type: string
       status:
-        $ref: '#/definitions/BridgingRequestStatus'
+        allOf:
+        - $ref: '#/definitions/BridgingRequestStatus'
+        description: Status of bridging request
     type: object
   BridgingRequestStatus:
     enum:
@@ -34,18 +40,24 @@ definitions:
   CardanoChainConfigUtxo:
     properties:
       address:
+        description: Output address
         type: string
       amount:
+        description: Amount of currency
         type: integer
       id:
+        description: Transaction hash
         items:
           type: integer
         type: array
       index:
+        description: Output index
         type: integer
       slot:
+        description: Output slot
         type: integer
       tokens:
+        description: Tokens
         items:
           $ref: '#/definitions/wallet.TokenAmount'
         type: array
@@ -58,17 +70,22 @@ definitions:
   HasTxFailedResponse:
     properties:
       failed:
+        description: true if the transaction failed, false otherwise
         type: boolean
     type: object
   OracleStateResponse:
     properties:
       chainID:
+        description: Chain ID
         type: string
       hash:
+        description: Latest block hash
         type: string
       slot:
+        description: Latest block slot
         type: integer
       utxos:
+        description: Unspent transaction outputs
         items:
           $ref: '#/definitions/CardanoChainConfigUtxo'
         type: array
@@ -76,24 +93,33 @@ definitions:
   SettingsResponse:
     properties:
       maxAmountAllowedToBridge:
+        description: Maximum amount of currency allowed to be bridged
         type: string
       maxReceiversPerBridgingRequest:
+        description: Maximum number of receivers allowed in a bridging request
         type: integer
       maxTokenAmountAllowedToBridge:
+        description: Maximum amount of native tokens allowed to be bridged
         type: string
       minChainFeeForBridging:
         additionalProperties:
           type: integer
+        description: For each chain, the minimum fee required to cover the submission
+          of the transaction on the destination chain
         type: object
       minOperationFee:
         additionalProperties:
           type: integer
+        description: For each chain, the minimum fee required to cover operational
+          costs
         type: object
       minUtxoChainValue:
         additionalProperties:
           type: integer
+        description: For each chain, the minimum allowed UTXO value
         type: object
       minValueToBridge:
+        description: Minimum value allowed to be bridged
         type: integer
     type: object
   wallet.TokenAmount:
@@ -131,7 +157,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: OK - Returns the bridging request with its current state.
           schema:
             $ref: '#/definitions/BridgingRequestStateResponse'
         "400":
@@ -209,7 +235,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: OK - Returns Oracle state.
           schema:
             $ref: '#/definitions/OracleStateResponse'
         "400":
@@ -250,7 +276,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: OK - Returns transaction failure status.
           schema:
             $ref: '#/definitions/HasTxFailedResponse'
         "400":
@@ -276,7 +302,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: OK - Returns bridge configuration.
           schema:
             $ref: '#/definitions/SettingsResponse'
         "401":

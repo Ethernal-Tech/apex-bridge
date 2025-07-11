@@ -46,7 +46,7 @@ func (c *BridgingRequestStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoi
 // @Produce json
 // @Param chainId query string true "Source chain ID"
 // @Param txHash query string true "Source transaction hash"
-// @Success 200 {object} response.BridgingRequestStateResponse
+// @Success 200 {object} response.BridgingRequestStateResponse "OK - Returns the bridging request with its current state."
 // @Failure 400 {object} response.ErrorResponse "Bad Request – One or more query parameters are missing, or the bridging request state could not be retrieved."
 // @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
 // @Failure 404 {object} response.ErrorResponse "Not Found - No bridging request found for the given parameters."
