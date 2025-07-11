@@ -1,12 +1,11 @@
 package core
 
 import (
-	"errors"
 	"math/big"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 type BridgingAddresses struct {
@@ -41,40 +40,28 @@ type EthChainConfig struct {
 	TestMode                uint8                `json:"testMode"`
 	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
 	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
 }
 
 type CardanoChainConfig struct {
-	ChainID                  string                           `json:"-"`
-	BridgingAddresses        BridgingAddresses                `json:"-"`
-	NetworkAddress           string                           `json:"networkAddress"`
-	NetworkMagic             uint32                           `json:"networkMagic"`
-	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
-	StartBlockHash           string                           `json:"startBlockHash"`
-	StartSlot                uint64                           `json:"startSlot"`
-	ConfirmationBlockCount   uint                             `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                         `json:"otherAddressesOfInterest"`
-	InitialUtxos             []CardanoChainConfigUtxo         `json:"initialUtxos"`
-
-	OgmiosURL             string  `json:"ogmiosUrl"`
-	BlockfrostURL         string  `json:"blockfrostUrl"`
-	BlockfrostAPIKey      string  `json:"blockfrostApiKey"`
-	SocketPath            string  `json:"socketPath"`
-	PotentialFee          uint64  `json:"potentialFee"`
-	SlotRoundingThreshold uint64  `json:"slotRoundingThreshold"`
-	TTLSlotNumberInc      uint64  `json:"ttlSlotNumberIncrement"`
-	NoBatchPeriodPercent  float64 `json:"noBatchPeriodPercent"`
-	UtxoMinAmount         uint64  `json:"utxoMinAmount"`
-	MinFeeForBridging     uint64  `json:"minFeeForBridging"`
-	MaxFeeUtxoCount       uint    `json:"maxFeeUtxoCount"`
-	MaxUtxoCount          uint    `json:"maxUtxoCount"`
-	TakeAtLeastUtxoCount  uint    `json:"takeAtLeastUtxoCount"`
+	cardanotx.CardanoChainConfig
+	ChainID                  string                   `json:"-"`
+	BridgingAddresses        BridgingAddresses        `json:"-"`
+	NetworkAddress           string                   `json:"networkAddress"`
+	StartBlockHash           string                   `json:"startBlockHash"`
+	StartSlot                uint64                   `json:"startSlot"`
+	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
+	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
+	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
+	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
+	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
 }
 
 type SubmitConfig struct {
-	ConfirmedBlocksThreshold  int  `json:"confirmedBlocksThreshold"`
-	ConfirmedBlocksSubmitTime int  `json:"confirmedBlocksSubmitTime"`
-	EmptyBlocksThreshold      int  `json:"emptyBlocksThreshold"`
-	UpdateFromIndexerDB       bool `json:"updateFromIndexerDb"`
+	ConfirmedBlocksThreshold  int             `json:"confirmedBlocksThreshold"`
+	ConfirmedBlocksSubmitTime int             `json:"confirmedBlocksSubmitTime"`
+	EmptyBlocksThreshold      map[string]uint `json:"emptyBlocksThreshold"`
+	UpdateFromIndexerDB       bool            `json:"updateFromIndexerDb"`
 }
 
 type BridgeConfig struct {
@@ -127,21 +114,4 @@ func (appConfig *AppConfig) FillOut() {
 	for chainID, ethChainConfig := range appConfig.EthChains {
 		ethChainConfig.ChainID = chainID
 	}
-}
-
-func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
-	if config.OgmiosURL != "" {
-		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
-	}
-
-	if config.SocketPath != "" {
-		return cardanowallet.NewTxProviderCli(
-			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
-	}
-
-	if config.BlockfrostURL != "" {
-		return cardanowallet.NewTxProviderBlockFrost(config.BlockfrostURL, config.BlockfrostAPIKey), nil
-	}
-
-	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }

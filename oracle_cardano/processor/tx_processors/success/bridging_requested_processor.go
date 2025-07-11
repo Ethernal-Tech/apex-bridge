@@ -71,17 +71,21 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
-	totalAmount := big.NewInt(0)
-
-	var feeAddress string
+	var (
+		totalAmount    = big.NewInt(0)
+		feeCurrencyDst *big.Int
+		feeAddress     string
+	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 
 	switch {
 	case cardanoDestConfig != nil:
 		feeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+		feeCurrencyDst = new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
+		feeCurrencyDst = new(big.Int).SetUint64(ethDestConfig.FeeAddrBridgingAmount)
 	default:
 		p.logger.Warn("Added BridgingRequestClaim not supported chain", "chainId", metadata.DestinationChainID)
 
@@ -107,13 +111,12 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		totalAmount.Add(totalAmount, receiverAmount)
 	}
 
-	feeAmount := new(big.Int).SetUint64(metadata.FeeAmount)
-
-	totalAmount.Add(totalAmount, feeAmount)
+	totalAmountCurrencySrc := new(big.Int).Add(totalAmount, new(big.Int).SetUint64(metadata.BridgingFee))
+	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDst)
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: feeAddress,
-		Amount:             feeAmount,
+		Amount:             feeCurrencyDst,
 	})
 
 	claim := cCore.BridgingRequestClaim{
@@ -121,7 +124,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 		SourceChainId:           common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:      common.ToNumChainID(metadata.DestinationChainID),
 		Receivers:               receivers,
-		TotalAmount:             totalAmount,
+		TotalAmountSrc:          totalAmountCurrencySrc,
+		TotalAmountDst:          totalAmountCurrencyDst,
 		RetryCounter:            big.NewInt(int64(tx.BatchTryCount)),
 	}
 
@@ -220,25 +224,25 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
-	// update fee amount if needed with sum of fee address receivers
-	metadata.FeeAmount += feeSum
-	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.FeeAmount))
+	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
+		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
+		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
+		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
+			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
+	}
 
-	if (cardanoDestConfig != nil && metadata.FeeAmount < cardanoDestConfig.MinFeeForBridging) ||
-		(ethDestConfig != nil && metadata.FeeAmount < ethDestConfig.MinFeeForBridging) {
+	// update fee amount if needed with sum of fee address receivers
+	metadata.BridgingFee += feeSum
+	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
+
+	if (cardanoDestConfig != nil && metadata.BridgingFee < cardanoDestConfig.MinFeeForBridging) ||
+		(ethDestConfig != nil && metadata.BridgingFee < ethDestConfig.MinFeeForBridging) {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: %v", metadata)
 	}
 
 	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
 		return fmt.Errorf("multisig amount is not equal to sum of receiver amounts + fee: expected %v but got %v",
 			multisigUtxo.Amount, receiverAmountSum)
-	}
-
-	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&
-		appConfig.BridgingSettings.MaxAmountAllowedToBridge.Sign() > 0 &&
-		receiverAmountSum.Cmp(appConfig.BridgingSettings.MaxAmountAllowedToBridge) == 1 {
-		return fmt.Errorf("sum of receiver amounts + fee: %v greater than maximum allowed: %v",
-			receiverAmountSum, appConfig.BridgingSettings.MaxAmountAllowedToBridge)
 	}
 
 	return nil

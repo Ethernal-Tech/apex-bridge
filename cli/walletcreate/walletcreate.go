@@ -1,47 +1,43 @@
 package cliwalletcreate
 
 import (
-	"fmt"
-
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/spf13/cobra"
 )
 
-var initParamsData = &initParams{}
+const bladeAdminCommandUse = "blade"
+
+var (
+	walletCreateParamsData      = &walletCreateParams{}
+	walletCreateBladeParamsData = &walletCreateBladeParams{}
+)
 
 func GetWalletCreateCommand() *cobra.Command {
-	secretsInitCmd := &cobra.Command{
+	walletCreateCmd := &cobra.Command{
 		Use:     "wallet-create",
 		Short:   "creates cardano wallet for specific chain id",
 		PreRunE: runPreRun,
-		Run:     runCommand,
+		Run:     common.GetCliRunCommand(walletCreateParamsData),
+	}
+	walletCreateBladeCmd := &cobra.Command{
+		Use:     bladeAdminCommandUse,
+		Short:   "create blade admin or proxy admin wallets using secret manager",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(walletCreateBladeParamsData),
 	}
 
-	initParamsData.setFlags(secretsInitCmd)
+	walletCreateParamsData.setFlags(walletCreateCmd)
+	walletCreateBladeParamsData.setFlags(walletCreateBladeCmd)
 
-	return secretsInitCmd
+	walletCreateCmd.AddCommand(walletCreateBladeCmd)
+
+	return walletCreateCmd
 }
 
-func runPreRun(_ *cobra.Command, _ []string) error {
-	return initParamsData.validateFlags()
-}
-
-func runCommand(cmd *cobra.Command, _ []string) {
-	outputter := common.InitializeOutputter(cmd)
-	defer outputter.WriteOutput()
-
-	defer func() {
-		if r := recover(); r != nil {
-			outputter.SetError(fmt.Errorf("%v", r))
-		}
-	}()
-
-	results, err := initParamsData.Execute()
-	if err != nil {
-		outputter.SetError(err)
-
-		return
+func runPreRun(cmd *cobra.Command, _ []string) error {
+	if cmd.Use == bladeAdminCommandUse {
+		return walletCreateBladeParamsData.validateFlags()
 	}
 
-	outputter.SetCommandResult(results)
+	return walletCreateParamsData.validateFlags()
 }

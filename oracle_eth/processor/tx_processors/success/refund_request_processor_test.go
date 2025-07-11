@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -29,12 +30,14 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := &oCore.AppConfig{
 			CardanoChains: map[string]*oCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
-					NetworkID: wallet.TestNetNetwork,
 					BridgingAddresses: oCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 						FeeAddress:      primeBridgingFeeAddr,
 					},
-					UtxoMinAmount:     utxoMinValue,
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+					},
 					MinFeeForBridging: minFeeForBridging,
 				},
 			},

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
@@ -39,22 +40,26 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		appConfig := &cCore.AppConfig{
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
-					NetworkID: wallet.TestNetNetwork,
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 						FeeAddress:      primeBridgingFeeAddr,
 					},
-					UtxoMinAmount:     utxoMinValue,
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+					},
 					MinFeeForBridging: minFeeForBridging,
 				},
 				common.ChainIDStrVector: {
-					NetworkID: wallet.VectorTestNetNetwork,
-					OgmiosURL: "http://ogmios.vector.testnet.apexfusion.org:1337",
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: vectorBridgingAddr,
 						FeeAddress:      vectorBridgingFeeAddr,
 					},
-					UtxoMinAmount:     utxoMinValue,
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.VectorTestNetNetwork,
+						OgmiosURL:     "http://ogmios.vector.testnet.apexfusion.org:1337",
+						UtxoMinAmount: utxoMinValue,
+					},
 					MinFeeForBridging: minFeeForBridging,
 				},
 			},

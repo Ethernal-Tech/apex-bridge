@@ -65,7 +65,7 @@ func (cco *CardanoChainOperations) SendTx(
 		return err
 	}
 
-	tip, err := cco.txProvider.GetTip(context.Background())
+	tip, err := cco.txProvider.GetTip(ctx)
 	if err == nil {
 		cco.logger.Info("confirmed batch - sending tx current tip",
 			"block", tip.Block, "slot", tip.Slot, "hash", tip.Hash)
@@ -79,5 +79,5 @@ func (cco *CardanoChainOperations) SendTx(
 		cco.logger.Error("confirmed batch - sending tx info error", "err", err)
 	}
 
-	return cco.txProvider.SubmitTx(context.Background(), txSigned)
+	return cco.txProvider.SubmitTx(ctx, txSigned)
 }

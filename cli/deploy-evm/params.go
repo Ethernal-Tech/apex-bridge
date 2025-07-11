@@ -45,7 +45,7 @@ const (
 
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
-	evmPrivateKeyFlagDesc   = "private key for evm chain"
+	evmPrivateKeyFlagDesc   = "private key for smart contract admin"
 	evmBlsKeyFlagDesc       = "bls key of the bridge validator. it can be used multiple times, but the order must be the same as on the bridge" //nolint:lll
 	evmChainIDFlagDesc      = "evm chain ID (prime, vector, etc)"
 	evmDynamicTxFlagDesc    = "dynamic tx"
@@ -54,7 +54,10 @@ const (
 
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
-	bridgePrivateKeyFlagDesc = "private key for bridge wallet (proxy admin)"
+	bridgePrivateKeyFlagDesc = "bridge admin private key"
+
+	privateKeyConfigFlag     = "key-config"
+	privateKeyConfigFlagDesc = "path to secrets manager config file"
 
 	minFeeAmountFlagDesc      = "minimal fee amount"
 	minBridgingAmountFlagDesc = "minimal amount to bridge"
@@ -87,6 +90,8 @@ type deployEVMParams struct {
 	bridgeSCAddr     string
 	bridgePrivateKey string
 
+	privateKeyConfig string
+
 	minFeeString            string
 	minBridgingAmountString string
 
@@ -103,8 +108,8 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
 	}
 
-	if ip.evmPrivateKey == "" {
-		return fmt.Errorf("invalid --%s flag", evmPrivateKeyFlag)
+	if ip.evmPrivateKey == "" && ip.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
 	if ip.bridgeNodeURL != "" {
@@ -159,13 +164,6 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.evmPrivateKey,
-		evmPrivateKeyFlag,
-		"",
-		evmPrivateKeyFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&ip.evmDir,
 		evmSCDirFlag,
 		"",
@@ -215,13 +213,6 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.bridgePrivateKey,
-		bridgePrivateKeyFlag,
-		"",
-		bridgePrivateKeyFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
 		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
@@ -234,6 +225,28 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
 		minBridgingAmountFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&ip.evmPrivateKey,
+		evmPrivateKeyFlag,
+		"",
+		evmPrivateKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&ip.bridgePrivateKey,
+		bridgePrivateKeyFlag,
+		"",
+		bridgePrivateKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, privateKeyConfigFlag)
+	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
 	cmd.MarkFlagsMutuallyExclusive(bridgeSCAddrFlag, evmBlsKeyFlag)
@@ -275,9 +288,9 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.evmPrivateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.evmPrivateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
@@ -318,7 +331,7 @@ func (ip *deployEVMParams) Execute(
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
 
-		_, _ = outputter.Write([]byte(fmt.Sprintf("%s has been sent", contractName)))
+		_, _ = outputter.Write(fmt.Appendf(nil, "%s has been sent", contractName))
 		outputter.WriteOutput()
 
 		txHashes[i*2] = proxyTx.Hash
@@ -348,7 +361,7 @@ func (ip *deployEVMParams) Execute(
 	additionalTxHashes := make([]string, 0, len(setDependenciesData)+1) // + 1 for setValidatorsChainData
 
 	for contractName, dependencyNames := range setDependenciesData {
-		dependencies := make([]interface{}, len(dependencyNames))
+		dependencies := make([]any, len(dependencyNames))
 		for i, x := range dependencyNames {
 			dependencies[i] = addresses[x]
 		}
@@ -359,7 +372,7 @@ func (ip *deployEVMParams) Execute(
 			return nil, fmt.Errorf("setDependecies for %s has been failed: %w", contractName, err)
 		}
 
-		_, _ = outputter.Write([]byte(fmt.Sprintf("%s initialization transaction has been sent", contractName)))
+		_, _ = outputter.Write(fmt.Appendf(nil, "%s initialization transaction has been sent", contractName))
 		outputter.WriteOutput()
 
 		additionalTxHashes = append(additionalTxHashes, txInfo.Hash().String())
@@ -393,13 +406,13 @@ func (ip *deployEVMParams) setChainAdditionalData(
 	ctx context.Context, gatewayProxyAddr ethcommon.Address,
 	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) error {
-	if ip.bridgePrivateKey == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return nil
 	}
 
 	sc := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper)
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("Configuring bridge smart contract at %s...", ip.bridgeSCAddr)))
+	_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
 	outputter.WriteOutput()
 
 	_, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (bool, error) {
@@ -413,7 +426,7 @@ func (ip *deployEVMParams) getValidatorsChainData(
 	ctx context.Context, txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) ([]eth.ValidatorChainData, error) {
 	if ip.bridgeNodeURL != "" {
-		_, _ = outputter.Write([]byte(fmt.Sprintf("Get data from bridge smart contract at %s...", ip.bridgeSCAddr)))
+		_, _ = outputter.Write(fmt.Appendf(nil, "Get data from bridge smart contract at %s...", ip.bridgeSCAddr))
 		outputter.WriteOutput()
 
 		return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).GetValidatorsChainData(ctx, ip.evmChainID)
@@ -455,16 +468,16 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		return nil, nil
 	}
 
-	if ip.bridgePrivateKey == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return eth.NewEthHelperWrapper(
 			hclog.NewNullLogger(),
 			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
 			ethtxhelper.WithDynamicTx(false)), nil
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.bridgePrivateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.bridgePrivateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	return eth.NewEthHelperWrapperWithWallet(
@@ -475,10 +488,10 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithDynamicTx(false)), nil
 }
 
-func (ip *deployEVMParams) getInitParams(contractName string) []interface{} {
+func (ip *deployEVMParams) getInitParams(contractName string) []any {
 	switch strings.ToLower(contractName) {
 	case strings.ToLower(Gateway):
-		return []interface{}{
+		return []any{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
 		}
