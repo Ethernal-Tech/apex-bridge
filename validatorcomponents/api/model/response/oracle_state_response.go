@@ -15,7 +15,7 @@ type OracleStateResponse struct {
 	BlockSlot uint64 `json:"slot"`
 	// Latest block hash
 	BlockHash string `json:"hash"`
-} //@name OracleStateResponse
+} // @name OracleStateResponse
 
 func NewOracleStateResponse(
 	chainID string, utxos []oCore.CardanoChainConfigUtxo, slot uint64, hash [32]byte,

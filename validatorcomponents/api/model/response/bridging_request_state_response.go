@@ -15,7 +15,7 @@ type BridgingRequestStateResponse struct {
 	Status core.BridgingRequestStatus `json:"status"`
 	// Destination transaction hash
 	DestinationTxHash string `json:"destinationTxHash"`
-} //@name BridgingRequestStateResponse
+} // @name BridgingRequestStateResponse
 
 func NewBridgingRequestStateResponse(state *core.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
