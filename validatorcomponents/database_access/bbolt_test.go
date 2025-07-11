@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,7 +64,7 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		state := core.NewBridgingRequestState(primeChainID, testTxHash)
+		state := common.NewBridgingRequestState(primeChainID, testTxHash, false)
 		err = db.AddBridgingRequestState(state)
 		require.NoError(t, err)
 
@@ -81,7 +80,7 @@ func TestBoltDatabase(t *testing.T) {
 		err := db.Init(filePath)
 		require.NoError(t, err)
 
-		err = db.AddBridgingRequestState(core.NewBridgingRequestState(primeChainID, testTxHash))
+		err = db.AddBridgingRequestState(common.NewBridgingRequestState(primeChainID, testTxHash, false))
 		require.NoError(t, err)
 
 		state, err := db.GetBridgingRequestState("vect", common.Hash{89, 8})
@@ -103,11 +102,11 @@ func TestBoltDatabase(t *testing.T) {
 		sourceChainID := primeChainID
 		sourceTxHash := testTxHash
 
-		err = db.UpdateBridgingRequestState(core.NewBridgingRequestState(sourceChainID, sourceTxHash))
+		err = db.UpdateBridgingRequestState(common.NewBridgingRequestState(sourceChainID, sourceTxHash, false))
 		require.Error(t, err)
 		require.ErrorContains(t, err, "trying to update a BridgingRequestState that does not exist")
 
-		state := core.NewBridgingRequestState(sourceChainID, sourceTxHash)
+		state := common.NewBridgingRequestState(sourceChainID, sourceTxHash, false)
 
 		err = db.AddBridgingRequestState(state)
 		require.NoError(t, err)
@@ -123,6 +122,6 @@ func TestBoltDatabase(t *testing.T) {
 		state, err = db.GetBridgingRequestState(sourceChainID, sourceTxHash)
 		require.NoError(t, err)
 		require.NotNil(t, state)
-		require.Equal(t, core.BridgingRequestStatusInvalidRequest, state.Status)
+		require.Equal(t, common.BridgingRequestStatusInvalidRequest, state.Status)
 	})
 }

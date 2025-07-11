@@ -60,7 +60,10 @@ func (pc *txProcessorsCollection) getSuccess(tx *core.CardanoTx, appConfig *cCor
 
 		txProcessor, relevant = pc.successTxProcessors[string(metadata.BridgingTxType)]
 		if !relevant {
-			return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+			txProcessor, relevant = pc.successTxProcessors[string(common.TxTypeRefundRequest)]
+			if !relevant {
+				return nil, fmt.Errorf("irrelevant tx. Tx type: %s", metadata.BridgingTxType)
+			}
 		}
 	} else {
 		txProcessor = pc.successTxProcessors[string(common.TxTypeHotWalletFund)]

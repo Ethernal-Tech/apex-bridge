@@ -13,6 +13,7 @@ type ClaimType = string
 
 const (
 	BRCClaimType ClaimType = "BRC"
+	RRCClaimType ClaimType = "RRC"
 )
 
 type ContractClaims = contractbinding.IBridgeStructsValidatorClaims
@@ -31,7 +32,8 @@ func (bc *BridgeClaims) Count() int {
 	return len(bc.BridgingRequestClaims) +
 		len(bc.BatchExecutedClaims) +
 		len(bc.BatchExecutionFailedClaims) +
-		len(bc.HotWalletIncrementClaims) /* + len(bc.RefundRequest) + len(bc.RefundExecuted)*/
+		len(bc.HotWalletIncrementClaims) +
+		len(bc.RefundRequestClaims)
 }
 
 func (bc *BridgeClaims) Any() bool {
@@ -63,7 +65,7 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	if len(c.OutputIndexes) > 0 {
 		sb.WriteString("\nOutputIndexes = ")
 
-		indexes, err := common.UnpackNumbersToBytes[[]uint16](c.OutputIndexes)
+		indexes, err := common.UnpackNumbersToBytes[[]common.TxOutputIndex](c.OutputIndexes)
 		if err != nil {
 			sb.WriteString(err.Error())
 		} else {
@@ -151,7 +153,6 @@ func (bc BridgeClaims) String() string {
 		sbBEC  strings.Builder
 		sbBEFC strings.Builder
 		sbRRC  strings.Builder
-		sbREC  strings.Builder
 		sbHWIC strings.Builder
 	)
 
@@ -217,10 +218,6 @@ func (bc BridgeClaims) String() string {
 
 	sb.WriteString("\nRefundRequestClaims = \n[")
 	sb.WriteString(sbRRC.String())
-	sb.WriteString("]")
-
-	sb.WriteString("\nRefundExecutedClaims = \n[")
-	sb.WriteString(sbREC.String())
 	sb.WriteString("]")
 
 	sb.WriteString("\nHotWalletIncrementClaims = [")
