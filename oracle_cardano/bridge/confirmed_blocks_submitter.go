@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -129,8 +130,18 @@ func (bs *ConfirmedBlocksSubmitterImpl) getBlocksToSubmit(from uint64) (
 		if len(block.Txs) == 0 {
 			latestInfo.BlockNumOrSlot = block.Slot
 			latestInfo.CounterEmpty++
+
+			threshold, ok := bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[bs.chainID]
+			if !ok {
+				return result, latestInfo, fmt.Errorf("empty blocks threshold not configured for chain: %s", bs.chainID)
+			}
+
+			if threshold > uint(math.MaxInt) {
+				return result, latestInfo, fmt.Errorf("threshold too large: %d", threshold)
+			}
+
 			// add empty block only if threshold is reached
-			if latestInfo.CounterEmpty < bs.appConfig.Bridge.SubmitConfig.EmptyBlocksThreshold {
+			if latestInfo.CounterEmpty < int(threshold) {
 				continue
 			}
 		} else {

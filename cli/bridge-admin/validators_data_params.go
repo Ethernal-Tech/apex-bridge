@@ -121,21 +121,22 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			multisigPolicyScript, multisigFeePolicyScript, err := cardanotx.GetPolicyScripts(validatorsData)
+			keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
 			if err != nil {
 				return nil, err
 			}
 
-			multisigAddr, feeAddr, err := cardanotx.GetMultisigAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic),
-				multisigPolicyScript, multisigFeePolicyScript)
+			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
+
+			addrs, err := cardanotx.NewApexAddresses(
+				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
 			if err != nil {
 				return nil, err
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from validator data): \n", chainID)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", multisigAddr)))
-			_, _ = outputter.Write([]byte(fmt.Sprintf("Fee Payer Address = %s\n", feeAddr)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", addrs.Multisig.Payment)))
+			_, _ = outputter.Write([]byte(fmt.Sprintf("Fee Payer Address = %s\n", addrs.Fee.Payment)))
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Addresses on %s chain (retrieved from registered chains): \n", chainID)))
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Multisig Address =  %s\n", regChain.AddressMultisig)))

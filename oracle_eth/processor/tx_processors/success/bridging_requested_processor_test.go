@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -15,12 +16,13 @@ import (
 
 func TestBridgingRequestedProcessor(t *testing.T) {
 	const (
-		utxoMinValue         = 1000000
-		minFeeForBridging    = 1000010
-		primeBridgingAddr    = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-		primeBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		nexusBridgingAddr    = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
-		validTestAddress     = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+		utxoMinValue          = 1000000
+		minFeeForBridging     = 1000010
+		feeAddrBridgingAmount = uint64(1000005)
+		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
+		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
@@ -29,13 +31,16 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		config := &oCore.AppConfig{
 			CardanoChains: map[string]*oCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
-					NetworkID: wallet.TestNetNetwork,
 					BridgingAddresses: oCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 						FeeAddress:      primeBridgingFeeAddr,
 					},
-					UtxoMinAmount:     utxoMinValue,
-					MinFeeForBridging: minFeeForBridging,
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:     wallet.TestNetNetwork,
+						UtxoMinAmount: utxoMinValue,
+					},
+					MinFeeForBridging:     minFeeForBridging,
+					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
 			},
 			EthChains: map[string]*oCore.EthChainConfig{
@@ -621,7 +626,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []core.BridgingRequestEthMetadataTransaction{
 			{Address: primeBridgingFeeAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
-			{Address: validTestAddress, Amount: common.DfmToWei(maxAmountAllowedToBridge)},
+			{Address: validTestAddress, Amount: common.DfmToWei(new(big.Int).Add(new(big.Int).SetUint64(1), maxAmountAllowedToBridge))},
 		}
 
 		validMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
@@ -639,7 +644,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			Hash:          txHash,
 			Metadata:      validMetadata,
 			OriginChainID: common.ChainIDStrNexus,
-			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + minFeeForBridging)),
+			Value:         common.DfmToWei(new(big.Int).SetUint64(maxAmountAllowedToBridge.Uint64() + 1 + minFeeForBridging)),
 		}
 
 		appConfig := getAppConfig(false)
@@ -703,6 +708,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.Equal(t, common.WeiToDfm(receivers[1].Amount), claims.BridgingRequestClaims[0].Receivers[0].Amount)
 		require.Equal(t, receivers[0].Address,
 			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
-		require.Equal(t, common.WeiToDfm(receivers[0].Amount), claims.BridgingRequestClaims[0].Receivers[1].Amount)
+		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
 	})
 }

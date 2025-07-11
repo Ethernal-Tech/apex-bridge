@@ -8,14 +8,14 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-type CardanoWallet struct {
-	MultiSig    *cardanowallet.Wallet `json:"multisig"`
-	MultiSigFee *cardanowallet.Wallet `json:"fee"`
+type ApexCardanoWallet struct {
+	MultiSig *cardanowallet.Wallet `json:"multisig"`
+	Fee      *cardanowallet.Wallet `json:"fee"`
 }
 
 func GenerateWallet(
 	mngr secrets.SecretsManager, chain string, isStake bool, forceRegenerate bool,
-) (*CardanoWallet, error) {
+) (*ApexCardanoWallet, error) {
 	keyName := fmt.Sprintf("%s%s_key", secrets.CardanoKeyLocalPrefix, chain)
 
 	if mngr.HasSecret(keyName) {
@@ -38,9 +38,9 @@ func GenerateWallet(
 		return nil, fmt.Errorf("failed to generate fee wallet: %w", err)
 	}
 
-	cardanoWallet := &CardanoWallet{
-		MultiSig:    multisigWallet,
-		MultiSigFee: feeWallet,
+	cardanoWallet := &ApexCardanoWallet{
+		MultiSig: multisigWallet,
+		Fee:      feeWallet,
 	}
 
 	bytes, err := json.Marshal(cardanoWallet)
@@ -55,7 +55,7 @@ func GenerateWallet(
 	return cardanoWallet, err
 }
 
-func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, error) {
+func LoadWallet(mngr secrets.SecretsManager, chain string) (*ApexCardanoWallet, error) {
 	keyName := fmt.Sprintf("%s%s_key", secrets.CardanoKeyLocalPrefix, chain)
 
 	bytes, err := mngr.GetSecret(keyName)
@@ -63,7 +63,7 @@ func LoadWallet(mngr secrets.SecretsManager, chain string) (*CardanoWallet, erro
 		return nil, fmt.Errorf("failed to load wallet: %w", err)
 	}
 
-	var cardanoWallet *CardanoWallet
+	var cardanoWallet *ApexCardanoWallet
 
 	if err := json.Unmarshal(bytes, &cardanoWallet); err != nil {
 		return nil, fmt.Errorf("failed to load wallet: %w", err)

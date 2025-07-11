@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -26,8 +27,10 @@ const (
 )
 
 type upgradeEVMParams struct {
-	nodeURL       string
-	privateKey    string
+	nodeURL          string
+	privateKey       string
+	privateKeyConfig string
+
 	dir           string
 	repositoryURL string
 	clone         bool
@@ -41,8 +44,8 @@ func (ip *upgradeEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if ip.privateKey == "" {
-		return fmt.Errorf("not specified --%s flag", evmPrivateKeyFlag)
+	if ip.privateKey == "" && ip.privateKeyConfig == "" {
+		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
 	if len(ip.contracts) == 0 {
@@ -69,6 +72,13 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		evmPrivateKeyFlag,
 		"",
 		evmPrivateKeyFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.privateKeyConfig,
+		privateKeyConfigFlag,
+		"",
+		privateKeyConfigFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -112,6 +122,8 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		"",
 		repositoryURLFlagDesc,
 	)
+
+	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
 func (ip *upgradeEVMParams) Execute(
@@ -171,9 +183,9 @@ func (ip *upgradeEVMParams) Execute(
 		return nil, err
 	}
 
-	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKey)
+	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.privateKey, ip.privateKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
 
 	txHelper, err := ethtxhelper.NewEThTxHelper(
@@ -212,7 +224,7 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("upgrade %s has been failed: %w", contractName, err)
 		}
 
-		_, _ = outputter.Write([]byte(fmt.Sprintf("%s upgrade has been sent", contractName)))
+		_, _ = outputter.Write(fmt.Appendf(nil, "%s upgrade has been sent", contractName))
 		outputter.WriteOutput()
 
 		txHashes[i*2] = tx.Hash().String()
