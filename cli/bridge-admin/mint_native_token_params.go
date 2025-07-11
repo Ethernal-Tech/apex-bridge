@@ -196,7 +196,7 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 		"Done minting %s:%d. txHash:%s\n", m.tokenName, m.mintAmount, txHash))
 
 	if m.showPolicyScript {
-		policyBytes, err := policyScript.GetPolicyScriptJSON()
+		policyBytes, err := policyScript.GetBytesJSON()
 		if err != nil {
 			_, _ = outputter.Write(fmt.Appendf(nil, "Failed to generate policy script: %s", err.Error()))
 		} else {

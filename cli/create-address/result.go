@@ -40,7 +40,7 @@ func (r CmdResult) GetOutput() string {
 				return
 			}
 
-			bytes, err := ps.GetPolicyScriptJSON()
+			bytes, err := ps.GetBytesJSON()
 			if err != nil {
 				_, _ = buffer.WriteString(fmt.Sprintf("\nFailed to generate %s: %s",
 					title, err.Error()))

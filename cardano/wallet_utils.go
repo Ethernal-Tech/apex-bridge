@@ -74,13 +74,13 @@ func NewPolicyScriptsContainer(keyHashes KeyHashesContainer) PolicyScriptsContai
 	//  if needed create policy script for payment only
 	if len(keyHashes.Stake) == 0 {
 		return PolicyScriptsContainer{
-			Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount),
+			Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, 0),
 		}
 	}
 
 	return PolicyScriptsContainer{
-		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount),
-		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount),
+		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, 0),
+		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount, 0),
 	}
 }
 

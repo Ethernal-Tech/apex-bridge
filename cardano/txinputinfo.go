@@ -19,3 +19,13 @@ type TxInputInfo struct {
 	PolicyScript *cardanowallet.PolicyScript
 	Address      string
 }
+
+type CertificatesWithScript struct {
+	PolicyScript *cardanowallet.PolicyScript
+	Certificates []cardanowallet.ICertificate
+}
+
+type CertificatesData struct {
+	Certificates    []*CertificatesWithScript
+	RegistrationFee uint64
+}
