@@ -17,13 +17,11 @@ import (
 const (
 	apexBridgeSmartContracts = "apex-bridge-smartcontracts"
 
-	nodeFlag          = "url"
-	contractFlag      = "contract"
-	repositoryURLFlag = "repo"
+	nodeFlag     = "url"
+	contractFlag = "contract"
 
-	nodeFlagDessc         = "node url"
-	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
-	repositoryURLFlagDesc = "smart contracts github repository url"
+	nodeFlagDessc    = "node url"
+	contractFlagDesc = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 )
 
 type upgradeEVMParams struct {
@@ -52,7 +50,7 @@ func (ip *upgradeEVMParams) validateFlags() error {
 		return fmt.Errorf("not specified --%s flag", contractFlag)
 	}
 
-	if ip.clone && !common.IsValidHTTPURL(ip.repositoryURL) {
+	if ip.clone && ip.repositoryURL != "" && !common.IsValidHTTPURL(ip.repositoryURL) {
 		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
 	}
 
@@ -161,15 +159,13 @@ func (ip *upgradeEVMParams) Execute(
 		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
 		outputter.WriteOutput()
 
-		lastSlashIndex := strings.LastIndex(strings.TrimSuffix(ip.repositoryURL, "/"), "/")
-		if lastSlashIndex == -1 {
-			return nil, fmt.Errorf("invalid --%s", repositoryURLFlag)
+		repositoryURL, repositoryName, err := getRepositoryURLAndName(ip.repositoryURL)
+		if err != nil {
+			return nil, err
 		}
 
-		repositoryName := ip.repositoryURL[lastSlashIndex+1:]
-
 		newDir, err := ethcontracts.CloneAndBuildContracts(
-			dir, ip.repositoryURL, repositoryName, evmRepositoryArtifactsDir, ip.branchName)
+			dir, repositoryURL, repositoryName, evmRepositoryArtifactsDir, ip.branchName)
 		if err != nil {
 			return nil, err
 		}

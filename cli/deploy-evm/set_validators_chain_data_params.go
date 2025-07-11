@@ -157,6 +157,11 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
 		outputter.WriteOutput()
 
+		evmGatewayRepositoryURL, evmGatewayRepositoryName, err := getRepositoryURLAndName("")
+		if err != nil {
+			return nil, err
+		}
+
 		newDir, err := ethcontracts.CloneAndBuildContracts(
 			dir, evmGatewayRepositoryURL, evmGatewayRepositoryName, evmRepositoryArtifactsDir, ip.evmBranchName)
 		if err != nil {

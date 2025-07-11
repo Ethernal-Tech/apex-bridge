@@ -255,6 +255,7 @@ $ apex-bridge deploy-evm \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
+- optional `--repo` flag
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
@@ -304,6 +305,7 @@ $ apex-bridge deploy-evm set-validators-chain-data \
 ```
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- optional `--repo` flag
 
 # Bridge admin commands
 ```shell

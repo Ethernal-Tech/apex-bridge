@@ -35,6 +35,7 @@ const (
 	evmDynamicTxFlag    = "dynamic-tx"
 	evmCloneEvmRepoFlag = "clone"
 	evmBranchNameFlag   = "branch"
+	repositoryURLFlag   = "repo"
 
 	bridgeNodeURLFlag    = "bridge-url"
 	bridgeSCAddrFlag     = "bridge-addr"
@@ -51,6 +52,7 @@ const (
 	evmDynamicTxFlagDesc    = "dynamic tx"
 	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
 	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
+	repositoryURLFlagDesc   = "smart contracts github repository url"
 
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
@@ -62,10 +64,9 @@ const (
 	minFeeAmountFlagDesc      = "minimal fee amount"
 	minBridgingAmountFlagDesc = "minimal amount to bridge"
 
-	defaultEVMChainID = common.ChainIDStrNexus
+	defaultEVMChainID    = common.ChainIDStrNexus
+	defaultRepositoryURL = "https://github.com/Ethernal-Tech/apex-evm-gateway"
 
-	evmGatewayRepositoryName  = "apex-evm-gateway"
-	evmGatewayRepositoryURL   = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
 	evmRepositoryArtifactsDir = "artifacts"
 )
 
@@ -85,6 +86,8 @@ type deployEVMParams struct {
 	evmChainID    string
 	evmBranchName string
 	evmDynamicTx  bool
+
+	evmRepositoryURL string
 
 	bridgeNodeURL    string
 	bridgeSCAddr     string
@@ -142,6 +145,10 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
 	}
 
+	if ip.evmClone && ip.evmRepositoryURL != "" && !common.IsValidHTTPURL(ip.evmRepositoryURL) {
+		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
+	}
+
 	ip.minFeeAmount = feeAmount
 	ip.minBridgingAmount = bridgingAmount
 
@@ -175,6 +182,13 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		evmCloneEvmRepoFlag,
 		false,
 		evmCloneEvmRepoFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.evmRepositoryURL,
+		repositoryURLFlag,
+		"",
+		repositoryURLFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -273,8 +287,13 @@ func (ip *deployEVMParams) Execute(
 		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
 		outputter.WriteOutput()
 
+		repositoryURL, repositoryName, err := getRepositoryURLAndName(ip.evmRepositoryURL)
+		if err != nil {
+			return nil, err
+		}
+
 		newDir, err := ethcontracts.CloneAndBuildContracts(
-			dir, evmGatewayRepositoryURL, evmGatewayRepositoryName, evmRepositoryArtifactsDir, ip.evmBranchName)
+			dir, repositoryURL, repositoryName, evmRepositoryArtifactsDir, ip.evmBranchName)
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +425,7 @@ func (ip *deployEVMParams) setChainAdditionalData(
 	ctx context.Context, gatewayProxyAddr ethcommon.Address,
 	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) error {
-	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
+	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" || txHelper == nil {
 		return nil
 	}
 
@@ -498,4 +517,17 @@ func (ip *deployEVMParams) getInitParams(contractName string) []any {
 	default:
 		return nil
 	}
+}
+
+func getRepositoryURLAndName(repositoryURL string) (string, string, error) {
+	if repositoryURL == "" {
+		repositoryURL = defaultRepositoryURL
+	}
+
+	lastSlashIndex := strings.LastIndex(strings.TrimSuffix(repositoryURL, "/"), "/")
+	if lastSlashIndex == -1 {
+		return "", "", fmt.Errorf("invalid --%s", repositoryURLFlag)
+	}
+
+	return repositoryURL, repositoryURL[lastSlashIndex+1:], nil
 }
