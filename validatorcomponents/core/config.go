@@ -47,7 +47,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 
 		chainSpecificJSONRaw, _ := (cardanotx.CardanoChainConfig{
 			NetworkID:             ccConfig.NetworkID,
-			TestNetMagic:          ccConfig.NetworkMagic,
+			NetworkMagic:          ccConfig.NetworkMagic,
 			OgmiosURL:             ccConfig.OgmiosURL,
 			BlockfrostURL:         ccConfig.BlockfrostURL,
 			BlockfrostAPIKey:      ccConfig.BlockfrostAPIKey,

@@ -11,7 +11,7 @@ import (
 
 type CardanoChainConfig struct {
 	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
-	TestNetMagic          uint32                           `json:"testnetMagic"`
+	NetworkMagic          uint32                           `json:"testnetMagic"`
 	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
 	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
 	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
@@ -51,7 +51,7 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 
 	if config.SocketPath != "" {
 		return cardanowallet.NewTxProviderCli(
-			uint(config.TestNetMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
+			uint(config.NetworkMagic), config.SocketPath, cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	}
 
 	if config.BlockfrostURL != "" {
