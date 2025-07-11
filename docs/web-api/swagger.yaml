@@ -1,0 +1,563 @@
+openapi: 3.0.0
+paths:
+  /settings:
+    get:
+      operationId: SettingsController_get
+      summary: Get bridge settings
+      description: >-
+        Returns the participating chains with their specific settings, global
+        bridge configuration (such as minimum and maximum allowed bridging
+        amounts), and, for each source chain, the native token that will be
+        received on the destination chain.
+      parameters: []
+      responses:
+        '200':
+          description: OK - Returns the configuration settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponseDto'
+      tags:
+        - Settings
+  /transaction/createCardano:
+    post:
+      operationId: TransactionController_createCardano
+      summary: Create a bridging transaction
+      description: >-
+        Builds a bridging transaction with all required fees and metadata. The
+        transaction must be signed and submitted separately.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionDto'
+      responses:
+        '200':
+          description: >-
+            OK - Returns the raw transaction data, transaction hash, and
+            calculated bridging fee and amounts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCardanoTransactionResponseDto'
+        '400':
+          description: Bad Request - Error while creating bridging transaction.
+        '500':
+          description: Internal server Error
+      tags: &ref_0
+        - Transaction
+  /transaction/getCardanoTxFee:
+    post:
+      operationId: TransactionController_getCardanoTxFee
+      summary: Get fees required for a bridging transaction
+      description: >-
+        Returns the transaction and bridging fees that the sender must pay on
+        the source chain. The bridging fee covers the cost for the fee payer to
+        submit the transaction on the destination chain.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionDto'
+      responses:
+        '200':
+          description: OK - Returns calculated fees.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardanoTransactionFeeResponseDto'
+        '400':
+          description: Bad Request - Error while getting bridging transaction fees.
+        '500':
+          description: Internal server Error
+      tags: *ref_0
+  /transaction/bridgingTransactionSubmitted:
+    post:
+      operationId: TransactionController_bridgingTransactionSubmitted
+      summary: Confirm the bridging transaction submission on the source chain
+      description: Returns a confirmed bridging transaction along with its associated data.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionSubmittedDto'
+      responses:
+        '200':
+          description: OK - Returns confirmed bridging transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeTransactionDto'
+        '400':
+          description: Bad Request - Error while confirming transaction submittion.
+      tags: *ref_0
+  /bridgeTransaction/{id}:
+    get:
+      operationId: BridgeTransactionController_get
+      summary: Get the bridging transaction details
+      description: Returns information about bridging transaction based on the given ID.
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: number
+      responses:
+        '200':
+          description: OK - Returns bridging transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeTransactionDto'
+        '404':
+          description: Not Found - Bridging transaction not found.
+      tags: &ref_1
+        - BridgeTransaction
+  /bridgeTransaction/filter:
+    post:
+      operationId: BridgeTransactionController_getAllFiltered
+      summary: Get multiple bridging transactions with filtering and pagination
+      description: >-
+        Returns a paginated list of bridging transactions based on specified
+        filters. Results are sorted by transaction creation date in descending
+        order by default.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BridgeTransactionFilterDto'
+      responses:
+        '200':
+          description: OK - Returns bridging transactions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeTransactionResponseDto'
+      tags: *ref_1
+  /contact:
+    post:
+      operationId: ContactController_submitContactForm
+      summary: Submit a contact message
+      description: >-
+        Allows users to send a contact message by providing their name, email,
+        and message.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContactDto'
+      responses:
+        '200':
+          description: OK - Message submitted.
+      tags:
+        - Contact
+info:
+  title: Web API
+  description: ''
+  version: '1.0'
+  contact: {}
+tags: []
+servers: []
+components:
+  schemas:
+    NativeTokenDto:
+      type: object
+      properties:
+        dstChainID:
+          type: string
+          description: Destination chain ID
+        tokenName:
+          type: string
+          description: Native token name
+      required:
+        - dstChainID
+        - tokenName
+    BridgingSettingsDto:
+      type: object
+      properties:
+        minChainFeeForBridging:
+          type: object
+          description: >-
+            For each chain, the minimum fee required to cover the submission of
+            the transaction on the destination chain
+          additionalProperties:
+            type: number
+        minOperationFee:
+          type: object
+          description: For each chain, the minimum fee required to cover operational costs
+          additionalProperties:
+            type: number
+        minUtxoChainValue:
+          type: object
+          description: For each chain, the minimum allowed UTXO value
+          additionalProperties:
+            type: number
+        minValueToBridge:
+          type: number
+          description: Minimum value allowed to be bridged
+        maxAmountAllowedToBridge:
+          type: string
+          description: Maximum amount of currency allowed to be bridged
+        maxTokenAmountAllowedToBridge:
+          type: string
+          description: Maximum amount of native tokens allowed to be bridged
+        maxReceiversPerBridgingRequest:
+          type: number
+          description: Maximum number of receivers allowed in a bridging request
+      required:
+        - minChainFeeForBridging
+        - minOperationFee
+        - minUtxoChainValue
+        - minValueToBridge
+        - maxAmountAllowedToBridge
+        - maxTokenAmountAllowedToBridge
+        - maxReceiversPerBridgingRequest
+    SettingsResponseDto:
+      type: object
+      properties:
+        runMode:
+          type: string
+          description: Specifies the current operating mode of the application
+        cardanoChainsNativeTokens:
+          type: object
+          description: >-
+            For each source chain, defines the native token that will be
+            received on the destination chain
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/NativeTokenDto'
+        bridgingSettings:
+          description: Settings for bridge
+          allOf:
+            - $ref: '#/components/schemas/BridgingSettingsDto'
+        enabledChains:
+          description: Participating chains in the bridge
+          type: array
+          items:
+            type: string
+      required:
+        - runMode
+        - cardanoChainsNativeTokens
+        - bridgingSettings
+        - enabledChains
+    CreateTransactionDto:
+      type: object
+      properties:
+        senderAddress:
+          type: string
+          description: Address that initiates the bridging request on the source chain
+        originChain:
+          type: string
+          description: Source chain ID
+          enum:
+            - cardano
+            - prime
+        destinationChain:
+          type: string
+          description: Destination chain ID
+          enum:
+            - cardano
+            - prime
+        destinationAddress:
+          type: string
+          description: Receiver address on destination chain
+        amount:
+          type: string
+          description: Amount to be bridged
+        bridgingFee:
+          type: string
+          description: >-
+            Fee covering the submission of the transaction on the destination
+            chain, expressed in Lovelace
+          nullable: true
+        operationFee:
+          type: string
+          description: >-
+            Fee covering the operational cost of processing the bridging
+            request, expressed in Lovelace
+          nullable: true
+        utxoCacheKey:
+          type: string
+          description: Key used to enable caching of spent UTXOs
+          nullable: true
+        isNativeToken:
+          type: boolean
+          description: >-
+            True if the amount is specified in a native token; false if in a
+            currency on source chain
+      required:
+        - senderAddress
+        - originChain
+        - destinationChain
+        - destinationAddress
+        - amount
+        - isNativeToken
+    CreateCardanoTransactionResponseDto:
+      type: object
+      properties:
+        txRaw:
+          type: string
+          description: Raw transaction data, encoded as a hexadecimal string
+        txHash:
+          type: string
+          description: Transaction hash
+        bridgingFee:
+          type: number
+          description: >-
+            Bridging fee for covering submission on the destination chain,
+            expressed in Lovelace
+        isFallback:
+          type: boolean
+          description: Indicates is fallback mechanism used
+        amount:
+          type: number
+          description: Amount of currency to be bridged, expressed in Lovelace
+        nativeTokenAmount:
+          type: number
+          description: Amount of native token to be bridged
+      required:
+        - txRaw
+        - txHash
+        - bridgingFee
+        - isFallback
+        - amount
+        - nativeTokenAmount
+    CardanoTransactionFeeResponseDto:
+      type: object
+      properties:
+        fee:
+          type: number
+          description: Transaction fee on the source chain, expressed in Lovelace
+        bridgingFee:
+          type: number
+          description: >-
+            Bridging fee for covering submission on the destination chain,
+            expressed in Lovelace
+      required:
+        - fee
+        - bridgingFee
+    TransactionSubmittedDto:
+      type: object
+      properties:
+        originChain:
+          type: string
+          description: Source chain ID
+          enum:
+            - cardano
+            - prime
+        destinationChain:
+          type: string
+          description: Destination chain ID
+          enum:
+            - cardano
+            - prime
+        originTxHash:
+          type: string
+          description: Transaction hash on source chain
+        senderAddress:
+          type: string
+          description: Address that initiated the bridging request on the source chain
+        receiverAddrs:
+          description: Recipient addresses on the destination chain
+          type: array
+          items:
+            type: string
+        amount:
+          type: string
+          description: Amount of currency to be bridged, including bridging fee
+        nativeTokenAmount:
+          type: string
+          description: Amount of native token to be bridged
+        txRaw:
+          type: string
+          description: Transaction raw data on source chain
+        isFallback:
+          type: boolean
+          description: Indicates is fallback mechanism used
+      required:
+        - originChain
+        - destinationChain
+        - originTxHash
+        - senderAddress
+        - receiverAddrs
+        - amount
+        - nativeTokenAmount
+        - txRaw
+        - isFallback
+    BridgeTransactionDto:
+      type: object
+      properties:
+        id:
+          type: number
+          description: Bridging transaction ID
+        senderAddress:
+          type: string
+          description: Address that initiated the bridging transaction on the source chain
+        receiverAddresses:
+          type: string
+          description: Recipient addresses on the destination chain
+        amount:
+          type: string
+          description: Bridged amount
+        nativeTokenAmount:
+          type: string
+          description: Bridged native token amount
+        originChain:
+          type: string
+          description: Source chain ID
+          enum:
+            - cardano
+            - prime
+        destinationChain:
+          type: string
+          description: Destination chain ID
+          enum:
+            - cardano
+            - prime
+        sourceTxHash:
+          type: string
+          description: Transaction hash on source chain
+        destinationTxHash:
+          type: string
+          description: Transaction hash on destination chain
+          nullable: true
+        status:
+          type: string
+          description: Status of bridging request
+          enum:
+            - Pending
+            - DiscoveredOnSource
+            - InvalidRequest
+            - SubmittedToBridge
+            - IncludedInBatch
+            - SubmittedToDestination
+            - FailedToExecuteOnDestination
+            - ExecutedOnDestination
+        createdAt:
+          format: date-time
+          type: string
+          description: Transaction creation date
+        finishedAt:
+          format: date-time
+          type: string
+          description: Transaction finalization date
+          nullable: true
+      required:
+        - id
+        - senderAddress
+        - receiverAddresses
+        - amount
+        - nativeTokenAmount
+        - originChain
+        - destinationChain
+        - sourceTxHash
+        - status
+        - createdAt
+    BridgeTransactionFilterDto:
+      type: object
+      properties:
+        page:
+          type: number
+          description: Page number to retrieve
+          nullable: true
+        perPage:
+          type: number
+          description: Number of items per page
+          nullable: true
+        senderAddress:
+          type: string
+          description: Address that initiated the bridging transaction on the source chain
+        originChain:
+          type: string
+          description: Source chain ID
+          enum:
+            - cardano
+            - prime
+        destinationChain:
+          type: string
+          description: Destination chain ID
+          nullable: true
+          enum:
+            - cardano
+            - prime
+        amountFrom:
+          type: string
+          description: Minimum amount of currency
+          nullable: true
+        amountTo:
+          type: string
+          description: Maximum amount of currency
+          nullable: true
+        nativeTokenAmountFrom:
+          type: string
+          description: Minimum amount of native token
+          nullable: true
+        nativeTokenAmountTo:
+          type: string
+          description: Maximum amount of native token
+          nullable: true
+        orderBy:
+          type: string
+          description: Field by which the results should be sorted
+          nullable: true
+        order:
+          type: string
+          description: Sort direction
+          nullable: true
+        receiverAddress:
+          type: string
+          description: Receiver address on destination chain
+          nullable: true
+      required:
+        - senderAddress
+        - originChain
+    BridgeTransactionResponseDto:
+      type: object
+      properties:
+        items:
+          description: Array of bridging transactions
+          type: array
+          items:
+            $ref: '#/components/schemas/BridgeTransactionDto'
+        page:
+          type: number
+          description: Current page number
+        perPage:
+          type: number
+          description: Number of items returned per page
+        total:
+          type: number
+          description: Total number of items
+      required:
+        - items
+        - page
+        - perPage
+        - total
+    CreateContactDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Full name of the user submitting the message
+        email:
+          type: string
+          description: Email address of the user submitting the message
+          format: email
+        message:
+          type: string
+          description: Message to be submitted
+      required:
+        - name
+        - email
+        - message

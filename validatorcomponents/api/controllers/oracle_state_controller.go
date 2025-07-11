@@ -66,7 +66,7 @@ func (c *OracleStateControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
 // @Tags OracleState
 // @Produce json
 // @Param chainId query string true "Chain ID"
-// @Success 200 {object} response.OracleStateResponse
+// @Success 200 {object} response.OracleStateResponse "OK - Returns Oracle state."
 // @Failure 400 {object} response.ErrorResponse "Bad Request – chainId is missing from the query or invalid, or the transaction outputs could not be retrieved."
 // @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
 // @Security ApiKeyAuth
@@ -159,7 +159,7 @@ func (c *OracleStateControllerImpl) getState(w http.ResponseWriter, r *http.Requ
 // @Param chainId query string true "Source chain ID"
 // @Param txHash query string true "Source transaction hash"
 // @Param ttl query string true "Transaction TTL"
-// @Success 200 {object} response.HasTxFailedResponse
+// @Success 200 {object} response.HasTxFailedResponse "OK - Returns transaction failure status."
 // @Failure 400 {object} response.ErrorResponse "Bad Request – One or more query parameters are missing or invalid, or the transaction could not be retrieved."
 // @Failure 401 {object} response.ErrorResponse "Unauthorized – API key missing or invalid."
 // @Security ApiKeyAuth
