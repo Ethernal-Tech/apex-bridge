@@ -6,7 +6,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
-type BridgingRequestStatus string //@name BridgingRequestStatus
+type BridgingRequestStatus string // @name BridgingRequestStatus
 
 const (
 	BridgingRequestStatusDiscoveredOnSource           BridgingRequestStatus = "DiscoveredOnSource"
