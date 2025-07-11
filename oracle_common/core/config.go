@@ -29,7 +29,7 @@ type CardanoChainConfigUtxo struct {
 	Address string `json:"address"`
 	// Amount of currency
 	Amount uint64 `json:"amount"`
-	// Tokens
+	// List of tokens including their name, policy ID, and amount
 	Tokens []cardanowallet.TokenAmount `json:"tokens,omitempty"`
 	// Output slot
 	Slot uint64 `json:"slot"`

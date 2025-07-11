@@ -57,7 +57,7 @@ definitions:
         description: Output slot
         type: integer
       tokens:
-        description: Tokens
+        description: List of tokens including their name, policy ID, and amount
         items:
           $ref: '#/definitions/wallet.TokenAmount'
         type: array
