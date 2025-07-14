@@ -132,6 +132,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 		}},
+		TransactionType: uint8(common.BridgingConfirmedTxType),
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
@@ -288,11 +289,12 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
 		require.NoError(t, err)
 
-		witnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw})
+		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsBridging: true})
 		require.NoError(t, err)
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
+		require.Nil(t, stakeWitnessMultiSig)
 	})
 }
 
@@ -482,49 +484,16 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		require.ErrorContains(t, err, "invalid amount")
 	})
 
-	// t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
-	// 	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-	//
-	// 	bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-	// 	dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-	// 	dbMock.On("GetAllTxOutputs", mock.Anything, true).
-	// 		Return([]*indexer.TxInputOutput{
-	// 			{
-	// 				Input: indexer.TxInput{
-	// 					Hash: indexer.NewHashFromHexString("0x0012"),
-	// 				},
-	// 				Output: indexer.TxOutput{
-	// 					Amount: 2_000_000,
-	// 				},
-	// 			},
-	// 		}, error(nil)).Once()
-	// 	dbMock.On("GetAllTxOutputs", mock.Anything, true).
-	// 		Return([]*indexer.TxInputOutput{
-	// 			{
-	// 				Input: indexer.TxInput{
-	// 					Hash: indexer.NewHashFromHexString("0xFF"),
-	// 				},
-	// 				Output: indexer.TxOutput{
-	// 					Amount: 2_300_000,
-	// 				},
-	// 			},
-	// 		}, error(nil)).Once()
-	//
-	// 	result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-	// 	require.NoError(t, err)
-	// 	require.NotNil(t, result.TxRaw)
-	// 	require.NotEqual(t, "", result.TxHash)
-	// })
-
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
 		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
 		require.NoError(t, err)
 
-		witnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw})
+		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeDelegation: true})
 		require.NoError(t, err)
-		require.NotNil(t, witnessMultiSig)
+		require.Nil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
+		require.NotNil(t, stakeWitnessMultiSig)
 	})
 }
 
@@ -549,10 +518,10 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
-			"socketPath": "./socket",
-			"testnetMagic": 42,
-			"minUtxoAmount": 1000
-			}`))
+				"socketPath": "./socket",
+				"testnetMagic": 42,
+				"minUtxoAmount": 1000
+				}`))
 	dbMock := &indexer.DatabaseMock{}
 	txProviderMock := &cardano.TxProviderTestMock{
 		ReturnDefaultParameters: true,
@@ -683,11 +652,12 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
 		require.NoError(t, err)
 
-		witnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw})
+		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsBridging: true, IsStakeDelegation: true})
 		require.NoError(t, err)
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
+		require.NotNil(t, stakeWitnessMultiSig)
 	})
 }
 
@@ -1016,6 +986,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             new(big.Int).SetUint64(2_000_000),
 			}},
+			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
@@ -1148,6 +1119,7 @@ func TestSkylineConsolidation(t *testing.T) {
 				Amount:             big.NewInt(1_250_000),
 				AmountWrapped:      big.NewInt(2_500_000),
 			}},
+			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()

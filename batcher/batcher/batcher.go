@@ -142,7 +142,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
-	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
+	multisigSignature, stakeSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -152,7 +152,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	// Submit batch to smart contract
 	signedBatch := b.createSignedBatch(
-		batchID, generatedBatchData, multisigSignature, multisigFeeSignature, confirmedTransactions)
+		batchID, generatedBatchData, multisigSignature, stakeSignature, multisigFeeSignature, confirmedTransactions)
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
 		"signedBatch", eth.SignedBatchWrapper{SignedBatch: signedBatch})
@@ -183,11 +183,17 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 func (b *BatcherImpl) createSignedBatch(
 	batchID uint64, generatedBatchData *core.GeneratedBatchTxData,
-	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
+	multisigSignature, stakeSignature, multisigFeeSignature []byte,
+	confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
 	if !generatedBatchData.IsConsolidation {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
+	}
+
+	batchType := uint8(eth.BatchTypeNormal)
+	if generatedBatchData.IsConsolidation {
+		batchType = uint8(eth.BatchTypeConsolidation)
 	}
 
 	return &eth.SignedBatch{
@@ -195,17 +201,18 @@ func (b *BatcherImpl) createSignedBatch(
 		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
 		RawTransaction:     generatedBatchData.TxRaw,
 		Signature:          multisigSignature,
+		StakeSignature:     stakeSignature,
 		FeeSignature:       multisigFeeSignature,
 		FirstTxNonceId:     firstTxNonceID,
 		LastTxNonceId:      lastTxNonceID,
-		IsConsolidation:    generatedBatchData.IsConsolidation,
+		BatchType:          batchType,
 	}
 }
 
 func (b *BatcherImpl) updateBatchTxsStates(
 	batchID uint64, txs []eth.ConfirmedTransaction, signedBatch *eth.SignedBatch,
 ) []common.BridgingRequestStateKey {
-	if signedBatch.IsConsolidation {
+	if signedBatch.BatchType == uint8(eth.BatchTypeConsolidation) {
 		return nil
 	}
 

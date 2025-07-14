@@ -24,8 +24,8 @@ func TestCreateTx(t *testing.T) {
 	}
 	testnetMagic := uint(42)
 	networkID := wallet.MainNetNetwork
-	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes), 0)
-	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes), 0)
+	policyScriptMultiSig := wallet.NewPolicyScript(walletsKeyHashes, len(walletsKeyHashes))
+	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
 	cardanoCliBinary := wallet.ResolveCardanoCliBinary(networkID)
 	cliUtils := wallet.NewCliUtils(cardanoCliBinary)
 

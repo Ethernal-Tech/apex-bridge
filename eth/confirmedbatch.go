@@ -19,10 +19,20 @@ type ConfirmedBatch struct {
 	ID              uint64
 	RawTransaction  []byte
 	Signatures      [][]byte
+	StakeSignatures [][]byte
 	FeeSignatures   [][]byte
 	Bitmap          *big.Int
-	IsConsolidation bool
+	BatchType       BatchTypes
 }
+
+type BatchTypes uint8
+
+const (
+	BatchTypeNormal BatchTypes = iota
+	BatchTypeConsolidation
+	BatchTypeValidatorSet
+	BatchTypeValidatorSetFinal
+)
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
@@ -31,9 +41,10 @@ func NewConfirmedBatch(
 		ID:              contractConfirmedBatch.Id,
 		RawTransaction:  contractConfirmedBatch.RawTransaction,
 		Signatures:      contractConfirmedBatch.Signatures,
+		StakeSignatures: contractConfirmedBatch.StakeSignatures,
 		FeeSignatures:   contractConfirmedBatch.FeeSignatures,
 		Bitmap:          contractConfirmedBatch.Bitmap,
-		IsConsolidation: contractConfirmedBatch.IsConsolidation,
+		BatchType:       BatchTypes(contractConfirmedBatch.BatchType),
 	}
 }
 
@@ -42,8 +53,8 @@ func (b ConfirmedBatch) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(b.ID))
-	sb.WriteString("\nisConsolidation = ")
-	sb.WriteString(fmt.Sprint(b.IsConsolidation))
+	sb.WriteString("\nbatch type = ")
+	sb.WriteString(fmt.Sprint(b.BatchType))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nbitmap = ")
@@ -122,8 +133,8 @@ func (sbw SignedBatchWrapper) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(sbw.Id))
-	sb.WriteString("\nisConsolidation = ")
-	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
+	sb.WriteString("\nbatch type = ")
+	sb.WriteString(fmt.Sprint(sbw.BatchType))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
