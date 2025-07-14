@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/ethgo"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -25,6 +26,7 @@ type TxsProcessorImpl struct {
 	bridgeDataFetcher           core.BridgeDataFetcher
 	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
+	validatorSetObserver        *validatorSetObserver.ValidatorSetObserver
 	logger                      hclog.Logger
 	TickTime                    time.Duration
 }
@@ -38,6 +40,7 @@ func NewTxsProcessorImpl(
 	bridgeDataFetcher core.BridgeDataFetcher,
 	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *TxsProcessorImpl {
 	return &TxsProcessorImpl{
@@ -48,6 +51,7 @@ func NewTxsProcessorImpl(
 		bridgeDataFetcher:           bridgeDataFetcher,
 		bridgeSubmitter:             bridgeSubmitter,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
+		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
 		TickTime:                    TickTimeMs,
 	}
@@ -213,6 +217,12 @@ func (p *TxsProcessorImpl) processAllForChain(
 func (p *TxsProcessorImpl) submitClaims(
 	startChainID string, bridgeClaims *core.BridgeClaims) (*types.Receipt, bool) {
 	p.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
+
+	if p.validatorSetObserver != nil && p.validatorSetObserver.IsValidatorSetPending() {
+		p.logger.Warn("Validator set is pending, skipping submit claims")
+
+		return nil, false
+	}
 
 	receipt, err := p.bridgeSubmitter.SubmitClaims(
 		bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})

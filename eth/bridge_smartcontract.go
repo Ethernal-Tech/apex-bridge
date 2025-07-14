@@ -31,6 +31,7 @@ type IBridgeSmartContract interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
+	IsNewValidatorSetPending() (bool, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -327,4 +328,9 @@ func (bsc *BridgeSmartContractImpl) GetBatchStatusAndTransactions(
 	}
 
 	return result.Status, result.Txs, nil
+}
+
+func (bsc *BridgeSmartContractImpl) IsNewValidatorSetPending() (bool, error) {
+	// todo: fix when sc ready
+	return false, nil
 }
