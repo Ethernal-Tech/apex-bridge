@@ -24,7 +24,7 @@ const (
 
 type stakeDelParams struct {
 	chainID          string
-	bridgeAddrIdx    uint8
+	bridgeAddrIdx    int8
 	stakePoolID      string
 	bridgeNodeURL    string
 	bridgePrivateKey string
@@ -39,6 +39,10 @@ func (params *stakeDelParams) ValidateFlags() error {
 
 	if params.chainID == "" {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
+	}
+
+	if params.bridgeAddrIdx < 0 {
+		return fmt.Errorf("--%s flag not specified or negative", bridgeAddrIdxFlag)
 	}
 
 	if params.stakePoolID == "" {
@@ -92,8 +96,8 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	tx, err := txHelper.SendTx(
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
-
-			return contract.DelegateAddrToStakePool(opts, chainIDInt, params.bridgeAddrIdx, params.stakePoolID)
+			//nolint:gosec
+			return contract.DelegateAddrToStakePool(opts, chainIDInt, uint8(params.bridgeAddrIdx), params.stakePoolID)
 		})
 	if err != nil {
 		return nil, err
@@ -120,10 +124,10 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 		chainIDFlagDesc,
 	)
 
-	cmd.Flags().Uint8Var(
+	cmd.Flags().Int8Var(
 		&params.bridgeAddrIdx,
 		bridgeAddrIdxFlag,
-		0,
+		-1,
 		bridgeAddrIdxFlagDesc,
 	)
 
