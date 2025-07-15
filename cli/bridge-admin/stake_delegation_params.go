@@ -60,6 +60,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
+	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -88,7 +89,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
-		"delegateAddrToStakePool", chainIDInt, params.bridgeAddrIdx, params.stakePoolID)
+		"delegateAddrToStakePool", chainIDInt, bridgeAddrIndex, params.stakePoolID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +97,8 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	tx, err := txHelper.SendTx(
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
-			//nolint:gosec
-			return contract.DelegateAddrToStakePool(opts, chainIDInt, uint8(params.bridgeAddrIdx), params.stakePoolID)
+
+			return contract.DelegateAddrToStakePool(opts, chainIDInt, bridgeAddrIndex, params.stakePoolID)
 		})
 	if err != nil {
 		return nil, err
