@@ -707,7 +707,6 @@ func Test_createBatchInitialData(t *testing.T) {
 			},
 		},
 	}
-	containsBridgingTx := true
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -716,7 +715,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -732,7 +731,7 @@ func Test_createBatchInitialData(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
@@ -748,7 +747,7 @@ func Test_createBatchInitialData(t *testing.T) {
 
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
 	})
 
@@ -766,7 +765,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
 			Return(validValidatorsChainData, nil).Once()
 
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.ErrorIs(t, err, desiredErr)
 	})
 
@@ -775,7 +774,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
 			Return(validValidatorsChainData, nil).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
 		assert.Contains(t, data.MultisigAddr, "addr_test1")
@@ -833,7 +832,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			},
 		},
 	}
-	containsBridgingTx := true
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
@@ -855,7 +853,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -870,7 +868,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -896,7 +894,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
 		_, err = cco.generateConsolidationTransaction(data)
@@ -931,7 +929,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID, containsBridgingTx)
+		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
 		require.NoError(t, err)
 
 		result, err := cco.generateConsolidationTransaction(data)

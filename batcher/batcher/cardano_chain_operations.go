@@ -89,22 +89,12 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
 ) (*core.GeneratedBatchTxData, error) {
-	containsBridgingTx := false
-
-	for _, confirmedTx := range confirmedTransactions {
-		if confirmedTx.TransactionType == uint8(common.BridgingConfirmedTxType) {
-			containsBridgingTx = true
-
-			break
-		}
-	}
-
-	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID, containsBridgingTx)
+	data, err := cco.createBatchInitialData(ctx, bridgeSmartContract, chainID, batchNonceID)
 	if err != nil {
 		return nil, err
 	}
 
-	txData, err := cco.generateBatchTransaction(data, confirmedTransactions, containsBridgingTx)
+	txData, err := cco.generateBatchTransaction(data, confirmedTransactions)
 
 	if cco.shouldConsolidate(err) {
 		cco.logger.Warn("consolidation batch generation started", "err", err)
@@ -190,11 +180,11 @@ func (cco *CardanoChainOperations) Submit(
 func (cco *CardanoChainOperations) generateBatchTransaction(
 	data *batchInitialData,
 	confirmedTransactions []eth.ConfirmedTransaction,
-	containsBridgingTx bool,
 ) (*core.GeneratedBatchTxData, error) {
 	certificates := make([]*cardano.CertificatesWithScript, 0)
 	keyRegistrationFee := uint64(0)
 	isStakeDelegation := false
+	containsBridgingTx := false
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
@@ -233,6 +223,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 				PolicyScript: policyScript,
 				Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
 			})
+		} else {
+			containsBridgingTx = true
 		}
 	}
 
@@ -503,23 +495,16 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	batchNonceID uint64,
-	containsBridgingTx bool,
 ) (*batchInitialData, error) {
 	validatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
 		return nil, err
 	}
 
-	batchExecutedMetadata := common.BatchExecutedMetadata{
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
 		BatchNonceID:   batchNonceID,
-	}
-
-	if containsBridgingTx {
-		batchExecutedMetadata.ContainsBridgingTx = 1
-	}
-
-	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, batchExecutedMetadata)
+	})
 	if err != nil {
 		return nil, err
 	}
