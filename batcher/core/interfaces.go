@@ -15,7 +15,7 @@ type GeneratedBatchTxData struct {
 }
 
 type BatchSignatures struct {
-	MultisigSignature, MultsigStakeSignature, FeeSignature []byte
+	Multisig, MultsigStake, Fee []byte
 }
 
 type BatcherManager interface {

@@ -100,7 +100,7 @@ func TestEthChain_SignBatchTransaction(t *testing.T) {
 		signatures, err := ops.SignBatchTransaction(&core.GeneratedBatchTxData{TxHash: hash})
 		require.NoError(t, err)
 
-		require.Equal(t, expected, hex.EncodeToString(signatures.MultisigSignature))
+		require.Equal(t, expected, hex.EncodeToString(signatures.Multisig))
 	})
 }
 

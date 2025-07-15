@@ -131,7 +131,7 @@ func (cco *EVMChainOperations) SignBatchTransaction(
 	}
 
 	return &core.BatchSignatures{
-		MultisigSignature: signatureBytes,
+		Multisig: signatureBytes,
 	}, nil
 }
 

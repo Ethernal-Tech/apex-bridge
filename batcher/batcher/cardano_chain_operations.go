@@ -144,9 +144,9 @@ func (cco *CardanoChainOperations) SignBatchTransaction(
 	}
 
 	return &core.BatchSignatures{
-		MultisigSignature:     multisigWitness,
-		MultsigStakeSignature: stakeMultisigWitness,
-		FeeSignature:          feeWitness,
+		Multisig:     multisigWitness,
+		MultsigStake: stakeMultisigWitness,
+		Fee:          feeWitness,
 	}, nil
 }
 

@@ -292,9 +292,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		signatures, err := cco.SignBatchTransaction(
 			&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true})
 		require.NoError(t, err)
-		require.NotNil(t, signatures.MultisigSignature)
-		require.NotNil(t, signatures.FeeSignature)
-		require.Nil(t, signatures.MultsigStakeSignature)
+		require.NotNil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Fee)
+		require.Nil(t, signatures.MultsigStake)
 	})
 }
 
@@ -491,9 +491,9 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		signatures, err := cco.SignBatchTransaction(
 			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
 		require.NoError(t, err)
-		require.Nil(t, signatures.MultisigSignature)
-		require.NotNil(t, signatures.FeeSignature)
-		require.NotNil(t, signatures.MultsigStakeSignature)
+		require.Nil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Fee)
+		require.NotNil(t, signatures.MultsigStake)
 	})
 }
 
@@ -655,9 +655,9 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		signatures, err := cco.SignBatchTransaction(
 			&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true, IsStakeSignNeeded: true})
 		require.NoError(t, err)
-		require.NotNil(t, signatures.MultisigSignature)
-		require.NotNil(t, signatures.FeeSignature)
-		require.NotNil(t, signatures.MultsigStakeSignature)
+		require.NotNil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Fee)
+		require.NotNil(t, signatures.MultsigStake)
 	})
 }
 
