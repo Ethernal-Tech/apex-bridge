@@ -125,11 +125,13 @@ definitions:
   wallet.TokenAmount:
     properties:
       nam:
-        description: name must plain name and not be hex encoded
+        description: Human-readable name of the token
         type: string
       pid:
+        description: Hexadecimal hash of the monetary policy script
         type: string
       val:
+        description: Quantity of the token
         type: integer
     type: object
 info:

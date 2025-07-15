@@ -168,8 +168,10 @@ definitions:
   sendtx.TokenExchangeConfig:
     properties:
       dstChainID:
+        description: Destination chain ID
         type: string
       tokenName:
+        description: Token identifier in the format "policyId.name"
         type: string
     type: object
 info:
