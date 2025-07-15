@@ -7,11 +7,10 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	IsConsolidation     bool
-	IsStakeSignNeeded   bool
-	IsPaymentSignNeeded bool
-	TxRaw               []byte
-	TxHash              string
+	IsConsolidation   bool
+	IsStakeSignNeeded bool
+	TxRaw             []byte
+	TxHash            string
 }
 
 type BatchSignatures struct {

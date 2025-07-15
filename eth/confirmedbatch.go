@@ -70,7 +70,7 @@ func (b ConfirmedBatch) String() string {
 	}
 
 	sb.WriteString("]")
-	sb.WriteString("\nfee payer multisig signatures = [")
+	sb.WriteString("\nfee payer signatures = [")
 
 	for i, sig := range b.FeeSignatures {
 		if i > 0 {
@@ -81,6 +81,15 @@ func (b ConfirmedBatch) String() string {
 	}
 
 	sb.WriteString("]")
+	sb.WriteString("\nstake multisig signatures = [")
+
+	for i, sig := range b.StakeSignatures {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(hex.EncodeToString(sig))
+	}
 
 	return sb.String()
 }

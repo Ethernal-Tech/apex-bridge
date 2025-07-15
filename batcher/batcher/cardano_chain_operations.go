@@ -118,16 +118,11 @@ func (cco *CardanoChainOperations) SignBatchTransaction(
 
 	defer txBuilder.Dispose()
 
-	var (
-		multisigWitness      []byte
-		stakeMultisigWitness []byte
-	)
+	var stakeMultisigWitness []byte
 
-	if generatedBatchData.IsPaymentSignNeeded {
-		multisigWitness, err = txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
-		if err != nil {
-			return nil, err
-		}
+	multisigWitness, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
+	if err != nil {
+		return nil, err
 	}
 
 	if generatedBatchData.IsStakeSignNeeded {
@@ -186,7 +181,6 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	certificates := make([]*cardano.CertificatesWithScript, 0)
 	keyRegistrationFee := uint64(0)
 	hasStakeDelegationTx := false
-	hasNonStakeDelegationTx := false
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
@@ -199,8 +193,6 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			keyRegistrationFee += depositAmount
 
 			certificates = append(certificates, certificate)
-		} else {
-			hasNonStakeDelegationTx = true
 		}
 	}
 
@@ -211,15 +203,6 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			Certificates:    certificates,
 			RegistrationFee: keyRegistrationFee,
 		}
-	}
-
-	// dirty hack. do not take any multisig utxo if there are no bridging/refund/nonStake txs
-	if !hasNonStakeDelegationTx {
-		defer func(oldTakeAtLeastUtxoCount uint) {
-			cco.config.TakeAtLeastUtxoCount = oldTakeAtLeastUtxoCount
-		}(cco.config.TakeAtLeastUtxoCount)
-
-		cco.config.TakeAtLeastUtxoCount = 0
 	}
 
 	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
@@ -274,10 +257,9 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		TxRaw:               txRaw,
-		TxHash:              txHash,
-		IsStakeSignNeeded:   hasStakeDelegationTx,
-		IsPaymentSignNeeded: hasNonStakeDelegationTx,
+		TxRaw:             txRaw,
+		TxHash:            txHash,
+		IsStakeSignNeeded: hasStakeDelegationTx,
 	}, nil
 }
 
@@ -338,10 +320,9 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		IsConsolidation:     true,
-		IsPaymentSignNeeded: true,
-		TxRaw:               txRaw,
-		TxHash:              txHash,
+		IsConsolidation: true,
+		TxRaw:           txRaw,
+		TxHash:          txHash,
 	}, nil
 }
 
