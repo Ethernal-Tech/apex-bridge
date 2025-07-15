@@ -187,7 +187,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	containsBridgingTx := false
 
 	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
+		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
 			isStakeDelegation = true
 			// Generate policy script
 			quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec

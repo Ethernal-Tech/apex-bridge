@@ -31,7 +31,7 @@ const (
 	BridgingConfirmedTxType ConfirmedTxType = 0
 	DefundConfirmedTxType   ConfirmedTxType = 1
 	RefundConfirmedTxType   ConfirmedTxType = 2
-	StakeConfirmedTxType    ConfirmedTxType = 3
+	StakeDelConfirmedTxType ConfirmedTxType = 3
 )
 
 var (
