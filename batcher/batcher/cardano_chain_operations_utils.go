@@ -22,6 +22,11 @@ func getOutputs(
 	receiversMap := map[string]cardanowallet.TxOutput{}
 
 	for _, transaction := range txs {
+		// stake delegation tx are not processed in this way
+		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+			continue
+		}
+
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
 			data.Amount += receiver.Amount.Uint64()
