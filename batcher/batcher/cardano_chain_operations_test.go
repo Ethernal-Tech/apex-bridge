@@ -658,6 +658,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
 		require.NotNil(t, signatures.MultsigStake)
+		require.NotEqual(t, signatures.Multisig, signatures.MultsigStake)
 	})
 }
 
