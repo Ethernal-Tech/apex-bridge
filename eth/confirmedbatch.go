@@ -139,8 +139,17 @@ func (sbw SignedBatchWrapper) String() string {
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(sbw.RawTransaction))
-	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(hex.EncodeToString(sbw.Signature))
+
+	if len(sbw.Signature) > 0 {
+		sb.WriteString("\nmultisig signature = ")
+		sb.WriteString(hex.EncodeToString(sbw.Signature))
+	}
+
+	if len(sbw.StakeSignature) > 0 {
+		sb.WriteString("\nstake multisig signature = ")
+		sb.WriteString(hex.EncodeToString(sbw.StakeSignature))
+	}
+
 	sb.WriteString("\nfee payer multisig signature = ")
 	sb.WriteString(hex.EncodeToString(sbw.FeeSignature))
 	sb.WriteString("\nfirst tx nonce id = ")

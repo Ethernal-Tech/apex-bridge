@@ -45,7 +45,7 @@ func CreateTx(
 			builder.AddCertificates(cert.PolicyScript, cert.Certificates...)
 		}
 
-		stakeKeyRegistrationFee += certificatesData.RegistrationFee
+		stakeKeyRegistrationFee = certificatesData.RegistrationFee
 	}
 
 	// add multisigFee output

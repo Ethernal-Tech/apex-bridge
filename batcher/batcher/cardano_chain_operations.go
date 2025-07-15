@@ -213,6 +213,15 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		}
 	}
 
+	// dirty hack. do not take any multisig utxo if there are no bridging/refund/nonStake txs
+	if !hasNonStakeDelegationTx {
+		defer func(oldTakeAtLeastUtxoCount uint) {
+			cco.config.TakeAtLeastUtxoCount = oldTakeAtLeastUtxoCount
+		}(cco.config.TakeAtLeastUtxoCount)
+
+		cco.config.TakeAtLeastUtxoCount = 0
+	}
+
 	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, err
