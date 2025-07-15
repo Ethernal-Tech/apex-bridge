@@ -25,7 +25,7 @@ const (
 type stakeDelParams struct {
 	chainID          string
 	bridgeAddrIdx    uint8
-	stakePoolId      string
+	stakePoolID      string
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
@@ -41,7 +41,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if params.stakePoolId == "" {
+	if params.stakePoolID == "" {
 		return fmt.Errorf("--%s flag not specified", stakePoolIDFlag)
 	}
 
@@ -84,7 +84,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
-		"delegateAddrToStakePool", chainIDInt, params.bridgeAddrIdx, params.stakePoolId)
+		"delegateAddrToStakePool", chainIDInt, params.bridgeAddrIdx, params.stakePoolID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.DelegateAddrToStakePool(opts, chainIDInt, params.bridgeAddrIdx, params.stakePoolId)
+			return contract.DelegateAddrToStakePool(opts, chainIDInt, params.bridgeAddrIdx, params.stakePoolID)
 		})
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&params.stakePoolId,
+		&params.stakePoolID,
 		stakePoolIDFlag,
 		"",
 		stakePoolIDFlagDesc,
