@@ -28,13 +28,14 @@ const (
 )
 
 type batchInitialData struct {
-	BatchNonceID         uint64
-	Metadata             []byte
-	ProtocolParams       []byte
-	MultisigPolicyScript *cardanowallet.PolicyScript
-	FeePolicyScript      *cardanowallet.PolicyScript
-	MultisigAddr         string
-	FeeAddr              string
+	BatchNonceID           uint64
+	Metadata               []byte
+	ProtocolParams         []byte
+	MultisigPolicyScript   *cardanowallet.PolicyScript
+	FeePolicyScript        *cardanowallet.PolicyScript
+	MultisigAddr           string
+	FeeAddr                string
+	MultisigStakeKeyHashes []string
 }
 
 type CardanoChainOperations struct {
@@ -109,25 +110,42 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(
-	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, []byte, error) {
 	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	defer txBuilder.Dispose()
 
-	witnessMultiSig, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
-	if err != nil {
-		return nil, nil, err
+	var (
+		witnessMultiSig      []byte
+		stakeWitnessMultisig []byte
+	)
+
+	if generatedBatchData.IsBridging {
+		witnessMultiSig, err = txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	if generatedBatchData.IsStakeDelegation {
+		stakeWitnessMultisig, err = txBuilder.CreateTxWitness(
+			generatedBatchData.TxRaw,
+			cardanowallet.NewStakeSigner(cco.wallet.MultiSig),
+		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	witnessMultiSigFee, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.Fee)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return witnessMultiSig, witnessMultiSigFee, nil
+	return witnessMultiSig, stakeWitnessMultisig, witnessMultiSigFee, nil
 }
 
 // IsSynchronized implements core.IsSynchronized.
@@ -160,8 +178,65 @@ func (cco *CardanoChainOperations) Submit(
 }
 
 func (cco *CardanoChainOperations) generateBatchTransaction(
-	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
+	data *batchInitialData,
+	confirmedTransactions []eth.ConfirmedTransaction,
 ) (*core.GeneratedBatchTxData, error) {
+	certificates := make([]*cardano.CertificatesWithScript, 0)
+	keyRegistrationFee := uint64(0)
+	isStakeDelegation := false
+	containsBridgingTx := false
+
+	for _, tx := range confirmedTransactions {
+		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+			isStakeDelegation = true
+			// Generate policy script
+			quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
+			policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
+				cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
+
+			// Generate certificates
+			keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
+			if err != nil {
+				return nil, err
+			}
+
+			keyRegistrationFee += keyRegDepositAmount
+
+			cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
+
+			multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cco.config.NetworkMagic), policyScript)
+			if err != nil {
+				return nil, err
+			}
+
+			registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+			if err != nil {
+				return nil, err
+			}
+
+			delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
+			if err != nil {
+				return nil, err
+			}
+
+			certificates = append(certificates, &cardano.CertificatesWithScript{
+				PolicyScript: policyScript,
+				Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+			})
+		} else {
+			containsBridgingTx = true
+		}
+	}
+
+	var certificatedData *cardano.CertificatesData = nil
+
+	if len(certificates) > 0 {
+		certificatedData = &cardano.CertificatesData{
+			Certificates:    certificates,
+			RegistrationFee: keyRegistrationFee,
+		}
+	}
+
 	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, err
@@ -202,6 +277,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			},
 		},
 		txOutputs.Outputs,
+		certificatedData,
 	)
 	if err != nil {
 		return nil, err
@@ -213,8 +289,10 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		TxRaw:  txRaw,
-		TxHash: txHash,
+		TxRaw:             txRaw,
+		TxHash:            txHash,
+		IsStakeDelegation: isStakeDelegation,
+		IsBridging:        containsBridgingTx,
 	}, nil
 }
 
@@ -264,6 +342,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 			},
 		},
 		[]cardanowallet.TxOutput{multisigTxOutput},
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -448,13 +527,14 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	}
 
 	return &batchInitialData{
-		BatchNonceID:         batchNonceID,
-		Metadata:             metadata,
-		ProtocolParams:       protocolParams,
-		MultisigPolicyScript: policyScripts.Multisig.Payment,
-		FeePolicyScript:      policyScripts.Fee.Payment,
-		MultisigAddr:         addresses.Multisig.Payment,
-		FeeAddr:              addresses.Fee.Payment,
+		BatchNonceID:           batchNonceID,
+		Metadata:               metadata,
+		ProtocolParams:         protocolParams,
+		MultisigPolicyScript:   policyScripts.Multisig.Payment,
+		FeePolicyScript:        policyScripts.Fee.Payment,
+		MultisigAddr:           addresses.Multisig.Payment,
+		FeeAddr:                addresses.Fee.Payment,
+		MultisigStakeKeyHashes: keyHashes.Multisig.Stake,
 	}, nil
 }
 
