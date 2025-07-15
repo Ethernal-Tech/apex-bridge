@@ -110,40 +110,44 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(
-	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, []byte, error) {
+	generatedBatchData *core.GeneratedBatchTxData) (*core.BatchSignatures, error) {
 	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	defer txBuilder.Dispose()
 
 	var (
-		witnessMultiSig      []byte
-		stakeWitnessMultisig []byte
+		multisigWitness      []byte
+		stakeMultisigWitness []byte
 	)
 
 	if generatedBatchData.IsPaymentSignNeeded {
-		witnessMultiSig, err = txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
+		multisigWitness, err = txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
 	if generatedBatchData.IsStakeSignNeeded {
-		stakeWitnessMultisig, err = txBuilder.CreateTxWitness(
+		stakeMultisigWitness, err = txBuilder.CreateTxWitness(
 			generatedBatchData.TxRaw, cardanowallet.NewStakeSigner(cco.wallet.MultiSig))
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
-	witnessMultiSigFee, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.Fee)
+	feeWitness, err := txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.Fee)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	return witnessMultiSig, stakeWitnessMultisig, witnessMultiSigFee, nil
+	return &core.BatchSignatures{
+		MultisigSignature:     multisigWitness,
+		MultsigStakeSignature: stakeMultisigWitness,
+		FeeSignature:          feeWitness,
+	}, nil
 }
 
 // IsSynchronized implements core.IsSynchronized.

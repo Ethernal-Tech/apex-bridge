@@ -142,7 +142,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
-	multisigSignature, stakeSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
+	signatures, err := b.operations.SignBatchTransaction(generatedBatchData)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to sign batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -152,7 +152,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	// Submit batch to smart contract
 	signedBatch := b.createSignedBatch(
-		batchID, generatedBatchData, multisigSignature, stakeSignature, multisigFeeSignature, confirmedTransactions)
+		batchID, generatedBatchData, signatures, confirmedTransactions)
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
 		"signedBatch", eth.SignedBatchWrapper{SignedBatch: signedBatch})
@@ -183,7 +183,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 func (b *BatcherImpl) createSignedBatch(
 	batchID uint64, generatedBatchData *core.GeneratedBatchTxData,
-	multisigSignature, stakeSignature, multisigFeeSignature []byte,
+	signatures *core.BatchSignatures,
 	confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
@@ -200,9 +200,9 @@ func (b *BatcherImpl) createSignedBatch(
 		Id:                 batchID,
 		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
 		RawTransaction:     generatedBatchData.TxRaw,
-		Signature:          multisigSignature,
-		StakeSignature:     stakeSignature,
-		FeeSignature:       multisigFeeSignature,
+		Signature:          signatures.MultisigSignature,
+		StakeSignature:     signatures.MultsigStakeSignature,
+		FeeSignature:       signatures.FeeSignature,
 		FirstTxNonceId:     firstTxNonceID,
 		LastTxNonceId:      lastTxNonceID,
 		BatchType:          batchType,

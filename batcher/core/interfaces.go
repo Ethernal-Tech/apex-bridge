@@ -14,6 +14,10 @@ type GeneratedBatchTxData struct {
 	TxHash              string
 }
 
+type BatchSignatures struct {
+	MultisigSignature, MultsigStakeSignature, FeeSignature []byte
+}
+
 type BatcherManager interface {
 	Start()
 }
@@ -27,7 +31,7 @@ type ChainOperations interface {
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
 		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
-	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) ([]byte, []byte, []byte, error)
+	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) (*BatchSignatures, error)
 	IsSynchronized(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 	) (bool, error)
