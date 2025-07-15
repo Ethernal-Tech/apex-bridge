@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const StakeDepositFieldName = "stakeAddressDeposit"
+
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, error) {
@@ -267,8 +269,6 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	return result
 }
 
-var FieldName = "stakeAddressDeposit"
-
 func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	var params map[string]interface{}
 
@@ -277,7 +277,7 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	}
 
 	// Extract stakeAddressDeposit value
-	if stakeDeposit, exists := params[FieldName]; exists {
+	if stakeDeposit, exists := params[StakeDepositFieldName]; exists {
 		// Handle different number types that JSON might unmarshal to
 		switch v := stakeDeposit.(type) {
 		case float64:
@@ -297,9 +297,9 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 
 			return result, err
 		default:
-			return 0, fmt.Errorf("%s has unexpected type: %T", FieldName, stakeDeposit)
+			return 0, fmt.Errorf("%s has unexpected type: %T", StakeDepositFieldName, stakeDeposit)
 		}
 	}
 
-	return 0, fmt.Errorf("%s field not found in protocol parameters", FieldName)
+	return 0, fmt.Errorf("%s field not found in protocol parameters", StakeDepositFieldName)
 }

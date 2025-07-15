@@ -78,7 +78,6 @@ func NewPolicyScriptsContainer(keyHashes KeyHashesContainer) PolicyScriptsContai
 		}
 	}
 
-	fmt.Println(keyHashes.Stake)
 	return PolicyScriptsContainer{
 		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount),
 		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount),

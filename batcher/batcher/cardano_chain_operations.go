@@ -188,41 +188,15 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+			certificate, depositAmount, err := cco.getStakingDelegateCertificate(data, &tx)
+			if err != nil {
+				return nil, err
+			}
+
 			isStakeDelegation = true
-			// Generate policy script
-			quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-			policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
-				cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
+			keyRegistrationFee += depositAmount
 
-			// Generate certificates
-			keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
-			if err != nil {
-				return nil, err
-			}
-
-			keyRegistrationFee += keyRegDepositAmount
-
-			cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
-
-			multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cco.config.NetworkMagic), policyScript)
-			if err != nil {
-				return nil, err
-			}
-
-			registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-			if err != nil {
-				return nil, err
-			}
-
-			delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-			if err != nil {
-				return nil, err
-			}
-
-			certificates = append(certificates, &cardano.CertificatesWithScript{
-				PolicyScript: policyScript,
-				Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
-			})
+			certificates = append(certificates, certificate)
 		} else {
 			containsBridgingTx = true
 		}
@@ -354,6 +328,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	return &core.GeneratedBatchTxData{
 		IsConsolidation: true,
+		IsBridging:      true,
 		TxRaw:           txRaw,
 		TxHash:          txHash,
 	}, nil
@@ -536,6 +511,43 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		FeeAddr:                addresses.Fee.Payment,
 		MultisigStakeKeyHashes: keyHashes.Multisig.Stake,
 	}, nil
+}
+
+func (cco *CardanoChainOperations) getStakingDelegateCertificate(
+	data *batchInitialData, tx *eth.ConfirmedTransaction,
+) (*cardano.CertificatesWithScript, uint64, error) {
+	// Generate policy script
+	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
+	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
+		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
+
+	// Generate certificates
+	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
+
+	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cco.config.NetworkMagic), policyScript)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return &cardano.CertificatesWithScript{
+		PolicyScript: policyScript,
+		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+	}, keyRegDepositAmount, nil
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
