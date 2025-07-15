@@ -490,7 +490,7 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		signatures, err := cco.SignBatchTransaction(
 			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
 		require.NoError(t, err)
-		require.Nil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
 		require.NotNil(t, signatures.MultsigStake)
 	})
