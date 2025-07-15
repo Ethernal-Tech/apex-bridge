@@ -432,6 +432,9 @@ func Test_reactorGetOutputs(t *testing.T) {
 
 	txs := []eth.ConfirmedTransaction{
 		{
+			TransactionType: uint8(common.StakeDelConfirmedTxType),
+		},
+		{
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
@@ -544,6 +547,9 @@ func Test_skylineGetOutputs(t *testing.T) {
 	}
 
 	txs := []eth.ConfirmedTransaction{
+		{
+			TransactionType: uint8(common.StakeDelConfirmedTxType),
+		},
 		{
 			SourceChainId: common.ChainIDIntVector,
 			Receivers: []eth.BridgeReceiver{

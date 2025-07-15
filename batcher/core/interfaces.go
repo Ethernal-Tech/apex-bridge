@@ -7,11 +7,11 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	IsConsolidation   bool
-	IsStakeDelegation bool
-	IsBridging        bool
-	TxRaw             []byte
-	TxHash            string
+	IsConsolidation     bool
+	IsStakeSignNeeded   bool
+	IsPaymentSignNeeded bool
+	TxRaw               []byte
+	TxHash              string
 }
 
 type BatcherManager interface {

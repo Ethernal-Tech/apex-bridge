@@ -123,18 +123,16 @@ func (cco *CardanoChainOperations) SignBatchTransaction(
 		stakeWitnessMultisig []byte
 	)
 
-	if generatedBatchData.IsBridging {
+	if generatedBatchData.IsPaymentSignNeeded {
 		witnessMultiSig, err = txBuilder.CreateTxWitness(generatedBatchData.TxRaw, cco.wallet.MultiSig)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
-	if generatedBatchData.IsStakeDelegation {
+	if generatedBatchData.IsStakeSignNeeded {
 		stakeWitnessMultisig, err = txBuilder.CreateTxWitness(
-			generatedBatchData.TxRaw,
-			cardanowallet.NewStakeSigner(cco.wallet.MultiSig),
-		)
+			generatedBatchData.TxRaw, cardanowallet.NewStakeSigner(cco.wallet.MultiSig))
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -183,8 +181,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 ) (*core.GeneratedBatchTxData, error) {
 	certificates := make([]*cardano.CertificatesWithScript, 0)
 	keyRegistrationFee := uint64(0)
-	isStakeDelegation := false
-	containsBridgingTx := false
+	hasStakeDelegationTx := false
+	hasNonStakeDelegationTx := false
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
@@ -193,12 +191,12 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 				return nil, err
 			}
 
-			isStakeDelegation = true
+			hasStakeDelegationTx = true
 			keyRegistrationFee += depositAmount
 
 			certificates = append(certificates, certificate)
 		} else {
-			containsBridgingTx = true
+			hasNonStakeDelegationTx = true
 		}
 	}
 
@@ -263,10 +261,10 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		TxRaw:             txRaw,
-		TxHash:            txHash,
-		IsStakeDelegation: isStakeDelegation,
-		IsBridging:        containsBridgingTx,
+		TxRaw:               txRaw,
+		TxHash:              txHash,
+		IsStakeSignNeeded:   hasStakeDelegationTx,
+		IsPaymentSignNeeded: hasNonStakeDelegationTx,
 	}, nil
 }
 
@@ -327,10 +325,10 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		IsConsolidation: true,
-		IsBridging:      true,
-		TxRaw:           txRaw,
-		TxHash:          txHash,
+		IsConsolidation:     true,
+		IsPaymentSignNeeded: true,
+		TxRaw:               txRaw,
+		TxHash:              txHash,
 	}, nil
 }
 

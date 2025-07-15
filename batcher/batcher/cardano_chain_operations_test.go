@@ -290,7 +290,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NoError(t, err)
 
 		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw, IsBridging: true})
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true})
 		require.NoError(t, err)
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
@@ -489,7 +489,7 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		require.NoError(t, err)
 
 		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeDelegation: true})
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
 		require.NoError(t, err)
 		require.Nil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
@@ -653,7 +653,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.NoError(t, err)
 
 		witnessMultiSig, stakeWitnessMultiSig, witnessMultiSigFee, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw, IsBridging: true, IsStakeDelegation: true})
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true, IsStakeSignNeeded: true})
 		require.NoError(t, err)
 		require.NotNil(t, witnessMultiSig)
 		require.NotNil(t, witnessMultiSigFee)
