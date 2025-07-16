@@ -260,6 +260,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		TxRaw:             txRaw,
 		TxHash:            txHash,
 		IsStakeSignNeeded: hasStakeDelegationTx,
+		BatchType:         eth.BatchTypeNormal,
 	}, nil
 }
 

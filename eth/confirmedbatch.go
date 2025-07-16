@@ -104,6 +104,8 @@ func (b ConfirmedBatch) String() string {
 		sb.WriteString(hex.EncodeToString(sig))
 	}
 
+	sb.WriteString("]")
+
 	return sb.String()
 }
 
