@@ -157,7 +157,7 @@ const (
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
 
-	defaultMaxFeeUtxoCount      = 4
+	defaultMaxFeeUtxoCount      = 6
 	defaultMaxUtxoCount         = 50
 	defaultTakeAtLeastUtxoCount = 6
 
