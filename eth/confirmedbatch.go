@@ -19,9 +19,32 @@ type ConfirmedBatch struct {
 	ID              uint64
 	RawTransaction  []byte
 	Signatures      [][]byte
+	StakeSignatures [][]byte
 	FeeSignatures   [][]byte
 	Bitmap          *big.Int
-	IsConsolidation bool
+	BatchType       BatchTypes
+}
+
+type BatchTypes uint8
+
+const (
+	BatchTypeNormal BatchTypes = iota
+	BatchTypeConsolidation
+	BatchTypeValidatorSet
+	BatchTypeValidatorSetFinal
+)
+
+func (bt BatchTypes) String() string {
+	switch bt {
+	case BatchTypeConsolidation:
+		return "consolidation"
+	case BatchTypeValidatorSet:
+		return "validatorSet"
+	case BatchTypeValidatorSetFinal:
+		return "validatorSetFinal"
+	default:
+		return "normal"
+	}
 }
 
 func NewConfirmedBatch(
@@ -31,9 +54,10 @@ func NewConfirmedBatch(
 		ID:              contractConfirmedBatch.Id,
 		RawTransaction:  contractConfirmedBatch.RawTransaction,
 		Signatures:      contractConfirmedBatch.Signatures,
+		StakeSignatures: contractConfirmedBatch.StakeSignatures,
 		FeeSignatures:   contractConfirmedBatch.FeeSignatures,
 		Bitmap:          contractConfirmedBatch.Bitmap,
-		IsConsolidation: contractConfirmedBatch.IsConsolidation,
+		BatchType:       BatchTypes(contractConfirmedBatch.BatchType),
 	}
 }
 
@@ -42,8 +66,8 @@ func (b ConfirmedBatch) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(b.ID))
-	sb.WriteString("\nisConsolidation = ")
-	sb.WriteString(fmt.Sprint(b.IsConsolidation))
+	sb.WriteString("\nbatch type = ")
+	sb.WriteString(fmt.Sprint(b.BatchType))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nbitmap = ")
@@ -59,9 +83,20 @@ func (b ConfirmedBatch) String() string {
 	}
 
 	sb.WriteString("]")
-	sb.WriteString("\nfee payer multisig signatures = [")
+	sb.WriteString("\nfee payer signatures = [")
 
 	for i, sig := range b.FeeSignatures {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(hex.EncodeToString(sig))
+	}
+
+	sb.WriteString("]")
+	sb.WriteString("\nstake multisig signatures = [")
+
+	for i, sig := range b.StakeSignatures {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
@@ -122,14 +157,23 @@ func (sbw SignedBatchWrapper) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(sbw.Id))
-	sb.WriteString("\nisConsolidation = ")
-	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
+	sb.WriteString("\nbatch type = ")
+	sb.WriteString(fmt.Sprint(sbw.BatchType))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(sbw.RawTransaction))
-	sb.WriteString("\nmultisig signature = ")
-	sb.WriteString(hex.EncodeToString(sbw.Signature))
+
+	if len(sbw.Signature) > 0 {
+		sb.WriteString("\nmultisig signature = ")
+		sb.WriteString(hex.EncodeToString(sbw.Signature))
+	}
+
+	if len(sbw.StakeSignature) > 0 {
+		sb.WriteString("\nstake multisig signature = ")
+		sb.WriteString(hex.EncodeToString(sbw.StakeSignature))
+	}
+
 	sb.WriteString("\nfee payer multisig signature = ")
 	sb.WriteString(hex.EncodeToString(sbw.FeeSignature))
 	sb.WriteString("\nfirst tx nonce id = ")

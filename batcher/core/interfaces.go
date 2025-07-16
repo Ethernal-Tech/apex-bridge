@@ -7,9 +7,18 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	IsConsolidation bool
-	TxRaw           []byte
-	TxHash          string
+	BatchType         eth.BatchTypes
+	IsStakeSignNeeded bool
+	TxRaw             []byte
+	TxHash            string
+}
+
+func (gb GeneratedBatchTxData) IsConsolidation() bool {
+	return gb.BatchType == eth.BatchTypeConsolidation
+}
+
+type BatchSignatures struct {
+	Multisig, MultsigStake, Fee []byte
 }
 
 type BatcherManager interface {
@@ -25,7 +34,7 @@ type ChainOperations interface {
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
 		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
-	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) ([]byte, []byte, error)
+	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) (*BatchSignatures, error)
 	IsSynchronized(
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 	) (bool, error)
