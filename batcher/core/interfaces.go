@@ -7,10 +7,14 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	IsConsolidation   bool
+	BatchType         eth.BatchTypes
 	IsStakeSignNeeded bool
 	TxRaw             []byte
 	TxHash            string
+}
+
+func (gb GeneratedBatchTxData) IsConsolidation() bool {
+	return gb.BatchType == eth.BatchTypeConsolidation
 }
 
 type BatchSignatures struct {

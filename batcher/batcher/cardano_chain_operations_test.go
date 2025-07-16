@@ -1003,7 +1003,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
-		require.Equal(t, true, result.IsConsolidation)
+		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})
@@ -1136,7 +1136,7 @@ func TestSkylineConsolidation(t *testing.T) {
 
 		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
-		require.Equal(t, true, result.IsConsolidation)
+		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})

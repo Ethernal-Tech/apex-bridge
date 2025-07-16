@@ -34,6 +34,19 @@ const (
 	BatchTypeValidatorSetFinal
 )
 
+func (bt BatchTypes) String() string {
+	switch bt {
+	case BatchTypeConsolidation:
+		return "consolidation"
+	case BatchTypeValidatorSet:
+		return "validatorSet"
+	case BatchTypeValidatorSetFinal:
+		return "validatorSetFinal"
+	default:
+		return "normal"
+	}
+}
+
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
 ) *ConfirmedBatch {

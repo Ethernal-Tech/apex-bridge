@@ -133,13 +133,13 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
 			"batchID", batchID, "txHash", b.lastBatch.txHash,
-			"isConsolidation", generatedBatchData.IsConsolidation)
+			"batchType", generatedBatchData.BatchType)
 
 		return batchID, nil
 	}
 
 	b.logger.Info("Created batch tx", "batchID", batchID, "txHash", generatedBatchData.TxHash,
-		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
+		"batchType", generatedBatchData.BatchType, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	signatures, err := b.operations.SignBatchTransaction(generatedBatchData)
@@ -187,13 +187,8 @@ func (b *BatcherImpl) createSignedBatch(
 	confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
-	if !generatedBatchData.IsConsolidation {
+	if !generatedBatchData.IsConsolidation() {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
-	}
-
-	batchType := uint8(eth.BatchTypeNormal)
-	if generatedBatchData.IsConsolidation {
-		batchType = uint8(eth.BatchTypeConsolidation)
 	}
 
 	return &eth.SignedBatch{
@@ -205,7 +200,7 @@ func (b *BatcherImpl) createSignedBatch(
 		FeeSignature:       signatures.Fee,
 		FirstTxNonceId:     firstTxNonceID,
 		LastTxNonceId:      lastTxNonceID,
-		BatchType:          batchType,
+		BatchType:          uint8(generatedBatchData.BatchType),
 	}
 }
 
