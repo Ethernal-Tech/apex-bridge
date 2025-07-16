@@ -66,6 +66,25 @@ func (m *TxProviderTestMock) GetUtxos(ctx context.Context, addr string) ([]carda
 	return arg0, args.Error(1)
 }
 
+func (m *TxProviderTestMock) GetStakeAddressInfo(
+	ctx context.Context,
+	stakeAddress string,
+) (cardanowallet.QueryStakeAddressInfo, error) {
+	args := m.Called(ctx, stakeAddress)
+
+	arg0, _ := args.Get(0).(cardanowallet.QueryStakeAddressInfo)
+
+	return arg0, args.Error(1)
+}
+
+func (m *TxProviderTestMock) GetStakePools(ctx context.Context) ([]string, error) {
+	args := m.Called(ctx)
+
+	arg0, _ := args.Get(0).([]string)
+
+	return arg0, args.Error(1)
+}
+
 func (m *TxProviderTestMock) Dispose() {
 	m.Called()
 }
