@@ -10,36 +10,20 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-// Validate if all tx inputs belong to the multisig address or fee address
+// Validate if tx inputs contain the fee address
 func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
-	foundBridgingAddress := false
-	foundFeeAddress := false
-
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	if chainConfig == nil {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
 	for _, utxo := range tx.Tx.Inputs {
-		switch utxo.Output.Address {
-		case chainConfig.BridgingAddresses.BridgingAddress:
-			foundBridgingAddress = true
-		case chainConfig.BridgingAddresses.FeeAddress:
-			foundFeeAddress = true
-		default:
-			return fmt.Errorf("unexpected address found in tx input. address: %v", utxo.Output.Address)
+		if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
+			return nil
 		}
 	}
 
-	if !foundBridgingAddress {
-		return fmt.Errorf("bridging address not found in tx inputs")
-	}
-
-	if !foundFeeAddress {
-		return fmt.Errorf("fee address not found in tx inputs")
-	}
-
-	return nil
+	return fmt.Errorf("fee address not found in tx inputs")
 }
 
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
