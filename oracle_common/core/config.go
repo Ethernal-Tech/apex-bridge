@@ -86,6 +86,7 @@ type CardanoChainConfig struct {
 	BridgingAddresses        BridgingAddresses `json:"-"`
 	OtherAddressesOfInterest []string          `json:"otherAddressesOfInterest"`
 	MinFeeForBridging        uint64            `json:"minFeeForBridging"`
+	FeeAddrBridgingAmount    uint64            `json:"feeAddressBridgingAmount"`
 	MinOperationFee          uint64            `json:"minOperationFee"`
 }
 
