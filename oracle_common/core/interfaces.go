@@ -90,3 +90,14 @@ type BlockSubmitterDB interface {
 	GetBlocksSubmitterInfo(chainID string) (BlocksSubmitterInfo, error)
 	SetBlocksSubmitterInfo(chainID string, info BlocksSubmitterInfo) error
 }
+
+type ChainConfigReader interface {
+	GetChainID() string
+	GetNetworkAddress() string
+	GetNetworkMagic() uint32
+	GetStartBlockHash() string
+	GetStartSlot() uint64
+	GetInitialUtxos() []CardanoChainConfigUtxo
+	GetConfirmationBlockCount() uint
+	GetAddressesOfInterest() []string
+}

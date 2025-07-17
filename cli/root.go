@@ -11,6 +11,7 @@ import (
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
 	clisendtx "github.com/Ethernal-Tech/apex-bridge/cli/sendtx"
+	clistakingcomponent "github.com/Ethernal-Tech/apex-bridge/cli/staking"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
 	cliversion "github.com/Ethernal-Tech/apex-bridge/cli/version"
 	cliwalletcreate "github.com/Ethernal-Tech/apex-bridge/cli/walletcreate"
@@ -42,6 +43,7 @@ func (rc *RootCommand) registerSubCommands() {
 		clicreateaddress.GetCreateAddressCommand(),
 		cligenerateconfigs.GetGenerateConfigsCommand(),
 		clisendtx.GetSendTxCommand(),
+		clistakingcomponent.GetRunStakingComponentCommand(),
 		clideployevm.GetDeployEVMCommand(),
 		clibridgeadmin.GetBridgeAdminCommand(),
 		cliversion.GetVersionCommand(),

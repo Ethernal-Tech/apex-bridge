@@ -77,11 +77,13 @@ func TestCardanoChainObserver(t *testing.T) {
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
 			NetworkMagic: 3311,
 		},
-		ChainID:                common.ChainIDStrPrime,
-		NetworkAddress:         "relay-0.prime.testnet.apexfusion.org:5521",
-		StartBlockHash:         "b1bcc6d36031d4ca3104285452be4018b0a7968cb1e814ff5c8e095d7291a42c",
-		StartSlot:              23289347,
-		ConfirmationBlockCount: 1,
+		BaseCardanoChainConfig: cCore.BaseCardanoChainConfig{
+			ChainID:                common.ChainIDStrPrime,
+			NetworkAddress:         "relay-0.prime.testnet.apexfusion.org:5521",
+			StartBlockHash:         "b1bcc6d36031d4ca3104285452be4018b0a7968cb1e814ff5c8e095d7291a42c",
+			StartSlot:              23289347,
+			ConfirmationBlockCount: 1,
+		},
 		OtherAddressesOfInterest: []string{
 			"addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv",
 		},
@@ -109,7 +111,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger(), "oracle")
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -127,7 +129,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger(), "oracle")
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -155,7 +157,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, logger)
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, logger, "oracle")
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -180,7 +182,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger(), "oracle")
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -256,7 +258,7 @@ func TestCardanoChainObserver(t *testing.T) {
 			indexerDB: indexerDB,
 			syncer:    syncer,
 			logger:    hclog.NewNullLogger(),
-			config:    &cCore.CardanoChainConfig{ChainID: "test"},
+			config:    &cCore.CardanoChainConfig{BaseCardanoChainConfig: cCore.BaseCardanoChainConfig{ChainID: "test"}},
 		}
 
 		err := chainObserver.Start()

@@ -47,19 +47,57 @@ type EthChainConfig struct {
 	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
 }
 
+type BaseCardanoChainConfig struct {
+	ChainID                string                   `json:"-"`
+	NetworkAddress         string                   `json:"networkAddress"`
+	StartBlockHash         string                   `json:"startBlockHash"`
+	StartSlot              uint64                   `json:"startSlot"`
+	ConfirmationBlockCount uint                     `json:"confirmationBlockCount"`
+	InitialUtxos           []CardanoChainConfigUtxo `json:"initialUtxos"`
+}
+
+func (config BaseCardanoChainConfig) GetChainID() string {
+	return config.ChainID
+}
+
+func (config BaseCardanoChainConfig) GetNetworkAddress() string {
+	return config.NetworkAddress
+}
+
+func (config BaseCardanoChainConfig) GetStartBlockHash() string {
+	return config.StartBlockHash
+}
+
+func (config BaseCardanoChainConfig) GetStartSlot() uint64 {
+	return config.StartSlot
+}
+
+func (config BaseCardanoChainConfig) GetInitialUtxos() []CardanoChainConfigUtxo {
+	return config.InitialUtxos
+}
+
+func (config BaseCardanoChainConfig) GetConfirmationBlockCount() uint {
+	return config.ConfirmationBlockCount
+}
+
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
-	ChainID                  string                   `json:"-"`
-	BridgingAddresses        BridgingAddresses        `json:"-"`
-	NetworkAddress           string                   `json:"networkAddress"`
-	StartBlockHash           string                   `json:"startBlockHash"`
-	StartSlot                uint64                   `json:"startSlot"`
-	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
-	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
-	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
-	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
-	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
-	MinOperationFee          uint64                   `json:"minOperationFee"`
+	BaseCardanoChainConfig
+	BridgingAddresses        BridgingAddresses `json:"-"`
+	OtherAddressesOfInterest []string          `json:"otherAddressesOfInterest"`
+	MinFeeForBridging        uint64            `json:"minFeeForBridging"`
+	MinOperationFee          uint64            `json:"minOperationFee"`
+}
+
+func (config CardanoChainConfig) GetNetworkMagic() uint32 {
+	return config.NetworkMagic
+}
+
+func (config CardanoChainConfig) GetAddressesOfInterest() []string {
+	return append([]string{
+		config.BridgingAddresses.BridgingAddress,
+		config.BridgingAddresses.FeeAddress,
+	}, config.OtherAddressesOfInterest...)
 }
 
 type SubmitConfig struct {

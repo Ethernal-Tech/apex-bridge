@@ -43,7 +43,7 @@ type Oracle interface {
 type CardanoChainObserver interface {
 	Start() error
 	Dispose() error
-	GetConfig() *cCore.CardanoChainConfig
+	GetConfig() cCore.ChainConfigReader
 	ErrorCh() <-chan error
 }
 
