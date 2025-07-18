@@ -225,7 +225,8 @@ func (p *TxsProcessorImpl) submitClaims(
 
 		claimsToSubmit = &core.BridgeClaims{}
 		claimsToSubmit.BatchExecutedClaims = append(claimsToSubmit.BatchExecutedClaims, bridgeClaims.BatchExecutedClaims...)
-		claimsToSubmit.BatchExecutionFailedClaims = append(claimsToSubmit.BatchExecutionFailedClaims, bridgeClaims.BatchExecutionFailedClaims...)
+		claimsToSubmit.BatchExecutionFailedClaims = append(claimsToSubmit.BatchExecutionFailedClaims,
+			bridgeClaims.BatchExecutionFailedClaims...)
 	}
 
 	receipt, err := p.bridgeSubmitter.SubmitClaims(
