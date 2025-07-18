@@ -218,18 +218,22 @@ func (p *TxsProcessorImpl) submitClaims(
 	startChainID string, bridgeClaims *core.BridgeClaims) (*types.Receipt, bool) {
 	p.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
-	if p.validatorSetObserver != nil && p.validatorSetObserver.IsValidatorSetPending() {
+	claimsToSubmit := bridgeClaims
+
+	if p.validatorSetObserver.IsValidatorSetPending() {
 		p.logger.Warn("Validator set is pending, skipping submit claims")
 
-		return nil, false
+		claimsToSubmit = &core.BridgeClaims{}
+		claimsToSubmit.BatchExecutedClaims = append(claimsToSubmit.BatchExecutedClaims, bridgeClaims.BatchExecutedClaims...)
+		claimsToSubmit.BatchExecutionFailedClaims = append(claimsToSubmit.BatchExecutionFailedClaims, bridgeClaims.BatchExecutionFailedClaims...)
 	}
 
 	receipt, err := p.bridgeSubmitter.SubmitClaims(
-		bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})
+		claimsToSubmit, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})
 	if err != nil {
 		p.logger.Error("Failed to submit claims", "err", err)
 
-		p.settings.OnSubmitClaimsFailed(startChainID, bridgeClaims.Count())
+		p.settings.OnSubmitClaimsFailed(startChainID, claimsToSubmit.Count())
 
 		p.logger.Warn("Adjusted submit claims settings",
 			"startChainID", startChainID,
@@ -242,7 +246,7 @@ func (p *TxsProcessorImpl) submitClaims(
 
 	p.settings.ResetSubmitClaimsSettings(startChainID)
 
-	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
+	telemetry.UpdateOracleClaimsSubmitCounter(claimsToSubmit.Count()) // update telemetry
 
 	return receipt, true
 }

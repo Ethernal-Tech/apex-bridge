@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -142,4 +143,12 @@ func (m *BridgeSmartContractMock) IsNewValidatorSetPending() (bool, error) {
 	}
 
 	return false, args.Error(1)
+}
+
+func (m *BridgeSmartContractMock) GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error) {
+	return nil, nil, nil
+}
+
+func (m *BridgeSmartContractMock) GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error) {
+	return 0, nil
 }
