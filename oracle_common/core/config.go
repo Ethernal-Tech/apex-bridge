@@ -21,13 +21,19 @@ type EthBridgingAddresses struct {
 }
 
 type CardanoChainConfigUtxo struct {
-	Hash    [32]byte                    `json:"id"`
-	Index   uint32                      `json:"index"`
-	Address string                      `json:"address"`
-	Amount  uint64                      `json:"amount"`
-	Tokens  []cardanowallet.TokenAmount `json:"tokens,omitempty"`
-	Slot    uint64                      `json:"slot"`
-}
+	// Transaction hash
+	Hash [32]byte `json:"id"`
+	// Output index
+	Index uint32 `json:"index"`
+	// Output address
+	Address string `json:"address"`
+	// Amount of currency
+	Amount uint64 `json:"amount"`
+	// List of tokens including their name, policy ID, and amount
+	Tokens []cardanowallet.TokenAmount `json:"tokens,omitempty"`
+	// Output slot
+	Slot uint64 `json:"slot"`
+} // @name CardanoChainConfigUtxo
 
 type EthChainConfig struct {
 	ChainID                 string               `json:"-"`
