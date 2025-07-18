@@ -276,9 +276,9 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		IsConsolidation: true,
-		TxRaw:           txRaw,
-		TxHash:          txHash,
+		BatchType: uint8(Consolidation),
+		TxRaw:     txRaw,
+		TxHash:    txHash,
 	}, nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
+	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -24,6 +25,7 @@ type BatcherImpl struct {
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
+	validatorSetObserver        *validatorSetObserver.ValidatorSetObserver
 	logger                      hclog.Logger
 }
 
@@ -34,6 +36,7 @@ func NewBatcher(
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{
@@ -42,6 +45,7 @@ func NewBatcher(
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
+		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
 	}
 }
@@ -121,6 +125,11 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
 		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
 
+	// if validaor set is pending, skip batch creation
+	if b.validatorSetObserver != nil && b.validatorSetObserver.IsValidatorSetPending() {
+		return batchID, fmt.Errorf("validator set is pending, skipping batch creation, batchID: %d", batchID)
+	}
+
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
 		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
@@ -133,13 +142,13 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
 			"batchID", batchID, "txHash", b.lastBatch.txHash,
-			"isConsolidation", generatedBatchData.IsConsolidation)
+			"batchType", generatedBatchData.BatchType)
 
 		return batchID, nil
 	}
 
 	b.logger.Info("Created batch tx", "batchID", batchID, "txHash", generatedBatchData.TxHash,
-		"isConsolidation", generatedBatchData.IsConsolidation, "txs", len(confirmedTransactions))
+		"batchType", generatedBatchData.BatchType, "txs", len(confirmedTransactions))
 
 	// Sign batch transaction
 	multisigSignature, multisigFeeSignature, err := b.operations.SignBatchTransaction(generatedBatchData)
@@ -186,7 +195,7 @@ func (b *BatcherImpl) createSignedBatch(
 	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
-	if !generatedBatchData.IsConsolidation {
+	if generatedBatchData.BatchType != uint8(Consolidation) {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
 	}
 
@@ -198,14 +207,14 @@ func (b *BatcherImpl) createSignedBatch(
 		FeeSignature:       multisigFeeSignature,
 		FirstTxNonceId:     firstTxNonceID,
 		LastTxNonceId:      lastTxNonceID,
-		IsConsolidation:    generatedBatchData.IsConsolidation,
+		BatchType:          generatedBatchData.BatchType,
 	}
 }
 
 func (b *BatcherImpl) updateBatchTxsStates(
 	batchID uint64, txs []eth.ConfirmedTransaction, signedBatch *eth.SignedBatch,
 ) []common.BridgingRequestStateKey {
-	if signedBatch.IsConsolidation {
+	if signedBatch.BatchType == uint8(Consolidation) {
 		return nil
 	}
 
