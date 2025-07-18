@@ -1,6 +1,8 @@
 package batcher
 
 import (
+	"encoding/json"
+	"fmt"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -12,12 +14,19 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const StakeDepositFieldName = "stakeAddressDeposit"
+
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 
 	for _, transaction := range txs {
+		// stake delegation tx are not processed in this way
+		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+			continue
+		}
+
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
 			data.Amount += receiver.Amount.Uint64()
@@ -263,4 +272,39 @@ func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowalle
 	}
 
 	return result
+}
+
+func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
+	var params map[string]interface{}
+
+	if err := json.Unmarshal(protocolParams, &params); err != nil {
+		return 0, err
+	}
+
+	// Extract stakeAddressDeposit value
+	if stakeDeposit, exists := params[StakeDepositFieldName]; exists {
+		// Handle different number types that JSON might unmarshal to
+		switch v := stakeDeposit.(type) {
+		case float64:
+			return uint64(v), nil
+		case uint64:
+			return v, nil
+		case int:
+			if v < 0 {
+				return 0, fmt.Errorf("cannot convert negative int %d to uint64", v)
+			}
+
+			return uint64(v), nil
+		case string:
+			// If it's a string, try to parse it as a number
+			var result uint64
+			_, err := fmt.Sscanf(v, "%d", &result)
+
+			return result, err
+		default:
+			return 0, fmt.Errorf("%s has unexpected type: %T", StakeDepositFieldName, stakeDeposit)
+		}
+	}
+
+	return 0, fmt.Errorf("%s field not found in protocol parameters", StakeDepositFieldName)
 }

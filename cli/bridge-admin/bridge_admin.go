@@ -17,6 +17,7 @@ var (
 	mintNativeTokenParamsData            = &mintNativeTokenParams{}
 	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
 	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
+	stakeDelegationParamsData            = &stakeDelParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -92,6 +93,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(bridgingAddressesBalancesSkylineData),
 	}
+	delegateStakeCmd := &cobra.Command{
+		Use:   "delegate-address-to-stake-pool",
+		Short: "delegate address to stake pool",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return stakeDelegationParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(stakeDelegationParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -102,6 +111,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
 	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
+	stakeDelegationParamsData.RegisterFlags(delegateStakeCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -119,6 +129,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		mintNativeTokenCmd,
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
+		delegateStakeCmd,
 	)
 
 	return cmd

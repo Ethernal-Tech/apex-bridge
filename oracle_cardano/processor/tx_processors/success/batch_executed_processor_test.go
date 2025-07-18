@@ -24,12 +24,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	}
 	appConfig.FillOut()
 
-	txInputs := append(append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-		Input: indexer.TxInput{},
-		Output: indexer.TxOutput{
-			Address: "addr_bridging",
-		},
-	}), &indexer.TxInputOutput{
+	txInputs := append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
 		Input: indexer.TxInput{},
 		Output: indexer.TxOutput{
 			Address: "addr_fee",
@@ -78,42 +73,6 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
 		require.Equal(t, [32]byte{}, claims.BatchExecutedClaims[0].ObservedTransactionHash)
-	})
-
-	t.Run("ValidateAndAddClaim fail on validate", func(t *testing.T) {
-		const batchNonceID = uint64(1)
-		relevantFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BatchExecutedMetadata{
-			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceID:   batchNonceID,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, relevantFullMetadata)
-
-		claims := &cCore.BridgeClaims{}
-
-		txHash := indexer.Hash{1, 20}
-
-		txOutputs := []*indexer.TxOutput{
-			{Address: "addr1", Amount: 1},
-			{Address: "addr2", Amount: 2},
-		}
-
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			OriginChainID: common.ChainIDStrPrime,
-			Tx: indexer.Tx{
-				Hash:     txHash,
-				Metadata: relevantFullMetadata,
-				Outputs:  txOutputs,
-				Inputs: append(make([]*indexer.TxInputOutput, 0), &indexer.TxInputOutput{
-					Input: indexer.TxInput{},
-					Output: indexer.TxOutput{
-						Address: "addr123",
-					},
-				}),
-			},
-		}, &appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "unexpected address found in tx input")
 	})
 
 	t.Run("ValidateAndAddClaim valid full metadata", func(t *testing.T) {
@@ -181,19 +140,10 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			},
 		}
 
+		tx.Inputs[0].Output.Address = "addr1"
 		err := proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "unexpected address found in tx input")
-
-		tx.Inputs[0].Output.Address = "addr1"
-		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
-		require.Error(t, err)
 		require.ErrorContains(t, err, "fee address not found in tx inputs")
-
-		tx.Inputs[0].Output.Address = "addr2"
-		err = proc.validate(&tx, &common.BatchExecutedMetadata{}, config)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "bridging address not found in tx inputs")
 	})
 
 	t.Run("validate method origin chain not registered", func(t *testing.T) {

@@ -157,7 +157,7 @@ const (
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
 
-	defaultMaxFeeUtxoCount      = 4
+	defaultMaxFeeUtxoCount      = 6
 	defaultMaxUtxoCount         = 50
 	defaultTakeAtLeastUtxoCount = 6
 
@@ -671,6 +671,7 @@ func (p *generateConfigsParams) Execute(
 				},
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.primeMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrVector: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -697,6 +698,7 @@ func (p *generateConfigsParams) Execute(
 				},
 				OtherAddressesOfInterest: []string{},
 				MinFeeForBridging:        p.vectorMinFeeForBridging,
+				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
 			},
 		},
 		EthChains: map[string]*oCore.EthChainConfig{
@@ -712,6 +714,7 @@ func (p *generateConfigsParams) Execute(
 				DynamicTx:               true,
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
+				FeeAddrBridgingAmount:   p.nexusMinFeeForBridging,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
