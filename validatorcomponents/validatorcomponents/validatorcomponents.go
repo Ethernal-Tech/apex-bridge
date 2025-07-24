@@ -13,6 +13,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/api/utils"
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
+	bac "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_coordinator"
+	bam "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -44,19 +46,21 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
-	ctx               context.Context
-	shouldRunAPI      bool
-	oracleDB          *bbolt.DB
-	db                core.Database
-	cardanoIndexerDbs map[string]indexer.Database
-	oracle            *cardanoOracle.OracleImpl
-	ethOracle         *ethOracle.OracleImpl
-	batcherManager    batcherCore.BatcherManager
-	relayerImitator   core.RelayerImitator
-	api               apiCore.API
-	telemetry         *telemetry.Telemetry
-	telemetryWorker   *TelemetryWorker
-	logger            hclog.Logger
+	ctx                          context.Context
+	shouldRunAPI                 bool
+	oracleDB                     *bbolt.DB
+	db                           core.Database
+	cardanoIndexerDbs            map[string]indexer.Database
+	oracle                       *cardanoOracle.OracleImpl
+	ethOracle                    *ethOracle.OracleImpl
+	batcherManager               batcherCore.BatcherManager
+	relayerImitator              core.RelayerImitator
+	api                          apiCore.API
+	telemetry                    *telemetry.Telemetry
+	telemetryWorker              *TelemetryWorker
+	bridgingAddressesManager     common.BridgingAddressesManager
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
+	logger                       hclog.Logger
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -173,9 +177,22 @@ func NewValidatorComponents(
 	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
 		"contract", appConfig.Bridge.SmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
 
+	bridgingAddressesManager, err := bam.NewBridgingAdressesManager(
+		ctx,
+		appConfig.CardanoChains,
+		bridgeSmartContract,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bridging addresses component: %w", err)
+	}
+
+	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
+		bridgingAddressesManager, cardanoIndexerDbs)
+
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
+		bridgingAddressesCoordinator, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
@@ -224,7 +241,9 @@ func NewValidatorComponents(
 		telemetryWorker: NewTelemetryWorker(
 			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
-		logger: logger,
+		logger:                       logger,
+		bridgingAddressesManager:     bridgingAddressesManager,
+		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
 	}, nil
 }
 
@@ -382,7 +401,7 @@ func fixChainsAndAddresses(
 				return err
 			}
 
-			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
+			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, 0)
 
 			logger.Debug("Validators chain data retrieved",
 				"data", eth.GetChainValidatorsDataInfoString(chainID, validatorsData))

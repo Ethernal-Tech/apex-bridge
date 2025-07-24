@@ -39,10 +39,12 @@ func TestCreateTx(t *testing.T) {
 	require.NoError(t, err)
 
 	txInputsInfos := TxInputInfos{
-		MultiSig: &TxInputInfo{
-			TxInputs:     wallet.TxInputs{},
-			PolicyScript: policyScriptMultiSig,
-			Address:      multiSigAddr,
+		MultiSig: []*TxInputInfo{
+			{
+				TxInputs:     wallet.TxInputs{},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+			},
 		},
 		MultiSigFee: &TxInputInfo{
 			TxInputs:     wallet.TxInputs{},
@@ -81,7 +83,7 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{}
+		txInputsInfos.MultiSig = []*TxInputInfo{}
 
 		outputs := []wallet.TxOutput{
 			{
@@ -97,14 +99,17 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("empty fee multisig inputs", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
-					Index: 1,
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+							Index: 1,
+						},
+					},
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{}
 
@@ -122,13 +127,17 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("not enough funds on multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -154,13 +163,28 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("not enough funds on fee multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+							Index: 1,
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: 20},
+				},
+			},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -186,13 +210,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig and fee not in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -227,13 +257,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig and fee not in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -268,13 +304,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig in outputs, fee not in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -313,13 +355,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig in outputs, fee not in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -358,13 +406,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig not in outputs, fee in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -403,13 +457,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig not in outputs, fee in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -448,13 +508,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("multisig in outputs, fee in outputs without change for fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -515,10 +581,12 @@ func TestCreateTx(t *testing.T) {
 	}
 
 	txInputsInfos = TxInputInfos{
-		MultiSig: &TxInputInfo{
-			TxInputs:     wallet.TxInputs{},
-			PolicyScript: policyScriptMultiSig,
-			Address:      multiSigAddr,
+		MultiSig: []*TxInputInfo{
+			{
+				TxInputs:     wallet.TxInputs{},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+			},
 		},
 		MultiSigFee: &TxInputInfo{
 			TxInputs:     wallet.TxInputs{},
@@ -571,13 +639,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("only certificates, not enough fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -597,13 +671,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("only certificates, exact fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -636,13 +716,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("with certificates, exact fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -681,13 +767,19 @@ func TestCreateTx(t *testing.T) {
 	})
 
 	t.Run("with certificates and all outputs", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{

@@ -668,3 +668,61 @@ func Test_extractStakeKeyDepositAmount(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), amount)
 }
+
+func Test_allocateInputsForConsolidation(t *testing.T) {
+	t.Run("total < max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 5},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 10},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, inputs, alloc)
+	})
+
+	t.Run("total == max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, inputs, alloc)
+	})
+
+	t.Run("total > max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 30},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 17},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 8},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 25},
+		}, alloc)
+	})
+
+	t.Run("total >> max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true, Utxos: []*indexer.TxInputOutput{
+				{
+					Output: indexer.TxOutput{
+						Amount: 100_000_000,
+					},
+				},
+			}},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 9},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 3)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 2},
+		}, alloc)
+	})
+}

@@ -308,3 +308,120 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 
 	return 0, fmt.Errorf("%s field not found in protocol parameters", StakeDepositFieldName)
 }
+
+type AddressConsolidation struct {
+	Address      string
+	AddressIndex uint8
+	UtxoCount    int
+	Share        float64
+	Assigned     int
+	Remainder    float64
+	IsFee        bool
+}
+
+type AddressConsolidationData struct {
+	Address      string
+	AddressIndex uint8
+	UtxoCount    int
+	IsFee        bool
+	Utxos        []*indexer.TxInputOutput
+}
+
+func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) []AddressConsolidationData {
+	total := 0
+	for _, input := range inputs {
+		total += input.UtxoCount
+	}
+
+	n := len(inputs)
+	alloc := make([]AddressConsolidation, n)
+	result := make([]AddressConsolidationData, n)
+
+	if total <= max {
+		for i, input := range inputs {
+			result[i] = AddressConsolidationData{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    input.UtxoCount,
+				IsFee:        input.IsFee,
+			}
+		}
+		return result
+	}
+
+	assigned := 0
+
+	// First, assign the integer part of the proportional share
+	for i, input := range inputs {
+		share := (float64(input.UtxoCount) / float64(total)) * float64(max)
+		alloc[i] = AddressConsolidation{
+			Address:      input.Address,
+			AddressIndex: input.AddressIndex,
+			UtxoCount:    input.UtxoCount,
+			Share:        share,
+			Assigned:     int(share),
+			Remainder:    share - float64(int(share)),
+			IsFee:        input.IsFee,
+		}
+		assigned += alloc[i].Assigned
+	}
+
+	// Assign remaining utxos using the largest remainders
+	remaining := max - assigned
+	if remaining > 0 {
+		sort.SliceStable(alloc, func(i, j int) bool {
+			return alloc[i].Remainder > alloc[j].Remainder
+		})
+		for i := 0; i < remaining; i++ {
+			alloc[i%len(alloc)].Assigned += 1
+		}
+	}
+
+	// Prepare the result
+	maxIndex := 0
+	maxAssigned := 0
+	feeIndex := -1
+
+	for i, input := range alloc {
+		result[i] = AddressConsolidationData{
+			Address:      input.Address,
+			AddressIndex: input.AddressIndex,
+			UtxoCount:    input.Assigned,
+			IsFee:        input.IsFee,
+		}
+
+		if !input.IsFee && input.Assigned > maxAssigned {
+			maxIndex = i
+			maxAssigned = input.Assigned
+		}
+
+		if input.IsFee && input.Assigned == 0 {
+			feeIndex = i
+		}
+	}
+
+	if feeIndex != -1 {
+		for {
+			result[maxIndex].UtxoCount -= 1
+			result[feeIndex].UtxoCount += 1
+
+			// TODO: Update this, it's not the best way to do this
+			if calcualteUtxoSum(inputs[0].Utxos[:result[feeIndex].UtxoCount]) >= 2*common.MinUtxoAmountDefault {
+				break
+			}
+		}
+	} else {
+
+	}
+
+	return result
+}
+
+func calcualteUtxoSum(inputs []*indexer.TxInputOutput) uint64 {
+	sum := uint64(0)
+	for _, input := range inputs {
+		sum += input.Output.Amount
+	}
+
+	return sum
+}

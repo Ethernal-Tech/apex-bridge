@@ -7,10 +7,11 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	BatchType         eth.BatchTypes
-	IsStakeSignNeeded bool
-	TxRaw             []byte
-	TxHash            string
+	BatchType           eth.BatchTypes
+	IsStakeSignNeeded   bool
+	IsPaymentSignNeeded bool
+	TxRaw               []byte
+	TxHash              string
 }
 
 func (gb GeneratedBatchTxData) IsConsolidation() bool {
