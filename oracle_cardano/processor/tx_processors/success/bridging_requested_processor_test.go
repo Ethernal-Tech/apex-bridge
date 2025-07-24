@@ -51,7 +51,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					FeeAddress:      vectorBridgingFeeAddr,
 				},
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkID:     wallet.VectorTestNetNetwork,
+					NetworkID:     wallet.TestNetNetwork,
 					UtxoMinAmount: utxoMinValue,
 				},
 				MinFeeForBridging:     minFeeForBridging,

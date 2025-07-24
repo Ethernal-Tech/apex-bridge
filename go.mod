@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250702123826-95b4c892b5ee
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20250724145704-00ea2f2120f9
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240902085129-307ec04e3e94
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gorilla/handlers v1.5.2
