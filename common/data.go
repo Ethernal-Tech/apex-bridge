@@ -31,10 +31,7 @@ const (
 	BridgingConfirmedTxType ConfirmedTxType = 0
 	DefundConfirmedTxType   ConfirmedTxType = 1
 	RefundConfirmedTxType   ConfirmedTxType = 2
-)
-
-var (
-	DefundTxHash, _ = hex.DecodeString("c74d0d70be942fd68984df57687b9f453f1321726e8db77762dee952a5c85b24")
+	StakeDelConfirmedTxType ConfirmedTxType = 3
 )
 
 type Hash [HashSize]byte
@@ -83,4 +80,8 @@ func NewHashFromBytes(bytes []byte) Hash {
 	}
 
 	return Hash(bytes)
+}
+
+func IsDirectlyConfirmedTransaction(txType uint8) bool {
+	return txType == uint8(StakeDelConfirmedTxType) || txType == uint8(DefundConfirmedTxType)
 }

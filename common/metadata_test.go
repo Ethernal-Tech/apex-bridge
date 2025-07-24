@@ -138,7 +138,7 @@ func TestMetadata(t *testing.T) {
 		feeAmount := uint64(1)
 		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadataV1{
 			BridgingTxType: "test",
-			FeeAmount:      feeAmount,
+			BridgingFee:    feeAmount,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -153,7 +153,7 @@ func TestMetadata(t *testing.T) {
 		feeAmount := uint64(1)
 		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadataV1{
 			BridgingTxType: "test",
-			FeeAmount:      feeAmount,
+			BridgingFee:    feeAmount,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, result)

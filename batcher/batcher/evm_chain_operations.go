@@ -109,20 +109,20 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *EVMChainOperations) SignBatchTransaction(
-	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	generatedBatchData *core.GeneratedBatchTxData) (*core.BatchSignatures, error) {
 	txsHashBytes, err := common.DecodeHex(generatedBatchData.TxHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	signature, err := cco.privateKey.Sign(txsHashBytes, eth.BN256Domain)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	signatureBytes, err := signature.Marshal()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if cco.logger.IsDebug() {
@@ -131,7 +131,9 @@ func (cco *EVMChainOperations) SignBatchTransaction(
 			"public", hex.EncodeToString(cco.privateKey.PublicKey().Marshal()))
 	}
 
-	return signatureBytes, nil, nil
+	return &core.BatchSignatures{
+		Multisig: signatureBytes,
+	}, nil
 }
 
 func (cco *EVMChainOperations) IsSynchronized(

@@ -48,10 +48,27 @@ func (cco *CardanoChainOperations) SendTx(
 ) error {
 	cco.logger.Debug("confirmed batch - sending tx", "batchID", smartContractData.ID, "binary", cco.cardanoCliBinary)
 
-	witnesses := make(
-		[][]byte, len(smartContractData.Signatures)+len(smartContractData.FeeSignatures))
-	copy(witnesses, smartContractData.Signatures)
-	copy(witnesses[len(smartContractData.Signatures):], smartContractData.FeeSignatures)
+	signaturesLength := len(smartContractData.Signatures)
+	feeSignaturesLength := len(smartContractData.FeeSignatures)
+	stakeSignaturesLength := len(smartContractData.StakeSignatures)
+
+	if signaturesLength != feeSignaturesLength || feeSignaturesLength != stakeSignaturesLength {
+		return fmt.Errorf("wrong number of signatures: %d, %d, %d",
+			signaturesLength, feeSignaturesLength, stakeSignaturesLength)
+	}
+
+	// Combine all signatures into a single witnesses slice
+	witnesses := make([][]byte, 0, signaturesLength*3)
+
+	for i := range signaturesLength {
+		for _, sig := range [][]byte{
+			smartContractData.Signatures[i], smartContractData.FeeSignatures[i], smartContractData.StakeSignatures[i],
+		} {
+			if len(sig) > 0 {
+				witnesses = append(witnesses, sig)
+			}
+		}
+	}
 
 	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {

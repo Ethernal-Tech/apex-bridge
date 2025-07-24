@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type BridgingRequestStatus string
+type BridgingRequestStatus string // @name BridgingRequestStatus
 
 const (
 	BridgingRequestStatusDiscoveredOnSource           BridgingRequestStatus = "DiscoveredOnSource"

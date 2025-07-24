@@ -42,7 +42,7 @@ type BridgingRequestMetadataV1 struct {
 	DestinationChainID string                                 `cbor:"d" json:"d"`
 	SenderAddr         []string                               `cbor:"s" json:"s"`
 	Transactions       []BridgingRequestMetadataTransactionV1 `cbor:"tx" json:"tx"`
-	FeeAmount          uint64                                 `cbor:"fa" json:"fa"`
+	BridgingFee        uint64                                 `cbor:"fa" json:"fa"`
 }
 
 type RefundBridgingRequestMetadata struct {
@@ -133,7 +133,7 @@ func mapV1ToCurrentBridgingRequest(metadataMap map[int]map[int]*BridgingRequestM
 		DestinationChainID: v1m.DestinationChainID,
 		SenderAddr:         v1m.SenderAddr,
 		Transactions:       txs,
-		BridgingFee:        v1m.FeeAmount,
+		BridgingFee:        v1m.BridgingFee,
 	}, nil
 }
 
