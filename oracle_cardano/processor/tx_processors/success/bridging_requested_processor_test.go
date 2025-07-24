@@ -23,9 +23,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		feeAddrBridgingAmount = uint64(1000001)
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		vectorBridgingAddr    = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
-		vectorBridgingFeeAddr = "vector_test1wtyslvqxffyppmzhs7ecwunsnpq6g2p6kf9r4aa8ntfzc4qj925fr"
-		validTestAddress      = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
+		vectorBridgingAddr    = "addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
+		vectorBridgingFeeAddr = "addr_test1vzv206r2s6c5y3rr9eexxnlppz8lm048empp8zvtwjkn9cqleec9x"
+		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
