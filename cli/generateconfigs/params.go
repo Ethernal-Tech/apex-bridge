@@ -162,6 +162,8 @@ const (
 	defaultTakeAtLeastUtxoCount = 6
 
 	defaultEmptyBlocksThreshold = 1000
+
+	defaultNexusFeeAddrBridgingAmount = 1_000_000
 )
 
 var (
@@ -710,7 +712,7 @@ func (p *generateConfigsParams) Execute(
 				DynamicTx:               true,
 				MinFeeForBridging:       p.nexusMinFeeForBridging,
 				RestartTrackerPullCheck: time.Second * 150,
-				FeeAddrBridgingAmount:   p.nexusMinFeeForBridging,
+				FeeAddrBridgingAmount:   defaultNexusFeeAddrBridgingAmount,
 			},
 		},
 		Bridge: oCore.BridgeConfig{
