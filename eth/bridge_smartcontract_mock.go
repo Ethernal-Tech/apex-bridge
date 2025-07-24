@@ -132,3 +132,7 @@ func (m *BridgeSmartContractMock) GetBatchStatusAndTransactions(
 
 	return status, txs, args.Error(2)
 }
+
+func (m *BridgeSmartContractMock) GetSCVersion(ctx context.Context) (string, error) {
+	return "", nil
+}

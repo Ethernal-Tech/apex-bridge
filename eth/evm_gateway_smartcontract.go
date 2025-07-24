@@ -95,3 +95,22 @@ func (bsc *EVMGatewaySmartContractImpl) Deposit(
 
 	return nil
 }
+
+func (bsc *EVMGatewaySmartContractImpl) Version() (string, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return "", fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
+	if err != nil {
+		return "", fmt.Errorf("error while NewGateway: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	version, err := contract.Version(&bind.CallOpts{})
+	if err != nil {
+		return "", fmt.Errorf("error while Version: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return version, nil
+}

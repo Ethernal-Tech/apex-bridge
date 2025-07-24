@@ -367,3 +367,12 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --vector-wallet-addr addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
 ```
+
+# How to get bridge and gateway smart contract version
+```shell
+apex-bridge sc-version \
+        --bridge-url http://127.0.0.1:12013 \
+        --bridge-addr 0xaBef000000000000000000000000000000000000 \
+        --gateway-url http://127.0.0.1:12001 \
+        --gateway-addr 0x8580E64167df4Fc184d3d19A818C266Fd59e663B \
+```
