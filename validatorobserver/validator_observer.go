@@ -2,23 +2,31 @@ package validatorobserver
 
 import (
 	"context"
-	"math/big"
 	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/bn256"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
 type ValidatorSetObserver struct {
+	validatorSetStream  chan *Validators
+	validators          Validators
 	validatorSetPending bool
-	verificationKeys    map[uint8]map[int][]byte
 	bridgeSmartContract eth.IBridgeSmartContract
 	logger              hclog.Logger
+}
+
+type ValidatorsChainData struct {
+	Keys       []eth.ValidatorChainData
+	SlotNumber uint64
+}
+
+type Validators struct {
+	Data map[string]ValidatorsChainData
 }
 
 const (
@@ -28,6 +36,7 @@ const (
 var lock = sync.RWMutex{}
 
 func NewValidatorSetObserver(
+	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) (*ValidatorSetObserver, error) {
@@ -36,7 +45,9 @@ func NewValidatorSetObserver(
 		validatorSetPending = false
 	}
 
-	verificationKeys := make(map[uint8]map[int][]byte)
+	validators := Validators{
+		Data: make(map[string]ValidatorsChainData),
+	}
 
 	registeredChains, err := bridgeSmartContract.GetAllRegisteredChains(context.Background())
 	if err != nil {
@@ -47,22 +58,33 @@ func NewValidatorSetObserver(
 		validatorsData, err := bridgeSmartContract.GetValidatorsChainData(context.Background(),
 			common.ToStrChainID(chain.Id))
 		if err != nil {
-			verificationKeys[chain.Id] = make(map[int][]byte)
+			continue
+		}
 
-			for idx, data := range validatorsData {
-				key, err := keyFormBigIntToBytes(data.Key)
-				if err != nil {
-					continue
-				}
+		validatorKeys := []eth.ValidatorChainData{}
+		for _, data := range validatorsData {
+			validatorKeys = append(validatorKeys, eth.ValidatorChainData{
+				Key: data.Key,
+			})
+		}
 
-				verificationKeys[chain.Id][idx] = key
-			}
+		slotNumber := uint64(0)
+
+		lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, common.ToStrChainID(chain.Id))
+		if err == nil {
+			slotNumber = lastObservedBlock.BlockSlot.Uint64()
+		}
+
+		validators.Data[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
+			Keys:       validatorKeys,
+			SlotNumber: slotNumber,
 		}
 	}
 
 	return &ValidatorSetObserver{
+		validatorSetStream:  make(chan *Validators),
+		validators:          validators,
 		validatorSetPending: validatorSetPending,
-		verificationKeys:    verificationKeys,
 		bridgeSmartContract: bridgeSmartContract,
 		logger:              logger.Named("validator_set_observer"),
 	}, nil
@@ -73,6 +95,8 @@ func (vs *ValidatorSetObserver) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
+				close(vs.validatorSetStream)
+
 				return
 			case <-time.After(timeout):
 				if err := vs.execute(); err != nil {
@@ -86,7 +110,7 @@ func (vs *ValidatorSetObserver) Start(ctx context.Context) {
 func (vs *ValidatorSetObserver) execute() error {
 	lock.Lock()
 	oldState := vs.validatorSetPending
-	verificationKeys := vs.verificationKeys
+	validators := vs.validators
 	lock.Unlock()
 
 	isPending, err := vs.bridgeSmartContract.IsNewValidatorSetPending()
@@ -104,8 +128,8 @@ func (vs *ValidatorSetObserver) execute() error {
 			return err
 		}
 
-		vs.removeValidators(verificationKeys, removedValidators)
-		vs.addValidators(verificationKeys, addedValidators)
+		vs.removeValidators(validators, removedValidators)
+		vs.addValidators(validators, addedValidators)
 	}
 
 	lock.Lock()
@@ -113,7 +137,10 @@ func (vs *ValidatorSetObserver) execute() error {
 
 	vs.validatorSetPending = isPending
 	if isPending {
-		vs.verificationKeys = verificationKeys
+		vs.validators = validators
+		vs.validatorSetStream <- &validators
+	} else {
+		vs.validatorSetStream <- nil
 	}
 
 	return nil
@@ -126,14 +153,18 @@ func (vs *ValidatorSetObserver) IsValidatorSetPending() bool {
 	return vs.validatorSetPending
 }
 
-func (vs *ValidatorSetObserver) GetVerificationKeys(chainID uint8) map[int][]byte {
+func (vs *ValidatorSetObserver) GetVerificationKeys(chainID string) []eth.ValidatorChainData {
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return vs.verificationKeys[chainID]
+	return vs.validators.Data[chainID].Keys
 }
 
-func (vs *ValidatorSetObserver) removeValidators(verificationKeys map[uint8]map[int][]byte,
+func (vs *ValidatorSetObserver) GetValidatorSetReader() <-chan *Validators {
+	return vs.validatorSetStream
+}
+
+func (vs *ValidatorSetObserver) removeValidators(validators Validators,
 	removedValidators []ethcommon.Address) {
 	for _, validator := range removedValidators {
 		validatorIdx, err := vs.bridgeSmartContract.GetAddressValidatorIndex(validator)
@@ -141,38 +172,26 @@ func (vs *ValidatorSetObserver) removeValidators(verificationKeys map[uint8]map[
 			continue
 		}
 
-		for chainID, keys := range verificationKeys {
-			if _, exists := keys[int(validatorIdx)]; exists {
-				delete(verificationKeys[chainID], int(validatorIdx))
+		for chainID := range validators.Data {
+			validatorData := validators.Data[chainID]
+			if int(validatorIdx) < len(validatorData.Keys) {
+				validatorData.Keys = append(validatorData.Keys[:validatorIdx], validatorData.Keys[validatorIdx+1:]...)
+				validators.Data[chainID] = validatorData
 			}
 		}
 	}
 }
 
-func (vs *ValidatorSetObserver) addValidators(verificationKeys map[uint8]map[int][]byte,
-	addedValidators []eth.ValidatorSet) {
+func (vs *ValidatorSetObserver) addValidators(
+	validators Validators, addedValidators []eth.ValidatorSet,
+) {
 	for _, validator := range addedValidators {
 		for _, v := range validator.Validators {
-			key, err := keyFormBigIntToBytes(v.Data.Key)
-			if err != nil {
-				return
-			}
-
-			validatorIdx, err := vs.bridgeSmartContract.GetAddressValidatorIndex(v.Addr)
-			if err != nil {
-				continue
-			}
-
-			verificationKeys[validator.ChainId][int(validatorIdx)] = key
+			validatorData := validators.Data[common.ToStrChainID(validator.ChainId)]
+			validatorData.Keys = append(validatorData.Keys, eth.ValidatorChainData{
+				Key: v.Data.Key,
+			})
+			validators.Data[common.ToStrChainID(validator.ChainId)] = validatorData
 		}
 	}
-}
-
-func keyFormBigIntToBytes(key [4]*big.Int) ([]byte, error) {
-	pub, err := bn256.UnmarshalPublicKeyFromBigInt(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return pub.Marshal(), nil
 }

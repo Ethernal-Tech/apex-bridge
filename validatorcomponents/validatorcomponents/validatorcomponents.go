@@ -111,7 +111,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(bridgeSmartContract,
+	validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContract,
 		logger.Named("validator_set_observer"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create validator set observer: %w", err)

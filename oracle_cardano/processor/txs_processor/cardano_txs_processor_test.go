@@ -491,7 +491,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(bridgeSmartContractMock,
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
 		require.NoError(t, err)
 

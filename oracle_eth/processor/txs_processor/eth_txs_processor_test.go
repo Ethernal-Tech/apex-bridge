@@ -451,7 +451,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(bridgeSmartContractMock,
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(context.Background(), bridgeSmartContractMock,
 			hclog.NewNullLogger())
 		require.NoError(t, err)
 

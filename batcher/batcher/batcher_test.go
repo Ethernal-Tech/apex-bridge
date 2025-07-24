@@ -235,7 +235,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(bridgeSmartContractMock,
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
 		require.NoError(t, err)
 
@@ -264,7 +264,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(bridgeSmartContractMock,
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
 		require.NoError(t, err)
 
