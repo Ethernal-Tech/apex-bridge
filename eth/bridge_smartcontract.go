@@ -31,6 +31,9 @@ type IBridgeSmartContract interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
+	IsNewValidatorSetPending() (bool, error)
+	GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error)
+	GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -327,4 +330,73 @@ func (bsc *BridgeSmartContractImpl) GetBatchStatusAndTransactions(
 	}
 
 	return result.Status, result.Txs, nil
+}
+
+func (bsc *BridgeSmartContractImpl) IsNewValidatorSetPending() (bool, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return false, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return false, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.IsNewValidatorSetPending(&bind.CallOpts{
+		Context: context.Background(),
+	})
+	if err != nil {
+		return false, fmt.Errorf("error while IsNewValidatorSetPending: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.GetNewValidatorSetDelta(&bind.CallOpts{
+		Context: context.Background(),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while GetVerificationKeys: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result.AddedValidators, result.RemovedValidators, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.GetAddressValidatorIndex(&bind.CallOpts{
+		Context: context.Background(),
+	}, validatorAddr)
+	if err != nil {
+		return 0, fmt.Errorf("error while GetVerificationKeys: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result, nil
 }
