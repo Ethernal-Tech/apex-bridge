@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -234,6 +235,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]contractbinding.IBridgeStructsChain{}, error(nil))
 
 		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
@@ -263,6 +265,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]contractbinding.IBridgeStructsChain{}, error(nil))
 
 		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
