@@ -48,11 +48,8 @@ func (params *stakeDelParams) ValidateFlags() error {
 
 	if params.stakePoolID == "" {
 		return fmt.Errorf("--%s flag not specified", stakePoolIDFlag)
-	} else {
-		prefix, _, err := bech32.Decode(params.stakePoolID)
-		if err != nil || prefix != "pool" {
-			return fmt.Errorf("invalid --%s", stakePoolIDFlag)
-		}
+	} else if prefix, _, err := bech32.Decode(params.stakePoolID); err != nil || prefix != "pool" {
+		return fmt.Errorf("invalid --%s", stakePoolIDFlag)
 	}
 
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
