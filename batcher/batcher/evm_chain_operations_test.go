@@ -64,6 +64,14 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 						Amount:             new(big.Int).SetUint64(100),
 						DestinationAddress: "0xff",
 					},
+					{
+						Amount:             new(big.Int).SetUint64(1000),
+						DestinationAddress: "0xaa",
+					},
+					{
+						Amount:             new(big.Int).SetUint64(10),
+						DestinationAddress: "cc",
+					},
 				},
 			},
 		}
@@ -74,7 +82,22 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		dt, err := ops.GenerateBatchTransaction(ctx, nil, chainID, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
-		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs)
+		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
+
+		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
+			{
+				Address: common.HexToAddress("0xaa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(1000)),
+			},
+			{
+				Address: common.HexToAddress("0xcc"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(10)),
+			},
+			{
+				Address: common.HexToAddress("0xff"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(100)),
+			},
+		}, txs.Receivers)
 
 		txsBytes, err := txs.Pack()
 		require.NoError(t, err)
@@ -156,7 +179,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 		},
 	}
 
-	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs)
+	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, big.NewInt(0))
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
@@ -173,6 +196,86 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			{
 				Address: common.HexToAddress("0xff"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(121)),
+			},
+		},
+	}, result)
+}
+
+func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
+	batchNonceID := uint64(213)
+	ttl := uint64(39203902)
+	feeAmount := new(big.Int).SetUint64(11)
+	minFeeForBridging := new(big.Int).SetUint64(10)
+
+	confirmedTxs := []eth.ConfirmedTransaction{
+		{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			Receivers: []eth.BridgeReceiver{
+				{
+					Amount:             new(big.Int).SetUint64(100),
+					DestinationAddress: "0xff",
+				},
+				{
+					Amount:             new(big.Int).SetUint64(200),
+					DestinationAddress: "0xfa",
+				},
+			},
+		},
+		{
+			Receivers: []eth.BridgeReceiver{
+				{
+					Amount:             new(big.Int).SetUint64(10),
+					DestinationAddress: "0xff",
+				},
+			},
+		},
+		{
+			TransactionType: uint8(common.RefundConfirmedTxType),
+			Receivers: []eth.BridgeReceiver{
+				{
+					Amount:             new(big.Int).SetUint64(15),
+					DestinationAddress: "0xf0",
+				},
+				{
+					Amount:             new(big.Int).SetUint64(11),
+					DestinationAddress: "0xff",
+				},
+			},
+		},
+		{
+			Receivers: []eth.BridgeReceiver{
+				{
+					Amount:             new(big.Int).SetUint64(15),
+					DestinationAddress: "0xf0",
+				},
+				{
+					Amount:             feeAmount,
+					DestinationAddress: common.EthZeroAddr,
+				},
+			},
+		},
+	}
+
+	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, minFeeForBridging)
+	require.Equal(t, eth.EVMSmartContractTransaction{
+		BatchNonceID: batchNonceID,
+		TTL:          ttl,
+		FeeAmount:    big.NewInt(0).Add(common.DfmToWei(feeAmount), big.NewInt(40)),
+		Receivers: []eth.EVMSmartContractTransactionReceiver{
+			{
+				Address: common.HexToAddress("0xf0"),
+				// 30 - 1 * minFeeForBridging due to refund tx
+				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(30)), minFeeForBridging),
+			},
+			{
+				Address: common.HexToAddress("0xfa"),
+				// 200 - 1 * minFeeForBridging due to refund tx
+				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(200)), minFeeForBridging),
+			},
+			{
+				Address: common.HexToAddress("0xff"),
+				// 121 - 2 * minFeeForBridging due to refund txs
+				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(121)), big.NewInt(0).Mul(minFeeForBridging, big.NewInt(2))),
 			},
 		},
 	}, result)
