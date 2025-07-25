@@ -368,6 +368,13 @@ type cardanoChainOperationsMock struct {
 	mock.Mock
 }
 
+// CreateValidatorSetChangeTx implements core.ChainOperations.
+func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
+	nextBatchId uint64, bridgeSmartContract eth.IBridgeSmartContract,
+	validatorsKeys *validatorSetObserver.Validators) (*core.GeneratedBatchTxData, error) {
+	panic("unimplemented")
+}
+
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
 
 // GenerateBatchTransaction implements core.ChainOperations.

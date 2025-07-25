@@ -12,6 +12,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/testenv"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -56,6 +57,13 @@ func NewEVMChainOperations(
 		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
 	}, nil
+}
+
+// CreateValidatorSetChangeTx implements core.ChainOperations.
+func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
+	nextBatchId uint64, bridgeSmartContract eth.IBridgeSmartContract,
+	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
+	panic("unimplemented")
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.

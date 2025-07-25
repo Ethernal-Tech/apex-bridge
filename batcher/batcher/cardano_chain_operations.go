@@ -11,6 +11,7 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -600,4 +601,204 @@ func getOutputs(
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
 	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
+}
+
+func (cco *CardanoChainOperations) generatePolicyAndMultisig(validatorsData []eth.ValidatorChainData) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+	keyHashes, err := cardano.NewApexKeyHashes(validatorsData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	policyScripts := cardano.NewApexPolicyScripts(keyHashes)
+
+	addresses, err := cardano.NewApexAddresses(cco.cardanoCliBinary, uint(cco.config.NetworkMagic), policyScripts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &policyScripts, &addresses, nil
+}
+
+// CreateValidatorSetChangeTx implements core.ChainOperations.
+func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchId uint64,
+	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
+	// get validators data
+	validatorsData, ok := validatorsKeys.Data[chainID]
+	if !ok {
+		return nil, fmt.Errorf("couldn't find keys for chain:%s", chainID)
+	}
+
+	// new validator set policy, multisig & fee address
+	_, newAddresses, err :=
+		cco.generatePolicyAndMultisig(validatorsData.Keys)
+	if err != nil {
+		return nil, err
+	}
+
+	// get active validator set from bridge smart contract
+	activeValidatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// active validator set policy, multisig & fee address
+	activePolicy, activeAddresses, err :=
+		cco.generatePolicyAndMultisig(activeValidatorsData)
+	if err != nil {
+		return nil, err
+	}
+
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// get filtered & limited utxos
+	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment)
+	if err != nil {
+		return nil, err
+	}
+
+	lastTx := len(multisigUtxos) == 0
+
+	if lastTx && len(feeUtxos) == 0 {
+		return &core.GeneratedBatchTxData{
+			BatchType: uint8(ValidatorSetFinal),
+			TxRaw:     []byte{},
+			TxHash:    "",
+		}, nil
+	}
+
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceID:   nextBatchId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// last slot number from indexer
+	slotNumber, err := cco.getSlotNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		txRaw   []byte
+		txHash  string
+		outputs []cardanowallet.TxOutput
+	)
+
+	if lastTx {
+		// last transaction sends funds from active fee key to new fee key
+		outputs = []cardanowallet.TxOutput{
+			{
+				Addr:   newAddresses.Fee.Payment,
+				Amount: 0,
+				Tokens: []cardanowallet.TokenAmount{},
+			},
+		}
+
+		// calculate how much to transfer to new fee key
+		feeExhaust, err := cardano.CalculateFeeExhaust(
+			cco.cardanoCliBinary,
+			uint(cco.config.NetworkMagic),
+			protocolParams,
+			slotNumber+cco.config.TTLSlotNumberInc,
+			metadata,
+			cardano.TxInputInfos{
+				MultiSig: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+				MultiSigFee: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+			},
+			outputs,
+		)
+		if err != nil {
+			if err == cardano.NotEnoughFee {
+				return &core.GeneratedBatchTxData{
+					BatchType: uint8(ValidatorSetFinal),
+					TxRaw:     []byte{},
+					TxHash:    "",
+				}, nil
+			}
+
+			return nil, err
+		}
+
+		outputs[0].Amount = feeExhaust
+
+		txRaw, txHash, err = cardano.CreateTx(
+			cco.cardanoCliBinary,
+			uint(cco.config.NetworkMagic),
+			protocolParams,
+			slotNumber+cco.config.TTLSlotNumberInc,
+			metadata,
+			cardano.TxInputInfos{
+				MultiSig: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+				MultiSigFee: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+			},
+			outputs,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var sum uint64
+		for _, u := range multisigUtxos {
+			sum += u.Output.Amount
+		}
+
+		outputs = []cardanowallet.TxOutput{
+			{
+				Addr:   newAddresses.Multisig.Payment,
+				Amount: sum,
+				Tokens: []cardanowallet.TokenAmount{},
+			},
+		}
+
+		txRaw, txHash, err = cardano.CreateTx(
+			cco.cardanoCliBinary,
+			uint(cco.config.NetworkMagic),
+			protocolParams,
+			slotNumber+cco.config.TTLSlotNumberInc,
+			metadata,
+			cardano.TxInputInfos{
+				MultiSig: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Multisig.Payment,
+					Address:      activeAddresses.Multisig.Payment,
+					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
+				},
+				MultiSigFee: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+			},
+			outputs,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &core.GeneratedBatchTxData{
+		BatchType: uint8(ValidatorSet),
+		TxRaw:     txRaw,
+		TxHash:    txHash,
+	}, nil
 }
