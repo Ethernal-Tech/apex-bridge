@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func GetStakingDelegateCertificate(
+func getStakingDelegateCertificate(
 	cardanoCliBinary string, networkMagic uint,
 	data *batchInitialData, tx *eth.ConfirmedTransaction,
 ) (*cardano.CertificatesWithScript, uint64, error) {

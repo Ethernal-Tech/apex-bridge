@@ -694,7 +694,7 @@ func TestGetStakingDelegateCertificate(t *testing.T) {
 	batchInitialData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
 
 	t.Run("invalid stake pool id", func(t *testing.T) {
-		_, _, err := GetStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+		_, _, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
 			StakePoolId: "0x999",
 		})
 
@@ -702,7 +702,7 @@ func TestGetStakingDelegateCertificate(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		cert, amount, err := GetStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+		cert, amount, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
 			StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",
 		})
 
