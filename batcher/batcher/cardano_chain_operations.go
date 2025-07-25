@@ -185,14 +185,13 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
 			certificate, depositAmount, err := cco.getStakingDelegateCertificate(data, &tx)
-			if err != nil {
-				return nil, err
+			if err == nil {
+				hasStakeDelegationTx = true
+				keyRegistrationFee += depositAmount
+
+				certificates = append(certificates, certificate)
 			}
 
-			hasStakeDelegationTx = true
-			keyRegistrationFee += depositAmount
-
-			certificates = append(certificates, certificate)
 		}
 	}
 
