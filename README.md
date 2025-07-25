@@ -429,3 +429,13 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances skyline \
         --prime-wallet-addr addr_test1wpg8ayttfkr2gvj47p2qkekhrx7w0ecjfdedh6ewrzjhnyg0t7rzg \
         --cardano-wallet-addr addr_test1wrzslpc4stfp78r774k96gxgv4nl2nluc84nv8xkdm0pv7cp4j05f
 ```
+
+```shell
+$ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
