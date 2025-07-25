@@ -7,11 +7,15 @@ import (
 )
 
 type OracleStateResponse struct {
-	ChainID   string                         `json:"chainID"`
-	Utxos     []oCore.CardanoChainConfigUtxo `json:"utxos"`
-	BlockSlot uint64                         `json:"slot"`
-	BlockHash string                         `json:"hash"`
-}
+	// Chain ID
+	ChainID string `json:"chainID"`
+	// Unspent transaction outputs
+	Utxos []oCore.CardanoChainConfigUtxo `json:"utxos"`
+	// Latest block slot
+	BlockSlot uint64 `json:"slot"`
+	// Latest block hash
+	BlockHash string `json:"hash"`
+} // @name OracleStateResponse
 
 func NewOracleStateResponse(
 	chainID string, utxos []oCore.CardanoChainConfigUtxo, slot uint64, hash [32]byte,

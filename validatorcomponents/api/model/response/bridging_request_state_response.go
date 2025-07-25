@@ -5,13 +5,19 @@ import (
 )
 
 type BridgingRequestStateResponse struct {
-	SourceChainID      string                       `json:"sourceChainId"`
-	SourceTxHash       string                       `json:"sourceTxHash"`
-	DestinationChainID string                       `json:"destinationChainId"`
-	Status             common.BridgingRequestStatus `json:"status"`
-	DestinationTxHash  string                       `json:"destinationTxHash"`
-	IsRefund           bool                         `json:"isRefund"`
-}
+	// Source chain ID
+	SourceChainID string `json:"sourceChainId"`
+	// Source transaction hash
+	SourceTxHash string `json:"sourceTxHash"`
+	// Destination chain ID
+	DestinationChainID string `json:"destinationChainId"`
+	// Status of bridging request
+	Status common.BridgingRequestStatus `json:"status"`
+	// Destination transaction hash
+	DestinationTxHash string `json:"destinationTxHash"`
+	// Is in refund phase
+	IsRefund bool `json:"isRefund"`
+} // @name BridgingRequestStateResponse
 
 func NewBridgingRequestStateResponse(state *common.BridgingRequestState) *BridgingRequestStateResponse {
 	return &BridgingRequestStateResponse{
