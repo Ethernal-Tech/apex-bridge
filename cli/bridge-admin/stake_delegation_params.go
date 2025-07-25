@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet/bech32"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
@@ -47,6 +48,8 @@ func (params *stakeDelParams) ValidateFlags() error {
 
 	if params.stakePoolID == "" {
 		return fmt.Errorf("--%s flag not specified", stakePoolIDFlag)
+	} else if prefix, _, err := bech32.Decode(params.stakePoolID); err != nil || prefix != "pool" {
+		return fmt.Errorf("invalid --%s", stakePoolIDFlag)
 	}
 
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
