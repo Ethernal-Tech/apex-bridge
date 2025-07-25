@@ -211,7 +211,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			certificates = append(certificates, certificate)
 		}
 
-		if tx.TransactionType == uint8(common.BridgingConfirmedTxType) {
+		if tx.TransactionType != uint8(common.StakeDelConfirmedTxType) {
 			hasBridgingTx = true
 		}
 	}

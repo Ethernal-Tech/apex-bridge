@@ -30,6 +30,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 	// Go through all addresses, sort them by the total amount of tokens (descending), and choose the one with the biggest amount
 	// Future improvement:
 	// - add the stake pool saturation awareness
+	if len(txOutputs) == 0 {
+		return nil, nil
+	}
+
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
