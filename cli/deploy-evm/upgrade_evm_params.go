@@ -37,6 +37,7 @@ type upgradeEVMParams struct {
 	branchName    string
 	dynamicTx     bool
 	contracts     []string
+	gasLimit      uint64
 }
 
 func (ip *upgradeEVMParams) validateFlags() error {
@@ -123,6 +124,13 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		repositoryURLFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&ip.gasLimit,
+		gasLimitFlag,
+		defaultGasLimitValue,
+		gasLimitFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
@@ -191,7 +199,7 @@ func (ip *upgradeEVMParams) Execute(
 	txHelper, err := ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(ip.nodeURL),
 		ethtxhelper.WithDynamicTx(ip.dynamicTx),
-		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
+		ethtxhelper.WithDefaultGasLimit(ip.gasLimit),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithZeroGasPrice(strings.Contains(dir, apexBridgeSmartContracts)),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),

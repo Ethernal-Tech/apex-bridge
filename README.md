@@ -282,7 +282,8 @@ $ apex-bridge deploy-evm \
 ```
 - instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
--- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 
 Example with explicit bls keys:
 ```shell
@@ -298,6 +299,7 @@ $ apex-bridge deploy-evm \
 ```
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to upgrade bridge/gateway contracts
@@ -312,6 +314,7 @@ $ apex-bridge deploy-evm upgrade \
         --contract Admin:0xABEF000000000000000000000000000000000006
 ```
 - optional `--dynamic-tx`
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
@@ -429,3 +432,13 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances skyline \
         --prime-wallet-addr addr_test1wpg8ayttfkr2gvj47p2qkekhrx7w0ecjfdedh6ewrzjhnyg0t7rzg \
         --cardano-wallet-addr addr_test1wrzslpc4stfp78r774k96gxgv4nl2nluc84nv8xkdm0pv7cp4j05f
 ```
+
+```shell
+$ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.

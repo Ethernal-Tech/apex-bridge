@@ -19,7 +19,8 @@ import (
 var (
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 
-	errTxSizeTooBig = errors.New("batch tx size too big")
+	errTxSizeTooBig    = errors.New("batch tx size too big")
+	errSkipConfirmedTx = errors.New("skip confirmed tx")
 )
 
 // Get real tx size from protocolParams/config
@@ -178,31 +179,9 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	data *batchInitialData,
 	confirmedTransactions []eth.ConfirmedTransaction,
 ) (*core.GeneratedBatchTxData, error) {
-	certificates := make([]*cardano.CertificatesWithScript, 0)
-	keyRegistrationFee := uint64(0)
-	hasStakeDelegationTx := false
-
-	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
-			certificate, depositAmount, err := cco.getStakingDelegateCertificate(data, &tx)
-			if err != nil {
-				return nil, err
-			}
-
-			hasStakeDelegationTx = true
-			keyRegistrationFee += depositAmount
-
-			certificates = append(certificates, certificate)
-		}
-	}
-
-	var certificatedData *cardano.CertificatesData = nil
-
-	if len(certificates) > 0 {
-		certificatedData = &cardano.CertificatesData{
-			Certificates:    certificates,
-			RegistrationFee: keyRegistrationFee,
-		}
+	certificateData, err := cco.getCertificateData(data, confirmedTransactions)
+	if err != nil {
+		return nil, err
 	}
 
 	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
@@ -245,7 +224,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			},
 		},
 		txOutputs.Outputs,
-		certificatedData,
+		certificateData,
 	)
 	if err != nil {
 		return nil, err
@@ -259,7 +238,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	return &core.GeneratedBatchTxData{
 		TxRaw:             txRaw,
 		TxHash:            txHash,
-		IsStakeSignNeeded: hasStakeDelegationTx,
+		IsStakeSignNeeded: certificateData != nil,
 		BatchType:         eth.BatchTypeNormal,
 	}, nil
 }
@@ -506,41 +485,41 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	}, nil
 }
 
-func (cco *CardanoChainOperations) getStakingDelegateCertificate(
-	data *batchInitialData, tx *eth.ConfirmedTransaction,
-) (*cardano.CertificatesWithScript, uint64, error) {
-	// Generate policy script
-	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
-		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
+func (cco *CardanoChainOperations) getCertificateData(
+	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
+) (*cardano.CertificatesData, error) {
+	var (
+		certificates       []*cardano.CertificatesWithScript
+		keyRegistrationFee uint64
+	)
 
-	// Generate certificates
-	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
-	if err != nil {
-		return nil, 0, err
+	for _, tx := range confirmedTransactions {
+		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+			certificate, depositAmount, err := getStakingDelegateCertificate(
+				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx)
+			if errors.Is(err, errSkipConfirmedTx) {
+				cco.logger.Error("Staking delegation transaction skipped",
+					"tx", eth.ConfirmedTransactionsWrapper{Txs: []eth.ConfirmedTransaction{tx}}, "err", err)
+
+				continue
+			} else if err != nil {
+				return nil, err
+			}
+
+			certificates = append(certificates, certificate)
+
+			keyRegistrationFee += depositAmount
+		}
 	}
 
-	cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
-
-	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cco.config.NetworkMagic), policyScript)
-	if err != nil {
-		return nil, 0, err
+	if len(certificates) > 0 {
+		return &cardano.CertificatesData{
+			Certificates:    certificates,
+			RegistrationFee: keyRegistrationFee,
+		}, nil
 	}
 
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return &cardano.CertificatesWithScript{
-		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
-	}, keyRegDepositAmount, nil
+	return nil, nil
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {

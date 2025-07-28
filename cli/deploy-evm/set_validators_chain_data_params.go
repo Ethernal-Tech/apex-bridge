@@ -180,7 +180,6 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 	txHelper, err := ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(ip.evmNodeURL),
 		ethtxhelper.WithDynamicTx(ip.evmDynamicTx),
-		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
