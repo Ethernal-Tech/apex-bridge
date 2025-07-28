@@ -282,7 +282,8 @@ $ apex-bridge deploy-evm \
 ```
 - instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
--- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 
 Example with explicit bls keys:
 ```shell
@@ -298,6 +299,7 @@ $ apex-bridge deploy-evm \
 ```
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to upgrade bridge/gateway contracts
@@ -312,6 +314,7 @@ $ apex-bridge deploy-evm upgrade \
         --contract Admin:0xABEF000000000000000000000000000000000006
 ```
 - optional `--dynamic-tx`
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
