@@ -79,7 +79,14 @@ func (ip *scVersionParams) Execute(ctx context.Context, outputter common.OutputF
 			Data: []byte{0x54, 0xfd, 0x4d, 0x50},
 		}, nil)
 
-		if err != nil || len(response) == 0 {
+		if err != nil {
+			_, _ = outputter.Write([]byte(scName + "Error: " + err.Error() + "\n"))
+			outputter.WriteOutput()
+
+			continue
+		}
+
+		if len(response) == 0 {
 			_, _ = outputter.Write([]byte(scName + ": No version available\n"))
 			outputter.WriteOutput()
 
