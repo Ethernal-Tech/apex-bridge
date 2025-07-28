@@ -33,7 +33,7 @@ func (ip *scVersionParams) validateFlags() error {
 		return fmt.Errorf("failed to connect to the bridge node: %w", err)
 	}
 
-	if ip.scAddresses == nil || len(ip.scAddresses) == 0 {
+	if len(ip.scAddresses) == 0 {
 		return fmt.Errorf("no smart contract addresses specified: --%s", scAddrFlag)
 	}
 
@@ -79,7 +79,7 @@ func (ip *scVersionParams) Execute(ctx context.Context, outputter common.OutputF
 			Data: []byte{0x54, 0xfd, 0x4d, 0x50},
 		}, nil)
 
-		if err != nil || response == nil || len(response) == 0 {
+		if err != nil || len(response) == 0 {
 			_, _ = outputter.Write([]byte(scName + ": No version available\n"))
 			outputter.WriteOutput()
 
