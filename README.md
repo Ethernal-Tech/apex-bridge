@@ -371,8 +371,12 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
 # How to get bridge and gateway smart contract version
 ```shell
 apex-bridge sc-version \
-        --bridge-url http://127.0.0.1:12013 \
-        --bridge-addr 0xaBef000000000000000000000000000000000000 \
-        --gateway-url http://127.0.0.1:12001 \
-        --gateway-addr 0x8580E64167df4Fc184d3d19A818C266Fd59e663B \
+        --node-url http://127.0.0.1:12013 \
+        --addr 0xaBef000000000000000000000000000000000000:Bridge \
+        --addr 0xaBef000000000000000000000000000000000001:ClaimsHelper \
+        --addr 0xaBef000000000000000000000000000000000002:Claims \
+        --addr 0xaBef000000000000000000000000000000000003:SignedBatches \
+        --addr 0xaBef000000000000000000000000000000000004:Slots \
+        --addr 0xaBef000000000000000000000000000000000005:Validators \
+        --addr 0xaBef000000000000000000000000000000000006:Admin \
 ```

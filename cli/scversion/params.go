@@ -3,128 +3,94 @@ package cliscversion
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
 const (
-	bridgeURLFlag      = "bridge-url"
-	bridgeSCAddrFlag   = "bridge-addr"
-	gatewayURLFlag     = "gateway-url"
-	gatewayAddressFlag = "gateway-addr"
+	nodeURLFlag = "node-url"
+	scAddrFlag  = "addr"
 
-	bridgeURLFlagDesc      = "bridge node url"
-	bridgeSCAddrFlagDesc   = "bridge smart contract address"
-	gatewayURLFlagDesc     = "gateway url"
-	gatewayAddressFlagDesc = "gateway smart contract address"
+	nodeURLFlagDesc = "node url"
+	scAddrFlagDesc  = "list of smart contract addresses"
 )
 
 type scVersionParams struct {
-	bridgeURL    string
-	bridgeSCAddr string
-
-	gatewayURL  string
-	gatewayAddr string
+	nodeURL     string
+	scAddresses []string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
 }
 
 func (ip *scVersionParams) validateFlags() error {
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.bridgeURL))
+	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.nodeURL))
 	if err != nil {
 		return fmt.Errorf("failed to connect to the bridge node: %w", err)
 	}
 
-	ip.ethTxHelper = ethTxHelper
-
-	addrDecoded, err := common.DecodeHex(ip.bridgeSCAddr)
-	if err != nil || len(addrDecoded) == 0 || len(addrDecoded) > 20 {
-		return fmt.Errorf("invalid bridge smart contract address: %s", ip.bridgeSCAddr)
+	if ip.scAddresses == nil || len(ip.scAddresses) == 0 {
+		return fmt.Errorf("no smart contract addresses specified: --%s", scAddrFlag)
 	}
+
+	ip.ethTxHelper = ethTxHelper
 
 	return nil
 }
 
 func (ip *scVersionParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&ip.bridgeURL,
-		bridgeURLFlag,
+		&ip.nodeURL,
+		nodeURLFlag,
 		"",
-		bridgeURLFlagDesc,
+		nodeURLFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&ip.bridgeSCAddr,
-		bridgeSCAddrFlag,
-		"",
-		bridgeSCAddrFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.gatewayURL,
-		gatewayURLFlag,
-		"",
-		gatewayURLFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&ip.gatewayAddr,
-		gatewayAddressFlag,
-		"",
-		gatewayAddressFlagDesc,
+	cmd.Flags().StringSliceVar(
+		&ip.scAddresses,
+		scAddrFlag,
+		[]string{},
+		scAddrFlagDesc,
 	)
 }
 
 func (ip *scVersionParams) Execute(ctx context.Context, outputter common.OutputFormatter) (
 	common.ICommandResult, error) {
-	contract, err := contractbinding.NewBridgeContract(
-		common.HexToAddress(ip.bridgeSCAddr), ip.ethTxHelper.GetClient())
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to bridge smart contract: %w", err)
+	for _, scAddrStr := range ip.scAddresses {
+		scParams := strings.SplitN(scAddrStr, ":", 2)
+
+		if len(scParams) != 2 {
+			_, _ = outputter.Write([]byte(scAddrStr + ": Invalid address flag\n"))
+			outputter.WriteOutput()
+
+			continue
+		}
+
+		addr := common.HexToAddress(scParams[0])
+		scName := scParams[1]
+
+		response, err := ip.ethTxHelper.GetClient().CallContract(context.Background(), ethereum.CallMsg{
+			To: &addr,
+			// bytes4(keccak256("version()"))
+			Data: []byte{0x54, 0xfd, 0x4d, 0x50},
+		}, nil)
+
+		if err != nil || response == nil || len(response) == 0 {
+			_, _ = outputter.Write([]byte(scName + ": No version available\n"))
+			outputter.WriteOutput()
+
+			continue
+		}
+
+		_, _ = outputter.Write([]byte(scName + " Smart Contract version:\n"))
+		_, _ = outputter.Write(response)
+		_, _ = outputter.Write([]byte("\n"))
+		outputter.WriteOutput()
 	}
-
-	version, err := contract.Version(&bind.CallOpts{
-		Context: ctx,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get smart : %w", err)
-	}
-
-	_, _ = outputter.Write([]byte("Smart Contract version retrieved:\n"))
-	_, _ = outputter.Write([]byte(version))
-	_, _ = outputter.Write([]byte("\n"))
-	outputter.WriteOutput()
-
-	ethTxHelper, err := ethtxhelper.NewEThTxHelper(
-		[]ethtxhelper.TxRelayerOption{
-			ethtxhelper.WithNodeURL(ip.gatewayURL),
-		}...)
-	if err != nil {
-		return nil, fmt.Errorf("error while NewEThTxHelper: %w", err)
-	}
-
-	smartContractAddress := ethcommon.HexToAddress(ip.gatewayAddr)
-
-	evmContract, err := contractbinding.NewGateway(smartContractAddress, ethTxHelper.GetClient())
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to gateway smart contract : %w", err)
-	}
-
-	gatewayVersion, err := evmContract.Version(&bind.CallOpts{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get gateway version: %w", err)
-	}
-
-	_, _ = outputter.Write([]byte("Gateway Contract version retrieved:\n"))
-	_, _ = outputter.Write([]byte(gatewayVersion))
-	_, _ = outputter.Write([]byte("\n"))
-	outputter.WriteOutput()
 
 	return &CmdResult{}, nil
 }
