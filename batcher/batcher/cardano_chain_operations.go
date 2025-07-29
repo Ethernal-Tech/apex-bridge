@@ -603,7 +603,8 @@ func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
 	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
 }
 
-func (cco *CardanoChainOperations) generatePolicyAndMultisig(validatorsData []eth.ValidatorChainData) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+func (cco *CardanoChainOperations) generatePolicyAndMultisig(
+	validatorsData []eth.ValidatorChainData) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
 	keyHashes, err := cardano.NewApexKeyHashes(validatorsData)
 	if err != nil {
 		return nil, nil, err
@@ -620,8 +621,9 @@ func (cco *CardanoChainOperations) generatePolicyAndMultisig(validatorsData []et
 }
 
 // CreateValidatorSetChangeTx implements core.ChainOperations.
-func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchId uint64,
-	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
+func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchID uint64,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
 	// get validators data
 	validatorsData, ok := validatorsKeys.Data[chainID]
 	if !ok {
@@ -654,14 +656,13 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	}
 
 	// get filtered & limited utxos
-	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment)
+	multisigUtxos, feeUtxos, isFeeOnly, err := cco.getUTXOsForValidatorChange(
+		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment)
 	if err != nil {
 		return nil, err
 	}
 
-	lastTx := len(multisigUtxos) == 0
-
-	if lastTx && len(feeUtxos) == 0 {
+	if isFeeOnly && len(feeUtxos) == 0 {
 		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
@@ -671,7 +672,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
-		BatchNonceID:   nextBatchId,
+		BatchNonceID:   nextBatchID,
 	})
 	if err != nil {
 		return nil, err
@@ -689,7 +690,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		outputs []cardanowallet.TxOutput
 	)
 
-	if lastTx {
+	if isFeeOnly {
 		// last transaction sends funds from active fee key to new fee key
 		outputs = []cardanowallet.TxOutput{
 			{
@@ -710,7 +711,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 				MultiSig: &cardano.TxInputInfo{
 					PolicyScript: activePolicy.Fee.Payment,
 					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 				},
 				MultiSigFee: &cardano.TxInputInfo{
 					PolicyScript: activePolicy.Fee.Payment,
@@ -721,7 +722,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			outputs,
 		)
 		if err != nil {
-			if err == cardano.NotEnoughFee {
+			if errors.Is(err, cardano.ErrNotEnoughFee) {
 				return &core.GeneratedBatchTxData{
 					BatchType: uint8(ValidatorSetFinal),
 					TxRaw:     []byte{},
@@ -744,7 +745,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 				MultiSig: &cardano.TxInputInfo{
 					PolicyScript: activePolicy.Fee.Payment,
 					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
 				},
 				MultiSigFee: &cardano.TxInputInfo{
 					PolicyScript: activePolicy.Fee.Payment,
@@ -801,4 +802,42 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		TxRaw:     txRaw,
 		TxHash:    txHash,
 	}, nil
+}
+
+func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
+	multisigAddress, multisigFeeAddress string,
+) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, isFeeOnly bool, err error) {
+	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return
+	}
+
+	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return
+	}
+
+	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
+	feeUtxos = filterOutTokenUtxos(feeUtxos)
+
+	if len(feeUtxos) == 0 {
+		return multisigUtxos, feeUtxos, false, nil
+	}
+
+	if len(multisigUtxos) == 0 {
+		isFeeOnly = true
+
+		fees := feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
+		maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(fees)), len(multisigUtxos))
+		multisigUtxos = multisigUtxos[:maxUtxosCnt]
+		feeUtxos = fees
+
+		return
+	}
+
+	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
+	maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))
+	multisigUtxos = multisigUtxos[:maxUtxosCnt]
+
+	return
 }

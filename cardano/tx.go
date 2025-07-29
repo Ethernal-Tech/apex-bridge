@@ -109,7 +109,7 @@ func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uin
 	return -1, 0
 }
 
-var NotEnoughFee = errors.New("not enough fee for tx")
+var ErrNotEnoughFee = errors.New("not enough fee for tx")
 
 func CalculateFeeExhaust(
 	cardanoCliBinary string,
@@ -128,7 +128,7 @@ func CalculateFeeExhaust(
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
 	lovelaceOutputsAmount := outputsAmount[cardanowallet.AdaTokenName]
 	multiSigIndex, multisigAmount := isAddressInOutputs(outputs, txInputInfos.MultiSig.Address)
-	feeIndex, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
+	_, feeAmount := isAddressInOutputs(outputs, txInputInfos.MultiSigFee.Address)
 	multisigAmount += txInputInfos.MultiSig.Sum[cardanowallet.AdaTokenName]
 	feeAmount += txInputInfos.MultiSigFee.Sum[cardanowallet.AdaTokenName]
 
@@ -148,14 +148,9 @@ func CalculateFeeExhaust(
 	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
 		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
 
-	// add multisigFee output
-	if feeIndex == -1 {
-		feeIndex = len(outputs)
-
-		builder.AddOutputs(cardanowallet.TxOutput{
-			Addr: txInputInfos.MultiSigFee.Address,
-		})
-	}
+	builder.AddOutputs(cardanowallet.TxOutput{
+		Addr: txInputInfos.MultiSigFee.Address,
+	})
 
 	// add multisig output if change is not zero
 	if changeAmount > 0 {
@@ -168,11 +163,6 @@ func CalculateFeeExhaust(
 			builder.UpdateOutputAmount(multiSigIndex, changeAmount)
 		}
 	} else if multiSigIndex >= 0 {
-		// we need to decrement feeIndex if it was after multisig in outputs
-		if feeIndex > multiSigIndex {
-			feeIndex--
-		}
-
 		builder.RemoveOutput(multiSigIndex)
 	}
 
@@ -185,7 +175,7 @@ func CalculateFeeExhaust(
 	}
 
 	if feeAmount < calcFee {
-		return 0, NotEnoughFee
+		return 0, ErrNotEnoughFee
 	}
 
 	return feeAmount - calcFee, nil

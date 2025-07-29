@@ -147,7 +147,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		confirmedTransactions []eth.ConfirmedTransaction
 	)
 
-	if b.newValidatorSet == nil {
+	if b.newValidatorSet.validators == nil {
 		// Get confirmed transactions from smart contract
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 		if err != nil {
@@ -169,7 +169,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
 			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, b.newValidatorSet.validators)
 
-		if generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
 			b.newValidatorSet.finalized = true
 		}
 	}

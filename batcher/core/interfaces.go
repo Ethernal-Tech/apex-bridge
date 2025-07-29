@@ -34,7 +34,9 @@ type ChainOperations interface {
 	Submit(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch) error
 
 	// Update & transfer to new multisig
-	CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchId uint64, bridgeSmartContract eth.IBridgeSmartContract,
+	CreateValidatorSetChangeTx(ctx context.Context,
+		chainID string, nextBatchID uint64,
+		bridgeSmartContract eth.IBridgeSmartContract,
 		validatorsKeys *validatorobserver.Validators) (*GeneratedBatchTxData, error)
 }
 
