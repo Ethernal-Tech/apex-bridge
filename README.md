@@ -367,3 +367,16 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --vector-wallet-addr addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
 ```
+
+# How to get bridge and gateway smart contract version
+```shell
+apex-bridge sc-version \
+        --node-url http://127.0.0.1:12013 \
+        --addr 0xaBef000000000000000000000000000000000000:Bridge \
+        --addr 0xaBef000000000000000000000000000000000001:ClaimsHelper \
+        --addr 0xaBef000000000000000000000000000000000002:Claims \
+        --addr 0xaBef000000000000000000000000000000000003:SignedBatches \
+        --addr 0xaBef000000000000000000000000000000000004:Slots \
+        --addr 0xaBef000000000000000000000000000000000005:Validators \
+        --addr 0xaBef000000000000000000000000000000000006:Admin \
+```
