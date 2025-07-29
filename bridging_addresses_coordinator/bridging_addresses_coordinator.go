@@ -26,8 +26,14 @@ func NewBridgingAddressesCoordinator(
 	}
 }
 
-func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chainID uint8, cardanoCliBinary string, protocolParams []byte, txOutputs []cardanowallet.TxOutput) ([]common.AddressAndAmount, error) {
-	// Go through all addresses, sort them by the total amount of tokens (descending), and choose the one with the biggest amount
+func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
+	chainID uint8,
+	cardanoCliBinary string,
+	protocolParams []byte,
+	txOutputs []cardanowallet.TxOutput,
+) ([]common.AddressAndAmount, error) {
+	// Go through all addresses, sort them by the total amount of tokens (descending),
+	// and choose the one with the biggest amount
 	// Future improvement:
 	// - add the stake pool saturation awareness
 	if len(txOutputs) == 0 {
@@ -40,9 +46,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 	// TODO: extract methods that do this from cco_utils
 	containsTokens := false
 	remainingTokenAmounts := make(map[string]uint64)
+
 	for _, txOutput := range txOutputs {
-		//remainingAdaAmount += txOutput.Amount
 		remainingTokenAmounts[cardanowallet.AdaTokenName] += txOutput.Amount
+
 		for _, token := range txOutput.Tokens {
 			containsTokens = true
 			remainingTokenAmounts[token.TokenName()] += token.Amount
@@ -93,6 +100,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 		totalTokenAmounts := make(map[string]uint64)
 		for _, utxo := range utxos {
 			totalTokenAmounts[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
 			for _, token := range utxo.Output.Tokens {
 				if remainingTokenAmounts[token.TokenName()] > 0 {
 					totalTokenAmounts[token.TokenName()] += token.Amount
@@ -102,14 +110,15 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 
 		addrAmounts = append(addrAmounts, addrAmount{
 			address:           address,
-			addressIndex:      uint8(i),
+			addressIndex:      uint8(i), //nolint:gosec
 			totalTokenAmounts: totalTokenAmounts,
 		})
 	}
 
 	// Sort by totalAmount descending
 	sort.Slice(addrAmounts, func(i, j int) bool {
-		return addrAmounts[i].totalTokenAmounts[cardanowallet.AdaTokenName] > addrAmounts[j].totalTokenAmounts[cardanowallet.AdaTokenName]
+		return addrAmounts[i].
+			totalTokenAmounts[cardanowallet.AdaTokenName] > addrAmounts[j].totalTokenAmounts[cardanowallet.AdaTokenName]
 	})
 
 	amounts := make([]common.AddressAndAmount, 0)
@@ -119,25 +128,13 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 			break
 		}
 
-		// Check if this address has enough tokens to cover remaining token amounts
-		// canHandleTokens := true
-		// for tokenPolicyID, requiredAmount := range remainingTokenAmounts {
-		// 	if addrAmount.totalTokenAmounts[tokenPolicyID] < requiredAmount {
-		// 		canHandleTokens = false
-		// 		break
-		// 	}
-		// }
-		//
-		// if !canHandleTokens {
-		// 	continue // Skip this address if it can't handle the required tokens
-		// }
-
 		// Update remaining token amounts
 		for tokenName, requiredAmount := range remainingTokenAmounts {
 			if tokenName == cardanowallet.AdaTokenName {
 				// TODO: check if we need GetMinUtxoAmount(chainID)
 				if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount+common.MinUtxoAmountDefault {
 					delete(remainingTokenAmounts, tokenName)
+
 					addrAmount.totalTokenAmounts[tokenName] = requiredAmount
 				} else {
 					remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
@@ -146,6 +143,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 
 			if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount {
 				delete(remainingTokenAmounts, tokenName)
+
 				addrAmount.totalTokenAmounts[tokenName] = requiredAmount
 			} else {
 				remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
@@ -160,7 +158,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 	}
 
 	if remainingTokenAmounts[cardanowallet.AdaTokenName] > 0 {
-		return nil, fmt.Errorf("not enough lovelace funds, required: %d, remaining: %d", requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
+		return nil, fmt.Errorf("not enough lovelace funds, required: %d, remaining: %d",
+			requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
 	}
 
 	if len(remainingTokenAmounts) > 0 {
@@ -170,18 +169,20 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(chain
 	return amounts, nil
 }
 
-func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(chainID uint8, amount uint64) ([]common.AddressAndAmount, error) {
+func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
+	chainID uint8, amount uint64,
+) ([]common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
 	// Future improvement:
 	// - add the stake pool saturation awareness
-
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 	amounts := make([]common.AddressAndAmount, 0)
 
 	minAmount := uint64(0)
 	index := 0
+
 	for i, address := range addresses {
 		utxos, err := db.GetAllTxOutputs(address, true)
 		if err != nil {
@@ -194,7 +195,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(chain
 		}
 
 		if amount == 0 {
-			amounts = append(amounts, common.AddressAndAmount{Address: address, AddressIndex: uint8(i)})
+			amounts = append(amounts, common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}) //nolint:gosec
+
 			return amounts, nil
 		}
 
@@ -206,7 +208,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(chain
 		}
 	}
 
-	amounts = append(amounts, common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)})
+	amounts = append(amounts,
+		common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}) //nolint:gosec
 
 	return amounts, nil
 }

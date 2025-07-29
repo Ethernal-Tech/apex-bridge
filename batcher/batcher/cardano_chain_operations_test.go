@@ -22,6 +22,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -104,7 +105,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -141,104 +142,61 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	validValidatorsChainData := []eth.ValidatorChainData{
+	cliUtils := cardanowallet.NewCliUtils(wallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+	}
+	script = cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
 		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
-			},
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64()},
 		},
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("no vkey for multisig address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput{
-				{
-					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0x0012"),
-					},
-					Output: indexer.TxOutput{
-						Amount: 2000000,
-					},
-				},
-			}, error(nil)).Twice()
-		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
@@ -249,42 +207,74 @@ func TestGenerateBatchTransaction(t *testing.T) {
 					},
 				},
 			}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
-	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2_000_000,
+						Amount: 4000000,
 					},
 				},
-			}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0xFF"),
+						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 300_000,
+						Amount: 2000000,
 					},
 				},
-			}, error(nil)).Once()
+			}, error(nil))
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get payment policy script for address")
+	})
+
+	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get fee policy script for chain")
+	})
+
+	t.Run("should pass", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
@@ -294,7 +284,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
 		require.NoError(t, err)
 
-		signatures, err := cco.SignBatchTransaction(&core.GeneratedBatchTxData{TxRaw: txRaw})
+		signatures, err := cco.SignBatchTransaction(&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true})
 		require.NoError(t, err)
 		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
@@ -317,7 +307,7 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -353,68 +343,84 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	validValidatorsChainData := []eth.ValidatorChainData{
+	cliUtils := cardanowallet.NewCliUtils(wallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+	}
+	script = cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
 		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
-			},
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 		},
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+	t.Run("GetStakePolicyScript returns false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get stake policy script for address")
+	})
+
+	t.Run("GetStakeAddressFromIndex returns false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("", false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get stake address from index")
+	})
+
+	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("no vkey for multisig address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
@@ -424,71 +430,86 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 						Amount: 2000000,
 					},
 				},
-			}, error(nil)).Twice()
-		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
+			}, error(nil)).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput(nil), testError).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
-	t.Run("GenerateBatchTransaction invalid fee amount", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2_000_000,
+						Amount: 5000000,
 					},
 				},
-			}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0xFF"),
+						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 300_000,
+						Amount: 2000000,
 					},
 				},
-			}, error(nil)).Once()
+			}, error(nil))
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.ErrorContains(t, err, "invalid amount")
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get payment policy script for address")
+	})
+
+	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get fee policy script for chain")
+	})
+
+	t.Run("should pass", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
 	})
 
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
@@ -498,7 +519,7 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		signatures, err := cco.SignBatchTransaction(
 			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
 		require.NoError(t, err)
-		require.NotNil(t, signatures.Multisig)
+		require.Nil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
 		require.NotNil(t, signatures.MultsigStake)
 	})
@@ -521,7 +542,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -566,68 +587,84 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	validValidatorsChainData := []eth.ValidatorChainData{
+	cliUtils := cardanowallet.NewCliUtils(wallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+	}
+	script = cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
 		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
-			},
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 		},
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+	t.Run("GetStakePolicyScript returns false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get stake policy script for address")
+	})
+
+	t.Run("GetStakeAddressFromIndex returns false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("", false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get stake address from index")
+	})
+
+	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("no vkey for multisig address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
@@ -637,25 +674,86 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 						Amount: 2000000,
 					},
 				},
-			}, error(nil)).Twice()
+			}, error(nil)).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+	})
+
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 5000000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil))
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return([]*indexer.TxInputOutput(nil), testError).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
 
-		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
+		require.ErrorContains(t, err, "failed to get payment policy script for address")
+	})
+
+	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get fee policy script for chain")
+	})
+
+	t.Run("should pass", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
 	})
 
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
@@ -663,7 +761,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.NoError(t, err)
 
 		signatures, err := cco.SignBatchTransaction(
-			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true, IsStakeSignNeeded: true})
 		require.NoError(t, err)
 		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
@@ -687,7 +785,7 @@ func Test_createBatchInitialData(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -708,62 +806,11 @@ func Test_createBatchInitialData(t *testing.T) {
 
 	cco.txProvider = txProviderMock
 
-	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	validValidatorsChainData := []eth.ValidatorChainData{
-		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
-			},
-		},
-	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
-
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
-
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.ErrorContains(t, err, "test err")
-	})
-
-	t.Run("no vkey for multisig address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int), new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
-
-	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
-			{
-				Key: [4]*big.Int{
-					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
-				},
-			},
-		}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
-
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
-		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
-	})
 
 	t.Run("GetProtocolParameters error", func(t *testing.T) {
 		desiredErr := errors.New("hello")
@@ -775,25 +822,13 @@ func Test_createBatchInitialData(t *testing.T) {
 			txProviderMock.ReturnDefaultParameters = true
 		}()
 
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
-			Return(validValidatorsChainData, nil).Once()
-
-		_, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		_, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.ErrorIs(t, err, desiredErr)
 	})
 
 	t.Run("good", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).
-			Return(validValidatorsChainData, nil).Once()
-
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
-
-		//assert.Contains(t, data.MultisigAddr, "addr_test1")
-		//assert.Contains(t, data.FeeAddr, "addr_test1")
-		//assert.NotEqual(t, data.MultisigAddr, data.FeeAddr)
 		assert.Equal(t, batchID, data.BatchNonceID)
 		assert.Greater(t, len(data.Metadata), 5)
 	})
@@ -814,7 +849,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", false, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", false, false)
 	require.NoError(t, err)
 
 	configRaw := json.RawMessage([]byte(`{
@@ -841,22 +876,39 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	testError := errors.New("test err")
 	batchID := uint64(1)
 	destinationChain := common.ChainIDStrVector
-	validValidatorsChainData := []eth.ValidatorChainData{
+	cliUtils := cardanowallet.NewCliUtils(wallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+	}
+	script = cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(1))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
 		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-			},
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 		},
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -870,32 +922,26 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{})
+		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
 		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{})
+		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
 		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("GenerateConsolidationTransaction fee multisig does not have any utxo", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GetFeeMultisigPolicyScript returns false", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
@@ -910,19 +956,19 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(nil, false).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{})
-		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		require.ErrorContains(t, err, "failed to get fee policy script")
 	})
 
-	t.Run("GenerateConsolidationTransaction should pass", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+	t.Run("GenerateConsolidationTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -930,11 +976,23 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2_000_000,
+						Amount: 2000000,
 					},
 				},
 			}, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Once()
+
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
+		require.NoError(t, err)
+
+		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+	})
+
+	t.Run("GenerateConsolidationTransaction should pass", func(t *testing.T) {
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
@@ -945,11 +1003,24 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 					},
 				},
 			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2_000_000,
+					},
+				},
+			}, error(nil)).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 
-		data, err := cco.createBatchInitialData(ctx, bridgeSmartContractMock, destinationChain, batchID)
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{})
+		result, err := cco.generateConsolidationTransaction(data, addressAndAmountRet)
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -957,37 +1028,42 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is more utxos than maxUtxo", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 50)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10)
 
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{}, "bbb")
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 46, len(multisigUtxos))
-		require.Equal(t, 4, len(feeUtxos))
+		require.Equal(t, 8, len(feeUtxos))
+		require.Equal(t, 42, len(multisigUtxos[0]))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3)
 
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return(feePayerUtxoOutputs, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return(feePayerUtxoOutputs, error(nil))
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{}, "bbb")
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 30, len(multisigUtxos))
+		require.Equal(t, 30, len(multisigUtxos[0]))
 		require.Equal(t, 3, len(feeUtxos))
 	})
 
 	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		batchNonceID := uint64(1)
 
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(30_010, 100)
@@ -1004,26 +1080,29 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return(feePayerUtxoOutputs, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
-			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})
+
 }
 
 func TestSkylineConsolidation(t *testing.T) {
@@ -1041,10 +1120,8 @@ func TestSkylineConsolidation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", false, false)
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", false, false)
 	require.NoError(t, err)
-
-	_ = wallet
 
 	token1, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", true)
 	token2, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
@@ -1077,12 +1154,30 @@ func TestSkylineConsolidation(t *testing.T) {
 			TokenName:  token1.String(),
 		},
 	}
-	validValidatorsChainData := []eth.ValidatorChainData{
+	cliUtils := cardanowallet.NewCliUtils(wallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+	}
+	script = cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(1))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
 		{
-			Key: [4]*big.Int{
-				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
-				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
-			},
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": 1_000_000, token1.String(): 10},
 		},
 	}
 
@@ -1093,34 +1188,37 @@ func TestSkylineConsolidation(t *testing.T) {
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 100, token1, token2)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 10)
 
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{}, "bbb")
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, int(cco.config.MaxUtxoCount)-len(feeUtxos), len(multisigUtxos))
-		require.Equal(t, 4, len(feeUtxos))
+		require.Equal(t, int(cco.config.MaxUtxoCount)-len(feeUtxos), len(multisigUtxos[0]))
+		require.Equal(t, 7, len(feeUtxos))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(10, 30, token1, token2)
 		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(10, 3)
 
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{}, "bbb")
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 15, len(multisigUtxos))
+		require.Equal(t, 15, len(multisigUtxos[0]))
 		require.Equal(t, 3, len(feeUtxos))
 	})
 
 	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 
 		batchNonceID := uint64(1)
 
@@ -1140,21 +1238,24 @@ func TestSkylineConsolidation(t *testing.T) {
 			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 55}, nil).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
-		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
@@ -1170,7 +1271,6 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 	}
 	multisigAddr := "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k"
 	feeAddr := "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8"
-	customAddr := "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu"
 	cco := &CardanoChainOperations{
 		config: &cardano.CardanoChainConfig{
 			MaxFeeUtxoCount: 1,
@@ -1195,11 +1295,13 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 
 		_, _, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr, &batchInitialData{
 			ProtocolParams: protocolParams,
-		}, cardano.TxOutputs{})
+		})
 		require.ErrorContains(t, err, "fee")
 	})
 
 	t.Run("pass", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		multisigUtxos := []*indexer.TxInputOutput{
 			{
 				Input: indexer.TxInput{
@@ -1267,22 +1369,18 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(feeUtxos, nil).Once()
 
 		mutlisigUtxosRes, feeUtxosRes, err := cco.getUTXOsForNormalBatch(
-			[]common.AddressAndAmount{}, multisigAddr, &batchInitialData{
+			[]common.AddressAndAmount{{
+				AddressIndex:  0,
+				Address:       multisigAddr,
+				TokensAmounts: map[string]uint64{},
+			}}, feeAddr, &batchInitialData{
 				ProtocolParams: protocolParams,
-			}, cardano.TxOutputs{
-				Outputs: []cardanowallet.TxOutput{
-					cardanowallet.NewTxOutput(customAddr, 100, cardanowallet.NewTokenAmount(token, 200)),
-				},
-				Sum: map[string]uint64{
-					cardanowallet.AdaTokenName: 100,
-					token.String():             200,
-				},
 			})
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
 			multisigUtxos[0], multisigUtxos[2],
-		}, mutlisigUtxosRes)
+		}, mutlisigUtxosRes[0])
 		require.Equal(t, feeUtxos[:cco.config.MaxFeeUtxoCount], feeUtxosRes)
 	})
 }

@@ -721,8 +721,8 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 
 		alloc := allocateInputsForConsolidation(inputs, 3)
 		require.Equal(t, []AddressConsolidationData{
-			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true},
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 2},
+			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true},
 		}, alloc)
 	})
 }

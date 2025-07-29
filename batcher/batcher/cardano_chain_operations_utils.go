@@ -327,7 +327,9 @@ type AddressConsolidationData struct {
 	Utxos        []*indexer.TxInputOutput
 }
 
-func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) []AddressConsolidationData {
+// Chose inputs for consolidation proportionally depending of how many there are for every address
+// and the max number allowed.
+func allocateInputsForConsolidation(inputs []AddressConsolidationData, maxUtxoCount int) []AddressConsolidationData {
 	total := 0
 	for _, input := range inputs {
 		total += input.UtxoCount
@@ -337,7 +339,7 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) 
 	alloc := make([]AddressConsolidation, n)
 	result := make([]AddressConsolidationData, n)
 
-	if total <= max {
+	if total <= maxUtxoCount {
 		for i, input := range inputs {
 			result[i] = AddressConsolidationData{
 				Address:      input.Address,
@@ -346,6 +348,7 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) 
 				IsFee:        input.IsFee,
 			}
 		}
+
 		return result
 	}
 
@@ -353,7 +356,7 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) 
 
 	// First, assign the integer part of the proportional share
 	for i, input := range inputs {
-		share := (float64(input.UtxoCount) / float64(total)) * float64(max)
+		share := (float64(input.UtxoCount) / float64(total)) * float64(maxUtxoCount)
 		alloc[i] = AddressConsolidation{
 			Address:      input.Address,
 			AddressIndex: input.AddressIndex,
@@ -367,11 +370,12 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) 
 	}
 
 	// Assign remaining utxos using the largest remainders
-	remaining := max - assigned
+	remaining := maxUtxoCount - assigned
 	if remaining > 0 {
 		sort.SliceStable(alloc, func(i, j int) bool {
 			return alloc[i].Remainder > alloc[j].Remainder
 		})
+
 		for i := 0; i < remaining; i++ {
 			alloc[i%len(alloc)].Assigned += 1
 		}
@@ -402,16 +406,19 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, max int) 
 
 	if feeIndex != -1 {
 		for {
-			result[maxIndex].UtxoCount -= 1
-			result[feeIndex].UtxoCount += 1
+			if result[feeIndex].UtxoCount < inputs[0].UtxoCount {
+				result[maxIndex].UtxoCount -= 1
+				result[feeIndex].UtxoCount += 1
+			} else {
+				break
+			}
 
-			// TODO: Update this, it's not the best way to do this
+			// TODO: Not sure how to update this, it's not the best way to do it
+			// Should we have the PotentialFeeDefault + MinUtxoAmountDefault?
 			if calcualteUtxoSum(inputs[0].Utxos[:result[feeIndex].UtxoCount]) >= 2*common.MinUtxoAmountDefault {
 				break
 			}
 		}
-	} else {
-
 	}
 
 	return result

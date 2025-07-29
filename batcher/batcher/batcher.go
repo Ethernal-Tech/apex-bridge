@@ -129,7 +129,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
+		ctx, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)

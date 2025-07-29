@@ -47,7 +47,14 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, bridgingAddressesManager, bridgingAddressesCoordinator, logger)
+			operations, err = getCardanoOperations(
+				chainConfig,
+				cardanoIndexerDbs,
+				secretsManager,
+				bridgingAddressesManager,
+				bridgingAddressesCoordinator,
+				logger,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -100,7 +107,14 @@ func getCardanoOperations(
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, bridgingAddressesManager, bridgingAddressesCoordinator, logger)
+		config.ChainSpecific,
+		db,
+		secretsManager,
+		config.ChainID,
+		bridgingAddressesManager,
+		bridgingAddressesCoordinator,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}

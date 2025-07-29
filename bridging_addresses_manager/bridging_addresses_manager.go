@@ -115,56 +115,67 @@ func (b *BridgingAddressesManagerImpl) GetAllStakeAddresses(chainID uint8) []str
 	return b.bridgingStakeAddresses[chainID]
 }
 
-func (b *BridgingAddressesManagerImpl) GetPaymentPolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool) {
+func (b *BridgingAddressesManagerImpl) GetPaymentPolicyScript(
+	chainID uint8, index uint8,
+) (*cardanowallet.PolicyScript, bool) {
 	scripts, ok := b.bridgingPaymentPolicyScripts[chainID]
 	if !ok {
 		return nil, false
 	}
-	if index >= uint8(len(scripts)) {
+
+	if int(index) >= len(scripts) {
 		return nil, false
 	}
+
 	return scripts[index], true
 }
 
-func (b *BridgingAddressesManagerImpl) GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool) {
+func (b *BridgingAddressesManagerImpl) GetStakePolicyScript(
+	chainID uint8, index uint8,
+) (*cardanowallet.PolicyScript, bool) {
 	scripts := b.bridgingStakePolicyScripts[chainID]
-	if index >= uint8(len(scripts)) {
+	if int(index) >= len(scripts) {
 		return nil, false
 	}
+
 	return scripts[index], true
 }
 
 func (b *BridgingAddressesManagerImpl) GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool) {
 	addrs := b.bridgingPaymentAddresses[chainID]
-	if index >= uint8(len(addrs)) {
+	if int(index) >= len(addrs) {
 		return "", false
 	}
+
 	return addrs[index], true
 }
 
 func (b *BridgingAddressesManagerImpl) GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool) {
 	for i, addr := range b.bridgingPaymentAddresses[chainID] {
 		if addr == address {
-			return uint8(i), true
+			return uint8(i), true //nolint:gosec
 		}
 	}
+
 	return 0, false
 }
 
 func (b *BridgingAddressesManagerImpl) GetStakeAddressFromIndex(chainID uint8, index uint8) (string, bool) {
 	addrs := b.bridgingStakeAddresses[chainID]
-	if index >= uint8(len(addrs)) {
+	if int(index) >= len(addrs) {
 		return "", false
 	}
+
 	return addrs[index], true
 }
 
 func (b *BridgingAddressesManagerImpl) GetStakeAddressIndex(chainID uint8, address string) (uint8, bool) {
 	for i, addr := range b.bridgingStakeAddresses[chainID] {
 		if addr == address {
-			return uint8(i), true
+			return uint8(i), true //nolint:gosec
 		}
 	}
+
 	return 0, false
 }
 
@@ -177,5 +188,6 @@ func (b *BridgingAddressesManagerImpl) GetFeeMultisigPolicyScript(chainID uint8)
 	if script == nil {
 		return nil, false
 	}
+
 	return script, true
 }
