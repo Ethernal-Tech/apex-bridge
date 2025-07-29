@@ -27,13 +27,6 @@ type validatorSetChange struct {
 	sync.Mutex
 }
 
-func newValidatorSetChange() *validatorSetChange {
-	return &validatorSetChange{
-		validators: nil,
-		finalized:  false,
-	}
-}
-
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	operations                  core.ChainOperations
@@ -63,7 +56,7 @@ func NewBatcher(
 		lastBatch:                   lastBatchData{},
 		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
-		newValidatorSet:             newValidatorSetChange(),
+		newValidatorSet:             &validatorSetChange{},
 	}
 }
 

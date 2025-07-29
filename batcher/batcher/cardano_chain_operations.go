@@ -662,7 +662,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		return nil, err
 	}
 
-	if isFeeOnly && len(feeUtxos) == 0 {
+	if len(feeUtxos) == 0 {
 		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
