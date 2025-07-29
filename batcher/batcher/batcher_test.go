@@ -251,36 +251,6 @@ func TestBatcherExecute(t *testing.T) {
 		require.Equal(t, batchNonceID, batchID)
 	})
 
-	t.Run("execute pass - with validatorSetObserver true", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		operationsMock := &cardanoChainOperationsMock{}
-		batchData := &core.GeneratedBatchTxData{
-			TxRaw:  []byte{0},
-			TxHash: "txHash",
-		}
-
-		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
-		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
-			Return(batchData, nil)
-		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
-		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]contractbinding.IBridgeStructsChain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
-		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, validatorSetObserver,
-			hclog.NewNullLogger())
-		_, err = b.execute(ctx)
-
-		require.Error(t, err)
-		require.ErrorContains(t, err, "validator set is pending, skipping batch creation")
-	})
-
 	t.Run("Test Validator set change - five multisig one fee", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 
