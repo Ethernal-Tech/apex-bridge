@@ -39,6 +39,10 @@ type deployContractParams struct {
 	evmPrivateKey    string
 	privateKeyConfig string
 
+	repositoryURL string
+	clone         bool
+	branchName    string
+
 	evmNodeURL   string
 	evmDynamicTx bool
 }
@@ -55,8 +59,6 @@ func (ip *deployContractParams) validateFlags() error {
 	if ip.contractDir == "" {
 		return fmt.Errorf("contract directory not specified: --%s", contractDirFlag)
 	}
-
-	ip.contractDir = filepath.Clean(ip.contractDir)
 
 	if ip.dependenciesAddressesStr != "" {
 		dependenciesAddrs, err := parseAddresses(ip.dependenciesAddressesStr)
@@ -80,6 +82,10 @@ func (ip *deployContractParams) validateFlags() error {
 
 	if ip.evmPrivateKey == "" && ip.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
+	}
+
+	if ip.clone && !common.IsValidHTTPURL(ip.repositoryURL) {
+		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
 	}
 
 	return nil
@@ -141,6 +147,27 @@ func (ip *deployContractParams) setFlags(cmd *cobra.Command) {
 		evmDynamicTxFlagDesc,
 	)
 
+	cmd.Flags().BoolVar(
+		&ip.clone,
+		evmCloneEvmRepoFlag,
+		false,
+		evmCloneEvmRepoFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.branchName,
+		evmBranchNameFlag,
+		"main",
+		evmBranchNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.repositoryURL,
+		repositoryURLFlag,
+		"",
+		repositoryURLFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
@@ -148,17 +175,25 @@ func (ip *deployContractParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
+	contractDir := filepath.Clean(ip.contractDir)
 
 	_, _ = outputter.Write(fmt.Appendf(nil, "Building the smart contracts from %s repository has started...", ip.contractDir)) //nolint:lll
 	outputter.WriteOutput()
 
-	_, _ = common.ExecuteCLICommand("npm", []string{"install"}, ip.contractDir)
+	if ip.clone {
+		newContractDir, err := cloneAndBuildRepo(contractDir, ip.repositoryURL, ip.branchName, outputter)
+		if err != nil {
+			return nil, err
+		}
 
-	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, ip.contractDir); err != nil {
-		return nil, fmt.Errorf("failed to compile smart contracts: %w", err)
+		contractDir = newContractDir
+	} else {
+		if err := buildRepo(contractDir, outputter); err != nil {
+			return nil, err
+		}
 	}
 
-	artifacts, err := ethcontracts.LoadArtifacts(ip.contractDir, []string{ercProxyContractName, ip.contractName}...)
+	artifacts, err := ethcontracts.LoadArtifacts(contractDir, []string{ercProxyContractName, ip.contractName}...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +269,41 @@ func (ip *deployContractParams) Execute(
 	return &cmdResult{
 		Contracts: contracts,
 	}, nil
+}
+
+func cloneAndBuildRepo(
+	contractDir string, repositoryURL, branchName string, outputter common.OutputFormatter,
+) (string, error) {
+	lastSlashIndex := strings.LastIndex(strings.TrimSuffix(repositoryURL, "/"), "/")
+	if lastSlashIndex == -1 {
+		return "", fmt.Errorf("invalid repository url: %s", repositoryURL)
+	}
+
+	repositoryName := repositoryURL[lastSlashIndex+1:]
+
+	_, _ = outputter.Write(fmt.Appendf(nil, "Cloning and building the smart contracts repository %s has been started...", repositoryURL)) //nolint:lll
+	outputter.WriteOutput()
+
+	newDir, err := ethcontracts.CloneAndBuildContracts(
+		contractDir, repositoryURL, repositoryName, evmRepositoryArtifactsDir, branchName)
+	if err != nil {
+		return "", fmt.Errorf("failed to clone and build contracts: %w", err)
+	}
+
+	return newDir, nil
+}
+
+func buildRepo(contractDir string, outputter common.OutputFormatter) error {
+	if _, err := common.ExecuteCLICommand("npm", []string{"install"}, contractDir); err != nil {
+		_, _ = outputter.Write(fmt.Appendf(nil, "Failed to execute npm install: %s", err.Error()))
+		outputter.WriteOutput()
+	}
+
+	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, contractDir); err != nil {
+		return fmt.Errorf("failed to compile smart contracts: %w", err)
+	}
+
+	return nil
 }
 
 func parseAddresses(input string) ([]string, error) {

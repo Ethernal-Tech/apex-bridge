@@ -165,23 +165,12 @@ func (ip *upgradeEVMParams) Execute(
 	}
 
 	if ip.clone {
-		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
-		outputter.WriteOutput()
-
-		lastSlashIndex := strings.LastIndex(strings.TrimSuffix(ip.repositoryURL, "/"), "/")
-		if lastSlashIndex == -1 {
-			return nil, fmt.Errorf("invalid --%s", repositoryURLFlag)
-		}
-
-		repositoryName := ip.repositoryURL[lastSlashIndex+1:]
-
-		newDir, err := ethcontracts.CloneAndBuildContracts(
-			dir, ip.repositoryURL, repositoryName, evmRepositoryArtifactsDir, ip.branchName)
+		newContractDir, err := cloneAndBuildRepo(dir, ip.repositoryURL, ip.branchName, outputter)
 		if err != nil {
 			return nil, err
 		}
 
-		dir = newDir
+		dir = newContractDir
 	}
 
 	artifacts, err := ethcontracts.LoadArtifacts(
