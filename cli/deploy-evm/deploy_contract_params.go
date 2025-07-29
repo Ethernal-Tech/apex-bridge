@@ -149,8 +149,10 @@ func (ip *deployContractParams) Execute(
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	_, _ = outputter.Write([]byte("Building the smart contracts repository has started..."))
+	_, _ = outputter.Write(fmt.Appendf(nil, "Building the smart contracts from %s repository has started...", ip.contractDir)) //nolint:lll
 	outputter.WriteOutput()
+
+	_, _ = common.ExecuteCLICommand("npm", []string{"install"}, ip.contractDir)
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, ip.contractDir); err != nil {
 		return nil, fmt.Errorf("failed to compile smart contracts: %w", err)
