@@ -685,75 +685,30 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	}
 
 	var (
-		txRaw   []byte
-		txHash  string
-		outputs []cardanowallet.TxOutput
+		txRaw  []byte
+		txHash string
 	)
 
 	if isFeeOnly {
 		// last transaction sends funds from active fee key to new fee key
-		outputs = []cardanowallet.TxOutput{
-			{
-				Addr:   newAddresses.Fee.Payment,
-				Amount: 0,
-				Tokens: []cardanowallet.TokenAmount{},
-			},
+		output := cardanowallet.TxOutput{
+			Addr:   newAddresses.Fee.Payment,
+			Amount: 0,
+			Tokens: []cardanowallet.TokenAmount{},
 		}
 
-		// calculate how much to transfer to new fee key
-		feeExhaust, err := cardano.CalculateFeeExhaust(
+		txRaw, txHash, err = cardano.CreateOnlyFeeTx(
 			cco.cardanoCliBinary,
 			uint(cco.config.NetworkMagic),
 			protocolParams,
 			slotNumber+cco.config.TTLSlotNumberInc,
 			metadata,
-			cardano.TxInputInfos{
-				MultiSig: &cardano.TxInputInfo{
-					PolicyScript: activePolicy.Fee.Payment,
-					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
-				},
-				MultiSigFee: &cardano.TxInputInfo{
-					PolicyScript: activePolicy.Fee.Payment,
-					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
-				},
+			&cardano.TxInputInfo{
+				PolicyScript: activePolicy.Fee.Payment,
+				Address:      activeAddresses.Fee.Payment,
+				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
 			},
-			outputs,
-		)
-		if err != nil {
-			if errors.Is(err, cardano.ErrNotEnoughFee) {
-				return &core.GeneratedBatchTxData{
-					BatchType: uint8(ValidatorSetFinal),
-					TxRaw:     []byte{},
-					TxHash:    "",
-				}, nil
-			}
-
-			return nil, err
-		}
-
-		outputs[0].Amount = feeExhaust
-
-		txRaw, txHash, err = cardano.CreateTx(
-			cco.cardanoCliBinary,
-			uint(cco.config.NetworkMagic),
-			protocolParams,
-			slotNumber+cco.config.TTLSlotNumberInc,
-			metadata,
-			cardano.TxInputInfos{
-				MultiSig: &cardano.TxInputInfo{
-					PolicyScript: activePolicy.Fee.Payment,
-					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
-				},
-				MultiSigFee: &cardano.TxInputInfo{
-					PolicyScript: activePolicy.Fee.Payment,
-					Address:      activeAddresses.Fee.Payment,
-					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
-				},
-			},
-			outputs,
+			output,
 		)
 		if err != nil {
 			return nil, err
@@ -764,7 +719,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			sum += u.Output.Amount
 		}
 
-		outputs = []cardanowallet.TxOutput{
+		outputs := []cardanowallet.TxOutput{
 			{
 				Addr:   newAddresses.Multisig.Payment,
 				Amount: sum,
@@ -826,15 +781,7 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 
 	if len(multisigUtxos) == 0 {
 		isFeeOnly = true
-
-		minFees := min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))
-		fees := feeUtxos[:minFees] //nolint:gosec
-
-		multisigUtxos = feeUtxos[minFees:]
-		maxUtxosCnt := min(getMaxUtxoCount(cco.config, minFees), len(multisigUtxos))
-
-		multisigUtxos = multisigUtxos[:maxUtxosCnt]
-		feeUtxos = fees
+		feeUtxos = feeUtxos[:min(cco.config.MaxUtxoCount, uint(len(feeUtxos)))]
 
 		return
 	}
