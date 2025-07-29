@@ -827,8 +827,12 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 	if len(multisigUtxos) == 0 {
 		isFeeOnly = true
 
-		fees := feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
-		maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(fees)), len(multisigUtxos))
+		minFees := min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))
+		fees := feeUtxos[:minFees] //nolint:gosec
+
+		multisigUtxos = feeUtxos[minFees:]
+		maxUtxosCnt := min(getMaxUtxoCount(cco.config, minFees), len(multisigUtxos))
+
 		multisigUtxos = multisigUtxos[:maxUtxosCnt]
 		feeUtxos = fees
 
