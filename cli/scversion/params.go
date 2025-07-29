@@ -60,6 +60,14 @@ func (ip *scVersionParams) setFlags(cmd *cobra.Command) {
 
 func (ip *scVersionParams) Execute(ctx context.Context, outputter common.OutputFormatter) (
 	common.ICommandResult, error) {
+	data, err := common.Keccak256([]byte("version()"))
+	if err != nil {
+		_, _ = outputter.Write([]byte("Error calculating Keccak256: " + err.Error() + "\n"))
+		outputter.WriteOutput()
+
+		return &CmdResult{}, nil
+	}
+
 	for _, scAddrStr := range ip.scAddresses {
 		scParams := strings.SplitN(scAddrStr, ":", 2)
 
@@ -74,9 +82,8 @@ func (ip *scVersionParams) Execute(ctx context.Context, outputter common.OutputF
 		scName := scParams[1]
 
 		response, err := ip.ethTxHelper.GetClient().CallContract(context.Background(), ethereum.CallMsg{
-			To: &addr,
-			// bytes4(keccak256("version()"))
-			Data: []byte{0x54, 0xfd, 0x4d, 0x50},
+			To:   &addr,
+			Data: data,
 		}, nil)
 
 		if err != nil {
