@@ -31,6 +31,8 @@ func NewBatcherManager(
 	cardanoIndexerDbs map[string]indexer.Database,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	bridgingAddressesManager common.BridgingAddressesManager,
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
 	var (
@@ -45,7 +47,14 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
+			operations, err = getCardanoOperations(
+				chainConfig,
+				cardanoIndexerDbs,
+				secretsManager,
+				bridgingAddressesManager,
+				bridgingAddressesCoordinator,
+				logger,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -66,6 +75,8 @@ func NewBatcherManager(
 			operations,
 			bridgeSmartContract,
 			bridgingRequestStateUpdater,
+			bridgingAddressesManager,
+			bridgingAddressesCoordinator,
 			chainLogger)
 
 		batchers = append(batchers, batcher)
@@ -86,7 +97,9 @@ func (bm *BatchManagerImpl) Start() {
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, bridgingAddressesManager common.BridgingAddressesManager,
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
+	logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
@@ -94,7 +107,14 @@ func getCardanoOperations(
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+		config.ChainSpecific,
+		db,
+		secretsManager,
+		config.ChainID,
+		bridgingAddressesManager,
+		bridgingAddressesCoordinator,
+		logger,
+	)
 	if err != nil {
 		return nil, err
 	}

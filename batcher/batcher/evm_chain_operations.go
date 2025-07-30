@@ -61,7 +61,6 @@ func NewEVMChainOperations(
 // GenerateBatchTransaction implements core.ChainOperations.
 func (cco *EVMChainOperations) GenerateBatchTransaction(
 	ctx context.Context,
-	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,

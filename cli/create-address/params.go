@@ -148,7 +148,7 @@ func (ip *createAddressParams) Execute(
 		return nil, err
 	}
 
-	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
+	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, 0)
 
 	addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
 	if err != nil {
