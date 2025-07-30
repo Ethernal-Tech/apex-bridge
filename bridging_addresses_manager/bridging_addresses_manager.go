@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 )
 
 type BridgingAddressesManagerImpl struct {
@@ -22,6 +23,7 @@ type BridgingAddressesManagerImpl struct {
 	cardanoChains       map[string]*oracleCore.CardanoChainConfig
 	ctx                 context.Context
 	bridgeSmartContract eth.IBridgeSmartContract
+	logger              hclog.Logger
 }
 
 var _ common.BridgingAddressesManager = (*BridgingAddressesManagerImpl)(nil)
@@ -30,6 +32,7 @@ func NewBridgingAdressesManager(
 	ctx context.Context,
 	cardanoChains map[string]*oracleCore.CardanoChainConfig,
 	bridgeSmartContract eth.IBridgeSmartContract,
+	logger hclog.Logger,
 ) (common.BridgingAddressesManager, error) {
 	registeredChains, err := bridgeSmartContract.GetAllRegisteredChains(ctx)
 	if err != nil {
@@ -92,6 +95,9 @@ func NewBridgingAdressesManager(
 
 			feeMultisigAddresses[registeredChain.Id] = addrs.Fee.Payment
 		}
+
+		logger.Debug("Bridging addresses manager initialized for %s chain with %d payment addresses: %v",
+			chainIDStr, len(bridgingPaymentAddresses[registeredChain.Id]), bridgingPaymentAddresses[registeredChain.Id])
 	}
 
 	return &BridgingAddressesManagerImpl{
@@ -104,6 +110,7 @@ func NewBridgingAdressesManager(
 		cardanoChains:                cardanoChains,
 		ctx:                          ctx,
 		bridgeSmartContract:          bridgeSmartContract,
+		logger:                       logger,
 	}, nil
 }
 

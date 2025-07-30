@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -31,6 +32,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 			context.Background(),
 			cardanoChains,
 			bridgeSmartContractMock,
+			hclog.NewNullLogger(),
 		)
 
 		require.Error(t, err)
@@ -60,6 +62,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 			context.Background(),
 			cardanoChains,
 			bridgeSmartContractMock,
+			hclog.NewNullLogger(),
 		)
 
 		require.ErrorIs(t, err, testError)
@@ -96,6 +99,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 		context.Background(),
 		cardanoChains,
 		bridgeSmartContractMock,
+		hclog.NewNullLogger(),
 	)
 
 	require.NoError(t, err)

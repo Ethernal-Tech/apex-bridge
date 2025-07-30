@@ -181,13 +181,14 @@ func NewValidatorComponents(
 		ctx,
 		appConfig.CardanoChains,
 		bridgeSmartContract,
+		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridging addresses component: %w", err)
 	}
 
 	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
-		bridgingAddressesManager, cardanoIndexerDbs)
+		bridgingAddressesManager, cardanoIndexerDbs, logger)
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,

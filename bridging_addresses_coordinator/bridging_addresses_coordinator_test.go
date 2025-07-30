@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +34,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
-		})
+		}, hclog.NewNullLogger())
 
 		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, "", []byte{}, []cardanowallet.TxOutput{
 			{
@@ -66,7 +67,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
-		})
+		}, hclog.NewNullLogger())
 
 		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, "", []byte{}, []cardanowallet.TxOutput{
 			{
@@ -109,7 +110,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
-		})
+		}, hclog.NewNullLogger())
 
 		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, []cardanowallet.TxOutput{
 			{
@@ -153,7 +154,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
-		})
+		}, hclog.NewNullLogger())
 
 		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, []cardanowallet.TxOutput{
 			{
@@ -194,7 +195,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
-		})
+		}, hclog.NewNullLogger())
 
 		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, []cardanowallet.TxOutput{
 			{

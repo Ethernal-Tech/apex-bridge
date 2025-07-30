@@ -7,11 +7,13 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 )
 
 type BridgingAddressesCoordinatorImpl struct {
 	bridgingAddressesManager common.BridgingAddressesManager
 	dbs                      map[string]indexer.Database
+	logger                   hclog.Logger
 }
 
 var _ common.BridgingAddressesCoordinator = (*BridgingAddressesCoordinatorImpl)(nil)
@@ -19,10 +21,12 @@ var _ common.BridgingAddressesCoordinator = (*BridgingAddressesCoordinatorImpl)(
 func NewBridgingAddressesCoordinator(
 	bridgingAddressesManager common.BridgingAddressesManager,
 	dbs map[string]indexer.Database,
+	logger hclog.Logger,
 ) common.BridgingAddressesCoordinator {
 	return &BridgingAddressesCoordinatorImpl{
 		bridgingAddressesManager: bridgingAddressesManager,
 		dbs:                      dbs,
+		logger:                   logger,
 	}
 }
 
@@ -43,7 +47,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
-	// TODO: extract methods that do this from cco_utils
+	// TODO: should we extract methods that do this from cco_utils
 	containsTokens := false
 	remainingTokenAmounts := make(map[string]uint64)
 
