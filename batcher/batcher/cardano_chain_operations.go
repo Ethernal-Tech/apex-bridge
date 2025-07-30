@@ -494,9 +494,11 @@ func (cco *CardanoChainOperations) getCertificateData(
 	)
 
 	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) ||
+			tx.TransactionType == uint8(common.StakeRegDelConfirmedTxType) {
 			certificate, depositAmount, err := getStakingDelegateCertificate(
 				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx)
+
 			if errors.Is(err, errSkipConfirmedTx) {
 				cco.logger.Error("Staking delegation transaction skipped",
 					"tx", eth.ConfirmedTransactionsWrapper{Txs: []eth.ConfirmedTransaction{tx}}, "err", err)
@@ -507,7 +509,6 @@ func (cco *CardanoChainOperations) getCertificateData(
 			}
 
 			certificates = append(certificates, certificate)
-
 			keyRegistrationFee += depositAmount
 		}
 	}

@@ -29,15 +29,22 @@ func getStakingDelegateCertificate(
 		return nil, 0, err
 	}
 
-	// Generate certificates
-	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
-	if err != nil {
-		return nil, 0, err
-	}
+	certs := make([]cardanowallet.ICertificate, 0)
 
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
+	// Generate certificates
+	keyRegDepositAmount := uint64(0)
+	if tx.TransactionType == uint8(common.StakeRegDelConfirmedTxType) {
+		keyRegDepositAmount, err = extractStakeKeyDepositAmount(data.ProtocolParams)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, registrationCert)
 	}
 
 	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
@@ -47,7 +54,7 @@ func getStakingDelegateCertificate(
 
 	return &cardano.CertificatesWithScript{
 		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+		Certificates: append(certs, delegationCert),
 	}, keyRegDepositAmount, nil
 }
 
@@ -58,7 +65,8 @@ func getOutputs(
 
 	for _, transaction := range txs {
 		// stake delegation tx are not processed in this way
-		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) ||
+			transaction.TransactionType == uint8(common.StakeRegDelConfirmedTxType) {
 			continue
 		}
 

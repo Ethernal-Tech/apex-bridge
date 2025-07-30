@@ -18,8 +18,10 @@ import (
 const (
 	stakePoolIDFlag   = "stake-pool"
 	bridgeAddrIdxFlag = "bridge-address-index"
+	doReistrationFlag = "do-registration"
 
 	stakePoolIDFlagDesc   = "identifier of the stake pool to delegate to"
+	doReistrationFlagDesc = "defined if address needs to be registered"
 	bridgeAddrIdxFlagDesc = "index of the bridging address to be delegated"
 )
 
@@ -27,6 +29,7 @@ type stakeDelParams struct {
 	chainID          string
 	bridgeAddrIdx    int8
 	stakePoolID      string
+	doRegistration   bool
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
@@ -92,7 +95,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
-		"delegateAddrToStakePool", chainIDInt, bridgeAddrIndex, params.stakePoolID)
+		"delegateAddrToStakePool", chainIDInt, bridgeAddrIndex, params.stakePoolID, params.doRegistration)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +104,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.DelegateAddrToStakePool(opts, chainIDInt, bridgeAddrIndex, params.stakePoolID)
+			return contract.DelegateAddrToStakePool(opts, chainIDInt, bridgeAddrIndex, params.stakePoolID, params.doRegistration)
 		})
 	if err != nil {
 		return nil, err
@@ -140,6 +143,13 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 		stakePoolIDFlag,
 		"",
 		stakePoolIDFlagDesc,
+	)
+
+	cmd.Flags().BoolVar(
+		&params.doRegistration,
+		doReistrationFlag,
+		false,
+		doReistrationFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
