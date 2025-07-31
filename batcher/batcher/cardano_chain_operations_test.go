@@ -1021,4 +1021,14 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 
 		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
 	})
+
+	t.Run("Test 2 multisig, 2 fee UTXOs", func(t *testing.T) {
+		info := runTest(2, 2)
+
+		require.Equal(t, len(info.Outputs), 2)
+		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
+		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
+
+		require.Equal(t, info.Outputs[0].Amount, uint64(2*1000000))
+	})
 }
