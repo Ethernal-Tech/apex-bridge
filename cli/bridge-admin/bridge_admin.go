@@ -18,6 +18,7 @@ var (
 	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
 	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 	stakeDelegationParamsData            = &stakeDelParams{}
+	stakeDeregistrationParamsData        = &stakeDeregParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -101,6 +102,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(stakeDelegationParamsData),
 	}
+	deregisterStakeCmd := &cobra.Command{
+		Use:   "deregister-stake-address",
+		Short: "deregister stake address",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return stakeDeregistrationParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(stakeDeregistrationParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -112,6 +121,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
 	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
 	stakeDelegationParamsData.RegisterFlags(delegateStakeCmd)
+	stakeDeregistrationParamsData.RegisterFlags(deregisterStakeCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -130,6 +140,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
 		delegateStakeCmd,
+		deregisterStakeCmd,
 	)
 
 	return cmd

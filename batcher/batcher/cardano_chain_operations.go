@@ -489,14 +489,14 @@ func (cco *CardanoChainOperations) getCertificateData(
 	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
 ) (*cardano.CertificatesData, error) {
 	var (
-		certificates       []*cardano.CertificatesWithScript
-		keyRegistrationFee uint64
+		certificates         []*cardano.CertificatesWithScript
+		keyRegistrationFee   uint64
+		keyDeregistrationFee uint64
 	)
 
 	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) ||
-			tx.TransactionType == uint8(common.StakeRegDelConfirmedTxType) {
-			certificate, depositAmount, err := getStakingDelegateCertificate(
+		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
+			certificate, depositAmount, err := getStakingCertificates(
 				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx)
 
 			if errors.Is(err, errSkipConfirmedTx) {
@@ -509,14 +509,22 @@ func (cco *CardanoChainOperations) getCertificateData(
 			}
 
 			certificates = append(certificates, certificate)
-			keyRegistrationFee += depositAmount
+
+			if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxType) {
+				keyRegistrationFee += depositAmount
+			}
+
+			if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxType) {
+				keyDeregistrationFee += depositAmount
+			}
 		}
 	}
 
 	if len(certificates) > 0 {
 		return &cardano.CertificatesData{
-			Certificates:    certificates,
-			RegistrationFee: keyRegistrationFee,
+			Certificates:      certificates,
+			RegistrationFee:   keyRegistrationFee,
+			DeregistrationFee: keyDeregistrationFee,
 		}, nil
 	}
 

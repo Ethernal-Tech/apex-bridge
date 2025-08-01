@@ -28,11 +28,14 @@ const (
 	ReactorMode VCRunMode = "reactor"
 	SkylineMode VCRunMode = "skyline"
 
-	BridgingConfirmedTxType    ConfirmedTxType = 0
-	DefundConfirmedTxType      ConfirmedTxType = 1
-	RefundConfirmedTxType      ConfirmedTxType = 2
-	StakeRegDelConfirmedTxType ConfirmedTxType = 3
-	StakeDelConfirmedTxType    ConfirmedTxType = 4
+	BridgingConfirmedTxType ConfirmedTxType = 0
+	DefundConfirmedTxType   ConfirmedTxType = 1
+	RefundConfirmedTxType   ConfirmedTxType = 2
+	StakeConfirmedTxType    ConfirmedTxType = 3
+
+	StakeRegDelConfirmedTxType StakeConfirmedTxSubType = 0
+	StakeDelConfirmedTxType    StakeConfirmedTxSubType = 1
+	StakeDeregConfirmedTxType  StakeConfirmedTxSubType = 2
 )
 
 type Hash [HashSize]byte
@@ -54,6 +57,7 @@ type NewBridgingRequestStateModel struct {
 }
 
 type ConfirmedTxType uint8
+type StakeConfirmedTxSubType uint8
 
 func (h Hash) String() string {
 	return hex.EncodeToString(h[:])
@@ -79,7 +83,6 @@ func NewHashFromBytes(bytes []byte) Hash {
 }
 
 func IsDirectlyConfirmedTransaction(txType uint8) bool {
-	return txType == uint8(StakeDelConfirmedTxType) ||
-		txType == uint8(StakeRegDelConfirmedTxType) ||
+	return txType == uint8(StakeConfirmedTxType) ||
 		txType == uint8(DefundConfirmedTxType)
 }
