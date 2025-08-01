@@ -1005,6 +1005,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
+		// max utxos = 5 => output = 3 multisig utxos & 2 fee utxos to old fee address
 		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
 		require.True(t, info.Outputs[1].Amount > 0)
 	})
@@ -1012,6 +1013,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 	t.Run("Test 0 multisig, 10 fee UTXOs", func(t *testing.T) {
 		info := runTest(0, 10)
 
+		// max utxos = 5 => output = 5 utxos to new fee address reduced for fee amount
 		require.Equal(t, len(info.Outputs), 1)
 		require.Equal(t, info.Outputs[0].Address, newAddresses.Fee.Payment)
 		require.True(t, info.Outputs[0].Amount < 5*1000000)
@@ -1024,6 +1026,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
+		// max utxos = 5 => output = 3 multisig utxos & 2 fee utxos to old fee address
 		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
 		require.True(t, info.Outputs[1].Amount > 0)
 	})
@@ -1035,6 +1038,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
+		// max utxos = 5 => output = 2 multisig utxos & 2 fee utxos to old fee address
 		require.Equal(t, info.Outputs[0].Amount, uint64(2*1000000))
 		require.True(t, info.Outputs[1].Amount > 0)
 	})
@@ -1042,12 +1046,14 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 	t.Run("Test 10 multisig, 0 fee UTXOs", func(t *testing.T) {
 		info := runTest(10, 0)
 
+		// no fee utxos => finalize batch
 		require.Nil(t, info)
 	})
 
 	t.Run("Test 10 multisig, 1 fee UTXOs", func(t *testing.T) {
 		info := runTest(10, 1)
 
+		// 1 fee utxo < MinUtxoAmountDefault*2 => finalize batch
 		require.Nil(t, info)
 	})
 }
