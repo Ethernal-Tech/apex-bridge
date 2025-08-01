@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -19,14 +20,25 @@ type lastBatchData struct {
 	txHash string
 }
 
+type validatorSetChange struct {
+	validators *validatorobserver.Validators
+	finalized  bool
+
+	sync.RWMutex
+}
+
+func (v *validatorSetChange) isValidatorPending() bool {
+	return v.validators != nil
+}
+
 type BatcherImpl struct {
 	config                      *core.BatcherConfiguration
 	operations                  core.ChainOperations
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
-	validatorSetObserver        *validatorSetObserver.ValidatorSetObserver
 	logger                      hclog.Logger
+	newValidatorSet             *validatorSetChange
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -36,7 +48,7 @@ func NewBatcher(
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver *validatorobserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{
@@ -45,9 +57,17 @@ func NewBatcher(
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
-		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
+		newValidatorSet:             &validatorSetChange{},
 	}
+}
+
+func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validators) {
+	b.newValidatorSet.Lock()
+	defer b.newValidatorSet.Unlock()
+
+	b.newValidatorSet.validators = validators
+	b.newValidatorSet.finalized = false
 }
 
 func (b *BatcherImpl) Start(ctx context.Context) {
@@ -90,6 +110,15 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 }
 
 func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
+	b.newValidatorSet.RLock()
+	validators := b.newValidatorSet.validators
+	finalized := b.newValidatorSet.finalized
+	b.newValidatorSet.RUnlock()
+
+	if finalized {
+		return 0, nil
+	}
+
 	// Check if I should create batch
 	batchID, err := b.bridgeSmartContract.GetNextBatchID(ctx, b.config.Chain.ChainID)
 	if err != nil {
@@ -110,29 +139,40 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	b.logger.Info("Starting batch creation process", "batchID", batchID)
 
-	// Get confirmed transactions from smart contract
-	confirmedTransactions, err := b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
-	if err != nil {
-		return batchID, fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
-			b.config.Chain.ChainID, err)
+	var (
+		generatedBatchData    *core.GeneratedBatchTxData
+		confirmedTransactions []eth.ConfirmedTransaction
+	)
+
+	if b.newValidatorSet.validators == nil {
+		// Get confirmed transactions from smart contract
+		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
+		if err != nil {
+			return batchID, fmt.Errorf("failed to query bridge.GetConfirmedTransactions for chainID: %s. err: %w",
+				b.config.Chain.ChainID, err)
+		}
+
+		if len(confirmedTransactions) == 0 {
+			return batchID, fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
+				b.config.Chain.ChainID)
+		}
+
+		b.logger.Debug("Successfully queried smart contract for confirmed transactions",
+			"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
+		// Generate batch transaction
+		generatedBatchData, err = b.operations.GenerateBatchTransaction(
+			ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
+	} else {
+		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, validators)
+
+		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+			b.newValidatorSet.Lock()
+			b.newValidatorSet.finalized = true
+			b.newValidatorSet.Unlock()
+		}
 	}
 
-	if len(confirmedTransactions) == 0 {
-		return batchID, fmt.Errorf("batch should not be created for zero number of confirmed transactions. chainID: %s",
-			b.config.Chain.ChainID)
-	}
-
-	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
-
-	// if validaor set is pending, skip batch creation
-	if b.validatorSetObserver != nil && b.validatorSetObserver.IsValidatorSetPending() {
-		return batchID, fmt.Errorf("validator set is pending, skipping batch creation, batchID: %d", batchID)
-	}
-
-	// Generate batch transaction
-	generatedBatchData, err := b.operations.GenerateBatchTransaction(
-		ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	if err != nil {
 		return batchID, fmt.Errorf("failed to generate batch transaction for chainID: %s. err: %w",
 			b.config.Chain.ChainID, err)
@@ -195,7 +235,7 @@ func (b *BatcherImpl) createSignedBatch(
 	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
-	if generatedBatchData.BatchType != uint8(Consolidation) {
+	if generatedBatchData.BatchType == uint8(Normal) {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
 	}
 

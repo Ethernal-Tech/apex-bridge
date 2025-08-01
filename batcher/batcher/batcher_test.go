@@ -16,6 +16,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
@@ -250,35 +251,118 @@ func TestBatcherExecute(t *testing.T) {
 		require.Equal(t, batchNonceID, batchID)
 	})
 
-	t.Run("execute pass - with validatorSetObserver true", func(t *testing.T) {
+	t.Run("Test Validator set change - five multisig one fee", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		operationsMock := &cardanoChainOperationsMock{}
-		batchData := &core.GeneratedBatchTxData{
-			TxRaw:  []byte{0},
-			TxHash: "txHash",
+
+		testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+		require.NoError(t, err)
+
+		defer func() {
+			os.RemoveAll(testDir)
+			os.Remove(testDir)
+		}()
+
+		secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+			Path: filepath.Join(testDir, "stp"),
+			Type: secrets.Local,
+		})
+		require.NoError(t, err)
+
+		wallet, err := cardanotx.GenerateWallet(secretsMngr, "prime", true, false)
+		require.NoError(t, err)
+
+		wallet2, err := cardanotx.GenerateWallet(secretsMngr, "prime2", true, false)
+		require.NoError(t, err)
+
+		dbMock := &indexer.DatabaseMock{}
+
+		configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000,
+			"maxFeeUtxoCount": 2,
+			"maxUtxoCount": 5,
+			"slotRoundingThreshold": 2
+			}`))
+
+		validatorsChainData := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+					new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+					new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
+					new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
+				},
+			},
 		}
+
+		newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet2.Fee.VerificationKey),
+				new(big.Int).SetBytes(wallet2.MultiSig.StakeVerificationKey),
+				new(big.Int).SetBytes(wallet2.Fee.StakeVerificationKey),
+			},
+		})
+
+		txProviderMock := &cardanotx.TxProviderTestMock{
+			ReturnDefaultParameters: true,
+		}
+
+		operations, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, common.ChainIDStrPrime, hclog.NewNullLogger())
+		require.NoError(t, err)
+
+		operations.txProvider = txProviderMock
+
+		_, oldAddresses, err := operations.generatePolicyAndMultisig(validatorsChainData)
+		require.NoError(t, err)
+
+		multisig := generateUTXO(5)
+		fee := generateUTXO(1)
+
+		dbMock.On("GetAllTxOutputs", oldAddresses.Multisig.Payment, mock.Anything).Return(multisig, nil)
+		dbMock.On("GetAllTxOutputs", oldAddresses.Fee.Payment, mock.Anything).Return(fee, nil)
+
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
+			BlockSlot: 4,
+			BlockHash: indexer.Hash{},
+		}, nil)
 
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(batchNonceID, nil)
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(getConfirmedTransactionsRet, nil)
-		operationsMock.On("GenerateBatchTransaction", ctx, bridgeSmartContractMock, common.ChainIDStrPrime, getConfirmedTransactionsRet, batchNonceID).
-			Return(batchData, nil)
-		operationsMock.On("SignBatchTransaction", batchData).Return([]byte{}, []byte{}, nil)
-		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]contractbinding.IBridgeStructsChain{}, error(nil))
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, common.ChainIDStrPrime).Return(validatorsChainData, nil)
+		bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
+		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			nil, hclog.NewNullLogger())
 
-		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, validatorSetObserver,
-			hclog.NewNullLogger())
+		b.UpdateValidatorSet(&validatorSetObserver.Validators{
+			Data: map[string]validatorSetObserver.ValidatorsChainData{
+				common.ChainIDStrPrime: {
+					Keys:       newValidatorChainData,
+					SlotNumber: 0,
+				},
+			},
+		})
+
 		_, err = b.execute(ctx)
-
-		require.Error(t, err)
-		require.ErrorContains(t, err, "validator set is pending, skipping batch creation")
+		require.NoError(t, err)
 	})
+}
+
+func generateUTXO(size uint) []*indexer.TxInputOutput {
+	txs := make([]*indexer.TxInputOutput, size)
+
+	for i := range txs {
+		txs[i] = &indexer.TxInputOutput{
+			Input: indexer.TxInput{},
+			Output: indexer.TxOutput{
+				Amount: 1000000,
+			},
+		}
+	}
+
+	return txs
 }
 
 func TestBatcherGetChainSpecificOperations(t *testing.T) {
@@ -366,6 +450,15 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 
 type cardanoChainOperationsMock struct {
 	mock.Mock
+}
+
+// CreateValidatorSetChangeTx implements core.ChainOperations.
+func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
+	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
+	validatorsKeys *validatorSetObserver.Validators) (*core.GeneratedBatchTxData, error) {
+	args := c.Called(ctx, chainID, nextBatchID, bridgeSmartContract, validatorsKeys)
+
+	return args.Get(0).(*core.GeneratedBatchTxData), args.Error(1)
 }
 
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
