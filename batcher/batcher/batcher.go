@@ -24,7 +24,11 @@ type validatorSetChange struct {
 	validators *validatorobserver.Validators
 	finalized  bool
 
-	sync.Mutex
+	sync.RWMutex
+}
+
+func (v *validatorSetChange) isValidatorPending() bool {
+	return v.validators != nil
 }
 
 type BatcherImpl struct {
@@ -33,7 +37,6 @@ type BatcherImpl struct {
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
-	validatorSetObserver        *validatorobserver.ValidatorSetObserver
 	logger                      hclog.Logger
 	newValidatorSet             *validatorSetChange
 }
@@ -54,7 +57,6 @@ func NewBatcher(
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
-		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
 		newValidatorSet:             &validatorSetChange{},
 	}
@@ -108,10 +110,12 @@ func (b *BatcherImpl) Start(ctx context.Context) {
 }
 
 func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
-	b.newValidatorSet.Lock()
-	defer b.newValidatorSet.Unlock()
+	b.newValidatorSet.RLock()
+	validators := b.newValidatorSet.validators
+	finalized := b.newValidatorSet.finalized
+	b.newValidatorSet.RUnlock()
 
-	if b.newValidatorSet.finalized {
+	if finalized {
 		return 0, nil
 	}
 
@@ -160,10 +164,12 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 			ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	} else {
 		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, b.newValidatorSet.validators)
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, validators)
 
 		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+			b.newValidatorSet.Lock()
 			b.newValidatorSet.finalized = true
+			b.newValidatorSet.Unlock()
 		}
 	}
 
@@ -229,7 +235,7 @@ func (b *BatcherImpl) createSignedBatch(
 	multisigSignature, multisigFeeSignature []byte, confirmedTxs []eth.ConfirmedTransaction,
 ) *eth.SignedBatch {
 	firstTxNonceID, lastTxNonceID := uint64(0), uint64(0)
-	if generatedBatchData.BatchType < uint8(Consolidation) {
+	if generatedBatchData.BatchType == uint8(Normal) {
 		firstTxNonceID, lastTxNonceID = getFirstAndLastTxNonceID(confirmedTxs)
 	}
 

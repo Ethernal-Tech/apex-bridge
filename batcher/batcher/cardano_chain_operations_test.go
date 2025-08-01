@@ -962,7 +962,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 
 	const nextBatchID = 1
 
-	runTest := func(multisigNum, feeNum uint) indexer.TxInfo {
+	runTest := func(multisigNum, feeNum uint) *indexer.TxInfo {
 		dbMock := &indexer.DatabaseMock{}
 		cco.db = dbMock
 
@@ -988,20 +988,25 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 			})
 		require.NoError(t, err)
 
+		if generatedData.BatchType == uint8(ValidatorSetFinal) {
+			return nil
+		}
+
 		info, err := gouroboros.ParseTxInfo(generatedData.TxRaw, true)
 		require.NoError(t, err)
 
-		return info
+		return &info
 	}
 
-	t.Run("Test 10 multisig, 1 fee UTXOs", func(t *testing.T) {
-		info := runTest(10, 1)
+	t.Run("Test 10 multisig, 2 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 2)
 
 		require.Equal(t, len(info.Outputs), 2)
 		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
-		require.Equal(t, info.Outputs[0].Amount, uint64(4*1000000))
+		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
 	})
 
 	t.Run("Test 0 multisig, 10 fee UTXOs", func(t *testing.T) {
@@ -1020,6 +1025,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
 		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
 	})
 
 	t.Run("Test 2 multisig, 2 fee UTXOs", func(t *testing.T) {
@@ -1030,5 +1036,18 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
 
 		require.Equal(t, info.Outputs[0].Amount, uint64(2*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
+	})
+
+	t.Run("Test 10 multisig, 0 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 0)
+
+		require.Nil(t, info)
+	})
+
+	t.Run("Test 10 multisig, 1 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 1)
+
+		require.Nil(t, info)
 	})
 }

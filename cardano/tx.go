@@ -146,16 +146,9 @@ func CreateOnlyFeeTx(
 
 	builder.SetFee(calcFee)
 
-	if feeAmount < calcFee {
-		return nil, "", ErrNotEnoughFee
-	}
-
 	feeAmountFinal := feeAmount - calcFee
 
-	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
-	if feeAmountFinal > 0 {
-		builder.UpdateOutputAmount(0, feeAmountFinal)
-	}
+	builder.UpdateOutputAmount(0, feeAmountFinal)
 
 	return builder.Build()
 }
