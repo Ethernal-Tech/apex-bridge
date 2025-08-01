@@ -662,7 +662,9 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		return nil, err
 	}
 
-	// if there are no transactions, or only one transaction with an amount less than twice the minimum UTXO amount, return the validator final
+	// if there are no transactions
+	// or only one transaction with an amount less than twice the minimum UTXO amount
+	// return the validator final
 	if len(feeUtxos) == 0 || (len(feeUtxos) == 1 && feeUtxos[0].Output.Amount < common.MinUtxoAmountDefault*2) {
 		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
