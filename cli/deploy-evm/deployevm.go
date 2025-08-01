@@ -6,10 +6,12 @@ import (
 )
 
 const upgradeEVMCommandUse = "upgrade"
+const deployContractCommandUse = "deploy-contract"
 const setValidatorsChainDataEVMCommandUse = "set-validators-chain-data"
 
 var deployEVMParamsData = &deployEVMParams{}
 var upgradeEVMParamsData = &upgradeEVMParams{}
+var deployContractParamsData = &deployContractParams{}
 var setValidatorsChainDataEVMParamsData = &setValidatorsChainDataEVMParams{}
 
 func GetDeployEVMCommand() *cobra.Command {
@@ -25,6 +27,12 @@ func GetDeployEVMCommand() *cobra.Command {
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(upgradeEVMParamsData),
 	}
+	cmdDeployContract := &cobra.Command{
+		Use:     deployContractCommandUse,
+		Short:   "deploy smart contract",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(deployContractParamsData),
+	}
 	cmdSetVCDEVM := &cobra.Command{
 		Use:     setValidatorsChainDataEVMCommandUse,
 		Short:   "set validators chain data",
@@ -34,9 +42,11 @@ func GetDeployEVMCommand() *cobra.Command {
 
 	deployEVMParamsData.setFlags(cmdDeployEVM)
 	upgradeEVMParamsData.setFlags(cmdUpgradeEVM)
+	deployContractParamsData.setFlags(cmdDeployContract)
 	setValidatorsChainDataEVMParamsData.setFlags(cmdSetVCDEVM)
 
 	cmdDeployEVM.AddCommand(cmdUpgradeEVM)
+	cmdDeployEVM.AddCommand(cmdDeployContract)
 	cmdDeployEVM.AddCommand(cmdSetVCDEVM)
 
 	return cmdDeployEVM
@@ -45,6 +55,10 @@ func GetDeployEVMCommand() *cobra.Command {
 func runPreRun(cb *cobra.Command, _ []string) error {
 	if cb.Use == upgradeEVMCommandUse {
 		return upgradeEVMParamsData.validateFlags()
+	}
+
+	if cb.Use == deployContractCommandUse {
+		return deployContractParamsData.validateFlags()
 	}
 
 	if cb.Use == setValidatorsChainDataEVMCommandUse {
