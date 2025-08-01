@@ -65,37 +65,39 @@ type IEthTxHelper interface {
 }
 
 type EthTxHelperImpl struct {
-	client            *ethclient.Client
-	nodeURL           string
-	writer            io.Writer
-	receiptRetriesCnt int
-	receiptWaitTime   time.Duration
-	receiptIsRetryErr func(error) bool
-	txPoolRetriesCnt  int
-	txPoolWaitTime    time.Duration
-	gasFeeMultiplier  uint64
-	isDynamic         bool
-	zeroGasPrice      bool
-	defaultGasLimit   uint64
-	chainID           *big.Int
-	initFn            func(*EthTxHelperImpl) error
-	nonceStrategy     NonceStrategy
-	mutex             sync.Mutex
-	logger            hclog.Logger
+	client             *ethclient.Client
+	nodeURL            string
+	writer             io.Writer
+	receiptRetriesCnt  int
+	receiptWaitTime    time.Duration
+	receiptIsRetryErr  func(error) bool
+	txPoolCheckEnabled bool
+	txPoolRetriesCnt   int
+	txPoolWaitTime     time.Duration
+	gasFeeMultiplier   uint64
+	isDynamic          bool
+	zeroGasPrice       bool
+	defaultGasLimit    uint64
+	chainID            *big.Int
+	initFn             func(*EthTxHelperImpl) error
+	nonceStrategy      NonceStrategy
+	mutex              sync.Mutex
+	logger             hclog.Logger
 }
 
 var _ IEthTxHelper = (*EthTxHelperImpl)(nil)
 
 func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 	t := &EthTxHelperImpl{
-		receiptWaitTime:   defaultReceiptWaitTime,
-		receiptRetriesCnt: defaultReceiptRetriesCnt,
-		txPoolRetriesCnt:  defaultTxPoolRetriesCnt,
-		txPoolWaitTime:    defaultTxPoolWaitTime,
-		gasFeeMultiplier:  defaultGasFeeMultiplier,
-		zeroGasPrice:      true,
-		defaultGasLimit:   defaultGasLimit,
-		nonceStrategy:     NonceStrategyFactory(NonceNodePendingStrategy),
+		receiptWaitTime:    defaultReceiptWaitTime,
+		receiptRetriesCnt:  defaultReceiptRetriesCnt,
+		txPoolRetriesCnt:   defaultTxPoolRetriesCnt,
+		txPoolWaitTime:     defaultTxPoolWaitTime,
+		gasFeeMultiplier:   defaultGasFeeMultiplier,
+		zeroGasPrice:       true,
+		txPoolCheckEnabled: true,
+		defaultGasLimit:    defaultGasLimit,
+		nonceStrategy:      NonceStrategyFactory(NonceNodePendingStrategy),
 		initFn: func(t *EthTxHelperImpl) error {
 			if t.client == nil {
 				client, err := ethclient.Dial(t.nodeURL)
@@ -359,6 +361,10 @@ func (t *EthTxHelperImpl) PopulateTxOpts(
 func (t *EthTxHelperImpl) WaitForTxEnterTxPool(
 	ctx context.Context, wallet IEthTxWallet, txHashStr string,
 ) (bool, error) {
+	if !t.txPoolCheckEnabled {
+		return false, nil
+	}
+
 	addr := wallet.GetAddress()
 	txHash := common.HexToHash(txHashStr)
 	tryCount := 0
@@ -492,6 +498,12 @@ func WithLogger(logger hclog.Logger) TxRelayerOption {
 func WithNonceStrategy(strategy NonceStrategy) TxRelayerOption {
 	return func(t *EthTxHelperImpl) {
 		t.nonceStrategy = strategy
+	}
+}
+
+func WithTxPoolCheck(enabled bool) TxRelayerOption {
+	return func(t *EthTxHelperImpl) {
+		t.txPoolCheckEnabled = enabled
 	}
 }
 
