@@ -57,6 +57,17 @@ type EthTxFailedProcessor interface {
 	ValidateAndAddClaim(claims *oCore.BridgeClaims, tx *BridgeExpectedEthTx, appConfig *oCore.AppConfig) error
 }
 
+type EthTxSuccessRefundProcessor interface {
+	EthTxSuccessProcessor
+
+	HandleBridgingProcessorError(
+		claims *oCore.BridgeClaims, tx *EthTx, appConfig *oCore.AppConfig,
+		err error, errContext string) error
+
+	HandleBridgingProcessorPreValidate(
+		tx *EthTx, appConfig *oCore.AppConfig) error
+}
+
 type EthChainObserver interface {
 	Start() error
 	Dispose() error
