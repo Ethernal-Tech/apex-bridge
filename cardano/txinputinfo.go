@@ -26,6 +26,7 @@ type CertificatesWithScript struct {
 }
 
 type CertificatesData struct {
-	Certificates    []*CertificatesWithScript
-	RegistrationFee uint64
+	Certificates      []*CertificatesWithScript
+	RegistrationFee   uint64
+	DeregistrationFee uint64
 }

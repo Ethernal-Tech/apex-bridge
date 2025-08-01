@@ -9,34 +9,21 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet/bech32"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
-const (
-	stakePoolIDFlag   = "stake-pool"
-	bridgeAddrIdxFlag = "bridge-address-index"
-	doReistrationFlag = "do-registration"
-
-	stakePoolIDFlagDesc   = "identifier of the stake pool to delegate to"
-	doReistrationFlagDesc = "defined if address needs to be registered"
-	bridgeAddrIdxFlagDesc = "index of the bridging address to be delegated"
-)
-
-type stakeDelParams struct {
+type stakeDeregParams struct {
 	chainID          string
 	bridgeAddrIdx    int8
-	stakePoolID      string
-	doRegistration   bool
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
-func (params *stakeDelParams) ValidateFlags() error {
+func (params *stakeDeregParams) ValidateFlags() error {
 	if !common.IsValidHTTPURL(params.bridgeNodeURL) {
 		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
 	}
@@ -49,12 +36,6 @@ func (params *stakeDelParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag not specified or negative", bridgeAddrIdxFlag)
 	}
 
-	if params.stakePoolID == "" {
-		return fmt.Errorf("--%s flag not specified", stakePoolIDFlag)
-	} else if prefix, _, err := bech32.Decode(params.stakePoolID); err != nil || prefix != "pool" {
-		return fmt.Errorf("invalid --%s", stakePoolIDFlag)
-	}
-
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
@@ -63,7 +44,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 }
 
 // Execute implements common.CliCommandExecutor.
-func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
@@ -93,14 +74,9 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, err
 	}
 
-	subType := uint8(common.StakeDelConfirmedTxType)
-	if params.doRegistration {
-		subType = uint8(common.StakeRegDelConfirmedTxType)
-	}
-
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
-		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, params.stakePoolID, subType)
+		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxType))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +85,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.StakeAddressOperation(opts, chainIDInt, bridgeAddrIndex, params.stakePoolID, subType)
+			return contract.StakeAddressOperation(opts, chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxType))
 		})
 	if err != nil {
 		return nil, err
@@ -128,7 +104,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	return &chainTokenQuantityResult{}, err
 }
 
-func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
+func (params *stakeDeregParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.chainID,
 		chainIDFlag,
@@ -141,20 +117,6 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 		bridgeAddrIdxFlag,
 		-1,
 		bridgeAddrIdxFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&params.stakePoolID,
-		stakePoolIDFlag,
-		"",
-		stakePoolIDFlagDesc,
-	)
-
-	cmd.Flags().BoolVar(
-		&params.doRegistration,
-		doReistrationFlag,
-		false,
-		doReistrationFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -182,5 +144,5 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 var (
-	_ common.CliCommandExecutor = (*stakeDelParams)(nil)
+	_ common.CliCommandExecutor = (*stakeDeregParams)(nil)
 )
