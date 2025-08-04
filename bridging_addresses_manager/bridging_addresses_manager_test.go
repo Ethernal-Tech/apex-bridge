@@ -56,7 +56,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 				AddressFeePayer: "",
 			},
 		}, nil)
-		bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(nil, testError)
+		bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(nil, testError).Once()
 
 		_, err := NewBridgingAdressesManager(
 			context.Background(),
@@ -84,6 +84,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 			AddressFeePayer: "",
 		},
 	}, nil)
+
 	bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return([]contractbinding.IBridgeStructsValidatorChainData{
 		{
 			Key: [4]*big.Int{
@@ -94,6 +95,21 @@ func TestBridgingAddressesManager(t *testing.T) {
 			},
 		},
 	}, nil)
+
+	t.Run("GetBridgingAddressesCount returns error", func(t *testing.T) {
+		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(0, testError).Once()
+		_, err := NewBridgingAdressesManager(
+			context.Background(),
+			cardanoChains,
+			bridgeSmartContractMock,
+			hclog.NewNullLogger(),
+		)
+
+		require.ErrorIs(t, err, testError)
+		require.ErrorContains(t, err, "failed to retrieve number of bridging addresses from smart contract")
+	})
+
+	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, "prime").Return(uint8(1), nil)
 
 	bridgingAddressesManager, err := NewBridgingAdressesManager(
 		context.Background(),
