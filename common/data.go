@@ -33,9 +33,9 @@ const (
 	RefundConfirmedTxType   ConfirmedTxType = 2
 	StakeConfirmedTxType    ConfirmedTxType = 3
 
-	StakeRegDelConfirmedTxType StakeConfirmedTxSubType = 0
-	StakeDelConfirmedTxType    StakeConfirmedTxSubType = 1
-	StakeDeregConfirmedTxType  StakeConfirmedTxSubType = 2
+	StakeRegDelConfirmedTxSubType StakeConfirmedTxSubType = 0
+	StakeDelConfirmedTxSubType    StakeConfirmedTxSubType = 1
+	StakeDeregConfirmedTxSubType  StakeConfirmedTxSubType = 2
 )
 
 type Hash [HashSize]byte

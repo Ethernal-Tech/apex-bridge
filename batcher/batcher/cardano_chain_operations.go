@@ -510,11 +510,11 @@ func (cco *CardanoChainOperations) getCertificateData(
 
 			certificates = append(certificates, certificate)
 
-			if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxType) {
+			if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
 				keyRegistrationFee += depositAmount
 			}
 
-			if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxType) {
+			if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
 				keyDeregistrationFee += depositAmount
 			}
 		}

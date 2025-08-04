@@ -76,7 +76,7 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
-		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxType))
+		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxSubType))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.StakeAddressOperation(opts, chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxType))
+			return contract.StakeAddressOperation(opts, chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxSubType))
 		})
 	if err != nil {
 		return nil, err

@@ -37,7 +37,7 @@ func getStakingCertificates(
 		return nil, 0, err
 	}
 
-	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxType) {
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
 		registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
 		if err != nil {
 			return nil, 0, errors.Join(errSkipConfirmedTx, err)
@@ -46,8 +46,8 @@ func getStakingCertificates(
 		certs = append(certs, registrationCert)
 	}
 
-	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxType) ||
-		tx.TransactionSubType == uint8(common.StakeDelConfirmedTxType) {
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) ||
+		tx.TransactionSubType == uint8(common.StakeDelConfirmedTxSubType) {
 		delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
 		if err != nil {
 			return nil, 0, errors.Join(errSkipConfirmedTx, err)
@@ -56,7 +56,7 @@ func getStakingCertificates(
 		certs = append(certs, delegationCert)
 	}
 
-	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxType) {
+	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
 		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress)
 		if err != nil {
 			return nil, 0, errors.Join(errSkipConfirmedTx, err)

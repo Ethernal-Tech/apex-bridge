@@ -93,9 +93,9 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, err
 	}
 
-	subType := uint8(common.StakeDelConfirmedTxType)
+	subType := uint8(common.StakeDelConfirmedTxSubType)
 	if params.doRegistration {
-		subType = uint8(common.StakeRegDelConfirmedTxType)
+		subType = uint8(common.StakeRegDelConfirmedTxSubType)
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(

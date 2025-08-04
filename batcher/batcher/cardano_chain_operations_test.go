@@ -340,7 +340,8 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		BlockHeight:        big.NewInt(1),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
@@ -539,7 +540,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		BlockHeight:        big.NewInt(1),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDeregConfirmedTxType),
+		TransactionType:    uint8(common.StakeDeregConfirmedTxSubType),
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
@@ -750,7 +751,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		BlockHeight:        big.NewInt(2),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxType),
+		TransactionType:    uint8(common.StakeDelConfirmedTxSubType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
@@ -1526,8 +1527,8 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 
 	t.Run("one invalid, one valid stake pool id", func(t *testing.T) {
 		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "0x999", TransactionType: uint8(common.StakeDelConfirmedTxType)},
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "0x999", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.NoError(t, err)
@@ -1537,8 +1538,8 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 
 	t.Run("two valid stake pool ids", func(t *testing.T) {
 		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.NoError(t, err)
@@ -1554,7 +1555,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 		batchData.ProtocolParams = nil
 
 		_, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.Error(t, err)
