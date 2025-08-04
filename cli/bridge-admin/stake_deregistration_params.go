@@ -85,7 +85,13 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.StakeAddressOperation(opts, chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxSubType))
+			return contract.StakeAddressOperation(
+				opts,
+				chainIDInt,
+				bridgeAddrIndex,
+				"",
+				uint8(common.StakeDeregConfirmedTxSubType),
+			)
 		})
 	if err != nil {
 		return nil, err
