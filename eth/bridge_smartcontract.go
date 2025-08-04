@@ -32,7 +32,7 @@ type IBridgeSmartContract interface {
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
 	IsNewValidatorSetPending() (bool, error)
-	GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error)
+	GetPendingValidatorSetDelta() ([]ValidatorSet, []ethcommon.Address, error)
 	GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error)
 }
 
@@ -355,7 +355,7 @@ func (bsc *BridgeSmartContractImpl) IsNewValidatorSetPending() (bool, error) {
 	return result, nil
 }
 
-func (bsc *BridgeSmartContractImpl) GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error) {
+func (bsc *BridgeSmartContractImpl) GetPendingValidatorSetDelta() ([]ValidatorSet, []ethcommon.Address, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while GetEthHelper: %w", err)

@@ -34,7 +34,7 @@ type OracleImpl struct {
 	ethChainObservers        []core.EthChainObserver
 	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
 	db                       core.Database
-	validatorSetObserver     *validatorSetObserver.ValidatorSetObserver
+	validatorSetObserver     validatorSetObserver.IValidatorSetObserver
 	logger                   hclog.Logger
 }
 
@@ -49,7 +49,7 @@ func NewEthOracle(
 	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}

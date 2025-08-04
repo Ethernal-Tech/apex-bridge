@@ -145,8 +145,16 @@ func (m *BridgeSmartContractMock) IsNewValidatorSetPending() (bool, error) {
 	return false, args.Error(1)
 }
 
-func (m *BridgeSmartContractMock) GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error) {
-	return nil, nil, nil
+func (m *BridgeSmartContractMock) GetPendingValidatorSetDelta() ([]ValidatorSet, []ethcommon.Address, error) {
+	args := m.Called()
+	if args.Get(0) != nil && args.Get(1) != nil {
+		arg0, _ := args.Get(0).([]ValidatorSet)
+		arg1, _ := args.Get(1).([]ethcommon.Address)
+
+		return arg0, arg1, args.Error(2)
+	}
+
+	return nil, nil, args.Error(2)
 }
 
 func (m *BridgeSmartContractMock) GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error) {
@@ -157,5 +165,5 @@ func (m *BridgeSmartContractMock) GetAddressValidatorIndex(validatorAddr ethcomm
 		return arg0, args.Error(1)
 	}
 
-	return 0, nil
+	return 0, args.Error(1)
 }

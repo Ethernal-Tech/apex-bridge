@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -25,7 +24,6 @@ type BatcherImpl struct {
 	bridgeSmartContract         eth.IBridgeSmartContract
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
 	lastBatch                   lastBatchData
-	validatorSetObserver        *validatorSetObserver.ValidatorSetObserver
 	logger                      hclog.Logger
 }
 
@@ -36,7 +34,6 @@ func NewBatcher(
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{
@@ -45,7 +42,6 @@ func NewBatcher(
 		bridgeSmartContract:         bridgeSmartContract,
 		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
 		lastBatch:                   lastBatchData{},
-		validatorSetObserver:        validatorSetObserver,
 		logger:                      logger,
 	}
 }
@@ -124,11 +120,6 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
 		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
-
-	// if validaor set is pending, skip batch creation
-	if b.validatorSetObserver != nil && b.validatorSetObserver.IsValidatorSetPending() {
-		return batchID, fmt.Errorf("validator set is pending, skipping batch creation, batchID: %d", batchID)
-	}
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
