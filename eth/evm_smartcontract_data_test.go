@@ -36,3 +36,35 @@ func TestEVMSmartContractTransaction(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, obj, newObj)
 }
+
+func TestEVMValidatorSetChangeTransaction(t *testing.T) {
+	obj := &EVMValidatorSetChangeTx{
+		ValidatorsSetNumber: big.NewInt(100),
+		TTL:                 big.NewInt(1_000_000),
+		ValidatorsChainData: []ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					big.NewInt(1),
+					big.NewInt(2),
+					big.NewInt(3),
+					big.NewInt(4),
+				},
+			},
+			{
+				Key: [4]*big.Int{
+					big.NewInt(5),
+					big.NewInt(6),
+					big.NewInt(7),
+					big.NewInt(8),
+				},
+			},
+		},
+	}
+
+	bytes, err := obj.Pack()
+	require.NoError(t, err)
+
+	newObj, err := NewEVMValidatorSetChangeTransaction(bytes)
+	require.NoError(t, err)
+	require.Equal(t, obj, newObj)
+}
