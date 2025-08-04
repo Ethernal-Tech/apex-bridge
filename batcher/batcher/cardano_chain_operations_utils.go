@@ -95,7 +95,7 @@ func getReceiversMap(
 					token, err := cardanoConfig.GetNativeToken(origDstChainID)
 
 					if err != nil {
-						return nil, fmt.Errorf("failed getting native token while refund original destination chain: (%s -> %s). err: %w", srcChainID, origDstChainID, err) //nolint:lll
+						return nil, fmt.Errorf("failed getting native token for refund tx. original destination chain: (%s -> %s). err: %w", srcChainID, origDstChainID, err) //nolint:lll
 					}
 
 					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
@@ -127,7 +127,7 @@ func getReceiversMap(
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 					token, err := cardanoConfig.GetNativeToken(srcChainID)
 					if err != nil {
-						return nil, fmt.Errorf("failed getting native token while normal tx for destination chain: (%s -> %s). err: %w", srcChainID, destChainID, err) //nolint:lll
+						return nil, fmt.Errorf("failed getting native token for normal tx. for destination chain: (%s -> %s). err: %w", srcChainID, destChainID, err) //nolint:lll
 					}
 
 					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
