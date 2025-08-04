@@ -62,14 +62,12 @@ func NewBridgingAdressesManager(
 			return nil, fmt.Errorf("error while executing NewApexKeyHashes for bridging addresses component. err: %w", err)
 		}
 
-		// numberOfAddresses, err := bridgeSmartContract.GetNumberOfAddresses(ctx, chainIDStr)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("error while executing GetNumberOfAddresses for bridging addresses component. err: %w",
-		// 		err)
-		// }
+		numberOfAddresses, err := bridgeSmartContract.GetBridgingAddressesCount(ctx, chainIDStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve number of bridging addresses from smart contract for chain ID %s: %w", chainIDStr, err)
+		}
 
-		numberOfAddresses := uint64(1)
-		for i := range numberOfAddresses {
+		for i := range uint64(numberOfAddresses) {
 			policyScripts := cardano.NewApexPolicyScripts(keyHashes, i)
 			bridgingPaymentPolicyScripts[registeredChain.Id] =
 				append(bridgingPaymentPolicyScripts[registeredChain.Id], policyScripts.Multisig.Payment)
