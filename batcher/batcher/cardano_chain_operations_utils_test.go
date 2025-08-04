@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -898,4 +899,46 @@ func Test_extractStakeKeyDepositAmount(t *testing.T) {
 	amount, err := extractStakeKeyDepositAmount(protocolParams)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), amount)
+}
+
+func TestGetStakingDelegateCertificate(t *testing.T) {
+	wallet1, err := cardanowallet.GenerateWallet(true)
+	require.NoError(t, err)
+
+	wallet2, err := cardanowallet.GenerateWallet(true)
+	require.NoError(t, err)
+
+	keyHash1, err := cardanowallet.GetKeyHash(wallet1.StakeVerificationKey)
+	require.NoError(t, err)
+
+	keyHash2, err := cardanowallet.GetKeyHash(wallet2.StakeVerificationKey)
+	require.NoError(t, err)
+
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork)
+	networkMagic := uint(cardanowallet.MainNetNetwork)
+	batchInitialData := &batchInitialData{
+		MultisigStakeKeyHashes: []string{keyHash1, keyHash2},
+	}
+	batchInitialData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
+
+	t.Run("invalid stake pool id", func(t *testing.T) {
+		_, _, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+			StakePoolId: "0x999",
+		})
+
+		require.ErrorIs(t, err, errSkipConfirmedTx)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		cert, amount, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+			StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, uint64(0x1e8480), amount)
+		require.NotNil(t, cert)
+	})
 }

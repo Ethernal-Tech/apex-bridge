@@ -1585,3 +1585,69 @@ func generateSmallUtxoOutputs(value, n uint64, tokens ...cardanowallet.Token) ([
 
 	return utxoOutput, returnCurrencySum
 }
+
+func TestCardanoChainOperations_getCertificateData(t *testing.T) {
+	wallet1, err := cardanowallet.GenerateWallet(true)
+	require.NoError(t, err)
+
+	wallet2, err := cardanowallet.GenerateWallet(true)
+	require.NoError(t, err)
+
+	keyHash1, err := cardanowallet.GetKeyHash(wallet1.StakeVerificationKey)
+	require.NoError(t, err)
+
+	keyHash2, err := cardanowallet.GetKeyHash(wallet2.StakeVerificationKey)
+	require.NoError(t, err)
+
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+	cco := &CardanoChainOperations{
+		config: &cardano.CardanoChainConfig{
+			NetworkMagic: uint32(cardanowallet.MainNetNetwork),
+		},
+		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		txProvider:       txProviderMock,
+		logger:           hclog.NewNullLogger(),
+	}
+	batchData := &batchInitialData{
+		MultisigStakeKeyHashes: []string{keyHash1, keyHash2},
+	}
+	batchData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
+
+	t.Run("one invalid, one valid stake pool id", func(t *testing.T) {
+		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+			{StakePoolId: "0x999", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, 1, len(certs.Certificates))
+		require.Equal(t, uint64(2000000), certs.RegistrationFee)
+	})
+
+	t.Run("two valid stake pool ids", func(t *testing.T) {
+		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, 2, len(certs.Certificates))
+		require.Equal(t, 2*uint64(2000000), certs.RegistrationFee)
+	})
+
+	t.Run("invalid protocol parameters", func(t *testing.T) {
+		defer func(old []byte) {
+			batchData.ProtocolParams = old
+		}(batchData.ProtocolParams)
+
+		batchData.ProtocolParams = nil
+
+		_, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+		})
+
+		require.Error(t, err)
+	})
+}
