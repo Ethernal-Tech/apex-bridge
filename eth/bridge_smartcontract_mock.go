@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/mock"
@@ -158,4 +159,8 @@ func (m *BridgeSmartContractMock) GetAddressValidatorIndex(validatorAddr ethcomm
 	}
 
 	return 0, nil
+}
+
+func (m *BridgeSmartContractMock) GetCurrentValidatorSetId(context.Context) (*big.Int, error) {
+	return nil, nil
 }

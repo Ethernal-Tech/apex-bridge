@@ -88,9 +88,12 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, c
 			return nil, err
 		}
 
-		// TODO: read from the `bridge.sol` and increment by one
-		validatorSetNumber := big.NewInt(0)
-		_ = validatorSetNumber
+		currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetId(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		validatorSetNumber := big.NewInt(0).Add(currentValidatorSetNumber, big.NewInt(1))
 
 		ttl := big.NewInt(int64(cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
 
