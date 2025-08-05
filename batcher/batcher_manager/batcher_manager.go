@@ -20,7 +20,7 @@ type BatchManagerImpl struct {
 	ctx                  context.Context
 	config               *core.BatcherManagerConfiguration
 	batchers             []core.Batcher
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver
 }
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)

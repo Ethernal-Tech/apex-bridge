@@ -62,7 +62,7 @@ func NewEVMChainOperations(
 // CreateValidatorSetChangeTx implements core.ChainOperations.
 func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
 	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
+	validatorsKeys validatorobserver.ValidatorsPerChain) (*core.GeneratedBatchTxData, error) {
 	return nil, nil
 }
 

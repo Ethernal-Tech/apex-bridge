@@ -21,7 +21,7 @@ type lastBatchData struct {
 }
 
 type validatorSetChange struct {
-	validators *validatorobserver.Validators
+	validators *validatorobserver.ValidatorsPerChain
 	finalized  bool
 
 	sync.RWMutex
@@ -61,7 +61,7 @@ func NewBatcher(
 	}
 }
 
-func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validators) {
+func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()
 	defer b.newValidatorSet.Unlock()
 
@@ -163,7 +163,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 			ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
 	} else {
 		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, validators)
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators)
 
 		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
 			b.newValidatorSet.Lock()

@@ -14,6 +14,7 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
@@ -301,17 +302,15 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, common.ChainIDStrPrime).Return(validatorsChainData, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil, hclog.NewNullLogger())
+		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
 
-		b.UpdateValidatorSet(&validatorSetObserver.Validators{
-			Data: map[string]validatorSetObserver.ValidatorsChainData{
-				common.ChainIDStrPrime: {
-					Keys:       newValidatorChainData,
-					SlotNumber: 0,
-				},
+		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
+			common.ChainIDStrPrime: {
+				Keys:       newValidatorChainData,
+				SlotNumber: 0,
 			},
-		})
+		},
+		)
 
 		_, err = b.execute(ctx)
 		require.NoError(t, err)
@@ -423,7 +422,7 @@ type cardanoChainOperationsMock struct {
 // CreateValidatorSetChangeTx implements core.ChainOperations.
 func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
 	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys *validatorSetObserver.Validators) (*core.GeneratedBatchTxData, error) {
+	validatorsKeys validatorobserver.ValidatorsPerChain) (*core.GeneratedBatchTxData, error) {
 	args := c.Called(ctx, chainID, nextBatchID, bridgeSmartContract, validatorsKeys)
 
 	return args.Get(0).(*core.GeneratedBatchTxData), args.Error(1)

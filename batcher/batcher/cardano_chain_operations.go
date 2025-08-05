@@ -623,9 +623,9 @@ func (cco *CardanoChainOperations) generatePolicyAndMultisig(
 // CreateValidatorSetChangeTx implements core.ChainOperations.
 func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
+	validatorsKeys validatorobserver.ValidatorsPerChain) (*core.GeneratedBatchTxData, error) {
 	// get validators data
-	validatorsData, ok := validatorsKeys.Data[chainID]
+	validatorsData, ok := validatorsKeys[chainID]
 	if !ok {
 		return nil, fmt.Errorf("couldn't find keys for chain:%s", chainID)
 	}
