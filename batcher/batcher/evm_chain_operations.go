@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"sort"
 
@@ -30,6 +31,15 @@ type EVMChainOperations struct {
 	ttlFormatter testenv.TTLFormatterFunc
 	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
+	bridgeSC     eth.IBridgeSmartContract
+
+	// vsc is an internal variable (field) used only during the validator set change
+	// process. When false, a standard validator set change tx/batch should be sent.
+	// When true, a finalize validator set change tx/batch should be sent. Note: Even
+	// when true, a standard validator set change tx/batch may still be sent if the
+	// previous validator set change tx/batch failed and requires a retry. This flag
+	// is reset to false after a finalize validator set change tx/batch is created.
+	vsc bool
 }
 
 func NewEVMChainOperations(
@@ -38,6 +48,7 @@ func NewEVMChainOperations(
 	db eventTrackerStore.EventTrackerStore,
 	chainID string,
 	logger hclog.Logger,
+	bridgeSC eth.IBridgeSmartContract,
 ) (*EVMChainOperations, error) {
 	config, err := cardano.NewBatcherEVMChainConfig(jsonConfig)
 	if err != nil {
@@ -56,6 +67,7 @@ func NewEVMChainOperations(
 		ttlFormatter: testenv.GetTTLFormatter(config.TestMode),
 		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
+		bridgeSC:     bridgeSC,
 	}, nil
 }
 
@@ -63,7 +75,78 @@ func NewEVMChainOperations(
 func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
 	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
 	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
-	return nil, nil
+
+	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
+		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
+		if err != nil {
+			return nil, err
+		}
+
+		blockRounded, err := getNumberWithRoundingThreshold(
+			lastProcessedBlock, cco.config.BlockRoundingThreshold, cco.config.NoBatchPeriodPercent)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: read from the `bridge.sol` and increment by one
+		validatorSetNumber := big.NewInt(0)
+		_ = validatorSetNumber
+
+		ttl := big.NewInt(int64(cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
+
+		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys.Data[chainID].Keys))
+
+		for _, key := range validatorsKeys.Data[chainID].Keys {
+			keys = append(keys, key)
+		}
+
+		tx := eth.EVMValidatorSetChangeTx{
+			ValidatorsSetNumber: validatorSetNumber,
+			TTL:                 ttl,
+			ValidatorsChainData: keys,
+		}
+
+		txsBytes, err := tx.Pack()
+		if err != nil {
+			return nil, err
+		}
+
+		txsHashBytes, err := common.Keccak256(txsBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		txHash := hex.EncodeToString(txsHashBytes)
+
+		return &core.GeneratedBatchTxData{
+			BatchType: uint8(ValidatorSet),
+			TxRaw:     txsBytes,
+			TxHash:    txHash,
+		}, nil
+	}
+
+	if !cco.vsc {
+		return createVSCTxFn()
+	}
+
+	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, nextBatchID-1)
+	if err != nil {
+		return nil, err
+	}
+
+	if status == 3 {
+		return createVSCTxFn()
+	} else if status == 2 {
+		cco.vsc = false
+
+		return &core.GeneratedBatchTxData{
+			BatchType: uint8(ValidatorSetFinal),
+			TxRaw:     []byte{},
+			TxHash:    "",
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.
