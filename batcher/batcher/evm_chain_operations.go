@@ -72,10 +72,13 @@ func NewEVMChainOperations(
 }
 
 // CreateValidatorSetChangeTx implements core.ChainOperations.
-func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
-	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys *validatorobserver.Validators) (*core.GeneratedBatchTxData, error) {
-
+func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
+	ctx context.Context,
+	chainID string,
+	nextBatchID uint64,
+	bridgeSmartContract eth.IBridgeSmartContract,
+	validatorsKeys *validatorobserver.Validators,
+) (*core.GeneratedBatchTxData, error) {
 	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
 		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
 		if err != nil {
@@ -88,14 +91,14 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, c
 			return nil, err
 		}
 
-		currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetId(ctx)
+		currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetID(ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		validatorSetNumber := big.NewInt(0).Add(currentValidatorSetNumber, big.NewInt(1))
 
-		ttl := big.NewInt(int64(cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
+		ttl := big.NewInt(0).SetUint64((cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
 
 		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys.Data[chainID].Keys))
 
@@ -128,6 +131,24 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, c
 		}, nil
 	}
 
+	// The main logic operates as follows: if the "vsc" flag is set to false, it indicates
+	// that we have not yet sent a validator set change tx/batch, and therefore we need to
+	// create one. Otherwise, we proceed with additional logic. There are two valid and one
+	// invalid scenario. The selected path depends on the status of the previously sent tx.
+	// Since "vsc" is set to true, the previous batch/tx is guaranteed to be a validator set
+	// change tx/batch. If the given batch was successfully executed (status 2), we need to
+	// create a finalize validator set change tx and reset the "vsc" flag to false. If the
+	// status is 3 (failed), it is necessary to create and resend the validator set change
+	// tx/batch (retry). If the status is neither of these two, we return an error indicating
+	// an unexpected state.
+	//
+	// Note: For the above logic to function correctly, it is assumed that the caller invokes
+	// this method at the appropriate moment. For example, this method should not be called
+	// if the previous batch has not yet been processed (which would return an error due to
+	// status 1), or if a finalize tx/batch has already been created but a new validator set
+	// change cycle has not yet started (in this case a validator set change tx would be again
+	// created, since "vsc" has been reset). See (*BatcherImpl).execute for an example of a
+	// correctly implemented caller.
 	if !cco.vsc {
 		return createVSCTxFn()
 	}
@@ -137,9 +158,8 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, c
 		return nil, err
 	}
 
-	if status == 3 {
-		return createVSCTxFn()
-	} else if status == 2 {
+	switch status {
+	case 2:
 		cco.vsc = false
 
 		return &core.GeneratedBatchTxData{
@@ -147,9 +167,11 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(ctx context.Context, c
 			TxRaw:     []byte{},
 			TxHash:    "",
 		}, nil
+	case 3:
+		return createVSCTxFn()
+	default:
+		return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
 	}
-
-	return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.

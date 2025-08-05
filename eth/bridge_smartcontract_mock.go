@@ -161,6 +161,6 @@ func (m *BridgeSmartContractMock) GetAddressValidatorIndex(validatorAddr ethcomm
 	return 0, nil
 }
 
-func (m *BridgeSmartContractMock) GetCurrentValidatorSetId(context.Context) (*big.Int, error) {
+func (m *BridgeSmartContractMock) GetCurrentValidatorSetID(context.Context) (*big.Int, error) {
 	return nil, nil
 }

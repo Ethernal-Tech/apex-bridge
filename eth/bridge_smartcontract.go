@@ -35,7 +35,7 @@ type IBridgeSmartContract interface {
 	IsNewValidatorSetPending() (bool, error)
 	GetVerificationKeys() ([]ValidatorSet, []ethcommon.Address, error)
 	GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error)
-	GetCurrentValidatorSetId(ctx context.Context) (*big.Int, error)
+	GetCurrentValidatorSetID(ctx context.Context) (*big.Int, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -403,7 +403,7 @@ func (bsc *BridgeSmartContractImpl) GetAddressValidatorIndex(validatorAddr ethco
 	return result, nil
 }
 
-func (bsc *BridgeSmartContractImpl) GetCurrentValidatorSetId(ctx context.Context) (*big.Int, error) {
+func (bsc *BridgeSmartContractImpl) GetCurrentValidatorSetID(ctx context.Context) (*big.Int, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
 		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
