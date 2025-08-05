@@ -540,7 +540,8 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		BlockHeight:        big.NewInt(1),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDeregConfirmedTxSubType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeDeregConfirmedTxSubType),
 	}
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
@@ -751,7 +752,8 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		BlockHeight:        big.NewInt(2),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxSubType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
