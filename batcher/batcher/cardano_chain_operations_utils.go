@@ -92,13 +92,13 @@ func getReceiversMap(
 					// In case of refund, destChainID will be equal to srcChainID
 					// to get the correct token name, original destination chain is needed.
 					origDstChainID := common.ToStrChainID(tx.DestinationChainId)
-					tokenName := cardanoConfig.GetNativeTokenName(origDstChainID)
+					token, err := cardanoConfig.GetNativeToken(origDstChainID)
 
-					if tokenName == "" {
-						return nil, fmt.Errorf("token is not defined for refund original destination chain: (%s -> %s)", srcChainID, origDstChainID) //nolint:lll
+					if err != nil {
+						return nil, fmt.Errorf("failed getting native token for refund tx. original destination chain: (%s -> %s). err: %w", srcChainID, origDstChainID, err) //nolint:lll
 					}
 
-					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
 				}
 
 				for _, utxo := range refundUtxosPerConfirmedTx[txIndx] {
@@ -125,12 +125,12 @@ func getReceiversMap(
 				updateMap(receiver.DestinationAddress, cardanowallet.AdaTokenName, amount)
 
 				if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
-					tokenName := cardanoConfig.GetNativeTokenName(srcChainID)
-					if tokenName == "" {
-						return nil, fmt.Errorf("token is not defined for destination chain: (%s -> %s)", srcChainID, destChainID) //nolint:lll
+					token, err := cardanoConfig.GetNativeToken(srcChainID)
+					if err != nil {
+						return nil, fmt.Errorf("failed getting native token for normal tx. for destination chain: (%s -> %s). err: %w", srcChainID, destChainID, err) //nolint:lll
 					}
 
-					updateMap(receiver.DestinationAddress, tokenName, receiver.AmountWrapped.Uint64())
+					updateMap(receiver.DestinationAddress, token.String(), receiver.AmountWrapped.Uint64())
 				}
 			}
 		}
