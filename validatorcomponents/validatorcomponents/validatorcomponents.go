@@ -56,7 +56,7 @@ type ValidatorComponentsImpl struct {
 	api                  core.API
 	telemetry            *telemetry.Telemetry
 	telemetryWorker      *TelemetryWorker
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver
+	validatorSetObserver *validatorSetObserver.ValidatorSetObserverImpl
 	logger               hclog.Logger
 }
 
@@ -262,7 +262,7 @@ func (v *ValidatorComponentsImpl) Start() error {
 		go v.telemetryWorker.Start(v.ctx)
 	}
 
-	v.validatorSetObserver.Start(v.ctx)
+	v.validatorSetObserver.Start()
 
 	v.logger.Debug("Started ValidatorComponents")
 

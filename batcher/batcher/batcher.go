@@ -48,7 +48,6 @@ func NewBatcher(
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorobserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{

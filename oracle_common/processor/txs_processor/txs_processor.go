@@ -26,7 +26,7 @@ type TxsProcessorImpl struct {
 	bridgeDataFetcher           core.BridgeDataFetcher
 	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
-	validatorSetObserver        *validatorSetObserver.ValidatorSetObserver
+	validatorSetObserver        validatorSetObserver.IValidatorSetObserver
 	logger                      hclog.Logger
 	TickTime                    time.Duration
 }
@@ -40,7 +40,7 @@ func NewTxsProcessorImpl(
 	bridgeDataFetcher core.BridgeDataFetcher,
 	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) *TxsProcessorImpl {
 	return &TxsProcessorImpl{
@@ -218,23 +218,12 @@ func (p *TxsProcessorImpl) submitClaims(
 	startChainID string, bridgeClaims *core.BridgeClaims) (*types.Receipt, bool) {
 	p.logger.Info("Submitting bridge claims", "claims", bridgeClaims)
 
-	claimsToSubmit := bridgeClaims
-
-	if p.validatorSetObserver.IsValidatorSetPending() {
-		p.logger.Warn("Validator set is pending, skipping submit claims")
-
-		claimsToSubmit = &core.BridgeClaims{}
-		claimsToSubmit.BatchExecutedClaims = append(claimsToSubmit.BatchExecutedClaims, bridgeClaims.BatchExecutedClaims...)
-		claimsToSubmit.BatchExecutionFailedClaims = append(claimsToSubmit.BatchExecutionFailedClaims,
-			bridgeClaims.BatchExecutionFailedClaims...)
-	}
-
 	receipt, err := p.bridgeSubmitter.SubmitClaims(
-		claimsToSubmit, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})
+		bridgeClaims, &eth.SubmitOpts{GasLimitMultiplier: p.settings.gasLimitMultiplier[startChainID]})
 	if err != nil {
 		p.logger.Error("Failed to submit claims", "err", err)
 
-		p.settings.OnSubmitClaimsFailed(startChainID, claimsToSubmit.Count())
+		p.settings.OnSubmitClaimsFailed(startChainID, bridgeClaims.Count())
 
 		p.logger.Warn("Adjusted submit claims settings",
 			"startChainID", startChainID,
@@ -247,7 +236,7 @@ func (p *TxsProcessorImpl) submitClaims(
 
 	p.settings.ResetSubmitClaimsSettings(startChainID)
 
-	telemetry.UpdateOracleClaimsSubmitCounter(claimsToSubmit.Count()) // update telemetry
+	telemetry.UpdateOracleClaimsSubmitCounter(bridgeClaims.Count()) // update telemetry
 
 	return receipt, true
 }
