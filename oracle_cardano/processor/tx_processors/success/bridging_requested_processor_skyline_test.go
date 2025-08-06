@@ -68,12 +68,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 								TokenName:  wrappedTokenPrime.String(),
 							},
 						},
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
-					MinOperationFee:   minOperationFee,
+					MinOperationFee: minOperationFee,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -85,13 +85,13 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 								TokenName:  wrappedTokenCardano.String(),
 							},
 						},
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: cardanoBridgingAddr,
 						FeeAddress:      cardanoBridgingFeeAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
-					MinOperationFee:   minOperationFee,
+					MinOperationFee: minOperationFee,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{

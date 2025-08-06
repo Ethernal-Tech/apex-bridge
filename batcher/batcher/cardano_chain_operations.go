@@ -413,7 +413,18 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, nil, err
 	}
 
-	multisigUtxos = append(multisigUtxos, refundUtxos...) // add refund UTXOs to multisig UTXOs
+	multisigUtxoMap := make(map[string]struct{}, len(multisigUtxos))
+	for _, utxo := range multisigUtxos {
+		multisigUtxoMap[utxo.String()] = struct{}{}
+	}
+
+	// make sure we are not adding already added utxos - should not happen if oracle is correctly implemented
+	// however, it happened that oracle was not correctly implemented, and this is a fix to unstuck the bridge
+	for _, refundUtxo := range refundUtxos {
+		if _, exists := multisigUtxoMap[refundUtxo.String()]; !exists {
+			multisigUtxos = append(multisigUtxos, refundUtxo) // add refund UTXOs to multisig UTXOs
+		}
+	}
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos, "refund count", len(refundUtxos))
 

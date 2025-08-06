@@ -44,26 +44,26 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:     wallet.TestNetNetwork,
-						UtxoMinAmount: utxoMinValue,
+						NetworkID:         wallet.TestNetNetwork,
+						UtxoMinAmount:     utxoMinValue,
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 						FeeAddress:      primeBridgingFeeAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
 				},
 				common.ChainIDStrVector: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:     wallet.VectorTestNetNetwork,
-						UtxoMinAmount: utxoMinValue,
-						OgmiosURL:     "http://ogmios.vector.testnet.apexfusion.org:1337",
+						NetworkID:         wallet.VectorTestNetNetwork,
+						UtxoMinAmount:     utxoMinValue,
+						OgmiosURL:         "http://ogmios.vector.testnet.apexfusion.org:1337",
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: vectorBridgingAddr,
 						FeeAddress:      vectorBridgingFeeAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{
@@ -507,12 +507,12 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 								TokenName:  wrappedTokenPrime.String(),
 							},
 						},
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: primeBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
-					MinOperationFee:   minOperationFee,
+					MinOperationFee: minOperationFee,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -524,13 +524,13 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 								TokenName:  wrappedTokenCardano.String(),
 							},
 						},
+						MinFeeForBridging: minFeeForBridging,
 					},
 					BridgingAddresses: cCore.BridgingAddresses{
 						BridgingAddress: cardanoBridgingAddr,
 						FeeAddress:      cardanoBridgingFeeAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
-					MinOperationFee:   minOperationFee,
+					MinOperationFee: minOperationFee,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{

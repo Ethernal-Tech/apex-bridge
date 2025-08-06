@@ -78,15 +78,13 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, metadata, appConfig)
-
-	return nil
+	return p.addRefundRequestClaim(claims, tx, metadata, appConfig)
 }
 
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.RefundBridgingRequestMetadata, appConfig *cCore.AppConfig,
-) {
+) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
@@ -104,7 +102,12 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			recognizeToken = false
 
 			for _, tExc := range chainConfig.NativeTokens {
-				if tExc.TokenName == token.TokenName() {
+				confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+				if err != nil {
+					return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+				}
+
+				if confToken.String() == token.TokenName() {
 					recognizeToken = true
 
 					break
@@ -113,6 +116,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 			if !recognizeToken {
 				unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
+
+				break
 			} else {
 				tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
 			}
@@ -137,6 +142,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 	p.logger.Info("Added RefundRequestClaim",
 		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
+
+	return nil
 }
 
 func (p *RefundRequestProcessorImpl) validate(
@@ -177,7 +184,12 @@ func (p *RefundRequestProcessorImpl) validate(
 					recognizeToken = false
 
 					for _, tExc := range chainConfig.NativeTokens {
-						if tExc.TokenName == token.TokenName() {
+						confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+						if err != nil {
+							return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+						}
+
+						if confToken.String() == token.TokenName() {
 							recognizeToken = true
 
 							break
