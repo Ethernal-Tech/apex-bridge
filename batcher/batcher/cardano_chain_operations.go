@@ -657,7 +657,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// get filtered & limited utxos
 	multisigUtxos, feeUtxos, isFeeOnly, err := cco.getUTXOsForValidatorChange(
-		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment)
+		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment, validatorsData.SlotNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -763,11 +763,21 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 }
 
 func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
-	multisigAddress, multisigFeeAddress string,
+	multisigAddress, multisigFeeAddress string, slot uint64,
 ) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, isFeeOnly bool, err error) {
-	multisigUtxos, err = cco.db.GetAllTxOutputs(multisigAddress, true)
+	// Fetch all UTXOs for the multisig address (including those after the given slot).
+	allMultisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
 	if err != nil {
 		return
+	}
+
+	multisigUtxos = make([]*indexer.TxInputOutput, 0, len(allMultisigUtxos))
+
+	// Filter out any UTXOs created after the given slot.
+	for _, utxo := range allMultisigUtxos {
+		if utxo.Output.Slot <= slot {
+			multisigUtxos = append(multisigUtxos, utxo)
+		}
 	}
 
 	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
