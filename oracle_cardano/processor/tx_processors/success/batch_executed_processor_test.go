@@ -3,24 +3,26 @@ package successtxprocessors
 import (
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatchExecutedProcessor(t *testing.T) {
 	proc := NewBatchExecutedProcessor(hclog.NewNullLogger())
 
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_bridging"}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr_fee")
+
 	appConfig := cCore.AppConfig{
-		CardanoChains: map[string]*cCore.CardanoChainConfig{common.ChainIDStrPrime: {
-			BridgingAddresses: cCore.BridgingAddresses{
-				BridgingAddress: "addr_bridging",
-				FeeAddress:      "addr_fee",
-			},
-		}},
+		BridgingAddressesManager: brAddrManagerMock,
+		CardanoChains:            map[string]*cCore.CardanoChainConfig{common.ChainIDStrPrime: {}},
 	}
 	appConfig.FillOut()
 
@@ -109,18 +111,19 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	t.Run("validate method fail", func(t *testing.T) {
 		cardanoChains := make(map[string]*cCore.CardanoChainConfig)
-		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{
-			BridgingAddresses: cCore.BridgingAddresses{
-				BridgingAddress: "addr1",
-				FeeAddress:      "addr2",
-			},
-		}
+
+		brAddrManMock := &brAddrManager.BridgingAddressesManagerMock{}
+		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+		brAddrManMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr2")
+
+		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{}
 
 		config := &cCore.AppConfig{
-			CardanoChains:    cardanoChains,
-			Bridge:           cCore.BridgeConfig{},
-			Settings:         cCore.AppSettings{},
-			BridgingSettings: cCore.BridgingSettings{},
+			BridgingAddressesManager: brAddrManMock,
+			CardanoChains:            cardanoChains,
+			Bridge:                   cCore.BridgeConfig{},
+			Settings:                 cCore.AppSettings{},
+			BridgingSettings:         cCore.BridgingSettings{},
 		}
 
 		config.FillOut()
@@ -180,18 +183,19 @@ func TestBatchExecutedProcessor(t *testing.T) {
 
 	t.Run("validate method pass", func(t *testing.T) {
 		cardanoChains := make(map[string]*cCore.CardanoChainConfig)
-		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{
-			BridgingAddresses: cCore.BridgingAddresses{
-				BridgingAddress: "addr1",
-				FeeAddress:      "addr2",
-			},
-		}
+
+		brAddrManMock := &brAddrManager.BridgingAddressesManagerMock{}
+		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+		brAddrManMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr2")
+
+		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{}
 
 		config := &cCore.AppConfig{
-			CardanoChains:    cardanoChains,
-			Bridge:           cCore.BridgeConfig{},
-			Settings:         cCore.AppSettings{},
-			BridgingSettings: cCore.BridgingSettings{},
+			BridgingAddressesManager: brAddrManMock,
+			CardanoChains:            cardanoChains,
+			Bridge:                   cCore.BridgeConfig{},
+			Settings:                 cCore.AppSettings{},
+			BridgingSettings:         cCore.BridgingSettings{},
 		}
 
 		config.FillOut()

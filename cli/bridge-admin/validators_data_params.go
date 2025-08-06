@@ -126,7 +126,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
+			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, 0)
 
 			addrs, err := cardanotx.NewApexAddresses(
 				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)

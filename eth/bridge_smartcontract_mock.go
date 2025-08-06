@@ -132,3 +132,16 @@ func (m *BridgeSmartContractMock) GetBatchStatusAndTransactions(
 
 	return status, txs, args.Error(2)
 }
+
+func (m *BridgeSmartContractMock) GetBridgingAddressesCount(
+	ctx context.Context, chainID string,
+) (uint8, error) {
+	args := m.Called(ctx, chainID)
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(uint8)
+
+		return arg0, args.Error(1)
+	}
+
+	return 0, args.Error(1)
+}

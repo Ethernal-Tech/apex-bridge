@@ -9,6 +9,7 @@ type CreateBridgingTxTransactionRequest struct {
 type CreateBridgingTxRequest struct {
 	SenderAddr         string                               `json:"senderAddr"`
 	SourceChainID      string                               `json:"sourceChainId"`
+	BridgingAddress    string                               `json:"bridgingAddress"`
 	DestinationChainID string                               `json:"destinationChainId"`
 	Transactions       []CreateBridgingTxTransactionRequest `json:"transactions"`
 	BridgingFee        uint64                               `json:"bridgingFee"`

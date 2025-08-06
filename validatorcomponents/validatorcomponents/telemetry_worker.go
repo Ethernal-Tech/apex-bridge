@@ -136,7 +136,7 @@ func (ti *TelemetryWorker) execute() {
 }
 
 func (ti *TelemetryWorker) updateFeeHotWalletState(db indexer.Database, chainID string) {
-	txInOuts, err := db.GetAllTxOutputs(ti.config.CardanoChains[chainID].BridgingAddresses.FeeAddress, true)
+	txInOuts, err := db.GetAllTxOutputs(ti.config.GetFeeMultisigAddress(chainID), true)
 	if err != nil {
 		ti.logger.Warn("failed to retrieve utxos for fee multisig", "chain", chainID, "err", err)
 	} else {
