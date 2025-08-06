@@ -213,10 +213,10 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		}
 	}
 
-	var certificatedData *cardano.CertificatesData = nil
+	var certificateData *cardano.CertificatesData = nil
 
 	if len(certificates) > 0 {
-		certificatedData = &cardano.CertificatesData{
+		certificateData = &cardano.CertificatesData{
 			Certificates:    certificates,
 			RegistrationFee: keyRegistrationFee,
 		}

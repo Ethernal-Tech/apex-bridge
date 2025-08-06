@@ -23,6 +23,7 @@ const (
 	bridgePrivateKeyFlag = "bridge-key"
 	privateKeyConfigFlag = "key-config"
 	showPolicyScrFlag    = "show-policy-script"
+	addressIndexFlag     = "addr-index"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
@@ -32,6 +33,7 @@ const (
 	bridgePrivateKeyFlagDesc = "private key for bridge admin"
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 	showPolicyScrFlagDesc    = "show policy script"
+	addrIndexFlagDesc        = "address index"
 )
 
 type createAddressParams struct {
@@ -44,6 +46,7 @@ type createAddressParams struct {
 	bridgePrivateKey string
 	privateKeyConfig string
 	showPolicyScript bool
+	addrIndex        uint
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -75,6 +78,13 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		testnetMagicFlag,
 		0,
 		testnetMagicFlagDesc,
+	)
+
+	cmd.Flags().UintVar(
+		&ip.addrIndex,
+		addressIndexFlag,
+		0,
+		addrIndexFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -148,7 +158,7 @@ func (ip *createAddressParams) Execute(
 		return nil, err
 	}
 
-	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, 0)
+	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(ip.addrIndex))
 
 	addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
 	if err != nil {

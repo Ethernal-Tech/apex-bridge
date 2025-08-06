@@ -2,7 +2,6 @@ package batcher
 
 import (
 	"encoding/json"
-	"errors"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -13,43 +12,6 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
-
-func getStakingDelegateCertificate(
-	cardanoCliBinary string, networkMagic uint,
-	data *batchInitialData, tx *eth.ConfirmedTransaction,
-) (*cardano.CertificatesWithScript, uint64, error) {
-	// Generate policy script
-	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
-		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
-	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
-
-	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScript)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Generate certificates
-	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
-	}
-
-	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
-	}
-
-	return &cardano.CertificatesWithScript{
-		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
-	}, keyRegDepositAmount, nil
-}
 
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
