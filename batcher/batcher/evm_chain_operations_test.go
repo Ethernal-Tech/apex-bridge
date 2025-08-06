@@ -13,11 +13,15 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/testenv"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -205,4 +209,78 @@ func TestEthChain_IsSynchronized(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, i >= scBlock.BlockSlot.Uint64(), val)
 	}
+}
+
+type eventTrackerStoreMock struct {
+	mock.Mock
+}
+
+func (m *eventTrackerStoreMock) GetLastProcessedBlock() (uint64, error) {
+	blockNumber, _ := m.Called()[0].(uint64)
+
+	return blockNumber, nil
+}
+
+func (*eventTrackerStoreMock) InsertLastProcessedBlock(blockNumber uint64) error { return nil }
+
+func (*eventTrackerStoreMock) InsertLogs(logs []*ethgo.Log) error { return nil }
+
+func (*eventTrackerStoreMock) GetLogsByBlockNumber(blockNumber uint64) ([]*ethgo.Log, error) {
+	return nil, nil
+}
+
+func (*eventTrackerStoreMock) GetLog(blockNumber, logIndex uint64) (*ethgo.Log, error) {
+	return nil, nil
+}
+
+func (*eventTrackerStoreMock) GetAllLogs() ([]*ethgo.Log, error) { return nil, nil }
+
+func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
+	db := &eventTrackerStoreMock{}
+	db.On("GetLastProcessedBlock", mock.Anything).Return(uint64(11))
+
+	bsc := &eth.BridgeSmartContractMock{}
+
+	bsc.On("GetCurrentValidatorSetID", mock.Anything).Return(big.NewInt(20))
+
+	op := &EVMChainOperations{
+		config: &cardanotx.BatcherEVMChainConfig{
+			TTLBlockNumberInc:      1,
+			BlockRoundingThreshold: 100,
+			NoBatchPeriodPercent:   0.1,
+		},
+		db:           db,
+		ttlFormatter: testenv.GetTTLFormatter(0),
+		bridgeSC:     bsc,
+	}
+
+	// 1. We have just started the validator set change process, "vscTxSent" is false, so VSC batch/tx
+	// should be returned.
+	batch, err := op.CreateValidatorSetChangeTx(nil, "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	require.NoError(t, err)
+	require.NotNil(t, batch)
+	require.EqualValues(t, ValidatorSet, batch.BatchType)
+
+	// 2. Now "vscTxSent" is true and we should get a finalize batch/tx. However, the previous tx/batch
+	// was executed unsuccessfully, so we get a validator set change batch/tx again (retry).
+	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(20)).Return(uint8(3), nil, nil)
+	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	require.NoError(t, err)
+	require.NotNil(t, batch)
+	require.EqualValues(t, ValidatorSet, batch.BatchType)
+
+	// 3. Since "vscTxSent" is still true and previous validator set change tx/batch was successfully
+	// executed, we should get a finalize batch/tx.
+	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(21)).Return(uint8(2), nil, nil)
+	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	require.NoError(t, err)
+	require.NotNil(t, batch)
+	require.EqualValues(t, ValidatorSetFinal, batch.BatchType)
+
+	// 4. We enter a new cycle of validator set change. "vscTxSent" is reset to false, so we expect
+	// to get a validator set change tx/batch.
+	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	require.NoError(t, err)
+	require.NotNil(t, batch)
+	require.EqualValues(t, ValidatorSet, batch.BatchType)
 }

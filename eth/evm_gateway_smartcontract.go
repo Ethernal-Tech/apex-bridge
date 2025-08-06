@@ -14,7 +14,7 @@ import (
 
 const (
 	depositGasLimitMultiplier   = 1.7
-	updateVCDGasLimitMultiplier = depositGasLimitMultiplier // potentially set to an "independent" value
+	updateVCDGasLimitMultiplier = depositGasLimitMultiplier // potentially set to an different value
 )
 
 type IEVMGatewaySmartContract interface {
@@ -42,7 +42,7 @@ func NewEVMGatewaySmartContract(
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 		depositGasLimit:      depositGasLimit,
-		updateVCDGasLimit:    depositGasLimit, // potentially set to an "independent" value
+		updateVCDGasLimit:    depositGasLimit, // potentially set to different value
 		gasPrice:             gasPrice,
 		gasFeeCap:            gasFeeCap,
 		gasTipCap:            gasTipCap,

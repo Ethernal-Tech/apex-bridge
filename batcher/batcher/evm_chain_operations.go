@@ -33,13 +33,13 @@ type EVMChainOperations struct {
 	logger       hclog.Logger
 	bridgeSC     eth.IBridgeSmartContract
 
-	// vsc is an internal variable (field) used only during the validator set change
+	// vscTxSent is an internal variable used only during the validator set change
 	// process. When false, a standard validator set change tx/batch should be sent.
 	// When true, a finalize validator set change tx/batch should be sent. Note: Even
 	// when true, a standard validator set change tx/batch may still be sent if the
 	// previous validator set change tx/batch failed and requires a retry. This flag
 	// is reset to false after a finalize validator set change tx/batch is created.
-	vsc bool
+	vscTxSent bool
 }
 
 func NewEVMChainOperations(
@@ -149,8 +149,15 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	// change cycle has not yet started (in this case a validator set change tx would be again
 	// created, since "vsc" has been reset). See (*BatcherImpl).execute for an example of a
 	// correctly implemented caller.
-	if !cco.vsc {
-		return createVSCTxFn()
+	if !cco.vscTxSent {
+		data, err := createVSCTxFn()
+		if err != nil {
+			return nil, err
+		}
+
+		cco.vscTxSent = true
+
+		return data, nil
 	}
 
 	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, nextBatchID-1)
@@ -160,7 +167,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 
 	switch status {
 	case 2:
-		cco.vsc = false
+		cco.vscTxSent = false
 
 		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
