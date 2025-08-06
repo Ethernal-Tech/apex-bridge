@@ -328,7 +328,6 @@ func (p *sendSkylineTxParams) Execute(
 			p.chainIDSrc: {
 				CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(networkID),
 				TxProvider:            cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				MultiSigAddr:          p.multisigAddrSrc,
 				TestNetMagic:          p.testnetMagicSrc,
 				TTLSlotNumberInc:      ttlSlotNumberInc,
 				MinBridgingFeeAmount:  minFeeForBridgingSrc,
@@ -352,7 +351,7 @@ func (p *sendSkylineTxParams) Execute(
 	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		p.chainIDSrc, p.chainIDDst,
-		senderAddr.String(), receivers,
+		senderAddr.String(), receivers, p.multisigAddrSrc,
 		p.feeAmount.Uint64(), p.operationFeeAmount.Uint64())
 	if err != nil {
 		return nil, err

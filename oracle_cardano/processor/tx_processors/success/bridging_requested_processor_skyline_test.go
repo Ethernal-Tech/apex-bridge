@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
@@ -60,7 +61,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
 		common.ChainIDStrCardano: {ProtocolParams: protocolParameters},
 	})
+
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntCardano).Return([]string{cardanoBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntCardano).Return(cardanoBridgingFeeAddr)
+
 	appConfig := &cCore.AppConfig{
+		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -77,10 +86,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						},
 					},
 				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
-				},
 				MinFeeForBridging: minFeeForBridging,
 				MinOperationFee:   minOperationFee,
 			},
@@ -94,10 +99,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 							TokenName:  wrappedTokenCardano.String(),
 						},
 					},
-				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: cardanoBridgingAddr,
-					FeeAddress:      cardanoBridgingFeeAddr,
 				},
 				MinFeeForBridging: minFeeForBridging,
 				MinOperationFee:   minOperationFee,
@@ -259,7 +260,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, fmt.Sprintf("bridging address %s on %s", primeBridgingAddr, common.ChainIDStrPrime))
+		require.ErrorContains(t, err, fmt.Sprintf("none of bridging addresses on %s", common.ChainIDStrPrime))
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
@@ -689,13 +690,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 			require.NoError(t, json.Unmarshal(bytes, &newAppConfig))
 			// because of `json:"-"`
-			newAppConfig.CardanoChains[common.ChainIDStrCardano].BridgingAddresses =
-				appConfig.CardanoChains[common.ChainIDStrCardano].BridgingAddresses
-			newAppConfig.CardanoChains[common.ChainIDStrPrime].BridgingAddresses =
-				appConfig.CardanoChains[common.ChainIDStrPrime].BridgingAddresses
 			newAppConfig.CardanoChains[common.ChainIDStrCardano].NativeTokens = nil
 			newAppConfig.CardanoChains[common.ChainIDStrCardano].ChainID = common.ChainIDStrCardano
 			newAppConfig.CardanoChains[common.ChainIDStrPrime].ChainID = common.ChainIDStrPrime
+			newAppConfig.BridgingAddressesManager = appConfig.BridgingAddressesManager
 
 			srcChainID, dstChainID := common.ChainIDStrPrime, common.ChainIDStrCardano
 			txOutput := &indexer.TxOutput{

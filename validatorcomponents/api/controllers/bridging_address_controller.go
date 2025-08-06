@@ -1,0 +1,87 @@
+package controllers
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
+	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
+	"github.com/hashicorp/go-hclog"
+)
+
+type BridgingAddressControllerImpl struct {
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
+	logger                       hclog.Logger
+}
+
+var _ apiCore.APIController = (*BridgingAddressControllerImpl)(nil)
+
+func NewBridgingAddressController(
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator, logger hclog.Logger,
+) *BridgingAddressControllerImpl {
+	return &BridgingAddressControllerImpl{
+		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
+		logger:                       logger,
+	}
+}
+
+func (*BridgingAddressControllerImpl) GetPathPrefix() string {
+	return "BridgingAddress"
+}
+
+func (c *BridgingAddressControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
+	return []*apiCore.APIEndpoint{
+		{Path: "Get", Method: http.MethodGet, Handler: c.getBridgingAddress, APIKeyAuth: true},
+	}
+}
+
+func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter, r *http.Request) {
+	queryValues := r.URL.Query()
+	c.logger.Debug("getBridgingAddress request", "query values", queryValues, "url", r.URL)
+
+	chainIDArr, exists := queryValues["chainId"]
+	if !exists || len(chainIDArr) == 0 {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
+
+		return
+	}
+
+	amountArr, exists := queryValues["amount"]
+	if !exists || len(amountArr) == 0 {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("amount missing from query"), c.logger)
+
+		return
+	}
+
+	chainIDStr := chainIDArr[0]
+	chainID := common.ToNumChainID(chainIDStr)
+
+	amount, err := strconv.ParseUint(amountArr[0], 10, 64)
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("error parsing amount %s from query", amountArr[0]), c.logger)
+
+		return
+	}
+
+	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressesAndAmountsToStakeTo(chainID, amount)
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("get address from bridging address coordinator: %w", err), c.logger)
+
+		return
+	}
+
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewBridgingAddressResponse(
+		chainIDStr, bridgingAddress), c.logger)
+}

@@ -17,8 +17,10 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
+
 	for _, utxo := range tx.Tx.Inputs {
-		if utxo.Output.Address == chainConfig.BridgingAddresses.FeeAddress {
+		if utxo.Output.Address == cardanoDestChainFeeAddress {
 			return nil
 		}
 	}
@@ -28,10 +30,11 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
 
 	for _, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress &&
-			out.Address != chainConfig.BridgingAddresses.FeeAddress {
+		if !CheckBridgingAddrForChain(appConfig, tx.OriginChainID, out.Address) &&
+			out.Address != cardanoDestChainFeeAddress {
 			continue
 		}
 
@@ -60,23 +63,29 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool) (*indexer.TxOutput, error) {
 	var multisigUtxoOutput *indexer.TxOutput = nil
 
-	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-
 	for _, output := range tx.Tx.Outputs {
-		if output.Address == chainConfig.BridgingAddresses.BridgingAddress {
+		if CheckBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = output
 			} else if !allowMultiple {
-				return nil, fmt.Errorf("found multiple tx outputs to the bridging address %s on %s",
-					chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
+				return nil, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
 			}
 		}
 	}
 
 	if multisigUtxoOutput == nil {
-		return nil, fmt.Errorf("bridging address %s on %s not found in tx outputs",
-			chainConfig.BridgingAddresses.BridgingAddress, tx.OriginChainID)
+		return nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
 	}
 
 	return multisigUtxoOutput, nil
+}
+
+func CheckBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
+	for _, bridgingAddr := range appConfig.GetBridgingMultisigAddresses(chainID) {
+		if bridgingAddr == addr {
+			return true
+		}
+	}
+
+	return false
 }

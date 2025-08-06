@@ -175,14 +175,13 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 	chainID uint8, amount uint64,
-) ([]common.AddressAndAmount, error) {
+) (common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
 	// Future improvement:
 	// - add the stake pool saturation awareness
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
-	amounts := make([]common.AddressAndAmount, 0)
 
 	minAmount := uint64(0)
 	index := 0
@@ -190,7 +189,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 	for i, address := range addresses {
 		utxos, err := db.GetAllTxOutputs(address, true)
 		if err != nil {
-			return nil, err
+			return common.AddressAndAmount{}, err
 		}
 
 		amount := uint64(0)
@@ -199,9 +198,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 		}
 
 		if amount == 0 {
-			amounts = append(amounts, common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}) //nolint:gosec
-
-			return amounts, nil
+			return common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}, nil //nolint:gosec
 		}
 
 		if i == 0 {
@@ -212,8 +209,5 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 		}
 	}
 
-	amounts = append(amounts,
-		common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}) //nolint:gosec
-
-	return amounts, nil
+	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil
 }

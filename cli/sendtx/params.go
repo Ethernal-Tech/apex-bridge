@@ -367,7 +367,6 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 			ip.chainIDSrc: {
 				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
 				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
-				MultiSigAddr:         ip.multisigAddrSrc,
 				TestNetMagic:         ip.testnetMagicSrc,
 				TTLSlotNumberInc:     ttlSlotNumberInc,
 				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
@@ -390,7 +389,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
 		ip.chainIDSrc, ip.chainIDDst,
-		senderAddr.String(), receivers,
+		senderAddr.String(), receivers, ip.multisigAddrSrc,
 		ip.feeAmount.Uint64(), 0,
 	)
 	if err != nil {

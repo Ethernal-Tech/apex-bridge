@@ -27,6 +27,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 	t.Run("GetAllRegisteredChains returns error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return(nil, testError)
+		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(1, nil)
 
 		_, err := NewBridgingAdressesManager(
 			context.Background(),
@@ -42,6 +43,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 
 	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(1, nil)
 		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 			{
 				Id:              1,
@@ -70,6 +72,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 	})
 
 	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(uint8(1), nil)
 	bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 		{
 			Id:              1,

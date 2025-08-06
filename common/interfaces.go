@@ -51,5 +51,5 @@ type BridgingAddressesCoordinator interface {
 		cardanoCliBinary string,
 		protocolParams []byte,
 		txOutputs []cardanowallet.TxOutput) ([]AddressAndAmount, error)
-	GetAddressesAndAmountsToStakeTo(chainID uint8, amount uint64) ([]AddressAndAmount, error)
+	GetAddressesAndAmountsToStakeTo(chainID uint8, amount uint64) (AddressAndAmount, error)
 }
