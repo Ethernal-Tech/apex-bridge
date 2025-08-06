@@ -131,14 +131,14 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		}, nil
 	}
 
-	// The main logic operates as follows: if the "vsc" flag is set to false, it indicates
+	// The main logic operates as follows: if the "vscTxSent" flag is set to false, it indicates
 	// that we have not yet sent a validator set change tx/batch, and therefore we need to
 	// create one. Otherwise, we proceed with additional logic. There are two valid and one
 	// invalid scenario. The selected path depends on the status of the previously sent tx.
-	// Since "vsc" is set to true, the previous batch/tx is guaranteed to be a validator set
-	// change tx/batch. If the given batch was successfully executed (status 2), we need to
-	// create a finalize validator set change tx and reset the "vsc" flag to false. If the
-	// status is 3 (failed), it is necessary to create and resend the validator set change
+	// Since "vscTxSent" is set to true, the previous batch/tx is guaranteed to be a validator
+	// set change tx/batch. If the given batch was successfully executed (status 2), we need to
+	// create a finalize validator set change tx and reset the "vscTxSent" flag to false. If
+	// the status is 3 (failed), it is necessary to create and resend the validator set change
 	// tx/batch (retry). If the status is neither of these two, we return an error indicating
 	// an unexpected state.
 	//
@@ -147,8 +147,8 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	// if the previous batch has not yet been processed (which would return an error due to
 	// status 1), or if a finalize tx/batch has already been created but a new validator set
 	// change cycle has not yet started (in this case a validator set change tx would be again
-	// created, since "vsc" has been reset). See (*BatcherImpl).execute for an example of a
-	// correctly implemented caller.
+	// created, since "vscTxSent" has been reset). See (*BatcherImpl).execute for an example of
+	// a correctly implemented caller.
 	if !cco.vscTxSent {
 		data, err := createVSCTxFn()
 		if err != nil {
