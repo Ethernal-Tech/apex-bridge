@@ -77,7 +77,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	chainID string,
 	nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys *validatorobserver.Validators,
+	validatorsKeys validatorobserver.ValidatorsPerChain,
 ) (*core.GeneratedBatchTxData, error) {
 	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
 		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
@@ -100,9 +100,9 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 
 		ttl := big.NewInt(0).SetUint64((cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
 
-		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys.Data[chainID].Keys))
+		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys[chainID].Keys))
 
-		for _, key := range validatorsKeys.Data[chainID].Keys {
+		for _, key := range validatorsKeys[chainID].Keys {
 			keys = append(keys, key)
 		}
 

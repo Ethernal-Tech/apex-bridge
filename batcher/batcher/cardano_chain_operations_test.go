@@ -978,12 +978,10 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		}, nil)
 
 		generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
-			nextBatchID, bridgeSmartContractMock, &validatorobserver.Validators{
-				Data: map[string]validatorobserver.ValidatorsChainData{
-					common.ChainIDStrPrime: {
-						Keys:       newValidatorChainData,
-						SlotNumber: 0,
-					},
+			nextBatchID, bridgeSmartContractMock, validatorobserver.ValidatorsPerChain{
+				common.ChainIDStrPrime: {
+					Keys:       newValidatorChainData,
+					SlotNumber: 0,
 				},
 			})
 		require.NoError(t, err)

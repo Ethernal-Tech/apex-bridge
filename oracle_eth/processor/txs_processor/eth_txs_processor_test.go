@@ -39,7 +39,7 @@ func newEthTxsProcessor(
 	bridgeSubmitter oCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {
 	txProcessors := NewTxProcessorsCollection(
 		successTxProcessors, failedTxProcessors,
@@ -70,7 +70,7 @@ func newValidProcessor(
 	bridgeSubmitter oCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *EthTxsReceiverImpl) {
 	var successTxProcessors []ethcore.EthTxSuccessProcessor
 	if successTxProcessor != nil {
@@ -313,13 +313,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.Hash{1}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -381,81 +390,15 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
-			indexerDbs,
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
-		)
-
-		require.NotNil(t, proc)
-
-		events, err := eth.GetNexusEventSignatures()
-		require.NoError(t, err)
-
-		depositEventSig := events[0]
-
-		log := &ethgo.Log{
-			BlockHash:       ethgo.Hash{1},
-			TransactionHash: txHash,
-			Data:            simulateRealData(),
-			Topics: []ethgo.Hash{
-				depositEventSig,
-			},
-		}
-
-		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
-		require.Len(t, unprocessedTxs, 1)
-		require.Equal(t, txHash, unprocessedTxs[0].Hash)
-		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
-		require.Nil(t, processedTx)
-	})
-
-	t.Run("Start - unprocessedTxs - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		const (
-			originChainID = common.ChainIDStrNexus
-		)
-
-		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{originChainID: &ethcore.EventStoreMock{}}
-
-		oracleDB, err := createOracleDB(dbFilePath)
-		require.NoError(t, err)
-
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", mock.Anything, mock.Anything).Return([]eth.TxDataInfo{}, nil)
-
-		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
-
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(true, error(nil))
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
 
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(context.Background(), bridgeSmartContractMock,
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
 			hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		ctx, cancelFunc := context.WithCancel(context.Background())
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
@@ -492,11 +435,11 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc.Start()
 
 		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
-		require.NotNil(t, unprocessedTxs)
-
+		require.Len(t, unprocessedTxs, 1)
+		require.Equal(t, txHash, unprocessedTxs[0].Hash)
+		require.Equal(t, originChainID, unprocessedTxs[0].OriginChainID)
 		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: originChainID, DBKey: txHash[:]})
 		require.Nil(t, processedTx)
-		require.False(t, processedTx.IsInvalid)
 	})
 
 	t.Run("Start - unprocessedTxs - valid", func(t *testing.T) {
@@ -524,13 +467,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -599,13 +551,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -678,13 +639,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -836,13 +806,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -912,13 +891,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1016,13 +1004,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1120,13 +1117,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1246,13 +1252,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1393,13 +1408,22 @@ func TestEthTxsProcessor(t *testing.T) {
 		}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1443,7 +1467,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1481,7 +1505,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1594,13 +1618,22 @@ func TestEthTxsProcessor(t *testing.T) {
 			Return(&types.Receipt{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
+		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
+
+		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
+			hclog.NewNullLogger())
+		require.NoError(t, err)
+
 		proc, rec := newEthTxsProcessor(
 			ctx,
 			appConfig, oracleDB,
 			[]ethcore.EthTxSuccessProcessor{brcProc, becProc}, nil, bridgeDataFetcher, bridgeSubmitter,
 			indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
+			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)

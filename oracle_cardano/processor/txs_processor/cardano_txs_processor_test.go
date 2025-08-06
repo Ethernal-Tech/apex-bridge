@@ -37,7 +37,7 @@ func newCardanoTxsProcessor(
 	bridgeSubmitter cCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
 	txProcessors := NewTxProcessorsCollection(
 		successTxProcessors, failedTxProcessors,
@@ -69,7 +69,7 @@ func newValidProcessor(
 	bridgeSubmitter cCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserver,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
 	var successTxProcessors []core.CardanoTxSuccessProcessor
 	if successTxProcessor != nil {

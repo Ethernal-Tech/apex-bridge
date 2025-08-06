@@ -19,7 +19,7 @@ type BatcherManager interface {
 
 type Batcher interface {
 	Start(ctx context.Context)
-	UpdateValidatorSet(validators *validatorobserver.Validators)
+	UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain)
 }
 
 type ChainOperations interface {
@@ -37,7 +37,7 @@ type ChainOperations interface {
 	CreateValidatorSetChangeTx(ctx context.Context,
 		chainID string, nextBatchID uint64,
 		bridgeSmartContract eth.IBridgeSmartContract,
-		validatorsKeys *validatorobserver.Validators) (*GeneratedBatchTxData, error)
+		validatorsKeys validatorobserver.ValidatorsPerChain) (*GeneratedBatchTxData, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

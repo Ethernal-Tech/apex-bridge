@@ -21,13 +21,16 @@ type lastBatchData struct {
 }
 
 type validatorSetChange struct {
-	validators *validatorobserver.Validators
+	validators *validatorobserver.ValidatorsPerChain
 	finalized  bool
 
 	sync.RWMutex
 }
 
 func (v *validatorSetChange) isValidatorPending() bool {
+	v.RLock()
+	defer v.RUnlock()
+
 	return v.validators != nil
 }
 
@@ -48,7 +51,6 @@ func NewBatcher(
 	operations core.ChainOperations,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorobserver.ValidatorSetObserver,
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{
@@ -62,7 +64,7 @@ func NewBatcher(
 	}
 }
 
-func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validators) {
+func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()
 	defer b.newValidatorSet.Unlock()
 
@@ -144,7 +146,16 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		confirmedTransactions []eth.ConfirmedTransaction
 	)
 
-	if b.newValidatorSet.validators == nil {
+	if b.newValidatorSet.isValidatorPending() {
+		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators)
+
+		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+			b.newValidatorSet.Lock()
+			b.newValidatorSet.finalized = true
+			b.newValidatorSet.Unlock()
+		}
+	} else {
 		// Get confirmed transactions from smart contract
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
 		if err != nil {
@@ -162,15 +173,6 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		// Generate batch transaction
 		generatedBatchData, err = b.operations.GenerateBatchTransaction(
 			ctx, b.bridgeSmartContract, b.config.Chain.ChainID, confirmedTransactions, batchID)
-	} else {
-		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, validators)
-
-		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
-			b.newValidatorSet.Lock()
-			b.newValidatorSet.finalized = true
-			b.newValidatorSet.Unlock()
-		}
 	}
 
 	if err != nil {

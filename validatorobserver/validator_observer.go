@@ -2,99 +2,72 @@ package validatorobserver
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
-type ValidatorSetObserver struct {
-	validatorSetStream  chan *Validators
-	validators          Validators
+type ValidatorSetObserverImpl struct {
+	context             context.Context
+	validatorSetStream  chan *ValidatorsPerChain
+	validators          ValidatorsPerChain
 	validatorSetPending bool
 	bridgeSmartContract eth.IBridgeSmartContract
 	logger              hclog.Logger
+	lock                sync.RWMutex
 }
+
+var _ IValidatorSetObserver = (*ValidatorSetObserverImpl)(nil)
 
 type ValidatorsChainData struct {
 	Keys       []eth.ValidatorChainData
 	SlotNumber uint64
 }
 
-type Validators struct {
-	Data map[string]ValidatorsChainData
-}
+type ValidatorsPerChain map[string]ValidatorsChainData
 
 const (
-	timeout = 1 * time.Second
+	timeout = 30 * time.Second
 )
-
-var lock = sync.RWMutex{}
 
 func NewValidatorSetObserver(
 	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
-) (*ValidatorSetObserver, error) {
+) (*ValidatorSetObserverImpl, error) {
+	newValidatorSet := &ValidatorSetObserverImpl{
+		context:             ctx,
+		bridgeSmartContract: bridgeSmartContract,
+		validatorSetStream:  make(chan *ValidatorsPerChain),
+		logger:              logger.Named("validator_set_observer"),
+		lock:                sync.RWMutex{},
+	}
+
 	validatorSetPending, err := bridgeSmartContract.IsNewValidatorSetPending()
 	if err != nil {
-		validatorSetPending = false
+		return newValidatorSet, fmt.Errorf("error checking if new validator set is pending: %w", err)
 	}
 
-	validators := Validators{
-		Data: make(map[string]ValidatorsChainData),
-	}
-
-	registeredChains, err := bridgeSmartContract.GetAllRegisteredChains(context.Background())
+	err = newValidatorSet.initValidatorSet()
 	if err != nil {
-		registeredChains = []contractbinding.IBridgeStructsChain{}
+		return newValidatorSet, fmt.Errorf("error initializing validator set: %w", err)
 	}
 
-	for _, chain := range registeredChains {
-		validatorsData, err := bridgeSmartContract.GetValidatorsChainData(context.Background(),
-			common.ToStrChainID(chain.Id))
-		if err != nil {
-			continue
-		}
+	newValidatorSet.validatorSetPending = validatorSetPending
 
-		validatorKeys := []eth.ValidatorChainData{}
-		for _, data := range validatorsData {
-			validatorKeys = append(validatorKeys, eth.ValidatorChainData{
-				Key: data.Key,
-			})
-		}
-
-		slotNumber := uint64(0)
-
-		lastObservedBlock, err := bridgeSmartContract.GetLastObservedBlock(ctx, common.ToStrChainID(chain.Id))
-		if err == nil {
-			slotNumber = lastObservedBlock.BlockSlot.Uint64()
-		}
-
-		validators.Data[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
-			Keys:       validatorKeys,
-			SlotNumber: slotNumber,
-		}
-	}
-
-	return &ValidatorSetObserver{
-		validatorSetStream:  make(chan *Validators),
-		validators:          validators,
-		validatorSetPending: validatorSetPending,
-		bridgeSmartContract: bridgeSmartContract,
-		logger:              logger.Named("validator_set_observer"),
-	}, nil
+	return newValidatorSet, nil
 }
 
-func (vs *ValidatorSetObserver) Start(ctx context.Context) {
+func (vs *ValidatorSetObserverImpl) Start() {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-vs.context.Done():
 				close(vs.validatorSetStream)
 
 				return
@@ -107,91 +80,222 @@ func (vs *ValidatorSetObserver) Start(ctx context.Context) {
 	}()
 }
 
-func (vs *ValidatorSetObserver) execute() error {
-	lock.Lock()
-	oldState := vs.validatorSetPending
-	validators := vs.validators
-	lock.Unlock()
+func (vs *ValidatorSetObserverImpl) execute() error {
+	// Check if the initialization is complete
+	if len(vs.validators) == 0 {
+		// try to initialize the validator set
+		err := vs.initValidatorSet()
+		if err != nil {
+			return fmt.Errorf("error initializing validator set, err: %w", err)
+		}
+	}
 
 	isPending, err := vs.bridgeSmartContract.IsNewValidatorSetPending()
 	if err != nil {
 		return err
 	}
 
-	if isPending == oldState {
+	// check if same state
+	if isPending == vs.IsValidatorSetPending() {
 		return nil
 	}
 
+	var (
+		addedValidators        []eth.ValidatorSet
+		removedValidators      []ethcommon.Address
+		lastObservedBlockSlots map[string]uint64
+	)
+
 	if isPending {
-		addedValidators, removedValidators, err := vs.bridgeSmartContract.GetVerificationKeys()
+		addedValidators, removedValidators, err = vs.bridgeSmartContract.GetPendingValidatorSetDelta()
 		if err != nil {
 			return err
 		}
 
-		vs.removeValidators(validators, removedValidators)
-		vs.addValidators(validators, addedValidators)
+		registeredChains, err := vs.bridgeSmartContract.GetAllRegisteredChains(vs.context)
+		if err != nil {
+			return fmt.Errorf("error getting registered chains: %w", err)
+		}
+
+		lastObservedBlockSlots = make(map[string]uint64, len(registeredChains))
+
+		for _, chainID := range registeredChains {
+			chainIDStr := common.ToStrChainID(chainID.Id)
+
+			lastObservedBlock, err := vs.bridgeSmartContract.GetLastObservedBlock(vs.context, chainIDStr)
+			if err != nil {
+				return fmt.Errorf("error getting last observed block for chain: %s, err: %w", chainIDStr, err)
+			}
+
+			lastObservedBlockSlots[chainIDStr] = lastObservedBlock.BlockSlot.Uint64()
+		}
 	}
 
-	lock.Lock()
-	defer lock.Unlock()
+	var pendingValidatorSet *ValidatorsPerChain
+
+	vs.lock.Lock()
 
 	vs.validatorSetPending = isPending
+
 	if isPending {
-		vs.validators = validators
-		vs.validatorSetStream <- &validators
-	} else {
-		vs.validatorSetStream <- nil
+		validatorSetCopy := vs.validators.Clone()
+
+		err := vs.removeValidators(validatorSetCopy, removedValidators)
+		if err != nil {
+			vs.lock.Unlock()
+
+			return fmt.Errorf("error removing validators: %w", err)
+		}
+
+		vs.addValidators(validatorSetCopy, addedValidators)
+
+		err = vs.updateSlotNumbers(validatorSetCopy, lastObservedBlockSlots)
+		if err != nil {
+			vs.lock.Unlock()
+
+			return fmt.Errorf("error updating slot numbers: %w", err)
+		}
+
+		pendingValidatorSet = &validatorSetCopy
+		vs.validators = validatorSetCopy
+	}
+
+	vs.lock.Unlock()
+
+	vs.validatorSetStream <- pendingValidatorSet
+
+	return nil
+}
+
+func (vs *ValidatorSetObserverImpl) IsValidatorSetPending() bool {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
+
+	return vs.validatorSetPending
+}
+
+func (vs *ValidatorSetObserverImpl) GetValidatorSet(chainID string) []eth.ValidatorChainData {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
+
+	return vs.validators[chainID].Keys
+}
+
+func (vs *ValidatorSetObserverImpl) GetValidatorSetReader() <-chan *ValidatorsPerChain {
+	return vs.validatorSetStream
+}
+
+func (vs *ValidatorSetObserverImpl) removeValidators(
+	validators ValidatorsPerChain, removedValidators []ethcommon.Address,
+) error {
+	deletedMap := map[uint8]bool{}
+
+	for _, validator := range removedValidators {
+		validatorIdx, err := vs.bridgeSmartContract.GetAddressValidatorIndex(validator)
+		if err != nil {
+			return err
+		}
+
+		deletedMap[validatorIdx] = true
+	}
+
+	for chainID, chainData := range validators {
+		newKeys := make([]eth.ValidatorChainData, 0, len(chainData.Keys)-len(deletedMap))
+
+		idx := uint8(0)
+		for _, key := range chainData.Keys {
+			if !deletedMap[idx] {
+				newKeys = append(newKeys, key)
+			}
+
+			idx++
+		}
+
+		chainData.Keys = newKeys
+		validators[chainID] = chainData
 	}
 
 	return nil
 }
 
-func (vs *ValidatorSetObserver) IsValidatorSetPending() bool {
-	lock.RLock()
-	defer lock.RUnlock()
-
-	return vs.validatorSetPending
-}
-
-func (vs *ValidatorSetObserver) GetVerificationKeys(chainID string) []eth.ValidatorChainData {
-	lock.RLock()
-	defer lock.RUnlock()
-
-	return vs.validators.Data[chainID].Keys
-}
-
-func (vs *ValidatorSetObserver) GetValidatorSetReader() <-chan *Validators {
-	return vs.validatorSetStream
-}
-
-func (vs *ValidatorSetObserver) removeValidators(validators Validators,
-	removedValidators []ethcommon.Address) {
-	for _, validator := range removedValidators {
-		validatorIdx, err := vs.bridgeSmartContract.GetAddressValidatorIndex(validator)
-		if err != nil {
-			continue
-		}
-
-		for chainID := range validators.Data {
-			validatorData := validators.Data[chainID]
-			if int(validatorIdx) < len(validatorData.Keys) {
-				validatorData.Keys = append(validatorData.Keys[:validatorIdx], validatorData.Keys[validatorIdx+1:]...)
-				validators.Data[chainID] = validatorData
-			}
-		}
-	}
-}
-
-func (vs *ValidatorSetObserver) addValidators(
-	validators Validators, addedValidators []eth.ValidatorSet,
-) {
+func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain, addedValidators []eth.ValidatorSet) {
 	for _, validator := range addedValidators {
 		for _, v := range validator.Validators {
-			validatorData := validators.Data[common.ToStrChainID(validator.ChainId)]
+			validatorData := validators[common.ToStrChainID(validator.ChainId)]
 			validatorData.Keys = append(validatorData.Keys, eth.ValidatorChainData{
 				Key: v.Data.Key,
 			})
-			validators.Data[common.ToStrChainID(validator.ChainId)] = validatorData
+			validators[common.ToStrChainID(validator.ChainId)] = validatorData
 		}
 	}
+}
+
+func (vs *ValidatorSetObserverImpl) updateSlotNumbers(
+	validators ValidatorsPerChain, lastObservedBlockSlots map[string]uint64,
+) error {
+	for chainID, chainData := range validators {
+		if _, exists := lastObservedBlockSlots[chainID]; !exists {
+			return fmt.Errorf("last observed block slot not found for chain: %s", chainID)
+		}
+
+		if chainData.SlotNumber != lastObservedBlockSlots[chainID] {
+			chainData.SlotNumber = lastObservedBlockSlots[chainID]
+			validators[chainID] = chainData
+		}
+	}
+
+	return nil
+}
+
+func (vs *ValidatorSetObserverImpl) initValidatorSet() error {
+	validators := make(map[string]ValidatorsChainData)
+
+	registeredChains, err := vs.bridgeSmartContract.GetAllRegisteredChains(vs.context)
+	if err != nil {
+		return fmt.Errorf("error getting registered chains: %w", err)
+	}
+
+	for _, chain := range registeredChains {
+		validatorsData, err := vs.bridgeSmartContract.GetValidatorsChainData(vs.context, common.ToStrChainID(chain.Id))
+		if err != nil {
+			return fmt.Errorf("error getting validators chain data for chain %s: %w", common.ToStrChainID(chain.Id), err)
+		}
+
+		validatorKeys := []eth.ValidatorChainData{}
+		for _, data := range validatorsData {
+			validatorKeys = append(validatorKeys, eth.ValidatorChainData{
+				Key: data.Key,
+			})
+		}
+
+		lastObservedBlock, err := vs.bridgeSmartContract.GetLastObservedBlock(vs.context, common.ToStrChainID(chain.Id))
+		if err != nil {
+			return fmt.Errorf("error getting last observed block for chain %s: %w", common.ToStrChainID(chain.Id), err)
+		}
+
+		validators[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
+			Keys:       validatorKeys,
+			SlotNumber: lastObservedBlock.BlockSlot.Uint64(),
+		}
+	}
+
+	vs.lock.Lock()
+	defer vs.lock.Unlock()
+
+	vs.validators = validators
+
+	return nil
+}
+
+func (v ValidatorsPerChain) Clone() ValidatorsPerChain {
+	clone := make(map[string]ValidatorsChainData, len(v))
+
+	for chainID, elem := range v {
+		clone[chainID] = ValidatorsChainData{
+			Keys:       append([]eth.ValidatorChainData(nil), elem.Keys...),
+			SlotNumber: elem.SlotNumber,
+		}
+	}
+
+	return clone
 }
