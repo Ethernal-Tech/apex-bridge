@@ -223,7 +223,10 @@ func getAllUtxos(
 		}
 	} else { // Retrieve Cardano balances via Ogmios
 		for chainID, cardanoConfig := range appConfig.CardanoChains {
-			txProvider := cardanowallet.NewTxProviderOgmios(cardanoConfig.OgmiosURL)
+			txProvider, err := cardanoConfig.CreateTxProvider()
+			if err != nil {
+				return nil, err
+			}
 
 			allUtxos, err := infracommon.ExecuteWithRetry(context.Background(),
 				func(ctx context.Context) ([]cardanowallet.Utxo, error) {

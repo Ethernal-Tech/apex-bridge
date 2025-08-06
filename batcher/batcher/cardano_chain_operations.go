@@ -20,7 +20,8 @@ import (
 var (
 	_ core.ChainOperations = (*CardanoChainOperations)(nil)
 
-	errTxSizeTooBig = errors.New("batch tx size too big")
+	errTxSizeTooBig    = errors.New("batch tx size too big")
+	errSkipConfirmedTx = errors.New("skip confirmed tx")
 )
 
 // Get real tx size from protocolParams/config
@@ -292,7 +293,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		data.Metadata,
 		txInputs,
 		txOutputs.Outputs,
-		certificatedData,
+		certificateData,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err

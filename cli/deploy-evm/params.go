@@ -22,7 +22,7 @@ import (
 
 const (
 	defaultGasFeeMultiplier   = 200 // 170%
-	defaultGasLimit           = uint64(5_242_880)
+	defaultGasLimitValue      = uint64(5_242_880)
 	defaultGasLimitMultiplier = float64(1.1)
 
 	ercProxyContractName = "ERC1967Proxy"
@@ -35,6 +35,7 @@ const (
 	evmDynamicTxFlag    = "dynamic-tx"
 	evmCloneEvmRepoFlag = "clone"
 	evmBranchNameFlag   = "branch"
+	gasLimitFlag        = "gas-limit"
 
 	bridgeNodeURLFlag    = "bridge-url"
 	bridgeSCAddrFlag     = "bridge-addr"
@@ -51,6 +52,7 @@ const (
 	evmDynamicTxFlagDesc    = "dynamic tx"
 	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
 	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
+	gasLimitFlagDesc        = "gas limit for transaction"
 
 	bridgeNodeURLFlagDesc    = "bridge node url"
 	bridgeSCAddrFlagDesc     = "bridge smart contract address"
@@ -96,6 +98,7 @@ type deployEVMParams struct {
 	minBridgingAmountString string
 	minFeeAmount            *big.Int
 	minBridgingAmount       *big.Int
+	gasLimit                uint64
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -244,6 +247,13 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		privateKeyConfigFlagDesc,
 	)
 
+	cmd.Flags().Uint64Var(
+		&ip.gasLimit,
+		gasLimitFlag,
+		defaultGasLimitValue,
+		gasLimitFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, privateKeyConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 
@@ -295,7 +305,7 @@ func (ip *deployEVMParams) Execute(
 	txHelper, err := ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(ip.evmNodeURL),
 		ethtxhelper.WithDynamicTx(ip.evmDynamicTx),
-		ethtxhelper.WithDefaultGasLimit(defaultGasLimit),
+		ethtxhelper.WithDefaultGasLimit(ip.gasLimit),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
