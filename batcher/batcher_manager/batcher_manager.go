@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -16,9 +17,10 @@ import (
 )
 
 type BatchManagerImpl struct {
-	ctx      context.Context
-	config   *core.BatcherManagerConfiguration
-	batchers []core.Batcher
+	ctx                  context.Context
+	config               *core.BatcherManagerConfiguration
+	batchers             []core.Batcher
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver
 }
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
@@ -31,6 +33,7 @@ func NewBatcherManager(
 	cardanoIndexerDbs map[string]indexer.Database,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
 	var (
@@ -50,7 +53,7 @@ func NewBatcherManager(
 				return nil, err
 			}
 		case common.ChainTypeEVMStr:
-			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
+			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger, bridgeSmartContract)
 			if err != nil {
 				return nil, err
 			}
@@ -72,9 +75,10 @@ func NewBatcherManager(
 	}
 
 	return &BatchManagerImpl{
-		ctx:      ctx,
-		config:   config,
-		batchers: batchers,
+		ctx:                  ctx,
+		config:               config,
+		batchers:             batchers,
+		validatorSetObserver: validatorSetObserver,
 	}, nil
 }
 
@@ -82,6 +86,25 @@ func (bm *BatchManagerImpl) Start() {
 	for _, b := range bm.batchers {
 		go b.Start(bm.ctx)
 	}
+
+	go func() {
+		for {
+			select {
+			case <-bm.ctx.Done():
+				return
+			case vs := <-bm.validatorSetObserver.GetValidatorSetReader():
+				select {
+				case <-bm.ctx.Done():
+					return
+				default:
+				}
+
+				for _, b := range bm.batchers {
+					b.UpdateValidatorSet(vs)
+				}
+			}
+		}
+	}()
 }
 
 func getCardanoOperations(
@@ -104,7 +127,7 @@ func getCardanoOperations(
 
 func getEthOperations(
 	config core.ChainConfig, ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, logger hclog.Logger, bridgeSC eth.IBridgeSmartContract,
 ) (core.ChainOperations, error) {
 	db, exists := ethIndexerDbs[config.ChainID]
 	if !exists {
@@ -112,7 +135,7 @@ func getEthOperations(
 	}
 
 	operations, err := batcher.NewEVMChainOperations(
-		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
+		config.ChainSpecific, secretsManager, db, config.ChainID, logger, bridgeSC)
 	if err != nil {
 		return nil, err
 	}

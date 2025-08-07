@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -101,5 +103,77 @@ func TestEVMChainOperations(t *testing.T) {
 		require.NoError(t, ops.SendTx(ctx, nil, batch))
 
 		scMock.AssertExpectations(t)
+	})
+
+	t.Run("SendTx - behavior for each batch type", func(t *testing.T) {
+		createFn := func() (*eth.EVMGatewaySmartContractMock, *EVMChainOperations) {
+			gateway := &eth.EVMGatewaySmartContractMock{}
+			gateway.On("Deposit",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything).Return(nil)
+			gateway.On("UpdateValidatorsChainData",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything).Return(nil)
+
+			op := &EVMChainOperations{
+				evmSmartContract: gateway,
+				logger:           hclog.NewNullLogger(),
+			}
+
+			return gateway, op
+		}
+
+		t.Run("Normal batch", func(t *testing.T) {
+			gateway, op := createFn()
+
+			_ = op.SendTx(nil, nil, &eth.ConfirmedBatch{
+				BatchType: uint8(batcher.Normal),
+			})
+
+			gateway.AssertCalled(t, "Deposit",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything)
+		})
+
+		t.Run("Validator set batch", func(t *testing.T) {
+			gateway, op := createFn()
+
+			_ = op.SendTx(nil, nil, &eth.ConfirmedBatch{
+				BatchType: uint8(batcher.ValidatorSet),
+			})
+
+			gateway.AssertCalled(t, "UpdateValidatorsChainData",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything)
+		})
+
+		t.Run("Validator set batch", func(t *testing.T) {
+			gateway, op := createFn()
+
+			err := op.SendTx(nil, nil, &eth.ConfirmedBatch{
+				BatchType: uint8(batcher.ValidatorSetFinal),
+			})
+
+			require.Error(t, err)
+
+			gateway.AssertNotCalled(t, "Deposit",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything)
+			gateway.AssertNotCalled(t, "UpdateValidatorsChainData",
+				mock.Anything,
+				mock.Anything,
+				mock.Anything,
+				mock.Anything)
+		})
 	})
 }
