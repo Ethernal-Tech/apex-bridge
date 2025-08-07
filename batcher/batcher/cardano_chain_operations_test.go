@@ -1055,3 +1055,50 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		require.Nil(t, info)
 	})
 }
+
+func TestGetUTXOsForValidatorChange(t *testing.T) {
+	db := indexer.DatabaseMock{}
+	db.On("GetAllTxOutputs", "fee", mock.Anything).Return([]*indexer.TxInputOutput{
+		{},
+		{},
+	}, nil)
+	db.On("GetAllTxOutputs", "multisig", mock.Anything).Return([]*indexer.TxInputOutput{
+		{
+			Output: indexer.TxOutput{Address: "1", Slot: 56}, // should be omitted from the returned UTXOs
+		},
+		{
+			Output: indexer.TxOutput{Address: "2", Slot: 20},
+		},
+		{
+			Output: indexer.TxOutput{Address: "3", Slot: 83}, // should be omitted from the returned UTXOs
+		},
+		{
+			Output: indexer.TxOutput{Address: "4", Slot: 44},
+		},
+		{
+			Output: indexer.TxOutput{Address: "5", Slot: 12},
+		},
+	}, nil)
+
+	cco := CardanoChainOperations{
+		db: &db,
+		config: &cardano.CardanoChainConfig{
+			MaxUtxoCount:    10,
+			MaxFeeUtxoCount: 3,
+		},
+	}
+
+	ms, fee, onlyFee, err := cco.getUTXOsForValidatorChange("multisig", "fee", 50)
+
+	require.NoError(t, err)
+	require.Len(t, ms, 3)
+
+	correctAddr := []string{"2", "4", "5"}
+
+	for _, o := range ms {
+		require.Contains(t, correctAddr, o.Output.Address)
+	}
+
+	require.Len(t, fee, 2)
+	require.False(t, onlyFee)
+}

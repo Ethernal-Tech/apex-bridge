@@ -130,9 +130,10 @@ func TestEVMChainOperations(t *testing.T) {
 		t.Run("Normal batch", func(t *testing.T) {
 			gateway, op := createFn()
 
-			op.SendTx(nil, nil, &eth.ConfirmedBatch{
+			_ = op.SendTx(nil, nil, &eth.ConfirmedBatch{
 				BatchType: uint8(batcher.Normal),
 			})
+
 			gateway.AssertCalled(t, "Deposit",
 				mock.Anything,
 				mock.Anything,
@@ -143,7 +144,7 @@ func TestEVMChainOperations(t *testing.T) {
 		t.Run("Validator set batch", func(t *testing.T) {
 			gateway, op := createFn()
 
-			op.SendTx(nil, nil, &eth.ConfirmedBatch{
+			_ = op.SendTx(nil, nil, &eth.ConfirmedBatch{
 				BatchType: uint8(batcher.ValidatorSet),
 			})
 
