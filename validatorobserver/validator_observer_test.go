@@ -303,7 +303,7 @@ func TestExecute(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 
-	t.Run("No state change returns nil", func(t *testing.T) {
+	t.Run("No state change returns no error", func(t *testing.T) {
 		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
 		observer.validatorSetPending = false
 		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, nil)

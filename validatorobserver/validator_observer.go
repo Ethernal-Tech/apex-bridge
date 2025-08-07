@@ -218,14 +218,14 @@ func (vs *ValidatorSetObserverImpl) removeValidators(
 	return nil
 }
 
-func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain, addedValidators []eth.ValidatorSet) {
-	for _, validator := range addedValidators {
-		for _, v := range validator.Validators {
-			validatorData := validators[common.ToStrChainID(validator.ChainId)]
+func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain, chainsDeltas []eth.ValidatorSet) {
+	for _, chainDelta := range chainsDeltas {
+		for _, v := range chainDelta.Validators {
+			validatorData := validators[common.ToStrChainID(chainDelta.ChainId)]
 			validatorData.Keys = append(validatorData.Keys, eth.ValidatorChainData{
 				Key: v.Data.Key,
 			})
-			validators[common.ToStrChainID(validator.ChainId)] = validatorData
+			validators[common.ToStrChainID(chainDelta.ChainId)] = validatorData
 		}
 	}
 }
