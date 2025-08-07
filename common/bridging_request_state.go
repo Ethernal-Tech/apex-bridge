@@ -1,9 +1,7 @@
-package core
+package common
 
 import (
 	"fmt"
-
-	"github.com/Ethernal-Tech/apex-bridge/common"
 )
 
 type BridgingRequestStatus string // @name BridgingRequestStatus
@@ -16,29 +14,59 @@ const (
 	BridgingRequestStatusSubmittedToDestination       BridgingRequestStatus = "SubmittedToDestination"
 	BridgingRequestStatusFailedToExecuteOnDestination BridgingRequestStatus = "FailedToExecuteOnDestination"
 	BridgingRequestStatusExecutedOnDestination        BridgingRequestStatus = "ExecutedOnDestination"
+
+	bridgingRequestStatusRefundRequestSubmittedToBridge = "RefundRequestSubmittedToBridge"
+	bridgingRequestStatusRefundSubmittedToChain         = "RefundSubmittedToChain"
+	bridgingRequestStatusFailedToRefund                 = "FailedToRefund"
+	bridgingRequestStatusRefundExecuted                 = "RefundExecuted"
 )
 
 type BridgingRequestState struct {
 	SourceChainID      string
-	SourceTxHash       common.Hash
+	SourceTxHash       Hash
 	DestinationChainID string
 	Status             BridgingRequestStatus
-	DestinationTxHash  common.Hash
+	DestinationTxHash  Hash
+	IsRefund           bool
 }
 
 func (s *BridgingRequestState) ToDBKey() []byte {
 	return ToBridgingRequestStateDBKey(s.SourceChainID, s.SourceTxHash)
 }
 
-func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash common.Hash) []byte {
+func (s *BridgingRequestState) StatusStr() string {
+	return BridgingRequestStateStatusStr(s.Status, s.IsRefund)
+}
+
+func BridgingRequestStateStatusStr(status BridgingRequestStatus, isRefund bool) string {
+	if !isRefund {
+		return string(status)
+	}
+
+	switch status {
+	case BridgingRequestStatusSubmittedToBridge:
+		return bridgingRequestStatusRefundRequestSubmittedToBridge
+	case BridgingRequestStatusSubmittedToDestination:
+		return bridgingRequestStatusRefundSubmittedToChain
+	case BridgingRequestStatusFailedToExecuteOnDestination:
+		return bridgingRequestStatusFailedToRefund
+	case BridgingRequestStatusExecutedOnDestination:
+		return bridgingRequestStatusRefundExecuted
+	default:
+		return string(status)
+	}
+}
+
+func ToBridgingRequestStateDBKey(sourceChainID string, sourceTxHash Hash) []byte {
 	return append(append([]byte(sourceChainID), '_'), sourceTxHash[:]...)
 }
 
-func NewBridgingRequestState(sourceChainID string, sourceTxHash common.Hash) *BridgingRequestState {
+func NewBridgingRequestState(sourceChainID string, sourceTxHash Hash, isRefund bool) *BridgingRequestState {
 	return &BridgingRequestState{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
 		Status:        BridgingRequestStatusDiscoveredOnSource,
+		IsRefund:      isRefund,
 	}
 }
 
@@ -62,22 +90,9 @@ func (s *BridgingRequestState) ToFailedToExecuteOnDestination() {
 	s.Status = BridgingRequestStatusFailedToExecuteOnDestination
 }
 
-func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash common.Hash) {
+func (s *BridgingRequestState) ToExecutedOnDestination(destinationTxHash Hash) {
 	s.Status = BridgingRequestStatusExecutedOnDestination
 	s.DestinationTxHash = destinationTxHash
-}
-
-func (s *BridgingRequestState) UpdateDestChainID(chainID string) error {
-	if s.DestinationChainID == "" {
-		s.DestinationChainID = chainID
-	}
-
-	if s.DestinationChainID != chainID {
-		return fmt.Errorf("destination chain not equal %s != %s for (%s, %s)",
-			s.DestinationChainID, chainID, s.SourceChainID, s.SourceTxHash)
-	}
-
-	return nil
 }
 
 func (s *BridgingRequestState) IsTransitionPossible(newStatus BridgingRequestStatus) error {
@@ -112,7 +127,7 @@ func (s *BridgingRequestState) IsTransitionPossible(newStatus BridgingRequestSta
 
 	if isInvalidTransition {
 		return fmt.Errorf("BridgingRequestState (%s, %s) invalid transition %s -> %s",
-			s.SourceChainID, s.SourceTxHash, s.Status, newStatus)
+			s.SourceChainID, s.SourceTxHash, s.StatusStr(), newStatus)
 	}
 
 	return nil

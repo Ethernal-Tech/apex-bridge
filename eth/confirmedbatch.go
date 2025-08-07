@@ -121,13 +121,14 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 			sb.WriteString("\n")
 		}
 
-		sb.WriteString(fmt.Sprintf("Chain ID = %s, ", common.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Src ChainID = %s, ", common.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Dst ChainID = %s, ", common.ToStrChainID(tx.DestinationChainId)))
 		sb.WriteString(fmt.Sprintf("Tx Hash = %s, ", hex.EncodeToString(tx.ObservedTransactionHash[:])))
 		sb.WriteString(fmt.Sprintf("Block = %s, ", tx.BlockHeight))
 		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
 		sb.WriteString(fmt.Sprintf("Total = %s, ", tx.TotalAmount))
 		sb.WriteString(fmt.Sprintf("Retry Counter = %s, ", tx.RetryCounter))
-		sb.WriteString(fmt.Sprintf("Tx Type = %s, ", common.BridgingTxType(tx.TransactionType)))
+		sb.WriteString(fmt.Sprintf("Tx Type = %d, ", tx.TransactionType))
 		sb.WriteString(fmt.Sprintf("AlreadyTriedBatch = %s, ", fmt.Sprint(tx.AlreadyTriedBatch)))
 		sb.WriteString(fmt.Sprintf("OutputIndexes= %s, ", hex.EncodeToString(tx.OutputIndexes)))
 		sb.WriteString("Receivers = [")
