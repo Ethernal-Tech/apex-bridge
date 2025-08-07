@@ -64,7 +64,6 @@ type CardanoChainConfig struct {
 	ConfirmationBlockCount   uint                     `json:"confirmationBlockCount"`
 	OtherAddressesOfInterest []string                 `json:"otherAddressesOfInterest"`
 	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
-	MinFeeForBridging        uint64                   `json:"minFeeForBridging"`
 	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
 	MinOperationFee          uint64                   `json:"minOperationFee"`
 }
