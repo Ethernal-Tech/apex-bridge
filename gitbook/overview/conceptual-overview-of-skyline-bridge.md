@@ -6,7 +6,7 @@ Below is a comprehensive breakdown of the Skyline Bridge workflow:
 
 1.  **Transfer Initiation by End-User** &#x20;
 
-    The bridging process begins at the user interface level, providing an intuitive and simple interaction. Users initiate a cross-chain asset transfer through Skyline’s user-friendly interface. At this initial phase, the user explicitly selects:
+    The bridging process begins at the user interface level, providing an intuitive and simple interaction. Users initiate a cross-chain asset transfer through Skyline's user-friendly interface. At this initial phase, the user explicitly selects:
 
     1. Asset type (e.g., ADA token or Apex token)
     2. Amount of tokens they wish to transfer
@@ -25,17 +25,17 @@ Below is a comprehensive breakdown of the Skyline Bridge workflow:
     This locking mechanism guarantees that tokens remain safely reserved until validators achieve consensus for transfer execution, significantly reducing risk and enhancing security.
 3.  **Decentralized Validation and Consensus**
 
-    The core of Skyline’s security model is its decentralized validation approach, involving multiple independent validator nodes. These validators collectively perform thorough and rigorous verification procedures of bridging requests.
+    The core of Skyline's security model is its decentralized validation approach, involving multiple independent validator nodes. These validators collectively perform thorough and rigorous verification procedures of bridging requests.
 
     The consensus mechanism utilized by Skyline validators ensures a secure and transparent approval process. Only after successfully reaching a consensus among validators does the bridging request receive final authorization to continue to the next stage. This ensures strict adherence to protocol standards and prevents fraudulent or erroneous transactions.    \
     Following the consensus approval, validators group multiple validated bridging requests into a single aggregated transaction referred to as a Batch. This Batch transaction efficiently consolidates multiple requests and is cryptographically signed by the validators, ensuring integrity and authenticity. Once signed, the Batch transaction is finalized and prepared for secure submission to the destination blockchain.
 
-    This structured and clearly-defined validation workflow enhances the bridge’s operational efficiency, ensures rigorous security standards, and maintains full decentralization and transparency throughout the asset bridging process.
+    This structured and clearly-defined validation workflow enhances the bridge's operational efficiency, ensures rigorous security standards, and maintains full decentralization and transparency throughout the asset bridging process.
 4.  **Relaying Signed Transactions**
 
     Once a Batch is successfully signed by the validators, the Skyline bridge activates specialized blockchain entities known as Relayers. These Relayers perform a critical role within the bridging workflow - securely submitting Batches to the destination blockchain.
 
-    Relayers operate as neutral entities within the network. Skyline’s system requires the existence of at least one trustworthy Relayer at any time, ensuring reliable execution of validated transactions. Relayers facilitate prompt and efficient communication between blockchains, ensuring bridging transactions are finalized without delays.
+    Relayers operate as neutral entities within the network. Skyline's system requires the existence of at least one trustworthy Relayer at any time, ensuring reliable execution of validated transactions. Relayers facilitate prompt and efficient communication between blockchains, ensuring bridging transactions are finalized without delays.
 5.  **Token Unlocking**
 
     Once a Batch - containing multiple validated bridging requests - successfully reaches the destination blockchain (either Cardano or Apex Fusion), the automatic unlocking mechanism for the corresponding wrapped tokens is initiated. Upon the Batch transaction's successful execution on the destination blockchain, all tokens represented by bridging requests within that Batch become immediately accessible to the end-users. This automated and secure unlocking process ensures seamless finalization of each bridging request contained within the Batch, promptly making the wrapped assets available and effectively completing the cross-chain transfer:

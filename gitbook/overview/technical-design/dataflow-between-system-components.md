@@ -10,13 +10,13 @@ Deposit and withdrawal dataflows operate similarly, so “source” and “desti
     Each validator runs an off-chain component (Oracle) responsible for monitoring bridging requests. This will be done by observing transactions on the source chain that are producing output UTXO related to the bridge multisig address.
 3.  **Bridging transactions witnessing**
 
-    Each Oracle submits the transaction (a “claim”) to the Skyline’s blockchain to confirm that it has observed the bridging request.
+    Each Oracle submits the transaction (a “claim”) to the Skyline's blockchain to confirm that it has observed the bridging request.
 4.  **Bridging transactions confirmation**
 
     When the quorum of the validator Oracle votes is gathered to confirm that a bridging request has occurred, the bridging request is considered to be valid and ready to enter the Batch.
 5.  **Transactions batching**
 
-    Confirmed bridging requests remain stored on the Skyline’s blockchain until it's time to create a new Batch. In this workflow, a Batch is a UTXO transaction that will be executed on the destination blockchain. The Batch can be created when a sufficient number of bridging requests have been confirmed, or when the maximum time limit between two Batches has been reached.
+    Confirmed bridging requests remain stored on the Skyline's blockchain until it's time to create a new Batch. In this workflow, a Batch is a UTXO transaction that will be executed on the destination blockchain. The Batch can be created when a sufficient number of bridging requests have been confirmed, or when the maximum time limit between two Batches has been reached.
 6.  **Batch confirmation**
 
     In order to submit the Batch to the destination blockchain, the Batch must be confirmed by the quorum of Skyline validators. Validators confirm the Batch by signing it with their private keys which control the multisig address on the destination blockchain.

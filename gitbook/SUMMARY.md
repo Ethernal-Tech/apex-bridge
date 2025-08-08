@@ -30,3 +30,9 @@
 * [Settings](web-api/settings.md)
 * [Transaction](web-api/transaction.md)
 * [Models](web-api/models.md)
+
+## BRIDGE COMPONENTS
+
+* [Oracle](bridge-components/oracle.md)
+* [Batcher](bridge-components/batcher.md)
+* [Relayer](bridge-components/relayer.md)
