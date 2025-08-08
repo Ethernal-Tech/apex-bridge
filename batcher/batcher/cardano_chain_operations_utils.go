@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func getStakingDelegateCertificate(
+func getStakingCertificates(
 	cardanoCliBinary string, networkMagic uint,
 	data *batchInitialData, tx *eth.ConfirmedTransaction,
 ) (*cardano.CertificatesWithScript, uint64, error) {
@@ -29,25 +29,45 @@ func getStakingDelegateCertificate(
 		return nil, 0, err
 	}
 
+	certs := make([]cardanowallet.ICertificate, 0)
+
 	// Generate certificates
 	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
+		registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, registrationCert)
 	}
 
-	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) ||
+		tx.TransactionSubType == uint8(common.StakeDelConfirmedTxSubType) {
+		delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, delegationCert)
+	}
+
+	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
+		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, deregCert)
 	}
 
 	return &cardano.CertificatesWithScript{
 		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+		Certificates: certs,
 	}, keyRegDepositAmount, nil
 }
 
@@ -58,7 +78,7 @@ func getOutputs(
 
 	for _, transaction := range txs {
 		// stake delegation tx are not processed in this way
-		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+		if transaction.TransactionType == uint8(common.StakeConfirmedTxType) {
 			continue
 		}
 

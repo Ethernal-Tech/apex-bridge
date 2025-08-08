@@ -414,6 +414,19 @@ $ apex-bridge bridge-admin set-additional-data \
 ```
 - instead of `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
+To register stake address and delegate it to the stake pool use: 
+```shell
+$ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6 \
+        --do-registration
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+For redelegation of stake address to another stake pool use: 
 ```shell
 $ apex-bridge bridge-admin delegate-address-to-stake-pool \
         --bridge-address-index 0 \
@@ -421,6 +434,16 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
         --chain prime \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+For deregistration of stake address use:
+```shell
+$ apex-bridge bridge-admin deregister-stake-address \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d 
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 

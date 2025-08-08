@@ -340,7 +340,8 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 		BlockHeight:        big.NewInt(1),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
@@ -496,6 +497,207 @@ func TestGenerateBatchTransactionOnlyStaking(t *testing.T) {
 	})
 }
 
+func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	cco.txProvider = txProviderMock
+	cco.config.SlotRoundingThreshold = 100
+	cco.config.MaxFeeUtxoCount = 4
+	cco.config.MaxUtxoCount = 50
+
+	testError := errors.New("test err")
+	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
+	confirmedTransactions[0] = eth.ConfirmedTransaction{
+		Nonce:              1,
+		BlockHeight:        big.NewInt(1),
+		SourceChainId:      common.ChainIDIntPrime,
+		DestinationChainId: common.ChainIDIntPrime,
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeDeregConfirmedTxSubType),
+	}
+	batchNonceID := uint64(1)
+	destinationChain := common.ChainIDStrVector
+	validValidatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
+			},
+		},
+	}
+
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
+
+	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(nil, testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("no vkey for multisig address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("no vkey for multisig fee address error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		getValidatorsCardanoDataRet := []eth.ValidatorChainData{
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+				},
+			},
+		}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(getValidatorsCardanoDataRet, nil).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "verifying keys of current batcher wasn't found in validators data queried from smart contract")
+	})
+
+	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Twice()
+		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput(nil), testError).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+	})
+
+	t.Run("GenerateBatchTransaction should pass", func(t *testing.T) {
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, destinationChain).Return(validValidatorsChainData, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2_000_000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0xFF"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 300_000,
+					},
+				},
+			}, error(nil)).Once()
+
+		data, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotEqual(t, "", data.TxHash)
+		require.NotEmpty(t, data.TxRaw)
+	})
+
+	t.Run("Test SignBatchTransaction", func(t *testing.T) {
+		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
+		require.NoError(t, err)
+
+		signatures, err := cco.SignBatchTransaction(
+			&core.GeneratedBatchTxData{TxRaw: txRaw, IsStakeSignNeeded: true})
+		require.NoError(t, err)
+		require.NotNil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Fee)
+		require.NotNil(t, signatures.MultsigStake)
+	})
+}
+
 func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
 	require.NoError(t, err)
@@ -550,7 +752,8 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		BlockHeight:        big.NewInt(2),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
+		TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
@@ -1326,8 +1529,8 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 
 	t.Run("one invalid, one valid stake pool id", func(t *testing.T) {
 		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "0x999", TransactionType: uint8(common.StakeDelConfirmedTxType)},
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "0x999", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.NoError(t, err)
@@ -1337,8 +1540,8 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 
 	t.Run("two valid stake pool ids", func(t *testing.T) {
 		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.NoError(t, err)
@@ -1354,7 +1557,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 		batchData.ProtocolParams = nil
 
 		_, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
-			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeDelConfirmedTxType)},
+			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
 		require.Error(t, err)
