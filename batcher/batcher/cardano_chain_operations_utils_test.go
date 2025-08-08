@@ -433,7 +433,8 @@ func Test_reactorGetOutputs(t *testing.T) {
 
 	txs := []eth.ConfirmedTransaction{
 		{
-			TransactionType: uint8(common.StakeDelConfirmedTxType),
+			TransactionType:    uint8(common.StakeConfirmedTxType),
+			TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		},
 		{
 			Receivers: []eth.BridgeReceiver{
@@ -549,7 +550,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 
 	txs := []eth.ConfirmedTransaction{
 		{
-			TransactionType: uint8(common.StakeDelConfirmedTxType),
+			TransactionType:    uint8(common.StakeConfirmedTxType),
+			TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		},
 		{
 			SourceChainId: common.ChainIDIntVector,
@@ -694,7 +696,7 @@ func TestGetStakingDelegateCertificate(t *testing.T) {
 	batchInitialData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
 
 	t.Run("invalid stake pool id", func(t *testing.T) {
-		_, _, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+		_, _, err := getStakingCertificates(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
 			StakePoolId: "0x999",
 		})
 
@@ -702,7 +704,7 @@ func TestGetStakingDelegateCertificate(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		cert, amount, err := getStakingDelegateCertificate(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
+		cert, amount, err := getStakingCertificates(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
 			StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",
 		})
 

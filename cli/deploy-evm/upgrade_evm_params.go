@@ -3,7 +3,9 @@ package clideployevm
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -22,7 +24,7 @@ const (
 	repositoryURLFlag = "repo"
 
 	nodeFlagDessc         = "node url"
-	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
+	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName:args] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 	repositoryURLFlagDesc = "smart contracts github repository url"
 )
 
@@ -142,10 +144,11 @@ func (ip *upgradeEVMParams) Execute(
 	contracts := make([]string, len(ip.contracts))
 	proxyAddrs := make([]ethcommon.Address, len(ip.contracts))
 	updateFuncs := make([]string, len(ip.contracts))
+	updateFuncsArgs := make([]string, len(ip.contracts))
 
 	for i, x := range ip.contracts {
 		ss := strings.Split(x, ":")
-		if len(ss) != 2 && len(ss) != 3 {
+		if n := len(ss); n < 2 || n > 4 {
 			return nil, fmt.Errorf("invalid --%s number %d", contractFlag, i)
 		}
 
@@ -157,32 +160,25 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
 		}
 
+		contracts[i] = ss[0]
+		proxyAddrs[i] = common.HexToAddress(ss[1])
+
 		if len(ss) > 2 {
 			updateFuncs[i] = ss[2] // empty function names will be skipped
 		}
 
-		contracts[i] = ss[0]
-		proxyAddrs[i] = common.HexToAddress(ss[1])
+		if len(ss) > 3 {
+			updateFuncsArgs[i] = ss[3]
+		}
 	}
 
 	if ip.clone {
-		_, _ = outputter.Write([]byte("Cloning and building the smart contracts repository has started..."))
-		outputter.WriteOutput()
-
-		lastSlashIndex := strings.LastIndex(strings.TrimSuffix(ip.repositoryURL, "/"), "/")
-		if lastSlashIndex == -1 {
-			return nil, fmt.Errorf("invalid --%s", repositoryURLFlag)
-		}
-
-		repositoryName := ip.repositoryURL[lastSlashIndex+1:]
-
-		newDir, err := ethcontracts.CloneAndBuildContracts(
-			dir, ip.repositoryURL, repositoryName, evmRepositoryArtifactsDir, ip.branchName)
+		newContractDir, err := cloneAndBuildRepo(dir, ip.repositoryURL, ip.branchName, outputter)
 		if err != nil {
 			return nil, err
 		}
 
-		dir = newDir
+		dir = newContractDir
 	}
 
 	artifacts, err := ethcontracts.LoadArtifacts(
@@ -220,7 +216,12 @@ func (ip *upgradeEVMParams) Execute(
 		var initializationData []byte
 
 		if fn := updateFuncs[i]; fn != "" {
-			initializationData, err = artifacts[contractName].Abi.Pack(fn)
+			var args []any
+			if argStr := updateFuncsArgs[i]; argStr != "" {
+				args = parseFnArguments(argStr)
+			}
+
+			initializationData, err = artifacts[contractName].Abi.Pack(fn, args...)
 			if err != nil {
 				return nil, fmt.Errorf("upgrade %s has been failed: %w", contractName, err)
 			}
@@ -256,4 +257,40 @@ func (ip *upgradeEVMParams) Execute(
 	return &cmdResult{
 		Contracts: contractInfos,
 	}, nil
+}
+
+func parseFnArguments(input string) []any {
+	inputArgs := strings.Split(input, ";")
+	args := make([]any, len(inputArgs))
+
+	for i, rawArg := range inputArgs {
+		arg := strings.TrimSpace(rawArg)
+
+		if ethcommon.IsHexAddress(arg) {
+			args[i] = ethcommon.HexToAddress(arg)
+		} else if isHash(arg) {
+			args[i] = ethcommon.HexToHash(arg)
+		} else if strings.HasSuffix(arg, "u") {
+			numStr := strings.TrimSuffix(arg, "u")
+			if n, err := strconv.ParseUint(numStr, 10, 8); err == nil {
+				args[i] = uint8(n)
+			} else {
+				args[i] = arg // fallback to string if parsing fails
+			}
+		} else if n, err := strconv.ParseInt(arg, 10, 8); err == nil {
+			args[i] = int8(n)
+		} else if n, ok := new(big.Int).SetString(arg, 10); ok {
+			args[i] = n
+		} else {
+			args[i] = arg
+		}
+	}
+
+	return args
+}
+
+func isHash(s string) bool {
+	has0xPrefix := strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X")
+
+	return has0xPrefix && len(s[2:]) == 2*ethcommon.HashLength
 }
