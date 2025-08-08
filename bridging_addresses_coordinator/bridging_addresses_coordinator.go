@@ -60,6 +60,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		}
 	}
 
+	c.logger.Debug("remainingTokenAmounts", remainingTokenAmounts)
+
+	// If we have native tokens we need to add up min utxo lovelace amount
+	// needed to be sent together with native token
 	if containsTokens {
 		tokens, err := cardanowallet.GetTokensFromSumMap(remainingTokenAmounts)
 		if err != nil {
@@ -95,6 +99,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 	addrAmounts := make([]addrAmount, 0, len(addresses))
 
+	// Calculate amount hold by each address
 	for i, address := range addresses {
 		utxos, err := db.GetAllTxOutputs(address, true)
 		if err != nil {
@@ -127,30 +132,38 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 	amounts := make([]common.AddressAndAmount, 0)
 
+	if remainingTokenAmounts[cardanowallet.AdaTokenName] != 0 {
+		remainingTokenAmounts[cardanowallet.AdaTokenName] += common.MinUtxoAmountDefault
+	}
+
+	// Pick addresses and amounts to be taken from
 	for _, addrAmount := range addrAmounts {
-		if remainingTokenAmounts[cardanowallet.AdaTokenName] == 0 && (len(remainingTokenAmounts) == 0 && containsTokens) {
+		if len(remainingTokenAmounts) == 0 {
 			break
 		}
 
+		fullAmount := false
+
 		// Update remaining token amounts
 		for tokenName, requiredAmount := range remainingTokenAmounts {
-			if tokenName == cardanowallet.AdaTokenName {
-				// TODO: check if we need GetMinUtxoAmount(chainID)
-				if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount+common.MinUtxoAmountDefault {
-					delete(remainingTokenAmounts, tokenName)
-
-					addrAmount.totalTokenAmounts[tokenName] = requiredAmount
-				} else {
-					remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
-				}
-			}
-
 			if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount {
-				delete(remainingTokenAmounts, tokenName)
+				addressChange, ok := safeSubstract(addrAmount.totalTokenAmounts[tokenName], requiredAmount)
+				if ok && addressChange > common.MinUtxoAmountDefault {
+					delete(remainingTokenAmounts, tokenName)
+				} else if ok {
+					requiredAmount += addressChange
+					fullAmount = true
+				}
+
+				if tokenName == cardanowallet.AdaTokenName && requiredAmount < common.MinUtxoAmountDefault {
+					requiredAmount = common.MinUtxoAmountDefault
+				}
 
 				addrAmount.totalTokenAmounts[tokenName] = requiredAmount
 			} else {
 				remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
+
+				fullAmount = true
 			}
 		}
 
@@ -158,6 +171,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 			Address:       addrAmount.address,
 			AddressIndex:  addrAmount.addressIndex,
 			TokensAmounts: addrAmount.totalTokenAmounts,
+			FullAmount:    fullAmount,
 		})
 	}
 
@@ -171,6 +185,14 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	}
 
 	return amounts, nil
+}
+
+func safeSubstract(a, b uint64) (uint64, bool) {
+	if a >= b {
+		return a - b, true
+	}
+
+	return 0, false
 }
 
 func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(

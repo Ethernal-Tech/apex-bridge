@@ -537,10 +537,13 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 		cco.logger.Debug("Output for calculateMinUtxoLovelaceAmount", "output", output)
 
-		minUtxoLovelaceAmount, err := calculateMinUtxoLovelaceAmount(
-			cco.cardanoCliBinary, data.ProtocolParams, addressAndAmount.Address, multisigUtxos, output)
-		if err != nil {
-			return nil, nil, err
+		minUtxoLovelaceAmount := uint64(0)
+		if !addressAndAmount.FullAmount {
+			minUtxoLovelaceAmount, err = calculateMinUtxoLovelaceAmount(
+				cco.cardanoCliBinary, data.ProtocolParams, addressAndAmount.Address, multisigUtxos, output)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		cco.logger.Debug("Min Utxo Lovelace Amount", "minUtxoLovelaceAmount", minUtxoLovelaceAmount)

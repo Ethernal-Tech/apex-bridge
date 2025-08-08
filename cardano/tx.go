@@ -3,6 +3,7 @@ package cardanotx
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -63,6 +64,7 @@ func CreateTx(
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
+	carryOverChange := uint64(0)
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
 
@@ -72,12 +74,18 @@ func CreateTx(
 			return nil, "", err
 		}
 
+		multisigChangeTxOutput.Amount += carryOverChange
+
 		// add multisig output if change is not zero
 		if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
-			if multiSigIndex == -1 {
-				builder.AddOutputs(multisigChangeTxOutput)
+			if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefault {
+				if multiSigIndex == -1 {
+					builder.AddOutputs(multisigChangeTxOutput)
+				} else {
+					builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+				}
 			} else {
-				builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+				carryOverChange += multisigChangeTxOutput.Amount
 			}
 		} else if multiSigIndex >= 0 {
 			// we need to decrement feeIndex if it was after multisig in outputs
@@ -86,6 +94,10 @@ func CreateTx(
 			}
 
 			builder.RemoveOutput(multiSigIndex)
+		}
+
+		for tokenName, amount := range multisig.Sum {
+			outputsAmount[tokenName] = safeSubstract(outputsAmount[tokenName], amount)
 		}
 
 		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
@@ -114,6 +126,14 @@ func CreateTx(
 	}
 
 	return builder.Build()
+}
+
+func safeSubstract(a, b uint64) uint64 {
+	if a >= b {
+		return a - b
+	}
+
+	return 0
 }
 
 func getOutputForAddress(outputs []cardanowallet.TxOutput, addr string) (cardanowallet.TxOutput, int) {
