@@ -16,13 +16,13 @@ import (
 )
 
 const (
-	stakePoolIDFlag   = "stake-pool"
-	bridgeAddrIdxFlag = "bridge-address-index"
-	doReistrationFlag = "do-registration"
+	stakePoolIDFlag    = "stake-pool"
+	bridgeAddrIdxFlag  = "bridge-address-index"
+	doRegistrationFlag = "do-registration"
 
-	stakePoolIDFlagDesc   = "identifier of the stake pool to delegate to"
-	doReistrationFlagDesc = "defined if address needs to be registered"
-	bridgeAddrIdxFlagDesc = "index of the bridging address to be delegated"
+	stakePoolIDFlagDesc    = "identifier of the stake pool to delegate to"
+	doRegistrationFlagDesc = "defined if address needs to be registered"
+	bridgeAddrIdxFlagDesc  = "index of the bridging address to be delegated"
 )
 
 type stakeDelParams struct {
@@ -152,9 +152,9 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(
 		&params.doRegistration,
-		doReistrationFlag,
+		doRegistrationFlag,
 		false,
-		doReistrationFlagDesc,
+		doRegistrationFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
