@@ -16,8 +16,9 @@ import (
 )
 
 type lastBatchData struct {
-	id     uint64
-	txHash string
+	id        uint64
+	txHash    string
+	batchType BatchType
 }
 
 type validatorSetChange struct {
@@ -144,16 +145,16 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	var (
 		generatedBatchData    *core.GeneratedBatchTxData
 		confirmedTransactions []eth.ConfirmedTransaction
+		forceSend             bool
 	)
 
 	if b.newValidatorSet.isValidatorPending() {
-		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators)
+		forceSend, generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators,
+			b.lastBatch.id, uint8(b.lastBatch.batchType))
 
-		if generatedBatchData != nil && generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
-			b.newValidatorSet.Lock()
-			b.newValidatorSet.finalized = true
-			b.newValidatorSet.Unlock()
+		if generatedBatchData == nil && err == nil {
+			return 0, nil
 		}
 	} else {
 		// Get confirmed transactions from smart contract
@@ -180,7 +181,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 			b.config.Chain.ChainID, err)
 	}
 
-	if generatedBatchData.TxHash == b.lastBatch.txHash {
+	if generatedBatchData.TxHash == b.lastBatch.txHash && !forceSend {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
 			"batchID", batchID, "txHash", b.lastBatch.txHash,
@@ -223,10 +224,18 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		b.logger.Info("Batch successfully re-submitted", "batchID", batchID)
 	}
 
+	if generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+		// set only if batch is submitted (tx executed on blade)
+		b.newValidatorSet.Lock()
+		b.newValidatorSet.finalized = true
+		b.newValidatorSet.Unlock()
+	}
+
 	// update last batch data
 	b.lastBatch = lastBatchData{
-		id:     batchID,
-		txHash: generatedBatchData.TxHash,
+		id:        batchID,
+		txHash:    generatedBatchData.TxHash,
+		batchType: BatchType(generatedBatchData.BatchType),
 	}
 
 	return batchID, nil
@@ -256,7 +265,7 @@ func (b *BatcherImpl) createSignedBatch(
 func (b *BatcherImpl) updateBatchTxsStates(
 	batchID uint64, txs []eth.ConfirmedTransaction, signedBatch *eth.SignedBatch,
 ) []common.BridgingRequestStateKey {
-	if signedBatch.BatchType == uint8(Consolidation) {
+	if signedBatch.BatchType != uint8(Normal) {
 		return nil
 	}
 

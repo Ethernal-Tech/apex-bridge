@@ -37,7 +37,9 @@ type ChainOperations interface {
 	CreateValidatorSetChangeTx(ctx context.Context,
 		chainID string, nextBatchID uint64,
 		bridgeSmartContract eth.IBridgeSmartContract,
-		validatorsKeys validatorobserver.ValidatorsPerChain) (*GeneratedBatchTxData, error)
+		validatorsKeys validatorobserver.ValidatorsPerChain,
+		lastBatchID uint64, lastBatchType uint8,
+	) (bool, *GeneratedBatchTxData, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

@@ -422,10 +422,11 @@ type cardanoChainOperationsMock struct {
 // CreateValidatorSetChangeTx implements core.ChainOperations.
 func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
 	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys validatorobserver.ValidatorsPerChain) (*core.GeneratedBatchTxData, error) {
-	args := c.Called(ctx, chainID, nextBatchID, bridgeSmartContract, validatorsKeys)
+	validatorsKeys validatorobserver.ValidatorsPerChain, lastBatchID uint64, lastBatchType uint8,
+) (bool, *core.GeneratedBatchTxData, error) {
+	args := c.Called(ctx, chainID, nextBatchID, bridgeSmartContract, validatorsKeys, lastBatchID, lastBatchType)
 
-	return args.Get(0).(*core.GeneratedBatchTxData), args.Error(1)
+	return args.Get(0).(bool), args.Get(1).(*core.GeneratedBatchTxData), args.Error(2)
 }
 
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)

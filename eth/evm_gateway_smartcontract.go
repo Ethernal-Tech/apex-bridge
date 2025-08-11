@@ -14,7 +14,7 @@ import (
 
 const (
 	depositGasLimitMultiplier   = 1.7
-	updateVCDGasLimitMultiplier = depositGasLimitMultiplier // potentially set to an different value
+	updateVCDGasLimitMultiplier = depositGasLimitMultiplier // potentially set to a different value
 )
 
 type IEVMGatewaySmartContract interface {

@@ -254,33 +254,41 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 		bridgeSC:     bsc,
 	}
 
-	// 1. We have just started the validator set change process, "vscTxSent" is false, so VSC batch/tx
-	// should be returned.
-	batch, err := op.CreateValidatorSetChangeTx(nil, "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	// 1. We have just started the validator set change process, send vsc tx batch
+	forceSend, batch, err := op.CreateValidatorSetChangeTx(
+		nil, "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0), 19, uint8(Normal),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
+	require.False(t, forceSend)
 	require.EqualValues(t, ValidatorSet, batch.BatchType)
 
-	// 2. Now "vscTxSent" is true and we should get a finalize batch/tx. However, the previous tx/batch
+	// 2. vsc tx batch is sent and we should get a finalize batch/tx. However, the previous tx/batch
 	// was executed unsuccessfully, so we get a validator set change batch/tx again (retry).
 	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(20)).Return(uint8(3), nil, nil)
-	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	forceSend, batch, err = op.CreateValidatorSetChangeTx(
+		nil, "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0), 20, uint8(ValidatorSet),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
+	require.True(t, forceSend)
 	require.EqualValues(t, ValidatorSet, batch.BatchType)
 
-	// 3. Since "vscTxSent" is still true and previous validator set change tx/batch was successfully
-	// executed, we should get a finalize batch/tx.
+	// 3. Since vsc tx batch is sent after retry, we should get a finalize batch/tx.
 	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(21)).Return(uint8(2), nil, nil)
-	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	forceSend, batch, err = op.CreateValidatorSetChangeTx(
+		nil, "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0), 21, uint8(ValidatorSet),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
+	require.False(t, forceSend)
 	require.EqualValues(t, ValidatorSetFinal, batch.BatchType)
 
-	// 4. We enter a new cycle of validator set change. "vscTxSent" is reset to false, so we expect
-	// to get a validator set change tx/batch.
-	batch, err = op.CreateValidatorSetChangeTx(nil, "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0))
+	// 4. We enter a new cycle of validator set change, so we expect to get a validator set change tx/batch.
+	forceSend, batch, err = op.CreateValidatorSetChangeTx(
+		nil, "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0), 22, uint8(Normal))
 	require.NoError(t, err)
 	require.NotNil(t, batch)
+	require.False(t, forceSend)
 	require.EqualValues(t, ValidatorSet, batch.BatchType)
 }
