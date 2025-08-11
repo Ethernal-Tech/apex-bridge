@@ -249,6 +249,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, multisigAddresses, err
 	}
 
+	cco.logger.Debug("Chosen multisig addresses1", "addresses", multisigAddresses)
+
 	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -294,6 +296,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		txInputs,
 		txOutputs.Outputs,
 		certificateData,
+		multisigAddresses,
+		cco.logger,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -388,6 +392,8 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		txInputs,
 		multisigTxOutputs,
 		nil,
+		nil, // TODO: ??????????
+		cco.logger,
 	)
 	if err != nil {
 		return nil, err
@@ -499,11 +505,15 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 	chosenMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
 
+	cco.logger.Debug("Chosen multisig addresses11", "addresses", multisigAddresses)
+
 	for _, addressAndAmount := range multisigAddresses {
 		multisigUtxos, err := cco.db.GetAllTxOutputs(addressAndAmount.Address, true)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		cco.logger.Debug("Chosen multisig addresses22", "addresses", multisigAddresses)
 
 		multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
 
@@ -535,6 +545,8 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			})
 		}
 
+		cco.logger.Debug("Chosen multisig addresses33", "addresses", multisigAddresses)
+
 		cco.logger.Debug("Output for calculateMinUtxoLovelaceAmount", "output", output)
 
 		minUtxoLovelaceAmount := uint64(0)
@@ -545,6 +557,8 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 				return nil, nil, err
 			}
 		}
+
+		cco.logger.Debug("Chosen multisig addresses44", "addresses", multisigAddresses)
 
 		cco.logger.Debug("Min Utxo Lovelace Amount", "minUtxoLovelaceAmount", minUtxoLovelaceAmount)
 
@@ -558,6 +572,8 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		if err != nil {
 			return nil, nil, err
 		}
+
+		cco.logger.Debug("Chosen multisig addresses55", "addresses", multisigAddresses)
 
 		cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos)
 		chosenMultisigUtxos[addressAndAmount.AddressIndex] = multisigUtxos

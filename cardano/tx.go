@@ -5,6 +5,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/hashicorp/go-hclog"
 )
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
@@ -17,6 +18,8 @@ func CreateTx(
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
+	addrAndAmountToDeduct []common.AddressAndAmount,
+	logger hclog.Logger,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
@@ -67,6 +70,19 @@ func CreateTx(
 	carryOverChange := uint64(0)
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
+
+		logger.Debug("CREATE TX addr", multisig.Address)
+		logger.Debug("CREATE TX baseTxOutput amount", multisigOutput.Amount)
+		logger.Debug("CREATE TX totalSum amount", multisig.Sum[cardanowallet.AdaTokenName])
+		logger.Debug("CREATE TX outputsSum amount", outputsAmount[cardanowallet.AdaTokenName])
+
+		if addrAndAmountToDeduct != nil {
+			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
+			logger.Debug("CREATE TX addrAndAmountToDeduct", addrAndAmountToDeduct)
+			logger.Debug("CREATE TX outputsSumNew amount", outputsAmountNew[cardanowallet.AdaTokenName])
+		} else {
+			logger.Debug("CREATE TX addrAndAmountToDeduct is nil")
+		}
 
 		multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
 			multisigOutput, multisig.Sum, outputsAmount)
@@ -126,6 +142,20 @@ func CreateTx(
 	}
 
 	return builder.Build()
+}
+
+func GetOutputsSumForAddress(addr string, addrAndAmountToDeduct []common.AddressAndAmount) map[string]uint64 {
+	result := map[string]uint64{}
+
+	for _, addrAndAmount := range addrAndAmountToDeduct {
+		if addrAndAmount.Address == addr {
+			for name, token := range addrAndAmount.TokensAmounts {
+				result[name] += token
+			}
+		}
+	}
+
+	return result
 }
 
 func safeSubstract(a, b uint64) uint64 {
