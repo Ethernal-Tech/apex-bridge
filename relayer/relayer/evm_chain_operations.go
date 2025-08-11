@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -99,27 +98,10 @@ func (cco *EVMChainOperations) SendTx(
 
 	signature, _ := signatures.Aggregate().Marshal() // error is always nil
 
-	switch batcher.BatchType(smartContractData.BatchType) {
-	case batcher.Normal:
-		cco.logger.Info("Submitting deposit transaction",
-			"signature", hex.EncodeToString(signature),
-			"bitmap", smartContractData.Bitmap,
-			"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
+	cco.logger.Info("Submitting deposit transaction",
+		"signature", hex.EncodeToString(signature),
+		"bitmap", smartContractData.Bitmap,
+		"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
 
-		return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
-	case batcher.ValidatorSet:
-		cco.logger.Info("Submitting update validators chain data transaction",
-			"signature", hex.EncodeToString(signature),
-			"bitmap", smartContractData.Bitmap,
-			"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
-
-		return cco.evmSmartContract.UpdateValidatorsChainData(ctx,
-			signature, smartContractData.Bitmap, smartContractData.RawTransaction)
-	case batcher.ValidatorSetFinal:
-		cco.logger.Info("Skipping ValidatorSetFinal batch")
-
-		return nil
-	default:
-		return fmt.Errorf("invalid batch type: %d", smartContractData.BatchType)
-	}
+	return cco.evmSmartContract.Deposit(ctx, signature, smartContractData.Bitmap, smartContractData.RawTransaction)
 }

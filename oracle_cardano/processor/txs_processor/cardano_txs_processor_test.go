@@ -16,7 +16,6 @@ import (
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -37,7 +36,6 @@ func newCardanoTxsProcessor(
 	bridgeSubmitter cCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
 	txProcessors := NewTxProcessorsCollection(
 		successTxProcessors, failedTxProcessors,
@@ -52,7 +50,7 @@ func newCardanoTxsProcessor(
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
 		ctx, appConfig, cardanoStateProcessor,
-		bridgeDataFetcher, bridgeSubmitter, bridgingRequestStateUpdater, validatorSetObserver,
+		bridgeDataFetcher, bridgeSubmitter, bridgingRequestStateUpdater,
 		hclog.NewNullLogger(),
 	)
 
@@ -69,7 +67,6 @@ func newValidProcessor(
 	bridgeSubmitter cCore.BridgeClaimsSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 ) (*txsprocessor.TxsProcessorImpl, *CardanoTxsReceiverImpl) {
 	var successTxProcessors []core.CardanoTxSuccessProcessor
 	if successTxProcessor != nil {
@@ -83,7 +80,7 @@ func newValidProcessor(
 
 	return newCardanoTxsProcessor(
 		ctx, appConfig, oracleDB, successTxProcessors, failedTxProcessors,
-		bridgeDataFetcher, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater, validatorSetObserver)
+		bridgeDataFetcher, bridgeSubmitter, indexerDbs, bridgingRequestStateUpdater)
 }
 
 func TestCardanoTxsProcessor(t *testing.T) {
@@ -142,7 +139,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		oracleDB, primeDB, vectorDB, err := createDbs()
 		require.NoError(t, err)
 
-		proc, rec := newCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil, nil)
+		proc, rec := newCardanoTxsProcessor(context.Background(), appConfig, nil, nil, nil, nil, nil, nil, nil)
 		require.NotNil(t, proc)
 		require.NotNil(t, rec)
 
@@ -157,7 +154,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			&core.CardanoBridgeDataFetcherMock{},
 			&core.BridgeSubmitterMock{}, indexerDbs,
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 		require.NotNil(t, proc)
 		require.NotNil(t, rec)
@@ -180,7 +176,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			&core.CardanoBridgeDataFetcherMock{}, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -204,7 +199,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			nil, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -230,7 +224,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			validTxProc, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -261,7 +254,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			validTxProc, nil, nil, nil,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -304,21 +296,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -373,22 +356,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -442,23 +415,13 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -519,7 +482,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -575,21 +537,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test err"))
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -657,7 +610,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			nil,
 		)
 
 		require.NotNil(t, proc)
@@ -719,21 +671,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, _ := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			&core.CardanoTxSuccessProcessorMock{}, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -802,21 +745,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -901,22 +835,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -998,22 +922,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1101,21 +1015,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1199,21 +1104,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1308,22 +1204,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1411,22 +1297,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return(&types.Receipt{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1535,22 +1411,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		indexerTx := &indexer.Tx{Hash: txHash, Metadata: metadata}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newValidProcessor(
 			ctx,
 			appConfig, oracleDB,
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1594,7 +1460,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1632,7 +1497,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			validTxProc, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)
@@ -1756,22 +1620,12 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			Return(&types.Receipt{}, nil)
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("IsNewValidatorSetPending").Return(false, error(nil))
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{}, error(nil))
-
-		validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContractMock,
-			hclog.NewNullLogger())
-		require.NoError(t, err)
-
 		proc, rec := newCardanoTxsProcessor(
 			ctx,
 			appConfig, oracleDB,
 			[]core.CardanoTxSuccessProcessor{brcProc, becProc}, nil, bridgeDataFetcher, bridgeSubmitter,
 			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
 			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			validatorSetObserver,
 		)
 
 		require.NotNil(t, proc)

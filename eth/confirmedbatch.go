@@ -16,24 +16,24 @@ type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 type BridgeReceiver = contractbinding.IBridgeStructsReceiver
 
 type ConfirmedBatch struct {
-	ID             uint64
-	RawTransaction []byte
-	Signatures     [][]byte
-	FeeSignatures  [][]byte
-	Bitmap         *big.Int
-	BatchType      uint8
+	ID              uint64
+	RawTransaction  []byte
+	Signatures      [][]byte
+	FeeSignatures   [][]byte
+	Bitmap          *big.Int
+	IsConsolidation bool
 }
 
 func NewConfirmedBatch(
 	contractConfirmedBatch contractbinding.IBridgeStructsConfirmedBatch,
 ) *ConfirmedBatch {
 	return &ConfirmedBatch{
-		ID:             contractConfirmedBatch.Id,
-		RawTransaction: contractConfirmedBatch.RawTransaction,
-		Signatures:     contractConfirmedBatch.Signatures,
-		FeeSignatures:  contractConfirmedBatch.FeeSignatures,
-		Bitmap:         contractConfirmedBatch.Bitmap,
-		BatchType:      contractConfirmedBatch.BatchType,
+		ID:              contractConfirmedBatch.Id,
+		RawTransaction:  contractConfirmedBatch.RawTransaction,
+		Signatures:      contractConfirmedBatch.Signatures,
+		FeeSignatures:   contractConfirmedBatch.FeeSignatures,
+		Bitmap:          contractConfirmedBatch.Bitmap,
+		IsConsolidation: contractConfirmedBatch.IsConsolidation,
 	}
 }
 
@@ -42,8 +42,8 @@ func (b ConfirmedBatch) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(b.ID))
-	sb.WriteString("\nbatchType = ")
-	sb.WriteString(fmt.Sprint(b.BatchType))
+	sb.WriteString("\nisConsolidation = ")
+	sb.WriteString(fmt.Sprint(b.IsConsolidation))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(b.RawTransaction))
 	sb.WriteString("\nbitmap = ")
@@ -122,8 +122,8 @@ func (sbw SignedBatchWrapper) String() string {
 
 	sb.WriteString("id = ")
 	sb.WriteString(fmt.Sprint(sbw.Id))
-	sb.WriteString("\nbatchType = ")
-	sb.WriteString(fmt.Sprint(sbw.BatchType))
+	sb.WriteString("\nisConsolidation = ")
+	sb.WriteString(fmt.Sprint(sbw.IsConsolidation))
 	sb.WriteString("\ndestination chain id = ")
 	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")

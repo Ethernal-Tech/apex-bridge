@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"sort"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/testenv"
-	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -31,7 +29,6 @@ type EVMChainOperations struct {
 	ttlFormatter testenv.TTLFormatterFunc
 	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
-	bridgeSC     eth.IBridgeSmartContract
 }
 
 func NewEVMChainOperations(
@@ -40,7 +37,6 @@ func NewEVMChainOperations(
 	db eventTrackerStore.EventTrackerStore,
 	chainID string,
 	logger hclog.Logger,
-	bridgeSC eth.IBridgeSmartContract,
 ) (*EVMChainOperations, error) {
 	config, err := cardano.NewBatcherEVMChainConfig(jsonConfig)
 	if err != nil {
@@ -59,107 +55,7 @@ func NewEVMChainOperations(
 		ttlFormatter: testenv.GetTTLFormatter(config.TestMode),
 		gasLimiter:   eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		logger:       logger,
-		bridgeSC:     bridgeSC,
 	}, nil
-}
-
-// CreateValidatorSetChangeTx implements core.ChainOperations.
-func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
-	ctx context.Context,
-	chainID string,
-	nextBatchID uint64,
-	bridgeSmartContract eth.IBridgeSmartContract,
-	validatorsKeys validatorobserver.ValidatorsPerChain,
-	lastBatchID uint64,
-	lastBatchType uint8,
-) (bool, *core.GeneratedBatchTxData, error) {
-	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
-		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
-		if err != nil {
-			return nil, err
-		}
-
-		blockRounded, err := getNumberWithRoundingThreshold(
-			lastProcessedBlock, cco.config.BlockRoundingThreshold, cco.config.NoBatchPeriodPercent)
-		if err != nil {
-			return nil, err
-		}
-
-		currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetID(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		validatorSetNumber := big.NewInt(0).Add(currentValidatorSetNumber, big.NewInt(1))
-
-		ttl := big.NewInt(0).SetUint64((cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
-
-		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys[chainID].Keys))
-
-		for _, key := range validatorsKeys[chainID].Keys {
-			keys = append(keys, key)
-		}
-
-		tx := eth.EVMValidatorSetChangeTx{
-			ValidatorsSetNumber: validatorSetNumber,
-			TTL:                 ttl,
-			ValidatorsChainData: keys,
-		}
-
-		txsBytes, err := tx.Pack()
-		if err != nil {
-			return nil, err
-		}
-
-		txsHashBytes, err := common.Keccak256(txsBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		txHash := hex.EncodeToString(txsHashBytes)
-
-		return &core.GeneratedBatchTxData{
-			BatchType: uint8(ValidatorSet),
-			TxRaw:     txsBytes,
-			TxHash:    txHash,
-		}, nil
-	}
-
-	if lastBatchType != uint8(ValidatorSet) {
-		// vsc tx not sent, send it. It is not possible to get here otherwise.
-		batch, err := createVSCTxFn()
-
-		return false, batch, err
-	}
-
-	// vsc tx sent, check its status and resend if needed
-	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, lastBatchID)
-	if err != nil {
-		return false, nil, err
-	}
-
-	switch status {
-	case 1:
-		// vsc tx is pending on evm chain, do nothing
-		cco.logger.Info("VSC batch transaction is in progress...",
-			"chainID", chainID, "batchID", nextBatchID)
-
-		return false, nil, nil
-	case 2:
-		// vsc tx executed on evm chain, send final
-		return false, &core.GeneratedBatchTxData{
-			BatchType: uint8(ValidatorSetFinal),
-			TxRaw:     []byte{},
-			TxHash:    "",
-		}, nil
-	case 3:
-		// vsc tx failed on evm chain, resend
-		batch, err := createVSCTxFn()
-
-		return true, batch, err
-	default:
-		return false, nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
-	}
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.

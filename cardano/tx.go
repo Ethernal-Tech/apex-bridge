@@ -1,7 +1,6 @@
 package cardanotx
 
 import (
-	"errors"
 	"fmt"
 
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -107,48 +106,4 @@ func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uin
 	}
 
 	return -1, 0
-}
-
-var ErrNotEnoughFee = errors.New("not enough fee for tx")
-
-func CreateOnlyFeeTx(
-	cardanoCliBinary string,
-	testNetMagic uint,
-	protocolParams []byte,
-	timeToLive uint64,
-	metadataBytes []byte,
-	feeTxInput *TxInputInfo,
-	output cardanowallet.TxOutput,
-) ([]byte, string, error) {
-	// ensure there is at least one input for both the multisig and fee multisig.
-	if feeTxInput == nil || len(feeTxInput.Inputs) == 0 {
-		return nil, "", ErrNotEnoughFee
-	}
-
-	feeAmount := feeTxInput.Sum[cardanowallet.AdaTokenName]
-
-	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
-	if err != nil {
-		return nil, "", err
-	}
-
-	defer builder.Dispose()
-
-	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
-		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(output)
-
-	builder.AddInputsWithScript(feeTxInput.PolicyScript, feeTxInput.Inputs...)
-
-	calcFee, err := builder.CalculateFee(0)
-	if err != nil {
-		return nil, "", err
-	}
-
-	builder.SetFee(calcFee)
-
-	feeAmountFinal := feeAmount - calcFee
-
-	builder.UpdateOutputAmount(0, feeAmountFinal)
-
-	return builder.Build()
 }
