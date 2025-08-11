@@ -32,14 +32,6 @@ type EVMChainOperations struct {
 	gasLimiter   eth.GasLimitHolder
 	logger       hclog.Logger
 	bridgeSC     eth.IBridgeSmartContract
-
-	// vscTxSent is an internal variable used only during the validator set change
-	// process. When false, a standard validator set change tx/batch should be sent.
-	// When true, a finalize validator set change tx/batch should be sent. Note: Even
-	// when true, a standard validator set change tx/batch may still be sent if the
-	// previous validator set change tx/batch failed and requires a retry. This flag
-	// is reset to false after a finalize validator set change tx/batch is created.
-	vscTxSent bool
 }
 
 func NewEVMChainOperations(
@@ -78,7 +70,9 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	validatorsKeys validatorobserver.ValidatorsPerChain,
-) (*core.GeneratedBatchTxData, error) {
+	lastBatchID uint64,
+	lastBatchType uint8,
+) (bool, *core.GeneratedBatchTxData, error) {
 	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
 		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
 		if err != nil {
@@ -131,53 +125,40 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		}, nil
 	}
 
-	// The main logic operates as follows: if the "vscTxSent" flag is set to false, it indicates
-	// that we have not yet sent a validator set change tx/batch, and therefore we need to
-	// create one. Otherwise, we proceed with additional logic. There are two valid and one
-	// invalid scenario. The selected path depends on the status of the previously sent tx.
-	// Since "vscTxSent" is set to true, the previous batch/tx is guaranteed to be a validator
-	// set change tx/batch. If the given batch was successfully executed (status 2), we need to
-	// create a finalize validator set change tx and reset the "vscTxSent" flag to false. If
-	// the status is 3 (failed), it is necessary to create and resend the validator set change
-	// tx/batch (retry). If the status is neither of these two, we return an error indicating
-	// an unexpected state.
-	//
-	// Note: For the above logic to function correctly, it is assumed that the caller invokes
-	// this method at the appropriate moment. For example, this method should not be called
-	// if the previous batch has not yet been processed (which would return an error due to
-	// status 1), or if a finalize tx/batch has already been created but a new validator set
-	// change cycle has not yet started (in this case a validator set change tx would be again
-	// created, since "vscTxSent" has been reset). See (*BatcherImpl).execute for an example of
-	// a correctly implemented caller.
-	if !cco.vscTxSent {
-		data, err := createVSCTxFn()
-		if err != nil {
-			return nil, err
-		}
+	if lastBatchType != uint8(ValidatorSet) {
+		// vsc tx not sent, send it. It is not possible to get here otherwise.
+		batch, err := createVSCTxFn()
 
-		cco.vscTxSent = true
-
-		return data, nil
+		return false, batch, err
 	}
 
-	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, nextBatchID-1)
+	// vsc tx sent, check its status and resend if needed
+	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, lastBatchID)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	switch status {
-	case 2:
-		cco.vscTxSent = false
+	case 1:
+		// vsc tx is pending on evm chain, do nothing
+		cco.logger.Info("VSC batch transaction is in progress...",
+			"chainID", chainID, "batchID", nextBatchID)
 
-		return &core.GeneratedBatchTxData{
+		return false, nil, nil
+	case 2:
+		// vsc tx executed on evm chain, send final
+		return false, &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
 			TxHash:    "",
 		}, nil
 	case 3:
-		return createVSCTxFn()
+		// vsc tx failed on evm chain, resend
+		batch, err := createVSCTxFn()
+
+		return true, batch, err
 	default:
-		return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
+		return false, nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
 	}
 }
 

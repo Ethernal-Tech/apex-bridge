@@ -977,13 +977,13 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 			BlockHash: indexer.Hash{},
 		}, nil)
 
-		generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
+		_, generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
 			nextBatchID, bridgeSmartContractMock, validatorobserver.ValidatorsPerChain{
 				common.ChainIDStrPrime: {
 					Keys:       newValidatorChainData,
 					SlotNumber: 0,
 				},
-			})
+			}, 0, 0)
 		require.NoError(t, err)
 
 		if generatedData.BatchType == uint8(ValidatorSetFinal) {

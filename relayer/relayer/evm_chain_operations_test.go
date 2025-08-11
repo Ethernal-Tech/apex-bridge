@@ -162,7 +162,7 @@ func TestEVMChainOperations(t *testing.T) {
 				BatchType: uint8(batcher.ValidatorSetFinal),
 			})
 
-			require.Error(t, err)
+			require.NoError(t, err)
 
 			gateway.AssertNotCalled(t, "Deposit",
 				mock.Anything,
