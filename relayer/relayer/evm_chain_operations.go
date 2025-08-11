@@ -66,6 +66,8 @@ func NewEVMChainOperations(
 		ethtxhelper.WithNodeURL(config.NodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 		ethtxhelper.WithDynamicTx(config.DynamicTx),
+		ethtxhelper.WithTxPoolCheck(false),
+		ethtxhelper.WithGasFeeMultiplier(140),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")))
 
 	evmSmartContract, err := eth.NewEVMGatewaySmartContract(

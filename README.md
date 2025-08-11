@@ -179,7 +179,7 @@ apex-bridge sendtx \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --ogmios-dst http://ogmios.vector.testnet.apexfusion.org:1337 \
         --chain-dst vector \
-        --receiver vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
+        --receiver addr_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf:1_000_000 \
         --fee 1_100_000
 ```
 - there is an optional `--stake-key` flag
@@ -364,6 +364,19 @@ $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --config ./config.json \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \
         --prime-wallet-addr addr_test1wrapsqy073nhdx7tz4j54q4aanhzqqgfpydftysvqyqw50cgz9hpl \
-        --vector-wallet-addr vector_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
+        --vector-wallet-addr addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --nexus-wallet-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4 \
+```
+
+# How to get bridge and gateway smart contract version
+```shell
+apex-bridge sc-version \
+        --node-url http://127.0.0.1:12013 \
+        --addr 0xaBef000000000000000000000000000000000000:Bridge \
+        --addr 0xaBef000000000000000000000000000000000001:ClaimsHelper \
+        --addr 0xaBef000000000000000000000000000000000002:Claims \
+        --addr 0xaBef000000000000000000000000000000000003:SignedBatches \
+        --addr 0xaBef000000000000000000000000000000000004:Slots \
+        --addr 0xaBef000000000000000000000000000000000005:Validators \
+        --addr 0xaBef000000000000000000000000000000000006:Admin \
 ```

@@ -10,6 +10,7 @@ import (
 	cligenerateconfigs "github.com/Ethernal-Tech/apex-bridge/cli/generateconfigs"
 	cliregisterchain "github.com/Ethernal-Tech/apex-bridge/cli/registerchain"
 	clirelayer "github.com/Ethernal-Tech/apex-bridge/cli/relayer"
+	cliscversion "github.com/Ethernal-Tech/apex-bridge/cli/scversion"
 	clisendtx "github.com/Ethernal-Tech/apex-bridge/cli/sendtx"
 	clivalidatorcomponents "github.com/Ethernal-Tech/apex-bridge/cli/validatorcomponents"
 	cliversion "github.com/Ethernal-Tech/apex-bridge/cli/version"
@@ -45,6 +46,7 @@ func (rc *RootCommand) registerSubCommands() {
 		clideployevm.GetDeployEVMCommand(),
 		clibridgeadmin.GetBridgeAdminCommand(),
 		cliversion.GetVersionCommand(),
+		cliscversion.GetScVersionCommand(),
 	)
 }
 
