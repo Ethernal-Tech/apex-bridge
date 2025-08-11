@@ -20,11 +20,3 @@ func (m *EVMGatewaySmartContractMock) Deposit(
 
 	return args.Error(0)
 }
-
-func (m *EVMGatewaySmartContractMock) UpdateValidatorsChainData(
-	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
-) error {
-	args := m.Called(ctx, signature, bitmap, data)
-
-	return args.Error(0)
-}

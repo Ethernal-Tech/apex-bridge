@@ -16,7 +16,6 @@ const submitClaimsGasLimit = uint64(10_000_000)
 type CardanoBlock = contractbinding.IBridgeStructsCardanoBlock
 type Claims = contractbinding.IBridgeStructsValidatorClaims
 type TxDataInfo = contractbinding.IBridgeStructsTxDataInfo
-type ValidatorSet = contractbinding.IBridgeStructsValidatorSet
 
 type SubmitOpts struct {
 	GasLimitMultiplier float32

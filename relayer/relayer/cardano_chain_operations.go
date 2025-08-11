@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -48,12 +47,6 @@ func (cco *CardanoChainOperations) SendTx(
 	ctx context.Context, _ eth.IBridgeSmartContract, smartContractData *eth.ConfirmedBatch,
 ) error {
 	cco.logger.Debug("confirmed batch - sending tx", "batchID", smartContractData.ID, "binary", cco.cardanoCliBinary)
-
-	if smartContractData.BatchType == uint8(batcher.ValidatorSetFinal) {
-		cco.logger.Info("confirmed batch - skipping ValidatorSetFinal batch")
-
-		return nil
-	}
 
 	witnesses := make(
 		[][]byte, len(smartContractData.Signatures)+len(smartContractData.FeeSignatures))

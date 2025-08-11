@@ -28,7 +28,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	relayerDbAccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access/relayer_imitator"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
@@ -44,20 +43,19 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
-	ctx                  context.Context
-	shouldRunAPI         bool
-	oracleDB             *bbolt.DB
-	db                   core.Database
-	cardanoIndexerDbs    map[string]indexer.Database
-	oracle               cardanoOracleCore.Oracle
-	ethOracle            ethOracleCore.Oracle
-	batcherManager       batcherCore.BatcherManager
-	relayerImitator      core.RelayerImitator
-	api                  core.API
-	telemetry            *telemetry.Telemetry
-	telemetryWorker      *TelemetryWorker
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserverImpl
-	logger               hclog.Logger
+	ctx               context.Context
+	shouldRunAPI      bool
+	oracleDB          *bbolt.DB
+	db                core.Database
+	cardanoIndexerDbs map[string]indexer.Database
+	oracle            cardanoOracleCore.Oracle
+	ethOracle         ethOracleCore.Oracle
+	batcherManager    batcherCore.BatcherManager
+	relayerImitator   core.RelayerImitator
+	api               core.API
+	telemetry         *telemetry.Telemetry
+	telemetryWorker   *TelemetryWorker
+	logger            hclog.Logger
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -111,14 +109,6 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContract,
-		logger.Named("validator_set_observer"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create validator set observer: %w", err)
-	}
-
-	fmt.Printf("Validator set observer created: %+v\n", validatorSetObserver)
-
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
@@ -159,7 +149,7 @@ func NewValidatorComponents(
 
 	cardanoOracle, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
-		bridgingRequestStateManager, validatorSetObserver, logger.Named("oracle_cardano"))
+		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
@@ -169,7 +159,7 @@ func NewValidatorComponents(
 
 	ethOracle, err := ethOracle.NewEthOracle(
 		ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
-		bridgingRequestStateManager, validatorSetObserver, logger.Named("oracle_eth"))
+		bridgingRequestStateManager, logger.Named("oracle_eth"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)
 	}
@@ -179,7 +169,7 @@ func NewValidatorComponents(
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, validatorSetObserver, logger.Named("batcher"))
+		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
@@ -228,8 +218,7 @@ func NewValidatorComponents(
 		telemetryWorker: NewTelemetryWorker(
 			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
-		validatorSetObserver: validatorSetObserver,
-		logger:               logger,
+		logger: logger,
 	}, nil
 }
 
@@ -261,8 +250,6 @@ func (v *ValidatorComponentsImpl) Start() error {
 
 		go v.telemetryWorker.Start(v.ctx)
 	}
-
-	v.validatorSetObserver.Start()
 
 	v.logger.Debug("Started ValidatorComponents")
 

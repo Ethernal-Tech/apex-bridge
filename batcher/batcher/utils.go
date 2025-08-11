@@ -5,15 +5,6 @@ import (
 	"fmt"
 )
 
-type BatchType uint8
-
-const (
-	Normal BatchType = iota
-	Consolidation
-	ValidatorSet
-	ValidatorSetFinal
-)
-
 var (
 	errNonActiveBatchPeriod = errors.New("non active batch period")
 
