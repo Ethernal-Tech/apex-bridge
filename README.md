@@ -140,6 +140,7 @@ $ go run ./main.go generate-configs \
         --nexus-block-rounding-threshold <nexus block rounding threshold> \
         --nexus-starting-block <block number> \
         --nexus-min-fee-for-bridging <minimal bridging fee for nexus> \
+        --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
         --relayer-data-dir <relayer data dir for secrets> \
