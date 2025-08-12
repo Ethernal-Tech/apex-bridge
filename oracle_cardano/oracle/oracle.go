@@ -30,7 +30,7 @@ type OracleImpl struct {
 	db                       core.Database
 	expectedTxsFetcher       cCore.ExpectedTxsFetcher
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
-	validatorSetObserver     *validatorSetObserver.ValidatorSetObserverImpl
+	validatorSetObserver     validatorSetObserver.IValidatorSetObserver
 	logger                   hclog.Logger
 }
 
@@ -45,7 +45,7 @@ func NewCardanoOracle(
 	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserverImpl,
+	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}

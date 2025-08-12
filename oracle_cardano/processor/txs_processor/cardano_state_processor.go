@@ -95,6 +95,7 @@ func (sp *CardanoStateProcessor) RunChecks(
 	chainID string,
 	maxClaimsToGroup int,
 	priority uint8,
+	isValidatorSetPending bool,
 ) {
 	expectedTxs, err := sp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
@@ -103,11 +104,13 @@ func (sp *CardanoStateProcessor) RunChecks(
 		return
 	}
 
-	sp.state.unprocessedTxs, err = sp.db.GetUnprocessedTxs(chainID, priority, 0)
-	if err != nil {
-		sp.logger.Error("Failed to get unprocessed txs", "err", err)
+	if !isValidatorSetPending {
+		sp.state.unprocessedTxs, err = sp.db.GetUnprocessedTxs(chainID, priority, 0)
+		if err != nil {
+			sp.logger.Error("Failed to get unprocessed txs", "err", err)
 
-		return
+			return
+		}
 	}
 
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
@@ -129,7 +132,9 @@ func (sp *CardanoStateProcessor) RunChecks(
 			"for chainID", sp.state.blockInfo.ChainID,
 			"blockInfo", sp.state.blockInfo)
 
-		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
+		if !isValidatorSetPending {
+			sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
+		}
 		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
