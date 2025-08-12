@@ -233,7 +233,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		data.ChainID,
 		cco.cardanoCliBinary,
 		data.ProtocolParams,
-		txOutputs.Outputs,
+		&txOutputs.Outputs,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -265,14 +265,18 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	for addressIndex, utxos := range multisigUtxos {
 		policyScript, ok := cco.bridgingAddressesManager.GetPaymentPolicyScript(data.ChainID, addressIndex)
 		if !ok {
-			return nil, multisigAddresses, fmt.Errorf("failed to get payment policy script for address: %d", addressIndex)
+			return nil, multisigAddresses, fmt.Errorf("failed to get payment policy script for address index: %d", addressIndex)
 		}
 
-		txInputs.MultiSig = append(txInputs.MultiSig, &cardano.TxInputInfo{
-			PolicyScript: policyScript,
-			Address:      multisigAddresses[addressIndex].Address,
-			TxInputs:     convertUTXOsToTxInputs(utxos),
-		})
+		if addr, ok := cco.bridgingAddressesManager.GetPaymentAddressFromIndex(data.ChainID, addressIndex); !ok {
+			return nil, multisigAddresses, fmt.Errorf("failed to get payment address for address index: %d", addressIndex)
+		} else {
+			txInputs.MultiSig = append(txInputs.MultiSig, &cardano.TxInputInfo{
+				PolicyScript: policyScript,
+				Address:      addr,
+				TxInputs:     convertUTXOsToTxInputs(utxos),
+			})
+		}
 	}
 
 	feePolicyScript, ok := cco.bridgingAddressesManager.GetFeeMultisigPolicyScript(data.ChainID)
