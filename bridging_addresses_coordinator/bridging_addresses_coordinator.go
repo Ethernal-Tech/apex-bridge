@@ -165,7 +165,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		for tokenName, requiredAmount := range remainingTokenAmounts {
 			c.logger.Debug("remainingTokenAmounts requiredAmount", requiredAmount)
 
-			if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount {
+			if addrAmount.totalTokenAmounts[tokenName] > requiredAmount {
 				addressChange, ok := safeSubstract(addrAmount.totalTokenAmounts[tokenName], requiredAmount)
 				c.logger.Debug("address change", addressChange)
 
@@ -227,6 +227,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 				c.logger.Debug("[FULL] addr amount for token", tokenName, "amount", addrAmount.totalTokenAmounts[tokenName])
 				c.logger.Debug("[FULL] remainingTokenAmounts for token", tokenName, "amount", remainingTokenAmounts[tokenName])
+
+				if remainingTokenAmounts[tokenName] == 0 {
+					delete(remainingTokenAmounts, tokenName)
+				}
 			}
 		}
 
