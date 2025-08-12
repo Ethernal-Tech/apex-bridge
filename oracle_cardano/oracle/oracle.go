@@ -16,7 +16,7 @@ import (
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/txs_processor"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -30,7 +30,7 @@ type OracleImpl struct {
 	db                       core.Database
 	expectedTxsFetcher       cCore.ExpectedTxsFetcher
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
-	validatorSetObserver     validatorSetObserver.IValidatorSetObserver
+	validatorSetObserver     validatorobserver.IValidatorSetObserver
 	logger                   hclog.Logger
 }
 
@@ -45,7 +45,7 @@ func NewCardanoOracle(
 	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}
