@@ -36,6 +36,7 @@ func (*BridgingAddressControllerImpl) GetPathPrefix() string {
 func (c *BridgingAddressControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
 	return []*apiCore.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.getBridgingAddress, APIKeyAuth: true},
+		{Path: "GetAllAddresses", Method: http.MethodGet, Handler: c.getAllBridgingAddresses, APIKeyAuth: true},
 	}
 }
 
@@ -84,4 +85,25 @@ func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewBridgingAddressResponse(
 		chainIDStr, bridgingAddress), c.logger)
+}
+
+func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseWriter, r *http.Request) {
+	queryValues := r.URL.Query()
+	c.logger.Debug("getBridgingAddress request", "query values", queryValues, "url", r.URL)
+
+	chainIDArr, exists := queryValues["chainId"]
+	if !exists || len(chainIDArr) == 0 {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
+
+		return
+	}
+
+	chainIDStr := chainIDArr[0]
+	chainID := common.ToNumChainID(chainIDStr)
+
+	bridgingAddresses := c.bridgingAddressesCoordinator.GetAllAddresses(chainID)
+
+	apiUtils.WriteResponse(w, r, http.StatusOK, bridgingAddresses, c.logger)
 }

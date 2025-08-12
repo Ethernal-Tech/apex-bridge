@@ -265,3 +265,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 
 	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil
 }
+
+func (c *BridgingAddressesCoordinatorImpl) GetAllAddresses(chainID uint8) []string {
+	// Return all addresses
+	return c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
+}
