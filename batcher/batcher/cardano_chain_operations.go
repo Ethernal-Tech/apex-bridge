@@ -434,6 +434,9 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
+	// do not take more than maxFeeUtxoCount
+	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
+
 	consolidationInputs := make([]AddressConsolidationData, len(chosenMultisigAddresses)+1)
 	consolidationInputs[0] = AddressConsolidationData{
 		Address:      multisigFeeAddress,
@@ -507,6 +510,14 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
+	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+
+	if len(feeUtxos) == 0 {
+		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+	}
+
+	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
+
 	chosenMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
 
 	cco.logger.Debug("Chosen multisig addresses11", "addresses", multisigAddresses)
@@ -553,6 +564,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 		cco.logger.Debug("Output for calculateMinUtxoLovelaceAmount", "output", output)
 
+		// in case we are sending all the tokens we have from all the utxos we have, there won't be any change
 		minUtxoLovelaceAmount := uint64(0)
 		if !addressAndAmount.FullAmount {
 			minUtxoLovelaceAmount, err = calculateMinUtxoLovelaceAmount(
