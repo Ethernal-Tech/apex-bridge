@@ -220,6 +220,10 @@ func (vs *ValidatorSetObserverImpl) removeValidators(
 
 func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain, chainsDeltas []eth.ValidatorSet) {
 	for _, chainDelta := range chainsDeltas {
+		if chainDelta.ChainId == uint8(0xFF) {
+			continue
+		}
+
 		for _, v := range chainDelta.Validators {
 			validatorData := validators[common.ToStrChainID(chainDelta.ChainId)]
 			validatorData.Keys = append(validatorData.Keys, eth.ValidatorChainData{
