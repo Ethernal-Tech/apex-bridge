@@ -265,7 +265,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 
 	// 2. vsc tx batch is sent and we should get a finalize batch/tx. However, the previous tx/batch
 	// was executed unsuccessfully, so we get a validator set change batch/tx again (retry).
-	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(20)).Return(uint8(3), nil, nil)
+	bsc.On("GetBatchStatusAndTransactions", mock.Anything, "nexus", uint64(20)).Return(uint8(3), nil, nil)
 	forceSend, batch, err = op.CreateValidatorSetChangeTx(
 		context.TODO(), "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0), 20, uint8(ValidatorSet),
 	)
@@ -275,7 +275,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 	require.EqualValues(t, ValidatorSet, batch.BatchType)
 
 	// 3. Since vsc tx batch is sent after retry, we should get a finalize batch/tx.
-	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(21)).Return(uint8(2), nil, nil)
+	bsc.On("GetBatchStatusAndTransactions", mock.Anything, "nexus", uint64(21)).Return(uint8(2), nil, nil)
 	forceSend, batch, err = op.CreateValidatorSetChangeTx(
 		context.TODO(), "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0), 21, uint8(ValidatorSet),
 	)

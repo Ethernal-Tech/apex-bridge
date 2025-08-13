@@ -79,7 +79,8 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 			} else {
 				tx, err := eth.NewEVMValidatorSetChangeTransaction(lastBatchRawTx)
 				if err != nil {
-					df.logger.Error("Failed to parse validator set change evm tx", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
+					df.logger.Error("Failed to parse validator set change evm tx",
+						"rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
 
 					return nil, fmt.Errorf("failed to parse evm tx. err: %w", err)
 				}
