@@ -101,6 +101,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		}
 
 		tx := eth.EVMValidatorSetChangeTx{
+			BatchNonceID:        nextBatchID,
 			ValidatorsSetNumber: validatorSetNumber,
 			TTL:                 ttl,
 			ValidatorsChainData: keys,
@@ -139,12 +140,6 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	}
 
 	switch status {
-	case 1:
-		// vsc tx is pending on evm chain, do nothing
-		cco.logger.Info("VSC batch transaction is in progress...",
-			"chainID", chainID, "batchID", nextBatchID)
-
-		return false, nil, nil
 	case 2:
 		// vsc tx executed on evm chain, send final
 		return false, &core.GeneratedBatchTxData{

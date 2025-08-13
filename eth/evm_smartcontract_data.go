@@ -41,6 +41,10 @@ var (
 	})
 	validatorSetChangeTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
+			Name: "batchId",
+			Type: "uint64",
+		},
+		{
 			Name: "validatorsSetNumber",
 			Type: "uint256",
 		},
@@ -120,6 +124,7 @@ type EVMValidatorChainData struct {
 }
 
 type EVMValidatorSetChangeTx struct {
+	BatchNonceID        uint64               `json:"batchNonceId" abi:"batchId"`
 	ValidatorsSetNumber *big.Int             `json:"validatorsSetNumber" abi:"validatorsSetNumber"`
 	TTL                 *big.Int             `json:"ttl" abi:"ttl"`
 	ValidatorsChainData []ValidatorChainData `json:"validatorsChainData" abi:"validatorsChainData"`

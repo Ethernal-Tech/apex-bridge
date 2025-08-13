@@ -256,7 +256,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 
 	// 1. We have just started the validator set change process, send vsc tx batch
 	forceSend, batch, err := op.CreateValidatorSetChangeTx(
-		nil, "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0), 19, uint8(Normal),
+		context.TODO(), "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0), 19, uint8(Normal),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
@@ -267,7 +267,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 	// was executed unsuccessfully, so we get a validator set change batch/tx again (retry).
 	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(20)).Return(uint8(3), nil, nil)
 	forceSend, batch, err = op.CreateValidatorSetChangeTx(
-		nil, "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0), 20, uint8(ValidatorSet),
+		context.TODO(), "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0), 20, uint8(ValidatorSet),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
@@ -277,7 +277,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 	// 3. Since vsc tx batch is sent after retry, we should get a finalize batch/tx.
 	bsc.On("GetBatchStatusAndTransactions", nil, "nexus", uint64(21)).Return(uint8(2), nil, nil)
 	forceSend, batch, err = op.CreateValidatorSetChangeTx(
-		nil, "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0), 21, uint8(ValidatorSet),
+		context.TODO(), "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0), 21, uint8(ValidatorSet),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
@@ -286,7 +286,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 
 	// 4. We enter a new cycle of validator set change, so we expect to get a validator set change tx/batch.
 	forceSend, batch, err = op.CreateValidatorSetChangeTx(
-		nil, "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0), 22, uint8(Normal))
+		context.TODO(), "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0), 22, uint8(Normal))
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 	require.False(t, forceSend)

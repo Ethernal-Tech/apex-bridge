@@ -152,10 +152,6 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		forceSend, generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
 			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators,
 			b.lastBatch.id, uint8(b.lastBatch.batchType))
-
-		if generatedBatchData == nil && err == nil {
-			return 0, nil
-		}
 	} else {
 		// Get confirmed transactions from smart contract
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)

@@ -24,7 +24,7 @@ type SubmitOpts struct {
 
 type IOracleBridgeSmartContract interface {
 	GetLastObservedBlock(ctx context.Context, sourceChain string) (CardanoBlock, error)
-	GetRawTransactionFromLastBatch(ctx context.Context, chainID string) ([]byte, error)
+	GetRawTransactionAndBatchTypeFromLastBatch(ctx context.Context, chainID string) ([]byte, uint8, error)
 	SubmitClaims(ctx context.Context, claims Claims, submitOpts *SubmitOpts) (*types.Receipt, error)
 	SubmitLastObservedBlocks(ctx context.Context, chainID string, blocks []CardanoBlock) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
@@ -71,29 +71,29 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 	return result, nil
 }
 
-func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
+func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionAndBatchTypeFromLastBatch(
 	ctx context.Context, chainID string,
-) ([]byte, error) {
+) ([]byte, uint8, error) {
 	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
 	if err != nil {
-		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
+		return nil, 0, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
 	contract, err := contractbinding.NewBridgeContract(
 		bsc.smartContractAddress,
 		ethTxHelper.GetClient())
 	if err != nil {
-		return nil, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+		return nil, 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
+	result, batchType, err := contract.GetRawTransactionAndBatchTypeFromLastBatch(&bind.CallOpts{
 		Context: ctx,
 	}, common.ToNumChainID(chainID))
 	if err != nil {
-		return nil, fmt.Errorf("error while GetRawTransactionFromLastBatch: %w", bsc.ethHelper.ProcessError(err))
+		return nil, 0, fmt.Errorf("error while GetRawTransactionFromLastBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	return result, nil
+	return result, batchType, nil
 }
 
 func (bsc *OracleBridgeSmartContractImpl) SubmitClaims(
