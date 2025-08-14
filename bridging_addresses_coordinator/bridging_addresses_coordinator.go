@@ -34,13 +34,13 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	chainID uint8,
 	cardanoCliBinary string,
 	protocolParams []byte,
-	txOutputs *[]cardanowallet.TxOutput,
+	txOutputs []cardanowallet.TxOutput,
 ) ([]common.AddressAndAmount, error) {
 	// Go through all addresses, sort them by the total amount of tokens (descending),
 	// and choose the one with the biggest amount
 	// Future improvement:
 	// - add the stake pool saturation awareness
-	if len(*txOutputs) == 0 {
+	if len(txOutputs) == 0 {
 		return nil, nil
 	}
 
@@ -51,7 +51,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	// containsTokens := false
 	remainingTokenAmounts := make(map[string]uint64)
 
-	for _, txOutput := range *txOutputs {
+	for _, txOutput := range txOutputs {
 		remainingTokenAmounts[cardanowallet.AdaTokenName] += txOutput.Amount
 
 		for _, token := range txOutput.Tokens {
@@ -139,9 +139,6 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	c.logger.Debug("remainingTokenAmounts1", remainingTokenAmounts)
 	c.logger.Debug("addrAmounts", addrAmounts)
 
-	// Pick addresses and amounts to be taken from
-	carryOverChange := uint64(0)
-
 	for _, addrAmount := range addrAmounts {
 		if len(remainingTokenAmounts) == 0 {
 			break
@@ -172,45 +169,22 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 				if ok && addressChange > common.MinUtxoAmountDefault {
 					c.logger.Debug("delete from remainingTokenAmounts", tokenName)
 
-					if carryOverChange != 0 {
-						newOutput := cardanowallet.TxOutput{
-							Addr:   addrAmount.address,
-							Amount: carryOverChange + requiredAmount,
-							Tokens: []cardanowallet.TokenAmount{},
-						}
-						*txOutputs = append(*txOutputs, newOutput)
-						c.logger.Debug("Added new output", newOutput)
-					}
-
 					delete(remainingTokenAmounts, tokenName)
 				} else if ok {
 					// We have enough to cover the required amount but the change is less than min utxo
 					// we need to include input of min utxo from another address so that it could
 					// receive the change from this one
-					requiredAmount += addressChange
-					fullAmount = true
+					requiredAmount -= common.MinUtxoAmountDefault
+					fullAmount = false
+					remainingTokenAmounts[tokenName] -= requiredAmount
 
-					if carryOverChange == 0 {
-						carryOverChange = addressChange
-						remainingTokenAmounts[tokenName] = common.MinUtxoAmountDefault
-					} else {
-						// We are taking min utxo, if we have min utxo + addressChange < min utxo
-						// we shouldn't continue
-						newOutput := cardanowallet.TxOutput{
-							Addr:   addrAmount.address,
-							Amount: carryOverChange + requiredAmount,
-							Tokens: []cardanowallet.TokenAmount{},
-						}
-						*txOutputs = append(*txOutputs, newOutput)
-						c.logger.Debug("Added new output", newOutput)
-
-						delete(remainingTokenAmounts, tokenName)
-					}
 					// requiredAmount += addressChange - common.MinUtxoAmountDefault
 					// newAddrChange, _ := safeSubstract(addrAmount.totalTokenAmounts[tokenName], requiredAmount)
 					// c.logger.Debug("requiredAmount", requiredAmount, "newAddrChange", newAddrChange)
 					//
 					// c.logger.Debug("remainingTokenAmounts for token", tokenName, "amount", remainingTokenAmounts[tokenName])
+				} else {
+					return nil, fmt.Errorf("not enough funds for bridging")
 				}
 
 				/* if tokenName == cardanowallet.AdaTokenName && requiredAmount < common.MinUtxoAmountDefault {
@@ -255,8 +229,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	}
 
 	if remainingTokenAmounts[cardanowallet.AdaTokenName] > 0 {
-		return nil, fmt.Errorf("not enough lovelace funds, required: %d, remaining: %d, append change: %d",
-			requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName], carryOverChange)
+		return nil, fmt.Errorf("%w: %d vs %d",
+			cardanowallet.ErrUTXOsCouldNotSelect, requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
 	}
 
 	if len(remainingTokenAmounts) > 0 {

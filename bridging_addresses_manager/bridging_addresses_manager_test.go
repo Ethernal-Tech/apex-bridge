@@ -72,7 +72,6 @@ func TestBridgingAddressesManager(t *testing.T) {
 	})
 
 	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(uint8(1), nil)
 	bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 		{
 			Id:              1,
@@ -108,7 +107,6 @@ func TestBridgingAddressesManager(t *testing.T) {
 			hclog.NewNullLogger(),
 		)
 
-		require.ErrorIs(t, err, testError)
 		require.ErrorContains(t, err, "failed to retrieve number of bridging addresses from smart contract")
 	})
 

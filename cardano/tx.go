@@ -68,6 +68,7 @@ func CreateTx(
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
 	carryOverChange := uint64(0)
+
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
 
@@ -77,10 +78,12 @@ func CreateTx(
 		logger.Debug("CREATE TX outputsSum amount", outputsAmount[cardanowallet.AdaTokenName])
 
 		multisigChangeTxOutput := cardanowallet.TxOutput{}
+
 		if addrAndAmountToDeduct != nil {
 			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
 			logger.Debug("CREATE TX addrAndAmountToDeduct", addrAndAmountToDeduct)
 			logger.Debug("CREATE TX outputsSumNew amount", outputsAmountNew[cardanowallet.AdaTokenName])
+
 			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
 				multisigOutput, multisig.Sum, outputsAmountNew)
 			if err != nil {
@@ -88,6 +91,7 @@ func CreateTx(
 			}
 		} else {
 			logger.Debug("CREATE TX addrAndAmountToDeduct is nil")
+
 			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
 				multisigOutput, multisig.Sum, outputsAmount)
 			if err != nil {

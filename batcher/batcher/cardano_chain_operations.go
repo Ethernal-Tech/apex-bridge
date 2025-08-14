@@ -233,7 +233,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		data.ChainID,
 		cco.cardanoCliBinary,
 		data.ProtocolParams,
-		&txOutputs.Outputs,
+		txOutputs.Outputs,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -337,16 +337,19 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	multisigTxOutputs := make([]cardanowallet.TxOutput, 0, len(chosenMultisigAddresses))
 
-	for _, addressAndAmount := range chosenMultisigAddresses {
+	for i, addressAndAmount := range chosenMultisigAddresses {
+		sum := getSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex])
+
 		multisigTxOutput, err := getTxOutputFromSumMap(
 			addressAndAmount.Address,
-			getSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex]),
+			sum,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		multisigTxOutputs = append(multisigTxOutputs, multisigTxOutput)
+		chosenMultisigAddresses[i].TokensAmounts = sum
 	}
 
 	slotNumber, err := cco.getSlotNumber()
@@ -396,7 +399,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		txInputs,
 		multisigTxOutputs,
 		nil,
-		nil, // TODO: ??????????
+		chosenMultisigAddresses,
 		cco.logger,
 	)
 	if err != nil {
@@ -519,6 +522,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
 
 	chosenMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
+	chosenMultisigUtxosSoFar := 0
 
 	cco.logger.Debug("Chosen multisig addresses11", "addresses", multisigAddresses)
 
@@ -582,7 +586,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			multisigUtxos,
 			addressAndAmount.TokensAmounts,
 			minUtxoLovelaceAmount,
-			getMaxUtxoCount(cco.config, len(feeUtxos)),
+			getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar),
 			int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 		)
 		if err != nil {
@@ -593,6 +597,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 		cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos)
 		chosenMultisigUtxos[addressAndAmount.AddressIndex] = multisigUtxos
+		chosenMultisigUtxosSoFar += len(multisigUtxos)
 	}
 
 	return chosenMultisigUtxos, feeUtxos, nil
