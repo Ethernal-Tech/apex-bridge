@@ -109,6 +109,7 @@ func (cco *EVMChainOperations) SendTx(
 		cco.logger.Info("Submitting update validators chain data transaction",
 			"signature", hex.EncodeToString(signature),
 			"bitmap", smartContractData.Bitmap,
+			"id", smartContractData.ID,
 			"rawTx", hex.EncodeToString(smartContractData.RawTransaction))
 
 		return cco.evmSmartContract.UpdateValidatorsChainData(ctx,

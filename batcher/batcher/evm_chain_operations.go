@@ -142,10 +142,18 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	switch status {
 	case 2:
 		// vsc tx executed on evm chain, send final
+		txRaw := []byte("0xdeadbeef")
+		txsHashBytes, err := common.Keccak256(txRaw)
+		if err != nil {
+			return false, nil, err
+		}
+
+		txHash := hex.EncodeToString(txsHashBytes)
+
 		return false, &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
-			TxRaw:     []byte{},
-			TxHash:    "",
+			TxRaw:     txRaw,
+			TxHash:    txHash,
 		}, nil
 	case 3:
 		// vsc tx failed on evm chain, resend
