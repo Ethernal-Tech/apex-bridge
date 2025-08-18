@@ -143,6 +143,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	case 2:
 		// vsc tx executed on evm chain, send final
 		txRaw := []byte("0xdeadbeef")
+
 		txsHashBytes, err := common.Keccak256(txRaw)
 		if err != nil {
 			return false, nil, err

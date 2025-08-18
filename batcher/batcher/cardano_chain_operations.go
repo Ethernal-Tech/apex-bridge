@@ -756,7 +756,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		}
 	}
 
-	return false, &core.GeneratedBatchTxData{
+	return true, &core.GeneratedBatchTxData{
 		BatchType: uint8(ValidatorSet),
 		TxRaw:     txRaw,
 		TxHash:    txHash,

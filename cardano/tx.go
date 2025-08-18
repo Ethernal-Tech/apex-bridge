@@ -109,8 +109,6 @@ func isAddressInOutputs(outputs []cardanowallet.TxOutput, addr string) (int, uin
 	return -1, 0
 }
 
-var ErrNotEnoughFee = errors.New("not enough fee for tx")
-
 func CreateOnlyFeeTx(
 	cardanoCliBinary string,
 	testNetMagic uint,
@@ -120,9 +118,9 @@ func CreateOnlyFeeTx(
 	feeTxInput *TxInputInfo,
 	output cardanowallet.TxOutput,
 ) ([]byte, string, error) {
-	// ensure there is at least one input for both the multisig and fee multisig.
+	// ensure there is at least 1 fee input
 	if feeTxInput == nil || len(feeTxInput.Inputs) == 0 {
-		return nil, "", ErrNotEnoughFee
+		return nil, "", errors.New("no fee inputs provided for CreateOnlyFeeTx")
 	}
 
 	feeAmount := feeTxInput.Sum[cardanowallet.AdaTokenName]
@@ -139,7 +137,7 @@ func CreateOnlyFeeTx(
 
 	builder.AddInputsWithScript(feeTxInput.PolicyScript, feeTxInput.Inputs...)
 
-	calcFee, err := builder.CalculateFee(0)
+	calcFee, err := builder.CalculateFee(feeTxInput.PolicyScript.GetCount() * 2)
 	if err != nil {
 		return nil, "", err
 	}

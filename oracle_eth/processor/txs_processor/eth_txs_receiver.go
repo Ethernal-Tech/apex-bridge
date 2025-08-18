@@ -132,7 +132,7 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 	depositEventSig := events[0]
 	withdrawEventSig := events[1]
 	fundedEventSig := events[2]
-	// validator set change occured
+	// validator set change occurred
 	vscEventSig := events[3]
 
 	contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
