@@ -674,10 +674,15 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		}, nil
 	}
 
-	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, common.BatchExecutedMetadata{
+	metadataStruct := common.BatchExecutedMetadata{
 		BridgingTxType: common.BridgingTxTypeBatchExecution,
 		BatchNonceID:   nextBatchID,
-	})
+	}
+	if isFeeOnly {
+		metadataStruct.IsFeeOnlyTx = 1
+	}
+
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataStruct)
 	if err != nil {
 		return false, nil, err
 	}
