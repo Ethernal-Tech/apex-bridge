@@ -945,6 +945,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			AddressIndex:  0,
 			Address:       bridgingAddr,
 			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			IncludeChnage: 1_000_000,
 		},
 	}
 
@@ -1085,8 +1086,8 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 8, len(feeUtxos))
-		require.Equal(t, 42, len(multisigUtxos[0]))
+		require.Equal(t, 4, len(feeUtxos))
+		require.Equal(t, 46, len(multisigUtxos[0]))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
@@ -1241,8 +1242,8 @@ func TestSkylineConsolidation(t *testing.T) {
 
 		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, int(cco.config.MaxUtxoCount)-len(feeUtxos), len(multisigUtxos[0]))
-		require.Equal(t, 7, len(feeUtxos))
+		require.Equal(t, 37, len(multisigUtxos[0]))
+		require.Equal(t, 3, len(feeUtxos))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
@@ -1535,9 +1536,9 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 
 		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 4, len(feeUtxos))
-		require.Equal(t, 23, len(multisigUtxos[0]))
-		require.Equal(t, 23, len(multisigUtxos[1]))
+		require.Equal(t, 2, len(feeUtxos))
+		require.Equal(t, 24, len(multisigUtxos[0]))
+		require.Equal(t, 24, len(multisigUtxos[1]))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -330,6 +331,19 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	chosenMultisigAddresses []common.AddressAndAmount,
 ) (*core.GeneratedBatchTxData, error) {
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
+
+	// +1 because we need to take fee address into consideration
+	if uint(len(chosenMultisigAddresses)+1) >= cco.config.MaxUtxoCount {
+
+		sort.Slice(chosenMultisigAddresses, func(i, j int) bool {
+			return chosenMultisigAddresses[i].UtxoCount > chosenMultisigAddresses[j].UtxoCount
+		})
+
+		difference := len(chosenMultisigAddresses) - int(cco.config.MaxUtxoCount) + 2
+		cco.logger.Debug("Number of chosen addresses (including fee address) greather or equal to MaxUtxoCount", "Num of chosen addresses", len(chosenMultisigAddresses)+1, "MaxUtxoCount", int(cco.config.MaxUtxoCount))
+		chosenMultisigAddresses = slices.Delete(chosenMultisigAddresses, len(chosenMultisigAddresses)-difference, len(chosenMultisigAddresses))
+	}
+
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(chosenMultisigAddresses, feeMultisigAddress)
 	if err != nil {
 		return nil, err
@@ -569,18 +583,21 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		cco.logger.Debug("Output for calculateMinUtxoLovelaceAmount", "output", output)
 
 		// in case we are sending all the tokens we have from all the utxos we have, there won't be any change
-		minUtxoLovelaceAmount := uint64(0)
-		if !addressAndAmount.FullAmount {
-			minUtxoLovelaceAmount, err = calculateMinUtxoLovelaceAmount(
-				cco.cardanoCliBinary, data.ProtocolParams, addressAndAmount.Address, multisigUtxos, output)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
+		minUtxoLovelaceAmount := addressAndAmount.IncludeChnage
+		// if !addressAndAmount.FullAmount {
+		// 	minUtxoLovelaceAmount, err = calculateMinUtxoLovelaceAmount(
+		// 		cco.cardanoCliBinary, data.ProtocolParams, addressAndAmount.Address, multisigUtxos, output)
+		// 	if err != nil {
+		// 		return nil, nil, err
+		// 	}
+		// }
 
 		cco.logger.Debug("Chosen multisig addresses44", "addresses", multisigAddresses)
 
 		cco.logger.Debug("Min Utxo Lovelace Amount", "minUtxoLovelaceAmount", minUtxoLovelaceAmount)
+
+		maxUtxoCount := getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar)
+		cco.logger.Debug("Max UTXO count batch", "maxUtxoCount", maxUtxoCount)
 
 		multisigUtxos, err = getNeededUtxos(
 			multisigUtxos,

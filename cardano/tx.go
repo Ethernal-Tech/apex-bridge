@@ -82,6 +82,7 @@ func CreateTx(
 		if addrAndAmountToDeduct != nil {
 			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
 			logger.Debug("CREATE TX addrAndAmountToDeduct", addrAndAmountToDeduct)
+			logger.Debug("CREATE TX outputsAmountNew", outputsAmountNew)
 			logger.Debug("CREATE TX outputsSumNew amount", outputsAmountNew[cardanowallet.AdaTokenName])
 
 			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
@@ -99,6 +100,7 @@ func CreateTx(
 			}
 		}
 
+		logger.Debug("multisigChangeTxOutput", multisigChangeTxOutput)
 		multisigChangeTxOutput.Amount += carryOverChange
 
 		// add multisig output if change is not zero

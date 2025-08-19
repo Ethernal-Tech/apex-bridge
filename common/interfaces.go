@@ -43,7 +43,8 @@ type AddressAndAmount struct {
 	AddressIndex  uint8
 	Address       string
 	TokensAmounts map[string]uint64
-	FullAmount    bool
+	IncludeChnage uint64
+	UtxoCount     int
 }
 
 type BridgingAddressesCoordinator interface {

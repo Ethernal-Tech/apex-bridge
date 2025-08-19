@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -121,6 +122,11 @@ func getNeededUtxos(
 	// Change outputs require minUtxoLovelace (protocol rule)
 	// Exact spends without change are rare (especially with tokens)
 	// desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+
+	if maxUtxoCount == 0 {
+		return nil, fmt.Errorf(
+			"%w: maxUtxoCount equal to 0", cardanowallet.ErrUTXOsLimitReached)
+	}
 
 	outputUTXOs, err := txsend.GetUTXOsForAmounts(
 		inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
