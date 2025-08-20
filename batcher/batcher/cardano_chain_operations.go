@@ -114,6 +114,10 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(
 	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	if generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+		return []byte{}, []byte{}, nil
+	}
+
 	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {
 		return nil, nil, err
@@ -637,6 +641,12 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	if err != nil {
 		return false, nil, err
 	}
+
+	cco.logger.Debug("NEW MULTISIG & FEE ADDRESS",
+		"ms", newAddresses.Multisig.Payment,
+		"fee", newAddresses.Fee.Payment,
+		"ms.stake", newAddresses.Multisig.Stake,
+		"fee.stake", newAddresses.Fee.Stake)
 
 	// get active validator set from bridge smart contract
 	activeValidatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
