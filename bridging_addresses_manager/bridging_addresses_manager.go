@@ -64,8 +64,11 @@ func NewBridgingAdressesManager(
 
 		numberOfAddresses, err := bridgeSmartContract.GetBridgingAddressesCount(ctx, chainIDStr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve number of bridging addresses from smart contract for chain ID %s: %w", chainIDStr, err)
+			return nil, fmt.Errorf("failed to retrieve number of bridging addresses from smart contract for chain ID %s: %w",
+				chainIDStr, err)
 		}
+
+		chainConfig := cardanoChains[chainIDStr]
 
 		for i := range uint64(numberOfAddresses) {
 			policyScripts := cardano.NewApexPolicyScripts(keyHashes, i)
@@ -74,10 +77,6 @@ func NewBridgingAdressesManager(
 
 			bridgingStakePolicyScripts[registeredChain.Id] =
 				append(bridgingStakePolicyScripts[registeredChain.Id], policyScripts.Multisig.Stake)
-
-			feeMultisigPolicyScripts[registeredChain.Id] = policyScripts.Fee.Payment
-
-			chainConfig := cardanoChains[chainIDStr]
 
 			addrs, err := cardano.NewApexAddresses(
 				cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
@@ -91,11 +90,16 @@ func NewBridgingAdressesManager(
 			bridgingStakeAddresses[registeredChain.Id] =
 				append(bridgingStakeAddresses[registeredChain.Id], addrs.Multisig.Stake)
 
-			feeMultisigAddresses[registeredChain.Id] = addrs.Fee.Payment
+			if i == 0 {
+				feeMultisigAddresses[registeredChain.Id] = addrs.Fee.Payment
+				feeMultisigPolicyScripts[registeredChain.Id] = policyScripts.Fee.Payment
+			}
 		}
 
-		logger.Debug("Bridging addresses manager initialized for %s chain with %d payment addresses: %v",
-			chainIDStr, len(bridgingPaymentAddresses[registeredChain.Id]), bridgingPaymentAddresses[registeredChain.Id])
+		logger.Debug(
+			fmt.Sprintf("Bridging addresses manager initialized for %s chain with %d payment addresses: %v and fee address %s",
+				chainIDStr, len(bridgingPaymentAddresses[registeredChain.Id]),
+				bridgingPaymentAddresses[registeredChain.Id], feeMultisigAddresses[registeredChain.Id]))
 	}
 
 	return &BridgingAddressesManagerImpl{
