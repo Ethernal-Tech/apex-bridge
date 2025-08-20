@@ -202,7 +202,7 @@ func (vs *ValidatorSetObserverImpl) removeValidators(
 	for chainID, chainData := range validators {
 		newKeys := make([]eth.ValidatorChainData, 0, len(chainData.Keys)-len(deletedMap))
 
-		idx := uint8(0)
+		idx := uint8(1)
 		for _, key := range chainData.Keys {
 			if !deletedMap[idx] {
 				newKeys = append(newKeys, key)
