@@ -52,7 +52,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			hclog.NewNullLogger())
+			hclog.NewNullLogger(), nil)
 		_, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -66,7 +66,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), nil)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(nil, testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -115,7 +115,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("ShouldConsolidate", testError).Return(false)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -138,7 +138,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", batchData).Return(nil, nil, testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -162,7 +162,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -185,7 +185,7 @@ func TestBatcherExecute(t *testing.T) {
 			}, nil)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		b.lastBatch = lastBatchData{
 			id:     1,
 			txHash: txHash,
@@ -213,7 +213,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, common.ChainIDStrPrime).Return(validatorsChainData, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 
 		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
 			common.ChainIDStrPrime: {

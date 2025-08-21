@@ -32,6 +32,7 @@ type OracleImpl struct {
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
 	validatorSetObserver     *validatorSetObserver.ValidatorSetObserverImpl
 	logger                   hclog.Logger
+	indexers                 map[string]*indexer.BlockIndexer
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -87,6 +88,8 @@ func NewCardanoOracle(
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]cCore.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
 
+	indexers := make(map[string]*indexer.BlockIndexer, len(appConfig.CardanoChains))
+
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
 
@@ -105,6 +108,8 @@ func NewCardanoOracle(
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
+		indexers[cardanoChainConfig.ChainID] = cco.GetIndexer()
+
 		cardanoChainObservers = append(cardanoChainObservers, cco)
 	}
 
@@ -119,6 +124,10 @@ func NewCardanoOracle(
 		validatorSetObserver:     validatorSetObserver,
 		logger:                   logger,
 	}, nil
+}
+
+func (o *OracleImpl) GetIndexers() map[string]*indexer.BlockIndexer {
+	return o.indexers
 }
 
 func (o *OracleImpl) Start() error {

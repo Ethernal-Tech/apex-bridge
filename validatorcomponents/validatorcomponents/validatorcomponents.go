@@ -179,7 +179,8 @@ func NewValidatorComponents(
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, validatorSetObserver, logger.Named("batcher"))
+		cardanoIndexerDbs, cardanoOracle.GetIndexers(), ethIndexerDbs, bridgingRequestStateManager, validatorSetObserver,
+		logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}

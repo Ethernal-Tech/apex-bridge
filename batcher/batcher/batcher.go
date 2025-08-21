@@ -43,6 +43,7 @@ type BatcherImpl struct {
 	lastBatch                   lastBatchData
 	logger                      hclog.Logger
 	newValidatorSet             *validatorSetChange
+	adder                       AddressAdder
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -53,6 +54,7 @@ func NewBatcher(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
+	adder AddressAdder,
 ) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
@@ -62,15 +64,35 @@ func NewBatcher(
 		lastBatch:                   lastBatchData{},
 		logger:                      logger,
 		newValidatorSet:             &validatorSetChange{},
+		adder:                       adder,
 	}
+}
+
+type AddressAdder interface {
+	AddNewAddressesOfInterest(address ...string)
 }
 
 func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()
-	defer b.newValidatorSet.Unlock()
 
 	b.newValidatorSet.validators = validators
 	b.newValidatorSet.finalized = false
+
+	b.newValidatorSet.Unlock()
+
+	if validators != nil && b.config.Chain.ChainType == common.ChainTypeCardanoStr {
+		operations, ok := b.operations.(*CardanoChainOperations)
+		if !ok {
+			return // this should never happen
+		}
+
+		_, addr, err := operations.generatePolicyAndMultisig((*validators)[b.config.Chain.ChainID].Keys)
+		if err != nil {
+			return // this should never happen (handle it somehow?)
+		}
+
+		b.adder.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
+	}
 }
 
 func (b *BatcherImpl) Start(ctx context.Context) {
