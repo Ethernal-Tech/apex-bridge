@@ -159,11 +159,13 @@ func loadSyncerConfigs(
 		"https://")
 
 	chainID := common.ToNumChainID(config.ChainID)
-	bridgingAddresses := bridgingAddressesManager.GetAllPaymentAddresses(chainID)
-	feeAddress := bridgingAddressesManager.GetFeeMultisigAddress(chainID)
 
-	addressesOfInterest := append(bridgingAddresses, feeAddress)
-	addressesOfInterest = append(addressesOfInterest, config.OtherAddressesOfInterest...)
+	addressesOfInterest := append(
+		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),
+			bridgingAddressesManager.GetFeeMultisigAddress(chainID),
+		),
+		config.OtherAddressesOfInterest...,
+	)
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{

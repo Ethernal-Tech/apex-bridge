@@ -56,7 +56,7 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 	)
 
 	for _, output := range tx.Outputs {
-		if utils.CheckBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
+		if utils.IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
 
 			if len(chainConfig.NativeTokens) > 0 {

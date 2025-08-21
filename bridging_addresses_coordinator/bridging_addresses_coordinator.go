@@ -113,6 +113,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 		totalTokenAmounts := make(map[string]uint64)
 		holdNativeTokens := false
+
 		for _, utxo := range utxos {
 			totalTokenAmounts[cardanowallet.AdaTokenName] += utxo.Output.Amount
 
@@ -178,6 +179,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 				// Take full amount, no chnage so we don't pay attention to lovelace
 				remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
 				addrAmount.includeInTx[tokenName] = addrAmount.totalTokenAmounts[tokenName]
+
 				if remainingTokenAmounts[tokenName] == 0 {
 					delete(remainingTokenAmounts, tokenName)
 				}
@@ -189,7 +191,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		if requiredAdaAmount > 0 {
 			availableAdaOnAddress := addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName]
 
-			requiredForChange := uint64(0)
+			var requiredForChange uint64
 			if nativeTokenChangeInUtxos {
 				requiredForChange = minUtxo
 			} else {
@@ -199,6 +201,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 			addressChange, ok := safeSubstract(availableAdaOnAddress, requiredAdaAmount)
 			c.logger.Debug("addressChange", addressChange)
 			c.logger.Debug("nativeTokenChangeInUtxos", nativeTokenChangeInUtxos)
+
 			if ok {
 				if addressChange == 0 && !nativeTokenChangeInUtxos {
 					addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
@@ -222,11 +225,11 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 			if remainingTokenAmounts[cardanowallet.AdaTokenName] == 0 {
 				delete(remainingTokenAmounts, cardanowallet.AdaTokenName)
 			}
-
 		} else {
 			if nativeTokenChangeInUtxos {
 				includeChange = minUtxo
 			}
+
 			addrAmount.includeInTx[cardanowallet.AdaTokenName] = 0
 		}
 
@@ -313,7 +316,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
 		}
 	}
 
-	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil
+	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil //nolint:gosec
 }
 
 func (c *BridgingAddressesCoordinatorImpl) GetAllAddresses(chainID uint8) []string {

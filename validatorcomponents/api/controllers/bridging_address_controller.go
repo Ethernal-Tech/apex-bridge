@@ -89,7 +89,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter
 
 func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
-	c.logger.Debug("getBridgingAddress request", "query values", queryValues, "url", r.URL)
+	c.logger.Debug("getAllBridgingAddresses request", "query values", queryValues, "url", r.URL)
 
 	chainIDArr, exists := queryValues["chainId"]
 	if !exists || len(chainIDArr) == 0 {
@@ -105,5 +105,6 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 
 	bridgingAddresses := c.bridgingAddressesCoordinator.GetAllAddresses(chainID)
 
-	apiUtils.WriteResponse(w, r, http.StatusOK, bridgingAddresses, c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewAllBridgingAddressesResponse(
+		bridgingAddresses), c.logger)
 }

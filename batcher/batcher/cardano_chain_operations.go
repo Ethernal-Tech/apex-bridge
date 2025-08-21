@@ -333,15 +333,19 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
 	// +1 because we need to take fee address into consideration
+	//nolint:gosec
 	if uint(len(chosenMultisigAddresses)+1) >= cco.config.MaxUtxoCount {
-
 		sort.Slice(chosenMultisigAddresses, func(i, j int) bool {
 			return chosenMultisigAddresses[i].UtxoCount > chosenMultisigAddresses[j].UtxoCount
 		})
 
-		difference := len(chosenMultisigAddresses) - int(cco.config.MaxUtxoCount) + 2
-		cco.logger.Debug("Number of chosen addresses (including fee address) greather or equal to MaxUtxoCount", "Num of chosen addresses", len(chosenMultisigAddresses)+1, "MaxUtxoCount", int(cco.config.MaxUtxoCount))
-		chosenMultisigAddresses = slices.Delete(chosenMultisigAddresses, len(chosenMultisigAddresses)-difference, len(chosenMultisigAddresses))
+		difference := len(chosenMultisigAddresses) - int(cco.config.MaxUtxoCount) + 2 //nolint:gosec
+
+		cco.logger.Debug("Number of chosen addresses (including fee address) greather or equal to MaxUtxoCount",
+			"Num of chosen addresses", len(chosenMultisigAddresses)+1, "MaxUtxoCount", cco.config.MaxUtxoCount)
+
+		chosenMultisigAddresses = slices.Delete(
+			chosenMultisigAddresses, len(chosenMultisigAddresses)-difference, len(chosenMultisigAddresses))
 	}
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(chosenMultisigAddresses, feeMultisigAddress)

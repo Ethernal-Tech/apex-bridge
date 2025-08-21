@@ -107,7 +107,7 @@ func NewValidatorComponents(
 	bridgeSmartContract := eth.NewBridgeSmartContract(
 		appConfig.Bridge.SmartContractAddress, ethHelper)
 
-	err = fixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
+	err = fixChainsInConfig(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
@@ -157,7 +157,7 @@ func NewValidatorComponents(
 		logger,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bridging addresses component: %w", err)
+		return nil, fmt.Errorf("failed to create bridging addresses manager: %w", err)
 	}
 
 	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
@@ -168,7 +168,7 @@ func NewValidatorComponents(
 	cardanoOracleObj, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleDB, typeRegister, oracleConfig,
 		oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
-		bridgingRequestStateManager, bridgingAddressesCoordinator, logger.Named("oracle_cardano"))
+		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oracle_cardano. err %w", err)
 	}
@@ -219,7 +219,8 @@ func NewValidatorComponents(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
 				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
-			controllers.NewBridgingAddressController(bridgingAddressesCoordinator, apiLogger.Named("bridging_address_controller")),
+			controllers.NewBridgingAddressController(
+				bridgingAddressesCoordinator, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
@@ -342,7 +343,7 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	return nil
 }
 
-func fixChainsAndAddresses(
+func fixChainsInConfig(
 	ctx context.Context,
 	config *core.AppConfig,
 	smartContract eth.IBridgeSmartContract,

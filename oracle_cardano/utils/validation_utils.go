@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 
+	"slices"
+
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -12,8 +14,8 @@ import (
 
 // Validate if tx inputs contain the fee address
 func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
-	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-	if chainConfig == nil {
+	_, ok := appConfig.CardanoChains[tx.OriginChainID]
+	if !ok {
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
@@ -33,7 +35,7 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
 
 	for _, out := range tx.Outputs {
-		if !CheckBridgingAddrForChain(appConfig, tx.OriginChainID, out.Address) &&
+		if !IsBridgingAddrForChain(appConfig, tx.OriginChainID, out.Address) &&
 			out.Address != cardanoDestChainFeeAddress {
 			continue
 		}
@@ -64,7 +66,7 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	var multisigUtxoOutput *indexer.TxOutput = nil
 
 	for _, output := range tx.Tx.Outputs {
-		if CheckBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
+		if IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			if multisigUtxoOutput == nil {
 				multisigUtxoOutput = output
 			} else if !allowMultiple {
@@ -80,12 +82,6 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	return multisigUtxoOutput, nil
 }
 
-func CheckBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
-	for _, bridgingAddr := range appConfig.GetBridgingMultisigAddresses(chainID) {
-		if bridgingAddr == addr {
-			return true
-		}
-	}
-
-	return false
+func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
+	return slices.Contains(appConfig.GetBridgingMultisigAddresses(chainID), addr)
 }

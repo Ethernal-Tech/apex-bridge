@@ -44,7 +44,6 @@ func NewCardanoOracle(
 	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}
