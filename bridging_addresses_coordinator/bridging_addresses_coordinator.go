@@ -4,11 +4,21 @@ import (
 	"fmt"
 	"sort"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
+
+type addrAmount struct {
+	address           string
+	totalTokenAmounts map[string]uint64
+	includeInTx       map[string]uint64
+	addressIndex      uint8
+	holdNativeTokens  bool
+	utxoCount         int
+}
 
 type BridgingAddressesCoordinatorImpl struct {
 	bridgingAddressesManager common.BridgingAddressesManager
@@ -40,6 +50,8 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	// and choose the one with the biggest amount
 	// Future improvement:
 	// - add the stake pool saturation awareness
+	var err error
+
 	if len(*txOutputs) == 0 {
 		return nil, nil
 	}
@@ -47,62 +59,14 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
-	// TODO: should we extract methods that do this from cco_utils
-	containsTokens := false
-	remainingTokenAmounts := make(map[string]uint64)
-
-	for _, txOutput := range *txOutputs {
-		remainingTokenAmounts[cardanowallet.AdaTokenName] += txOutput.Amount
-
-		for _, token := range txOutput.Tokens {
-			containsTokens = true
-			remainingTokenAmounts[token.TokenName()] += token.Amount
-		}
-	}
-
+	remainingTokenAmounts := cardanowallet.GetOutputsSum(*txOutputs)
+	containsTokens := len(remainingTokenAmounts) > 1
 	c.logger.Debug("remainingTokenAmounts", remainingTokenAmounts)
-
-	// If we have native tokens we need to add up min utxo lovelace amount
-	// needed to be sent together with native token
-	minUtxo := uint64(0)
-
-	if containsTokens {
-		tokens, err := cardanowallet.GetTokensFromSumMap(remainingTokenAmounts)
-		if err != nil {
-			return nil, err
-		}
-
-		txBuilder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
-		if err != nil {
-			return nil, err
-		}
-
-		defer txBuilder.Dispose()
-
-		minUtxo, err = txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
-			Addr:   addresses[0],
-			Amount: remainingTokenAmounts[cardanowallet.AdaTokenName],
-			Tokens: tokens,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		minUtxo += common.MinUtxoAmountDefault
-	}
 
 	requiredAdaAmount := remainingTokenAmounts[cardanowallet.AdaTokenName]
 
-	type addrAmount struct {
-		address           string
-		totalTokenAmounts map[string]uint64
-		includeInTx       map[string]uint64
-		addressIndex      uint8
-		holdNativeTokens  bool
-		utxoCount         int
-	}
-
 	addrAmounts := make([]addrAmount, 0, len(addresses))
+	potentialInputs := make([]*indexer.TxInputOutput, 0)
 
 	// Calculate amount hold by each address
 	for i, address := range addresses {
@@ -110,6 +74,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		if err != nil {
 			return nil, err
 		}
+		potentialInputs = append(potentialInputs, utxos...)
 
 		totalTokenAmounts := make(map[string]uint64)
 		holdNativeTokens := false
@@ -135,6 +100,19 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		})
 	}
 
+	// If we have native tokens we need to add up min utxo lovelace amount
+	// needed to be sent together with native token
+	minUtxo := uint64(0)
+
+	if containsTokens {
+		minUtxo, err = cardanotx.CalculateMinUtxoLovelaceAmount(cardanoCliBinary, protocolParams, addresses[0], potentialInputs, *txOutputs)
+		if err != nil {
+			return nil, err
+		}
+
+		// minUtxo += common.MinUtxoAmountDefault
+	}
+
 	// Sort by totalAmount descending
 	sort.Slice(addrAmounts, func(i, j int) bool {
 		return addrAmounts[i].
@@ -143,127 +121,30 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 
 	amounts := make([]common.AddressAndAmount, 0)
 
-	c.logger.Debug("remainingTokenAmounts1", remainingTokenAmounts)
 	c.logger.Debug("addrAmounts", addrAmounts)
 
-	for i, addrAmount := range addrAmounts {
-		if len(remainingTokenAmounts) == 0 {
+	for i := range addrAmounts {
+		c.logger.Debug("remainingTokenAmounts loop", remainingTokenAmounts)
+		// Early exit if we've satisfied all required amounts
+		if len(remainingTokenAmounts) == 1 && remainingTokenAmounts[cardanowallet.AdaTokenName] == 0 {
 			break
 		}
 
+		addrAmount := &addrAmounts[i]
 		includeChange := uint64(0)
 
 		c.logger.Debug("addrAmount Address", addrAmount.address)
 
-		nativeTokenChangeInUtxos := false
-		// Update remaining native token amounts
-		for tokenName, requiredAmount := range remainingTokenAmounts {
-			if tokenName == cardanowallet.AdaTokenName {
-				continue
-			}
-
-			if addrAmount.totalTokenAmounts[tokenName] > requiredAmount {
-				nativeTokenChangeInUtxos = true
-				// Take partial amount, be sure that we have enough lovelace for change
-				if addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName] < 2*minUtxo {
-					// We don't have enough lovelace to cover the change
-					continue
-				}
-
-				// Handle needed ada for change
-				addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName] -= minUtxo
-
-				remainingTokenAmounts[tokenName] -= requiredAmount
-				delete(remainingTokenAmounts, tokenName)
-
-				addrAmount.includeInTx[tokenName] = requiredAmount
-				includeChange = minUtxo
-			} else if addrAmount.totalTokenAmounts[tokenName] > 0 {
-				// Take full amount, no chnage so we don't pay attention to lovelace
-				remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
-				addrAmount.includeInTx[tokenName] = addrAmount.totalTokenAmounts[tokenName]
-
-				if remainingTokenAmounts[tokenName] == 0 {
-					delete(remainingTokenAmounts, tokenName)
-				}
-			}
-		}
+		nativeTokenChangeInUtxos := c.processNativeTokens(addrAmount, remainingTokenAmounts, minUtxo)
 
 		// Update remaining lovelace amount
 		requiredAdaAmount := remainingTokenAmounts[cardanowallet.AdaTokenName]
 		if requiredAdaAmount > 0 {
-			availableAdaOnAddress := addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName]
-
-			requiredForChange := common.MinUtxoAmountDefault
-
-			if nativeTokenChangeInUtxos {
-				requiredForChange = minUtxo
-			}
-
-			addressChange, ok := safeSubstract(availableAdaOnAddress, requiredAdaAmount)
-			c.logger.Debug("addressChange", addressChange)
-			c.logger.Debug("nativeTokenChangeInUtxos", nativeTokenChangeInUtxos)
-
-			if ok {
-				if addressChange == 0 && !nativeTokenChangeInUtxos {
-					// Exact amount
-					addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
-					includeChange = 0
-					remainingTokenAmounts[cardanowallet.AdaTokenName] = 0
-				} else if addressChange >= requiredForChange {
-					// Sufficient change amount
-					addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
-					includeChange = requiredForChange
-					remainingTokenAmounts[cardanowallet.AdaTokenName] = 0
-				} else {
-					c.logger.Debug("i", i)
-					includeChange = requiredForChange + addressChange
-					if availableAdaOnAddress-includeChange > common.MinUtxoAmountDefault && i <= len(addrAmounts)-2 {
-						if addrAmounts[i+1].totalTokenAmounts[cardanowallet.AdaTokenName]-
-							(remainingTokenAmounts[cardanowallet.AdaTokenName]-availableAdaOnAddress+includeChange) >= common.MinUtxoAmountDefault {
-							addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress - includeChange
-							remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress - includeChange
-						} else {
-							c.logger.Debug("Handle carry over")
-							addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
-							*txOutputs = append(*txOutputs, cardanowallet.NewTxOutput(
-								addrAmounts[i+1].address,
-								addressChange+addrAmounts[i+1].totalTokenAmounts[cardanowallet.AdaTokenName]))
-							remainingTokenAmounts[cardanowallet.AdaTokenName] = addrAmounts[i+1].totalTokenAmounts[cardanowallet.AdaTokenName]
-							includeChange = 0
-						}
-					} else if i <= len(addrAmounts)-2 {
-						c.logger.Debug("Handle carry over")
-						// We have to handle carry over, the case where
-						// we need to send the insufficient change from one address to another
-						// To do this we need to update txOutput and include other address amount
-						// into the tx
-						// We are able to do this only when the address that has carry over
-						// isn't the last address that is being checked
-
-						addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
-						*txOutputs = append(*txOutputs, cardanowallet.NewTxOutput(
-							addrAmounts[i+1].address,
-							addressChange+addrAmounts[i+1].totalTokenAmounts[cardanowallet.AdaTokenName]))
-						remainingTokenAmounts[cardanowallet.AdaTokenName] = addrAmounts[i+1].totalTokenAmounts[cardanowallet.AdaTokenName]
-						includeChange = 0
-					}
-
-				}
-			} else {
-				addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
-				includeChange = 0
-				remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress
-			}
-
-			if remainingTokenAmounts[cardanowallet.AdaTokenName] == 0 {
-				delete(remainingTokenAmounts, cardanowallet.AdaTokenName)
-			}
+			includeChange = c.processAdaAmount(addrAmount, remainingTokenAmounts, minUtxo, nativeTokenChangeInUtxos, i, addrAmounts, txOutputs)
 		} else {
 			if nativeTokenChangeInUtxos {
 				includeChange = minUtxo
 			}
-
 			addrAmount.includeInTx[cardanowallet.AdaTokenName] = 0
 		}
 
@@ -276,24 +157,12 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 			IncludeChnage: includeChange,
 			UtxoCount:     addrAmount.utxoCount,
 		})
-
-		if len(remainingTokenAmounts) == 0 {
-			break
-		}
 	}
 
-	c.logger.Debug("amounts:")
-
-	for _, am := range amounts {
-		c.logger.Debug("address", am.Address)
-		c.logger.Debug("address index", am.AddressIndex)
-		c.logger.Debug("tokens amount", am.TokensAmounts)
-		c.logger.Debug("include change", am.IncludeChnage)
-		c.logger.Debug("-------------------------------------")
-	}
+	c.logDebugAmounts(amounts)
 
 	if remainingTokenAmounts[cardanowallet.AdaTokenName] > 0 {
-		return nil, fmt.Errorf("%w: %d vs %d",
+		return nil, fmt.Errorf("%w: required %d, but missing %d",
 			cardanowallet.ErrUTXOsCouldNotSelect, requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
 	}
 
@@ -304,6 +173,152 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	}
 
 	return amounts, nil
+}
+
+// processNativeTokens handles the processing of native tokens for a given address
+func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
+	addrAmount *addrAmount,
+	remainingTokenAmounts map[string]uint64,
+	minUtxo uint64,
+) bool {
+	nativeTokenChangeInUtxos := false
+
+	for tokenName, requiredAmount := range remainingTokenAmounts {
+		if tokenName == cardanowallet.AdaTokenName {
+			continue
+		}
+
+		if addrAmount.totalTokenAmounts[tokenName] > requiredAmount {
+			nativeTokenChangeInUtxos = true
+			// Take partial amount, be sure that we have enough lovelace for change
+			if addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName] < 2*minUtxo {
+				// We don't have enough lovelace to cover the change
+				continue
+			}
+
+			// Handle needed ada for change
+			addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName] -= minUtxo
+
+			remainingTokenAmounts[tokenName] -= requiredAmount
+			delete(remainingTokenAmounts, tokenName)
+
+			addrAmount.includeInTx[tokenName] = requiredAmount
+		} else if addrAmount.totalTokenAmounts[tokenName] > 0 {
+			// Take full amount, no change so we don't pay attention to lovelace
+			remainingTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
+			addrAmount.includeInTx[tokenName] = addrAmount.totalTokenAmounts[tokenName]
+
+			if remainingTokenAmounts[tokenName] == 0 {
+				delete(remainingTokenAmounts, tokenName)
+			}
+		}
+	}
+
+	return nativeTokenChangeInUtxos
+}
+
+// processAdaAmount handles the processing of ADA amounts for a given address
+func (c *BridgingAddressesCoordinatorImpl) processAdaAmount(
+	addrAmount *addrAmount,
+	remainingTokenAmounts map[string]uint64,
+	minUtxo uint64,
+	nativeTokenChangeInUtxos bool,
+	currentIndex int,
+	addrAmounts []addrAmount,
+	txOutputs *[]cardanowallet.TxOutput,
+) uint64 {
+	requiredAdaAmount := remainingTokenAmounts[cardanowallet.AdaTokenName]
+	availableAdaOnAddress := addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName]
+
+	requiredForChange := common.MinUtxoAmountDefault
+	if nativeTokenChangeInUtxos {
+		requiredForChange = minUtxo
+	}
+
+	addressChange, ok := safeSubstract(availableAdaOnAddress, requiredAdaAmount)
+	c.logger.Debug("addressChange", addressChange)
+	c.logger.Debug("nativeTokenChangeInUtxos", nativeTokenChangeInUtxos)
+
+	if !ok {
+		// Not enough ADA on this address
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
+		remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress
+		return 0
+	}
+
+	if addressChange == 0 && !nativeTokenChangeInUtxos {
+		// Exact amount
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
+		remainingTokenAmounts[cardanowallet.AdaTokenName] = 0
+		return 0
+	}
+
+	if addressChange >= requiredForChange {
+		// Sufficient change amount
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
+		remainingTokenAmounts[cardanowallet.AdaTokenName] = 0
+		return requiredForChange
+	}
+
+	// Handle insufficient change - need carry over logic
+	return c.handleInsufficientChange(addrAmount, remainingTokenAmounts, availableAdaOnAddress,
+		addressChange, requiredForChange, currentIndex, addrAmounts, txOutputs)
+}
+
+// handleInsufficientChange handles the case where there's insufficient change and needs carry over
+func (c *BridgingAddressesCoordinatorImpl) handleInsufficientChange(
+	addrAmount *addrAmount,
+	remainingTokenAmounts map[string]uint64,
+	availableAdaOnAddress uint64,
+	addressChange uint64,
+	requiredForChange uint64,
+	currentIndex int,
+	addrAmounts []addrAmount,
+	txOutputs *[]cardanowallet.TxOutput,
+) uint64 {
+	includeChange := requiredForChange + addressChange
+
+	// Check if we can handle carry over (not the last address)
+	if currentIndex > len(addrAmounts)-2 {
+		// Last address, can't carry over
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
+		remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress
+		return 0
+	}
+
+	// Check if we have enough remaining ADA after change
+	if availableAdaOnAddress-includeChange > common.MinUtxoAmountDefault {
+		nextAddressAda := addrAmounts[currentIndex+1].totalTokenAmounts[cardanowallet.AdaTokenName]
+		remainingRequired := remainingTokenAmounts[cardanowallet.AdaTokenName] - availableAdaOnAddress + includeChange
+
+		if nextAddressAda-remainingRequired >= common.MinUtxoAmountDefault {
+			// Can split the amount
+			addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress - includeChange
+			remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress - includeChange
+			return includeChange
+		}
+	}
+
+	// Handle carry over
+	c.logger.Debug("Handle carry over")
+	addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
+	*txOutputs = append(*txOutputs, cardanowallet.NewTxOutput(
+		addrAmounts[currentIndex+1].address,
+		addressChange+addrAmounts[currentIndex+1].totalTokenAmounts[cardanowallet.AdaTokenName]))
+	remainingTokenAmounts[cardanowallet.AdaTokenName] = addrAmounts[currentIndex+1].totalTokenAmounts[cardanowallet.AdaTokenName]
+	return 0
+}
+
+// logDebugAmounts logs the amounts for debugging
+func (c *BridgingAddressesCoordinatorImpl) logDebugAmounts(amounts []common.AddressAndAmount) {
+	c.logger.Debug("amounts:")
+	for _, am := range amounts {
+		c.logger.Debug("address", am.Address)
+		c.logger.Debug("address index", am.AddressIndex)
+		c.logger.Debug("tokens amount", am.TokensAmounts)
+		c.logger.Debug("include change", am.IncludeChnage)
+		c.logger.Debug("-------------------------------------")
+	}
 }
 
 func safeSubstract(a, b uint64) (uint64, bool) {

@@ -245,7 +245,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress, data)
+		multisigAddresses, feeMultisigAddress)
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
@@ -356,7 +356,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	multisigTxOutputs := make([]cardanowallet.TxOutput, 0, len(chosenMultisigAddresses))
 
 	for i, addressAndAmount := range chosenMultisigAddresses {
-		sum := getSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex])
+		sum := cardano.GetSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex])
 
 		multisigTxOutput, err := getTxOutputFromSumMap(
 			addressAndAmount.Address,
@@ -519,7 +519,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 }
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
-	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string, data *batchInitialData,
+	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string,
 ) (map[uint8][]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
@@ -584,26 +584,14 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 
 		cco.logger.Debug("Chosen multisig addresses33", "addresses", multisigAddresses)
 
-		cco.logger.Debug("Output for calculateMinUtxoLovelaceAmount", "output", output)
-
-		// in case we are sending all the tokens we have from all the utxos we have, there won't be any change
-		minUtxoLovelaceAmount := addressAndAmount.IncludeChnage
-		// if !addressAndAmount.FullAmount {
-		// 	minUtxoLovelaceAmount, err = calculateMinUtxoLovelaceAmount(
-		// 		cco.cardanoCliBinary, data.ProtocolParams, addressAndAmount.Address, multisigUtxos, output)
-		// 	if err != nil {
-		// 		return nil, nil, err
-		// 	}
-		// }
-
 		cco.logger.Debug("Chosen multisig addresses44", "addresses", multisigAddresses)
 
-		cco.logger.Debug("Min Utxo Lovelace Amount", "minUtxoLovelaceAmount", minUtxoLovelaceAmount)
+		cco.logger.Debug("Min Utxo Lovelace Amount", "change included", addressAndAmount.IncludeChnage)
 
 		multisigUtxos, err = getNeededUtxos(
 			multisigUtxos,
 			addressAndAmount.TokensAmounts,
-			minUtxoLovelaceAmount,
+			addressAndAmount.IncludeChnage,
 			getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar),
 			int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 		)

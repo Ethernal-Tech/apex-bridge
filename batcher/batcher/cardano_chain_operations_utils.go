@@ -97,6 +97,16 @@ func getOutputs(
 	return result, nil
 }
 
+// createUtxoSelectionAmounts creates a copy of desired amounts with adjusted ADA amount for UTXO selection
+func createUtxoSelectionAmounts(desiredAmounts map[string]uint64, minUtxoLovelaceAmount uint64) map[string]uint64 {
+	utxoSelectionAmounts := make(map[string]uint64, len(desiredAmounts))
+	for k, v := range desiredAmounts {
+		utxoSelectionAmounts[k] = v
+	}
+	utxoSelectionAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+	return utxoSelectionAmounts
+}
+
 func getNeededUtxos(
 	txInputOutputs []*indexer.TxInputOutput,
 	desiredAmounts map[string]uint64,
@@ -119,9 +129,9 @@ func getNeededUtxos(
 		}
 	}
 
-	// Change outputs require minUtxoLovelace (protocol rule)
-	// Exact spends without change are rare (especially with tokens)
-	desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+	// Create a copy of desired amounts for UTXO selection so we don't modify the original map
+	// We need to include minUtxoLovelace for change outputs (protocol rule)
+	utxoSelectionAmounts := createUtxoSelectionAmounts(desiredAmounts, minUtxoLovelaceAmount)
 
 	if maxUtxoCount == 0 {
 		return nil, fmt.Errorf(
@@ -129,13 +139,10 @@ func getNeededUtxos(
 	}
 
 	outputUTXOs, err := txsend.GetUTXOsForAmounts(
-		inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
+		inputUtxos, utxoSelectionAmounts, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: Explain
-	desiredAmounts[cardanowallet.AdaTokenName] -= minUtxoLovelaceAmount
 
 	usedUtxoMap := map[string]bool{}
 	for _, utxo := range outputUTXOs.Inputs {
@@ -167,20 +174,6 @@ func filterOutUtxosWithUnknownTokens(
 	return result
 }
 
-func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint64 {
-	totalSum := map[string]uint64{}
-
-	for _, utxo := range utxos {
-		totalSum[cardanowallet.AdaTokenName] += utxo.Output.Amount
-
-		for _, token := range utxo.Output.Tokens {
-			totalSum[token.TokenName()] += token.Amount
-		}
-	}
-
-	return totalSum
-}
-
 func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet.TxOutput, error) {
 	if len(sumMap) == 0 {
 		return cardanowallet.NewTxOutput(addr, 0), nil
@@ -204,60 +197,6 @@ func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet
 	})
 
 	return cardanowallet.NewTxOutput(addr, sumMap[cardanowallet.AdaTokenName], tokens...), nil
-}
-
-func subtractTxOutputsFromSumMap(
-	sumMap map[string]uint64, txOutputs []cardanowallet.TxOutput,
-) map[string]uint64 {
-	updateTokenInMap := func(tokenName string, amount uint64) {
-		if existingAmount, exists := sumMap[tokenName]; exists {
-			if existingAmount > amount {
-				sumMap[tokenName] = existingAmount - amount
-			} else {
-				delete(sumMap, tokenName)
-			}
-		}
-	}
-
-	for _, out := range txOutputs {
-		updateTokenInMap(cardanowallet.AdaTokenName, out.Amount)
-
-		for _, token := range out.Tokens {
-			updateTokenInMap(token.TokenName(), token.Amount)
-		}
-	}
-
-	return sumMap
-}
-
-func calculateMinUtxoLovelaceAmount(
-	cardanoCliBinary string, protocolParams []byte,
-	addr string, txInputOutputs []*indexer.TxInputOutput, txOutputs []cardanowallet.TxOutput,
-) (uint64, error) {
-	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(txInputOutputs), txOutputs)
-
-	tokens, err := cardanowallet.GetTokensFromSumMap(sumMap)
-	if err != nil {
-		return 0, err
-	}
-
-	txBuilder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
-	if err != nil {
-		return 0, err
-	}
-
-	defer txBuilder.Dispose()
-
-	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
-		Addr:   addr,
-		Amount: sumMap[cardanowallet.AdaTokenName],
-		Tokens: tokens,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	return minUtxo, nil
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
