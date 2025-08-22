@@ -123,6 +123,7 @@ func NewCardanoOracle(
 		db:                       db,
 		validatorSetObserver:     validatorSetObserver,
 		logger:                   logger,
+		indexers:                 indexers,
 	}, nil
 }
 
