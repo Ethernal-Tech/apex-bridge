@@ -324,6 +324,8 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, maxUtxoCo
 		}
 	}
 
+	// We have to make sure that fee address is included in the transaction
+	// and it has enough utxos to pay for the fee
 	if feeIndex != -1 {
 		for {
 			if result[feeIndex].UtxoCount < inputs[0].UtxoCount {
@@ -333,8 +335,6 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, maxUtxoCo
 				break
 			}
 
-			// TODO: Not sure how to update this, it's not the best way to do it
-			// Should we have the PotentialFeeDefault + MinUtxoAmountDefault?
 			if calcualteUtxoSum(inputs[0].Utxos[:result[feeIndex].UtxoCount]) >= 2*common.MinUtxoAmountDefault {
 				break
 			}

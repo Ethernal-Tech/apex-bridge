@@ -72,35 +72,15 @@ func CreateTx(
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
 
-		logger.Debug("CREATE TX addr", multisig.Address)
-		logger.Debug("CREATE TX baseTxOutput amount", multisigOutput.Amount)
-		logger.Debug("CREATE TX totalSum amount", multisig.Sum[cardanowallet.AdaTokenName])
-		logger.Debug("CREATE TX outputsSum amount", outputsAmount[cardanowallet.AdaTokenName])
+		outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
 
-		multisigChangeTxOutput := cardanowallet.TxOutput{}
-
-		if addrAndAmountToDeduct != nil {
-			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
-			logger.Debug("CREATE TX addrAndAmountToDeduct", addrAndAmountToDeduct)
-			logger.Debug("CREATE TX outputsAmountNew", outputsAmountNew)
-			logger.Debug("CREATE TX outputsSumNew amount", outputsAmountNew[cardanowallet.AdaTokenName])
-
-			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
-				multisigOutput, multisig.Sum, outputsAmountNew)
-			if err != nil {
-				return nil, "", err
-			}
-		} else {
-			logger.Debug("CREATE TX addrAndAmountToDeduct is nil")
-
-			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
-				multisigOutput, multisig.Sum, outputsAmount)
-			if err != nil {
-				return nil, "", err
-			}
+		multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
+			multisigOutput, multisig.Sum, outputsAmountNew)
+		if err != nil {
+			return nil, "", err
 		}
 
-		logger.Debug("multisigChangeTxOutput", multisigChangeTxOutput)
+		logger.Debug("Address change", multisigChangeTxOutput)
 
 		// add multisig output if change is not zero
 		if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {

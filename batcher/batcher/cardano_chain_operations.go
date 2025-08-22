@@ -37,6 +37,12 @@ type batchInitialData struct {
 	ChainID        uint8
 }
 
+type utxoSelectionResult struct {
+	multisigUtxos            map[uint8][]*indexer.TxInputOutput
+	feeUtxos                 []*indexer.TxInputOutput
+	chosenMultisigUtxosCount int
+}
+
 type CardanoChainOperations struct {
 	config                       *cardano.CardanoChainConfig
 	wallet                       *cardano.ApexCardanoWallet
@@ -240,17 +246,15 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	cco.logger.Debug("Chosen multisig addresses", "addresses", multisigAddresses)
+	cco.logger.Debug("Chosen multisig addresses to pay from", "addresses", multisigAddresses)
 
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
-	multisigUtxos, feeUtxos, err := cco.getUTXOsForNormalBatch(
+	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
 		multisigAddresses, feeMultisigAddress)
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
-
-	cco.logger.Debug("Chosen multisig addresses1", "addresses", multisigAddresses)
 
 	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
@@ -259,11 +263,12 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	cco.logger.Info("Creating batch tx", "batchID", data.BatchNonceID,
 		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
-		"slot", slotNumber, "multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", len(txOutputs.Outputs))
+		"slot", slotNumber, "multisig", utxoSelectionResult.chosenMultisigUtxosCount,
+		"fee", len(utxoSelectionResult.feeUtxos), "outputs", len(txOutputs.Outputs))
 
 	txInputs := cardano.TxInputInfos{}
 
-	for addressIndex, utxos := range multisigUtxos {
+	for addressIndex, utxos := range utxoSelectionResult.multisigUtxos {
 		policyScript, ok := cco.bridgingAddressesManager.GetPaymentPolicyScript(data.ChainID, addressIndex)
 		if !ok {
 			return nil, multisigAddresses, fmt.Errorf("failed to get payment policy script for address index: %d", addressIndex)
@@ -288,7 +293,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	txInputs.MultiSigFee = &cardano.TxInputInfo{
 		PolicyScript: feePolicyScript,
 		Address:      feeMultisigAddress,
-		TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+		TxInputs:     convertUTXOsToTxInputs(utxoSelectionResult.feeUtxos),
 	}
 
 	// Create Tx
@@ -332,6 +337,8 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 ) (*core.GeneratedBatchTxData, error) {
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
+	// In case we have more or equal to MaxUtxoCount addresses, we need to reduce the number of addresses
+	// to the MaxUtxoCount - 2, otherwise we will not be able to create a meaningful transaction
 	// +1 because we need to take fee address into consideration
 	//nolint:gosec
 	if uint(len(chosenMultisigAddresses)+1) >= cco.config.MaxUtxoCount {
@@ -520,21 +527,21 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string,
-) (map[uint8][]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+) (*utxoSelectionResult, error) {
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	knownTokens, err := cardano.GetKnownTokens(cco.config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
+		return nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
 	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
 
 	if len(feeUtxos) == 0 {
-		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
+		return nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
 	}
 
 	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
@@ -542,15 +549,11 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	chosenMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
 	chosenMultisigUtxosSoFar := 0
 
-	cco.logger.Debug("Chosen multisig addresses11", "addresses", multisigAddresses)
-
 	for _, addressAndAmount := range multisigAddresses {
 		multisigUtxos, err := cco.db.GetAllTxOutputs(addressAndAmount.Address, true)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-
-		cco.logger.Debug("Chosen multisig addresses22", "addresses", multisigAddresses)
 
 		multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
 
@@ -582,11 +585,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			})
 		}
 
-		cco.logger.Debug("Chosen multisig addresses33", "addresses", multisigAddresses)
-
-		cco.logger.Debug("Chosen multisig addresses44", "addresses", multisigAddresses)
-
-		cco.logger.Debug("Min Utxo Lovelace Amount", "change included", addressAndAmount.IncludeChnage)
+		cco.logger.Debug("Change included in utxo selection", addressAndAmount.IncludeChnage)
 
 		multisigUtxos, err = getNeededUtxos(
 			multisigUtxos,
@@ -596,17 +595,19 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
-		cco.logger.Debug("Chosen multisig addresses55", "addresses", multisigAddresses)
-
-		cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos)
+		cco.logger.Debug("UTXOs chosen", addressAndAmount.Address, multisigUtxos)
 		chosenMultisigUtxos[addressAndAmount.AddressIndex] = multisigUtxos
 		chosenMultisigUtxosSoFar += len(multisigUtxos)
 	}
 
-	return chosenMultisigUtxos, feeUtxos, nil
+	return &utxoSelectionResult{
+		multisigUtxos:            chosenMultisigUtxos,
+		feeUtxos:                 feeUtxos,
+		chosenMultisigUtxosCount: chosenMultisigUtxosSoFar,
+	}, nil
 }
 
 func (cco *CardanoChainOperations) getFeeUTXOsForNormalBatch(
