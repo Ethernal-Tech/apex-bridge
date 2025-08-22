@@ -234,7 +234,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		data.ChainID,
 		cco.cardanoCliBinary,
 		data.ProtocolParams,
-		txOutputs.Outputs,
+		&txOutputs.Outputs,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -599,9 +599,6 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		cco.logger.Debug("Chosen multisig addresses44", "addresses", multisigAddresses)
 
 		cco.logger.Debug("Min Utxo Lovelace Amount", "minUtxoLovelaceAmount", minUtxoLovelaceAmount)
-
-		maxUtxoCount := getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar)
-		cco.logger.Debug("Max UTXO count batch", "maxUtxoCount", maxUtxoCount)
 
 		multisigUtxos, err = getNeededUtxos(
 			multisigUtxos,

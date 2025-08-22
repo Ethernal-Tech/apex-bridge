@@ -67,7 +67,7 @@ func CreateTx(
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
-	carryOverChange := uint64(0)
+	// carryOverChange := uint64(0)
 
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
@@ -101,7 +101,6 @@ func CreateTx(
 		}
 
 		logger.Debug("multisigChangeTxOutput", multisigChangeTxOutput)
-		multisigChangeTxOutput.Amount += carryOverChange
 
 		// add multisig output if change is not zero
 		if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
@@ -111,8 +110,6 @@ func CreateTx(
 				} else {
 					builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
 				}
-			} else {
-				carryOverChange += multisigChangeTxOutput.Amount
 			}
 		} else if multiSigIndex >= 0 {
 			// we need to decrement feeIndex if it was after multisig in outputs
@@ -157,7 +154,6 @@ func CreateTx(
 
 func GetOutputsSumForAddress(addr string, addrAndAmountToDeduct []common.AddressAndAmount) map[string]uint64 {
 	result := map[string]uint64{}
-
 	for _, addrAndAmount := range addrAndAmountToDeduct {
 		if addrAndAmount.Address == addr {
 			for name, token := range addrAndAmount.TokensAmounts {

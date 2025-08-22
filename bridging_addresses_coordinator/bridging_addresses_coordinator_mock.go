@@ -17,7 +17,7 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsToPayFrom(
 	chainID uint8,
 	cardanoCliBinary string,
 	protocolParams []byte,
-	txOutputs []cardanowallet.TxOutput,
+	txOutputs *[]cardanowallet.TxOutput,
 ) ([]common.AddressAndAmount, error) {
 	args := m.Called(chainID, cardanoCliBinary, protocolParams, txOutputs)
 
