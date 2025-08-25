@@ -24,6 +24,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type AddressAdderMock struct {
+	mock.Mock
+}
+
+func (*AddressAdderMock) AddNewAddressesOfInterest(address ...string) {}
+
 func TestBatcherExecute(t *testing.T) {
 	config := &core.BatcherConfiguration{
 		Chain: core.ChainConfig{
@@ -52,7 +58,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, operationsMock,
 			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			hclog.NewNullLogger())
+			hclog.NewNullLogger(), nil)
 		_, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -66,7 +72,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetNextBatchID", ctx, common.ChainIDStrPrime).Return(uint64(0), nil)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -81,7 +87,7 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetConfirmedTransactions", ctx, common.ChainIDStrPrime).Return(nil, testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -115,7 +121,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("ShouldConsolidate", testError).Return(false)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -138,7 +144,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("SignBatchTransaction", batchData).Return(nil, nil, testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -162,7 +168,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(testError)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.Error(t, err)
@@ -185,7 +191,7 @@ func TestBatcherExecute(t *testing.T) {
 			}, nil)
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		b.lastBatch = lastBatchData{
 			id:     1,
 			txHash: txHash,
@@ -213,7 +219,7 @@ func TestBatcherExecute(t *testing.T) {
 		operationsMock.On("Submit", ctx, bridgeSmartContractMock, mock.Anything).Return(error(nil))
 
 		b := NewBatcher(config, operationsMock,
-			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 		batchID, err := b.execute(ctx)
 
 		require.NoError(t, err)
@@ -265,6 +271,12 @@ func TestBatcherExecute(t *testing.T) {
 			},
 		}
 
+		validatorPerChain := validatorobserver.ValidatorsPerChain{
+			"prime": validatorobserver.ValidatorsChainData{
+				Keys: validatorsChainData,
+			},
+		}
+
 		newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
 			Key: [4]*big.Int{
 				new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
@@ -283,7 +295,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		operations.txProvider = txProviderMock
 
-		_, oldAddresses, err := operations.generatePolicyAndMultisig(validatorsChainData)
+		_, oldAddresses, err := operations.GeneratePolicyAndMultisig(&validatorPerChain, "prime")
 		require.NoError(t, err)
 
 		multisig := generateUTXO(5)
@@ -302,7 +314,11 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("GetValidatorsChainData", ctx, common.ChainIDStrPrime).Return(validatorsChainData, nil)
 		bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
+
+		addressAdderMock := &AddressAdderMock{}
+		b.addressAdder = addressAdderMock
+		addressAdderMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
 
 		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
 			common.ChainIDStrPrime: {
@@ -430,6 +446,12 @@ func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Cont
 }
 
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
+
+func (c *cardanoChainOperationsMock) GeneratePolicyAndMultisig(
+	validators *validatorobserver.ValidatorsPerChain,
+	chainID string) (*cardanotx.ApexPolicyScripts, *cardanotx.ApexAddresses, error) {
+	return nil, nil, nil
+}
 
 // GenerateBatchTransaction implements core.ChainOperations.
 func (c *cardanoChainOperationsMock) GenerateBatchTransaction(

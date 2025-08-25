@@ -31,6 +31,7 @@ func NewBatcherManager(
 	secretsManager secrets.SecretsManager,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	cardanoIndexerDbs map[string]indexer.Database,
+	cardanoIndexers map[string]*indexer.BlockIndexer,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
@@ -69,7 +70,8 @@ func NewBatcherManager(
 			operations,
 			bridgeSmartContract,
 			bridgingRequestStateUpdater,
-			chainLogger)
+			chainLogger,
+			cardanoIndexers[chainConfig.ChainID])
 
 		batchers = append(batchers, batcher)
 	}

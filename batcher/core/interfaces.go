@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 
+	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 )
@@ -40,6 +41,9 @@ type ChainOperations interface {
 		validatorsKeys validatorobserver.ValidatorsPerChain,
 		lastBatchID uint64, lastBatchType uint8,
 	) (bool, *GeneratedBatchTxData, error)
+	GeneratePolicyAndMultisig(
+		validators *validatorobserver.ValidatorsPerChain,
+		chainID string) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations

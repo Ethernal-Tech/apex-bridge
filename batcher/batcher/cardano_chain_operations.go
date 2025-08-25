@@ -607,9 +607,19 @@ func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
 	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
 }
 
-func (cco *CardanoChainOperations) generatePolicyAndMultisig(
-	validatorsData []eth.ValidatorChainData) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
-	keyHashes, err := cardano.NewApexKeyHashes(validatorsData)
+func (cco *CardanoChainOperations) GeneratePolicyAndMultisig(
+	validators *validatorobserver.ValidatorsPerChain,
+	chainID string) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+	if validators == nil {
+		return nil, nil, nil
+	}
+
+	validatorsData, ok := (*validators)[chainID]
+	if !ok {
+		return nil, nil, fmt.Errorf("unknown chain id")
+	}
+
+	keyHashes, err := cardano.NewApexKeyHashes(validatorsData.Keys)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -637,7 +647,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// new validator set policy, multisig & fee address
 	_, newAddresses, err :=
-		cco.generatePolicyAndMultisig(validatorsData.Keys)
+		cco.GeneratePolicyAndMultisig(&validatorsKeys, chainID)
 	if err != nil {
 		return false, nil, err
 	}
@@ -656,7 +666,11 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// active validator set policy, multisig & fee address
 	activePolicy, activeAddresses, err :=
-		cco.generatePolicyAndMultisig(activeValidatorsData)
+		cco.GeneratePolicyAndMultisig(&validatorobserver.ValidatorsPerChain{
+			chainID: validatorobserver.ValidatorsChainData{
+				Keys: activeValidatorsData,
+			},
+		}, chainID)
 	if err != nil {
 		return false, nil, err
 	}

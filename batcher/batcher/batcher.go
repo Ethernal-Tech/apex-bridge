@@ -43,6 +43,7 @@ type BatcherImpl struct {
 	lastBatch                   lastBatchData
 	logger                      hclog.Logger
 	newValidatorSet             *validatorSetChange
+	addressAdder                AddressAdder
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -53,6 +54,7 @@ func NewBatcher(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	logger hclog.Logger,
+	addressAdder AddressAdder,
 ) *BatcherImpl {
 	return &BatcherImpl{
 		config:                      config,
@@ -62,15 +64,32 @@ func NewBatcher(
 		lastBatch:                   lastBatchData{},
 		logger:                      logger,
 		newValidatorSet:             &validatorSetChange{},
+		addressAdder:                addressAdder,
 	}
+}
+
+type AddressAdder interface {
+	AddNewAddressesOfInterest(address ...string)
 }
 
 func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()
-	defer b.newValidatorSet.Unlock()
 
 	b.newValidatorSet.validators = validators
 	b.newValidatorSet.finalized = false
+
+	b.newValidatorSet.Unlock()
+
+	_, addr, err := b.operations.GeneratePolicyAndMultisig(validators, b.config.Chain.ChainID)
+	if err != nil {
+		b.logger.Error("cannot generate multisig", "err", err)
+
+		return
+	}
+
+	if addr != nil {
+		b.addressAdder.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
+	}
 }
 
 func (b *BatcherImpl) Start(ctx context.Context) {

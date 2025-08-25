@@ -313,3 +313,9 @@ func newEVMSmartContractTransaction(
 		Receivers:    receivers,
 	}
 }
+
+func (cco *EVMChainOperations) GeneratePolicyAndMultisig(
+	validators *validatorobserver.ValidatorsPerChain,
+	chainID string) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+	return nil, nil, nil
+}
