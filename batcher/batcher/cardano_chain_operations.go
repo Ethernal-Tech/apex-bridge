@@ -197,36 +197,17 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	[]common.AddressAndAmount,
 	error,
 ) {
-	certificates := make([]*cardano.CertificatesWithScript, 0)
-	keyRegistrationFee := uint64(0)
-	hasStakeDelegationTx := false
+	// TODO: maybe merge these 3 in single function
 	hasBridgingTx := false
-
 	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.StakeDelConfirmedTxType) {
-			certificate, depositAmount, err := cco.getStakingDelegateCertificate(data, &tx)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			hasStakeDelegationTx = true
-			keyRegistrationFee += depositAmount
-
-			certificates = append(certificates, certificate)
-		}
-
-		if tx.TransactionType != uint8(common.StakeDelConfirmedTxType) {
+		if tx.TransactionType == uint8(common.BridgingConfirmedTxType) {
 			hasBridgingTx = true
 		}
 	}
 
-	var certificateData *cardano.CertificatesData = nil
-
-	if len(certificates) > 0 {
-		certificateData = &cardano.CertificatesData{
-			Certificates:    certificates,
-			RegistrationFee: keyRegistrationFee,
-		}
+	certificateData, err := cco.getCertificateData(data, confirmedTransactions)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	txOutputs, isRedistribution, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
@@ -334,7 +315,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	return &core.GeneratedBatchTxData{
 		TxRaw:               txRaw,
 		TxHash:              txHash,
-		IsStakeSignNeeded:   hasStakeDelegationTx,
+		IsStakeSignNeeded:   certificateData != nil,
 		IsPaymentSignNeeded: hasBridgingTx,
 		BatchType:           eth.BatchTypeNormal,
 	}, multisigAddresses, nil
@@ -711,8 +692,13 @@ func (cco *CardanoChainOperations) getCertificateData(
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
+			policyScript, ok := cco.bridgingAddressesManager.GetPaymentPolicyScript(data.ChainID, tx.BridgeAddrIndex)
+			if !ok {
+				return nil, fmt.Errorf("failed to get payment policy script for address: %d", tx.BridgeAddrIndex)
+			}
+
 			certificate, depositAmount, err := getStakingCertificates(
-				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx)
+				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx, policyScript)
 
 			if errors.Is(err, errSkipConfirmedTx) {
 				cco.logger.Error("Staking delegation transaction skipped",

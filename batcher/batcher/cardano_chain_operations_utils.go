@@ -18,11 +18,8 @@ import (
 func getStakingCertificates(
 	cardanoCliBinary string, networkMagic uint,
 	data *batchInitialData, tx *eth.ConfirmedTransaction,
+	policyScript *cardanowallet.PolicyScript,
 ) (*cardano.CertificatesWithScript, uint64, error) {
-	// Generate policy script
-	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
-		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
 	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
 
 	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScript)
