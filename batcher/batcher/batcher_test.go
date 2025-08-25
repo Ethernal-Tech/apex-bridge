@@ -316,9 +316,9 @@ func TestBatcherExecute(t *testing.T) {
 
 		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
 
-		adderMock := &AddressAdderMock{}
-		b.adder = adderMock
-		adderMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
+		addressAdderMock := &AddressAdderMock{}
+		b.addressAdder = addressAdderMock
+		addressAdderMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
 
 		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
 			common.ChainIDStrPrime: {
