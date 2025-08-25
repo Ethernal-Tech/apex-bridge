@@ -5,7 +5,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
-	"github.com/hashicorp/go-hclog"
 )
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
@@ -19,7 +18,6 @@ func CreateTx(
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
-	logger hclog.Logger,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
@@ -67,8 +65,6 @@ func CreateTx(
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
-	// carryOverChange := uint64(0)
-
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
 
@@ -79,8 +75,6 @@ func CreateTx(
 		if err != nil {
 			return nil, "", err
 		}
-
-		logger.Debug("Address change", multisigChangeTxOutput)
 
 		// add multisig output if change is not zero
 		if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {

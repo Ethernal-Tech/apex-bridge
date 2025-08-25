@@ -118,7 +118,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		c.logger.Debug("Processing address", i, "remainingTokenAmounts", remainingTokenAmounts)
 
 		addrAmount := &addrAmounts[i]
-		includeChange := uint64(0)
+		includeChange := minUtxo
 
 		// Process native tokens
 		nativeTokenChangeInUtxos := c.processNativeTokens(addrAmount, remainingTokenAmounts, minUtxo)
@@ -128,9 +128,6 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 		if requiredAdaAmount > 0 {
 			includeChange = c.processAdaAmount(addrAmount, remainingTokenAmounts, minUtxo, nativeTokenChangeInUtxos, i, addrAmounts, txOutputs)
 		} else {
-			if nativeTokenChangeInUtxos {
-				includeChange = minUtxo
-			}
 			addrAmount.includeInTx[cardanowallet.AdaTokenName] = 0
 		}
 
@@ -178,10 +175,6 @@ func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
 				continue
 			}
 
-			// Handle needed lovelace for change, since we need to keep some lovelace for change
-			// we need to deduct the lovelace so that we don't use it in lovelace calculations
-			addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName] -= minUtxo
-
 			remainingTokenAmounts[tokenName] -= requiredAmount
 			addrAmount.includeInTx[tokenName] = requiredAmount
 		} else if addrAmount.totalTokenAmounts[tokenName] > 0 {
@@ -222,7 +215,7 @@ func (c *BridgingAddressesCoordinatorImpl) processAdaAmount(
 	addressChange, ok := safeSubstract(availableAdaOnAddress, requiredAdaAmount)
 	c.logger.Debug("Address change", addrAmount.address, addressChange)
 
-	if !ok {
+	if !ok && !nativeTokenChangeInUtxos {
 		// Not enough lovelace on this address
 		// Take all lovelace from this address
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress
@@ -235,6 +228,12 @@ func (c *BridgingAddressesCoordinatorImpl) processAdaAmount(
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredAdaAmount
 		remainingTokenAmounts[cardanowallet.AdaTokenName] = 0
 		return 0
+	}
+
+	if nativeTokenChangeInUtxos && (addressChange == 0 || !ok) {
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableAdaOnAddress - requiredForChange
+		remainingTokenAmounts[cardanowallet.AdaTokenName] -= availableAdaOnAddress - requiredForChange
+		return requiredForChange
 	}
 
 	if addressChange >= requiredForChange {

@@ -307,7 +307,6 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		txOutputs.Outputs,
 		certificateData,
 		multisigAddresses,
-		cco.logger,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -425,7 +424,6 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		multisigTxOutputs,
 		nil,
 		chosenMultisigAddresses,
-		cco.logger,
 	)
 	if err != nil {
 		return nil, err

@@ -1113,7 +1113,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		batchNonceID := uint64(1)
 
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(20_010, 1000)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(1_000_000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
@@ -1144,7 +1144,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 
 		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		fmt.Println(result)
 		require.NoError(t, err)
 		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
@@ -1270,7 +1269,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		batchNonceID := uint64(1)
 
 		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(20_000, 100, token1, token2)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(1_000_000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
@@ -1566,8 +1565,8 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.Calls = nil
 		batchNonceID := uint64(1)
 
-		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(2_010, 1000)
-		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(200000, 10)
+		multisigUtxoOutputs, _ := generateSmallUtxoOutputs(20_010, 1000)
+		feePayerUtxoOutputs, _ := generateSmallUtxoOutputs(1000000, 10)
 
 		confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
@@ -1603,7 +1602,6 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 
 		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		fmt.Println(result)
 		require.NoError(t, err)
 		require.True(t, result.IsConsolidation())
 		require.NotNil(t, result.TxRaw)
@@ -1635,15 +1633,12 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		txProvider:       txProviderMock,
 		logger:           hclog.NewNullLogger(),
 	}
-	protocolParams, _ := txProviderMock.GetProtocolParameters(context.Background())
 
 	t.Run("empty fee", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 
-		_, _, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr, &batchInitialData{
-			ProtocolParams: protocolParams,
-		})
+		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr)
 		require.ErrorContains(t, err, "fee")
 	})
 
@@ -1716,22 +1711,20 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return(multisigUtxos, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return(feeUtxos, nil).Once()
 
-		mutlisigUtxosRes, feeUtxosRes, err := cco.getUTXOsForNormalBatch(
+		utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
 			[]common.AddressAndAmount{{
 				AddressIndex: 0,
 				Address:      multisigAddr,
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, &batchInitialData{
-				ProtocolParams: protocolParams,
-			})
+			}}, feeAddr)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
 			multisigUtxos[0], multisigUtxos[2],
-		}, mutlisigUtxosRes[0])
-		require.Equal(t, feeUtxos[:cco.config.MaxFeeUtxoCount], feeUtxosRes)
+		}, utxoSelectionResult.multisigUtxos[0])
+		require.Equal(t, feeUtxos[:cco.config.MaxFeeUtxoCount], utxoSelectionResult.feeUtxos)
 	})
 }
 
