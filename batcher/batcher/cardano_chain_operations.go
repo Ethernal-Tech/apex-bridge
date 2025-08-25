@@ -700,41 +700,50 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	}, nil
 }
 
-func (cco *CardanoChainOperations) getStakingDelegateCertificate(
-	data *batchInitialData, tx *eth.ConfirmedTransaction,
-) (*cardano.CertificatesWithScript, uint64, error) {
-	// Generate certificates
-	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
-	if err != nil {
-		return nil, 0, err
+func (cco *CardanoChainOperations) getCertificateData(
+	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
+) (*cardano.CertificatesData, error) {
+	var (
+		certificates         []*cardano.CertificatesWithScript
+		keyRegistrationFee   uint64
+		keyDeregistrationFee uint64
+	)
+
+	for _, tx := range confirmedTransactions {
+		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
+			certificate, depositAmount, err := getStakingCertificates(
+				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx)
+
+			if errors.Is(err, errSkipConfirmedTx) {
+				cco.logger.Error("Staking delegation transaction skipped",
+					"tx", eth.ConfirmedTransactionsWrapper{Txs: []eth.ConfirmedTransaction{tx}}, "err", err)
+
+				continue
+			} else if err != nil {
+				return nil, err
+			}
+
+			certificates = append(certificates, certificate)
+
+			if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
+				keyRegistrationFee += depositAmount
+			}
+
+			if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
+				keyDeregistrationFee += depositAmount
+			}
+		}
 	}
 
-	cliUtils := cardanowallet.NewCliUtils(cco.cardanoCliBinary)
-
-	policyScript, ok := cco.bridgingAddressesManager.GetStakePolicyScript(data.ChainID, tx.BridgeAddrIndex)
-	if !ok {
-		return nil, 0, fmt.Errorf("failed to get stake policy script for address: %d", tx.BridgeAddrIndex)
+	if len(certificates) > 0 {
+		return &cardano.CertificatesData{
+			Certificates:      certificates,
+			RegistrationFee:   keyRegistrationFee,
+			DeregistrationFee: keyDeregistrationFee,
+		}, nil
 	}
 
-	multisigStakeAddress, ok := cco.bridgingAddressesManager.GetStakeAddressFromIndex(data.ChainID, tx.BridgeAddrIndex)
-	if !ok {
-		return nil, 0, fmt.Errorf("failed to get stake address from index: %d", tx.BridgeAddrIndex)
-	}
-
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return &cardano.CertificatesWithScript{
-		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
-	}, keyRegDepositAmount, nil
+	return nil, nil
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {

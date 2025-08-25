@@ -42,6 +42,7 @@ func CreateTx(
 		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
 
 	stakeKeyRegistrationFee := uint64(0)
+	stakeKeyDeregistrationGain := uint64(0)
 
 	if certificatesData != nil {
 		for _, cert := range certificatesData.Certificates {
@@ -49,6 +50,7 @@ func CreateTx(
 		}
 
 		stakeKeyRegistrationFee = certificatesData.RegistrationFee
+		stakeKeyDeregistrationGain = certificatesData.DeregistrationFee
 	}
 
 	outputsAmount := cardanowallet.GetOutputsSum(outputs)
@@ -118,6 +120,9 @@ func CreateTx(
 	if err != nil {
 		return nil, "", err
 	}
+
+	// Include the key deregistration gain if exists
+	feeChangeTxOutput.Amount += stakeKeyDeregistrationGain
 
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {

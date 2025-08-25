@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -14,6 +15,63 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+func getStakingCertificates(
+	cardanoCliBinary string, networkMagic uint,
+	data *batchInitialData, tx *eth.ConfirmedTransaction,
+) (*cardano.CertificatesWithScript, uint64, error) {
+	// Generate policy script
+	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
+	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
+		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
+	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
+
+	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScript)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	certs := make([]cardanowallet.ICertificate, 0)
+
+	// Generate certificates
+	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
+		registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, registrationCert)
+	}
+
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) ||
+		tx.TransactionSubType == uint8(common.StakeDelConfirmedTxSubType) {
+		delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, delegationCert)
+	}
+
+	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
+		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, deregCert)
+	}
+
+	return &cardano.CertificatesWithScript{
+		PolicyScript: policyScript,
+		Certificates: certs,
+	}, keyRegDepositAmount, nil
+}
+
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
 ) (cardano.TxOutputs, bool, error) {
@@ -22,7 +80,7 @@ func getOutputs(
 
 	for _, transaction := range txs {
 		// stake delegation tx are not processed in this way
-		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+		if transaction.TransactionType == uint8(common.StakeConfirmedTxType) {
 			continue
 		}
 
@@ -31,7 +89,6 @@ func getOutputs(
 			isRedistribution = true
 			continue
 		}
-
 		logger.Debug("NON REDISTRIBUTION")
 
 		for _, receiver := range transaction.Receivers {

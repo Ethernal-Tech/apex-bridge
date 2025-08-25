@@ -100,6 +100,7 @@ type IBridgeStructsConfirmedTransaction struct {
 	StakePoolId             string
 	BridgeAddrIndex         uint8
 	TransactionSubType      uint8
+	TransactionSubType      uint8
 }
 
 // IBridgeStructsHotWalletIncrementClaim is an auto generated low-level Go binding around an user-defined struct.
@@ -496,6 +497,7 @@ func (_BridgeContract *BridgeContractCallerSession) GetConfirmedBatch(_destinati
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x4cae8087.
 //
 // Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
+// Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractCaller) GetConfirmedTransactions(opts *bind.CallOpts, _destinationChain uint8) ([]IBridgeStructsConfirmedTransaction, error) {
 	var out []interface{}
 	err := _BridgeContract.contract.Call(opts, &out, "getConfirmedTransactions", _destinationChain)
@@ -513,12 +515,14 @@ func (_BridgeContract *BridgeContractCaller) GetConfirmedTransactions(opts *bind
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x4cae8087.
 //
 // Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
+// Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractSession) GetConfirmedTransactions(_destinationChain uint8) ([]IBridgeStructsConfirmedTransaction, error) {
 	return _BridgeContract.Contract.GetConfirmedTransactions(&_BridgeContract.CallOpts, _destinationChain)
 }
 
 // GetConfirmedTransactions is a free data retrieval call binding the contract method 0x4cae8087.
 //
+// Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
 // Solidity: function getConfirmedTransactions(uint8 _destinationChain) view returns((uint256,uint256,uint256,uint256,bytes32,uint64,uint8,uint8,bool,(uint256,uint256,string)[],bytes,uint8,string,uint8,uint8)[] _confirmedTransactions)
 func (_BridgeContract *BridgeContractCallerSession) GetConfirmedTransactions(_destinationChain uint8) ([]IBridgeStructsConfirmedTransaction, error) {
 	return _BridgeContract.Contract.GetConfirmedTransactions(&_BridgeContract.CallOpts, _destinationChain)
@@ -938,6 +942,27 @@ func (_BridgeContract *BridgeContractSession) SetDependencies(_claimsAddress com
 // Solidity: function setDependencies(address _claimsAddress, address _signedBatchesAddress, address _slotsAddress, address _validatorsAddress) returns()
 func (_BridgeContract *BridgeContractTransactorSession) SetDependencies(_claimsAddress common.Address, _signedBatchesAddress common.Address, _slotsAddress common.Address, _validatorsAddress common.Address) (*types.Transaction, error) {
 	return _BridgeContract.Contract.SetDependencies(&_BridgeContract.TransactOpts, _claimsAddress, _signedBatchesAddress, _slotsAddress, _validatorsAddress)
+}
+
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_BridgeContract *BridgeContractTransactor) StakeAddressOperation(opts *bind.TransactOpts, chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _BridgeContract.contract.Transact(opts, "stakeAddressOperation", chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
+}
+
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_BridgeContract *BridgeContractSession) StakeAddressOperation(chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _BridgeContract.Contract.StakeAddressOperation(&_BridgeContract.TransactOpts, chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
+}
+
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_BridgeContract *BridgeContractTransactorSession) StakeAddressOperation(chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _BridgeContract.Contract.StakeAddressOperation(&_BridgeContract.TransactOpts, chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
 }
 
 // StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
@@ -2236,6 +2261,9 @@ func (_BridgeContract *BridgeContractFilterer) ParseOwnershipTransferred(log typ
 // BridgeContractStakeOperationFailedAfterMultipleRetriesIterator is returned from FilterStakeOperationFailedAfterMultipleRetries and is used to iterate over the raw logs and unpacked data for StakeOperationFailedAfterMultipleRetries events raised by the BridgeContract contract.
 type BridgeContractStakeOperationFailedAfterMultipleRetriesIterator struct {
 	Event *BridgeContractStakeOperationFailedAfterMultipleRetries // Event containing the contract specifics and raw log
+// BridgeContractStakeOperationFailedAfterMultipleRetriesIterator is returned from FilterStakeOperationFailedAfterMultipleRetries and is used to iterate over the raw logs and unpacked data for StakeOperationFailedAfterMultipleRetries events raised by the BridgeContract contract.
+type BridgeContractStakeOperationFailedAfterMultipleRetriesIterator struct {
+	Event *BridgeContractStakeOperationFailedAfterMultipleRetries // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -2250,6 +2278,7 @@ type BridgeContractStakeOperationFailedAfterMultipleRetriesIterator struct {
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
 func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Next() bool {
+func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -2258,6 +2287,7 @@ func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Next()
 	if it.done {
 		select {
 		case log := <-it.logs:
+			it.Event = new(BridgeContractStakeOperationFailedAfterMultipleRetries)
 			it.Event = new(BridgeContractStakeOperationFailedAfterMultipleRetries)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
@@ -2273,6 +2303,7 @@ func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Next()
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
+		it.Event = new(BridgeContractStakeOperationFailedAfterMultipleRetries)
 		it.Event = new(BridgeContractStakeOperationFailedAfterMultipleRetries)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
@@ -2290,11 +2321,13 @@ func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Next()
 
 // Error returns any retrieval or parsing error occurred during filtering.
 func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Error() error {
+func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
+func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Close() error {
 func (it *BridgeContractStakeOperationFailedAfterMultipleRetriesIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
