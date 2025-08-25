@@ -73,7 +73,7 @@ func TestRemoveValidators(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	bridgeSmartContract := &eth.BridgeSmartContractMock{}
 	bridgeSmartContract.On("GetAddressValidatorIndex",
-		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")).Return(uint8(0), nil)
+		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")).Return(uint8(1), nil)
 
 	observer := &ValidatorSetObserverImpl{
 		validatorSetPending: false,
@@ -142,7 +142,7 @@ func TestRemoveValidators(t *testing.T) {
 	})
 
 	bridgeSmartContract.On("GetAddressValidatorIndex",
-		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345679")).Return(uint8(2), nil)
+		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345679")).Return(uint8(3), nil)
 	t.Run("Remove existing validator", func(t *testing.T) {
 		key1 := [4]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
 		key2 := [4]*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)}
@@ -185,7 +185,7 @@ func TestAddAndRemoveValidators(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	bridgeSmartContract := &eth.BridgeSmartContractMock{}
 	bridgeSmartContract.On("GetAddressValidatorIndex",
-		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")).Return(uint8(1), nil)
+		ethcommon.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")).Return(uint8(2), nil)
 
 	observer := &ValidatorSetObserverImpl{
 		validatorSetPending: false,
