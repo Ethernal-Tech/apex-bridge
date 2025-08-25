@@ -265,6 +265,12 @@ func TestBatcherExecute(t *testing.T) {
 			},
 		}
 
+		validatorPerChain := validatorobserver.ValidatorsPerChain{
+			"prime": validatorobserver.ValidatorsChainData{
+				Keys: validatorsChainData,
+			},
+		}
+
 		newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
 			Key: [4]*big.Int{
 				new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
@@ -283,7 +289,7 @@ func TestBatcherExecute(t *testing.T) {
 
 		operations.txProvider = txProviderMock
 
-		_, oldAddresses, err := operations.generatePolicyAndMultisig(validatorsChainData)
+		_, oldAddresses, err := operations.GeneratePolicyAndMultisig(&validatorPerChain, "prime")
 		require.NoError(t, err)
 
 		multisig := generateUTXO(5)
@@ -303,6 +309,10 @@ func TestBatcherExecute(t *testing.T) {
 		bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		b := NewBatcher(config, operations, bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger(), nil)
+
+		adderMock := &AddressAdderMock{}
+		b.adder = adderMock
+		adderMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
 
 		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
 			common.ChainIDStrPrime: {
@@ -430,6 +440,12 @@ func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Cont
 }
 
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
+
+func (c *cardanoChainOperationsMock) GeneratePolicyAndMultisig(
+	validators *validatorobserver.ValidatorsPerChain,
+	chainID string) (*cardanotx.ApexPolicyScripts, *cardanotx.ApexAddresses, error) {
+	return nil, nil, nil
+}
 
 // GenerateBatchTransaction implements core.ChainOperations.
 func (c *cardanoChainOperationsMock) GenerateBatchTransaction(

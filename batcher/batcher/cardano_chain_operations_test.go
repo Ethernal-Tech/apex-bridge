@@ -937,6 +937,12 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		},
 	}
 
+	validatorPerChain := validatorobserver.ValidatorsPerChain{
+		"prime": validatorobserver.ValidatorsChainData{
+			Keys: validatorsChainData,
+		},
+	}
+
 	newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
 		Key: [4]*big.Int{
 			new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
@@ -946,15 +952,21 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		},
 	})
 
+	newValidatorPerChain := validatorobserver.ValidatorsPerChain{
+		"prime": validatorobserver.ValidatorsChainData{
+			Keys: newValidatorChainData,
+		},
+	}
+
 	cco, err := NewCardanoChainOperations(configRaw, nil, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
 
-	_, activeAddresses, err := cco.generatePolicyAndMultisig(validatorsChainData)
+	_, activeAddresses, err := cco.GeneratePolicyAndMultisig(&validatorPerChain, "prime")
 	require.NoError(t, err)
 
-	_, newAddresses, err := cco.generatePolicyAndMultisig(newValidatorChainData)
+	_, newAddresses, err := cco.GeneratePolicyAndMultisig(&newValidatorPerChain, "prime")
 	require.NoError(t, err)
 
 	bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(validatorsChainData, nil)

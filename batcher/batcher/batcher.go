@@ -13,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 )
 
 type lastBatchData struct {
@@ -72,6 +73,12 @@ type AddressAdder interface {
 	AddNewAddressesOfInterest(address ...string)
 }
 
+type AddressAdderMock struct {
+	mock.Mock
+}
+
+func (*AddressAdderMock) AddNewAddressesOfInterest(address ...string) {}
+
 func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()
 
@@ -80,18 +87,14 @@ func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validator
 
 	b.newValidatorSet.Unlock()
 
-	if validators != nil && b.config.Chain.ChainType == common.ChainTypeCardanoStr {
-		operations, ok := b.operations.(*CardanoChainOperations)
-		if !ok {
-			return // this should never happen
-		}
+	_, addr, err := b.operations.GeneratePolicyAndMultisig(validators, b.config.Chain.ChainID)
+	if err != nil {
+		b.logger.Error("cannot generate multisig", "err", err)
 
-		_, addr, err := operations.generatePolicyAndMultisig((*validators)[b.config.Chain.ChainID].Keys)
-		if err != nil {
-			b.logger.Error("cannot generate multisig", "err", err)
-			return
-		}
+		return
+	}
 
+	if addr != nil {
 		b.adder.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
 	}
 }
