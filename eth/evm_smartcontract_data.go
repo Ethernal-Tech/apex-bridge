@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	txAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+	assetTransferTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
 			Name: "batchId",
 			Type: "uint64",
@@ -39,6 +39,31 @@ var (
 			},
 		},
 	})
+	validatorSetChangeTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{
+			Name: "batchId",
+			Type: "uint64",
+		},
+		{
+			Name: "validatorsSetNumber",
+			Type: "uint256",
+		},
+		{
+			Name: "ttl",
+			Type: "uint256",
+		},
+		{
+			Name:         "validatorsChainData",
+			Type:         "tuple[]",
+			InternalType: "struct IGatewayStructs.ValidatorChainData[]",
+			Components: []abi.ArgumentMarshaling{
+				{
+					Name: "key",
+					Type: "uint256[4]",
+				},
+			},
+		},
+	})
 )
 
 type EVMSmartContractTransactionReceiver struct {
@@ -54,7 +79,7 @@ type EVMSmartContractTransaction struct {
 }
 
 func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction, error) {
-	dt, err := abi.Arguments{{Type: txAbi}}.Unpack(bytes)
+	dt, err := abi.Arguments{{Type: assetTransferTxAbi}}.Unpack(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +90,7 @@ func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction,
 }
 
 func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {
-	return abi.Arguments{{Type: txAbi}}.Pack(evmsctx)
+	return abi.Arguments{{Type: assetTransferTxAbi}}.Pack(evmsctx)
 }
 
 func (evmsctx EVMSmartContractTransaction) String() string {
@@ -92,4 +117,30 @@ func (evmsctx EVMSmartContractTransaction) String() string {
 	}
 
 	return sb.String()
+}
+
+type EVMValidatorChainData struct {
+	Key [4]*big.Int `json:"key" abi:"key"`
+}
+
+type EVMValidatorSetChangeTx struct {
+	BatchNonceID        uint64               `json:"batchNonceId" abi:"batchId"`
+	ValidatorsSetNumber *big.Int             `json:"validatorsSetNumber" abi:"validatorsSetNumber"`
+	TTL                 *big.Int             `json:"ttl" abi:"ttl"`
+	ValidatorsChainData []ValidatorChainData `json:"validatorsChainData" abi:"validatorsChainData"`
+}
+
+func NewEVMValidatorSetChangeTransaction(bytes []byte) (*EVMValidatorSetChangeTx, error) {
+	dt, err := abi.Arguments{{Type: validatorSetChangeTxAbi}}.Unpack(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, _ := abi.ConvertType(dt[0], new(EVMValidatorSetChangeTx)).(*EVMValidatorSetChangeTx)
+
+	return tx, nil
+}
+
+func (t *EVMValidatorSetChangeTx) Pack() ([]byte, error) {
+	return abi.Arguments{{Type: validatorSetChangeTxAbi}}.Pack(t)
 }

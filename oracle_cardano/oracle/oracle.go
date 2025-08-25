@@ -16,6 +16,7 @@ import (
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/txs_processor"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
+	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -29,7 +30,9 @@ type OracleImpl struct {
 	db                       core.Database
 	expectedTxsFetcher       cCore.ExpectedTxsFetcher
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
+	validatorSetObserver     *validatorSetObserver.ValidatorSetObserverImpl
 	logger                   hclog.Logger
+	indexers                 map[string]*indexer.BlockIndexer
 }
 
 var _ core.Oracle = (*OracleImpl)(nil)
@@ -43,6 +46,7 @@ func NewCardanoOracle(
 	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver *validatorSetObserver.ValidatorSetObserverImpl,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}
@@ -79,10 +83,12 @@ func NewCardanoOracle(
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
 		ctx, appConfig, cardanoStateProcessor, bridgeDataFetcher, bridgeSubmitter,
-		bridgingRequestStateUpdater, txsProcessorLogger)
+		bridgingRequestStateUpdater, validatorSetObserver, txsProcessorLogger)
 
 	cardanoChainObservers := make([]core.CardanoChainObserver, 0, len(appConfig.CardanoChains))
 	confirmedBlockSubmitters := make([]cCore.ConfirmedBlocksSubmitter, 0, len(appConfig.CardanoChains))
+
+	indexers := make(map[string]*indexer.BlockIndexer, len(appConfig.CardanoChains))
 
 	for _, cardanoChainConfig := range appConfig.CardanoChains {
 		indexerDB := indexerDbs[cardanoChainConfig.ChainID]
@@ -102,6 +108,8 @@ func NewCardanoOracle(
 			return nil, fmt.Errorf("failed to create cardano chain observer for `%s`: %w", cardanoChainConfig.ChainID, err)
 		}
 
+		indexers[cardanoChainConfig.ChainID] = cco.GetIndexer()
+
 		cardanoChainObservers = append(cardanoChainObservers, cco)
 	}
 
@@ -113,8 +121,14 @@ func NewCardanoOracle(
 		expectedTxsFetcher:       expectedTxsFetcher,
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
 		db:                       db,
+		validatorSetObserver:     validatorSetObserver,
 		logger:                   logger,
+		indexers:                 indexers,
 	}, nil
+}
+
+func (o *OracleImpl) GetIndexers() map[string]*indexer.BlockIndexer {
+	return o.indexers
 }
 
 func (o *OracleImpl) Start() error {
