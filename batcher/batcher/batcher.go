@@ -88,7 +88,8 @@ func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validator
 
 		_, addr, err := operations.generatePolicyAndMultisig((*validators)[b.config.Chain.ChainID].Keys)
 		if err != nil {
-			return // this should never happen (handle it somehow?)
+			b.logger.Error("cannot generate multisig", "err", err)
+			return
 		}
 
 		b.adder.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
