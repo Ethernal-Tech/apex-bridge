@@ -63,17 +63,17 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		require.NotNil(t, relevantFullMetadata)
 
 		claims := &oCore.BridgeClaims{}
-		innerActionTxHash := ethgo.Hash{1, 20}
+		txHash := ethgo.Hash{1, 20}
 
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
-			OriginChainID:   common.ChainIDStrNexus,
-			InnerActionHash: innerActionTxHash,
-			Metadata:        relevantFullMetadata,
+			Hash:          txHash,
+			OriginChainID: common.ChainIDStrNexus,
+			Metadata:      relevantFullMetadata,
 		}, nil)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutedClaims, 1)
-		require.Equal(t, innerActionTxHash[:], claims.BatchExecutedClaims[0].ObservedTransactionHash[:])
+		require.Equal(t, txHash[:], claims.BatchExecutedClaims[0].ObservedTransactionHash[:])
 		require.Equal(t, batchNonceID, claims.BatchExecutedClaims[0].BatchNonceId)
 	})
 }
