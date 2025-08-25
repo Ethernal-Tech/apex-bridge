@@ -28,7 +28,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access"
 	relayerDbAccess "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/database_access/relayer_imitator"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
@@ -56,7 +56,7 @@ type ValidatorComponentsImpl struct {
 	api                  core.API
 	telemetry            *telemetry.Telemetry
 	telemetryWorker      *TelemetryWorker
-	validatorSetObserver *validatorSetObserver.ValidatorSetObserverImpl
+	validatorSetObserver *validatorobserver.ValidatorSetObserverImpl
 	logger               hclog.Logger
 }
 
@@ -111,7 +111,7 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
-	validatorSetObserver, err := validatorSetObserver.NewValidatorSetObserver(ctx, bridgeSmartContract,
+	validatorSetObserver, err := validatorobserver.NewValidatorSetObserver(ctx, bridgeSmartContract,
 		logger.Named("validator_set_observer"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create validator set observer: %w", err)

@@ -11,7 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/ethgo"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -26,7 +26,7 @@ type TxsProcessorImpl struct {
 	bridgeDataFetcher           core.BridgeDataFetcher
 	bridgeSubmitter             core.BridgeClaimsSubmitter
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
-	validatorSetObserver        validatorSetObserver.IValidatorSetObserver
+	validatorSetObserver        validatorobserver.IValidatorSetObserver
 	logger                      hclog.Logger
 	TickTime                    time.Duration
 }
@@ -40,7 +40,7 @@ func NewTxsProcessorImpl(
 	bridgeDataFetcher core.BridgeDataFetcher,
 	bridgeSubmitter core.BridgeClaimsSubmitter,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) *TxsProcessorImpl {
 	return &TxsProcessorImpl{
@@ -113,13 +113,17 @@ func (p *TxsProcessorImpl) processAllStartingWithChain(
 
 	p.stateProcessor.Reset()
 
-	p.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup)
+	isValidatorPending := p.validatorSetObserver.IsValidatorSetPending()
+	if isValidatorPending {
+		p.logger.Debug("Validator set is pending, skipping bridging requests and refund claims")
+	}
 
-	keys := p.getSortedChainIDs()
+	p.processAllForChain(bridgeClaims, startChainID, maxClaimsToGroup, isValidatorPending)
 
-	for _, key := range keys {
-		if key != startChainID {
-			p.processAllForChain(bridgeClaims, key, maxClaimsToGroup)
+	chainIDs := p.getSortedChainIDs()
+	for _, chainID := range chainIDs {
+		if chainID != startChainID {
+			p.processAllForChain(bridgeClaims, chainID, maxClaimsToGroup, isValidatorPending)
 		}
 	}
 
@@ -203,6 +207,7 @@ func (p *TxsProcessorImpl) processAllForChain(
 	bridgeClaims *core.BridgeClaims,
 	chainID string,
 	maxClaimsToGroup int,
+	isValidatorPending bool,
 ) {
 	for priority := uint8(0); priority <= core.LastProcessingPriority; priority++ {
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
@@ -210,7 +215,7 @@ func (p *TxsProcessorImpl) processAllForChain(
 		}
 
 		p.stateProcessor.RunChecks(
-			bridgeClaims, chainID, maxClaimsToGroup, priority)
+			bridgeClaims, chainID, maxClaimsToGroup, priority, isValidatorPending)
 	}
 }
 

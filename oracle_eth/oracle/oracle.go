@@ -16,7 +16,7 @@ import (
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/tx_processors/failed"
 	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/tx_processors/success"
 	ethtxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/txs_processor"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -34,7 +34,7 @@ type OracleImpl struct {
 	ethChainObservers        []core.EthChainObserver
 	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
 	db                       core.Database
-	validatorSetObserver     validatorSetObserver.IValidatorSetObserver
+	validatorSetObserver     validatorobserver.IValidatorSetObserver
 	logger                   hclog.Logger
 }
 
@@ -49,7 +49,7 @@ func NewEthOracle(
 	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}
