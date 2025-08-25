@@ -13,7 +13,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/hashicorp/go-hclog"
-	"github.com/stretchr/testify/mock"
 )
 
 type lastBatchData struct {
@@ -72,12 +71,6 @@ func NewBatcher(
 type AddressAdder interface {
 	AddNewAddressesOfInterest(address ...string)
 }
-
-type AddressAdderMock struct {
-	mock.Mock
-}
-
-func (*AddressAdderMock) AddNewAddressesOfInterest(address ...string) {}
 
 func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain) {
 	b.newValidatorSet.Lock()

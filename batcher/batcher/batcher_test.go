@@ -24,6 +24,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type AddressAdderMock struct {
+	mock.Mock
+}
+
+func (*AddressAdderMock) AddNewAddressesOfInterest(address ...string) {}
+
 func TestBatcherExecute(t *testing.T) {
 	config := &core.BatcherConfiguration{
 		Chain: core.ChainConfig{
