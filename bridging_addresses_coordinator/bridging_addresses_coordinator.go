@@ -40,9 +40,10 @@ func NewBridgingAddressesCoordinator(
 	}
 }
 
-func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
+func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 	chainID uint8,
 	cardanoCliBinary string,
+	isRedistribution bool,
 	protocolParams []byte,
 	txOutputs *[]cardanowallet.TxOutput,
 ) ([]common.AddressAndAmount, error) {
@@ -51,49 +52,64 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 	// Future improvement:
 	// - add the stake pool saturation awareness
 	var err error
+	var amounts []common.AddressAndAmount
 
-	if len(*txOutputs) == 0 {
+	// TODO what if txOutputs is nil?
+	if len(*txOutputs) == 0 && !isRedistribution {
 		return nil, nil
 	}
 
-	db := c.dbs[common.ToStrChainID(chainID)]
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
-
 	remainingTokenAmounts := cardanowallet.GetOutputsSum(*txOutputs)
-	containsTokens := len(remainingTokenAmounts) > 1
-	c.logger.Debug("remainingTokenAmounts", remainingTokenAmounts)
-
 	requiredAdaAmount := remainingTokenAmounts[cardanowallet.AdaTokenName]
 
-	addrAmounts := make([]addrAmount, 0, len(addresses))
-	potentialInputs := make([]*indexer.TxInputOutput, 0)
+	c.logger.Debug("remainingTokenAmounts", remainingTokenAmounts)
 
-	// Calculate amount hold by each address
-	for i, address := range addresses {
-		utxos, err := db.GetAllTxOutputs(address, true)
-		if err != nil {
-			return nil, err
-		}
-		potentialInputs = append(potentialInputs, utxos...)
-
-		totalTokenAmounts := cardanotx.GetSumMapFromTxInputOutput(utxos)
-
-		addrAmounts = append(addrAmounts, addrAmount{
-			address:           address,
-			addressIndex:      uint8(i), //nolint:gosec
-			totalTokenAmounts: totalTokenAmounts,
-			includeInTx:       make(map[string]uint64),
-			holdNativeTokens:  len(totalTokenAmounts) > 1,
-			utxoCount:         len(utxos),
-		})
+	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID, isRedistribution, remainingTokenAmounts)
+	if err != nil {
+		return nil, err
 	}
 
+	if isRedistribution {
+		amounts, err = c.redistributeTokens(remainingTokenAmounts, addrAmounts)
+
+	} else {
+		amounts, err = c.getAddressesAndAmountsToPayFrom(cardanoCliBinary, protocolParams, addrAmounts,
+			remainingTokenAmounts, potentialInputs, txOutputs)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if remainingTokenAmounts[cardanowallet.AdaTokenName] > 0 {
+		return nil, fmt.Errorf("%w: required %d, but missing %d",
+			cardanowallet.ErrUTXOsCouldNotSelect, requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
+	}
+
+	for tokenName, remainingAmount := range remainingTokenAmounts {
+		if remainingAmount > 0 {
+			return nil, fmt.Errorf("not enough %s native token funds, missing: %v", tokenName, remainingTokenAmounts)
+		}
+	}
+
+	return amounts, nil
+}
+
+func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
+	cardanoCliBinary string,
+	protocolParams []byte,
+	addrAmounts []addrAmount,
+	remainingTokenAmounts map[string]uint64,
+	potentialInputs []*indexer.TxInputOutput,
+	txOutputs *[]cardanowallet.TxOutput,
+) ([]common.AddressAndAmount, error) {
 	// If we have native tokens we need to add up min utxo lovelace amount
 	// needed to be sent together with native token
 	minUtxo := uint64(0)
+	var err error
 
-	if containsTokens {
-		minUtxo, err = cardanotx.CalculateMinUtxoLovelaceAmount(cardanoCliBinary, protocolParams, addresses[0], potentialInputs, *txOutputs)
+	if len(remainingTokenAmounts) > 1 {
+		minUtxo, err = cardanotx.CalculateMinUtxoLovelaceAmount(cardanoCliBinary, protocolParams, addrAmounts[0].address, potentialInputs, *txOutputs)
 		if err != nil {
 			return nil, err
 		}
@@ -135,23 +151,133 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToPayFrom(
 			Address:       addrAmount.address,
 			AddressIndex:  addrAmount.addressIndex,
 			TokensAmounts: addrAmount.includeInTx,
-			IncludeChnage: includeChange,
+			IncludeChange: includeChange,
 			UtxoCount:     addrAmount.utxoCount,
 		})
 	}
 
-	if remainingTokenAmounts[cardanowallet.AdaTokenName] > 0 {
-		return nil, fmt.Errorf("%w: required %d, but missing %d",
-			cardanowallet.ErrUTXOsCouldNotSelect, requiredAdaAmount, remainingTokenAmounts[cardanowallet.AdaTokenName])
+	return amounts, nil
+}
+
+func (c *BridgingAddressesCoordinatorImpl) redistributeAdaTokens(addrAmounts []addrAmount, totalAdaAmount uint64, requiredAdaAmount uint64) ([]common.AddressAndAmount, error) {
+	if len(addrAmounts) == 0 {
+		return nil, fmt.Errorf("cannot redistribute ADA tokens: no addresses provided")
 	}
 
-	for tokenName, remainingAmount := range remainingTokenAmounts {
-		if remainingAmount > 0 {
-			return nil, fmt.Errorf("not enough %s native token funds, missing: %v", tokenName, remainingTokenAmounts)
+	remainigAdaAmount, ok := safeSubstract(totalAdaAmount, requiredAdaAmount)
+	if !ok {
+		return nil, fmt.Errorf("not enough ADA token funds to redistribute: available = %d, required = %d",
+			totalAdaAmount,
+			requiredAdaAmount)
+	}
+
+	adaTokensPerAddress := remainigAdaAmount / uint64(len(addrAmounts))
+	extra := remainigAdaAmount % uint64(len(addrAmounts))
+
+	addressAndAmounts := make([]common.AddressAndAmount, 0, len(addrAmounts))
+
+	for i, addrAndAmount := range addrAmounts {
+		addressAndAmount := common.AddressAndAmount{
+			Address:       addrAndAmount.address,
+			AddressIndex:  addrAndAmount.addressIndex,
+			TokensAmounts: addrAndAmount.totalTokenAmounts,
+			UtxoCount:     addrAndAmount.utxoCount,
+		}
+
+		addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName] = adaTokensPerAddress
+		if uint64(i) < extra {
+			addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName] += 1 // Distribute the remainder fairly
+		}
+
+		addressAndAmounts = append(addressAndAmounts, addressAndAmount)
+	}
+
+	return addressAndAmounts, nil
+}
+
+func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(remainingTokenAmounts map[string]uint64, addrAmounts []addrAmount) ([]common.AddressAndAmount, error) {
+	totalAdaAmount := uint64(0)
+	for _, addrAmount := range addrAmounts {
+		totalAdaAmount += addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName]
+	}
+
+	requiredAdaAmount := remainingTokenAmounts[cardanowallet.AdaTokenName]
+	delete(remainingTokenAmounts, cardanowallet.AdaTokenName)
+
+	addressAndAmounts, err := c.redistributeAdaTokens(addrAmounts, totalAdaAmount, requiredAdaAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	// substract tokens that should be transferred
+	for _, addrAmount := range addressAndAmounts {
+		if len(remainingTokenAmounts) == 0 {
+			break
+		}
+
+		// Update remaining token amounts
+		for tokenName, requiredAmount := range remainingTokenAmounts {
+			if addrAmount.TokensAmounts[tokenName] >= requiredAmount {
+				addressChange, _ := safeSubstract(addrAmount.TokensAmounts[tokenName], requiredAmount)
+				delete(remainingTokenAmounts, tokenName)
+
+				if addressChange > 0 {
+					addrAmount.TokensAmounts[tokenName] = addressChange
+				} else {
+					delete(addrAmount.TokensAmounts, tokenName)
+				}
+			} else {
+				remainingTokenAmounts[tokenName] -= addrAmount.TokensAmounts[tokenName]
+				delete(addrAmount.TokensAmounts, tokenName)
+			}
 		}
 	}
 
-	return amounts, nil
+	return addressAndAmounts, nil
+}
+
+// TODO return values as a struct
+func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
+	chainID uint8, isRedistribution bool, remainingTokenAmounts map[string]uint64) ([]addrAmount, []*indexer.TxInputOutput, error) {
+	db := c.dbs[common.ToStrChainID(chainID)]
+	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
+
+	addrAmounts := make([]addrAmount, 0, len(addresses))
+	potentialInputs := make([]*indexer.TxInputOutput, 0)
+
+	// Calculate amount held by each address
+	for i, address := range addresses {
+		utxos, err := db.GetAllTxOutputs(address, true)
+		if err != nil {
+			return nil, nil, err
+		}
+		potentialInputs = append(potentialInputs, utxos...)
+
+		totalTokenAmounts := make(map[string]uint64)
+		holdNativeTokens := false
+
+		for _, utxo := range utxos {
+			totalTokenAmounts[cardanowallet.AdaTokenName] += utxo.Output.Amount
+
+			for _, token := range utxo.Output.Tokens {
+				if isRedistribution || remainingTokenAmounts[token.TokenName()] > 0 {
+					holdNativeTokens = true
+					totalTokenAmounts[token.TokenName()] += token.Amount
+				}
+			}
+		}
+
+		addrAmounts = append(addrAmounts, addrAmount{
+			address:           address,
+			addressIndex:      uint8(i), //nolint:gosec
+			totalTokenAmounts: totalTokenAmounts,
+			includeInTx:       make(map[string]uint64),
+			holdNativeTokens:  holdNativeTokens,
+			utxoCount:         len(utxos),
+		})
+	}
+
+	return addrAmounts, potentialInputs, nil
 }
 
 // processNativeTokens handles the processing of native tokens for a given address

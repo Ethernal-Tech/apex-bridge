@@ -43,14 +43,15 @@ type AddressAndAmount struct {
 	AddressIndex  uint8
 	Address       string
 	TokensAmounts map[string]uint64
-	IncludeChnage uint64
+	IncludeChange uint64
 	UtxoCount     int
 }
 
 type BridgingAddressesCoordinator interface {
-	GetAddressesAndAmountsToPayFrom(
+	GetAddressesAndAmounts(
 		chainID uint8,
 		cardanoCliBinary string,
+		isRedistribution bool,
 		protocolParams []byte,
 		txOutputs *[]cardanowallet.TxOutput) ([]AddressAndAmount, error)
 	GetAddressesAndAmountsToStakeTo(chainID uint8, amount uint64) (AddressAndAmount, error)

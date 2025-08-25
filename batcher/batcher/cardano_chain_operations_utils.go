@@ -16,14 +16,23 @@ import (
 
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, error) {
+) (cardano.TxOutputs, bool, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
+	isRedistribution := false
 
 	for _, transaction := range txs {
 		// stake delegation tx are not processed in this way
 		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
 			continue
 		}
+
+		if transaction.TransactionType == uint8(common.RedistributionConfirmedTxType) {
+			logger.Debug("REDISTRIBUTION")
+			isRedistribution = true
+			continue
+		}
+
+		logger.Debug("NON REDISTRIBUTION")
 
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
@@ -40,13 +49,13 @@ func getOutputs(
 						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
-							return cardano.TxOutputs{}, err
+							return cardano.TxOutputs{}, isRedistribution, err
 						}
 					} else {
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {
-							return cardano.TxOutputs{}, err
+							return cardano.TxOutputs{}, isRedistribution, err
 						}
 					}
 
@@ -94,7 +103,7 @@ func getOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, nil
+	return result, isRedistribution, nil
 }
 
 // createUtxoSelectionAmounts creates a copy of desired amounts with adjusted ADA amount for UTXO selection
@@ -172,6 +181,23 @@ func filterOutUtxosWithUnknownTokens(
 	}
 
 	return result
+}
+
+// TODO *[]cardanowallet.TxOutput?
+func addRedistributionOutputs(
+	outputs []cardanowallet.TxOutput,
+	multisigAddresses []common.AddressAndAmount,
+) ([]cardanowallet.TxOutput, error) {
+	for _, addr := range multisigAddresses {
+		output, err := getTxOutputFromSumMap(addr.Address, addr.TokensAmounts)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: handle duplicates if needed
+		outputs = append(outputs, output)
+	}
+	return outputs, nil
 }
 
 func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet.TxOutput, error) {

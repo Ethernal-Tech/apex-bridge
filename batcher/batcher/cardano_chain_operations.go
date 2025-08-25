@@ -229,16 +229,17 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		}
 	}
 
-	txOutputs, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
+	txOutputs, isRedistribution, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	cco.logger.Debug("Getting addresses and amounts to pay from", "outputs", txOutputs.Outputs)
 
-	multisigAddresses, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmountsToPayFrom(
+	multisigAddresses, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmounts(
 		data.ChainID,
 		cco.cardanoCliBinary,
+		isRedistribution,
 		data.ProtocolParams,
 		&txOutputs.Outputs,
 	)
@@ -251,7 +252,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
 	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress)
+		multisigAddresses, feeMultisigAddress, isRedistribution)
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
@@ -296,6 +297,19 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		TxInputs:     convertUTXOsToTxInputs(utxoSelectionResult.feeUtxos),
 	}
 
+	var addrAndAmountToDeduct []common.AddressAndAmount
+	if isRedistribution {
+		txOutputs.Outputs, err = addRedistributionOutputs(txOutputs.Outputs, multisigAddresses)
+		if err != nil {
+			return nil, multisigAddresses, err
+		}
+	} else {
+		addrAndAmountToDeduct = multisigAddresses
+	}
+
+	cco.logger.Debug("TX INPUTS", "txInputs", txInputs)
+	cco.logger.Debug("TX OUTPUTS", "txOutputs.Outputs", txOutputs.Outputs)
+
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
 		cco.cardanoCliBinary,
@@ -306,7 +320,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		txInputs,
 		txOutputs.Outputs,
 		certificateData,
-		multisigAddresses,
+		addrAndAmountToDeduct,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -524,7 +538,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 }
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
-	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string,
+	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string, isRedistribution bool,
 ) (*utxoSelectionResult, error) {
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
@@ -558,42 +572,50 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		cco.logger.Debug("UTXOs retrieved",
 			"multisig", addressAndAmount.Address, "utxos", multisigUtxos)
 
-		// Create output matching the address and amount
-		output := []cardanowallet.TxOutput{
-			{
-				Addr:   addressAndAmount.Address,
-				Amount: addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName],
-			},
-		}
-
-		for policyID, token := range addressAndAmount.TokensAmounts {
-			tokenName := ""
-
-			for _, token := range knownTokens {
-				if token.PolicyID == policyID {
-					tokenName = token.Name
-
-					break
-				}
+		if isRedistribution {
+			if len(multisigUtxos) > getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar) {
+				cco.logger.Debug("REDISTRIBUTION ErrUTXOsLimitReached", "multisigUtxos count", len(multisigUtxos))
+				return nil, fmt.Errorf(
+					"%w", cardanowallet.ErrUTXOsLimitReached)
+			}
+		} else {
+			// Create output matching the address and amount
+			output := []cardanowallet.TxOutput{
+				{
+					Addr:   addressAndAmount.Address,
+					Amount: addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName],
+				},
 			}
 
-			output[0].Tokens = append(output[0].Tokens, cardanowallet.TokenAmount{
-				Token:  cardanowallet.NewToken(policyID, tokenName),
-				Amount: token,
-			})
-		}
+			for policyID, token := range addressAndAmount.TokensAmounts {
+				tokenName := ""
 
-		cco.logger.Debug("Change included in utxo selection", addressAndAmount.IncludeChnage)
+				for _, token := range knownTokens {
+					if token.PolicyID == policyID {
+						tokenName = token.Name
 
-		multisigUtxos, err = getNeededUtxos(
-			multisigUtxos,
-			addressAndAmount.TokensAmounts,
-			addressAndAmount.IncludeChnage,
-			getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar),
-			int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
-		)
-		if err != nil {
-			return nil, err
+						break
+					}
+				}
+
+				output[0].Tokens = append(output[0].Tokens, cardanowallet.TokenAmount{
+					Token:  cardanowallet.NewToken(policyID, tokenName),
+					Amount: token,
+				})
+			}
+
+			cco.logger.Debug("Change included in utxo selection", addressAndAmount.IncludeChange)
+
+			multisigUtxos, err = getNeededUtxos(
+				multisigUtxos,
+				addressAndAmount.TokensAmounts,
+				addressAndAmount.IncludeChange,
+				getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar),
+				int(cco.config.TakeAtLeastUtxoCount), //nolint:gosec
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		cco.logger.Debug("UTXOs chosen", addressAndAmount.Address, multisigUtxos)

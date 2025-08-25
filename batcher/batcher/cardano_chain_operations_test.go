@@ -293,6 +293,50 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NotEqual(t, "", result.TxHash)
 	})
 
+	t.Run("should pass with redistribution", func(t *testing.T) {
+		redistributionConfirmedTx := make([]eth.ConfirmedTransaction, 1)
+		redistributionConfirmedTx[0] = eth.ConfirmedTransaction{
+			Nonce:           1,
+			BlockHeight:     big.NewInt(1),
+			TransactionType: uint8(common.RedistributionConfirmedTxType),
+		}
+
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil))
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, redistributionConfirmedTx, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
 	t.Run("Test SignBatchTransaction", func(t *testing.T) {
 		txRaw, err := hex.DecodeString("84a5008282582000000000000000000000000000000000000000000000000000000000000000120082582000000000000000000000000000000000000000000000000000000000000000ff00018282581d6033c378cee41b2e15ac848f7f6f1d2f78155ab12d93b713de898d855f1903e882581d702b5398fcb481e94163a6b5cca889c54bcd9d340fb71c5eaa9f2c8d441a001e8098021a0002e76d031864075820c5e403ad2ee72ff4eb1ab7e988c1e1b4cb34df699cb9112d6bded8e8f3195f34a10182830301818200581ce67d6de92a4abb3712e887fe2cf0f07693028fad13a3e510dbe73394830301818200581c31a31e2f2cd4e1d66fc25f400aa02ab0fe6ca5a3d735c2974e842a89f5d90103a100a101a2616e016174656261746368")
 		require.NoError(t, err)
@@ -945,7 +989,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 			AddressIndex:  0,
 			Address:       bridgingAddr,
 			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
-			IncludeChnage: 1_000_000,
+			IncludeChange: 1_000_000,
 		},
 	}
 
@@ -1638,7 +1682,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 
-		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr)
+		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr, false)
 		require.ErrorContains(t, err, "fee")
 	})
 
@@ -1718,7 +1762,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr)
+			}}, feeAddr, false)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{

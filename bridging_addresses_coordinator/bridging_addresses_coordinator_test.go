@@ -1,6 +1,7 @@
 package bridgingaddressscoordinator
 
 import (
+	"fmt"
 	"testing"
 
 	bam "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
@@ -36,7 +37,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, "", []byte{}, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", false, []byte{}, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr1",
 				Amount: 10_000_000,
@@ -45,7 +46,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "addr1", amounts[0].Address)
 		require.Equal(t, uint64(10_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(1_000_000), amounts[0].IncludeChnage)
+		require.Equal(t, uint64(1_000_000), amounts[0].IncludeChange)
 		require.Equal(t, uint8(0), amounts[0].AddressIndex)
 	})
 
@@ -70,7 +71,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, "", []byte{}, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", false, []byte{}, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr1",
 				Amount: 10_000_000,
@@ -113,7 +114,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, "", []byte{}, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", false, []byte{}, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr1",
 				Amount: 10_000_000,
@@ -121,7 +122,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, uint64(10_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(0), amounts[0].IncludeChnage)
+		require.Equal(t, uint64(0), amounts[0].IncludeChange)
 	})
 
 	token, err := cardanowallet.NewTokenWithFullName("b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431", true)
@@ -157,7 +158,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 				Amount: 10_000_000,
@@ -169,7 +170,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
 		require.Equal(t, uint64(10000000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(1000000), amounts[0].IncludeChnage)
+		require.Equal(t, uint64(1000000), amounts[0].IncludeChange)
 		require.Equal(t, uint64(1000000), amounts[0].TokensAmounts[token.String()])
 		require.Equal(t, uint8(0), amounts[0].AddressIndex)
 	})
@@ -202,7 +203,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 				Amount: 10_000_000,
@@ -243,7 +244,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 				Amount: 10_000_000,
@@ -296,7 +297,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 				Amount: 10_000_000,
@@ -309,9 +310,9 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(500_000), amounts[0].TokensAmounts[token.String()])
 		require.Equal(t, uint64(8_961_290), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(1038710), amounts[0].IncludeChnage)
+		require.Equal(t, uint64(1038710), amounts[0].IncludeChange)
 		require.Equal(t, uint64(1038710), amounts[1].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(1000000), amounts[1].IncludeChnage)
+		require.Equal(t, uint64(1000000), amounts[1].IncludeChange)
 	})
 
 	t.Run("GetAddressesAndAmountsToPayFrom 2 address native 2 currency 2", func(t *testing.T) {
@@ -360,7 +361,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsToPayFrom(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), protocolParams, &[]cardanowallet.TxOutput{
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &[]cardanowallet.TxOutput{
 			{
 				Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
 				Amount: 10_000_000,
@@ -373,9 +374,401 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(500_000), amounts[0].TokensAmounts[token.String()])
 		require.Equal(t, uint64(8961290), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
-		require.Equal(t, uint64(1038710), amounts[0].IncludeChnage)
+		require.Equal(t, uint64(1038710), amounts[0].IncludeChange)
 		require.Equal(t, uint64(1038710), amounts[1].TokensAmounts[cardanowallet.AdaTokenName])
 		require.Equal(t, uint64(0), amounts[1].TokensAmounts[token.String()])
-		require.Equal(t, uint64(1000000), amounts[1].IncludeChnage)
+		require.Equal(t, uint64(1000000), amounts[1].IncludeChange)
+	})
+}
+
+func TestRedistributeTokens(t *testing.T) {
+	chainID := common.ChainIDIntPrime
+
+	t.Run("GetAddressesAndAmounts 1 address", func(t *testing.T) {
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+
+		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
+		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+		require.NoError(t, err)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 500_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   1000000,
+							},
+						},
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 500_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   1000000,
+							},
+						},
+					},
+				},
+			}, error(nil)).Once()
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{})
+		require.NoError(t, err)
+		require.Equal(t, "addr1", amounts[0].Address)
+		require.Equal(t, uint64(1_000_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
+		require.Equal(t, uint8(0), amounts[0].AddressIndex)
+		require.Equal(t, uint64(2000000), amounts[0].TokensAmounts[tokenName])
+	})
+
+	t.Run("GetAddressesAndAmounts 2 addresses", func(t *testing.T) {
+		addresses := []string{"addr1", "addr2"}
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", addresses[0], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 200_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[1], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{})
+		require.NoError(t, err)
+		require.Equal(t, 2, len(amounts))
+
+		for i, amount := range amounts {
+			require.Equal(t, addresses[i], amount.Address)
+			require.Equal(t, uint64(500_000_000), amount.TokensAmounts[cardanowallet.AdaTokenName])
+			require.Equal(t, uint8(i), amount.AddressIndex)
+		}
+	})
+
+	t.Run("GetAddressesAndAmounts 3 addresses", func(t *testing.T) {
+		addresses := []string{"addr1", "addr2", "addr3"}
+		expectedAmounts := []uint64{333333334, 333333333, 333333333}
+
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", addresses[0], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 200_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[1], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[2], true).Return([]*indexer.TxInputOutput{}, error(nil))
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{})
+		require.NoError(t, err)
+		require.Equal(t, 3, len(amounts))
+
+		for i, amount := range amounts {
+			require.Equal(t, addresses[i], amount.Address)
+			require.Equal(t, expectedAmounts[i], amount.TokensAmounts[cardanowallet.AdaTokenName])
+			require.Equal(t, uint8(i), amount.AddressIndex)
+		}
+	})
+
+	t.Run("GetAddressesAndAmounts 3 addresses with output", func(t *testing.T) {
+		addresses := []string{"addr1", "addr2", "addr3"}
+
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", addresses[0], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 200_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[1], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[2], true).Return([]*indexer.TxInputOutput{}, error(nil))
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{
+			{
+				Amount: 100_000_000,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 3, len(amounts))
+
+		for i, amount := range amounts {
+			require.Equal(t, addresses[i], amount.Address)
+			require.Equal(t, uint64(300_000_000), amount.TokensAmounts[cardanowallet.AdaTokenName])
+			require.Equal(t, uint8(i), amount.AddressIndex)
+		}
+	})
+
+	t.Run("GetAddressesAndAmounts 3 addresses with outputs", func(t *testing.T) {
+		addresses := []string{"addr1", "addr2", "addr3"}
+		expectedTokens := []uint64{0, 1000000, 0}
+
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+
+		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
+		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+		require.NoError(t, err)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", addresses[0], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 200_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   1000000,
+							},
+						},
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[1], true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 400_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   2000000,
+							},
+						},
+					},
+				},
+			}, error(nil))
+		dbMock.On("GetAllTxOutputs", addresses[2], true).Return([]*indexer.TxInputOutput{}, error(nil))
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		amounts, err := coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{
+			{
+				Amount: 100_000_000,
+				Tokens: []cardanowallet.TokenAmount{
+					{
+						Token: cardanowallet.Token{
+							PolicyID: token.PolicyID,
+							Name:     token.Name,
+						},
+						Amount: 2000000,
+					},
+				},
+			},
+			{
+				Amount: 600_000_000,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 3, len(amounts))
+
+		for i, amount := range amounts {
+			require.Equal(t, addresses[i], amount.Address)
+			require.Equal(t, uint64(100_000_000), amount.TokensAmounts[cardanowallet.AdaTokenName])
+			require.Equal(t, expectedTokens[i], amount.TokensAmounts[tokenName])
+			require.Equal(t, uint8(i), amount.AddressIndex)
+		}
+	})
+
+	t.Run("GetAddressesAndAmounts 1 address not enough funds", func(t *testing.T) {
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+
+		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
+		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
+		require.NoError(t, err)
+
+		dbMock := &indexer.DatabaseMock{}
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 500_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   1000000,
+							},
+						},
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 500_000_000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token.PolicyID,
+								Name:     token.Name,
+								Amount:   1000000,
+							},
+						},
+					},
+				},
+			}, error(nil))
+
+		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
+			"prime": dbMock,
+		}, hclog.NewNullLogger())
+
+		_, err = coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{
+			{
+				Amount: 500_000_000,
+			},
+			{
+				Amount: 600_000_000,
+			},
+		})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "not enough ADA token funds to redistribute")
+
+		tok := cardanowallet.TokenAmount{
+			Token: cardanowallet.Token{
+				PolicyID: token.PolicyID,
+				Name:     token.Name,
+			},
+			Amount: 3000000,
+		}
+
+		_, err = coordinator.GetAddressesAndAmounts(chainID, "", true, []byte{}, &[]cardanowallet.TxOutput{
+			{
+				Amount: 500_000_000,
+				Tokens: []cardanowallet.TokenAmount{
+					tok,
+				},
+			},
+		})
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("not enough %s native token funds", tok.TokenName()))
 	})
 }

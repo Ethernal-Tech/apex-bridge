@@ -66,36 +66,39 @@ func CreateTx(
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
 	for _, multisig := range txInputInfos.MultiSig {
-		multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
+		multisigChangeTxOutput := cardanowallet.TxOutput{}
 
-		outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
+		if addrAndAmountToDeduct != nil {
+			multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
+			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
 
-		multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
-			multisigOutput, multisig.Sum, outputsAmountNew)
-		if err != nil {
-			return nil, "", err
-		}
+			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
+				multisigOutput, multisig.Sum, outputsAmountNew)
+			if err != nil {
+				return nil, "", err
+			}
 
-		// add multisig output if change is not zero
-		if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
-			if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefault {
-				if multiSigIndex == -1 {
-					builder.AddOutputs(multisigChangeTxOutput)
-				} else {
-					builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+			// add multisig output if change is not zero
+			if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
+				if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefault {
+					if multiSigIndex == -1 {
+						builder.AddOutputs(multisigChangeTxOutput)
+					} else {
+						builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+					}
 				}
-			}
-		} else if multiSigIndex >= 0 {
-			// we need to decrement feeIndex if it was after multisig in outputs
-			if feeIndex > multiSigIndex {
-				feeIndex--
+			} else if multiSigIndex >= 0 {
+				// we need to decrement feeIndex if it was after multisig in outputs
+				if feeIndex > multiSigIndex {
+					feeIndex--
+				}
+
+				builder.RemoveOutput(multiSigIndex)
 			}
 
-			builder.RemoveOutput(multiSigIndex)
-		}
-
-		for tokenName, amount := range multisig.Sum {
-			outputsAmount[tokenName] = safeSubstract(outputsAmount[tokenName], amount)
+			for tokenName, amount := range multisig.Sum {
+				outputsAmount[tokenName] = safeSubstract(outputsAmount[tokenName], amount)
+			}
 		}
 
 		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)

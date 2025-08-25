@@ -19,6 +19,7 @@ var (
 	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 	stakeDelegationParamsData            = &stakeDelParams{}
 	updateBridgingAddrsCountParamsData   = &updateBridgingAddrsCountParams{}
+	redistributeBrAddrsTokensParamsData  = &redistributeBridgingAddrsTokensParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -110,6 +111,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(updateBridgingAddrsCountParamsData),
 	}
+	redistributeTokensCmd := &cobra.Command{
+		Use:   "redistribute-bridging-addresses-tokens",
+		Short: "redistribute tokens across bridging addresses",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return redistributeBrAddrsTokensParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(redistributeBrAddrsTokensParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -122,6 +131,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
 	stakeDelegationParamsData.RegisterFlags(delegateStakeCmd)
 	updateBridgingAddrsCountParamsData.RegisterFlags(updateBridgingAddrsCountCmd)
+	redistributeBrAddrsTokensParamsData.RegisterFlags(redistributeTokensCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -141,6 +151,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		bridgingAddressesBalancesCmd,
 		delegateStakeCmd,
 		updateBridgingAddrsCountCmd,
+		redistributeTokensCmd,
 	)
 
 	return cmd
