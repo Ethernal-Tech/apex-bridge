@@ -5,7 +5,7 @@ import (
 )
 
 type TxInputInfos struct {
-	MultiSig    *TxInputInfo
+	MultiSig    []*TxInputInfo
 	MultiSigFee *TxInputInfo
 }
 

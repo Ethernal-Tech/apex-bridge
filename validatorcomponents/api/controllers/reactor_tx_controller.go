@@ -97,6 +97,8 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}
 
+	cardanoDestChainFeeAddress := c.oracleConfig.GetFeeMultisigAddress(requestBody.DestinationChainID)
+
 	if len(requestBody.Transactions) > c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
 		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, requestBody: %v",
 			len(requestBody.Transactions), c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
@@ -125,7 +127,7 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 			// if fee address is specified in transactions just add amount to the fee sum
 			// otherwise keep this transaction
-			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+			if receiver.Addr == cardanoDestChainFeeAddress {
 				feeSum += receiver.Amount
 			} else {
 				transactions = append(transactions, receiver)
@@ -201,7 +203,7 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	txInfo, _, err := txSender.CreateBridgingTx(
 		context.Background(),
 		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
+		requestBody.SenderAddr, receivers, requestBody.BridgingAddress, requestBody.BridgingFee,
 		0,
 	)
 	if err != nil {

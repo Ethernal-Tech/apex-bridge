@@ -1,7 +1,6 @@
 package batcher
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -17,37 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func Test_subtractTxOutputsFromSumMap(t *testing.T) {
-	tok1, err := cardano.GetNativeTokenFromName("3.31")
-	require.NoError(t, err)
-
-	tok2, err := cardano.GetNativeTokenFromName("3.32")
-	require.NoError(t, err)
-
-	tok3, err := cardano.GetNativeTokenFromName("3.33")
-	require.NoError(t, err)
-
-	tok4, err := cardano.GetNativeTokenFromName("3.34")
-	require.NoError(t, err)
-
-	vals := subtractTxOutputsFromSumMap(map[string]uint64{
-		cardanowallet.AdaTokenName: 200,
-		tok1.String():              400,
-		tok2.String():              500,
-		tok4.String():              1000,
-	}, []cardanowallet.TxOutput{
-		cardanowallet.NewTxOutput("", 100, cardanowallet.NewTokenAmount(tok1, 200), cardanowallet.NewTokenAmount(tok2, 205)),
-		cardanowallet.NewTxOutput("", 50, cardanowallet.NewTokenAmount(tok1, 150), cardanowallet.NewTokenAmount(tok3, 300)),
-		cardanowallet.NewTxOutput("", 10, cardanowallet.NewTokenAmount(tok2, 300)),
-	})
-
-	require.Equal(t, map[string]uint64{
-		cardanowallet.AdaTokenName: 40,
-		tok1.String():              50,
-		tok4.String():              1000,
-	}, vals)
-}
 
 func Test_filterOutTokenUtxos(t *testing.T) {
 	multisigUtxos := []*indexer.TxInputOutput{
@@ -499,9 +467,10 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, err := getOutputs(txs, cco.config, hclog.NewNullLogger())
+	res, isRedistribution, err := getOutputs(txs, cco.config, hclog.NewNullLogger())
 	require.NoError(t, err)
 
+	assert.False(t, isRedistribution)
 	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
 		{
@@ -584,9 +553,10 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, err := getOutputs(txs, config, hclog.NewNullLogger())
+	outputs, isRedistribution, err := getOutputs(txs, config, hclog.NewNullLogger())
 	require.NoError(t, err)
 
+	assert.False(t, isRedistribution)
 	require.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   addr2,
@@ -610,6 +580,40 @@ func Test_skylineGetOutputs(t *testing.T) {
 	require.Len(t, outputs.Sum, 2)
 	require.Equal(t, uint64(307), outputs.Sum[token.String()])
 	require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
+
+	t.Run("GetOutputs with redistribute tokens transaction", func(t *testing.T) {
+		txs = append(txs, eth.ConfirmedTransaction{
+			TransactionType: uint8(common.RedistributionConfirmedTxType),
+		})
+
+		outputs, isRedistribution, err := getOutputs(txs, config, hclog.NewNullLogger())
+		require.NoError(t, err)
+
+		assert.True(t, isRedistribution)
+		require.Equal(t, []cardanowallet.TxOutput{
+			{
+				Addr:   addr2,
+				Amount: 51,
+				Tokens: []cardanowallet.TokenAmount{
+					cardanowallet.NewTokenAmount(token, 102),
+				},
+			},
+			{
+				Addr:   addr1,
+				Amount: 102,
+				Tokens: []cardanowallet.TokenAmount{
+					cardanowallet.NewTokenAmount(token, 205),
+				},
+			},
+			{
+				Addr:   addr3,
+				Amount: 8,
+			},
+		}, outputs.Outputs)
+		require.Len(t, outputs.Sum, 2)
+		require.Equal(t, uint64(307), outputs.Sum[token.String()])
+		require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
+	})
 }
 
 func Test_getSkylineUTXOs(t *testing.T) {
@@ -672,44 +676,60 @@ func Test_extractStakeKeyDepositAmount(t *testing.T) {
 	require.Equal(t, uint64(0), amount)
 }
 
-func TestGetStakingDelegateCertificate(t *testing.T) {
-	wallet1, err := cardanowallet.GenerateWallet(true)
-	require.NoError(t, err)
+func Test_allocateInputsForConsolidation(t *testing.T) {
+	t.Run("total < max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 5},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 10},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+		}
 
-	wallet2, err := cardanowallet.GenerateWallet(true)
-	require.NoError(t, err)
-
-	keyHash1, err := cardanowallet.GetKeyHash(wallet1.StakeVerificationKey)
-	require.NoError(t, err)
-
-	keyHash2, err := cardanowallet.GetKeyHash(wallet2.StakeVerificationKey)
-	require.NoError(t, err)
-
-	txProviderMock := &cardano.TxProviderTestMock{
-		ReturnDefaultParameters: true,
-	}
-	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork)
-	networkMagic := uint(cardanowallet.MainNetNetwork)
-	batchInitialData := &batchInitialData{
-		MultisigStakeKeyHashes: []string{keyHash1, keyHash2},
-	}
-	batchInitialData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
-
-	t.Run("invalid stake pool id", func(t *testing.T) {
-		_, _, err := getStakingCertificates(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
-			StakePoolId: "0x999",
-		})
-
-		require.ErrorIs(t, err, errSkipConfirmedTx)
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, inputs, alloc)
 	})
 
-	t.Run("valid", func(t *testing.T) {
-		cert, amount, err := getStakingCertificates(cardanoCliBinary, networkMagic, batchInitialData, &eth.ConfirmedTransaction{
-			StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7",
-		})
+	t.Run("total == max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+		}
 
-		require.NoError(t, err)
-		require.Equal(t, uint64(0x1e8480), amount)
-		require.NotNil(t, cert)
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, inputs, alloc)
+	})
+
+	t.Run("total > max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 30},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 50)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 17},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 8},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 25},
+		}, alloc)
+	})
+
+	t.Run("total >> max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true, Utxos: []*indexer.TxInputOutput{
+				{
+					Output: indexer.TxOutput{
+						Amount: 100_000_000,
+					},
+				},
+			}},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 9},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 3)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 2},
+			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true},
+		}, alloc)
 	})
 }

@@ -3,6 +3,7 @@ package successtxprocessors
 import (
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -21,19 +22,27 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 	)
 
 	proc := NewHotWalletIncrementProcessor(hclog.NewNullLogger())
+
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
+
 	appConfig := &cCore.AppConfig{
+		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
-				BridgingAddresses: cCore.BridgingAddresses{
+				/* BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
-				},
+				}, */
 			},
 			common.ChainIDStrVector: {
-				BridgingAddresses: cCore.BridgingAddresses{
+				/* BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
-				},
+				}, */
 			},
 		},
 	}

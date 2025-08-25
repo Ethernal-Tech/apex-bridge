@@ -7,10 +7,11 @@ import (
 )
 
 type GeneratedBatchTxData struct {
-	BatchType         eth.BatchTypes
-	IsStakeSignNeeded bool
-	TxRaw             []byte
-	TxHash            string
+	BatchType           eth.BatchTypes
+	IsStakeSignNeeded   bool
+	IsPaymentSignNeeded bool
+	TxRaw               []byte
+	TxHash              string
 }
 
 func (gb GeneratedBatchTxData) IsConsolidation() bool {
@@ -31,8 +32,7 @@ type Batcher interface {
 
 type ChainOperations interface {
 	GenerateBatchTransaction(
-		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract,
-		destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
+		ctx context.Context, destinationChain string, confirmedTransactions []eth.ConfirmedTransaction, batchNonceID uint64,
 	) (*GeneratedBatchTxData, error)
 	SignBatchTransaction(generatedBatchData *GeneratedBatchTxData) (*BatchSignatures, error)
 	IsSynchronized(

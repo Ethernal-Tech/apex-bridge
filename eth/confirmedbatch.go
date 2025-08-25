@@ -139,7 +139,12 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 
 			sb.WriteString("(")
 			sb.WriteString(recv.DestinationAddress)
-			sb.WriteString(fmt.Sprintf(", %d)", recv.Amount))
+
+			if recv.AmountWrapped.Uint64() != 0 {
+				sb.WriteString(fmt.Sprintf(", %d+%d)", recv.Amount, recv.AmountWrapped))
+			} else {
+				sb.WriteString(fmt.Sprintf(", %d)", recv.Amount))
+			}
 		}
 
 		sb.WriteString("]")

@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -27,16 +28,18 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
 	proc := NewEthBridgingRequestedProcessor(hclog.NewNullLogger())
+
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+
 	appConfig := &oCore.AppConfig{
+		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
 					NetworkID:     wallet.TestNetNetwork,
 					UtxoMinAmount: utxoMinValue,
-				},
-				BridgingAddresses: oCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
 				},
 				MinFeeForBridging:     minFeeForBridging,
 				FeeAddrBridgingAmount: feeAddrBridgingAmount,
