@@ -68,7 +68,7 @@ func TestCreateTx(t *testing.T) {
 		{
 			Address:       multiSigAddr,
 			TokensAmounts: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
-			IncludeChnage: common.MinUtxoAmountDefault,
+			IncludeChange: common.MinUtxoAmountDefault,
 		},
 	}
 	t.Run("empty multisig inputs", func(t *testing.T) {

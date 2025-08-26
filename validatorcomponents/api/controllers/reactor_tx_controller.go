@@ -202,9 +202,15 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 
 	txInfo, _, err := txSender.CreateBridgingTx(
 		context.Background(),
-		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, requestBody.BridgingAddress, requestBody.BridgingFee,
-		0,
+		sendtx.BridgingTxInput{
+			SrcChainID:      requestBody.SourceChainID,
+			DstChainID:      requestBody.DestinationChainID,
+			SenderAddr:      requestBody.SenderAddr,
+			Receivers:       receivers,
+			BridgingAddress: requestBody.BridgingAddress,
+			BridgingFee:     requestBody.BridgingFee,
+			OperationFee:    0,
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build tx: %w", err)
