@@ -53,6 +53,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		BridgingSettings: oCore.BridgingSettings{
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			Directions: map[string][]string{
+				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus},
+				common.ChainIDStrVector: {common.ChainIDStrPrime},
+				common.ChainIDStrNexus:  {common.ChainIDStrPrime},
+			},
 		},
 	}
 	appConfig.FillOut()
@@ -93,7 +98,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim transaction direction not allowed - invalid destination chain", func(t *testing.T) {
 		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -110,10 +115,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim transaction direction not allowed ", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -130,7 +135,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {

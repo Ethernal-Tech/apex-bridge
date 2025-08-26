@@ -25,6 +25,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "addr_test1vzv206r2s6c5y3rr9eexxnlppz8lm048empp8zvtwjkn9cqleec9x"
+		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
 	)
 
@@ -61,6 +62,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		BridgingSettings: cCore.BridgingSettings{
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			Directions: map[string][]string{
+				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus},
+				common.ChainIDStrVector: {common.ChainIDStrPrime},
+				common.ChainIDStrNexus:  {common.ChainIDStrPrime},
+			},
 		},
 	}
 	appConfig.FillOut()
@@ -105,7 +111,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim origin transaction direction not allowed - chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -130,7 +136,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
