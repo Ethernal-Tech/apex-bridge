@@ -8,6 +8,25 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 )
 
+// Validate if there is only fee address
+func ValidateFeeOnlyTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	if len(tx.Tx.Inputs) != 1 {
+		return fmt.Errorf("bad number of tx inputs")
+	}
+
+	address := tx.Tx.Inputs[0].Output.Address
+	if address != chainConfig.BridgingAddresses.FeeAddress {
+		return fmt.Errorf("fee address not found in tx input")
+	}
+
+	return nil
+}
+
 // Validate if all tx inputs belong to the multisig address or fee address
 func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	foundBridgingAddress := false

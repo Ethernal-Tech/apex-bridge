@@ -86,7 +86,7 @@ func (df *CardanoBridgeDataFetcherImpl) FetchLatestBlockPoint(chainID string) (*
 
 func (df *CardanoBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeExpectedCardanoTx, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
-		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainID)
+		lastBatchRawTx, _, err := df.bridgeSC.GetRawTransactionAndBatchTypeFromLastBatch(df.ctx, chainID)
 		if err == nil {
 			if len(lastBatchRawTx) == 0 {
 				return nil, nil
