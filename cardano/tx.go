@@ -136,6 +136,7 @@ func CreateTx(
 
 func GetOutputsSumForAddress(addr string, addrAndAmountToDeduct []common.AddressAndAmount) map[string]uint64 {
 	result := map[string]uint64{}
+
 	for _, addrAndAmount := range addrAndAmountToDeduct {
 		if addrAndAmount.Address == addr {
 			for name, token := range addrAndAmount.TokensAmounts {

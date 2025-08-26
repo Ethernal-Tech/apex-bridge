@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const tokenName = "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
+
 func TestBridgingAddressesCoordinator(t *testing.T) {
 	chainID := common.ChainIDIntPrime
 
@@ -167,6 +169,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 		})
+
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
 		require.Equal(t, uint64(10000000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -213,6 +216,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			},
 		})
 		require.Error(t, err)
+		require.ErrorContains(t, err, "not enough b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431 native token funds")
 		require.Nil(t, amounts)
 	})
 
@@ -255,6 +259,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		})
 
 		require.Error(t, err)
+		require.ErrorContains(t, err, "couldn't select UTXOs")
 		require.Nil(t, amounts)
 	})
 
@@ -388,7 +393,6 @@ func TestRedistributeTokens(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
 
-		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)
 
@@ -611,7 +615,6 @@ func TestRedistributeTokens(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
 
-		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)
 
@@ -698,7 +701,6 @@ func TestRedistributeTokens(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
 
-		tokenName := "b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431"
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)
 

@@ -39,7 +39,9 @@ func (params *redistributeBridgingAddrsTokensParams) ValidateFlags() error {
 }
 
 // Execute implements common.CliCommandExecutor.
-func (params *redistributeBridgingAddrsTokensParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (params *redistributeBridgingAddrsTokensParams) Execute(
+	outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
 

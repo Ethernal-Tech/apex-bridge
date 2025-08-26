@@ -197,15 +197,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	[]common.AddressAndAmount,
 	error,
 ) {
-	// TODO: maybe merge these 3 in single function
-	hasBridgingTx := false
-	for _, tx := range confirmedTransactions {
-		if tx.TransactionType == uint8(common.BridgingConfirmedTxType) {
-			hasBridgingTx = true
-		}
-	}
-
-	certificateData, err := cco.getCertificateData(data, confirmedTransactions)
+	certificateData, hasBridgingTx, err := cco.getCertificateData(data, confirmedTransactions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -279,6 +271,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	var addrAndAmountToDeduct []common.AddressAndAmount
+
 	if isRedistribution {
 		txOutputs.Outputs, err = addRedistributionOutputs(txOutputs.Outputs, multisigAddresses)
 		if err != nil {
@@ -556,6 +549,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		if isRedistribution {
 			if len(multisigUtxos) > getMaxUtxoCount(cco.config, len(feeUtxos)+chosenMultisigUtxosSoFar) {
 				cco.logger.Debug("REDISTRIBUTION ErrUTXOsLimitReached", "multisigUtxos count", len(multisigUtxos))
+
 				return nil, fmt.Errorf(
 					"%w", cardanowallet.ErrUTXOsLimitReached)
 			}
@@ -683,22 +677,28 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 
 func (cco *CardanoChainOperations) getCertificateData(
 	data *batchInitialData, confirmedTransactions []eth.ConfirmedTransaction,
-) (*cardano.CertificatesData, error) {
+) (*cardano.CertificatesData, bool, error) {
 	var (
 		certificates         []*cardano.CertificatesWithScript
 		keyRegistrationFee   uint64
 		keyDeregistrationFee uint64
+		hasBridgingTx        = false
 	)
 
 	for _, tx := range confirmedTransactions {
 		if tx.TransactionType == uint8(common.StakeConfirmedTxType) {
-			policyScript, ok := cco.bridgingAddressesManager.GetPaymentPolicyScript(data.ChainID, tx.BridgeAddrIndex)
+			policyScript, ok := cco.bridgingAddressesManager.GetStakePolicyScript(data.ChainID, tx.BridgeAddrIndex)
 			if !ok {
-				return nil, fmt.Errorf("failed to get payment policy script for address: %d", tx.BridgeAddrIndex)
+				return nil, false, fmt.Errorf("failed to get stake policy script for address: %d", tx.BridgeAddrIndex)
+			}
+
+			multisigStakeAddress, ok := cco.bridgingAddressesManager.GetStakeAddressFromIndex(data.ChainID, tx.BridgeAddrIndex)
+			if !ok {
+				return nil, false, fmt.Errorf("failed to get stake address from index: %d", tx.BridgeAddrIndex)
 			}
 
 			certificate, depositAmount, err := getStakingCertificates(
-				cco.cardanoCliBinary, uint(cco.config.NetworkMagic), data, &tx, policyScript)
+				cco.cardanoCliBinary, data, &tx, policyScript, multisigStakeAddress)
 
 			if errors.Is(err, errSkipConfirmedTx) {
 				cco.logger.Error("Staking delegation transaction skipped",
@@ -706,7 +706,7 @@ func (cco *CardanoChainOperations) getCertificateData(
 
 				continue
 			} else if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 
 			certificates = append(certificates, certificate)
@@ -718,6 +718,8 @@ func (cco *CardanoChainOperations) getCertificateData(
 			if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
 				keyDeregistrationFee += depositAmount
 			}
+		} else {
+			hasBridgingTx = true
 		}
 	}
 
@@ -726,10 +728,10 @@ func (cco *CardanoChainOperations) getCertificateData(
 			Certificates:      certificates,
 			RegistrationFee:   keyRegistrationFee,
 			DeregistrationFee: keyDeregistrationFee,
-		}, nil
+		}, hasBridgingTx, nil
 	}
 
-	return nil, nil
+	return nil, hasBridgingTx, nil
 }
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {

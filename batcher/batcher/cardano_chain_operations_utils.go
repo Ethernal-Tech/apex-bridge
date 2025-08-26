@@ -16,16 +16,13 @@ import (
 )
 
 func getStakingCertificates(
-	cardanoCliBinary string, networkMagic uint,
-	data *batchInitialData, tx *eth.ConfirmedTransaction,
+	cardanoCliBinary string,
+	data *batchInitialData,
+	tx *eth.ConfirmedTransaction,
 	policyScript *cardanowallet.PolicyScript,
+	multisigStakeAddress string,
 ) (*cardano.CertificatesWithScript, uint64, error) {
 	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
-
-	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScript)
-	if err != nil {
-		return nil, 0, err
-	}
 
 	certs := make([]cardanowallet.ICertificate, 0)
 
@@ -82,11 +79,11 @@ func getOutputs(
 		}
 
 		if transaction.TransactionType == uint8(common.RedistributionConfirmedTxType) {
-			logger.Debug("REDISTRIBUTION")
+			logger.Debug("Triggered redistribution")
 			isRedistribution = true
+
 			continue
 		}
-		logger.Debug("NON REDISTRIBUTION")
 
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
@@ -166,7 +163,9 @@ func createUtxoSelectionAmounts(desiredAmounts map[string]uint64, minUtxoLovelac
 	for k, v := range desiredAmounts {
 		utxoSelectionAmounts[k] = v
 	}
+
 	utxoSelectionAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+
 	return utxoSelectionAmounts
 }
 
@@ -251,6 +250,7 @@ func addRedistributionOutputs(
 		// TODO: handle duplicates if needed
 		outputs = append(outputs, output)
 	}
+
 	return outputs, nil
 }
 

@@ -171,8 +171,8 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
-	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+	t.Run("GetAddressesAndAmounts returns error", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
@@ -180,7 +180,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
@@ -191,7 +191,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
@@ -212,7 +212,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
@@ -244,7 +244,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
@@ -255,7 +255,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GetPaymentAddressFromIndex return false", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -267,7 +267,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -280,7 +280,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	})
 
 	t.Run("should pass", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -301,7 +301,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			TransactionType: uint8(common.RedistributionConfirmedTxType),
 		}
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -343,9 +343,9 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 		signatures, err := cco.SignBatchTransaction(&core.GeneratedBatchTxData{TxRaw: txRaw, IsPaymentSignNeeded: true})
 		require.NoError(t, err)
-		require.Nil(t, signatures.Multisig)
+		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
-		require.NotNil(t, signatures.MultsigStake)
+		require.Nil(t, signatures.MultsigStake)
 	})
 }
 
@@ -395,7 +395,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		BlockHeight:        big.NewInt(1),
 		SourceChainId:      common.ChainIDIntPrime,
 		DestinationChainId: common.ChainIDIntPrime,
-		TransactionType:    uint8(common.StakeDelConfirmedTxType),
+		TransactionType:    uint8(common.StakeConfirmedTxType),
 		StakePoolId:        "pool1f0drqjkgfhqcdeyvfuvgv9hsss59hpfj5rrrk9hlg7tm29tmkjr",
 	}
 	batchNonceID := uint64(1)
@@ -447,10 +447,10 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		require.ErrorContains(t, err, "failed to get stake address from index")
 	})
 
-	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
+	t.Run("GetAddressesAndAmounts returns error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
@@ -460,7 +460,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
@@ -473,7 +473,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
@@ -496,7 +496,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
@@ -530,7 +530,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
@@ -543,7 +543,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GetPaymentAddressFromIndex return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -557,7 +557,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -572,7 +572,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	t.Run("should pass", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -708,10 +708,10 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.ErrorContains(t, err, "failed to get stake address from index")
 	})
 
-	t.Run("GetAddressesAndAmountsToPayFrom returns error", func(t *testing.T) {
+	t.Run("GetAddressesAndAmounts returns error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
@@ -721,7 +721,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GetAllTxOutputs return error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput(nil), testError).Once()
@@ -734,7 +734,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
@@ -757,7 +757,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
@@ -791,7 +791,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
@@ -804,7 +804,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -818,7 +818,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -833,7 +833,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	t.Run("should pass", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -1183,7 +1183,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
@@ -1341,7 +1341,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
@@ -1640,7 +1640,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", bridgingAddr2, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsToPayFrom", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmounts", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", uint8(2), uint8(0)).Return(bridgingAddr1, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", uint8(2), uint8(1)).Return(bridgingAddr2, true)
@@ -1818,24 +1818,33 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 	keyHash2, err := cardanowallet.GetKeyHash(wallet2.StakeVerificationKey)
 	require.NoError(t, err)
 
+	policyScript := cardanowallet.NewPolicyScript([]string{keyHash1, keyHash2}, 2)
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(uint(cardanowallet.MainNetNetwork), policyScript)
+	require.NoError(t, err)
+
 	txProviderMock := &cardano.TxProviderTestMock{
 		ReturnDefaultParameters: true,
 	}
+
+	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+	bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(policyScript, true)
+	bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return(multisigStakeAddress, true)
+
 	cco := &CardanoChainOperations{
 		config: &cardano.CardanoChainConfig{
 			NetworkMagic: uint32(cardanowallet.MainNetNetwork),
 		},
-		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
-		txProvider:       txProviderMock,
-		logger:           hclog.NewNullLogger(),
+		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		txProvider:               txProviderMock,
+		logger:                   hclog.NewNullLogger(),
+		bridgingAddressesManager: bridgingAddressesManagerMock,
 	}
-	batchData := &batchInitialData{
-		MultisigStakeKeyHashes: []string{keyHash1, keyHash2},
-	}
+	batchData := &batchInitialData{}
 	batchData.ProtocolParams, _ = txProviderMock.GetProtocolParameters(context.Background())
 
 	t.Run("one invalid, one valid stake pool id", func(t *testing.T) {
-		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+		certs, _, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
 			{StakePoolId: "0x999", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
@@ -1846,7 +1855,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 	})
 
 	t.Run("two valid stake pool ids", func(t *testing.T) {
-		certs, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+		certs, _, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
 			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
@@ -1863,7 +1872,7 @@ func TestCardanoChainOperations_getCertificateData(t *testing.T) {
 
 		batchData.ProtocolParams = nil
 
-		_, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
+		_, _, err := cco.getCertificateData(batchData, []eth.ConfirmedTransaction{
 			{StakePoolId: "pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7", TransactionType: uint8(common.StakeConfirmedTxType), TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType)},
 		})
 
