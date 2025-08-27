@@ -49,11 +49,3 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsToStakeTo(
 
 	return arg0, args.Error(1)
 }
-
-func (m *BridgingAddressesCoordinatorMock) GetAllAddresses(chainID uint8) []string {
-	args := m.Called(chainID)
-	//
-	arg0, _ := args.Get(0).([]string)
-	//
-	return arg0
-}

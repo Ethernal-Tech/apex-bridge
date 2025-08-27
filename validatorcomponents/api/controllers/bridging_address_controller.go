@@ -15,16 +15,20 @@ import (
 
 type BridgingAddressControllerImpl struct {
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
+	bridgingAddressManager       common.BridgingAddressesManager
 	logger                       hclog.Logger
 }
 
 var _ apiCore.APIController = (*BridgingAddressControllerImpl)(nil)
 
 func NewBridgingAddressController(
-	bridgingAddressesCoordinator common.BridgingAddressesCoordinator, logger hclog.Logger,
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
+	bridgingAddressManager common.BridgingAddressesManager,
+	logger hclog.Logger,
 ) *BridgingAddressControllerImpl {
 	return &BridgingAddressControllerImpl{
 		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
+		bridgingAddressManager:       bridgingAddressManager,
 		logger:                       logger,
 	}
 }
@@ -103,7 +107,7 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddresses := c.bridgingAddressesCoordinator.GetAllAddresses(chainID)
+	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewAllBridgingAddressesResponse(
 		bridgingAddresses), c.logger)
