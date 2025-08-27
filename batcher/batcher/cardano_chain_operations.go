@@ -207,7 +207,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	cco.logger.Debug("Getting addresses and amounts to pay from", "outputs", txOutputs.Outputs)
+	cco.logger.Debug("Getting addresses and amounts", "outputs", txOutputs.Outputs, "redistribution", isRedistribution)
 
 	multisigAddresses, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmounts(
 		data.ChainID,
