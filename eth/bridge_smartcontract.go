@@ -31,6 +31,7 @@ type IBridgeSmartContract interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
+	GetBridgingAddressesCount(ctx context.Context, chainID string) (uint8, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -327,4 +328,29 @@ func (bsc *BridgeSmartContractImpl) GetBatchStatusAndTransactions(
 	}
 
 	return result.Status, result.Txs, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetBridgingAddressesCount(
+	ctx context.Context, chainID string,
+) (uint8, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.GetBridgingAddressesCount(&bind.CallOpts{
+		Context: ctx,
+	}, common.ToNumChainID(chainID))
+	if err != nil {
+		return 0, fmt.Errorf("error while GetBridgingAddressesCount: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result, nil
 }

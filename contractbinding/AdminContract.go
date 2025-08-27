@@ -31,7 +31,7 @@ var (
 
 // AdminContractMetaData contains all meta data concerning the AdminContract contract.
 var AdminContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"BridgingAddrCountAlreadyInit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgeAddrIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgingAddrCount\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgingAddrCount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"InvalidStakeTransactionSubType\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgingAddresses\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotUpgradeAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_blocksCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxBlocksCount\",\"type\":\"uint256\"}],\"name\":\"TooManyBlocks\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_claimsCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxClaimsCount\",\"type\":\"uint256\"}],\"name\":\"TooManyClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_receiversCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxReceiversCount\",\"type\":\"uint256\"}],\"name\":\"TooManyReceivers\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"StakeOperationFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainWrappedTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint256\"}],\"name\":\"UpdatedMaxNumberOfTransactions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint256\"}],\"name\":\"UpdatedTimeoutBlocksNumber\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amountWrapped\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainWrappedTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainWrappedTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"}],\"name\":\"updateMaxNumberOfTransactions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"name\":\"updateTimeoutBlocksNumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"BridgingAddrCountAlreadyInit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgeAddrIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgingAddrCount\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgingAddrCount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"InvalidStakeTransactionSubType\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgingAddresses\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotUpgradeAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_blocksCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxBlocksCount\",\"type\":\"uint256\"}],\"name\":\"TooManyBlocks\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_claimsCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxClaimsCount\",\"type\":\"uint256\"}],\"name\":\"TooManyClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_receiversCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxReceiversCount\",\"type\":\"uint256\"}],\"name\":\"TooManyReceivers\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"StakeOperationFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"TokensRedistributionFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainWrappedTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint256\"}],\"name\":\"UpdatedMaxNumberOfTransactions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint256\"}],\"name\":\"UpdatedTimeoutBlocksNumber\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"bridgingAddresses\",\"outputs\":[{\"internalType\":\"contractBridgingAddresses\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amountWrapped\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainWrappedTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"}],\"name\":\"redistributeBridgingAddrsTokens\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridgingAddresses\",\"type\":\"address\"}],\"name\":\"setBridgingAddrsDependency\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgeAddrIndex\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"stakePoolId\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"transactionSubType\",\"type\":\"uint8\"}],\"name\":\"stakeAddressOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgingAddrsCount\",\"type\":\"uint8\"}],\"name\":\"updateBridgingAddrsCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainWrappedTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"}],\"name\":\"updateMaxNumberOfTransactions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"name\":\"updateTimeoutBlocksNumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
 }
 
 // AdminContractABI is the input ABI used to generate the binding from.
@@ -178,6 +178,37 @@ func (_AdminContract *AdminContractTransactorRaw) Transfer(opts *bind.TransactOp
 // Transact invokes the (paid) contract method with params as input values.
 func (_AdminContract *AdminContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _AdminContract.Contract.contract.Transact(opts, method, params...)
+}
+
+// BridgingAddresses is a free data retrieval call binding the contract method 0xd67c2ccf.
+//
+// Solidity: function bridgingAddresses() view returns(address)
+func (_AdminContract *AdminContractCaller) BridgingAddresses(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _AdminContract.contract.Call(opts, &out, "bridgingAddresses")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// BridgingAddresses is a free data retrieval call binding the contract method 0xd67c2ccf.
+//
+// Solidity: function bridgingAddresses() view returns(address)
+func (_AdminContract *AdminContractSession) BridgingAddresses() (common.Address, error) {
+	return _AdminContract.Contract.BridgingAddresses(&_AdminContract.CallOpts)
+}
+
+// BridgingAddresses is a free data retrieval call binding the contract method 0xd67c2ccf.
+//
+// Solidity: function bridgingAddresses() view returns(address)
+func (_AdminContract *AdminContractCallerSession) BridgingAddresses() (common.Address, error) {
+	return _AdminContract.Contract.BridgingAddresses(&_AdminContract.CallOpts)
 }
 
 // FundAdmin is a free data retrieval call binding the contract method 0x9c456583.
@@ -408,6 +439,27 @@ func (_AdminContract *AdminContractTransactorSession) Initialize(_owner common.A
 	return _AdminContract.Contract.Initialize(&_AdminContract.TransactOpts, _owner, _upgradeAdmin)
 }
 
+// RedistributeBridgingAddrsTokens is a paid mutator transaction binding the contract method 0xd77681ee.
+//
+// Solidity: function redistributeBridgingAddrsTokens(uint8 chainId) returns()
+func (_AdminContract *AdminContractTransactor) RedistributeBridgingAddrsTokens(opts *bind.TransactOpts, chainId uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "redistributeBridgingAddrsTokens", chainId)
+}
+
+// RedistributeBridgingAddrsTokens is a paid mutator transaction binding the contract method 0xd77681ee.
+//
+// Solidity: function redistributeBridgingAddrsTokens(uint8 chainId) returns()
+func (_AdminContract *AdminContractSession) RedistributeBridgingAddrsTokens(chainId uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.RedistributeBridgingAddrsTokens(&_AdminContract.TransactOpts, chainId)
+}
+
+// RedistributeBridgingAddrsTokens is a paid mutator transaction binding the contract method 0xd77681ee.
+//
+// Solidity: function redistributeBridgingAddrsTokens(uint8 chainId) returns()
+func (_AdminContract *AdminContractTransactorSession) RedistributeBridgingAddrsTokens(chainId uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.RedistributeBridgingAddrsTokens(&_AdminContract.TransactOpts, chainId)
+}
+
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
 // Solidity: function renounceOwnership() returns()
@@ -427,6 +479,27 @@ func (_AdminContract *AdminContractSession) RenounceOwnership() (*types.Transact
 // Solidity: function renounceOwnership() returns()
 func (_AdminContract *AdminContractTransactorSession) RenounceOwnership() (*types.Transaction, error) {
 	return _AdminContract.Contract.RenounceOwnership(&_AdminContract.TransactOpts)
+}
+
+// SetBridgingAddrsDependency is a paid mutator transaction binding the contract method 0x0d0934fb.
+//
+// Solidity: function setBridgingAddrsDependency(address _bridgingAddresses) returns()
+func (_AdminContract *AdminContractTransactor) SetBridgingAddrsDependency(opts *bind.TransactOpts, _bridgingAddresses common.Address) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "setBridgingAddrsDependency", _bridgingAddresses)
+}
+
+// SetBridgingAddrsDependency is a paid mutator transaction binding the contract method 0x0d0934fb.
+//
+// Solidity: function setBridgingAddrsDependency(address _bridgingAddresses) returns()
+func (_AdminContract *AdminContractSession) SetBridgingAddrsDependency(_bridgingAddresses common.Address) (*types.Transaction, error) {
+	return _AdminContract.Contract.SetBridgingAddrsDependency(&_AdminContract.TransactOpts, _bridgingAddresses)
+}
+
+// SetBridgingAddrsDependency is a paid mutator transaction binding the contract method 0x0d0934fb.
+//
+// Solidity: function setBridgingAddrsDependency(address _bridgingAddresses) returns()
+func (_AdminContract *AdminContractTransactorSession) SetBridgingAddrsDependency(_bridgingAddresses common.Address) (*types.Transaction, error) {
+	return _AdminContract.Contract.SetBridgingAddrsDependency(&_AdminContract.TransactOpts, _bridgingAddresses)
 }
 
 // SetDependencies is a paid mutator transaction binding the contract method 0x8389cb18.
@@ -471,6 +544,27 @@ func (_AdminContract *AdminContractTransactorSession) SetFundAdmin(_fundAdmin co
 	return _AdminContract.Contract.SetFundAdmin(&_AdminContract.TransactOpts, _fundAdmin)
 }
 
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_AdminContract *AdminContractTransactor) StakeAddressOperation(opts *bind.TransactOpts, chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "stakeAddressOperation", chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
+}
+
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_AdminContract *AdminContractSession) StakeAddressOperation(chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.StakeAddressOperation(&_AdminContract.TransactOpts, chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
+}
+
+// StakeAddressOperation is a paid mutator transaction binding the contract method 0x4354439c.
+//
+// Solidity: function stakeAddressOperation(uint8 chainId, uint8 bridgeAddrIndex, string stakePoolId, uint8 transactionSubType) returns()
+func (_AdminContract *AdminContractTransactorSession) StakeAddressOperation(chainId uint8, bridgeAddrIndex uint8, stakePoolId string, transactionSubType uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.StakeAddressOperation(&_AdminContract.TransactOpts, chainId, bridgeAddrIndex, stakePoolId, transactionSubType)
+}
+
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
 // Solidity: function transferOwnership(address newOwner) returns()
@@ -490,6 +584,27 @@ func (_AdminContract *AdminContractSession) TransferOwnership(newOwner common.Ad
 // Solidity: function transferOwnership(address newOwner) returns()
 func (_AdminContract *AdminContractTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
 	return _AdminContract.Contract.TransferOwnership(&_AdminContract.TransactOpts, newOwner)
+}
+
+// UpdateBridgingAddrsCount is a paid mutator transaction binding the contract method 0xe789545c.
+//
+// Solidity: function updateBridgingAddrsCount(uint8 _chainId, uint8 bridgingAddrsCount) returns()
+func (_AdminContract *AdminContractTransactor) UpdateBridgingAddrsCount(opts *bind.TransactOpts, _chainId uint8, bridgingAddrsCount uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateBridgingAddrsCount", _chainId, bridgingAddrsCount)
+}
+
+// UpdateBridgingAddrsCount is a paid mutator transaction binding the contract method 0xe789545c.
+//
+// Solidity: function updateBridgingAddrsCount(uint8 _chainId, uint8 bridgingAddrsCount) returns()
+func (_AdminContract *AdminContractSession) UpdateBridgingAddrsCount(_chainId uint8, bridgingAddrsCount uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateBridgingAddrsCount(&_AdminContract.TransactOpts, _chainId, bridgingAddrsCount)
+}
+
+// UpdateBridgingAddrsCount is a paid mutator transaction binding the contract method 0xe789545c.
+//
+// Solidity: function updateBridgingAddrsCount(uint8 _chainId, uint8 bridgingAddrsCount) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateBridgingAddrsCount(_chainId uint8, bridgingAddrsCount uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateBridgingAddrsCount(&_AdminContract.TransactOpts, _chainId, bridgingAddrsCount)
 }
 
 // UpdateChainTokenQuantity is a paid mutator transaction binding the contract method 0x0504334f.
@@ -1850,6 +1965,140 @@ func (_AdminContract *AdminContractFilterer) WatchStakeOperationFailedAfterMulti
 func (_AdminContract *AdminContractFilterer) ParseStakeOperationFailedAfterMultipleRetries(log types.Log) (*AdminContractStakeOperationFailedAfterMultipleRetries, error) {
 	event := new(AdminContractStakeOperationFailedAfterMultipleRetries)
 	if err := _AdminContract.contract.UnpackLog(event, "StakeOperationFailedAfterMultipleRetries", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator is returned from FilterTokensRedistributionFailedAfterMultipleRetries and is used to iterate over the raw logs and unpacked data for TokensRedistributionFailedAfterMultipleRetries events raised by the AdminContract contract.
+type AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator struct {
+	Event *AdminContractTokensRedistributionFailedAfterMultipleRetries // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractTokensRedistributionFailedAfterMultipleRetries)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractTokensRedistributionFailedAfterMultipleRetries)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractTokensRedistributionFailedAfterMultipleRetries represents a TokensRedistributionFailedAfterMultipleRetries event raised by the AdminContract contract.
+type AdminContractTokensRedistributionFailedAfterMultipleRetries struct {
+	ChainId uint8
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterTokensRedistributionFailedAfterMultipleRetries is a free log retrieval operation binding the contract event 0xc6b45103f097cb46857ced9f0723a22f0f918673dd7e86ceed3dcff5cabbae59.
+//
+// Solidity: event TokensRedistributionFailedAfterMultipleRetries(uint8 _chainId)
+func (_AdminContract *AdminContractFilterer) FilterTokensRedistributionFailedAfterMultipleRetries(opts *bind.FilterOpts) (*AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator, error) {
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "TokensRedistributionFailedAfterMultipleRetries")
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractTokensRedistributionFailedAfterMultipleRetriesIterator{contract: _AdminContract.contract, event: "TokensRedistributionFailedAfterMultipleRetries", logs: logs, sub: sub}, nil
+}
+
+// WatchTokensRedistributionFailedAfterMultipleRetries is a free log subscription operation binding the contract event 0xc6b45103f097cb46857ced9f0723a22f0f918673dd7e86ceed3dcff5cabbae59.
+//
+// Solidity: event TokensRedistributionFailedAfterMultipleRetries(uint8 _chainId)
+func (_AdminContract *AdminContractFilterer) WatchTokensRedistributionFailedAfterMultipleRetries(opts *bind.WatchOpts, sink chan<- *AdminContractTokensRedistributionFailedAfterMultipleRetries) (event.Subscription, error) {
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "TokensRedistributionFailedAfterMultipleRetries")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractTokensRedistributionFailedAfterMultipleRetries)
+				if err := _AdminContract.contract.UnpackLog(event, "TokensRedistributionFailedAfterMultipleRetries", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTokensRedistributionFailedAfterMultipleRetries is a log parse operation binding the contract event 0xc6b45103f097cb46857ced9f0723a22f0f918673dd7e86ceed3dcff5cabbae59.
+//
+// Solidity: event TokensRedistributionFailedAfterMultipleRetries(uint8 _chainId)
+func (_AdminContract *AdminContractFilterer) ParseTokensRedistributionFailedAfterMultipleRetries(log types.Log) (*AdminContractTokensRedistributionFailedAfterMultipleRetries, error) {
+	event := new(AdminContractTokensRedistributionFailedAfterMultipleRetries)
+	if err := _AdminContract.contract.UnpackLog(event, "TokensRedistributionFailedAfterMultipleRetries", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

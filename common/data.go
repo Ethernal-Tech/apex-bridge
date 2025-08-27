@@ -28,10 +28,11 @@ const (
 	ReactorMode VCRunMode = "reactor"
 	SkylineMode VCRunMode = "skyline"
 
-	BridgingConfirmedTxType ConfirmedTxType = 0
-	DefundConfirmedTxType   ConfirmedTxType = 1
-	RefundConfirmedTxType   ConfirmedTxType = 2
-	StakeConfirmedTxType    ConfirmedTxType = 3
+	BridgingConfirmedTxType       ConfirmedTxType = 0
+	DefundConfirmedTxType         ConfirmedTxType = 1
+	RefundConfirmedTxType         ConfirmedTxType = 2
+	StakeConfirmedTxType          ConfirmedTxType = 3
+	RedistributionConfirmedTxType ConfirmedTxType = 4
 
 	StakeRegDelConfirmedTxSubType StakeConfirmedTxSubType = 0
 	StakeDelConfirmedTxSubType    StakeConfirmedTxSubType = 1
@@ -84,5 +85,6 @@ func NewHashFromBytes(bytes []byte) Hash {
 
 func IsDirectlyConfirmedTransaction(txType uint8) bool {
 	return txType == uint8(StakeConfirmedTxType) ||
-		txType == uint8(DefundConfirmedTxType)
+		txType == uint8(DefundConfirmedTxType) ||
+		txType == uint8(RedistributionConfirmedTxType)
 }

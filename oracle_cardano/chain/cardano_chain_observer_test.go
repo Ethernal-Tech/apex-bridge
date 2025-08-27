@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
@@ -90,6 +91,10 @@ func TestCardanoChainObserver(t *testing.T) {
 	txsReceiverMock := &core.CardanoTxsReceiverMock{}
 	txsReceiverMock.On("NewUnprocessedTxs", mock.Anything, mock.Anything).Return(error(nil))
 
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju5uv")
+
 	initDB := func(t *testing.T) indexer.Database {
 		t.Helper()
 
@@ -109,7 +114,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, brAddrManagerMock, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -127,7 +132,7 @@ func TestCardanoChainObserver(t *testing.T) {
 
 		indexerDB := initDB(t)
 
-		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(context.Background(), chainConfig, txsReceiverMock, db, indexerDB, brAddrManagerMock, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -155,7 +160,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, logger)
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, brAddrManagerMock, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -180,7 +185,7 @@ func TestCardanoChainObserver(t *testing.T) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
 
-		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, hclog.NewNullLogger())
+		chainObserver, err := NewCardanoChainObserver(ctx, chainConfig, txsReceiverMock, db, indexerDB, brAddrManagerMock, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 

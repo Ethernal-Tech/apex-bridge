@@ -104,3 +104,34 @@ func Test_GetKnownTokens(t *testing.T) {
 	require.Equal(t, 1, len(retTokens))
 	require.Equal(t, token2, retTokens[0])
 }
+
+func Test_subtractTxOutputsFromSumMap(t *testing.T) {
+	tok1, err := GetNativeTokenFromName("3.31")
+	require.NoError(t, err)
+
+	tok2, err := GetNativeTokenFromName("3.32")
+	require.NoError(t, err)
+
+	tok3, err := GetNativeTokenFromName("3.33")
+	require.NoError(t, err)
+
+	tok4, err := GetNativeTokenFromName("3.34")
+	require.NoError(t, err)
+
+	vals := subtractTxOutputsFromSumMap(map[string]uint64{
+		wallet.AdaTokenName: 200,
+		tok1.String():       400,
+		tok2.String():       500,
+		tok4.String():       1000,
+	}, []wallet.TxOutput{
+		wallet.NewTxOutput("", 100, wallet.NewTokenAmount(tok1, 200), wallet.NewTokenAmount(tok2, 205)),
+		wallet.NewTxOutput("", 50, wallet.NewTokenAmount(tok1, 150), wallet.NewTokenAmount(tok3, 300)),
+		wallet.NewTxOutput("", 10, wallet.NewTokenAmount(tok2, 300)),
+	})
+
+	require.Equal(t, map[string]uint64{
+		wallet.AdaTokenName: 40,
+		tok1.String():       50,
+		tok4.String():       1000,
+	}, vals)
+}

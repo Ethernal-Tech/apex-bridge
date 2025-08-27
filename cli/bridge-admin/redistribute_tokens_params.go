@@ -14,26 +14,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type stakeDeregParams struct {
+type redistributeBridgingAddrsTokensParams struct {
 	chainID          string
-	bridgeAddrIdx    int8
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
-func (params *stakeDeregParams) ValidateFlags() error {
+func (params *redistributeBridgingAddrsTokensParams) ValidateFlags() error {
 	if !common.IsValidHTTPURL(params.bridgeNodeURL) {
 		return fmt.Errorf("invalid --%s flag", bridgeNodeURLFlag)
 	}
 
 	if params.chainID == "" {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
-	}
-
-	if params.bridgeAddrIdx < 0 {
-		return fmt.Errorf("--%s flag not specified or negative", bridgeAddrIdxFlag)
 	}
 
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
@@ -44,10 +39,11 @@ func (params *stakeDeregParams) ValidateFlags() error {
 }
 
 // Execute implements common.CliCommandExecutor.
-func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (params *redistributeBridgingAddrsTokensParams) Execute(
+	outputter common.OutputFormatter,
+) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
-	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -76,7 +72,7 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, "", uint8(common.StakeDeregConfirmedTxSubType))
+		"redistributeBridgingAddrsTokens", chainIDInt)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +81,7 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.StakeAddressOperation(
-				opts,
-				chainIDInt,
-				bridgeAddrIndex,
-				"",
-				uint8(common.StakeDeregConfirmedTxSubType),
-			)
+			return contract.RedistributeBridgingAddrsTokens(opts, chainIDInt)
 		})
 	if err != nil {
 		return nil, err
@@ -107,22 +97,15 @@ func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (commo
 		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
-	return &chainTokenQuantityResult{}, err
+	return &successResult{}, err
 }
 
-func (params *stakeDeregParams) RegisterFlags(cmd *cobra.Command) {
+func (params *redistributeBridgingAddrsTokensParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.chainID,
 		chainIDFlag,
 		"",
 		chainIDFlagDesc,
-	)
-
-	cmd.Flags().Int8Var(
-		&params.bridgeAddrIdx,
-		bridgeAddrIdxFlag,
-		-1,
-		bridgeAddrIdxFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -150,5 +133,5 @@ func (params *stakeDeregParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 var (
-	_ common.CliCommandExecutor = (*stakeDeregParams)(nil)
+	_ common.CliCommandExecutor = (*redistributeBridgingAddrsTokensParams)(nil)
 )

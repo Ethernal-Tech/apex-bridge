@@ -81,14 +81,14 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, err
 	}
 
-	contract, err := contractbinding.NewBridgeContract(
-		apexBridgeScAddress,
+	contract, err := contractbinding.NewAdminContract(
+		apexBridgeAdminScAddress,
 		txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
 
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	abi, err := contractbinding.AdminContractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
+		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
 		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, params.stakePoolID, subType)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
-	return &chainTokenQuantityResult{}, err
+	return &successResult{}, nil
 }
 
 func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {

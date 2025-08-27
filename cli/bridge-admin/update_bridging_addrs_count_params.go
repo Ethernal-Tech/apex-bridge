@@ -67,20 +67,20 @@ func (params *updateBridgingAddrsCountParams) Execute(outputter common.OutputFor
 		return nil, err
 	}
 
-	contract, err := contractbinding.NewBridgeContract(
-		apexBridgeScAddress,
+	contract, err := contractbinding.NewAdminContract(
+		apexBridgeAdminScAddress,
 		txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
 
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	abi, err := contractbinding.AdminContractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
+		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
 		"updateBridgingAddrsCount", chainIDInt, params.bridgingAddrsCount)
 	if err != nil {
 		return nil, err

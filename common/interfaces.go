@@ -1,6 +1,10 @@
 package common
 
-import "context"
+import (
+	"context"
+
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+)
 
 type BridgingRequestStateUpdater interface {
 	New(srcChainID string, model *NewBridgingRequestStateModel) error
@@ -20,4 +24,35 @@ type ChainSpecificConfig interface {
 
 type IStartable interface {
 	Start(context.Context)
+}
+
+type BridgingAddressesManager interface {
+	GetAllPaymentAddresses(chainID uint8) []string
+	GetAllStakeAddresses(chainID uint8) []string
+	GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool)
+	GetStakeAddressIndex(chainID uint8, address string) (uint8, bool)
+	GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool)
+	GetStakeAddressFromIndex(chainID uint8, index uint8) (string, bool)
+	GetPaymentPolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
+	GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
+	GetFeeMultisigAddress(chainID uint8) string
+	GetFeeMultisigPolicyScript(chainID uint8) (*cardanowallet.PolicyScript, bool)
+}
+
+type AddressAndAmount struct {
+	AddressIndex  uint8
+	Address       string
+	TokensAmounts map[string]uint64
+	IncludeChange uint64
+	UtxoCount     int
+}
+
+type BridgingAddressesCoordinator interface {
+	GetAddressesAndAmounts(
+		chainID uint8,
+		cardanoCliBinary string,
+		isRedistribution bool,
+		protocolParams []byte,
+		txOutputs *[]cardanowallet.TxOutput) ([]AddressAndAmount, error)
+	GetAddressesAndAmountsToStakeTo(chainID uint8) (AddressAndAmount, error)
 }

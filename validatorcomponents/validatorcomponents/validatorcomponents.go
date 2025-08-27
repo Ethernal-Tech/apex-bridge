@@ -13,7 +13,8 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/api/utils"
 	batchermanager "github.com/Ethernal-Tech/apex-bridge/batcher/batcher_manager"
 	batcherCore "github.com/Ethernal-Tech/apex-bridge/batcher/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	bac "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_coordinator"
+	bam "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
@@ -32,7 +33,6 @@ import (
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -44,19 +44,21 @@ const (
 )
 
 type ValidatorComponentsImpl struct {
-	ctx               context.Context
-	shouldRunAPI      bool
-	oracleDB          *bbolt.DB
-	db                core.Database
-	cardanoIndexerDbs map[string]indexer.Database
-	oracle            *cardanoOracle.OracleImpl
-	ethOracle         *ethOracle.OracleImpl
-	batcherManager    batcherCore.BatcherManager
-	relayerImitator   core.RelayerImitator
-	api               apiCore.API
-	telemetry         *telemetry.Telemetry
-	telemetryWorker   *TelemetryWorker
-	logger            hclog.Logger
+	ctx                          context.Context
+	shouldRunAPI                 bool
+	oracleDB                     *bbolt.DB
+	db                           core.Database
+	cardanoIndexerDbs            map[string]indexer.Database
+	oracle                       *cardanoOracle.OracleImpl
+	ethOracle                    *ethOracle.OracleImpl
+	batcherManager               batcherCore.BatcherManager
+	relayerImitator              core.RelayerImitator
+	api                          apiCore.API
+	telemetry                    *telemetry.Telemetry
+	telemetryWorker              *TelemetryWorker
+	bridgingAddressesManager     common.BridgingAddressesManager
+	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
+	logger                       hclog.Logger
 }
 
 var _ core.ValidatorComponents = (*ValidatorComponentsImpl)(nil)
@@ -105,7 +107,7 @@ func NewValidatorComponents(
 	bridgeSmartContract := eth.NewBridgeSmartContract(
 		appConfig.Bridge.SmartContractAddress, ethHelper)
 
-	err = fixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
+	err = fixChainsInConfig(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
@@ -148,6 +150,21 @@ func NewValidatorComponents(
 	typeRegister := oracleCommonCore.NewTypeRegisterWithChains(
 		oracleConfig, reflect.TypeOf(cardanoOracleCore.CardanoTx{}), reflect.TypeOf(ethOracleCore.EthTx{}))
 
+	bridgingAddressesManager, err := bam.NewBridgingAdressesManager(
+		ctx,
+		appConfig.CardanoChains,
+		bridgeSmartContract,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bridging addresses manager: %w", err)
+	}
+
+	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
+		bridgingAddressesManager, cardanoIndexerDbs, logger)
+
+	oracleConfig.BridgingAddressesManager = bridgingAddressesManager
+
 	cardanoOracleObj, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleDB, typeRegister, oracleConfig,
 		oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
@@ -175,7 +192,8 @@ func NewValidatorComponents(
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, logger.Named("batcher"))
+		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
+		bridgingAddressesCoordinator, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
@@ -199,8 +217,10 @@ func NewValidatorComponents(
 				bridgingRequestStateManager, apiLogger.Named("bridging_request_state_controller")),
 			controllers.NewOracleStateController(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
-				getAddressesMap(oracleConfig.CardanoChains), apiLogger.Named("oracle_state")),
+				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
+			controllers.NewBridgingAddressController(
+				bridgingAddressesCoordinator, bridgingAddressesManager, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
@@ -224,7 +244,9 @@ func NewValidatorComponents(
 		telemetryWorker: NewTelemetryWorker(
 			ethHelper, cardanoIndexerDbs, ethIndexerDbs, oracleConfig,
 			appConfig.Telemetry.PullTime, logger.Named("telemetry_worker")),
-		logger: logger,
+		logger:                       logger,
+		bridgingAddressesManager:     bridgingAddressesManager,
+		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
 	}, nil
 }
 
@@ -321,16 +343,13 @@ func (v *ValidatorComponentsImpl) Dispose() error {
 	return nil
 }
 
-func fixChainsAndAddresses(
+func fixChainsInConfig(
 	ctx context.Context,
 	config *core.AppConfig,
 	smartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) error {
-	var (
-		allRegisteredChains []eth.Chain
-		validatorsData      []eth.ValidatorChainData
-	)
+	var allRegisteredChains []eth.Chain
 
 	logger.Debug("Retrieving all registered chains...")
 
@@ -365,47 +384,7 @@ func fixChainsAndAddresses(
 				return fmt.Errorf("no configuration for chain: %s", chainID)
 			}
 
-			err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-				validatorsData, err = smartContract.GetValidatorsChainData(ctxInner, chainID)
-				if err != nil {
-					logger.Error("Failed to GetAllRegisteredChains while creating ValidatorComponents. Retrying...", "err", err)
-				}
-
-				return err
-			})
-			if err != nil {
-				return fmt.Errorf("error while RetryForever of GetValidatorsChainData. err: %w", err)
-			}
-
-			keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
-			if err != nil {
-				return err
-			}
-
-			policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
-
-			logger.Debug("Validators chain data retrieved",
-				"data", eth.GetChainValidatorsDataInfoString(chainID, validatorsData))
-
-			addrs, err := cardanotx.NewApexAddresses(
-				wallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
-			if err != nil {
-				return fmt.Errorf("error while executing GetMultisigAddresses. err: %w", err)
-			}
-
-			if regChain.AddressMultisig != "" &&
-				(addrs.Multisig.Payment != regChain.AddressMultisig || addrs.Fee.Payment != regChain.AddressFeePayer) {
-				return fmt.Errorf("addresses do not match: (%s, %s) != (%s, %s)",
-					addrs.Multisig.Payment, addrs.Fee.Payment, regChain.AddressMultisig, regChain.AddressFeePayer)
-			} else {
-				logger.Debug("Addresses are matching", "multisig", addrs.Multisig.Payment, "fee", addrs.Fee.Payment)
-			}
-
 			chainConfig.ChainID = chainID
-			chainConfig.BridgingAddresses = oracleCommonCore.BridgingAddresses{
-				BridgingAddress: addrs.Multisig.Payment,
-				FeeAddress:      addrs.Fee.Payment,
-			}
 			cardanoChains[chainID] = chainConfig
 		case common.ChainTypeEVM:
 			ethChainConfig, exists := config.EthChains[chainID]
@@ -434,11 +413,11 @@ func fixChainsAndAddresses(
 	return nil
 }
 
-func getAddressesMap(cardanoChainConfig map[string]*oracleCommonCore.CardanoChainConfig) map[string][]string {
-	result := make(map[string][]string, len(cardanoChainConfig))
+func getAddressesMap(appConfig *oracleCommonCore.AppConfig) map[string][]string {
+	result := make(map[string][]string, len(appConfig.CardanoChains))
 
-	for key, config := range cardanoChainConfig {
-		result[key] = []string{config.BridgingAddresses.BridgingAddress, config.BridgingAddresses.FeeAddress}
+	for chainID := range appConfig.CardanoChains {
+		result[chainID] = append(appConfig.GetBridgingMultisigAddresses(chainID), appConfig.GetFeeMultisigAddress(chainID))
 	}
 
 	return result

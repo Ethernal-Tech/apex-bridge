@@ -28,21 +28,19 @@ func TestCreateTx(t *testing.T) {
 	policyScriptFee := wallet.NewPolicyScript(walletsFeeKeyHashes, len(walletsFeeKeyHashes))
 	cardanoCliBinary := wallet.ResolveCardanoCliBinary(networkID)
 	cliUtils := wallet.NewCliUtils(cardanoCliBinary)
-
 	multiSigAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)
-
 	feeAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(testnetMagic, policyScriptFee)
 	require.NoError(t, err)
-
 	stakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(testnetMagic, policyScriptMultiSig)
 	require.NoError(t, err)
-
 	txInputsInfos := TxInputInfos{
-		MultiSig: &TxInputInfo{
-			TxInputs:     wallet.TxInputs{},
-			PolicyScript: policyScriptMultiSig,
-			Address:      multiSigAddr,
+		MultiSig: []*TxInputInfo{
+			{
+				TxInputs:     wallet.TxInputs{},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+			},
 		},
 		MultiSigFee: &TxInputInfo{
 			TxInputs:     wallet.TxInputs{},
@@ -50,27 +48,29 @@ func TestCreateTx(t *testing.T) {
 			Address:      feeAddr,
 		},
 	}
-
 	isInOutputs := func(ots []*indexer.TxOutput, addr string) bool {
 		for _, x := range ots {
 			if x.Address == addr {
 				return true
 			}
 		}
-
 		return false
 	}
-
 	getAmountFromOutputs := func(ots []*indexer.TxOutput, addr string) uint64 {
 		for _, x := range ots {
 			if x.Address == addr {
 				return x.Amount
 			}
 		}
-
 		return 0
 	}
-
+	addrAndAmounts := []common.AddressAndAmount{
+		{
+			Address:       multiSigAddr,
+			TokensAmounts: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
+			IncludeChange: common.MinUtxoAmountDefault,
+		},
+	}
 	t.Run("empty multisig inputs", func(t *testing.T) {
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -81,54 +81,51 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{}
-
+		txInputsInfos.MultiSig[0].TxInputs = wallet.TxInputs{}
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.ErrorContains(t, err, "no inputs found for multisig (0) or fee multisig (1)")
 	})
-
 	t.Run("empty fee multisig inputs", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
+		txInputsInfos.MultiSig[0].TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
 				{
 					Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.ErrorContains(t, err, "no inputs found for multisig (1) or fee multisig (0)")
 	})
-
 	t.Run("not enough funds on multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -139,28 +136,44 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault * 4,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault * 4
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.ErrorContains(t, err, "invalid amount: has = 3000000")
 	})
-
 	t.Run("not enough funds on fee multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
+			{
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash:  "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+							Index: 1,
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: 20},
+				},
+			},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -171,28 +184,31 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: 20},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.ErrorContains(t, err, "invalid amount: has = 20")
 	})
-
 	t.Run("multisig and fee not in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -203,37 +219,37 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 3)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUtxoAmountDefault*2)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig and fee not in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -244,37 +260,37 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   outputAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 2)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig in outputs, fee not in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -285,7 +301,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
@@ -296,30 +311,32 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 3)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUtxoAmountDefault*2)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig in outputs, fee not in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -330,7 +347,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
@@ -341,30 +357,33 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 2)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig not in outputs, fee in outputs with change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -375,7 +394,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   feeAddr,
@@ -386,30 +404,32 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 3)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, multiSigAddr), common.MinUtxoAmountDefault*2-131)
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig not in outputs, fee in outputs without change for multisig", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -420,7 +440,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault * 3},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   feeAddr,
@@ -431,30 +450,31 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
-
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 2)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("multisig in outputs, fee in outputs without change for fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 131},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -465,7 +485,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: 195377 - 131},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
@@ -480,16 +499,14 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 150 + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil)
-
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 1)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
@@ -513,12 +530,13 @@ func TestCreateTx(t *testing.T) {
 		},
 		RegistrationFee: keyRegDepositAmount,
 	}
-
 	txInputsInfos = TxInputInfos{
-		MultiSig: &TxInputInfo{
-			TxInputs:     wallet.TxInputs{},
-			PolicyScript: policyScriptMultiSig,
-			Address:      multiSigAddr,
+		MultiSig: []*TxInputInfo{
+			{
+				TxInputs:     wallet.TxInputs{},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
+			},
 		},
 		MultiSigFee: &TxInputInfo{
 			TxInputs:     wallet.TxInputs{},
@@ -537,14 +555,11 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount},
 		}
-
 		outputs := []wallet.TxOutput{}
-
 		_, _, err = CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.ErrorContains(t, err, "invalid amount")
 	})
-
 	t.Run("only certificates, no multisig inputs and exact fee amount", func(t *testing.T) {
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -555,29 +570,34 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 191901},
 		}
-
 		outputs := []wallet.TxOutput{}
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = 0
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
 		info, err := common.ParseTxInfo(rawTx, true)
-		require.NoError(t, err)
 
+		require.NoError(t, err)
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
 		require.Len(t, info.Outputs, 0)
 	})
-
 	t.Run("only certificates, not enough fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -588,22 +608,25 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount},
 		}
-
 		outputs := []wallet.TxOutput{}
-
 		_, _, err = CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.ErrorContains(t, err, "invalid amount")
 	})
-
 	t.Run("only certificates, exact fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -614,35 +637,37 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 208621},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 1)
 		assert.True(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("with certificates, exact fee", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -653,7 +678,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 212977},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
@@ -664,30 +688,34 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
+		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 150
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 2)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.True(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.True(t, isInOutputs(info.Outputs, outputAddr))
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
 	})
-
 	t.Run("with certificates and all outputs", func(t *testing.T) {
-		txInputsInfos.MultiSig.TxInputs = wallet.TxInputs{
-			Inputs: []wallet.TxInput{
-				{
-					Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+		txInputsInfos.MultiSig = []*TxInputInfo{
+			{
+				TxInputs: wallet.TxInputs{
+					Inputs: []wallet.TxInput{
+						{
+							Hash: "e99a5bde15aa05f24fcc04b7eabc1520d3397283b1ee720de9fe2653abbb0c9f",
+						},
+					},
+					Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 				},
+				PolicyScript: policyScriptMultiSig,
+				Address:      multiSigAddr,
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: common.MinUtxoAmountDefault + 150},
 		}
 		txInputsInfos.MultiSigFee.TxInputs = wallet.TxInputs{
 			Inputs: []wallet.TxInput{
@@ -698,7 +726,6 @@ func TestCreateTx(t *testing.T) {
 			},
 			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 212977 + 100},
 		}
-
 		outputs := []wallet.TxOutput{
 			{
 				Addr:   multiSigAddr,
@@ -713,15 +740,13 @@ func TestCreateTx(t *testing.T) {
 				Amount: common.MinUtxoAmountDefault,
 			},
 		}
-
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData)
+			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
-
 		require.Len(t, info.Outputs, 3)
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.True(t, isInOutputs(info.Outputs, multiSigAddr))
