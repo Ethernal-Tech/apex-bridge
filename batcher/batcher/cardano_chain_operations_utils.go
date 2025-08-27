@@ -80,6 +80,7 @@ func getOutputs(
 
 		if transaction.TransactionType == uint8(common.RedistributionConfirmedTxType) {
 			logger.Debug("Triggered redistribution")
+
 			isRedistribution = true
 
 			continue

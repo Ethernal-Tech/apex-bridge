@@ -65,7 +65,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 
 	c.logger.Debug("remainingTokenAmounts", remainingTokenAmounts)
 
-	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID, isRedistribution, remainingTokenAmounts)
+	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID, isRedistribution)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +243,8 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(
 	return addressAndAmounts, nil
 }
 
-// TODO return values as a struct
 func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
-	chainID uint8, isRedistribution bool, remainingTokenAmounts map[string]uint64,
+	chainID uint8, isRedistribution bool,
 ) ([]addrAmount, []*indexer.TxInputOutput, error) {
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
@@ -262,26 +261,14 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 
 		potentialInputs = append(potentialInputs, utxos...)
 
-		totalTokenAmounts := make(map[string]uint64)
-		holdNativeTokens := false
-
-		for _, utxo := range utxos {
-			totalTokenAmounts[cardanowallet.AdaTokenName] += utxo.Output.Amount
-
-			for _, token := range utxo.Output.Tokens {
-				if isRedistribution || remainingTokenAmounts[token.TokenName()] > 0 {
-					holdNativeTokens = true
-					totalTokenAmounts[token.TokenName()] += token.Amount
-				}
-			}
-		}
+		totalTokenAmounts := cardanotx.GetSumMapFromTxInputOutput(utxos)
 
 		addrAmounts = append(addrAmounts, addrAmount{
 			address:           address,
 			addressIndex:      uint8(i), //nolint:gosec
 			totalTokenAmounts: totalTokenAmounts,
 			includeInTx:       make(map[string]uint64),
-			holdNativeTokens:  holdNativeTokens,
+			holdNativeTokens:  len(totalTokenAmounts) > 1 || isRedistribution,
 			utxoCount:         len(utxos),
 		})
 	}

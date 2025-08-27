@@ -504,6 +504,7 @@ func TestCreateTx(t *testing.T) {
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, nil, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
+
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 		require.Len(t, info.Outputs, 1)
@@ -646,6 +647,7 @@ func TestCreateTx(t *testing.T) {
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
+
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 		require.Len(t, info.Outputs, 1)
@@ -691,6 +693,7 @@ func TestCreateTx(t *testing.T) {
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
+
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 		require.Len(t, info.Outputs, 2)
@@ -741,6 +744,7 @@ func TestCreateTx(t *testing.T) {
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, txInputsInfos, outputs, certData, addrAndAmounts)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
+
 		info, err := common.ParseTxInfo(rawTx, true)
 		require.NoError(t, err)
 		require.Len(t, info.Outputs, 3)

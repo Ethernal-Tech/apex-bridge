@@ -470,6 +470,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
+	//nolint:dupl
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
@@ -731,6 +732,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
+	//nolint:dupl
 	t.Run("GenerateBatchTransaction fee multisig does not have any utxo", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
@@ -1032,6 +1034,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
+	//nolint:dupl
 	t.Run("GetFeeMultisigPolicyScript returns false", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -1466,6 +1469,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
+	//nolint:dupl
 	t.Run("GetFeeMultisigPolicyScript returns false", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).

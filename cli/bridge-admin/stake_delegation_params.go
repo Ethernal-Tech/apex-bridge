@@ -64,7 +64,6 @@ func (params *stakeDelParams) ValidateFlags() error {
 
 // Execute implements common.CliCommandExecutor.
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	//TODO uncomment
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec

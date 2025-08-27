@@ -178,6 +178,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.Equal(t, uint8(0), amounts[0].AddressIndex)
 	})
 
+	//nolint:dupl
 	t.Run("GetAddressesAndAmountsToPayFrom 1 address native, not enough native funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
@@ -220,6 +221,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		require.Nil(t, amounts)
 	})
 
+	//nolint:dupl
 	t.Run("GetAddressesAndAmountsToPayFrom 1 address native, not enough currency funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
