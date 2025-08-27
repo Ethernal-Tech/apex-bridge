@@ -16,7 +16,6 @@ type addrAmount struct {
 	totalTokenAmounts map[string]uint64
 	includeInTx       map[string]uint64
 	addressIndex      uint8
-	holdNativeTokens  bool
 	utxoCount         int
 }
 
@@ -66,7 +65,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 
 	c.logger.Debug("requiredTokenAmounts", requiredTokenAmounts)
 
-	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID, isRedistribution)
+	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +244,7 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(
 }
 
 func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
-	chainID uint8, isRedistribution bool,
+	chainID uint8,
 ) ([]addrAmount, []*indexer.TxInputOutput, error) {
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
@@ -269,7 +268,6 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 			addressIndex:      uint8(i), //nolint:gosec
 			totalTokenAmounts: totalTokenAmounts,
 			includeInTx:       make(map[string]uint64),
-			holdNativeTokens:  len(totalTokenAmounts) > 1 || isRedistribution,
 			utxoCount:         len(utxos),
 		})
 	}
