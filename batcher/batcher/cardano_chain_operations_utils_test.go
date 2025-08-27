@@ -497,21 +497,21 @@ func Test_reactorGetOutputs(t *testing.T) {
 }
 
 func Test_skylineGetOutputs(t *testing.T) {
-	// vector -> prime
+	// cardano -> prime
 	const (
-		addr1 = "vector_test1vgxk3ha6hmftgjzrjlrxrndmqrg43y862pu909r87q8kpas0c0mzc"
-		addr2 = "vector_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf"
-		addr3 = "vector_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
+		addr1 = "addr_test1yz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzerkr0vd4msrxnuwnccdxlhdjar77j6lg0wypcc9uar5d2shsf5r8qx"
+		addr2 = "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae"
+		addr3 = "addr_test1zrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgsxj90mg"
 	)
 
 	policyID := "584ffccecba8a7c6a18037152119907b6b5c2ed063798ee68b012c41"
 	tokenName, _ := hex.DecodeString("526f75746533")
 	token := cardanowallet.NewToken(policyID, string(tokenName))
 	config := &cardano.CardanoChainConfig{
-		NetworkID: cardanowallet.VectorTestNetNetwork,
+		NetworkID: cardanowallet.TestNetNetwork,
 		NativeTokens: []sendtx.TokenExchangeConfig{
 			{
-				DstChainID: common.ChainIDStrVector,
+				DstChainID: common.ChainIDStrCardano,
 				TokenName:  token.String(),
 			},
 		},
@@ -523,7 +523,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		},
 		{
-			SourceChainId: common.ChainIDIntVector,
+			SourceChainId: common.ChainIDIntCardano,
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr1,
@@ -538,7 +538,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			},
 		},
 		{
-			SourceChainId: common.ChainIDIntVector,
+			SourceChainId: common.ChainIDIntCardano,
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr3,

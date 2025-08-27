@@ -418,7 +418,7 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint32Var(
 		&p.vectorNetworkID,
 		vectorNetworkIDFlag,
-		uint32(wallet.VectorMainNetNetwork),
+		uint32(wallet.MainNetNetwork),
 		vectorNetworkIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
