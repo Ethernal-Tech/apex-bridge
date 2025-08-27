@@ -1,10 +1,17 @@
 package clibridgeadmin
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet/bech32"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +65,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 // Execute implements common.CliCommandExecutor.
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	//TODO uncomment
-	/* ctx := context.Background()
+	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
@@ -75,14 +82,14 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, err
 	}
 
-	contract, err := contractbinding.NewBridgeContract(
-		apexBridgeScAddress,
+	contract, err := contractbinding.NewAdminContract(
+		apexBridgeAdminScAddress,
 		txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
 
-	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
+	abi, err := contractbinding.AdminContractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +100,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		ctx, wallet.GetAddress(), apexBridgeScAddress, nil, gasLimitMultiplier, abi,
+		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
 		"stakeAddressOperation", chainIDInt, bridgeAddrIndex, params.stakePoolID, subType)
 	if err != nil {
 		return nil, err
@@ -119,7 +126,6 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, errors.New("transaction receipt status is unsuccessful")
 	}
 
-	return &chainTokenQuantityResult{}, err */
 	return &successResult{}, nil
 }
 
