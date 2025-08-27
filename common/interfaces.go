@@ -54,5 +54,5 @@ type BridgingAddressesCoordinator interface {
 		isRedistribution bool,
 		protocolParams []byte,
 		txOutputs *[]cardanowallet.TxOutput) ([]AddressAndAmount, error)
-	GetAddressesAndAmountsToStakeTo(chainID uint8, amount uint64) (AddressAndAmount, error)
+	GetAddressesAndAmountsToStakeTo(chainID uint8) (AddressAndAmount, error)
 }

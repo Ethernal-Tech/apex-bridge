@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
@@ -57,28 +56,10 @@ func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter
 		return
 	}
 
-	amountArr, exists := queryValues["amount"]
-	if !exists || len(amountArr) == 0 {
-		apiUtils.WriteErrorResponse(
-			w, r, http.StatusBadRequest,
-			errors.New("amount missing from query"), c.logger)
-
-		return
-	}
-
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	amount, err := strconv.ParseUint(amountArr[0], 10, 64)
-	if err != nil {
-		apiUtils.WriteErrorResponse(
-			w, r, http.StatusBadRequest,
-			fmt.Errorf("error parsing amount %s from query", amountArr[0]), c.logger)
-
-		return
-	}
-
-	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressesAndAmountsToStakeTo(chainID, amount)
+	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressesAndAmountsToStakeTo(chainID)
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,

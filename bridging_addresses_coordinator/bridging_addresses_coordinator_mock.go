@@ -41,9 +41,9 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmounts(
 }
 
 func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsToStakeTo(
-	chainID uint8, amount uint64,
+	chainID uint8,
 ) (common.AddressAndAmount, error) {
-	args := m.Called(chainID, amount)
+	args := m.Called(chainID)
 
 	arg0, _ := args.Get(0).(common.AddressAndAmount)
 

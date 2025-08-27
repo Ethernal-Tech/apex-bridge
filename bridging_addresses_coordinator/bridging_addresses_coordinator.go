@@ -49,8 +49,6 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 ) ([]common.AddressAndAmount, error) {
 	// Go through all addresses, sort them by the total amount of tokens (descending),
 	// and choose the one with the biggest amount
-	// Future improvement:
-	// - add the stake pool saturation awareness
 	var err error
 
 	var amounts []common.AddressAndAmount
@@ -443,12 +441,10 @@ func safeSubstract(a, b uint64) (uint64, bool) {
 }
 
 func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
-	chainID uint8, amount uint64,
+	chainID uint8,
 ) (common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
-	// Future improvement:
-	// - add the stake pool saturation awareness
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
