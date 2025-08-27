@@ -237,7 +237,6 @@ func filterOutUtxosWithUnknownTokens(
 	return result
 }
 
-// TODO *[]cardanowallet.TxOutput?
 func addRedistributionOutputs(
 	outputs []cardanowallet.TxOutput,
 	multisigAddresses []common.AddressAndAmount,
@@ -248,7 +247,6 @@ func addRedistributionOutputs(
 			return nil, err
 		}
 
-		// TODO: handle duplicates if needed
 		outputs = append(outputs, output)
 	}
 

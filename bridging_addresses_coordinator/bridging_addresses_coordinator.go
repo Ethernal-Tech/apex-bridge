@@ -55,7 +55,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 
 	var amounts []common.AddressAndAmount
 
-	// TODO what if txOutputs is nil?
+	if txOutputs == nil {
+		return nil, fmt.Errorf("txOutputs cannot be nil")
+	}
+
 	if len(*txOutputs) == 0 && !isRedistribution {
 		return nil, nil
 	}
