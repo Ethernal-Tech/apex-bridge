@@ -744,7 +744,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
-			Directions: map[string][]string{
+			AllowedDirections: map[string][]string{
 				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus},
 				common.ChainIDStrVector: {common.ChainIDStrPrime, common.ChainIDStrNexus},
 				common.ChainIDStrNexus:  {common.ChainIDStrPrime, common.ChainIDStrVector},

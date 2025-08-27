@@ -81,7 +81,7 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 }
 
 func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
-	for _, chain := range appConfing.BridgingSettings.Directions[srcChainID] {
+	for _, chain := range appConfing.BridgingSettings.AllowedDirections[srcChainID] {
 		if chain == destChainID {
 			return nil
 		}

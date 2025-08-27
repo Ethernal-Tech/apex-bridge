@@ -80,7 +80,7 @@ type BridgingSettings struct {
 	MaxAmountAllowedToBridge       *big.Int            `json:"maxAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int                 `json:"maxBridgingClaimsToGroup"`
-	Directions                     map[string][]string `json:"directions"`
+	AllowedDirections              map[string][]string `json:"directions"`
 }
 
 type RetryUnprocessedSettings struct {
