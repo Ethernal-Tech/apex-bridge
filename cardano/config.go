@@ -133,14 +133,15 @@ func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
 }
 
 type RelayerEVMChainConfig struct {
-	NodeURL         string `json:"nodeUrl"`
-	DynamicTx       bool   `json:"dynamicTx"`
-	DataDir         string `json:"dataDir,omitempty"`
-	ConfigPath      string `json:"configPath,omitempty"`
-	DepositGasLimit uint64 `json:"depositGasLimit"`
-	GasPrice        uint64 `json:"gasPrice"`
-	GasFeeCap       uint64 `json:"gasFeeCap"`
-	GasTipCap       uint64 `json:"gasTipCap"`
+	NodeURL          string `json:"nodeUrl"`
+	DynamicTx        bool   `json:"dynamicTx"`
+	DataDir          string `json:"dataDir,omitempty"`
+	ConfigPath       string `json:"configPath,omitempty"`
+	DepositGasLimit  uint64 `json:"depositGasLimit"`
+	GasPrice         uint64 `json:"gasPrice"`
+	GasFeeCap        uint64 `json:"gasFeeCap"`
+	GasTipCap        uint64 `json:"gasTipCap"`
+	GasFeeMultiplier uint64 `json:"gasFeeMultiplier"`
 }
 
 func NewRelayerEVMChainConfig(rawMessage json.RawMessage) (*RelayerEVMChainConfig, error) {
