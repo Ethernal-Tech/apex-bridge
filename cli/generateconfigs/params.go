@@ -659,7 +659,7 @@ func (p *generateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.ReactorMode,
-		RefundEnabled:       false,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -679,13 +679,13 @@ func (p *generateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
+					MinFeeForBridging:     p.primeMinFeeForBridging,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
 				StartSlot:                primeStartingSlot,
 				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
-				MinFeeForBridging:        p.primeMinFeeForBridging,
 				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
 			common.ChainIDStrVector: {
@@ -704,13 +704,13 @@ func (p *generateConfigsParams) Execute(
 					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
+					MinFeeForBridging:     p.vectorMinFeeForBridging,
 				},
 				NetworkAddress:           p.vectorNetworkAddress,
 				StartBlockHash:           vectorStartingHash,
 				StartSlot:                vectorStartingSlot,
 				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
-				MinFeeForBridging:        p.vectorMinFeeForBridging,
 				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
 			},
 		},
