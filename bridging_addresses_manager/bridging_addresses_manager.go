@@ -48,7 +48,7 @@ func NewBridgingAdressesManager(
 
 	for _, registeredChain := range registeredChains {
 		chainIDStr := common.ToStrChainID(registeredChain.Id)
-		if !common.IsExistingSkylineChainID(chainIDStr) {
+		if !common.IsExistingChainID(chainIDStr) {
 			continue
 		}
 
