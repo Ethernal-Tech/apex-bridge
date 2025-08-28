@@ -19,14 +19,12 @@ type lastBatchData struct {
 }
 
 type BatcherImpl struct {
-	config                       *core.BatcherConfiguration
-	operations                   core.ChainOperations
-	bridgeSmartContract          eth.IBridgeSmartContract
-	bridgingRequestStateUpdater  common.BridgingRequestStateUpdater
-	bridgingAddressesManager     common.BridgingAddressesManager
-	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
-	lastBatch                    lastBatchData
-	logger                       hclog.Logger
+	config                      *core.BatcherConfiguration
+	operations                  core.ChainOperations
+	bridgeSmartContract         eth.IBridgeSmartContract
+	bridgingRequestStateUpdater common.BridgingRequestStateUpdater
+	lastBatch                   lastBatchData
+	logger                      hclog.Logger
 }
 
 var _ core.Batcher = (*BatcherImpl)(nil)
@@ -41,14 +39,12 @@ func NewBatcher(
 	logger hclog.Logger,
 ) *BatcherImpl {
 	return &BatcherImpl{
-		config:                       config,
-		operations:                   operations,
-		bridgeSmartContract:          bridgeSmartContract,
-		bridgingRequestStateUpdater:  bridgingRequestStateUpdater,
-		bridgingAddressesManager:     bridgingAddressesManager,
-		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
-		lastBatch:                    lastBatchData{},
-		logger:                       logger,
+		config:                      config,
+		operations:                  operations,
+		bridgeSmartContract:         bridgeSmartContract,
+		bridgingRequestStateUpdater: bridgingRequestStateUpdater,
+		lastBatch:                   lastBatchData{},
+		logger:                      logger,
 	}
 }
 

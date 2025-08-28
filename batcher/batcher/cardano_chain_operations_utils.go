@@ -79,7 +79,7 @@ func getOutputs(
 		}
 
 		if transaction.TransactionType == uint8(common.RedistributionConfirmedTxType) {
-			logger.Debug("Triggered redistribution")
+			logger.Debug("Triggered token redistribution", "chain", transaction.DestinationChainId)
 
 			isRedistribution = true
 
@@ -101,13 +101,13 @@ func getOutputs(
 						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
-							return cardano.TxOutputs{}, isRedistribution, err
+							return cardano.TxOutputs{}, false, err
 						}
 					} else {
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {
-							return cardano.TxOutputs{}, isRedistribution, err
+							return cardano.TxOutputs{}, false, err
 						}
 					}
 
@@ -221,20 +221,6 @@ func getNeededUtxos(
 	}
 
 	return chosenUTXOs, nil
-}
-
-func filterOutUtxosWithUnknownTokens(
-	utxos []*indexer.TxInputOutput, excludingTokens ...cardanowallet.Token,
-) []*indexer.TxInputOutput {
-	result := make([]*indexer.TxInputOutput, 0, len(utxos))
-
-	for _, utxo := range utxos {
-		if !cardano.UtxoContainsUnknownTokens(utxo.Output, excludingTokens...) {
-			result = append(result, utxo)
-		}
-	}
-
-	return result
 }
 
 func addRedistributionOutputs(

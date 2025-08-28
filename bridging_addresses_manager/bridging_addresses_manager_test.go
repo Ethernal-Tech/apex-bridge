@@ -2,7 +2,6 @@ package bridgingaddressmanager
 
 import (
 	"context"
-	"errors"
 	"math/big"
 	"testing"
 
@@ -22,65 +21,10 @@ func TestBridgingAddressesManager(t *testing.T) {
 		},
 	}
 
-	testError := errors.New("test err")
-
-	t.Run("GetAllRegisteredChains returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return(nil, testError)
-		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(1, nil)
-
-		_, err := NewBridgingAdressesManager(
-			context.Background(),
-			cardanoChains,
-			bridgeSmartContractMock,
-			hclog.NewNullLogger(),
-		)
-
-		require.Error(t, err)
-		require.ErrorIs(t, err, testError)
-		require.ErrorContains(t, err, "error while executing GetAllRegisteredChains for bridging addresses component. err:")
-	})
-
-	t.Run("GetValidatorsChainData returns error", func(t *testing.T) {
-		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
-		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(1, nil)
-		bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
-			{
-				Id:              1,
-				ChainType:       0,
-				AddressMultisig: "",
-				AddressFeePayer: "",
-			},
-			{
-				Id:              3,
-				ChainType:       0,
-				AddressMultisig: "",
-				AddressFeePayer: "",
-			},
-		}, nil)
-		bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(nil, testError).Once()
-
-		_, err := NewBridgingAdressesManager(
-			context.Background(),
-			cardanoChains,
-			bridgeSmartContractMock,
-			hclog.NewNullLogger(),
-		)
-
-		require.ErrorIs(t, err, testError)
-		require.ErrorContains(t, err, "error while executing GetValidatorsChainData for bridging addresses component. err:")
-	})
-
 	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
 	bridgeSmartContractMock.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{
 		{
 			Id:              1,
-			ChainType:       0,
-			AddressMultisig: "",
-			AddressFeePayer: "",
-		},
-		{
-			Id:              3,
 			ChainType:       0,
 			AddressMultisig: "",
 			AddressFeePayer: "",
@@ -97,18 +41,6 @@ func TestBridgingAddressesManager(t *testing.T) {
 			},
 		},
 	}, nil)
-
-	t.Run("GetBridgingAddressesCount returns error", func(t *testing.T) {
-		bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, mock.Anything).Return(0, testError).Once()
-		_, err := NewBridgingAdressesManager(
-			context.Background(),
-			cardanoChains,
-			bridgeSmartContractMock,
-			hclog.NewNullLogger(),
-		)
-
-		require.ErrorContains(t, err, "failed to retrieve number of bridging addresses from smart contract")
-	})
 
 	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, "prime").Return(uint8(1), nil)
 

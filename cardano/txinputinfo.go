@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -9,10 +10,7 @@ type TxInputInfos struct {
 	MultiSigFee *TxInputInfo
 }
 
-type TxOutputs struct {
-	Outputs []cardanowallet.TxOutput
-	Sum     map[string]uint64
-}
+type TxOutputs = common.TxOutputs
 
 type TxInputInfo struct {
 	cardanowallet.TxInputs

@@ -6,6 +6,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -19,9 +20,16 @@ type addrAmount struct {
 	utxoCount         int
 }
 
+type tokensAmountPerAddress struct {
+	addrAmounts     []addrAmount
+	potentialInputs []*indexer.TxInputOutput
+	sum             map[string]uint64
+}
+
 type BridgingAddressesCoordinatorImpl struct {
 	bridgingAddressesManager common.BridgingAddressesManager
 	dbs                      map[string]indexer.Database
+	cardanoChains            map[string]*oracleCore.CardanoChainConfig
 	logger                   hclog.Logger
 }
 
@@ -30,21 +38,23 @@ var _ common.BridgingAddressesCoordinator = (*BridgingAddressesCoordinatorImpl)(
 func NewBridgingAddressesCoordinator(
 	bridgingAddressesManager common.BridgingAddressesManager,
 	dbs map[string]indexer.Database,
+	cardanoChains map[string]*oracleCore.CardanoChainConfig,
 	logger hclog.Logger,
 ) common.BridgingAddressesCoordinator {
 	return &BridgingAddressesCoordinatorImpl{
 		bridgingAddressesManager: bridgingAddressesManager,
 		dbs:                      dbs,
+		cardanoChains:            cardanoChains,
 		logger:                   logger,
 	}
 }
 
-func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
+func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	chainID uint8,
 	cardanoCliBinary string,
 	isRedistribution bool,
 	protocolParams []byte,
-	txOutputs *[]cardanowallet.TxOutput,
+	txOutputs *cardanotx.TxOutputs,
 ) ([]common.AddressAndAmount, error) {
 	// Go through all addresses, sort them by the total amount of tokens (descending),
 	// and choose the one with the biggest amount
@@ -56,25 +66,33 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmounts(
 		return nil, fmt.Errorf("txOutputs cannot be nil")
 	}
 
-	if len(*txOutputs) == 0 && !isRedistribution {
+	if len(txOutputs.Outputs) == 0 && !isRedistribution {
 		return nil, nil
 	}
 
-	requiredTokenAmounts := cardanowallet.GetOutputsSum(*txOutputs)
+	requiredTokenAmounts := cardanowallet.GetOutputsSum(txOutputs.Outputs)
 	requiredAdaAmount := requiredTokenAmounts[cardanowallet.AdaTokenName]
 
-	c.logger.Debug("requiredTokenAmounts", requiredTokenAmounts)
+	c.logger.Debug("GetAddressesAndAmountsForBatch", "chain", common.ToStrChainID(chainID),
+		"requiredTokenAmounts", requiredTokenAmounts)
 
-	addrAmounts, potentialInputs, err := c.getTokensAmountByAddr(chainID)
+	totalTokenAmounts, err := c.getTokensAmountByAddr(chainID)
 	if err != nil {
 		return nil, err
 	}
 
+	for token, amount := range requiredTokenAmounts {
+		if amount > totalTokenAmounts.sum[token] {
+			return nil, fmt.Errorf("not enough %s token funds for batch: available = %d, required = %d",
+				token, totalTokenAmounts.sum[token], amount)
+		}
+	}
+
 	if isRedistribution {
-		amounts, err = c.redistributeTokens(requiredTokenAmounts, addrAmounts)
+		amounts, err = c.redistributeTokens(requiredTokenAmounts, totalTokenAmounts.addrAmounts)
 	} else {
-		amounts, err = c.getAddressesAndAmountsToPayFrom(cardanoCliBinary, protocolParams, addrAmounts,
-			requiredTokenAmounts, potentialInputs, txOutputs)
+		amounts, err = c.getAddressesAndAmountsToPayFrom(cardanoCliBinary, protocolParams, totalTokenAmounts.addrAmounts,
+			requiredTokenAmounts, totalTokenAmounts.potentialInputs, &txOutputs.Outputs)
 	}
 
 	if err != nil {
@@ -169,15 +187,9 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeAdaTokens(
 		return nil, fmt.Errorf("cannot redistribute ADA tokens: no addresses provided")
 	}
 
-	remainigAdaAmount, ok := safeSubstract(totalAdaAmount, requiredAdaAmount)
-	if !ok {
-		return nil, fmt.Errorf("not enough ADA token funds to redistribute: available = %d, required = %d",
-			totalAdaAmount,
-			requiredAdaAmount)
-	}
-
-	adaTokensPerAddress := remainigAdaAmount / uint64(len(addrAmounts))
-	extra := remainigAdaAmount % uint64(len(addrAmounts))
+	remainingAdaAmount := totalAdaAmount - requiredAdaAmount
+	adaTokensPerAddress := remainingAdaAmount / uint64(len(addrAmounts))
+	extra := remainingAdaAmount % uint64(len(addrAmounts))
 
 	addressAndAmounts := make([]common.AddressAndAmount, 0, len(addrAmounts))
 
@@ -218,14 +230,10 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(
 
 	// subtract tokens that should be transferred
 	for _, addrAmount := range addressAndAmounts {
-		if len(requiredTokenAmounts) == 0 {
-			break
-		}
-
 		// Update remaining token amounts
 		for tokenName, requiredAmount := range requiredTokenAmounts {
 			if addrAmount.TokensAmounts[tokenName] >= requiredAmount {
-				addressChange, _ := safeSubstract(addrAmount.TokensAmounts[tokenName], requiredAmount)
+				addressChange, _ := safeSubtract(addrAmount.TokensAmounts[tokenName], requiredAmount)
 				delete(requiredTokenAmounts, tokenName)
 
 				if addressChange > 0 {
@@ -245,23 +253,46 @@ func (c *BridgingAddressesCoordinatorImpl) redistributeTokens(
 
 func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 	chainID uint8,
-) ([]addrAmount, []*indexer.TxInputOutput, error) {
-	db := c.dbs[common.ToStrChainID(chainID)]
+) (*tokensAmountPerAddress, error) {
+	chainIDStr := common.ToStrChainID(chainID)
+
+	db, ok := c.dbs[chainIDStr]
+	if !ok {
+		return nil, fmt.Errorf("failed to get appropriate db for chain %s", chainIDStr)
+	}
+
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
 	addrAmounts := make([]addrAmount, 0, len(addresses))
 	potentialInputs := make([]*indexer.TxInputOutput, 0)
+	sum := make(map[string]uint64)
+
+	config, ok := c.cardanoChains[chainIDStr]
+	if !ok {
+		return nil, fmt.Errorf("failed to get appropriate config for chain %s", chainIDStr)
+	}
+
+	knownTokens, err := cardanotx.GetKnownTokens(&config.CardanoChainConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get known tokens: %w for chain %s", err, chainIDStr)
+	}
 
 	// Calculate amount held by each address
 	for i, address := range addresses {
 		utxos, err := db.GetAllTxOutputs(address, true)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
+
+		utxos = cardanotx.FilterOutUtxosWithUnknownTokens(utxos, knownTokens...)
 
 		potentialInputs = append(potentialInputs, utxos...)
 
 		totalTokenAmounts := cardanotx.GetSumMapFromTxInputOutput(utxos)
+
+		for token, amount := range totalTokenAmounts {
+			sum[token] += amount
+		}
 
 		addrAmounts = append(addrAmounts, addrAmount{
 			address:           address,
@@ -272,7 +303,11 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 		})
 	}
 
-	return addrAmounts, potentialInputs, nil
+	return &tokensAmountPerAddress{
+		addrAmounts:     addrAmounts,
+		potentialInputs: potentialInputs,
+		sum:             sum,
+	}, nil
 }
 
 // processNativeTokens handles the processing of native tokens for a given address
@@ -333,7 +368,7 @@ func (c *BridgingAddressesCoordinatorImpl) processAdaAmount(
 		requiredForChange = minUtxo
 	}
 
-	addressChange, ok := safeSubstract(availableAdaOnAddress, requiredAdaAmount)
+	addressChange, ok := safeSubtract(availableAdaOnAddress, requiredAdaAmount)
 	c.logger.Debug("Address change", addrAmount.address, addressChange)
 
 	if !ok && !nativeTokenChangeInUtxos {
@@ -430,7 +465,7 @@ func (c *BridgingAddressesCoordinatorImpl) handleInsufficientChange(
 	return 0
 }
 
-func safeSubstract(a, b uint64) (uint64, bool) {
+func safeSubtract(a, b uint64) (uint64, bool) {
 	if a >= b {
 		return a - b, true
 	}
@@ -438,7 +473,7 @@ func safeSubstract(a, b uint64) (uint64, bool) {
 	return 0, false
 }
 
-func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsToStakeTo(
+func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 	chainID uint8,
 ) (common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens

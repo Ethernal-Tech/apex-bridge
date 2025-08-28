@@ -161,7 +161,7 @@ func NewValidatorComponents(
 	}
 
 	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
-		bridgingAddressesManager, cardanoIndexerDbs, logger)
+		bridgingAddressesManager, cardanoIndexerDbs, appConfig.CardanoChains, logger)
 
 	oracleConfig.BridgingAddressesManager = bridgingAddressesManager
 

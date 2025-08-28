@@ -207,20 +207,22 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	cco.logger.Debug("Getting addresses and amounts", "outputs", txOutputs.Outputs, "redistribution", isRedistribution)
+	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
+		"outputs", txOutputs.Outputs, "redistribution", isRedistribution)
 
-	multisigAddresses, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmounts(
+	multisigAddresses, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmountsForBatch(
 		data.ChainID,
 		cco.cardanoCliBinary,
 		isRedistribution,
 		data.ProtocolParams,
-		&txOutputs.Outputs,
+		&txOutputs,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cco.logger.Debug("Chosen multisig addresses to pay from", "addresses", multisigAddresses)
+	cco.logger.Debug("Chosen multisig addresses to pay from",
+		"chain", common.ToStrChainID(data.ChainID), "addresses", multisigAddresses)
 
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
@@ -281,8 +283,10 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		addrAndAmountToDeduct = multisigAddresses
 	}
 
-	cco.logger.Debug("TX INPUTS", "txInputs", txInputs)
-	cco.logger.Debug("TX OUTPUTS", "txOutputs.Outputs", txOutputs.Outputs)
+	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
+		"chain", common.ToStrChainID(data.ChainID), "txInputs", txInputs)
+	cco.logger.Debug("TX OUTPUTS", "batchID", data.BatchNonceID,
+		"chain", common.ToStrChainID(data.ChainID), "txOutputs.Outputs", txOutputs.Outputs)
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
@@ -438,7 +442,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		return nil, nil, err
 	}
 
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+	feeUtxos = cardano.FilterOutUtxosWithUnknownTokens(feeUtxos)
 
 	sort.Slice(feeUtxos, func(i, j int) bool {
 		return feeUtxos[i].Output.Amount < feeUtxos[j].Output.Amount
@@ -473,7 +477,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 			return nil, nil, err
 		}
 
-		multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+		multisigUtxos = cardano.FilterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
 
 		sort.Slice(multisigUtxos, func(i, j int) bool {
 			return multisigUtxos[i].Output.Amount < multisigUtxos[j].Output.Amount
@@ -524,7 +528,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+	feeUtxos = cardano.FilterOutUtxosWithUnknownTokens(feeUtxos)
 
 	if len(feeUtxos) == 0 {
 		return nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
@@ -541,7 +545,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			return nil, err
 		}
 
-		multisigUtxos = filterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+		multisigUtxos = cardano.FilterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
 
 		cco.logger.Debug("UTXOs retrieved",
 			"multisig", addressAndAmount.Address, "utxos", multisigUtxos)
@@ -562,20 +566,19 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 				},
 			}
 
-			for policyID, token := range addressAndAmount.TokensAmounts {
-				tokenName := ""
+			for tokenName, amount := range addressAndAmount.TokensAmounts {
+				if tokenName == cardanowallet.AdaTokenName {
+					continue
+				}
 
-				for _, token := range knownTokens {
-					if token.PolicyID == policyID {
-						tokenName = token.Name
-
-						break
-					}
+				newToken, err := cardanowallet.NewTokenWithFullNameTry(tokenName)
+				if err != nil {
+					return nil, err
 				}
 
 				output[0].Tokens = append(output[0].Tokens, cardanowallet.TokenAmount{
-					Token:  cardanowallet.NewToken(policyID, tokenName),
-					Amount: token,
+					Token:  newToken,
+					Amount: amount,
 				})
 			}
 
@@ -613,7 +616,7 @@ func (cco *CardanoChainOperations) getFeeUTXOsForNormalBatch(
 		return nil, err
 	}
 
-	feeUtxos = filterOutUtxosWithUnknownTokens(feeUtxos)
+	feeUtxos = cardano.FilterOutUtxosWithUnknownTokens(feeUtxos)
 
 	if len(feeUtxos) == 0 {
 		return nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)

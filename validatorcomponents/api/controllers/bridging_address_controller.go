@@ -59,7 +59,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressesAndAmountsToStakeTo(chainID)
+	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID)
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,

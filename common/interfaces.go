@@ -47,12 +47,17 @@ type AddressAndAmount struct {
 	UtxoCount     int
 }
 
+type TxOutputs struct {
+	Outputs []cardanowallet.TxOutput
+	Sum     map[string]uint64
+}
+
 type BridgingAddressesCoordinator interface {
-	GetAddressesAndAmounts(
+	GetAddressesAndAmountsForBatch(
 		chainID uint8,
 		cardanoCliBinary string,
 		isRedistribution bool,
 		protocolParams []byte,
-		txOutputs *[]cardanowallet.TxOutput) ([]AddressAndAmount, error)
-	GetAddressesAndAmountsToStakeTo(chainID uint8) (AddressAndAmount, error)
+		txOutputs *TxOutputs) ([]AddressAndAmount, error)
+	GetAddressToBridgeTo(chainID uint8) (AddressAndAmount, error)
 }

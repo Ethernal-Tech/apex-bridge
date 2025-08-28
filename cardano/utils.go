@@ -126,3 +126,17 @@ func GetSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint6
 
 	return totalSum
 }
+
+func FilterOutUtxosWithUnknownTokens(
+	utxos []*indexer.TxInputOutput, excludingTokens ...wallet.Token,
+) []*indexer.TxInputOutput {
+	result := make([]*indexer.TxInputOutput, 0, len(utxos))
+
+	for _, utxo := range utxos {
+		if !UtxoContainsUnknownTokens(utxo.Output, excludingTokens...) {
+			result = append(result, utxo)
+		}
+	}
+
+	return result
+}
