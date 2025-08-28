@@ -55,7 +55,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 				},
 				common.ChainIDStrVector: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:         wallet.VectorTestNetNetwork,
+						NetworkID:         wallet.TestNetNetwork,
 						UtxoMinAmount:     utxoMinValue,
 						OgmiosURL:         "http://ogmios.vector.testnet.apexfusion.org:1337",
 						MinFeeForBridging: minFeeForBridging,

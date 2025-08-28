@@ -78,6 +78,8 @@ const (
 	relayerDataDirFlag              = "relayer-data-dir"
 	relayerConfigPathFlag           = "relayer-config"
 
+	evmRelayerGasFeeMultiplierFlag = "evm-relayer-gas-fee-multiplier"
+
 	emptyBlocksThresholdFlag = "empty-blocks-threshold"
 
 	primeNetworkAddressFlagDesc         = "(mandatory) address of prime network"
@@ -134,6 +136,8 @@ const (
 	nexusStartingBlockFlagDesc          = "block from where to start nexus oracle / nexus block submitter"
 	nexusMinFeeForBridgingFlagDesc      = "minimal bridging fee for nexus"
 
+	evmRelayerGasFeeMultiplierFlagDesc = "gas fee multiplier for evm relayer"
+
 	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks for blocks submitter to skip"
 
 	defaultPrimeBlockConfirmationCount       = 10
@@ -156,6 +160,8 @@ const (
 	defaultNoBatchPeriodPercent              = 0.0625
 	defaultNexusTTLBlockRoundingThreshold    = 10
 	defaultNexusTTLBlockNumberInc            = 20
+
+	defaultEvmRelayerGasFeeMultiplier = 140
 
 	defaultMaxFeeUtxoCount      = 6
 	defaultMaxUtxoCount         = 50
@@ -222,6 +228,8 @@ type generateConfigsParams struct {
 	nexusBlockRoundingThreshold uint64
 	nexusStartingBlock          uint64
 	nexusMinFeeForBridging      uint64
+
+	evmRelayerGasFeeMultiplier uint64
 
 	relayerDataDir    string
 	relayerConfigPath string
@@ -418,7 +426,7 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint32Var(
 		&p.vectorNetworkID,
 		vectorNetworkIDFlag,
-		uint32(wallet.VectorMainNetNetwork),
+		uint32(wallet.MainNetNetwork),
 		vectorNetworkIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
@@ -601,6 +609,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		nexusMinFeeForBridgingFlag,
 		common.MinFeeForBridgingDefault,
 		nexusMinFeeForBridgingFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.evmRelayerGasFeeMultiplier,
+		evmRelayerGasFeeMultiplierFlag,
+		defaultEvmRelayerGasFeeMultiplier,
+		evmRelayerGasFeeMultiplierFlagDesc,
 	)
 
 	cmd.Flags().UintVar(
@@ -787,10 +802,11 @@ func (p *generateConfigsParams) Execute(
 	primeChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrPrime].CardanoChainConfig)
 	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 	nexusChainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
-		NodeURL:    p.nexusNodeURL,
-		DataDir:    cleanPath(p.relayerDataDir),
-		ConfigPath: cleanPath(p.relayerConfigPath),
-		DynamicTx:  true,
+		NodeURL:          p.nexusNodeURL,
+		DataDir:          cleanPath(p.relayerDataDir),
+		ConfigPath:       cleanPath(p.relayerConfigPath),
+		DynamicTx:        true,
+		GasFeeMultiplier: p.evmRelayerGasFeeMultiplier,
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
