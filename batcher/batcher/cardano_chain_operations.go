@@ -558,30 +558,6 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 					"%w", cardanowallet.ErrUTXOsLimitReached)
 			}
 		} else {
-			// Create output matching the address and amount
-			output := []cardanowallet.TxOutput{
-				{
-					Addr:   addressAndAmount.Address,
-					Amount: addressAndAmount.TokensAmounts[cardanowallet.AdaTokenName],
-				},
-			}
-
-			for tokenName, amount := range addressAndAmount.TokensAmounts {
-				if tokenName == cardanowallet.AdaTokenName {
-					continue
-				}
-
-				newToken, err := cardanowallet.NewTokenWithFullNameTry(tokenName)
-				if err != nil {
-					return nil, err
-				}
-
-				output[0].Tokens = append(output[0].Tokens, cardanowallet.TokenAmount{
-					Token:  newToken,
-					Amount: amount,
-				})
-			}
-
 			cco.logger.Debug("Change included in utxo selection", addressAndAmount.IncludeChange)
 
 			multisigUtxos, err = getNeededUtxos(
