@@ -23,7 +23,6 @@ const (
 	bridgePrivateKeyFlag = "bridge-key"
 	privateKeyConfigFlag = "key-config"
 	showPolicyScrFlag    = "show-policy-script"
-	addressIndexFlag     = "addr-index"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
@@ -33,7 +32,6 @@ const (
 	bridgePrivateKeyFlagDesc = "private key for bridge admin"
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 	showPolicyScrFlagDesc    = "show policy script"
-	addrIndexFlagDesc        = "address index"
 )
 
 type createAddressParams struct {
@@ -46,7 +44,6 @@ type createAddressParams struct {
 	bridgePrivateKey string
 	privateKeyConfig string
 	showPolicyScript bool
-	addrIndex        uint
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -78,13 +75,6 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		testnetMagicFlag,
 		0,
 		testnetMagicFlagDesc,
-	)
-
-	cmd.Flags().UintVar(
-		&ip.addrIndex,
-		addressIndexFlag,
-		0,
-		addrIndexFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -153,33 +143,49 @@ func (ip *createAddressParams) Execute(
 	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 
+	bridgingAddressesCnt, err := bridgeContract.GetBridgingAddressesCount(ctx, ip.chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging addresses count retreived %d:\n", bridgingAddressesCnt)))
+	_, _ = outputter.Write([]byte("\n"))
+	outputter.WriteOutput()
+
+	cmdResult := CmdResult{
+		AddressAndPolicyScripts: make([]AddressAndPolicyScripts, bridgingAddressesCnt),
+		ShowPolicyScripts:       ip.showPolicyScript,
+	}
+
 	keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
 	if err != nil {
 		return nil, err
 	}
 
-	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(ip.addrIndex))
+	for i := range bridgingAddressesCnt {
+		policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(i))
 
-	addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
-	if err != nil {
-		return nil, err
-	}
-
-	if ip.bridgePrivateKey != "" {
-		_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
-		outputter.WriteOutput()
-
-		err := bridgeContract.SetChainAdditionalData(ctx, ip.chainID, addrs.Multisig.Payment, addrs.Fee.Payment)
+		addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
 		if err != nil {
 			return nil, err
 		}
+
+		if ip.bridgePrivateKey != "" {
+			_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
+			outputter.WriteOutput()
+
+			err := bridgeContract.SetChainAdditionalData(ctx, ip.chainID, addrs.Multisig.Payment, addrs.Fee.Payment)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		cmdResult.AddressAndPolicyScripts[i] = AddressAndPolicyScripts{
+			ApexAddresses: addrs,
+			PolicyScripts: policyScripts}
 	}
 
-	return &CmdResult{
-		ApexAddresses:     addrs,
-		PolicyScripts:     policyScripts,
-		ShowPolicyScripts: ip.showPolicyScript,
-	}, nil
+	return &cmdResult, nil
 }
 
 func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {

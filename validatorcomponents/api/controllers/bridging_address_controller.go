@@ -38,12 +38,12 @@ func (*BridgingAddressControllerImpl) GetPathPrefix() string {
 
 func (c *BridgingAddressControllerImpl) GetEndpoints() []*apiCore.APIEndpoint {
 	return []*apiCore.APIEndpoint{
-		{Path: "Get", Method: http.MethodGet, Handler: c.getBridgingAddress, APIKeyAuth: true},
+		{Path: "GetAddressToBridgeTo", Method: http.MethodGet, Handler: c.getBridgingAddressToBridgeTo, APIKeyAuth: true},
 		{Path: "GetAllAddresses", Method: http.MethodGet, Handler: c.getAllBridgingAddresses, APIKeyAuth: true},
 	}
 }
 
-func (c *BridgingAddressControllerImpl) getBridgingAddress(w http.ResponseWriter, r *http.Request) {
+func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	c.logger.Debug("getBridgingAddress request", "query values", queryValues, "url", r.URL)
 
