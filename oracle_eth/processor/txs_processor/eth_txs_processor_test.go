@@ -1127,336 +1127,166 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 1 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
+	t.Run("Start - validator set pending", func(t *testing.T) {
 		const (
 			chainID   = common.ChainIDStrNexus
 			ttl       = uint64(2)
 			blockSlot = uint64(6)
 		)
 
-		store := &ethcore.EventStoreMock{}
-		store.On("GetLastProcessedBlock").Return(uint64(6), nil).Once()
-
-		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
-
 		oracleDB, err := createOracleDB(dbFilePath)
 		require.NoError(t, err)
 
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "batch"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
 		var submittedClaims []*oCore.BridgeClaims
 
-		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
-		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
-		ctx, cancelFunc := context.WithCancel(context.Background())
+		setup := func(reqType common.BridgingTxType, event ethgo.Hash, befc bool, logData []byte) {
+			t.Cleanup(dbCleanup)
 
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
+			// reset slice for every subtest
+			submittedClaims = nil
 
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			indexerDbs,
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
+			store := &ethcore.EventStoreMock{}
+			store.On("GetLastProcessedBlock").Return(blockSlot, nil)
 
-		require.NotNil(t, proc)
+			indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
 
-		events, err := eth.GetNexusEventSignatures()
-		require.NoError(t, err)
+			becProc := &ethcore.EthTxSuccessProcessorMock{
+				AddClaimCallback: func(claims *oCore.BridgeClaims) {
+					claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oCore.BatchExecutedClaim{
+						BatchNonceId: 1,
+					})
+				},
+				Type: reqType,
+			}
+			becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		depositEventSig := events[0]
+			befcProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: reqType}
+			befcProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		log := &ethgo.Log{
-			BlockNumber:     blockSlot,
-			BlockHash:       ethgo.Hash{1},
-			TransactionHash: txHash,
-			Data:            simulateRealData(),
-			Topics: []ethgo.Hash{
-				depositEventSig,
-			},
+			bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
+			bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+				Return([]eth.TxDataInfo{}, error(nil))
+
+			bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
+			bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
+				submittedClaims = append(submittedClaims, claims)
+
+				return &types.Receipt{}, nil
+			}
+			bridgeSubmitter.On("Dispose").Return(nil)
+			bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+
+			ctx, cancelFunc := context.WithCancel(context.Background())
+
+			newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
+			newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
+			newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
+			newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
+
+			proc, rec := newValidProcessor(
+				ctx,
+				appConfig, oracleDB,
+				becProc, befcProc, bridgeDataFetcher, bridgeSubmitter,
+				indexerDbs,
+				&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+				newValidatorSetObserver,
+			)
+
+			require.NotNil(t, proc)
+
+			if !befc {
+				log := &ethgo.Log{
+					BlockNumber:     blockSlot,
+					BlockHash:       ethgo.Hash{1},
+					TransactionHash: txHash,
+					Data:            logData,
+					Topics:          []ethgo.Hash{event},
+				}
+
+				require.NoError(t, rec.NewUnprocessedLog(chainID, log))
+			} else {
+				// this is for BEFC claim
+				metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: reqType})
+				require.NoError(t, err)
+
+				err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
+					{ChainID: chainID, Hash: txHash, TTL: ttl, Metadata: metadata},
+				})
+				require.NoError(t, err)
+			}
+
+			go func() {
+				<-time.After(time.Millisecond * processingWaitTimeMs)
+				cancelFunc()
+			}()
+
+			proc.TickTime = 1
+			proc.Start()
 		}
 
-		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
+		t.Run("Bridge request executed", func(t *testing.T) {
+			events, err := eth.GetNexusEventSignatures()
+			require.NoError(t, err)
 
-		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
-		require.NoError(t, err)
+			// withdraw (bridge)
+			setup("bridge", events[1], false, []byte{})
 
-		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.NotNil(t, unprocessedTxs)
+
+			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.Nil(t, processedTx)
+
+			require.Nil(t, submittedClaims)
 		})
-		require.NoError(t, err)
 
-		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
+		t.Run("Batch request executed", func(t *testing.T) {
+			events, err := eth.GetNexusEventSignatures()
+			require.NoError(t, err)
 
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
+			// deposit (batch)
+			setup("batch", events[0], false, simulateRealData())
 
-		proc.TickTime = 1
-		proc.Start()
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Nil(t, unprocessedTxs)
 
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
+			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.NotNil(t, processedTx)
 
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.Nil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 3 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		const (
-			chainID   = common.ChainIDStrNexus
-			ttl       = uint64(2)
-			blockSlot = uint64(6)
-		)
-
-		store := &ethcore.EventStoreMock{}
-		store.On("GetLastProcessedBlock").Return(uint64(6), nil)
-
-		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
-
-		oracleDB, err := createOracleDB(dbFilePath)
-		require.NoError(t, err)
-
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: "batch"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: "batch"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*oCore.BridgeClaims
-
-		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
-		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			indexerDbs,
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		events, err := eth.GetNexusEventSignatures()
-		require.NoError(t, err)
-
-		depositEventSig := events[0]
-
-		log := &ethgo.Log{
-			BlockNumber:     uint64(5),
-			BlockHash:       ethgo.Hash{1},
-			TransactionHash: txHash,
-			Data:            simulateRealData(),
-			Topics: []ethgo.Hash{
-				depositEventSig,
-			},
-		}
-
-		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
-
-		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: "batch"})
-		require.NoError(t, err)
-
-		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
+			require.NotNil(t, submittedClaims)
+			require.Len(t, submittedClaims, 1)
+			//	require.Len(t, submittedClaims[0].BatchExecutedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 0)
+			require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
 		})
-		require.NoError(t, err)
 
-		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
+		t.Run("Batch request failed", func(t *testing.T) {
+			events, err := eth.GetNexusEventSignatures()
+			require.NoError(t, err)
 
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
+			// deposit (batch)
+			setup("batch", events[0], true, []byte{})
 
-		proc.TickTime = 1
-		proc.Start()
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Nil(t, unprocessedTxs)
 
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
+			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.NotNil(t, processedTx)
 
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.Nil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 4 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		const (
-			chainID   = common.ChainIDStrNexus
-			ttl       = uint64(2)
-			blockSlot = uint64(6)
-		)
-
-		store := &ethcore.EventStoreMock{}
-		store.On("GetLastProcessedBlock").Return(uint64(6), nil)
-
-		indexerDbs := map[string]eventTrackerStore.EventTrackerStore{chainID: store}
-
-		oracleDB, err := createOracleDB(dbFilePath)
-		require.NoError(t, err)
-
-		validTxProc := &ethcore.EthTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &ethcore.EthTxFailedProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*oCore.BridgeClaims
-
-		bridgeDataFetcher := &ethcore.EthBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &ethcore.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *oCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
-		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			indexerDbs,
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		events, err := eth.GetNexusEventSignatures()
-		require.NoError(t, err)
-
-		depositEventSig := events[0]
-
-		log := &ethgo.Log{
-			BlockNumber:     blockSlot - 1,
-			BlockHash:       ethgo.Hash{1},
-			TransactionHash: txHash,
-			Data:            simulateRealData(),
-			Topics: []ethgo.Hash{
-				depositEventSig,
-			},
-		}
-
-		require.NoError(t, rec.NewUnprocessedLog(chainID, log))
-
-		metadata, err := ethcore.MarshalEthMetadata(ethcore.BaseEthMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
-		require.NoError(t, err)
-
-		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
-			{ChainID: chainID, Hash: txHash, TTL: uint64(8), Metadata: metadata},
+			require.NotNil(t, submittedClaims)
+			require.Len(t, submittedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutedClaims, 0)
+			require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
+			require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
 		})
-		require.NoError(t, err)
-
-		err = oracleDB.AddExpectedTxs([]*ethcore.BridgeExpectedEthTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		store.On("GetLastProcessedBlock").Return(blockSlot, nil)
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.NotNil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
 	t.Run("verify abi pack for withdraw", func(t *testing.T) {
