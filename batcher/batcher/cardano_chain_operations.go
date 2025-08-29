@@ -555,7 +555,10 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 				cco.logger.Debug("REDISTRIBUTION ErrUTXOsLimitReached", "multisigUtxos count", len(multisigUtxos))
 
 				return nil, fmt.Errorf(
-					"%w", cardanowallet.ErrUTXOsLimitReached)
+					"UTXO limit reached during redistribution. "+
+						"multisigUtxos count: %d. Err: %w",
+					len(multisigUtxos), cardanowallet.ErrUTXOsLimitReached,
+				)
 			}
 		} else {
 			cco.logger.Debug("Change included in utxo selection", addressAndAmount.IncludeChange)
