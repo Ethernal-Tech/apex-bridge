@@ -472,11 +472,16 @@ func safeSubtract(a, b uint64) (uint64, bool) {
 
 func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 	chainID uint8,
+	containsNativeTokens bool,
 ) (common.AddressAndAmount, error) {
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
 	db := c.dbs[common.ToStrChainID(chainID)]
 	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
+
+	if containsNativeTokens {
+		return common.AddressAndAmount{Address: addresses[0], AddressIndex: 0}, nil
+	}
 
 	minAmount := uint64(0)
 	index := 0

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
 	apiUtils "github.com/Ethernal-Tech/apex-bridge/api/utils"
@@ -56,10 +57,28 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 		return
 	}
 
+	containsNativeTokensArr, exists := queryValues["containsNativeTokens"]
+	if !exists || len(containsNativeTokensArr) == 0 {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("chainId missing from query"), c.logger)
+
+		return
+	}
+
+	containsNativeTokens, err := strconv.ParseBool(containsNativeTokensArr[0])
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("invalid containsNativeTokens value: %w", err), c.logger)
+
+		return
+	}
+
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID)
+	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID, containsNativeTokens)
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,

@@ -59,5 +59,5 @@ type BridgingAddressesCoordinator interface {
 		isRedistribution bool,
 		protocolParams []byte,
 		txOutputs *TxOutputs) ([]AddressAndAmount, error)
-	GetAddressToBridgeTo(chainID uint8) (AddressAndAmount, error)
+	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool) (AddressAndAmount, error)
 }
