@@ -107,13 +107,11 @@ func (sp *EthStateProcessor) RunChecks(
 		return
 	}
 
-	if !isValidatorSetPending {
-		sp.state.unprocessedTxs, err = sp.db.GetUnprocessedTxs(chainID, priority, 0)
-		if err != nil {
-			sp.logger.Error("Failed to get unprocessed txs", "err", err)
+	sp.state.unprocessedTxs, err = sp.db.GetUnprocessedTxs(chainID, priority, 0)
+	if err != nil {
+		sp.logger.Error("Failed to get unprocessed txs", "err", err)
 
-			return
-		}
+		return
 	}
 
 	// needed for the guarantee that both unprocessedTxs and expectedTxs are processed in order of slot
@@ -135,10 +133,8 @@ func (sp *EthStateProcessor) RunChecks(
 			"for chainID", sp.state.blockInfo.ChainID,
 			"blockInfo", sp.state.blockInfo)
 
-		if !isValidatorSetPending {
-			sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
-		}
-		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
+		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
+		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -382,6 +378,7 @@ func (sp *EthStateProcessor) constructBridgeClaimsBlockInfo(
 func (sp *EthStateProcessor) checkUnprocessedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.EthTx
 
@@ -420,6 +417,10 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 
 			onInvalidTx(unprocessedTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 
@@ -487,6 +488,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 func (sp *EthStateProcessor) checkExpectedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantExpiredTxs []*core.BridgeExpectedEthTx
 
@@ -554,6 +556,10 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 
 			onInvalidTx(expiredTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 
