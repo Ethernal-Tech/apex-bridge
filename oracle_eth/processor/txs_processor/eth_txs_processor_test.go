@@ -1242,6 +1242,10 @@ func TestEthTxsProcessor(t *testing.T) {
 			require.NoError(t, err)
 			require.Nil(t, processedTx)
 
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
+
 			require.Nil(t, submittedClaims)
 		})
 
@@ -1260,6 +1264,10 @@ func TestEthTxsProcessor(t *testing.T) {
 			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 			require.NoError(t, err)
 			require.NotNil(t, processedTx)
+
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
 
 			require.NotNil(t, submittedClaims)
 			require.Len(t, submittedClaims, 1)
@@ -1283,6 +1291,10 @@ func TestEthTxsProcessor(t *testing.T) {
 			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 			require.NoError(t, err)
 			require.NotNil(t, processedTx)
+
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
 
 			require.NotNil(t, submittedClaims)
 			require.Len(t, submittedClaims, 1)
