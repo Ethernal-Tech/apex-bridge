@@ -1226,6 +1226,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			proc.Start()
 		}
 
+		// no claims for bridging requests during VS update
 		t.Run("Bridge request executed", func(t *testing.T) {
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
@@ -1244,6 +1245,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			require.Nil(t, submittedClaims)
 		})
 
+		// BEC claim during VS update
 		t.Run("Batch request executed", func(t *testing.T) {
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
@@ -1261,11 +1263,12 @@ func TestEthTxsProcessor(t *testing.T) {
 
 			require.NotNil(t, submittedClaims)
 			require.Len(t, submittedClaims, 1)
-			//	require.Len(t, submittedClaims[0].BatchExecutedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutedClaims, 1)
 			require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 0)
 			require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
 		})
 
+		// BEFC claim during VS update
 		t.Run("Batch request failed", func(t *testing.T) {
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
