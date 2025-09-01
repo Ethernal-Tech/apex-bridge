@@ -9,7 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	validatorSetObserver "github.com/Ethernal-Tech/apex-bridge/validatorobserver"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -20,7 +20,7 @@ type BatchManagerImpl struct {
 	ctx                  context.Context
 	config               *core.BatcherManagerConfiguration
 	batchers             []core.Batcher
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver
+	validatorSetObserver validatorobserver.IValidatorSetObserver
 }
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
@@ -34,7 +34,7 @@ func NewBatcherManager(
 	cardanoIndexers map[string]*indexer.BlockIndexer,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
-	validatorSetObserver validatorSetObserver.IValidatorSetObserver,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
 	var (
