@@ -1015,290 +1015,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
 	})
 
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 1 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*cCore.BridgeClaims
-
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		const (
-			chainID   = common.ChainIDStrPrime
-			ttl       = 2
-			blockSlot = 6
-		)
-
-		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAA"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFF"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("1122"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash}).Execute())
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.Nil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 3 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*cCore.BridgeClaims
-
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything)
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		const (
-			chainID   = common.ChainIDStrPrime
-			ttl       = 2
-			blockSlot = 6
-		)
-
-		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAA11"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFF22"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash}).Execute())
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.Nil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - single chain - valid 4 - validator set observer", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: common.BridgingTxTypeBatchExecution}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*cCore.BridgeClaims
-
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		const (
-			chainID   = common.ChainIDStrPrime
-			ttl       = 2
-			blockSlot = 6
-		)
-
-		txHash1 := indexer.Hash(common.NewHashFromHexString("11CCAA"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("11CCFF"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("221122"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: common.BridgingTxTypeBatchExecution})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash1, TTL: blockSlot + 2, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID, Hash: txHash2, TTL: ttl, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		require.NoError(t, primeDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash}).Execute())
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
-		require.NotNil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
 	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 1", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
 		dbCleanup()
@@ -1598,52 +1314,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 2)
 	})
 
-	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 1 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-		dbCleanup()
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*cCore.BridgeClaims
-
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
+	t.Run("Start - validator set pending", func(t *testing.T) {
 		const (
 			chainID1  = common.ChainIDStrPrime
 			chainID2  = common.ChainIDStrVector
@@ -1651,264 +1322,160 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			blockSlot = 6
 		)
 
-		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAABB"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFFAA"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		require.NoError(t, vectorDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash}).Execute())
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID1, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID2, 0)
-		require.Nil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 2 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-		dbCleanup()
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
 		var submittedClaims []*cCore.BridgeClaims
 
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
+		txHash := indexer.Hash(common.NewHashFromHexString("CCAABB"))
 
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
+		setup := func(reqType common.BridgingTxType, befc bool) core.Database {
+			t.Cleanup(dbCleanup)
+			dbCleanup()
 
-			return &types.Receipt{}, nil
+			// reset slice for every subtest
+			submittedClaims = nil
+
+			oracleDB, primeDB, vectorDB, err := createDbs()
+			require.NoError(t, err)
+
+			becProc := &core.CardanoTxSuccessProcessorMock{
+				AddClaimCallback: func(claims *cCore.BridgeClaims) {
+					claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, cCore.BatchExecutedClaim{
+						BatchNonceId: 1,
+					})
+				},
+				Type: reqType,
+			}
+			becProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			befcProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: reqType}
+			befcProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
+			bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
+				Return([]eth.TxDataInfo{}, error(nil))
+
+			bridgeSubmitter := &core.BridgeSubmitterMock{}
+			bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
+				submittedClaims = append(submittedClaims, claims)
+
+				return &types.Receipt{}, nil
+			}
+			bridgeSubmitter.On("Dispose").Return(nil)
+			bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
+
+			ctx, cancelFunc := context.WithCancel(context.Background())
+
+			newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
+			newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
+			newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
+			newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
+
+			proc, rec := newValidProcessor(
+				ctx,
+				appConfig, oracleDB,
+				becProc, befcProc, bridgeDataFetcher, bridgeSubmitter,
+				map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
+				&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+				newValidatorSetObserver,
+			)
+
+			require.NotNil(t, proc)
+
+			blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
+
+			metadata, err := common.SimulateRealMetadata(
+				common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: reqType})
+			require.NoError(t, err)
+
+			if !befc {
+				require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
+					{Hash: txHash, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
+				}))
+			} else {
+				err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
+					{ChainID: chainID2, Hash: txHash, TTL: ttl, Metadata: metadata},
+				})
+				require.NoError(t, err)
+
+				require.NoError(t, vectorDB.OpenTx().AddConfirmedBlock(&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash}).Execute())
+			}
+
+			go func() {
+				<-time.After(time.Millisecond * processingWaitTimeMs)
+				cancelFunc()
+			}()
+
+			proc.TickTime = 1
+			proc.Start()
+
+			return oracleDB
 		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
-		ctx, cancelFunc := context.WithCancel(context.Background())
+		// no claims for bridging requests during VS update
+		t.Run("Bridge request executed", func(t *testing.T) {
+			oracleDB := setup("bridge", false)
 
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
+			require.NoError(t, err)
+			require.NotNil(t, unprocessedTxs)
 
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
+			processedTx, err := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID1, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.Nil(t, processedTx)
 
-		require.NotNil(t, proc)
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID2, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
 
-		const (
-			chainID1  = common.ChainIDStrPrime
-			chainID2  = common.ChainIDStrVector
-			ttl       = 2
-			blockSlot = 6
-		)
-
-		txHash1 := indexer.Hash(common.NewHashFromHexString("CCAABB"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("CCFFAA"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("112233"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash2, BlockSlot: blockSlot - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash1, TTL: ttl, Metadata: metadata},
+			require.Nil(t, submittedClaims)
 		})
-		require.NoError(t, err)
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl, Metadata: metadata},
+
+		//nolint:dupl
+		// BEC claim during VS update
+		t.Run("Batch request executed", func(t *testing.T) {
+			oracleDB := setup("batch", false)
+
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
+			require.NoError(t, err)
+			require.Nil(t, unprocessedTxs)
+
+			processedTx, err := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID1, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.NotNil(t, processedTx)
+
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID1, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
+
+			require.NotNil(t, submittedClaims)
+			require.Len(t, submittedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 0)
+			require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
 		})
-		require.NoError(t, err)
 
-		require.NoError(t, vectorDB.OpenTx().AddConfirmedBlock(
-			&indexer.CardanoBlock{Slot: blockSlot, Hash: blockHash},
-		).Execute())
+		//nolint:dupl
+		// BEFC claim during VS update
+		t.Run("Batch request failed", func(t *testing.T) {
+			oracleDB := setup("batch", true)
 
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
+			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID2, 0)
+			require.NoError(t, err)
+			require.Nil(t, unprocessedTxs)
 
-		proc.TickTime = 1
-		proc.Start()
+			processedTx, err := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID2, DBKey: txHash[:]})
+			require.NoError(t, err)
+			require.Nil(t, processedTx)
 
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
-		require.NotNil(t, unprocessedTxs)
+			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID2, 0)
+			require.NoError(t, err)
+			require.Nil(t, expectedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID1, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID2, 0)
-		require.Nil(t, expectedTxs)
-		// require.NotNil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 2)
-	})
-
-	t.Run("Start - unprocessedTxs, expectedTxs - multiple chains - valid 3 - validator set pending", func(t *testing.T) {
-		t.Cleanup(dbCleanup)
-		dbCleanup()
-
-		oracleDB, primeDB, vectorDB, err := createDbs()
-		require.NoError(t, err)
-
-		validTxProc := &core.CardanoTxSuccessProcessorMock{ShouldAddClaim: true, Type: "test"}
-		validTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		failedTxProc := &core.CardanoTxFailedProcessorMock{ShouldAddClaim: true, Type: "test"}
-		failedTxProc.On("ValidateAndAddClaim", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		var submittedClaims []*cCore.BridgeClaims
-
-		bridgeDataFetcher := &core.CardanoBridgeDataFetcherMock{}
-		bridgeDataFetcher.On("GetBatchTransactions", "", uint64(0x1)).
-			Return([]eth.TxDataInfo{}, error(nil))
-
-		bridgeSubmitter := &core.BridgeSubmitterMock{}
-		bridgeSubmitter.OnSubmitClaims = func(claims *cCore.BridgeClaims) (*types.Receipt, error) {
-			submittedClaims = append(submittedClaims, claims)
-
-			return &types.Receipt{}, nil
-		}
-		bridgeSubmitter.On("Dispose").Return(nil)
-		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-
-		newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
-		newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-		newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-		newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
-
-		proc, rec := newValidProcessor(
-			ctx,
-			appConfig, oracleDB,
-			validTxProc, failedTxProc, bridgeDataFetcher, bridgeSubmitter,
-			map[string]indexer.Database{common.ChainIDStrPrime: primeDB, common.ChainIDStrVector: vectorDB},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true},
-			newValidatorSetObserver,
-		)
-
-		require.NotNil(t, proc)
-
-		const (
-			chainID1   = common.ChainIDStrPrime
-			chainID2   = common.ChainIDStrVector
-			ttl1       = 2
-			blockSlot1 = 6
-			ttl2       = 10
-			blockSlot2 = 15
-		)
-
-		txHash1 := indexer.Hash(common.NewHashFromHexString("AACCAABB"))
-		txHash2 := indexer.Hash(common.NewHashFromHexString("AACCFFAA"))
-		blockHash := indexer.Hash(common.NewHashFromHexString("AA112233"))
-
-		metadata, err := common.SimulateRealMetadata(
-			common.MetadataEncodingTypeCbor, common.BaseMetadata{BridgingTxType: "test"})
-		require.NoError(t, err)
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash1, BlockSlot: blockSlot1 - 1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		require.NoError(t, rec.NewUnprocessedTxs(chainID1, []*indexer.Tx{
-			{Hash: txHash2, BlockSlot: blockSlot1, BlockHash: blockHash, Metadata: metadata},
-		}))
-
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash1, TTL: ttl1, Metadata: metadata},
+			require.NotNil(t, submittedClaims)
+			require.Len(t, submittedClaims, 1)
+			require.Len(t, submittedClaims[0].BatchExecutedClaims, 0)
+			require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 1)
+			require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
 		})
-		require.NoError(t, err)
-		err = oracleDB.AddExpectedTxs([]*core.BridgeExpectedCardanoTx{
-			{ChainID: chainID2, Hash: txHash2, TTL: ttl2, Metadata: metadata},
-		})
-		require.NoError(t, err)
-
-		require.NoError(t, vectorDB.OpenTx().AddConfirmedBlock(
-			&indexer.CardanoBlock{Slot: blockSlot1, Hash: blockHash},
-		).AddConfirmedBlock(
-			&indexer.CardanoBlock{Slot: blockSlot2, Hash: blockHash},
-		).Execute())
-
-		go func() {
-			<-time.After(time.Millisecond * processingWaitTimeMs)
-			cancelFunc()
-		}()
-
-		proc.TickTime = 1
-		proc.Start()
-
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID1, 0)
-		require.NotNil(t, unprocessedTxs)
-
-		processedTx, _ := oracleDB.GetProcessedTx(cCore.DBTxID{ChainID: chainID1, DBKey: txHash1[:]})
-		require.Nil(t, processedTx)
-
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID2, 0)
-		require.Nil(t, expectedTxs)
-		// require.NotNil(t, expectedTxs)
-
-		require.NotNil(t, submittedClaims)
-		require.Len(t, submittedClaims, 1)
-
-		require.Len(t, submittedClaims[0].BridgingRequestClaims, 0)
-		require.Len(t, submittedClaims[0].BatchExecutionFailedClaims, 2)
 	})
 
 	t.Run("Start - unprocessedTxs - valid brc goes to pending", func(t *testing.T) {

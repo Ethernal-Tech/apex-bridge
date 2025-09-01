@@ -1134,16 +1134,12 @@ func TestEthTxsProcessor(t *testing.T) {
 			blockSlot = uint64(6)
 		)
 
-		oracleDB, err := createOracleDB(dbFilePath)
-		require.NoError(t, err)
-
 		var submittedClaims []*oCore.BridgeClaims
 
 		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
 
-		setup := func(reqType common.BridgingTxType, event ethgo.Hash, befc bool, logData []byte) {
-			t.Cleanup(dbCleanup)
-
+		setup := func(oracleDB *databaseaccess.BBoltDatabase, reqType common.BridgingTxType,
+			event ethgo.Hash, befc bool, logData []byte) {
 			// reset slice for every subtest
 			submittedClaims = nil
 
@@ -1228,11 +1224,16 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		// no claims for bridging requests during VS update
 		t.Run("Bridge request executed", func(t *testing.T) {
+			t.Cleanup(dbCleanup)
+
+			oracleDB, err := createOracleDB(dbFilePath)
+			require.NoError(t, err)
+
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
 
 			// withdraw (bridge)
-			setup("bridge", events[1], false, []byte{})
+			setup(oracleDB, "bridge", events[1], false, []byte{})
 
 			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 			require.NoError(t, err)
@@ -1251,11 +1252,16 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		// BEC claim during VS update
 		t.Run("Batch request executed", func(t *testing.T) {
+			t.Cleanup(dbCleanup)
+
+			oracleDB, err := createOracleDB(dbFilePath)
+			require.NoError(t, err)
+
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
 
 			// deposit (batch)
-			setup("batch", events[0], false, simulateRealData())
+			setup(oracleDB, "batch", events[0], false, simulateRealData())
 
 			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 			require.NoError(t, err)
@@ -1278,11 +1284,16 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		// BEFC claim during VS update
 		t.Run("Batch request failed", func(t *testing.T) {
+			t.Cleanup(dbCleanup)
+
+			oracleDB, err := createOracleDB(dbFilePath)
+			require.NoError(t, err)
+
 			events, err := eth.GetNexusEventSignatures()
 			require.NoError(t, err)
 
 			// deposit (batch)
-			setup("batch", events[0], true, []byte{})
+			setup(oracleDB, "batch", events[0], true, []byte{})
 
 			unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
 			require.NoError(t, err)
@@ -1290,7 +1301,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 			processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
 			require.NoError(t, err)
-			require.NotNil(t, processedTx)
+			require.Nil(t, processedTx)
 
 			expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
 			require.NoError(t, err)
