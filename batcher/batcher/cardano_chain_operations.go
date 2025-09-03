@@ -442,7 +442,6 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	chosenMultisigAddresses []common.AddressAndAmount,
 	multisigFeeAddress string,
 ) (map[uint8][]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
-	fmt.Println("multisigFeeAddress", multisigFeeAddress)
 	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
 	if err != nil {
 		return nil, nil, err
@@ -482,9 +481,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 	totalNumberOfUtxos := 0
 
-	fmt.Println("chosenMultisigAddresses", chosenMultisigAddresses)
 	for _, addressAndAmount := range chosenMultisigAddresses {
-		fmt.Println("addressAndAmount.Address", addressAndAmount.Address)
 		multisigUtxos, err := cco.db.GetAllTxOutputs(addressAndAmount.Address, true)
 		if err != nil {
 			return nil, nil, err

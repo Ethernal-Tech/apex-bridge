@@ -1041,7 +1041,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
-	//nolint:dupl
 	t.Run("GetFeeMultisigPolicyScript returns false", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -1541,7 +1540,6 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		require.ErrorContains(t, err, "test err")
 	})
 
-	//nolint:dupl
 	t.Run("GetFeeMultisigPolicyScript returns false", func(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
