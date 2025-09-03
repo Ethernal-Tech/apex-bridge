@@ -294,62 +294,48 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	return params.StakeAddressDeposit, nil
 }
 
-type AddressConsolidation struct {
+type addressConsolidation struct {
 	Address      string
 	AddressIndex uint8
 	UtxoCount    int
 	Share        float64
 	Assigned     int
 	Remainder    float64
-	IsFee        bool
+	Utxos        []*indexer.TxInputOutput
 }
 
 type AddressConsolidationData struct {
 	Address      string
 	AddressIndex uint8
 	UtxoCount    int
-	IsFee        bool
 	Utxos        []*indexer.TxInputOutput
 }
 
 // Chose inputs for consolidation proportionally depending of how many there are for every address
 // and the max number allowed.
-func allocateInputsForConsolidation(inputs []AddressConsolidationData, maxUtxoCount int) []AddressConsolidationData {
-	total := 0
-	for _, input := range inputs {
-		total += input.UtxoCount
-	}
-
+func allocateInputsForConsolidation(
+	inputs []AddressConsolidationData, maxUtxoCount int, totalNumberOfUtxos int,
+) []AddressConsolidationData {
 	n := len(inputs)
-	alloc := make([]AddressConsolidation, n)
-	result := make([]AddressConsolidationData, n)
+	alloc := make([]addressConsolidation, n)
 
-	if total <= maxUtxoCount {
-		for i, input := range inputs {
-			result[i] = AddressConsolidationData{
-				Address:      input.Address,
-				AddressIndex: input.AddressIndex,
-				UtxoCount:    input.UtxoCount,
-				IsFee:        input.IsFee,
-			}
-		}
-
-		return result
+	if maxUtxoCount > totalNumberOfUtxos {
+		maxUtxoCount = totalNumberOfUtxos
 	}
 
 	assigned := 0
 
 	// First, assign the integer part of the proportional share
 	for i, input := range inputs {
-		share := (float64(input.UtxoCount) / float64(total)) * float64(maxUtxoCount)
-		alloc[i] = AddressConsolidation{
+		share := (float64(input.UtxoCount) / float64(totalNumberOfUtxos)) * float64(maxUtxoCount)
+		alloc[i] = addressConsolidation{
 			Address:      input.Address,
 			AddressIndex: input.AddressIndex,
 			UtxoCount:    input.UtxoCount,
 			Share:        share,
 			Assigned:     int(share),
 			Remainder:    share - float64(int(share)),
-			IsFee:        input.IsFee,
+			Utxos:        input.Utxos,
 		}
 		assigned += alloc[i].Assigned
 	}
@@ -366,54 +352,57 @@ func allocateInputsForConsolidation(inputs []AddressConsolidationData, maxUtxoCo
 		}
 	}
 
-	// Prepare the result
-	maxIndex := 0
-	maxAssigned := 0
-	feeIndex := -1
+	redistributeIfNeeded(alloc, maxUtxoCount)
 
-	for i, input := range alloc {
-		result[i] = AddressConsolidationData{
-			Address:      input.Address,
-			AddressIndex: input.AddressIndex,
-			UtxoCount:    input.Assigned,
-			IsFee:        input.IsFee,
-		}
+	return generateAllocateInputsForConsolidationOutput(alloc)
+}
 
-		if !input.IsFee && input.Assigned > maxAssigned {
-			maxIndex = i
-			maxAssigned = input.Assigned
-		}
+// redistributes single UTXOs to avoid addresses with only 1 assigned
+func redistributeIfNeeded(alloc []addressConsolidation, maxUtxoCount int) {
+	for _, input := range alloc {
+		if input.Assigned == 1 {
+			redistributeSingleUtxo(alloc, maxUtxoCount)
 
-		if input.IsFee && input.Assigned == 0 {
-			feeIndex = i
+			break
 		}
 	}
+}
 
-	// We have to make sure that fee address is included in the transaction
-	// and it has enough utxos to pay for the fee
-	if feeIndex != -1 {
-		for {
-			if result[feeIndex].UtxoCount < inputs[0].UtxoCount {
-				result[maxIndex].UtxoCount -= 1
-				result[feeIndex].UtxoCount += 1
+// takes as many UTXOs as possible starting from the address with the most UTXOs
+func redistributeSingleUtxo(alloc []addressConsolidation, maxUtxoCount int) {
+	sort.SliceStable(alloc, func(i, j int) bool {
+		return alloc[i].UtxoCount > alloc[j].UtxoCount
+	})
+
+	for i, input := range alloc {
+		alloc[i].Assigned = 0
+
+		if maxUtxoCount > 1 {
+			if input.UtxoCount <= maxUtxoCount {
+				alloc[i].Assigned = input.UtxoCount
+				maxUtxoCount -= input.UtxoCount
 			} else {
-				break
+				// Take as many as we can from this address
+				alloc[i].Assigned = maxUtxoCount
+				maxUtxoCount = 0
 			}
+		}
+	}
+}
 
-			if calcualteUtxoSum(inputs[0].Utxos[:result[feeIndex].UtxoCount]) >= 2*common.MinUtxoAmountDefault {
-				break
-			}
+func generateAllocateInputsForConsolidationOutput(alloc []addressConsolidation) []AddressConsolidationData {
+	result := make([]AddressConsolidationData, 0)
+
+	for _, input := range alloc {
+		if input.Assigned > 1 {
+			result = append(result, AddressConsolidationData{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    input.Assigned,
+				Utxos:        input.Utxos[:input.Assigned],
+			})
 		}
 	}
 
 	return result
-}
-
-func calcualteUtxoSum(inputs []*indexer.TxInputOutput) uint64 {
-	sum := uint64(0)
-	for _, input := range inputs {
-		sum += input.Output.Amount
-	}
-
-	return sum
 }

@@ -987,15 +987,6 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
 	require.NoError(t, err)
 
-	addressAndAmountRet := []common.AddressAndAmount{
-		{
-			AddressIndex:  0,
-			Address:       bridgingAddr,
-			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
-			IncludeChange: 1_000_000,
-		},
-	}
-
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
@@ -1018,7 +1009,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		})
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1030,7 +1029,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		})
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1055,7 +1062,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		})
 		require.ErrorContains(t, err, "failed to get fee policy script")
 	})
 
@@ -1080,7 +1095,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		})
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -1104,7 +1127,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2_000_000,
+						Amount: 1_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -1114,7 +1145,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		})
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -1132,7 +1171,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		}, feeAddr)
 		require.NoError(t, err)
 		require.Equal(t, 4, len(feeUtxos))
 		require.Equal(t, 46, len(multisigUtxos[0]))
@@ -1149,7 +1196,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil))
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		}, feeAddr)
 		require.NoError(t, err)
 		require.Equal(t, 30, len(multisigUtxos[0]))
 		require.Equal(t, 3, len(feeUtxos))
@@ -1186,7 +1241,15 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		}, nil)
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true)
@@ -1289,8 +1352,8 @@ func TestSkylineConsolidation(t *testing.T) {
 
 		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 37, len(multisigUtxos[0]))
-		require.Equal(t, 3, len(feeUtxos))
+		require.Equal(t, 36, len(multisigUtxos[0]))
+		require.Equal(t, 4, len(feeUtxos))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
@@ -1418,19 +1481,6 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
 	require.NoError(t, err)
 
-	addressAndAmountRet := []common.AddressAndAmount{
-		{
-			AddressIndex:  0,
-			Address:       bridgingAddr1,
-			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
-		},
-		{
-			AddressIndex:  1,
-			Address:       bridgingAddr2,
-			TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
-		},
-	}
-
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
@@ -1453,7 +1503,18 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		})
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1465,7 +1526,18 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		})
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1490,7 +1562,18 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		})
 		require.ErrorContains(t, err, "failed to get fee policy script")
 	})
 
@@ -1515,7 +1598,18 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		})
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -1541,7 +1635,15 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 3_000_000,
+						Amount: 1_500_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_500_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -1552,7 +1654,15 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0013"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 3_000_000,
+						Amount: 1_500_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_500_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -1562,7 +1672,20 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, addressAndAmountRet)
+		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				UtxoCount:     2,
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				UtxoCount:     2,
+			},
+		})
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -1582,11 +1705,22 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", bridgingAddr2, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		}, feeAddr)
 		require.NoError(t, err)
-		require.Equal(t, 2, len(feeUtxos))
-		require.Equal(t, 24, len(multisigUtxos[0]))
-		require.Equal(t, 24, len(multisigUtxos[1]))
+		require.Equal(t, 4, len(feeUtxos))
+		require.Equal(t, 23, len(multisigUtxos[0]))
+		require.Equal(t, 23, len(multisigUtxos[1]))
 	})
 
 	t.Run("getUTXOsForConsolidation should pass when there is les utxos than maxUtxo", func(t *testing.T) {
@@ -1602,11 +1736,24 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil))
 
-		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr)
+		multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				UtxoCount:     30,
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				UtxoCount:     30,
+			},
+		}, feeAddr)
 		require.NoError(t, err)
 		require.Equal(t, 24, len(multisigUtxos[0]))
-		require.Equal(t, 24, len(multisigUtxos[1]))
-		require.Equal(t, 2, len(feeUtxos))
+		require.Equal(t, 23, len(multisigUtxos[1]))
+		require.Equal(t, 3, len(feeUtxos))
 	})
 
 	t.Run("GenerateBatchTransaction execute consolidation and pass", func(t *testing.T) {
@@ -1644,7 +1791,18 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", bridgingAddr2, true).
 			Return(multisigUtxoOutputs, error(nil)).Once()
 
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil)
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr1,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+			{
+				AddressIndex:  1,
+				Address:       bridgingAddr2,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+			},
+		}, nil)
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", uint8(2), uint8(0)).Return(bridgingAddr1, true)
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", uint8(2), uint8(1)).Return(bridgingAddr2, true)

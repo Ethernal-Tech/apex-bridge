@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"sort"
+
+	"slices"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -328,44 +329,48 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 ) (*core.GeneratedBatchTxData, error) {
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
-	// In case we have more or equal to MaxUtxoCount addresses, we need to reduce the number of addresses
-	// to the MaxUtxoCount - 2, otherwise we will not be able to create a meaningful transaction
-	// +1 because we need to take fee address into consideration
-	//nolint:gosec
-	if uint(len(chosenMultisigAddresses)+1) >= cco.config.MaxUtxoCount {
-		sort.Slice(chosenMultisigAddresses, func(i, j int) bool {
-			return chosenMultisigAddresses[i].UtxoCount > chosenMultisigAddresses[j].UtxoCount
-		})
-
-		difference := len(chosenMultisigAddresses) - int(cco.config.MaxUtxoCount) + 2 //nolint:gosec
-
-		cco.logger.Debug("Number of chosen addresses (including fee address) greather or equal to MaxUtxoCount",
-			"Num of chosen addresses", len(chosenMultisigAddresses)+1, "MaxUtxoCount", cco.config.MaxUtxoCount)
-
-		chosenMultisigAddresses = slices.Delete(
-			chosenMultisigAddresses, len(chosenMultisigAddresses)-difference, len(chosenMultisigAddresses))
-	}
-
 	multisigUtxos, feeUtxos, err := cco.getUTXOsForConsolidation(chosenMultisigAddresses, feeMultisigAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	multisigTxOutputs := make([]cardanowallet.TxOutput, 0, len(chosenMultisigAddresses))
+	removals := make([]uint8, 0)
 
+	// If not all chosen addresses are used for consolidation remove the unused
 	for i, addressAndAmount := range chosenMultisigAddresses {
-		sum := cardano.GetSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex])
+		if multisigUtxos[addressAndAmount.AddressIndex] != nil {
+			sum := cardano.GetSumMapFromTxInputOutput(multisigUtxos[addressAndAmount.AddressIndex])
 
-		multisigTxOutput, err := getTxOutputFromSumMap(
-			addressAndAmount.Address,
-			sum,
-		)
-		if err != nil {
-			return nil, err
+			multisigTxOutput, err := getTxOutputFromSumMap(
+				addressAndAmount.Address,
+				sum,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			multisigTxOutputs = append(multisigTxOutputs, multisigTxOutput)
+			chosenMultisigAddresses[i].TokensAmounts = sum
+		} else {
+			removals = append(removals, addressAndAmount.AddressIndex)
 		}
+	}
 
-		multisigTxOutputs = append(multisigTxOutputs, multisigTxOutput)
-		chosenMultisigAddresses[i].TokensAmounts = sum
+	if len(removals) > 0 {
+		for _, index := range removals {
+			i := 0
+
+			for j, c := range chosenMultisigAddresses {
+				if c.AddressIndex == index {
+					i = j
+
+					break
+				}
+			}
+
+			chosenMultisigAddresses = slices.Delete(chosenMultisigAddresses, i, i+1)
+		}
 	}
 
 	slotNumber, err := cco.getSlotNumber()
@@ -437,16 +442,13 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	chosenMultisigAddresses []common.AddressAndAmount,
 	multisigFeeAddress string,
 ) (map[uint8][]*indexer.TxInputOutput, []*indexer.TxInputOutput, error) {
+	fmt.Println("multisigFeeAddress", multisigFeeAddress)
 	feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	feeUtxos = cardano.FilterOutUtxosWithUnknownTokens(feeUtxos)
-
-	sort.Slice(feeUtxos, func(i, j int) bool {
-		return feeUtxos[i].Output.Amount < feeUtxos[j].Output.Amount
-	})
 
 	if len(feeUtxos) == 0 {
 		return nil, nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
@@ -455,59 +457,72 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	// do not take more than maxFeeUtxoCount
 	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
 
-	consolidationInputs := make([]AddressConsolidationData, len(chosenMultisigAddresses)+1)
-	consolidationInputs[0] = AddressConsolidationData{
-		Address:      multisigFeeAddress,
-		AddressIndex: 0,
-		UtxoCount:    len(feeUtxos),
-		IsFee:        true,
-		Utxos:        feeUtxos,
+	maxUtxoCount := int(max(cco.config.MaxUtxoCount-uint(len(feeUtxos)), 1)) //nolint:gosec
+
+	// In case we have more or equal to MaxUtxoCount addresses, we need to reduce the number of addresses
+	// to the MaxUtxoCount / 2, otherwise we will not be able to create a meaningful transaction
+
+	if len(chosenMultisigAddresses) >= maxUtxoCount/2 {
+		sort.Slice(chosenMultisigAddresses, func(i, j int) bool {
+			return chosenMultisigAddresses[i].UtxoCount > chosenMultisigAddresses[j].UtxoCount
+		})
+
+		cco.logger.Debug("Number of chosen addresses greather or equal to MaxUtxoCount / 2",
+			"Num of chosen addresses", len(chosenMultisigAddresses), "MaxUtxoCount", maxUtxoCount/2)
+
+		chosenMultisigAddresses = chosenMultisigAddresses[:maxUtxoCount/2]
 	}
+
+	consolidationInputs := make([]AddressConsolidationData, 0)
 
 	knownTokens, err := cardano.GetKnownTokens(cco.config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
-	queriedMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
+	totalNumberOfUtxos := 0
 
-	for i, addressAndAmount := range chosenMultisigAddresses {
+	fmt.Println("chosenMultisigAddresses", chosenMultisigAddresses)
+	for _, addressAndAmount := range chosenMultisigAddresses {
+		fmt.Println("addressAndAmount.Address", addressAndAmount.Address)
 		multisigUtxos, err := cco.db.GetAllTxOutputs(addressAndAmount.Address, true)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		multisigUtxos = cardano.FilterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+		if addressAndAmount.AddressIndex == 0 {
+			multisigUtxos = cardano.FilterOutUtxosWithUnknownTokens(multisigUtxos, knownTokens...)
+		} else {
+			multisigUtxos = cardano.FilterOutUtxosWithUnknownTokens(multisigUtxos)
+		}
 
-		sort.Slice(multisigUtxos, func(i, j int) bool {
-			return multisigUtxos[i].Output.Amount < multisigUtxos[j].Output.Amount
-		})
+		if len(multisigUtxos) > 0 {
+			totalNumberOfUtxos += len(multisigUtxos)
 
-		queriedMultisigUtxos[addressAndAmount.AddressIndex] = multisigUtxos
-
-		consolidationInputs[i+1] = AddressConsolidationData{
-			Address:      addressAndAmount.Address,
-			AddressIndex: addressAndAmount.AddressIndex,
-			UtxoCount:    len(multisigUtxos),
+			consolidationInputs = append(consolidationInputs, AddressConsolidationData{
+				Address:      addressAndAmount.Address,
+				AddressIndex: addressAndAmount.AddressIndex,
+				UtxoCount:    len(multisigUtxos),
+				Utxos:        multisigUtxos,
+			})
 		}
 	}
 
-	cco.logger.Debug("UTXOs retrieved",
-		"multisig", queriedMultisigUtxos, "fee", multisigFeeAddress, "utxos", feeUtxos)
+	cco.logger.Debug("UTXOs retrieved fee", "address", multisigFeeAddress, "utxos", feeUtxos)
+
+	for _, consolidationInput := range consolidationInputs {
+		cco.logger.Debug("UTXOs retrieved multisig", "address", consolidationInput.Address, "utxos", consolidationInput.Utxos)
+	}
 
 	consolidationChosenInputs := allocateInputsForConsolidation(
-		consolidationInputs, int(cco.config.MaxUtxoCount)) //nolint:gosec
+		consolidationInputs, maxUtxoCount, totalNumberOfUtxos)
 	cco.logger.Debug("Consolidation chosen inputs", "max", cco.config.MaxUtxoCount,
 		"inputs", consolidationInputs, "chosen", consolidationChosenInputs)
 
 	multisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
 
 	for _, input := range consolidationChosenInputs {
-		if input.Address == multisigFeeAddress {
-			feeUtxos = feeUtxos[:input.UtxoCount]
-		} else {
-			multisigUtxos[input.AddressIndex] = queriedMultisigUtxos[input.AddressIndex][:input.UtxoCount]
-		}
+		multisigUtxos[input.AddressIndex] = input.Utxos
 	}
 
 	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)

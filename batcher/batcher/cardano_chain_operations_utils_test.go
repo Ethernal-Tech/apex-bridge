@@ -558,59 +558,70 @@ func Test_extractStakeKeyDepositAmount(t *testing.T) {
 }
 
 func Test_allocateInputsForConsolidation(t *testing.T) {
+	getUtxos := func(count int) []*indexer.TxInputOutput {
+		outputs, _ := generateSmallUtxoOutputs(10, uint64(count))
+
+		return outputs
+	}
+
 	t.Run("total < max", func(t *testing.T) {
 		inputs := []AddressConsolidationData{
-			{Address: "addr1", AddressIndex: 0, UtxoCount: 5},
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 10},
-			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+			{Address: "addr1", AddressIndex: 0, Utxos: getUtxos(5), UtxoCount: 5},
+			{Address: "addr2", AddressIndex: 1, Utxos: getUtxos(10), UtxoCount: 10},
+			{Address: "addr3", AddressIndex: 2, Utxos: getUtxos(20), UtxoCount: 20},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50)
+		alloc := allocateInputsForConsolidation(inputs, 50, 35)
 		require.Equal(t, inputs, alloc)
 	})
 
 	t.Run("total == max", func(t *testing.T) {
 		inputs := []AddressConsolidationData{
-			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
-			{Address: "addr3", AddressIndex: 2, UtxoCount: 20},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10, Utxos: getUtxos(10)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20, Utxos: getUtxos(20)},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 20, Utxos: getUtxos(20)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50)
+		alloc := allocateInputsForConsolidation(inputs, 50, 50)
 		require.Equal(t, inputs, alloc)
 	})
 
 	t.Run("total > max", func(t *testing.T) {
 		inputs := []AddressConsolidationData{
-			{Address: "addr1", AddressIndex: 0, UtxoCount: 10},
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 20},
-			{Address: "addr3", AddressIndex: 2, UtxoCount: 30},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 10, Utxos: getUtxos(10)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20, Utxos: getUtxos(20)},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 30, Utxos: getUtxos(30)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50)
+		alloc := allocateInputsForConsolidation(inputs, 50, 60)
 		require.Equal(t, []AddressConsolidationData{
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 17},
-			{Address: "addr1", AddressIndex: 0, UtxoCount: 8},
-			{Address: "addr3", AddressIndex: 2, UtxoCount: 25},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 17, Utxos: inputs[1].Utxos[:17]},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 8, Utxos: inputs[0].Utxos[:8]},
+			{Address: "addr3", AddressIndex: 2, UtxoCount: 25, Utxos: inputs[2].Utxos[:25]},
 		}, alloc)
 	})
 
 	t.Run("total >> max", func(t *testing.T) {
 		inputs := []AddressConsolidationData{
-			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true, Utxos: []*indexer.TxInputOutput{
-				{
-					Output: indexer.TxOutput{
-						Amount: 100_000_000,
-					},
-				},
-			}},
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 9},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 1, Utxos: getUtxos(1)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 9, Utxos: getUtxos(9)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 3)
+		alloc := allocateInputsForConsolidation(inputs, 2, 9)
 		require.Equal(t, []AddressConsolidationData{
-			{Address: "addr2", AddressIndex: 1, UtxoCount: 2},
-			{Address: "fee", AddressIndex: 0, UtxoCount: 1, IsFee: true},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 2, Utxos: inputs[1].Utxos[:2]},
+		}, alloc)
+	})
+
+	t.Run("1 utxo in output fix", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 2, Utxos: getUtxos(1)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: getUtxos(3)},
+		}
+
+		alloc := allocateInputsForConsolidation(inputs, 3, 5)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: inputs[1].Utxos},
 		}, alloc)
 	})
 }
