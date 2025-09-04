@@ -381,13 +381,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 		ethTx := &core.EthTx{
-			Metadata: transactionDirectionNotSupportedMetadata,
-			// Metadata: destinationChainNonRegisteredMetadata,
+			Metadata:      transactionDirectionNotSupportedMetadata,
+			OriginChainID: common.ChainIDStrNexus,
 		}
-		// err = proc.ValidateAndAddClaim(claims, &core.EthTx{
-		// 	Metadata:      transactionDirectionNotSupportedMetadata,
-		// 	OriginChainID: common.ChainIDStrNexus,
-		// })
 
 		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
