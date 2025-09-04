@@ -785,7 +785,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		}
 	}
 
-	return false, &core.GeneratedBatchTxData{
+	return true, &core.GeneratedBatchTxData{
 		BatchType: uint8(ValidatorSet),
 		TxRaw:     txRaw,
 		TxHash:    txHash,
@@ -819,7 +819,7 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
 
 	if len(feeUtxos) == 0 {
-		return multisigUtxos, feeUtxos, false, nil
+		return
 	}
 
 	if len(multisigUtxos) == 0 {
