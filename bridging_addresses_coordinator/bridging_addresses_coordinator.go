@@ -111,6 +111,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		amounts, err = c.getAddressesAndAmountsToPayFrom(
 			totalTokenAmounts.addrAmounts, requiredTokenAmounts, changeMinUtxo)
 	}
+
 	if err != nil {
 		return amounts, err
 	}
@@ -145,6 +146,7 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 	amounts := make([]common.AddressAndAmount, 0)
 
 	c.logger.Debug("Available addresses to pay from", addrAmounts)
+
 	shouldSpecialyConsolidate := false
 
 	for i := range addrAmounts {
@@ -161,6 +163,8 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 
 		// Process native tokens only from frist address if there are any
 		if addrAmount.addressIndex == 0 && nativeTokensAvailable {
+			includeChange = changeMinUtxo
+
 			c.processNativeTokens(addrAmount, requiredTokenAmounts)
 		}
 
@@ -415,7 +419,7 @@ func (c *BridgingAddressesCoordinatorImpl) processCurrencyAmount(
 		return requiredForChange
 	}
 
-	// we have insufficient change on address 0 that we cannot specialy consolidate
+	// we have insufficient change on address 0 that we cannot specially consolidate
 	// do some reordering
 	if addrAmount.addressIndex == 0 {
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableCurrencyOnAddress - requiredForChange

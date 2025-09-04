@@ -571,7 +571,7 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, Utxos: getUtxos(20), UtxoCount: 20},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 35)
+		alloc := allocateInputsForConsolidation(inputs, 50, 35, false)
 		require.Equal(t, inputs, alloc)
 	})
 
@@ -582,7 +582,7 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, UtxoCount: 20, Utxos: getUtxos(20)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 50)
+		alloc := allocateInputsForConsolidation(inputs, 50, 50, false)
 		require.Equal(t, inputs, alloc)
 	})
 
@@ -593,7 +593,7 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, UtxoCount: 30, Utxos: getUtxos(30)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 60)
+		alloc := allocateInputsForConsolidation(inputs, 50, 60, false)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 17, Utxos: inputs[1].Utxos[:17]},
 			{Address: "addr1", AddressIndex: 0, UtxoCount: 8, Utxos: inputs[0].Utxos[:8]},
@@ -607,7 +607,7 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 9, Utxos: getUtxos(9)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 2, 9)
+		alloc := allocateInputsForConsolidation(inputs, 2, 9, false)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 2, Utxos: inputs[1].Utxos[:2]},
 		}, alloc)
@@ -619,7 +619,7 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: getUtxos(3)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 3, 5)
+		alloc := allocateInputsForConsolidation(inputs, 3, 5, false)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: inputs[1].Utxos},
 		}, alloc)

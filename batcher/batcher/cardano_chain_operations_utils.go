@@ -397,12 +397,14 @@ func generateAllocateInputsForConsolidationOutput(alloc []addressConsolidation) 
 	result := make([]AddressConsolidationData, 0)
 
 	for _, input := range alloc {
-		result = append(result, AddressConsolidationData{
-			Address:      input.Address,
-			AddressIndex: input.AddressIndex,
-			UtxoCount:    input.Assigned,
-			Utxos:        input.Utxos[:input.Assigned],
-		})
+		if input.Assigned > 0 {
+			result = append(result, AddressConsolidationData{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    input.Assigned,
+				Utxos:        input.Utxos[:input.Assigned],
+			})
+		}
 	}
 
 	return result

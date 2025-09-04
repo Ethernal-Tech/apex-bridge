@@ -9,7 +9,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -322,11 +321,11 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 func (cco *CardanoChainOperations) shouldConsolidate(err error) bool {
 	return errors.Is(err, cardanowallet.ErrUTXOsLimitReached) ||
 		errors.Is(err, errTxSizeTooBig) ||
-		errors.Is(err, cardanotx.ErrInsufficientChange)
+		errors.Is(err, cardano.ErrInsufficientChange)
 }
 
 func (cco *CardanoChainOperations) isSpecialConsolidation(err error) bool {
-	return errors.Is(err, cardanotx.ErrInsufficientChange)
+	return errors.Is(err, cardano.ErrInsufficientChange)
 }
 
 func (cco *CardanoChainOperations) generateConsolidationTransaction(
@@ -340,18 +339,24 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
-	getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(chosenMultisigAddresses, feeMultisigAddress, isSpecial)
+	getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(
+		chosenMultisigAddresses, feeMultisigAddress, isSpecial)
 	if err != nil {
 		return nil, err
 	}
 
 	multisigTxOutputs := make([]cardanowallet.TxOutput, 0, len(chosenMultisigAddresses))
 
+	var (
+		addr string
+		ok   bool
+	)
+
 	// If not all chosen addresses are used for consolidation remove the unused
 	for i, addressAndAmount := range getUTXOsForConsolidationRet.chosenMultisigAddresses {
 		sum := cardano.GetSumMapFromTxInputOutput(getUTXOsForConsolidationRet.multisigUtxos[addressAndAmount.AddressIndex])
 
-		addr, ok := addressAndAmount.Address, true
+		addr = addressAndAmount.Address
 		if isSpecial {
 			// Consolidate everything to addr 0
 			addr, ok = cco.bridgingAddressesManager.GetPaymentAddressFromIndex(data.ChainID, 0)
@@ -369,7 +374,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		}
 
 		multisigTxOutputs = append(multisigTxOutputs, multisigTxOutput)
-		chosenMultisigAddresses[i].TokensAmounts = sum
+		getUTXOsForConsolidationRet.chosenMultisigAddresses[i].TokensAmounts = sum
 	}
 
 	slotNumber, err := cco.getSlotNumber()
@@ -379,7 +384,8 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	cco.logger.Info("Creating consolidation tx", "consolidationTxID", data.BatchNonceID,
 		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
-		"slot", slotNumber, "multisig", len(getUTXOsForConsolidationRet.multisigUtxos), "fee", len(getUTXOsForConsolidationRet.feeUtxos))
+		"slot", slotNumber, "multisig", len(getUTXOsForConsolidationRet.multisigUtxos),
+		"fee", len(getUTXOsForConsolidationRet.feeUtxos))
 
 	// Generate tx inputs
 	feePolicyScript, ok := cco.bridgingAddressesManager.GetFeeMultisigPolicyScript(data.ChainID)
@@ -388,7 +394,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	txInputs := cardano.TxInputInfos{
-		MultiSig: make([]*cardano.TxInputInfo, 0, len(chosenMultisigAddresses)),
+		MultiSig: make([]*cardano.TxInputInfo, 0, len(getUTXOsForConsolidationRet.chosenMultisigAddresses)),
 		MultiSigFee: &cardano.TxInputInfo{
 			PolicyScript: feePolicyScript,
 			Address:      feeMultisigAddress,
@@ -396,7 +402,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		},
 	}
 
-	for _, addressAndAmount := range chosenMultisigAddresses {
+	for _, addressAndAmount := range getUTXOsForConsolidationRet.chosenMultisigAddresses {
 		policyScript, ok := cco.bridgingAddressesManager.GetPaymentPolicyScript(data.ChainID, addressAndAmount.AddressIndex)
 		if !ok {
 			return nil, fmt.Errorf("failed to get payment policy script for address: %d", addressAndAmount.AddressIndex)
@@ -419,7 +425,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		txInputs,
 		multisigTxOutputs,
 		nil,
-		chosenMultisigAddresses,
+		getUTXOsForConsolidationRet.chosenMultisigAddresses,
 	)
 	if err != nil {
 		return nil, err
@@ -529,7 +535,8 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 		multisigUtxos[input.AddressIndex] = input.Utxos
 	}
 
-	cco.logger.Debug("UTXOs chosen", "multisig", multisigUtxos, "fee", feeUtxos)
+	cco.logger.Debug("UTXOs chosen", "chosenMultisigAddresses", chosenMultisigAddresses,
+		"multisig", multisigUtxos, "fee", feeUtxos)
 
 	return &getUTXOsForConsolidation{
 		chosenMultisigAddresses: chosenMultisigAddresses,
