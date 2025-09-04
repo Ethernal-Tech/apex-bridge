@@ -1,7 +1,5 @@
 package common
 
-import "fmt"
-
 type chainIDNum = uint8
 
 const (
@@ -49,13 +47,4 @@ func IsExistingChainID(chainIDStr string) bool {
 
 func IsEVMChainID(chainIDStr string) bool {
 	return chainIDStr == ChainIDStrNexus
-}
-
-func IsTxDirectionAllowed(srcChainID, destChainID string) error {
-	if (srcChainID == ChainIDStrNexus && destChainID == ChainIDStrVector) ||
-		(srcChainID == ChainIDStrVector && destChainID == ChainIDStrNexus) {
-		return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
-	}
-
-	return nil
 }

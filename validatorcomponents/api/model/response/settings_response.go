@@ -5,11 +5,12 @@ import (
 )
 
 type SettingsResponse struct {
-	MinChainFeeForBridging         map[string]uint64 `json:"minChainFeeForBridging"`
-	MinUtxoChainValue              map[string]uint64 `json:"minUtxoChainValue"`
-	MinValueToBridge               uint64            `json:"minValueToBridge"`
-	MaxAmountAllowedToBridge       string            `json:"maxAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
+	MinChainFeeForBridging         map[string]uint64   `json:"minChainFeeForBridging"`
+	MinUtxoChainValue              map[string]uint64   `json:"minUtxoChainValue"`
+	MinValueToBridge               uint64              `json:"minValueToBridge"`
+	MaxAmountAllowedToBridge       string              `json:"maxAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
+	AllowedDirections              map[string][]string `json:"allowedDirections"`
 }
 
 func NewSettingsResponse(
@@ -39,5 +40,6 @@ func NewSettingsResponse(
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
+		AllowedDirections:              appConfig.BridgingSettings.AllowedDirections,
 	}
 }
