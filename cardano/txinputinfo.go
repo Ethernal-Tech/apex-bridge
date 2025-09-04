@@ -1,8 +1,14 @@
 package cardanotx
 
 import (
+	"errors"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+)
+
+var (
+	ErrInsufficientChange = errors.New("insufficient change, special consolidation required")
 )
 
 type TxInputInfos struct {

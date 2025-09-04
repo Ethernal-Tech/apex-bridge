@@ -315,6 +315,7 @@ type AddressConsolidationData struct {
 // and the max number allowed.
 func allocateInputsForConsolidation(
 	inputs []AddressConsolidationData, maxUtxoCount int, totalNumberOfUtxos int,
+	isSpecial bool,
 ) []AddressConsolidationData {
 	n := len(inputs)
 	alloc := make([]addressConsolidation, n)
@@ -352,7 +353,9 @@ func allocateInputsForConsolidation(
 		}
 	}
 
-	redistributeIfNeeded(alloc, maxUtxoCount)
+	if !isSpecial {
+		redistributeIfNeeded(alloc, maxUtxoCount)
+	}
 
 	return generateAllocateInputsForConsolidationOutput(alloc)
 }
@@ -394,14 +397,12 @@ func generateAllocateInputsForConsolidationOutput(alloc []addressConsolidation) 
 	result := make([]AddressConsolidationData, 0)
 
 	for _, input := range alloc {
-		if input.Assigned > 1 {
-			result = append(result, AddressConsolidationData{
-				Address:      input.Address,
-				AddressIndex: input.AddressIndex,
-				UtxoCount:    input.Assigned,
-				Utxos:        input.Utxos[:input.Assigned],
-			})
-		}
+		result = append(result, AddressConsolidationData{
+			Address:      input.Address,
+			AddressIndex: input.AddressIndex,
+			UtxoCount:    input.Assigned,
+			Utxos:        input.Utxos[:input.Assigned],
+		})
 	}
 
 	return result
