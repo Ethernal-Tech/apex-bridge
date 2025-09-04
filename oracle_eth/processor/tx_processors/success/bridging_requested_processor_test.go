@@ -168,7 +168,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 		ethTx := &core.EthTx{
-			Metadata: relevantButNotFullMetadata,
+			Metadata:      relevantButNotFullMetadata,
+			OriginChainID: common.ChainIDStrVector,
 		}
 
 		appConfig := getAppConfig(false)
@@ -182,7 +183,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata with refund", func(t *testing.T) {
