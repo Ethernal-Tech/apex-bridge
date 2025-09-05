@@ -25,10 +25,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "addr_test1vzv206r2s6c5y3rr9eexxnlppz8lm048empp8zvtwjkn9cqleec9x"
+		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	testChainID := "test"
 
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
@@ -61,6 +63,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				AllowedDirections: map[string][]string{
+					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
+					common.ChainIDStrVector: {common.ChainIDStrPrime},
+					common.ChainIDStrNexus:  {common.ChainIDStrPrime},
+					testChainID:             {common.ChainIDStrPrime},
+				},
 			},
 			RefundEnabled: refundEnabled,
 		}
@@ -231,10 +239,53 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim - transaction direction not allowed", func(t *testing.T) {
+		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []common.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: transactionDirectionNotSupportedMetadata,
+			Outputs:  txOutputs,
+		}
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: testChainID,
 			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
@@ -274,15 +325,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim - unsupported chain id found in tx", func(t *testing.T) {
+		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: common.ChainIDStrVector,
+			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
-		require.NotNil(t, destinationChainNonRegisteredMetadata)
+		require.NotNil(t, originChainNonRegisteredMetadata)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -293,9 +344,55 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}
 
 		tx := indexer.Tx{
-			Metadata: destinationChainNonRegisteredMetadata,
+			Metadata: originChainNonRegisteredMetadata,
 			Outputs:  txOutputs,
 		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: testChainID,
+		}
+
+		appConfig := getAppConfig(false)
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
+
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrVector,
+			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []common.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, originChainNonRegisteredMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+
+		tx := indexer.Tx{
+			Metadata: originChainNonRegisteredMetadata,
+			Outputs:  txOutputs,
+		}
+
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
 			OriginChainID: "invalid",
@@ -318,14 +415,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrNexus,
 			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []common.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
-		require.NotNil(t, destinationChainNonRegisteredMetadata)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -336,7 +433,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		}
 
 		tx := indexer.Tx{
-			Metadata: destinationChainNonRegisteredMetadata,
+			Metadata: transactionDirectionNotSupportedMetadata,
 			Outputs:  txOutputs,
 		}
 		cardanoTx := &core.CardanoTx{

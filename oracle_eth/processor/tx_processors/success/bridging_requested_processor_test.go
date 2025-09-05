@@ -26,6 +26,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	testChainID := "test"
 
 	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
 		config := &oCore.AppConfig{
@@ -54,6 +55,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				AllowedDirections: map[string][]string{
+					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
+					common.ChainIDStrVector: {common.ChainIDStrPrime},
+					common.ChainIDStrNexus:  {common.ChainIDStrPrime, testChainID},
+					testChainID:             {common.ChainIDStrNexus},
+				},
 			},
 			RefundEnabled: refundEnabled,
 		}
@@ -161,7 +168,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		claims := &oCore.BridgeClaims{}
 		ethTx := &core.EthTx{
-			Metadata: relevantButNotFullMetadata,
+			Metadata:      relevantButNotFullMetadata,
+			OriginChainID: common.ChainIDStrVector,
 		}
 
 		appConfig := getAppConfig(false)
@@ -175,7 +183,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
 	t.Run("ValidateAndAddClaim insufficient metadata with refund", func(t *testing.T) {
@@ -203,7 +211,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim transaction direction not allowed - invalid destination chain", func(t *testing.T) {
 		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
@@ -231,13 +239,108 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
+		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: testChainID,
+			SenderAddr:         "addr1",
+			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		ethTx := &core.EthTx{
+			Metadata:      metadata,
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.Error(t, err)
 		require.ErrorContains(t, err, "origin chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
+		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ChainIDStrNexus,
+			SenderAddr:         "addr1",
+			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		ethTx := &core.EthTx{
+			Metadata:      metadata,
+			OriginChainID: testChainID,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "origin chain not registered")
+	})
+
+	t.Run("ValidateAndAddClaim transaction direction not allowed", func(t *testing.T) {
+		transactionDirectionNotSupportedMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: "invalid",
+			SenderAddr:         "addr1",
+			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
+			FeeAmount:          big.NewInt(0),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
+
+		claims := &oCore.BridgeClaims{}
+
+		ethTx := &core.EthTx{
+			Metadata:      transactionDirectionNotSupportedMetadata,
+			OriginChainID: common.ChainIDStrNexus,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.EthTxSuccessRefundProcessorMock{}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, ethTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", ethTx, appConfig).Return(nil)
+
+		proc := NewEthBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: testChainID,
 			SenderAddr:         "addr1",
 			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
 			FeeAmount:          big.NewInt(0),
@@ -266,7 +369,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+		transactionDirectionNotSupportedMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         "addr1",
@@ -274,11 +377,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			FeeAmount:          big.NewInt(0),
 		})
 		require.NoError(t, err)
-		require.NotNil(t, destinationChainNonRegisteredMetadata)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
 
 		claims := &oCore.BridgeClaims{}
 		ethTx := &core.EthTx{
-			Metadata:      destinationChainNonRegisteredMetadata,
+			Metadata:      transactionDirectionNotSupportedMetadata,
 			OriginChainID: common.ChainIDStrNexus,
 		}
 
