@@ -258,12 +258,12 @@ func TestExecute(t *testing.T) {
 	bridgeSmartContract := &eth.BridgeSmartContractMock{}
 	validatorSetStream := make(chan *ValidatorsPerChain, 1)
 	observer := &ValidatorSetObserverImpl{
-		validatorSetPending: false,
-		validators:          ValidatorsPerChain{},
-		bridgeSmartContract: bridgeSmartContract,
-		logger:              logger,
-		validatorSetStream:  validatorSetStream,
-		lock:                sync.RWMutex{},
+		validatorSetPending:   false,
+		validators:            ValidatorsPerChain{},
+		bridgeSmartContract:   bridgeSmartContract,
+		logger:                logger,
+		validatorSetBatcherCh: validatorSetStream,
+		lock:                  sync.RWMutex{},
 	}
 	chainID := common.ChainIDStrPrime
 
@@ -289,12 +289,12 @@ func TestExecute(t *testing.T) {
 		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, expectedErr)
 
 		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetStream,
+			lock:                  sync.RWMutex{},
 		}
 		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
 
@@ -316,12 +316,12 @@ func TestExecute(t *testing.T) {
 		bridgeSmartContract := &eth.BridgeSmartContractMock{}
 
 		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetStream,
+			lock:                  sync.RWMutex{},
 		}
 
 		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
@@ -340,12 +340,12 @@ func TestExecute(t *testing.T) {
 		bridgeSmartContract := &eth.BridgeSmartContractMock{}
 
 		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetStream,
+			lock:                  sync.RWMutex{},
 		}
 
 		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
@@ -373,12 +373,12 @@ func TestExecute(t *testing.T) {
 		bridgeSmartContract := &eth.BridgeSmartContractMock{}
 
 		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetStream,
+			lock:                  sync.RWMutex{},
 		}
 
 		observer.validators = ValidatorsPerChain{
@@ -438,17 +438,19 @@ func TestExecute(t *testing.T) {
 func TestInitValidatorSet(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	bridgeSmartContract := &eth.BridgeSmartContractMock{}
-	validatorSetStream := make(chan *ValidatorsPerChain, 1)
+	validatorSetBatcherCh := make(chan *ValidatorsPerChain, 1)
+	validatorSetOracleCh := make(chan *ValidatorsPerChain, 1)
 	ctx := context.Background()
 	chainID := "prime"
 	observer := &ValidatorSetObserverImpl{
-		validatorSetPending: false,
-		validators:          ValidatorsPerChain{},
-		bridgeSmartContract: bridgeSmartContract,
-		logger:              logger,
-		validatorSetStream:  validatorSetStream,
-		lock:                sync.RWMutex{},
-		context:             ctx,
+		validatorSetPending:   false,
+		validators:            ValidatorsPerChain{},
+		bridgeSmartContract:   bridgeSmartContract,
+		logger:                logger,
+		validatorSetBatcherCh: validatorSetBatcherCh,
+		validatorSetOracleCh:  validatorSetOracleCh,
+		lock:                  sync.RWMutex{},
+		context:               ctx,
 	}
 
 	t.Run("Error getting registered chains", func(t *testing.T) {
@@ -508,19 +510,20 @@ func TestInitValidatorSet(t *testing.T) {
 		assert.Equal(t, 1, len(observer.validators))
 		assert.Equal(t, 1, len(observer.validators[chainID].Keys))
 		assert.Equal(t, validatorsData[0].Key, observer.validators[chainID].Keys[0].Key)
-		assert.Equal(t, uint64(100), observer.validators[chainID].SlotNumber)
+		assert.Equal(t, big.NewInt(100), observer.validators[chainID].Slot.BlockSlot)
 	})
 
 	t.Run("Successful initialization with multiple chains", func(t *testing.T) {
 		bridgeSmartContract := &eth.BridgeSmartContractMock{}
 		newObserver := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-			context:             ctx,
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetBatcherCh,
+			validatorSetOracleCh:  validatorSetOracleCh,
+			lock:                  sync.RWMutex{},
+			context:               ctx,
 		}
 
 		chainID2 := common.ChainIDStrVector
@@ -552,22 +555,23 @@ func TestInitValidatorSet(t *testing.T) {
 		assert.Equal(t, 2, len(newObserver.validators))
 		assert.Equal(t, 1, len(newObserver.validators[chainID].Keys))
 		assert.Equal(t, validatorsData1[0].Key, newObserver.validators[chainID].Keys[0].Key)
-		assert.Equal(t, uint64(100), newObserver.validators[chainID].SlotNumber)
+		assert.Equal(t, big.NewInt(100), newObserver.validators[chainID].Slot.BlockSlot)
 		assert.Equal(t, 1, len(newObserver.validators[chainID2].Keys))
 		assert.Equal(t, validatorsData2[0].Key, newObserver.validators[chainID2].Keys[0].Key)
-		assert.Equal(t, uint64(200), newObserver.validators[chainID2].SlotNumber)
+		assert.Equal(t, big.NewInt(200), newObserver.validators[chainID2].Slot.BlockSlot)
 	})
 
 	t.Run("Successful initialization with no validators for a chain", func(t *testing.T) {
 		bridgeSmartContract := &eth.BridgeSmartContractMock{}
 		newObserver := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-			context:             ctx,
+			validatorSetPending:   false,
+			validators:            ValidatorsPerChain{},
+			bridgeSmartContract:   bridgeSmartContract,
+			logger:                logger,
+			validatorSetBatcherCh: validatorSetBatcherCh,
+			validatorSetOracleCh:  validatorSetOracleCh,
+			lock:                  sync.RWMutex{},
+			context:               ctx,
 		}
 
 		registeredChains := []eth.Chain{{Id: common.ToNumChainID(chainID)}}
@@ -586,20 +590,18 @@ func TestInitValidatorSet(t *testing.T) {
 
 		assert.Equal(t, 1, len(newObserver.validators))
 		assert.Equal(t, 0, len(newObserver.validators[chainID].Keys))
-		assert.Equal(t, uint64(100), newObserver.validators[chainID].SlotNumber)
+		assert.Equal(t, big.NewInt(100), newObserver.validators[chainID].Slot.BlockSlot)
 	})
 }
 
-func TestUpdateSlotNumbers(t *testing.T) {
+func TestUpdateSlots(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	bridgeSmartContract := &eth.BridgeSmartContractMock{}
-	validatorSetStream := make(chan *ValidatorsPerChain, 1)
 	observer := &ValidatorSetObserverImpl{
 		validatorSetPending: false,
 		validators:          ValidatorsPerChain{},
 		bridgeSmartContract: bridgeSmartContract,
 		logger:              logger,
-		validatorSetStream:  validatorSetStream,
 		lock:                sync.RWMutex{},
 	}
 	chainID := "prime"
@@ -607,96 +609,98 @@ func TestUpdateSlotNumbers(t *testing.T) {
 	t.Run("Missing last observed block slot for chain", func(t *testing.T) {
 		validators := ValidatorsPerChain{
 			chainID: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
-				SlotNumber: 100,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(100)},
 			},
 		}
-		lastObservedBlockSlots := map[string]uint64{}
+		lastObservedBlocks := map[string]eth.CardanoBlock{}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.Error(t, err)
-		assert.Equal(t, fmt.Errorf("last observed block slot not found for chain: %s", chainID), err)
+		assert.Equal(t, fmt.Errorf("last observed block not found for chain: %s", chainID), err)
 	})
 
 	t.Run("No update needed when slot numbers match", func(t *testing.T) {
 		validators := ValidatorsPerChain{
 			chainID: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
-				SlotNumber: 100,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(100)},
 			},
 		}
-		lastObservedBlockSlots := map[string]uint64{chainID: 100}
+		lastObservedBlocks := map[string]eth.CardanoBlock{chainID: {BlockSlot: big.NewInt(100)}}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(100), validators[chainID].SlotNumber)
+		assert.Equal(t, big.NewInt(100), validators[chainID].Slot.BlockSlot)
 	})
 
 	t.Run("Successful update of slot number for single chain", func(t *testing.T) {
 		validators := ValidatorsPerChain{
 			chainID: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
-				SlotNumber: 100,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(100)},
 			},
 		}
-		lastObservedBlockSlots := map[string]uint64{chainID: 200}
+		lastObservedBlocks := map[string]eth.CardanoBlock{chainID: {BlockSlot: big.NewInt(200)}}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(200), validators[chainID].SlotNumber)
+		assert.Equal(t, big.NewInt(200), validators[chainID].Slot.BlockSlot)
 	})
 
+	//nolint:dupl
 	t.Run("Successful update of slot numbers for multiple chains", func(t *testing.T) {
 		chainID2 := "vector"
 		validators := ValidatorsPerChain{
 			chainID: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
-				SlotNumber: 100,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(100)},
 			},
 			chainID2: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(2)}}},
-				SlotNumber: 300,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(2)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(300)},
 			},
 		}
-		lastObservedBlockSlots := map[string]uint64{
-			chainID:  200,
-			chainID2: 400,
+		lastObservedBlocks := map[string]eth.CardanoBlock{
+			chainID:  {BlockSlot: big.NewInt(200)},
+			chainID2: {BlockSlot: big.NewInt(400)},
 		}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(200), validators[chainID].SlotNumber)
-		assert.Equal(t, uint64(400), validators[chainID2].SlotNumber)
+		assert.Equal(t, big.NewInt(200), validators[chainID].Slot.BlockSlot)
+		assert.Equal(t, big.NewInt(400), validators[chainID2].Slot.BlockSlot)
 	})
 
+	//nolint:dupl
 	t.Run("Partial update with some matching slot numbers", func(t *testing.T) {
 		chainID2 := "vector"
 		validators := ValidatorsPerChain{
 			chainID: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
-				SlotNumber: 100,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(100)},
 			},
 			chainID2: ValidatorsChainData{
-				Keys:       []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(2)}}},
-				SlotNumber: 300,
+				Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(2)}}},
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(300)},
 			},
 		}
-		lastObservedBlockSlots := map[string]uint64{
-			chainID:  100, // Same as current
-			chainID2: 400, // Different
+		lastObservedBlocks := map[string]eth.CardanoBlock{
+			chainID:  {BlockSlot: big.NewInt(100)}, // Same as current
+			chainID2: {BlockSlot: big.NewInt(400)}, // Different
 		}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(100), validators[chainID].SlotNumber)
-		assert.Equal(t, uint64(400), validators[chainID2].SlotNumber)
+		assert.Equal(t, big.NewInt(100), validators[chainID].Slot.BlockSlot)
+		assert.Equal(t, big.NewInt(400), validators[chainID2].Slot.BlockSlot)
 	})
 
 	t.Run("Empty validators map", func(t *testing.T) {
 		validators := ValidatorsPerChain{}
-		lastObservedBlockSlots := map[string]uint64{chainID: 200}
+		lastObservedBlocks := map[string]eth.CardanoBlock{chainID: {BlockSlot: big.NewInt(200)}}
 
-		err := observer.updateSlotNumbers(validators, lastObservedBlockSlots)
+		err := observer.updateSlots(validators, lastObservedBlocks)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(validators))
 	})

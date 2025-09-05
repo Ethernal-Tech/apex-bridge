@@ -136,6 +136,7 @@ func (o *OracleImpl) Start() error {
 
 	go o.cardanoTxsProcessor.Start()
 	go o.expectedTxsFetcher.Start()
+	go o.validatorSetUpdateListener()
 
 	for _, cbs := range o.confirmedBlockSubmitters {
 		cbs.Start(o.ctx)
@@ -170,4 +171,19 @@ func (o *OracleImpl) Dispose() error {
 	}
 
 	return nil
+}
+
+func (o *OracleImpl) validatorSetUpdateListener() {
+	for {
+		select {
+		case <-o.ctx.Done():
+			return
+		case vs := <-o.validatorSetObserver.GetValidatorSetOracleReader():
+			for _, cco := range o.cardanoChainObservers {
+				if err := cco.ValidatorSetUpdateNotify(vs); err != nil {
+					o.logger.Error("error while sending validator set update notify", "chainId", cco.GetConfig().ChainID, "err", err)
+				}
+			}
+		}
+	}
 }

@@ -138,8 +138,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 	validatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
 	validatorSetObserver.On("IsValidatorSetPending").Return(false, error(nil))
-	validatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-	validatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
 
 	t.Run("NewCardanoTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
@@ -1366,8 +1364,6 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 			newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
 			newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-			newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-			newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
 
 			proc, rec := newValidProcessor(
 				ctx,

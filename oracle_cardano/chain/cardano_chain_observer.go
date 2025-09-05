@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 
@@ -154,6 +155,27 @@ func (co *CardanoChainObserverImpl) GetConfig() *cCore.CardanoChainConfig {
 
 func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 	return co.syncer.ErrorCh()
+}
+
+func (co *CardanoChainObserverImpl) ValidatorSetUpdateNotify(vs *validatorobserver.ValidatorsPerChain) error {
+	co.logger.Debug("ValidatorSetUpdateNotify received", "chainID", co.config.ChainID)
+
+	if err := co.syncer.Close(); err != nil {
+		return err
+	}
+
+	if err := co.indexerDB.OpenTx().SetLatestBlockPoint(&indexer.BlockPoint{
+		BlockSlot: (*vs)[co.config.ChainID].Slot.BlockSlot.Uint64(),
+		BlockHash: (*vs)[co.config.ChainID].Slot.BlockHash,
+	}).Execute(); err != nil {
+		return err
+	}
+
+	if err := co.syncer.Sync(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func loadSyncerConfigs(

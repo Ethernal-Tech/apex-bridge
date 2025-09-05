@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"go.etcd.io/bbolt"
 )
@@ -45,6 +46,7 @@ type CardanoChainObserver interface {
 	Dispose() error
 	GetConfig() *cCore.CardanoChainConfig
 	ErrorCh() <-chan error
+	ValidatorSetUpdateNotify(*validatorobserver.ValidatorsPerChain) error
 }
 
 type CardanoTxsReceiver interface {

@@ -322,11 +322,10 @@ func TestBatcherExecute(t *testing.T) {
 
 		b.UpdateValidatorSet(&validatorobserver.ValidatorsPerChain{
 			common.ChainIDStrPrime: {
-				Keys:       newValidatorChainData,
-				SlotNumber: 0,
+				Keys: newValidatorChainData,
+				Slot: eth.CardanoBlock{BlockSlot: big.NewInt(0)},
 			},
-		},
-		)
+		})
 
 		_, err = b.execute(ctx)
 		require.NoError(t, err)

@@ -29,7 +29,19 @@ func (vso *ValidatorSetObserverMock) GetValidatorSet(chainID string) []eth.Valid
 	return nil
 }
 
-func (vso *ValidatorSetObserverMock) GetValidatorSetReader() <-chan *ValidatorsPerChain {
+func (vso *ValidatorSetObserverMock) GetValidatorSetBatcherReader() <-chan *ValidatorsPerChain {
+	args := vso.Called()
+
+	if args.Get(0) != nil {
+		arg0, _ := args.Get(0).(<-chan *ValidatorsPerChain)
+
+		return arg0
+	}
+
+	return nil
+}
+
+func (vso *ValidatorSetObserverMock) GetValidatorSetOracleReader() <-chan *ValidatorsPerChain {
 	args := vso.Called()
 
 	if args.Get(0) != nil {

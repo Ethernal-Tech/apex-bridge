@@ -94,7 +94,7 @@ func (bm *BatchManagerImpl) Start() {
 			select {
 			case <-bm.ctx.Done():
 				return
-			case vs := <-bm.validatorSetObserver.GetValidatorSetReader():
+			case vs := <-bm.validatorSetObserver.GetValidatorSetBatcherReader():
 				select {
 				case <-bm.ctx.Done():
 					return

@@ -992,8 +992,8 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		_, generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
 			nextBatchID, bridgeSmartContractMock, validatorobserver.ValidatorsPerChain{
 				common.ChainIDStrPrime: {
-					Keys:       newValidatorChainData,
-					SlotNumber: 0,
+					Keys: newValidatorChainData,
+					Slot: eth.CardanoBlock{BlockSlot: big.NewInt(0)},
 				},
 			}, 0, 0)
 		require.NoError(t, err)

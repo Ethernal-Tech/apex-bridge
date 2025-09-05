@@ -682,7 +682,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// get filtered & limited utxos
 	multisigUtxos, feeUtxos, isFeeOnly, err := cco.getUTXOsForValidatorChange(
-		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment, validatorsData.SlotNumber)
+		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment, validatorsData.Slot.BlockSlot.Uint64())
 	if err != nil {
 		return false, nil, err
 	}

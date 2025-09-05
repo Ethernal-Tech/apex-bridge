@@ -135,8 +135,6 @@ func TestEthTxsProcessor(t *testing.T) {
 
 	validatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
 	validatorSetObserver.On("IsValidatorSetPending").Return(false, error(nil))
-	validatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-	validatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
 
 	t.Run("TestEthTxsProcessor", func(t *testing.T) {
 		t.Cleanup(dbCleanup)
@@ -1178,8 +1176,6 @@ func TestEthTxsProcessor(t *testing.T) {
 
 			newValidatorSetObserver := &validatorobserver.ValidatorSetObserverMock{}
 			newValidatorSetObserver.On("IsValidatorSetPending").Return(true, error(nil))
-			newValidatorSetObserver.On("GetValidatorSet", mock.Anything).Return([]eth.ValidatorChainData{})
-			newValidatorSetObserver.On("GetValidatorSetReader").Return(make(chan *validatorobserver.ValidatorsPerChain))
 
 			proc, rec := newValidProcessor(
 				ctx,

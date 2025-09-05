@@ -13,20 +13,21 @@ import (
 )
 
 type ValidatorSetObserverImpl struct {
-	context             context.Context
-	validatorSetStream  chan *ValidatorsPerChain
-	validators          ValidatorsPerChain
-	validatorSetPending bool
-	bridgeSmartContract eth.IBridgeSmartContract
-	logger              hclog.Logger
-	lock                sync.RWMutex
+	context               context.Context
+	validatorSetBatcherCh chan *ValidatorsPerChain
+	validatorSetOracleCh  chan *ValidatorsPerChain
+	validators            ValidatorsPerChain
+	validatorSetPending   bool
+	bridgeSmartContract   eth.IBridgeSmartContract
+	logger                hclog.Logger
+	lock                  sync.RWMutex
 }
 
 var _ IValidatorSetObserver = (*ValidatorSetObserverImpl)(nil)
 
 type ValidatorsChainData struct {
-	Keys       []eth.ValidatorChainData
-	SlotNumber uint64
+	Keys []eth.ValidatorChainData
+	Slot eth.CardanoBlock
 }
 
 type ValidatorsPerChain map[string]ValidatorsChainData
@@ -41,11 +42,12 @@ func NewValidatorSetObserver(
 	logger hclog.Logger,
 ) (*ValidatorSetObserverImpl, error) {
 	newValidatorSet := &ValidatorSetObserverImpl{
-		context:             ctx,
-		bridgeSmartContract: bridgeSmartContract,
-		validatorSetStream:  make(chan *ValidatorsPerChain),
-		logger:              logger.Named("validator_set_observer"),
-		lock:                sync.RWMutex{},
+		context:               ctx,
+		bridgeSmartContract:   bridgeSmartContract,
+		validatorSetBatcherCh: make(chan *ValidatorsPerChain),
+		validatorSetOracleCh:  make(chan *ValidatorsPerChain),
+		logger:                logger.Named("validator_set_observer"),
+		lock:                  sync.RWMutex{},
 	}
 
 	validatorSetPending, err := bridgeSmartContract.IsNewValidatorSetPending()
@@ -68,7 +70,8 @@ func (vs *ValidatorSetObserverImpl) Start() {
 		for {
 			select {
 			case <-vs.context.Done():
-				close(vs.validatorSetStream)
+				close(vs.validatorSetBatcherCh)
+				close(vs.validatorSetOracleCh)
 
 				return
 			case <-time.After(timeout):
@@ -101,9 +104,9 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 	}
 
 	var (
-		addedValidators        []eth.ValidatorSet
-		removedValidators      []ethcommon.Address
-		lastObservedBlockSlots map[string]uint64
+		addedValidators    []eth.ValidatorSet
+		removedValidators  []ethcommon.Address
+		lastObservedBlocks map[string]eth.CardanoBlock
 	)
 
 	if isPending {
@@ -117,7 +120,7 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 			return fmt.Errorf("error getting registered chains: %w", err)
 		}
 
-		lastObservedBlockSlots = make(map[string]uint64, len(registeredChains))
+		lastObservedBlocks = make(map[string]eth.CardanoBlock, len(registeredChains))
 
 		for _, chainID := range registeredChains {
 			chainIDStr := common.ToStrChainID(chainID.Id)
@@ -127,7 +130,7 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 				return fmt.Errorf("error getting last observed block for chain: %s, err: %w", chainIDStr, err)
 			}
 
-			lastObservedBlockSlots[chainIDStr] = lastObservedBlock.BlockSlot.Uint64()
+			lastObservedBlocks[chainIDStr] = lastObservedBlock
 		}
 	}
 
@@ -149,7 +152,7 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 
 		vs.addValidators(validatorSetCopy, addedValidators)
 
-		err = vs.updateSlotNumbers(validatorSetCopy, lastObservedBlockSlots)
+		err = vs.updateSlots(validatorSetCopy, lastObservedBlocks)
 		if err != nil {
 			vs.lock.Unlock()
 
@@ -162,7 +165,12 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 
 	vs.lock.Unlock()
 
-	vs.validatorSetStream <- pendingValidatorSet
+	vs.validatorSetBatcherCh <- pendingValidatorSet
+
+	// notify oracle to reset indexer at the start of VS update
+	if isPending {
+		vs.validatorSetOracleCh <- pendingValidatorSet
+	}
 
 	return nil
 }
@@ -181,8 +189,12 @@ func (vs *ValidatorSetObserverImpl) GetValidatorSet(chainID string) []eth.Valida
 	return vs.validators[chainID].Keys
 }
 
-func (vs *ValidatorSetObserverImpl) GetValidatorSetReader() <-chan *ValidatorsPerChain {
-	return vs.validatorSetStream
+func (vs *ValidatorSetObserverImpl) GetValidatorSetBatcherReader() <-chan *ValidatorsPerChain {
+	return vs.validatorSetBatcherCh
+}
+
+func (vs *ValidatorSetObserverImpl) GetValidatorSetOracleReader() <-chan *ValidatorsPerChain {
+	return vs.validatorSetOracleCh
 }
 
 func (vs *ValidatorSetObserverImpl) removeValidators(
@@ -234,16 +246,14 @@ func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain,
 	}
 }
 
-func (vs *ValidatorSetObserverImpl) updateSlotNumbers(
-	validators ValidatorsPerChain, lastObservedBlockSlots map[string]uint64,
+func (vs *ValidatorSetObserverImpl) updateSlots(
+	validators ValidatorsPerChain, lastObservedBlocks map[string]eth.CardanoBlock,
 ) error {
 	for chainID, chainData := range validators {
-		if _, exists := lastObservedBlockSlots[chainID]; !exists {
-			return fmt.Errorf("last observed block slot not found for chain: %s", chainID)
-		}
-
-		if chainData.SlotNumber != lastObservedBlockSlots[chainID] {
-			chainData.SlotNumber = lastObservedBlockSlots[chainID]
+		if block, exists := lastObservedBlocks[chainID]; !exists {
+			return fmt.Errorf("last observed block not found for chain: %s", chainID)
+		} else {
+			chainData.Slot = block
 			validators[chainID] = chainData
 		}
 	}
@@ -278,8 +288,8 @@ func (vs *ValidatorSetObserverImpl) initValidatorSet() error {
 		}
 
 		validators[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
-			Keys:       validatorKeys,
-			SlotNumber: lastObservedBlock.BlockSlot.Uint64(),
+			Keys: validatorKeys,
+			Slot: lastObservedBlock,
 		}
 	}
 
@@ -296,8 +306,8 @@ func (v ValidatorsPerChain) Clone() ValidatorsPerChain {
 
 	for chainID, elem := range v {
 		clone[chainID] = ValidatorsChainData{
-			Keys:       append([]eth.ValidatorChainData(nil), elem.Keys...),
-			SlotNumber: elem.SlotNumber,
+			Keys: append([]eth.ValidatorChainData(nil), elem.Keys...),
+			Slot: elem.Slot,
 		}
 	}
 
