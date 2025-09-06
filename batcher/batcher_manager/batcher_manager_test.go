@@ -53,7 +53,11 @@ func TestBatcherManagerCreation(t *testing.T) {
 			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
 			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
-			}, nil, map[string]eventTrackerStore.EventTrackerStore{
+			},
+			map[string]*indexer.BlockIndexer{
+				common.ChainIDStrPrime: {},
+			},
+			map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
 			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, nil, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
@@ -92,7 +96,11 @@ func TestBatcherManagerCreation(t *testing.T) {
 			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
 			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
-			}, nil, map[string]eventTrackerStore.EventTrackerStore{
+			},
+			map[string]*indexer.BlockIndexer{
+				common.ChainIDStrPrime: {},
+			},
+			map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
 			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, nil, hclog.NewNullLogger())
 		require.NoError(t, err)
