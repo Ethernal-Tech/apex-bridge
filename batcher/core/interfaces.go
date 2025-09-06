@@ -41,12 +41,16 @@ type ChainOperations interface {
 		validatorsKeys validatorobserver.ValidatorsPerChain,
 		lastBatchID uint64, lastBatchType uint8,
 	) (bool, *GeneratedBatchTxData, error)
-	GeneratePolicyAndMultisig(
-		validators *validatorobserver.ValidatorsPerChain,
-		chainID string) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error)
+	GenerateMultisigAddress(validators *validatorobserver.ValidatorsPerChain, chainID string,
+	) (*cardano.ApexAddresses, error)
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations
 type ChainSpecificConfig interface {
 	GetChainType() string
+}
+
+// Defines the interface for indexer multisig address update during VS update
+type IndexerUpdater interface {
+	AddNewAddressesOfInterest(address ...string)
 }

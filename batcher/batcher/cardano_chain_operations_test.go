@@ -28,6 +28,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type IndexerUpdaterMock struct {
+	mock.Mock
+}
+
+func (*IndexerUpdaterMock) AddNewAddressesOfInterest(address ...string) {}
+
 func TestCardanoChainOperations_IsSynchronized(t *testing.T) {
 	chainID := "prime"
 	dbMock := &indexer.DatabaseMock{}
@@ -116,7 +122,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -325,7 +331,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -449,7 +455,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -958,15 +964,18 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 		},
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, nil, secretsMngr, "prime", hclog.NewNullLogger())
+	indxUpdaterMock := &IndexerUpdaterMock{}
+	indxUpdaterMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
+
+	cco, err := NewCardanoChainOperations(configRaw, nil, indxUpdaterMock, secretsMngr, "prime", hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
 
-	_, activeAddresses, err := cco.GeneratePolicyAndMultisig(&validatorPerChain, "prime")
+	activeAddresses, err := cco.GenerateMultisigAddress(&validatorPerChain, "prime")
 	require.NoError(t, err)
 
-	_, newAddresses, err := cco.GeneratePolicyAndMultisig(&newValidatorPerChain, "prime")
+	newAddresses, err := cco.GenerateMultisigAddress(&newValidatorPerChain, "prime")
 	require.NoError(t, err)
 
 	bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(validatorsChainData, nil)

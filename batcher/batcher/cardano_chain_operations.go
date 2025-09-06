@@ -46,6 +46,7 @@ type CardanoChainOperations struct {
 	wallet           *cardano.ApexCardanoWallet
 	txProvider       cardanowallet.ITxDataRetriever
 	db               indexer.Database
+	indxUpdater      core.IndexerUpdater
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
 	logger           hclog.Logger
@@ -54,6 +55,7 @@ type CardanoChainOperations struct {
 func NewCardanoChainOperations(
 	jsonConfig json.RawMessage,
 	db indexer.Database,
+	indxUpdater core.IndexerUpdater,
 	secretsManager secrets.SecretsManager,
 	chainID string,
 	logger hclog.Logger,
@@ -80,6 +82,7 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
+		indxUpdater:      indxUpdater,
 		logger:           logger,
 	}, nil
 }
@@ -607,9 +610,8 @@ func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
 	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
 }
 
-func (cco *CardanoChainOperations) GeneratePolicyAndMultisig(
-	validators *validatorobserver.ValidatorsPerChain,
-	chainID string) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+func generatePolicyAndMultisig(validators *validatorobserver.ValidatorsPerChain,
+	chainID, cardanoCliBinary string, networkMagic uint32) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
 	if validators == nil {
 		return nil, nil, nil
 	}
@@ -626,12 +628,26 @@ func (cco *CardanoChainOperations) GeneratePolicyAndMultisig(
 
 	policyScripts := cardano.NewApexPolicyScripts(keyHashes)
 
-	addresses, err := cardano.NewApexAddresses(cco.cardanoCliBinary, uint(cco.config.NetworkMagic), policyScripts)
+	addresses, err := cardano.NewApexAddresses(cardanoCliBinary, uint(networkMagic), policyScripts)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &policyScripts, &addresses, nil
+}
+
+func (cco *CardanoChainOperations) GenerateMultisigAddress(
+	validators *validatorobserver.ValidatorsPerChain, chainID string) (*cardano.ApexAddresses, error) {
+	_, addr, err := generatePolicyAndMultisig(validators, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
+	if err != nil {
+		return nil, err
+	}
+
+	if addr != nil {
+		cco.indxUpdater.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
+	}
+
+	return addr, nil
 }
 
 // CreateValidatorSetChangeTx implements core.ChainOperations.
@@ -647,7 +663,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// new validator set policy, multisig & fee address
 	_, newAddresses, err :=
-		cco.GeneratePolicyAndMultisig(&validatorsKeys, chainID)
+		generatePolicyAndMultisig(&validatorsKeys, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
 	if err != nil {
 		return false, nil, err
 	}
@@ -666,11 +682,11 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	// active validator set policy, multisig & fee address
 	activePolicy, activeAddresses, err :=
-		cco.GeneratePolicyAndMultisig(&validatorobserver.ValidatorsPerChain{
+		generatePolicyAndMultisig(&validatorobserver.ValidatorsPerChain{
 			chainID: validatorobserver.ValidatorsChainData{
 				Keys: activeValidatorsData,
 			},
-		}, chainID)
+		}, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
 	if err != nil {
 		return false, nil, err
 	}
