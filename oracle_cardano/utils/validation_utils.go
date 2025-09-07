@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -33,6 +34,22 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
+	knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
+
+	for i, tokenConfig := range chainConfig.NativeTokens {
+		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
+		if err != nil {
+			return err
+		}
+
+		knownTokens[i] = token
+	}
+
+	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+		common.ToNumChainID(tx.OriginChainID), 0)
+	if !ok {
+		return fmt.Errorf("failed to get zero address from bridging address manager")
+	}
 
 	for _, out := range tx.Outputs {
 		if !IsBridgingAddrForChain(appConfig, tx.OriginChainID, out.Address) &&
@@ -40,18 +57,13 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 			continue
 		}
 
-		knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
-
-		for i, tokenConfig := range chainConfig.NativeTokens {
-			token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
-			if err != nil {
-				return err
-			}
-
-			knownTokens[i] = token
+		// We allow only bridging via first address with native tokens
+		knownTokensForAddress := knownTokens
+		if out.Address != zeroAddress {
+			knownTokensForAddress = nil
 		}
 
-		if cardanotx.UtxoContainsUnknownTokens(*out, knownTokens...) {
+		if cardanotx.UtxoContainsUnknownTokens(*out, knownTokensForAddress...) {
 			return fmt.Errorf("tx %s has output (%s, %d), with some unknown tokens",
 				tx.Hash, out.Address, out.Amount)
 		}

@@ -1026,7 +1026,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "first address not found in outputs in bridging request with native tokens on source")
+		require.ErrorContains(t, err, "with some unknown tokens")
 	})
 
 	//nolint:dupl

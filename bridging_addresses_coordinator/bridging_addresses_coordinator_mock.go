@@ -17,13 +17,14 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsForBatch(
 	cardanoCliBinary string,
 	isRedistribution bool,
 	protocolParams []byte,
-	txOutputs *common.TxOutputs,
-) ([]common.AddressAndAmount, error) {
+	txOutputs common.TxOutputs,
+) ([]common.AddressAndAmount, bool, error) {
 	args := m.Called(chainID, cardanoCliBinary, isRedistribution, protocolParams, txOutputs)
 
 	arg0, _ := args.Get(0).([]common.AddressAndAmount)
+	arg1, _ := args.Get(0).(bool)
 
-	return arg0, args.Error(1)
+	return arg0, arg1, args.Error(1)
 }
 
 func (m *BridgingAddressesCoordinatorMock) GetAddressToBridgeTo(

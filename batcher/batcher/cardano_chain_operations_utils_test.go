@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -571,7 +572,8 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, Utxos: getUtxos(20), UtxoCount: 20},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 35, false)
+		alloc, err := allocateInputsForConsolidation(inputs, 50, 35, core.ConsolidationTypeSameAddress)
+		require.NoError(t, err)
 		require.Equal(t, inputs, alloc)
 	})
 
@@ -582,7 +584,8 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, UtxoCount: 20, Utxos: getUtxos(20)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 50, false)
+		alloc, err := allocateInputsForConsolidation(inputs, 50, 50, core.ConsolidationTypeSameAddress)
+		require.NoError(t, err)
 		require.Equal(t, inputs, alloc)
 	})
 
@@ -593,7 +596,8 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr3", AddressIndex: 2, UtxoCount: 30, Utxos: getUtxos(30)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 50, 60, false)
+		alloc, err := allocateInputsForConsolidation(inputs, 50, 60, core.ConsolidationTypeSameAddress)
+		require.NoError(t, err)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 17, Utxos: inputs[1].Utxos[:17]},
 			{Address: "addr1", AddressIndex: 0, UtxoCount: 8, Utxos: inputs[0].Utxos[:8]},
@@ -607,7 +611,8 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 9, Utxos: getUtxos(9)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 2, 9, false)
+		alloc, err := allocateInputsForConsolidation(inputs, 2, 9, core.ConsolidationTypeSameAddress)
+		require.NoError(t, err)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 2, Utxos: inputs[1].Utxos[:2]},
 		}, alloc)
@@ -615,11 +620,12 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 
 	t.Run("1 utxo in output fix", func(t *testing.T) {
 		inputs := []AddressConsolidationData{
-			{Address: "addr1", AddressIndex: 0, UtxoCount: 2, Utxos: getUtxos(1)},
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 2, Utxos: getUtxos(2)},
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: getUtxos(3)},
 		}
 
-		alloc := allocateInputsForConsolidation(inputs, 3, 5, false)
+		alloc, err := allocateInputsForConsolidation(inputs, 3, 5, core.ConsolidationTypeSameAddress)
+		require.NoError(t, err)
 		require.Equal(t, []AddressConsolidationData{
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: inputs[1].Utxos},
 		}, alloc)

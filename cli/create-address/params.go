@@ -170,7 +170,7 @@ func (ip *createAddressParams) Execute(
 			return nil, err
 		}
 
-		if ip.bridgePrivateKey != "" {
+		if ip.bridgePrivateKey != "" && i == 0 {
 			_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
 			outputter.WriteOutput()
 

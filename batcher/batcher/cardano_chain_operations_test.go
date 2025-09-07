@@ -1003,6 +1003,14 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Amount: 2000000,
 					},
 				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
 			}, error(nil)).Twice()
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
@@ -1017,7 +1025,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1037,7 +1045,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1050,10 +1058,18 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 						Hash: indexer.NewHashFromHexString("0x0012"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 2000000,
+						Amount: 1000000,
 					},
 				},
-			}, error(nil)).Once()
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1000000,
+					},
+				},
+			}, error(nil)).Twice()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{}, error(nil)).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(nil, false).Once()
@@ -1069,7 +1085,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "failed to get fee policy script")
 	})
 
@@ -1102,20 +1118,22 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
 	t.Run("GenerateConsolidationTransaction should pass", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		dbMock.On("GetAllTxOutputs", feeAddr, true).
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
 				{
 					Input: indexer.TxInput{
 						Hash: indexer.NewHashFromHexString("0xFF"),
 					},
 					Output: indexer.TxOutput{
-						Amount: 300_000,
+						Amount: 1_300_000,
 					},
 				},
 			}, error(nil)).Once()
@@ -1138,7 +1156,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 					},
 				},
 			}, error(nil)).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Twice()
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
@@ -1152,7 +1170,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -1178,7 +1196,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, feeAddr, false)
+		}, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 4, len(getUTXOsForConsolidationRet.feeUtxos))
 		require.Equal(t, 46, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
@@ -1203,7 +1221,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				IncludeChange: 1_000_000,
 				UtxoCount:     2,
 			},
-		}, feeAddr, false)
+		}, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 30, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
 		require.Equal(t, 3, len(getUTXOsForConsolidationRet.feeUtxos))
@@ -1349,7 +1367,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr, false)
+		getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 36, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
 		require.Equal(t, 4, len(getUTXOsForConsolidationRet.feeUtxos))
@@ -1366,7 +1384,7 @@ func TestSkylineConsolidation(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", feeAddr, true).
 			Return(feePayerUtxoOutputs, error(nil)).Once()
 
-		getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr, false)
+		getUTXOsForConsolidationRet, err := cco.getUTXOsForConsolidation(addressAndAmountRet, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 15, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
 		require.Equal(t, 3, len(getUTXOsForConsolidationRet.feeUtxos))
@@ -1496,6 +1514,14 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 						Amount: 2000000,
 					},
 				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
 			}, error(nil)).Times(3)
 		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
@@ -1513,7 +1539,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				Address:       bridgingAddr2,
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1536,7 +1562,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				Address:       bridgingAddr2,
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "test err")
 	})
 
@@ -1544,6 +1570,14 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
 			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
 				{
 					Input: indexer.TxInput{
 						Hash: indexer.NewHashFromHexString("0x0012"),
@@ -1571,7 +1605,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				Address:       bridgingAddr2,
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "failed to get fee policy script")
 	})
 
@@ -1607,7 +1641,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				Address:       bridgingAddr2,
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
@@ -1683,7 +1717,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 				UtxoCount:     2,
 			},
-		}, false)
+		}, core.ConsolidationTypeSameAddress)
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -1714,7 +1748,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				Address:       bridgingAddr2,
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 			},
-		}, feeAddr, false)
+		}, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 4, len(getUTXOsForConsolidationRet.feeUtxos))
 		require.Equal(t, 23, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
@@ -1747,7 +1781,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
 				UtxoCount:     30,
 			},
-		}, feeAddr, false)
+		}, feeAddr, core.ConsolidationTypeSameAddress)
 		require.NoError(t, err)
 		require.Equal(t, 24, len(getUTXOsForConsolidationRet.multisigUtxos[0]))
 		require.Equal(t, 23, len(getUTXOsForConsolidationRet.multisigUtxos[1]))

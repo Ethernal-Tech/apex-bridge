@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -314,83 +316,126 @@ type AddressConsolidationData struct {
 // Chose inputs for consolidation proportionally depending of how many there are for every address
 // and the max number allowed.
 func allocateInputsForConsolidation(
-	inputs []AddressConsolidationData, maxUtxoCount int, totalNumberOfUtxos int,
-	isSpecial bool,
-) []AddressConsolidationData {
+	inputs []AddressConsolidationData,
+	maxUtxoCount int,
+	totalNumberOfUtxos int,
+	consolidationType core.ConsolidationType,
+) ([]AddressConsolidationData, error) {
+	if consolidationType == core.ConsolidationTypeToZeroAddress {
+		return sequentialUtxoSelectionForConsolidation(inputs, maxUtxoCount), nil
+	}
+
 	n := len(inputs)
-	alloc := make([]addressConsolidation, n)
+	alloc := make([]addressConsolidation, 0, n)
 
 	if maxUtxoCount > totalNumberOfUtxos {
 		maxUtxoCount = totalNumberOfUtxos
 	}
 
-	assigned := 0
+	inputsWorkingSet := make([]AddressConsolidationData, 0, n)
 
-	// First, assign the integer part of the proportional share
-	for i, input := range inputs {
-		share := (float64(input.UtxoCount) / float64(totalNumberOfUtxos)) * float64(maxUtxoCount)
-		alloc[i] = addressConsolidation{
-			Address:      input.Address,
-			AddressIndex: input.AddressIndex,
-			UtxoCount:    input.UtxoCount,
-			Share:        share,
-			Assigned:     int(share),
-			Remainder:    share - float64(int(share)),
-			Utxos:        input.Utxos,
-		}
-		assigned += alloc[i].Assigned
-	}
-
-	// Assign remaining utxos using the largest remainders
-	remaining := maxUtxoCount - assigned
-	if remaining > 0 {
-		sort.SliceStable(alloc, func(i, j int) bool {
-			return alloc[i].Remainder > alloc[j].Remainder
-		})
-
-		for i := 0; i < remaining; i++ {
-			alloc[i%len(alloc)].Assigned += 1
+	for _, input := range inputs {
+		if input.UtxoCount > 1 {
+			inputsWorkingSet = append(inputsWorkingSet, input)
 		}
 	}
 
-	if !isSpecial {
-		redistributeIfNeeded(alloc, maxUtxoCount)
-	}
+	for {
+		assigned := 0
 
-	return generateAllocateInputsForConsolidationOutput(alloc)
-}
+		// First, assign the integer part of the proportional share
+		for _, input := range inputsWorkingSet {
+			share := (float64(input.UtxoCount) / float64(totalNumberOfUtxos)) * float64(maxUtxoCount)
+			alloc = append(alloc, addressConsolidation{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    input.UtxoCount,
+				Share:        share,
+				Assigned:     int(share),
+				Remainder:    share - float64(int(share)),
+				Utxos:        input.Utxos,
+			})
+			assigned += int(share)
+		}
 
-// redistributes single UTXOs to avoid addresses with only 1 assigned
-func redistributeIfNeeded(alloc []addressConsolidation, maxUtxoCount int) {
-	for _, input := range alloc {
-		if input.Assigned == 1 {
-			redistributeSingleUtxo(alloc, maxUtxoCount)
+		if len(alloc) == 0 {
+			return nil, fmt.Errorf("no elements found in addresses allocated for consolidation")
+		}
 
+		// Assign remaining utxos using the largest remainders
+		remaining := maxUtxoCount - assigned
+		if remaining > 0 {
+			sort.SliceStable(alloc, func(i, j int) bool {
+				return alloc[i].Remainder > alloc[j].Remainder
+			})
+
+			for i := 0; i < remaining; i++ {
+				alloc[i%len(alloc)].Assigned += 1
+			}
+		}
+
+		indexesToRemove := make([]uint8, 0, len(inputsWorkingSet))
+
+		for _, a := range alloc {
+			if a.Assigned == 1 {
+				indexesToRemove = append(indexesToRemove, a.AddressIndex)
+			}
+		}
+
+		if len(indexesToRemove) == 0 {
 			break
 		}
+
+		newInputsWorkingSet := make([]AddressConsolidationData, 0, len(inputsWorkingSet)-len(indexesToRemove))
+
+		for _, input := range inputsWorkingSet {
+			if !slices.Contains(indexesToRemove, input.AddressIndex) {
+				newInputsWorkingSet = append(newInputsWorkingSet, input)
+			}
+		}
+
+		inputsWorkingSet = newInputsWorkingSet
+		alloc = make([]addressConsolidation, 0, n)
 	}
+
+	return generateAllocateInputsForConsolidationOutput(alloc), nil
 }
 
 // takes as many UTXOs as possible starting from the address with the most UTXOs
-func redistributeSingleUtxo(alloc []addressConsolidation, maxUtxoCount int) {
-	sort.SliceStable(alloc, func(i, j int) bool {
-		return alloc[i].UtxoCount > alloc[j].UtxoCount
+func sequentialUtxoSelectionForConsolidation(inputs []AddressConsolidationData, maxUtxoCount int,
+) []AddressConsolidationData {
+	sort.SliceStable(inputs, func(i, j int) bool {
+		return inputs[i].UtxoCount > inputs[j].UtxoCount
 	})
 
-	for i, input := range alloc {
-		alloc[i].Assigned = 0
+	alloc := make([]addressConsolidation, 0)
 
-		if maxUtxoCount > 1 {
+	var utxoCnt int
+
+	for _, input := range inputs {
+		if maxUtxoCount > 0 {
 			if input.UtxoCount <= maxUtxoCount {
-				alloc[i].Assigned = input.UtxoCount
+				utxoCnt = input.UtxoCount
 				maxUtxoCount -= input.UtxoCount
 			} else {
 				// Take as many as we can from this address
-				alloc[i].Assigned = maxUtxoCount
+				utxoCnt = maxUtxoCount
 				maxUtxoCount = 0
 			}
+
+			alloc = append(alloc, addressConsolidation{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    utxoCnt,
+				Share:        0,
+				Assigned:     utxoCnt,
+				Remainder:    0,
+				Utxos:        input.Utxos[:utxoCnt],
+			})
 		}
 	}
+
+	return generateAllocateInputsForConsolidationOutput(alloc)
 }
 
 func generateAllocateInputsForConsolidationOutput(alloc []addressConsolidation) []AddressConsolidationData {

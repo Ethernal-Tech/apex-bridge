@@ -57,7 +57,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -94,7 +94,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -140,7 +140,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -186,7 +186,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -236,7 +236,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -282,7 +282,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -339,7 +339,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -414,7 +414,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), false, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Addr:   "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
@@ -485,7 +485,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
 		require.Equal(t, uint64(1_000_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -534,7 +534,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(amounts))
 
@@ -589,7 +589,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
 		require.NoError(t, err)
 		require.Equal(t, 3, len(amounts))
 
@@ -643,7 +643,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Amount: 100_000_000,
@@ -734,7 +734,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Amount: 100_000_000,
@@ -811,7 +811,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		_, err = coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{
+		_, _, err = coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Amount: 500_000_000,
@@ -833,7 +833,7 @@ func TestRedistributeTokens(t *testing.T) {
 			Amount: 3000000,
 		}
 
-		_, err = coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, &common.TxOutputs{
+		_, _, err = coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{
 			Outputs: []cardanowallet.TxOutput{
 				{
 					Amount: 500_000_000,

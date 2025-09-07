@@ -274,27 +274,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		}
 	}
 
-	// We allow only bridging via first address with native tokens
-	if hasNativeTokenOnSource {
-		firstAddressFoundInOutputs := false
-		bridgingAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-			common.ToNumChainID(tx.OriginChainID), 0)
-
-		if !ok {
-			return fmt.Errorf("failed to retrieve bridging address from manager")
-		}
-
-		for _, output := range tx.Outputs {
-			if bridgingAddress == output.Address {
-				firstAddressFoundInOutputs = true
-			}
-		}
-
-		if !firstAddressFoundInOutputs {
-			return fmt.Errorf("first address not found in outputs in bridging request with native tokens on source")
-		}
-	}
-
 	if foundAUtxoValueBelowMinimumValue {
 		return fmt.Errorf("found a utxo value below minimum value in metadata receivers: %v", metadata)
 	}

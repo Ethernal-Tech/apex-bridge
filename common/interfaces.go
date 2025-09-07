@@ -40,11 +40,12 @@ type BridgingAddressesManager interface {
 }
 
 type AddressAndAmount struct {
-	AddressIndex  uint8
-	Address       string
-	TokensAmounts map[string]uint64
-	IncludeChange uint64
-	UtxoCount     int
+	AddressIndex      uint8
+	Address           string
+	TokensAmounts     map[string]uint64
+	IncludeChange     uint64
+	UtxoCount         int
+	ShouldConsolidate bool
 }
 
 type TxOutputs struct {
@@ -58,6 +59,6 @@ type BridgingAddressesCoordinator interface {
 		cardanoCliBinary string,
 		isRedistribution bool,
 		protocolParams []byte,
-		txOutputs *TxOutputs) ([]AddressAndAmount, error)
+		txOutputs TxOutputs) ([]AddressAndAmount, bool, error)
 	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool) (AddressAndAmount, error)
 }

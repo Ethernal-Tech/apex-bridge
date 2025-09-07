@@ -18,6 +18,22 @@ func (gb GeneratedBatchTxData) IsConsolidation() bool {
 	return gb.BatchType == eth.BatchTypeConsolidation
 }
 
+type ConsolidationType uint8
+
+const (
+	ConsolidationTypeSameAddress ConsolidationType = iota
+	ConsolidationTypeToZeroAddress
+)
+
+func (ct ConsolidationType) String() string {
+	switch ct {
+	case ConsolidationTypeToZeroAddress:
+		return "consolidation to zero address"
+	default:
+		return "consolidation to same address"
+	}
+}
+
 type BatchSignatures struct {
 	Multisig, MultsigStake, Fee []byte
 }

@@ -36,6 +36,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
