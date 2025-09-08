@@ -59,7 +59,7 @@ func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {
 	return 0
 }
 
-func CalculateMinUtxoLovelaceAmount(
+func CalculateMinUtxoCurrencyAmount(
 	cardanoCliBinary string, protocolParams []byte,
 	addr string, txInputOutputs []*indexer.TxInputOutput, txOutputs []wallet.TxOutput,
 ) (uint64, error) {

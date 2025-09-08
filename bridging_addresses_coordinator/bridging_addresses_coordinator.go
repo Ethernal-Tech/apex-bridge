@@ -78,7 +78,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return nil, isRedistribution, err
 	}
 
-	changeMinUtxo, err := cardanotx.CalculateMinUtxoLovelaceAmount(
+	changeMinUtxo, err := cardanotx.CalculateMinUtxoCurrencyAmount(
 		cardanoCliBinary, protocolParams, totalTokenAmounts.addrAmounts[0].address,
 		totalTokenAmounts.potentialInputs, txOutputs.Outputs)
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 ) ([]common.AddressAndAmount, error) {
 	nativeTokensAvailable := len(addrAmounts[0].totalTokenAmounts) > 1
 
-	// Sort by total lovelace amount descending
+	// Sort by total currency amount descending
 	sort.SliceStable(addrAmounts, func(i, j int) bool {
 		return addrAmounts[i].
 			totalTokenAmounts[cardanowallet.AdaTokenName] > addrAmounts[j].totalTokenAmounts[cardanowallet.AdaTokenName]
@@ -197,7 +197,7 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 			c.processNativeTokens(addrAmount, requiredTokenAmounts)
 		}
 
-		// Process remaining lovelace amount
+		// Process remaining currency amount
 		if requiredCurrencyAmount > 0 {
 			includeChange = c.processCurrencyAmount(
 				addrAmount, changeMinUtxo, requiredTokenAmounts)
@@ -379,7 +379,7 @@ func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
 			requiredTokenAmounts[tokenName] -= requiredAmount
 			addrAmount.includeInTx[tokenName] = requiredAmount
 		} else if addrAmount.totalTokenAmounts[tokenName] > 0 {
-			// Take full amount, no change so we don't pay attention to lovelace
+			// Take full amount, no change so we don't pay attention to currency
 			requiredTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
 			addrAmount.includeInTx[tokenName] = addrAmount.totalTokenAmounts[tokenName]
 		}
@@ -390,10 +390,10 @@ func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
 	}
 }
 
-// processCurrencyAmount handles the processing of lovelace amounts for a given address
-// Updates the addrAmount.includeInTx map with the amount of lovelace to be included in the transaction
-// Deducts the amount of lovelace from the requiredTokenAmounts map
-// Returns the amount of lovelace to be included as change for this address during utxo selection
+// processCurrencyAmount handles the processing of currency amounts for a given address
+// Updates the addrAmount.includeInTx map with the amount of currency to be included in the transaction
+// Deducts the amount of currency from the requiredTokenAmounts map
+// Returns the amount of currency to be included as change for this address during utxo selection
 func (c *BridgingAddressesCoordinatorImpl) processCurrencyAmount(
 	addrAmount *addrAmount,
 	changeMinUtxo uint64,
@@ -424,8 +424,8 @@ func (c *BridgingAddressesCoordinatorImpl) processCurrencyAmount(
 	c.logger.Debug("Address change", addrAmount.address, addressChange)
 
 	if !ok || (addressChange == 0 && ok) {
-		// Not enough lovelace on this address or exact amount
-		// Take all lovelace from this address
+		// Not enough currency on this address or exact amount
+		// Take all currency from this address
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableCurrencyOnAddress
 		requiredTokenAmounts[cardanowallet.AdaTokenName] -= availableCurrencyOnAddress
 
