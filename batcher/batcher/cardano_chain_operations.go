@@ -720,7 +720,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		return false, &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
-			TxHash:    "",
+			TxHash:    "deadbeef",
 		}, nil
 	}
 
