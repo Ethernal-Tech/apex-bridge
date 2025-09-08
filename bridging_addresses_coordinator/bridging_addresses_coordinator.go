@@ -110,7 +110,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return amounts, isRedistribution, err
 	}
 
-	result, err := handleSpecialAdaConsolidation(
+	result, err := handleSpecialConsolidation(
 		requiredTokenAmounts[cardanowallet.AdaTokenName],
 		requiredCurrencyAmount,
 		amounts,
@@ -493,7 +493,7 @@ func validateTokenFunds(
 	return nil
 }
 
-func handleSpecialAdaConsolidation(
+func handleSpecialConsolidation(
 	requiredCurrencyAmounts uint64,
 	initalRequiredCurrencyAmount uint64,
 	amounts []common.AddressAndAmount,
