@@ -991,6 +991,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	defer cancelCtx()
 
 	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
+	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 
 	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -1122,6 +1123,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
+	//nolint:dupl
 	t.Run("GenerateConsolidationTransaction should pass", func(t *testing.T) {
 		dbMock.ExpectedCalls = nil
 		dbMock.Calls = nil
@@ -1171,6 +1173,62 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 				UtxoCount:     2,
 			},
 		}, core.ConsolidationTypeSameAddress)
+
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	//nolint:dupl
+	t.Run("GenerateConsolidationTransaction to zero address should pass", func(t *testing.T) {
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0xFF"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_300_000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
+					},
+				},
+			}, error(nil)).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Twice()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
+		require.NoError(t, err)
+
+		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+		}, core.ConsolidationTypeToZeroAddress)
 
 		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
@@ -1274,6 +1332,79 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
 		require.True(t, result.IsConsolidation())
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	t.Run("GenerateConsolidationTransaction MaxUtxoCount > addr num should pass", func(t *testing.T) {
+		cco.config.MaxUtxoCount = 3
+		dbMock.ExpectedCalls = nil
+		dbMock.Calls = nil
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		dbMock.On("GetAllTxOutputs", mock.Anything, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0xFF"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_300_000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
+					},
+				},
+			}, error(nil)).Once()
+		dbMock.On("GetAllTxOutputs", "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy88", true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 1_000_000,
+					},
+				},
+			}, error(nil)).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true).Twice()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
+		require.NoError(t, err)
+		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 1_000_000,
+				UtxoCount:     2,
+			},
+			{
+				AddressIndex:  1,
+				Address:       "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy88",
+				TokensAmounts: map[string]uint64{"lovelace": 1_000_000},
+				IncludeChange: 0,
+				UtxoCount:     1,
+			},
+		}, core.ConsolidationTypeSameAddress)
+
+		require.NoError(t, err)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})

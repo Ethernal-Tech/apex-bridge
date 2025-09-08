@@ -630,4 +630,31 @@ func Test_allocateInputsForConsolidation(t *testing.T) {
 			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: inputs[1].Utxos},
 		}, alloc)
 	})
+
+	t.Run("test consolidation to zero address, total > max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 2, Utxos: getUtxos(2)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: getUtxos(3)},
+		}
+
+		alloc, err := allocateInputsForConsolidation(inputs, 3, 5, core.ConsolidationTypeToZeroAddress)
+		require.NoError(t, err)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 3, Utxos: getUtxos(3)},
+		}, alloc)
+	})
+
+	t.Run("test consolidation to zero address, total < max", func(t *testing.T) {
+		inputs := []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 30, Utxos: getUtxos(30)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 25, Utxos: getUtxos(25)},
+		}
+
+		alloc, err := allocateInputsForConsolidation(inputs, 50, 55, core.ConsolidationTypeToZeroAddress)
+		require.NoError(t, err)
+		require.Equal(t, []AddressConsolidationData{
+			{Address: "addr1", AddressIndex: 0, UtxoCount: 30, Utxos: getUtxos(30)},
+			{Address: "addr2", AddressIndex: 1, UtxoCount: 20, Utxos: getUtxos(20)},
+		}, alloc)
+	})
 }

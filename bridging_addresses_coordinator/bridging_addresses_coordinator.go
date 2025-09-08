@@ -115,7 +115,6 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		requiredCurrencyAmount,
 		amounts,
 	)
-
 	if err != nil {
 		return result, isRedistribution, err
 	}
