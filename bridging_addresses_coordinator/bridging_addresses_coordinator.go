@@ -59,9 +59,10 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 ) ([]common.AddressAndAmount, bool, error) {
 	// Go through all addresses, sort them by the total amount of tokens (descending),
 	// and choose the one with the biggest amount
-	var err error
-
-	var amounts []common.AddressAndAmount
+	var (
+		err     error
+		amounts []common.AddressAndAmount
+	)
 
 	if len(txOutputs.Outputs) == 0 && !isRedistribution {
 		return nil, isRedistribution, nil
@@ -87,19 +88,9 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 
 	changeMinUtxo = max(changeMinUtxo, common.MinUtxoAmountDefault)
 
-	for token, amount := range requiredTokenAmounts {
-		if token == cardanowallet.AdaTokenName {
-			if amount != totalTokenAmounts.sum[token] &&
-				amount > totalTokenAmounts.sum[token]-changeMinUtxo {
-				return nil, isRedistribution, fmt.Errorf("not enough %s token funds for batch: available = %d, required = %d",
-					token, totalTokenAmounts.sum[token], amount)
-			}
-		}
-
-		if amount > totalTokenAmounts.sum[token] {
-			return nil, isRedistribution, fmt.Errorf("not enough %s token funds for batch: available = %d, required = %d",
-				token, totalTokenAmounts.sum[token], amount)
-		}
+	// Validate whether enough token funds exist
+	if err := validateTokenFunds(requiredTokenAmounts, totalTokenAmounts.sum, changeMinUtxo); err != nil {
+		return nil, isRedistribution, err
 	}
 
 	if isRedistribution {
@@ -119,31 +110,14 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return amounts, isRedistribution, err
 	}
 
-	if requiredTokenAmounts[cardanowallet.AdaTokenName] > 0 {
-		// trigger special consolidation
-		containsZeroAddr := false
-		insufficientChnageAddresses := make([]common.AddressAndAmount, 0)
+	result, err := handleSpecialAdaConsolidation(
+		requiredTokenAmounts[cardanowallet.AdaTokenName],
+		requiredCurrencyAmount,
+		amounts,
+	)
 
-		for _, addr := range amounts {
-			if addr.AddressIndex == 0 {
-				containsZeroAddr = true
-			}
-
-			if addr.AddressIndex != 0 && addr.ShouldConsolidate {
-				insufficientChnageAddresses = append(insufficientChnageAddresses, addr)
-			}
-		}
-
-		if len(insufficientChnageAddresses) == 0 {
-			return nil, isRedistribution, fmt.Errorf("%w: required %d, but missing %d",
-				cardanowallet.ErrUTXOsCouldNotSelect, requiredCurrencyAmount, requiredTokenAmounts[cardanowallet.AdaTokenName])
-		}
-
-		if containsZeroAddr {
-			return []common.AddressAndAmount{insufficientChnageAddresses[0]}, isRedistribution, cardanotx.ErrInsufficientChange
-		} else {
-			return insufficientChnageAddresses, isRedistribution, cardanotx.ErrInsufficientChange
-		}
+	if err != nil {
+		return result, isRedistribution, err
 	}
 
 	for tokenName, remainingAmount := range requiredTokenAmounts {
@@ -161,15 +135,13 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 	requiredTokenAmounts map[string]uint64,
 	changeMinUtxo uint64,
 ) ([]common.AddressAndAmount, error) {
-	nativeTokensAvailable := len(addrAmounts[0].totalTokenAmounts) > 1
+	amounts := make([]common.AddressAndAmount, 0)
 
 	// Sort by total currency amount descending
 	sort.SliceStable(addrAmounts, func(i, j int) bool {
 		return addrAmounts[i].
 			totalTokenAmounts[cardanowallet.AdaTokenName] > addrAmounts[j].totalTokenAmounts[cardanowallet.AdaTokenName]
 	})
-
-	amounts := make([]common.AddressAndAmount, 0)
 
 	c.logger.Debug("Available addresses to pay from", addrAmounts)
 
@@ -188,23 +160,18 @@ func (c *BridgingAddressesCoordinatorImpl) getAddressesAndAmountsToPayFrom(
 		}
 
 		includeChange := common.MinUtxoAmountDefault
-		requiredCurrencyAmount := requiredTokenAmounts[cardanowallet.AdaTokenName]
 
 		// Process native tokens only from frist address if there are any
-		if addrAmount.addressIndex == 0 && nativeTokensAvailable {
+		if addrAmount.addressIndex == 0 && len(addrAmount.totalTokenAmounts) > 1 {
 			includeChange = changeMinUtxo
 
 			c.processNativeTokens(addrAmount, requiredTokenAmounts)
 		}
 
 		// Process remaining currency amount
-		if requiredCurrencyAmount > 0 {
+		if requiredTokenAmounts[cardanowallet.AdaTokenName] > 0 {
 			includeChange = c.processCurrencyAmount(
 				addrAmount, changeMinUtxo, requiredTokenAmounts)
-
-			if requiredTokenAmounts[cardanowallet.AdaTokenName] == 0 {
-				delete(requiredTokenAmounts, cardanowallet.AdaTokenName)
-			}
 		} else {
 			addrAmount.includeInTx[cardanowallet.AdaTokenName] = 0
 		}
@@ -374,15 +341,17 @@ func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
 			continue
 		}
 
-		if addrAmount.totalTokenAmounts[tokenName] >= requiredAmount {
-			// Take partial amount and satisfy
-			requiredTokenAmounts[tokenName] -= requiredAmount
-			addrAmount.includeInTx[tokenName] = requiredAmount
-		} else if addrAmount.totalTokenAmounts[tokenName] > 0 {
-			// Take full amount, no change so we don't pay attention to currency
-			requiredTokenAmounts[tokenName] -= addrAmount.totalTokenAmounts[tokenName]
-			addrAmount.includeInTx[tokenName] = addrAmount.totalTokenAmounts[tokenName]
+		availableTokens := addrAmount.totalTokenAmounts[tokenName]
+		if availableTokens == 0 {
+			continue
 		}
+
+		tokensTakenFromAddress := min(availableTokens, requiredAmount)
+		c.logger.Debug("Taking native tokens from address", "address", addrAmount.address,
+			"token", tokenName, "amount", tokensTakenFromAddress)
+
+		requiredTokenAmounts[tokenName] -= tokensTakenFromAddress
+		addrAmount.includeInTx[tokenName] = tokensTakenFromAddress
 
 		if requiredTokenAmounts[tokenName] == 0 {
 			delete(requiredTokenAmounts, tokenName)
@@ -399,31 +368,38 @@ func (c *BridgingAddressesCoordinatorImpl) processCurrencyAmount(
 	changeMinUtxo uint64,
 	requiredTokenAmounts map[string]uint64,
 ) uint64 {
+	minChange := c.spendCurrencyFromAddress(addrAmount, changeMinUtxo, requiredTokenAmounts)
+
+	// Clean up if fully satisfied
+	if requiredTokenAmounts[cardanowallet.AdaTokenName] == 0 {
+		delete(requiredTokenAmounts, cardanowallet.AdaTokenName)
+	}
+
+	return minChange
+}
+
+func (c *BridgingAddressesCoordinatorImpl) spendCurrencyFromAddress(
+	addrAmount *addrAmount,
+	changeMinUtxo uint64,
+	requiredTokenAmounts map[string]uint64,
+) uint64 {
 	requiredCurrencyAmount := requiredTokenAmounts[cardanowallet.AdaTokenName]
 	availableCurrencyOnAddress := addrAmount.totalTokenAmounts[cardanowallet.AdaTokenName]
 
 	// We handle this address in a different way compared to other addresses
 	if addrAmount.addressIndex == 0 && len(addrAmount.totalTokenAmounts) > 1 {
-		if availableCurrencyOnAddress-changeMinUtxo >= requiredCurrencyAmount {
-			// we can cover required amount using this address
-			addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredCurrencyAmount
-			requiredTokenAmounts[cardanowallet.AdaTokenName] = 0
-		} else {
-			// not enough funds to cover all - we cover as much as we can but
-			// leave changeMinUtxo to this address
-			addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableCurrencyOnAddress - changeMinUtxo
-			requiredTokenAmounts[cardanowallet.AdaTokenName] -= availableCurrencyOnAddress - changeMinUtxo
-		}
+		maxSpendable := availableCurrencyOnAddress - changeMinUtxo
+		amountToSpend := min(maxSpendable, requiredCurrencyAmount)
+
+		addrAmount.includeInTx[cardanowallet.AdaTokenName] = amountToSpend
+		requiredTokenAmounts[cardanowallet.AdaTokenName] -= amountToSpend
 
 		return changeMinUtxo
 	}
 
-	requiredForChange := common.MinUtxoAmountDefault
+	const defaultMinChange = common.MinUtxoAmountDefault
 
-	addressChange, ok := safeSubtract(availableCurrencyOnAddress, requiredCurrencyAmount)
-	c.logger.Debug("Address change", addrAmount.address, addressChange)
-
-	if !ok || (addressChange == 0 && ok) {
+	if availableCurrencyOnAddress <= requiredCurrencyAmount {
 		// Not enough currency on this address or exact amount
 		// Take all currency from this address
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableCurrencyOnAddress
@@ -432,27 +408,23 @@ func (c *BridgingAddressesCoordinatorImpl) processCurrencyAmount(
 		return 0
 	}
 
-	if addressChange >= requiredForChange {
+	addressChange := availableCurrencyOnAddress - requiredCurrencyAmount
+	c.logger.Debug("Address change", addrAmount.address, addressChange)
+
+	if addressChange >= defaultMinChange {
 		// Sufficient change amount
 		addrAmount.includeInTx[cardanowallet.AdaTokenName] = requiredCurrencyAmount
-		requiredTokenAmounts[cardanowallet.AdaTokenName] -= requiredCurrencyAmount
+		requiredTokenAmounts[cardanowallet.AdaTokenName] = 0
 
-		return requiredForChange
+		return defaultMinChange
 	}
 
-	addrAmount.includeInTx[cardanowallet.AdaTokenName] = availableCurrencyOnAddress - requiredForChange
-	requiredTokenAmounts[cardanowallet.AdaTokenName] -= availableCurrencyOnAddress - requiredForChange
+	amountToSpend := availableCurrencyOnAddress - defaultMinChange
+	addrAmount.includeInTx[cardanowallet.AdaTokenName] = amountToSpend
+	requiredTokenAmounts[cardanowallet.AdaTokenName] -= amountToSpend
 	addrAmount.insufficientChange = true
 
-	return requiredForChange
-}
-
-func safeSubtract(a, b uint64) (uint64, bool) {
-	if a >= b {
-		return a - b, true
-	}
-
-	return 0, false
+	return defaultMinChange
 }
 
 func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
@@ -495,4 +467,78 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 	}
 
 	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil //nolint:gosec
+}
+
+func validateTokenFunds(
+	requiredTokenAmounts map[string]uint64,
+	totalTokenAmounts map[string]uint64,
+	changeMinUtxo uint64,
+) error {
+	for token, requiredAmount := range requiredTokenAmounts {
+		available := totalTokenAmounts[token]
+
+		// Adjust available ADA if required != total
+		if token == cardanowallet.AdaTokenName && requiredAmount != available {
+			available -= changeMinUtxo
+		}
+
+		if requiredAmount > available {
+			return fmt.Errorf(
+				"not enough %s token funds for batch: available = %d, required = %d",
+				token, totalTokenAmounts[token], requiredAmount,
+			)
+		}
+	}
+
+	return nil
+}
+
+func handleSpecialAdaConsolidation(
+	requiredCurrencyAmounts uint64,
+	initalRequiredCurrencyAmount uint64,
+	amounts []common.AddressAndAmount,
+) ([]common.AddressAndAmount, error) {
+	if requiredCurrencyAmounts == 0 {
+		return nil, nil
+	}
+
+	var (
+		containsZeroAddr            bool
+		insufficientChangeAddresses []common.AddressAndAmount
+	)
+
+	for _, addr := range amounts {
+		if addr.AddressIndex == 0 {
+			containsZeroAddr = true
+
+			continue
+		}
+
+		if addr.ShouldConsolidate {
+			insufficientChangeAddresses = append(insufficientChangeAddresses, addr)
+		}
+	}
+
+	if len(insufficientChangeAddresses) == 0 {
+		return nil, fmt.Errorf(
+			"%w: required %d, but missing %d",
+			cardanowallet.ErrUTXOsCouldNotSelect,
+			initalRequiredCurrencyAmount,
+			requiredCurrencyAmounts,
+		)
+	}
+
+	if containsZeroAddr {
+		return []common.AddressAndAmount{insufficientChangeAddresses[0]}, cardanotx.ErrInsufficientChange
+	}
+
+	return insufficientChangeAddresses, cardanotx.ErrInsufficientChange
+}
+
+func safeSubtract(a, b uint64) (uint64, bool) {
+	if a >= b {
+		return a - b, true
+	}
+
+	return 0, false
 }
