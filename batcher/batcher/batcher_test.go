@@ -281,7 +281,8 @@ func TestBatcherExecute(t *testing.T) {
 		indxUpdaterMock := &IndexerUpdaterMock{}
 		indxUpdaterMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
 
-		operations, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, common.ChainIDStrPrime, hclog.NewNullLogger())
+		operations, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr,
+			common.ChainIDStrPrime, 1*time.Millisecond, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		operations.txProvider = txProviderMock

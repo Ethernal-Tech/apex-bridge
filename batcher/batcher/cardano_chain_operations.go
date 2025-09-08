@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -49,6 +51,8 @@ type CardanoChainOperations struct {
 	indxUpdater      core.IndexerUpdater
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
+	vsuMutex         sync.Mutex
+	observerTimeout  time.Duration
 	logger           hclog.Logger
 }
 
@@ -58,6 +62,7 @@ func NewCardanoChainOperations(
 	indxUpdater core.IndexerUpdater,
 	secretsManager secrets.SecretsManager,
 	chainID string,
+	observerTimeout time.Duration,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -83,6 +88,7 @@ func NewCardanoChainOperations(
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
 		indxUpdater:      indxUpdater,
+		observerTimeout:  observerTimeout,
 		logger:           logger,
 	}, nil
 }
@@ -647,6 +653,8 @@ func (cco *CardanoChainOperations) GenerateMultisigAddress(
 		cco.indxUpdater.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
 	}
 
+	cco.startVSUSync()
+
 	return nil
 }
 
@@ -655,6 +663,8 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys validatorobserver.ValidatorsPerChain,
 	lastBatchID uint64, lastBatchType uint8,
 ) (bool, *core.GeneratedBatchTxData, error) {
+	cco.checkVSUSync()
+
 	// get validators data
 	validatorsData, ok := validatorsKeys[chainID]
 	if !ok {
@@ -850,4 +860,17 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 	multisigUtxos = multisigUtxos[:maxUtxosCnt]
 
 	return
+}
+
+// all cardano batchers should receive VSU start event before creating VSU txs
+func (cco *CardanoChainOperations) startVSUSync() {
+	cco.vsuMutex.Lock()
+	time.AfterFunc(cco.observerTimeout, func() {
+		cco.vsuMutex.Unlock()
+	})
+}
+
+func (cco *CardanoChainOperations) checkVSUSync() {
+	cco.vsuMutex.Lock()
+	cco.vsuMutex.Unlock()
 }

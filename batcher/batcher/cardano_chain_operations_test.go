@@ -122,7 +122,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -331,7 +331,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -455,7 +455,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -967,7 +967,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 	indxUpdaterMock := &IndexerUpdaterMock{}
 	indxUpdaterMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
 
-	cco, err := NewCardanoChainOperations(configRaw, nil, indxUpdaterMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, nil, indxUpdaterMock, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock

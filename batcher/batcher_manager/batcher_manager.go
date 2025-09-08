@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -35,6 +36,7 @@ func NewBatcherManager(
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	validatorSetObserver validatorobserver.IValidatorSetObserver,
+	observerTimeout time.Duration,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
 	var (
@@ -49,7 +51,8 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, cardanoIndexers, secretsManager, logger)
+			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs,
+				cardanoIndexers, secretsManager, observerTimeout, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -110,8 +113,8 @@ func (bm *BatchManagerImpl) Start() {
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	cardanoIndexers map[string]*indexer.BlockIndexer,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	cardanoIndexers map[string]*indexer.BlockIndexer, secretsManager secrets.SecretsManager,
+	observerTimeout time.Duration, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
@@ -124,7 +127,7 @@ func getCardanoOperations(
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, cardanoIndexer, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, db, cardanoIndexer, secretsManager, config.ChainID, observerTimeout, logger)
 	if err != nil {
 		return nil, err
 	}

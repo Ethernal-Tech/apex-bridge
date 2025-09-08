@@ -20,6 +20,7 @@ type ValidatorSetObserverImpl struct {
 	bridgeSmartContract eth.IBridgeSmartContract
 	logger              hclog.Logger
 	lock                sync.RWMutex
+	timeout             time.Duration
 }
 
 var _ IValidatorSetObserver = (*ValidatorSetObserverImpl)(nil)
@@ -31,13 +32,10 @@ type ValidatorsChainData struct {
 
 type ValidatorsPerChain map[string]ValidatorsChainData
 
-const (
-	timeout = 30 * time.Second
-)
-
 func NewValidatorSetObserver(
 	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
+	timeout time.Duration,
 	logger hclog.Logger,
 ) (*ValidatorSetObserverImpl, error) {
 	newValidatorSet := &ValidatorSetObserverImpl{
@@ -46,6 +44,7 @@ func NewValidatorSetObserver(
 		validatorSetStream:  make(chan *ValidatorsPerChain),
 		logger:              logger.Named("validator_set_observer"),
 		lock:                sync.RWMutex{},
+		timeout:             timeout,
 	}
 
 	validatorSetPending, err := bridgeSmartContract.IsNewValidatorSetPending()
@@ -71,7 +70,7 @@ func (vs *ValidatorSetObserverImpl) Start() {
 				close(vs.validatorSetStream)
 
 				return
-			case <-time.After(timeout):
+			case <-time.After(vs.timeout):
 				if err := vs.execute(); err != nil {
 					vs.logger.Error("error while executing", "err", err)
 				}

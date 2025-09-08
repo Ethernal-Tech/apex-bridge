@@ -41,6 +41,7 @@ import (
 const (
 	MainComponentName            = "validatorcomponents"
 	RelayerImitatorComponentName = "relayerimitator"
+	ObserverTimeout              = 30 * time.Second
 )
 
 type ValidatorComponentsImpl struct {
@@ -112,7 +113,7 @@ func NewValidatorComponents(
 	}
 
 	validatorSetObserver, err := validatorobserver.NewValidatorSetObserver(ctx, bridgeSmartContract,
-		logger.Named("validator_set_observer"))
+		ObserverTimeout, logger.Named("validator_set_observer"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create validator set observer: %w", err)
 	}
@@ -180,7 +181,7 @@ func NewValidatorComponents(
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
 		cardanoIndexerDbs, cardanoOracle.GetIndexers(), ethIndexerDbs, bridgingRequestStateManager, validatorSetObserver,
-		logger.Named("batcher"))
+		ObserverTimeout, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
 	}
