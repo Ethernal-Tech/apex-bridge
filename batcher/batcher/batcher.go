@@ -73,7 +73,7 @@ func (b *BatcherImpl) UpdateValidatorSet(validators *validatorobserver.Validator
 
 	b.newValidatorSet.Unlock()
 
-	_, err := b.operations.GenerateMultisigAddress(validators, b.config.Chain.ChainID)
+	err := b.operations.GenerateMultisigAddress(validators, b.config.Chain.ChainID)
 	if err != nil {
 		b.logger.Error("cannot generate multisig", "err", err)
 

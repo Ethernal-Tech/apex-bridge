@@ -265,12 +265,6 @@ func TestBatcherExecute(t *testing.T) {
 			},
 		}
 
-		validatorPerChain := validatorobserver.ValidatorsPerChain{
-			"prime": validatorobserver.ValidatorsChainData{
-				Keys: validatorsChainData,
-			},
-		}
-
 		newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
 			Key: [4]*big.Int{
 				new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
@@ -293,14 +287,11 @@ func TestBatcherExecute(t *testing.T) {
 		operations.txProvider = txProviderMock
 		operations.indxUpdater = indxUpdaterMock
 
-		oldAddresses, err := operations.GenerateMultisigAddress(&validatorPerChain, "prime")
-		require.NoError(t, err)
-
 		multisig := generateUTXO(5)
 		fee := generateUTXO(1)
 
-		dbMock.On("GetAllTxOutputs", oldAddresses.Multisig.Payment, mock.Anything).Return(multisig, nil)
-		dbMock.On("GetAllTxOutputs", oldAddresses.Fee.Payment, mock.Anything).Return(fee, nil)
+		dbMock.On("GetAllTxOutputs", mock.Anything, mock.Anything).Return(multisig, nil)
+		dbMock.On("GetAllTxOutputs", mock.Anything, mock.Anything).Return(fee, nil)
 
 		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
 			BlockSlot: 4,
@@ -442,9 +433,8 @@ func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Cont
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)
 
 func (c *cardanoChainOperationsMock) GenerateMultisigAddress(
-	validators *validatorobserver.ValidatorsPerChain,
-	chainID string) (*cardanotx.ApexAddresses, error) {
-	return nil, nil
+	validators *validatorobserver.ValidatorsPerChain, chainID string) error {
+	return nil
 }
 
 // GenerateBatchTransaction implements core.ChainOperations.

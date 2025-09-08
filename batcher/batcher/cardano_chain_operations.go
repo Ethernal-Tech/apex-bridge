@@ -637,17 +637,17 @@ func generatePolicyAndMultisig(validators *validatorobserver.ValidatorsPerChain,
 }
 
 func (cco *CardanoChainOperations) GenerateMultisigAddress(
-	validators *validatorobserver.ValidatorsPerChain, chainID string) (*cardano.ApexAddresses, error) {
+	validators *validatorobserver.ValidatorsPerChain, chainID string) error {
 	_, addr, err := generatePolicyAndMultisig(validators, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if addr != nil {
 		cco.indxUpdater.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
 	}
 
-	return addr, nil
+	return nil
 }
 
 // CreateValidatorSetChangeTx implements core.ChainOperations.

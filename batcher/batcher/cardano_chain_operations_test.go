@@ -972,10 +972,10 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 
 	cco.txProvider = txProviderMock
 
-	activeAddresses, err := cco.GenerateMultisigAddress(&validatorPerChain, "prime")
+	_, activeAddresses, err := generatePolicyAndMultisig(&validatorPerChain, "prime", cco.cardanoCliBinary, cco.config.NetworkMagic)
 	require.NoError(t, err)
 
-	newAddresses, err := cco.GenerateMultisigAddress(&newValidatorPerChain, "prime")
+	_, newAddresses, err := generatePolicyAndMultisig(&newValidatorPerChain, "prime", cco.cardanoCliBinary, cco.config.NetworkMagic)
 	require.NoError(t, err)
 
 	bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(validatorsChainData, nil)

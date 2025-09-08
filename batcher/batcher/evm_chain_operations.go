@@ -315,6 +315,6 @@ func newEVMSmartContractTransaction(
 }
 
 func (cco *EVMChainOperations) GenerateMultisigAddress(
-	validators *validatorobserver.ValidatorsPerChain, chainID string) (*cardano.ApexAddresses, error) {
-	return nil, nil
+	validators *validatorobserver.ValidatorsPerChain, chainID string) error {
+	return nil
 }
