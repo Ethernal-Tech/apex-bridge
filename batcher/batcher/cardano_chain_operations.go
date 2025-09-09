@@ -479,7 +479,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 	// to the MaxUtxoCount / 2, otherwise we will not be able to create a meaningful transaction
 
 	if len(chosenMultisigAddresses) >= maxUtxoCount/2 {
-		sort.Slice(chosenMultisigAddresses, func(i, j int) bool {
+		sort.SliceStable(chosenMultisigAddresses, func(i, j int) bool {
 			return chosenMultisigAddresses[i].UtxoCount > chosenMultisigAddresses[j].UtxoCount
 		})
 

@@ -195,7 +195,7 @@ func newEVMSmartContractTransaction(
 	}
 
 	// every batcher should have same order
-	sort.Slice(receivers, func(i, j int) bool {
+	sort.SliceStable(receivers, func(i, j int) bool {
 		return receivers[i].Address.Cmp(receivers[j].Address) < 0
 	})
 

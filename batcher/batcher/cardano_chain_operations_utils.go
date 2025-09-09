@@ -152,7 +152,7 @@ func getOutputs(
 	}
 
 	// sort outputs because all batchers should have same order of outputs
-	sort.Slice(result.Outputs, func(i, j int) bool {
+	sort.SliceStable(result.Outputs, func(i, j int) bool {
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
@@ -258,7 +258,7 @@ func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet
 		}
 	}
 
-	sort.Slice(tokens, func(i, j int) bool {
+	sort.SliceStable(tokens, func(i, j int) bool {
 		return tokens[i].TokenName() < tokens[j].TokenName()
 	})
 
