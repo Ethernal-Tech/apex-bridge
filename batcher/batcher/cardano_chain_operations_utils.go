@@ -370,7 +370,9 @@ func allocateInputsForConsolidation(
 			})
 
 			for i := 0; i < remaining; i++ {
-				alloc[i%len(alloc)].Assigned += 1
+				if alloc[i%len(alloc)].Assigned < alloc[i%len(alloc)].UtxoCount {
+					alloc[i%len(alloc)].Assigned += 1
+				}
 			}
 		}
 
