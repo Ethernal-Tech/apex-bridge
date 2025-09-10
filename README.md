@@ -292,13 +292,13 @@ $ apex-bridge deploy-evm \
         --url http://127.0.0.1:12001 \
         --key 1841ffaeb5015fa5547e42a2524214e9b55deda3cc26676ff9823bca98b25c94 \
         --dir /tmp \
-        --clone \
         --bls-key 0x.... \
         --bls-key 0x.... \
         --bls-key 0x.... \
         --bls-key 0x.... \        
 ```
 - optional `--min-fee`, min-fee value can be specified for the Gateway contract
+- optional `--clone` which should be used with `--repo REPOSITORY_URL` and `--branch BRANCH_NAME` flags
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 - optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
@@ -309,14 +309,31 @@ $ apex-bridge deploy-evm upgrade \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
-        --clone \
         --branch main \
         --repo https://github.com/Ethernal-Tech/apex-bridge-smartcontracts \
         --contract Admin:0xABEF000000000000000000000000000000000006
 ```
 - optional `--dynamic-tx`
-- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
+- optional `--gas-limit` flag if 5_242_880 of gas is not enough for transaction
+- optional `--clone` which should be used with `--repo REPOSITORY_URL` and `--branch BRANCH_NAME` flags
+- optional `--contract` can contain additional function call `--contract Admin:0xABEF000000000000000000000000000000000006:functionName:fnArg1;fnArg2`
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+# How to deploy bridge/gateway contracts
+```shell
+$ apex-bridge deploy-evm deploy-contract \
+        --contract-dir /home/apex-bridge-smartcontracts \
+        --contract-name BridgeAddresses \
+        --dependencies 0xaBef000000000000000000000000000000000000 \
+        --key NEXUS_OR_EVM_PRIVATE_KEY \
+        --owner 0xb1995c4276F222cF11Ce78338A0F588579367286 \
+        --upgrade-admin 0x7Af59817518702AB59936916c55bB552555BDEa5 \
+        --url http://127.0.0.1:12001
+```
+
+- optional `--dynamic-tx`
+- optional `--clone` which should be used with `--repo REPOSITORY_URL` and `--branch BRANCH_NAME` flags
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 # How to Set validators data on Nexus Smart Contracts
@@ -397,6 +414,48 @@ $ apex-bridge bridge-admin set-additional-data \
         --fee-addr 0xeefcd00000000000000000000000000000000021
 ```
 - instead of `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+To register stake address and delegate it to the stake pool use: 
+```shell
+$ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6 \
+        --do-registration
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+For redelegation of stake address to another stake pool use: 
+```shell
+$ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+For deregistration of stake address use:
+```shell
+$ apex-bridge bridge-admin deregister-stake-address \
+        --bridge-address-index 0 \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d 
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin update-bridging-addrs-count \
+        --bridge-url http://localhost:12001 \
+        --bridging-addresses-count 5 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin get-validators-data \

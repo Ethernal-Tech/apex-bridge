@@ -68,26 +68,26 @@ func NewApexKeyHashes(
 	}, nil
 }
 
-func NewPolicyScriptsContainer(keyHashes KeyHashesContainer) PolicyScriptsContainer {
+func NewPolicyScriptsContainer(keyHashes KeyHashesContainer, addressIndex uint64) PolicyScriptsContainer {
 	//nolint:gosec
 	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(keyHashes.Payment))))
 	//  if needed create policy script for payment only
 	if len(keyHashes.Stake) == 0 {
 		return PolicyScriptsContainer{
-			Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount),
+			Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, wallet.WithAfter(addressIndex)),
 		}
 	}
 
 	return PolicyScriptsContainer{
-		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount),
-		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount),
+		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, wallet.WithAfter(addressIndex)),
+		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount, wallet.WithAfter(addressIndex)),
 	}
 }
 
-func NewApexPolicyScripts(keyHashes ApexKeyHashes) ApexPolicyScripts {
+func NewApexPolicyScripts(keyHashes ApexKeyHashes, addressIndex uint64) ApexPolicyScripts {
 	return ApexPolicyScripts{
-		Multisig: NewPolicyScriptsContainer(keyHashes.Multisig),
-		Fee:      NewPolicyScriptsContainer(keyHashes.Fee),
+		Multisig: NewPolicyScriptsContainer(keyHashes.Multisig, addressIndex),
+		Fee:      NewPolicyScriptsContainer(keyHashes.Fee, addressIndex),
 	}
 }
 

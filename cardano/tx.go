@@ -3,6 +3,7 @@ package cardanotx
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -16,17 +17,19 @@ func CreateTx(
 	txInputInfos TxInputInfos,
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
+	addrAndAmountToDeduct []common.AddressAndAmount,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
-	ln, feeLn := len(txInputInfos.MultiSig.Inputs), len(txInputInfos.MultiSigFee.Inputs)
-	if certificatesData == nil && (ln == 0 || feeLn == 0) {
-		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", ln, feeLn)
+	multisigLn := 0
+	for _, multisig := range txInputInfos.MultiSig {
+		multisigLn += len(multisig.Inputs)
 	}
 
-	outputsAmount := cardanowallet.GetOutputsSum(outputs)
-	multisigOutput, multiSigIndex := getOutputForAddress(outputs, txInputInfos.MultiSig.Address)
-	feeOutput, feeIndex := getOutputForAddress(outputs, txInputInfos.MultiSigFee.Address)
+	feeLn := len(txInputInfos.MultiSigFee.Inputs)
+	if certificatesData == nil && (multisigLn == 0 || feeLn == 0) {
+		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", multisigLn, feeLn)
+	}
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
 	if err != nil {
@@ -39,6 +42,7 @@ func CreateTx(
 		SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic).AddOutputs(outputs...)
 
 	stakeKeyRegistrationFee := uint64(0)
+	stakeKeyDeregistrationGain := uint64(0)
 
 	if certificatesData != nil {
 		for _, cert := range certificatesData.Certificates {
@@ -46,7 +50,11 @@ func CreateTx(
 		}
 
 		stakeKeyRegistrationFee = certificatesData.RegistrationFee
+		stakeKeyDeregistrationGain = certificatesData.DeregistrationFee
 	}
+
+	outputsAmount := cardanowallet.GetOutputsSum(outputs)
+	feeOutput, feeIndex := getOutputForAddress(outputs, txInputInfos.MultiSigFee.Address)
 
 	// add multisigFee output
 	if feeIndex == -1 {
@@ -57,30 +65,46 @@ func CreateTx(
 		})
 	}
 
-	multisigChangeTxOutput, err := cardanowallet.CreateTxOutputChange(
-		multisigOutput, txInputInfos.MultiSig.Sum, outputsAmount)
-	if err != nil {
-		return nil, "", err
-	}
+	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
-	// add multisig output if change is not zero
-	if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
-		if multiSigIndex == -1 {
-			builder.AddOutputs(multisigChangeTxOutput)
-		} else {
-			builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+	for _, multisig := range txInputInfos.MultiSig {
+		multisigChangeTxOutput := cardanowallet.TxOutput{}
+
+		if addrAndAmountToDeduct != nil {
+			multisigOutput, multiSigIndex := getOutputForAddress(outputs, multisig.Address)
+			outputsAmountNew := GetOutputsSumForAddress(multisig.Address, addrAndAmountToDeduct)
+
+			multisigChangeTxOutput, err = cardanowallet.CreateTxOutputChange(
+				multisigOutput, multisig.Sum, outputsAmountNew)
+			if err != nil {
+				return nil, "", err
+			}
+
+			// add multisig output if change is not zero
+			if multisigChangeTxOutput.Amount > 0 || len(multisigChangeTxOutput.Tokens) > 0 {
+				if multisigChangeTxOutput.Amount >= common.MinUtxoAmountDefault {
+					if multiSigIndex == -1 {
+						builder.AddOutputs(multisigChangeTxOutput)
+					} else {
+						builder.ReplaceOutput(multiSigIndex, multisigChangeTxOutput)
+					}
+				}
+			} else if multiSigIndex >= 0 {
+				// we need to decrement feeIndex if it was after multisig in outputs
+				if feeIndex > multiSigIndex {
+					feeIndex--
+				}
+
+				builder.RemoveOutput(multiSigIndex)
+			}
+
+			for tokenName, amount := range multisig.Sum {
+				outputsAmount[tokenName] = safeSubstract(outputsAmount[tokenName], amount)
+			}
 		}
-	} else if multiSigIndex >= 0 {
-		// we need to decrement feeIndex if it was after multisig in outputs
-		if feeIndex > multiSigIndex {
-			feeIndex--
-		}
 
-		builder.RemoveOutput(multiSigIndex)
+		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
-
-	builder.AddInputsWithScript(txInputInfos.MultiSig.PolicyScript, txInputInfos.MultiSig.Inputs...).
-		AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
 	calcFee, err := builder.CalculateFee(0)
 	if err != nil {
@@ -97,6 +121,9 @@ func CreateTx(
 		return nil, "", err
 	}
 
+	// Include the key deregistration gain if exists
+	feeChangeTxOutput.Amount += stakeKeyDeregistrationGain
+
 	// update multisigFee amount if needed (feeAmountFinal > 0) or remove it from output
 	if feeChangeTxOutput.Amount > 0 || len(feeChangeTxOutput.Tokens) > 0 {
 		builder.ReplaceOutput(feeIndex, feeChangeTxOutput)
@@ -105,6 +132,28 @@ func CreateTx(
 	}
 
 	return builder.Build()
+}
+
+func GetOutputsSumForAddress(addr string, addrAndAmountToDeduct []common.AddressAndAmount) map[string]uint64 {
+	result := map[string]uint64{}
+
+	for _, addrAndAmount := range addrAndAmountToDeduct {
+		if addrAndAmount.Address == addr {
+			for name, token := range addrAndAmount.TokensAmounts {
+				result[name] += token
+			}
+		}
+	}
+
+	return result
+}
+
+func safeSubstract(a, b uint64) uint64 {
+	if a >= b {
+		return a - b
+	}
+
+	return 0
 }
 
 func getOutputForAddress(outputs []cardanowallet.TxOutput, addr string) (cardanowallet.TxOutput, int) {

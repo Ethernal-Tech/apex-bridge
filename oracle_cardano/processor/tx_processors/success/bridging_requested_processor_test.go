@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
@@ -32,16 +33,21 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
+
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
+
 	appConfig := &cCore.AppConfig{
+		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
 					NetworkID:     wallet.TestNetNetwork,
 					UtxoMinAmount: utxoMinValue,
-				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
 				},
 				MinFeeForBridging:     minFeeForBridging,
 				FeeAddrBridgingAmount: feeAddrBridgingAmount,
@@ -50,10 +56,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
 					NetworkID:     wallet.TestNetNetwork,
 					UtxoMinAmount: utxoMinValue,
-				},
-				BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: vectorBridgingAddr,
-					FeeAddress:      vectorBridgingFeeAddr,
 				},
 				MinFeeForBridging:     minFeeForBridging,
 				FeeAddrBridgingAmount: feeAddrBridgingAmount,
@@ -106,6 +108,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -213,7 +216,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, fmt.Sprintf("bridging address %s on %s", primeBridgingAddr, common.ChainIDStrPrime))
+		require.ErrorContains(t, err, fmt.Sprintf("none of bridging addresses on %s", common.ChainIDStrPrime))
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {

@@ -143,33 +143,49 @@ func (ip *createAddressParams) Execute(
 	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 
+	bridgingAddressesCnt, err := bridgeContract.GetBridgingAddressesCount(ctx, ip.chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("Bridging addresses count retreived %d:\n", bridgingAddressesCnt)))
+	_, _ = outputter.Write([]byte("\n"))
+	outputter.WriteOutput()
+
+	cmdResult := CmdResult{
+		AddressAndPolicyScripts: make([]AddressAndPolicyScripts, bridgingAddressesCnt),
+		ShowPolicyScripts:       ip.showPolicyScript,
+	}
+
 	keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
 	if err != nil {
 		return nil, err
 	}
 
-	policyScripts := cardanotx.NewApexPolicyScripts(keyHashes)
+	for i := range bridgingAddressesCnt {
+		policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(i))
 
-	addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
-	if err != nil {
-		return nil, err
-	}
-
-	if ip.bridgePrivateKey != "" {
-		_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
-		outputter.WriteOutput()
-
-		err := bridgeContract.SetChainAdditionalData(ctx, ip.chainID, addrs.Multisig.Payment, addrs.Fee.Payment)
+		addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
 		if err != nil {
 			return nil, err
 		}
+
+		if ip.bridgePrivateKey != "" && i == 0 {
+			_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
+			outputter.WriteOutput()
+
+			err := bridgeContract.SetChainAdditionalData(ctx, ip.chainID, addrs.Multisig.Payment, addrs.Fee.Payment)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		cmdResult.AddressAndPolicyScripts[i] = AddressAndPolicyScripts{
+			ApexAddresses: addrs,
+			PolicyScripts: policyScripts}
 	}
 
-	return &CmdResult{
-		ApexAddresses:     addrs,
-		PolicyScripts:     policyScripts,
-		ShowPolicyScripts: ip.showPolicyScript,
-	}, nil
+	return &cmdResult, nil
 }
 
 func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {

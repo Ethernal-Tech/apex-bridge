@@ -18,6 +18,9 @@ var (
 	bridgingAddressesBalancesData        = &bridgingAddressesBalancesParams{}
 	bridgingAddressesBalancesSkylineData = &bridgingAddressesBalancesSkylineParams{}
 	stakeDelegationParamsData            = &stakeDelParams{}
+	updateBridgingAddrsCountParamsData   = &updateBridgingAddrsCountParams{}
+	redistributeBrAddrsTokensParamsData  = &redistributeBridgingAddrsTokensParams{}
+	stakeDeregistrationParamsData        = &stakeDeregParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -101,6 +104,30 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(stakeDelegationParamsData),
 	}
+	updateBridgingAddrsCountCmd := &cobra.Command{
+		Use:   "update-bridging-addrs-count",
+		Short: "update count of bridging addresses for chain",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return updateBridgingAddrsCountParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(updateBridgingAddrsCountParamsData),
+	}
+	redistributeTokensCmd := &cobra.Command{
+		Use:   "redistribute-bridging-addresses-tokens",
+		Short: "redistribute tokens across bridging addresses",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return redistributeBrAddrsTokensParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(redistributeBrAddrsTokensParamsData),
+	}
+	deregisterStakeCmd := &cobra.Command{
+		Use:   "deregister-stake-address",
+		Short: "deregister stake address",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return stakeDeregistrationParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(stakeDeregistrationParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -112,6 +139,9 @@ func GetBridgeAdminCommand() *cobra.Command {
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
 	bridgingAddressesBalancesSkylineData.RegisterFlags(bridgingAddressesBalancesSkylineCmd)
 	stakeDelegationParamsData.RegisterFlags(delegateStakeCmd)
+	updateBridgingAddrsCountParamsData.RegisterFlags(updateBridgingAddrsCountCmd)
+	redistributeBrAddrsTokensParamsData.RegisterFlags(redistributeTokensCmd)
+	stakeDeregistrationParamsData.RegisterFlags(deregisterStakeCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -130,6 +160,9 @@ func GetBridgeAdminCommand() *cobra.Command {
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
 		delegateStakeCmd,
+		updateBridgingAddrsCountCmd,
+		redistributeTokensCmd,
+		deregisterStakeCmd,
 	)
 
 	return cmd

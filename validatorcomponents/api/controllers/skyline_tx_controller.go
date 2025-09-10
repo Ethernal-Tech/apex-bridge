@@ -97,6 +97,8 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}
 
+	cardanoDestChainFeeAddress := sc.oracleConfig.GetFeeMultisigAddress(requestBody.DestinationChainID)
+
 	if len(requestBody.Transactions) > sc.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
 		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, requestBody: %v",
 			len(requestBody.Transactions), sc.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
@@ -131,7 +133,7 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 		// if fee address is specified in transactions just add amount to the fee sum
 		// otherwise keep this transaction
-		if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiver.Addr == cardanoDestChainFeeAddress {
 			if receiver.IsNativeToken {
 				return fmt.Errorf("fee receiver invalid")
 			}
@@ -222,9 +224,15 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 
 	txInfo, metadata, err := txSender.CreateBridgingTx(
 		context.Background(),
-		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		requestBody.OperationFee,
+		sendtx.BridgingTxInput{
+			SrcChainID:      requestBody.SourceChainID,
+			DstChainID:      requestBody.DestinationChainID,
+			SenderAddr:      requestBody.SenderAddr,
+			Receivers:       receivers,
+			BridgingAddress: requestBody.BridgingAddress,
+			BridgingFee:     requestBody.BridgingFee,
+			OperationFee:    requestBody.OperationFee,
+		},
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build tx: %w", err)

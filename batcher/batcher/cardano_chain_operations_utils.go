@@ -3,8 +3,10 @@ package batcher
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -14,20 +16,16 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func getStakingDelegateCertificate(
-	cardanoCliBinary string, networkMagic uint,
-	data *batchInitialData, tx *eth.ConfirmedTransaction,
+func getStakingCertificates(
+	cardanoCliBinary string,
+	data *batchInitialData,
+	tx *eth.ConfirmedTransaction,
+	policyScript *cardanowallet.PolicyScript,
+	multisigStakeAddress string,
 ) (*cardano.CertificatesWithScript, uint64, error) {
-	// Generate policy script
-	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(data.MultisigStakeKeyHashes)))) //nolint:gosec
-	policyScript := cardanowallet.NewPolicyScript(data.MultisigStakeKeyHashes, quorumCount,
-		cardanowallet.WithAfter(uint64(tx.BridgeAddrIndex)))
 	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
 
-	multisigStakeAddress, err := cliUtils.GetPolicyScriptRewardAddress(networkMagic, policyScript)
-	if err != nil {
-		return nil, 0, err
-	}
+	certs := make([]cardanowallet.ICertificate, 0)
 
 	// Generate certificates
 	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
@@ -35,30 +33,57 @@ func getStakingDelegateCertificate(
 		return nil, 0, err
 	}
 
-	registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) {
+		registrationCert, err := cliUtils.CreateRegistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, registrationCert)
 	}
 
-	delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
-	if err != nil {
-		return nil, 0, errors.Join(errSkipConfirmedTx, err)
+	if tx.TransactionSubType == uint8(common.StakeRegDelConfirmedTxSubType) ||
+		tx.TransactionSubType == uint8(common.StakeDelConfirmedTxSubType) {
+		delegationCert, err := cliUtils.CreateDelegationCertificate(multisigStakeAddress, tx.StakePoolId)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, delegationCert)
+	}
+
+	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
+		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress)
+		if err != nil {
+			return nil, 0, errors.Join(errSkipConfirmedTx, err)
+		}
+
+		certs = append(certs, deregCert)
 	}
 
 	return &cardano.CertificatesWithScript{
 		PolicyScript: policyScript,
-		Certificates: []cardanowallet.ICertificate{registrationCert, delegationCert},
+		Certificates: certs,
 	}, keyRegDepositAmount, nil
 }
 
 func getOutputs(
 	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
-) (cardano.TxOutputs, error) {
+) (cardano.TxOutputs, bool, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
+	isRedistribution := false
 
 	for _, transaction := range txs {
 		// stake delegation tx are not processed in this way
-		if transaction.TransactionType == uint8(common.StakeDelConfirmedTxType) {
+		if transaction.TransactionType == uint8(common.StakeConfirmedTxType) {
+			continue
+		}
+
+		if transaction.TransactionType == uint8(common.RedistributionConfirmedTxType) {
+			logger.Debug("Triggered token redistribution", "chain", transaction.DestinationChainId)
+
+			isRedistribution = true
+
 			continue
 		}
 
@@ -77,13 +102,13 @@ func getOutputs(
 						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
-							return cardano.TxOutputs{}, err
+							return cardano.TxOutputs{}, false, err
 						}
 					} else {
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {
-							return cardano.TxOutputs{}, err
+							return cardano.TxOutputs{}, false, err
 						}
 					}
 
@@ -127,11 +152,23 @@ func getOutputs(
 	}
 
 	// sort outputs because all batchers should have same order of outputs
-	sort.Slice(result.Outputs, func(i, j int) bool {
+	sort.SliceStable(result.Outputs, func(i, j int) bool {
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, nil
+	return result, isRedistribution, nil
+}
+
+// createUtxoSelectionAmounts creates a copy of desired amounts with adjusted ADA amount for UTXO selection
+func createUtxoSelectionAmounts(desiredAmounts map[string]uint64, minUtxoLovelaceAmount uint64) map[string]uint64 {
+	utxoSelectionAmounts := make(map[string]uint64, len(desiredAmounts))
+	for k, v := range desiredAmounts {
+		utxoSelectionAmounts[k] = v
+	}
+
+	utxoSelectionAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+
+	return utxoSelectionAmounts
 }
 
 func getNeededUtxos(
@@ -156,12 +193,17 @@ func getNeededUtxos(
 		}
 	}
 
-	// Change outputs require minUtxoLovelace (protocol rule)
-	// Exact spends without change are rare (especially with tokens)
-	desiredAmounts[cardanowallet.AdaTokenName] += minUtxoLovelaceAmount
+	// Create a copy of desired amounts for UTXO selection so we don't modify the original map
+	// We need to include minUtxoLovelace for change outputs (protocol rule)
+	utxoSelectionAmounts := createUtxoSelectionAmounts(desiredAmounts, minUtxoLovelaceAmount)
+
+	if maxUtxoCount == 0 {
+		return nil, fmt.Errorf(
+			"%w: maxUtxoCount equal to 0", cardanowallet.ErrUTXOsLimitReached)
+	}
 
 	outputUTXOs, err := txsend.GetUTXOsForAmounts(
-		inputUtxos, desiredAmounts, maxUtxoCount, takeAtLeastUtxoCount)
+		inputUtxos, utxoSelectionAmounts, maxUtxoCount, takeAtLeastUtxoCount)
 	if err != nil {
 		return nil, err
 	}
@@ -182,32 +224,20 @@ func getNeededUtxos(
 	return chosenUTXOs, nil
 }
 
-func filterOutUtxosWithUnknownTokens(
-	utxos []*indexer.TxInputOutput, excludingTokens ...cardanowallet.Token,
-) []*indexer.TxInputOutput {
-	result := make([]*indexer.TxInputOutput, 0, len(utxos))
-
-	for _, utxo := range utxos {
-		if !cardano.UtxoContainsUnknownTokens(utxo.Output, excludingTokens...) {
-			result = append(result, utxo)
+func addRedistributionOutputs(
+	outputs []cardanowallet.TxOutput,
+	multisigAddresses []common.AddressAndAmount,
+) ([]cardanowallet.TxOutput, error) {
+	for _, addr := range multisigAddresses {
+		output, err := getTxOutputFromSumMap(addr.Address, addr.TokensAmounts)
+		if err != nil {
+			return nil, err
 		}
+
+		outputs = append(outputs, output)
 	}
 
-	return result
-}
-
-func getSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint64 {
-	totalSum := map[string]uint64{}
-
-	for _, utxo := range utxos {
-		totalSum[cardanowallet.AdaTokenName] += utxo.Output.Amount
-
-		for _, token := range utxo.Output.Tokens {
-			totalSum[token.TokenName()] += token.Amount
-		}
-	}
-
-	return totalSum
+	return outputs, nil
 }
 
 func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet.TxOutput, error) {
@@ -228,65 +258,11 @@ func getTxOutputFromSumMap(addr string, sumMap map[string]uint64) (cardanowallet
 		}
 	}
 
-	sort.Slice(tokens, func(i, j int) bool {
+	sort.SliceStable(tokens, func(i, j int) bool {
 		return tokens[i].TokenName() < tokens[j].TokenName()
 	})
 
 	return cardanowallet.NewTxOutput(addr, sumMap[cardanowallet.AdaTokenName], tokens...), nil
-}
-
-func subtractTxOutputsFromSumMap(
-	sumMap map[string]uint64, txOutputs []cardanowallet.TxOutput,
-) map[string]uint64 {
-	updateTokenInMap := func(tokenName string, amount uint64) {
-		if existingAmount, exists := sumMap[tokenName]; exists {
-			if existingAmount > amount {
-				sumMap[tokenName] = existingAmount - amount
-			} else {
-				delete(sumMap, tokenName)
-			}
-		}
-	}
-
-	for _, out := range txOutputs {
-		updateTokenInMap(cardanowallet.AdaTokenName, out.Amount)
-
-		for _, token := range out.Tokens {
-			updateTokenInMap(token.TokenName(), token.Amount)
-		}
-	}
-
-	return sumMap
-}
-
-func calculateMinUtxoLovelaceAmount(
-	cardanoCliBinary string, protocolParams []byte,
-	addr string, txInputOutputs []*indexer.TxInputOutput, txOutputs []cardanowallet.TxOutput,
-) (uint64, error) {
-	sumMap := subtractTxOutputsFromSumMap(getSumMapFromTxInputOutput(txInputOutputs), txOutputs)
-
-	tokens, err := cardanowallet.GetTokensFromSumMap(sumMap)
-	if err != nil {
-		return 0, err
-	}
-
-	txBuilder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
-	if err != nil {
-		return 0, err
-	}
-
-	defer txBuilder.Dispose()
-
-	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(cardanowallet.TxOutput{
-		Addr:   addr,
-		Amount: sumMap[cardanowallet.AdaTokenName],
-		Tokens: tokens,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	return minUtxo, nil
 }
 
 func convertUTXOsToTxInputs(utxos []*indexer.TxInputOutput) (result cardanowallet.TxInputs) {
@@ -317,4 +293,179 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	}
 
 	return params.StakeAddressDeposit, nil
+}
+
+type addressConsolidation struct {
+	Address      string
+	AddressIndex uint8
+	UtxoCount    int
+	Share        float64
+	Assigned     int
+	Remainder    float64
+	Utxos        []*indexer.TxInputOutput
+}
+
+type AddressConsolidationData struct {
+	Address      string
+	AddressIndex uint8
+	UtxoCount    int
+	Utxos        []*indexer.TxInputOutput
+}
+
+// Chose inputs for consolidation proportionally depending of how many there are for every address
+// and the max number allowed.
+func allocateInputsForConsolidation(
+	inputs []AddressConsolidationData,
+	maxUtxoCount int,
+	totalNumberOfUtxos int,
+	consolidationType core.ConsolidationType,
+) ([]AddressConsolidationData, error) {
+	if consolidationType == core.ConsolidationTypeToZeroAddress {
+		return sequentialUtxoSelectionForConsolidation(inputs, maxUtxoCount), nil
+	}
+
+	if maxUtxoCount > totalNumberOfUtxos {
+		maxUtxoCount = totalNumberOfUtxos
+	}
+
+	inputsWorkingSet := make([]AddressConsolidationData, 0, len(inputs))
+
+	for _, input := range inputs {
+		if input.UtxoCount > 1 {
+			inputsWorkingSet = append(inputsWorkingSet, input)
+		}
+	}
+
+	var alloc []addressConsolidation
+
+	for {
+		var remainingUtxosNum int
+		alloc, remainingUtxosNum = calculateInitialAllocations(inputsWorkingSet, totalNumberOfUtxos, maxUtxoCount)
+
+		if len(alloc) == 0 {
+			return nil, fmt.Errorf("no elements found in addresses allocated for consolidation")
+		}
+
+		distributeRemainders(alloc, remainingUtxosNum)
+
+		newInputsWorkingSet := filterWorkingSet(alloc)
+		if len(newInputsWorkingSet) == len(alloc) {
+			break
+		}
+
+		inputsWorkingSet = newInputsWorkingSet
+	}
+
+	return generateAllocateInputsForConsolidationOutput(alloc), nil
+}
+
+// takes as many UTXOs as possible starting from the address with the most UTXOs
+func sequentialUtxoSelectionForConsolidation(inputs []AddressConsolidationData, maxUtxoCount int,
+) []AddressConsolidationData {
+	sort.SliceStable(inputs, func(i, j int) bool {
+		return inputs[i].UtxoCount > inputs[j].UtxoCount
+	})
+
+	var (
+		alloc   = make([]addressConsolidation, 0)
+		utxoCnt int
+	)
+
+	for _, input := range inputs {
+		if maxUtxoCount == 0 {
+			break
+		}
+
+		utxoCnt = min(input.UtxoCount, maxUtxoCount)
+		maxUtxoCount -= utxoCnt
+
+		alloc = append(alloc, addressConsolidation{
+			Address:      input.Address,
+			AddressIndex: input.AddressIndex,
+			UtxoCount:    utxoCnt,
+			Assigned:     utxoCnt,
+			Utxos:        input.Utxos[:utxoCnt],
+		})
+	}
+
+	return generateAllocateInputsForConsolidationOutput(alloc)
+}
+
+func generateAllocateInputsForConsolidationOutput(alloc []addressConsolidation) []AddressConsolidationData {
+	result := make([]AddressConsolidationData, 0)
+
+	for _, input := range alloc {
+		if input.Assigned > 0 {
+			result = append(result, AddressConsolidationData{
+				Address:      input.Address,
+				AddressIndex: input.AddressIndex,
+				UtxoCount:    input.Assigned,
+				Utxos:        input.Utxos[:input.Assigned],
+			})
+		}
+	}
+
+	return result
+}
+
+func calculateInitialAllocations(
+	inputsWorkingSet []AddressConsolidationData,
+	totalNumberOfUtxos, maxUtxoCount int,
+) ([]addressConsolidation, int) {
+	alloc := make([]addressConsolidation, 0, len(inputsWorkingSet))
+
+	assigned := 0
+
+	// First, assign the integer part of the proportional share
+	for _, input := range inputsWorkingSet {
+		share := float64(input.UtxoCount) / float64(totalNumberOfUtxos) * float64(maxUtxoCount)
+		intShare := int(share)
+
+		alloc = append(alloc, addressConsolidation{
+			Address:      input.Address,
+			AddressIndex: input.AddressIndex,
+			UtxoCount:    input.UtxoCount,
+			Share:        share,
+			Assigned:     intShare,
+			Remainder:    share - float64(intShare),
+			Utxos:        input.Utxos,
+		})
+		assigned += intShare
+	}
+
+	return alloc, maxUtxoCount - assigned
+}
+
+func distributeRemainders(alloc []addressConsolidation, remainingUtxosNum int) {
+	if remainingUtxosNum <= 0 {
+		return
+	}
+
+	sort.SliceStable(alloc, func(i, j int) bool {
+		return alloc[i].Remainder > alloc[j].Remainder
+	})
+
+	for i := range remainingUtxosNum {
+		idx := i % len(alloc)
+		if alloc[idx].Assigned < alloc[idx].UtxoCount {
+			alloc[idx].Assigned++
+		}
+	}
+}
+
+func filterWorkingSet(alloc []addressConsolidation) []AddressConsolidationData {
+	newInputsWorkingSet := make([]AddressConsolidationData, 0, len(alloc))
+
+	for _, a := range alloc {
+		if a.Assigned > 1 {
+			newInputsWorkingSet = append(newInputsWorkingSet, AddressConsolidationData{
+				Address:      a.Address,
+				AddressIndex: a.AddressIndex,
+				UtxoCount:    a.UtxoCount,
+				Utxos:        a.Utxos,
+			})
+		}
+	}
+
+	return newInputsWorkingSet
 }
