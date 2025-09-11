@@ -123,8 +123,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
-	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
-		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
+	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: testChainID,
 			SenderAddr:         "addr1",
@@ -132,15 +132,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingFee:        big.NewInt(0),
 		})
 		require.NoError(t, err)
-		require.NotNil(t, metadata)
+		require.NotNil(t, destinationChainNonRegisteredMetadata)
 
 		claims := &oCore.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
-			Metadata:      metadata,
-			OriginChainID: common.ChainIDStrPrime,
+			Metadata:      destinationChainNonRegisteredMetadata,
+			OriginChainID: common.ChainIDStrNexus,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "origin chain not registered")
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
@@ -164,46 +164,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim transaction direction not allowed", func(t *testing.T) {
-		transactionDirectionNotSupportedMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: "invalid",
-			SenderAddr:         "addr1",
-			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
-			BridgingFee:        big.NewInt(0),
-		})
-		require.NoError(t, err)
-		require.NotNil(t, transactionDirectionNotSupportedMetadata)
-
-		claims := &oCore.BridgeClaims{}
-		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
-			Metadata:      transactionDirectionNotSupportedMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
-	})
-
-	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: testChainID,
-			SenderAddr:         "addr1",
-			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
-			BridgingFee:        big.NewInt(0),
-		})
-		require.NoError(t, err)
-		require.NotNil(t, destinationChainNonRegisteredMetadata)
-
-		claims := &oCore.BridgeClaims{}
-		err = proc.ValidateAndAddClaim(claims, &core.EthTx{
-			Metadata:      destinationChainNonRegisteredMetadata,
-			OriginChainID: common.ChainIDStrNexus,
-		}, appConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "destination chain not registered")
-	})
-
-	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
