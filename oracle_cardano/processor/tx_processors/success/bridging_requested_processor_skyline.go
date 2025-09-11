@@ -79,7 +79,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		totalAmountWrappedSrc  = uint64(0)
 		totalAmountWrappedDst  = uint64(0)
 
-		cardanoDestConfig = appConfig.CardanoChains[metadata.DestinationChainID]
+		cardanoDestConfig          = appConfig.CardanoChains[metadata.DestinationChainID]
+		cardanoDestChainFeeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
 	)
 
 	receivers := make([]cCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
@@ -87,7 +88,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiverAddr == cardanoDestChainFeeAddress {
 			// fee address will be added at the end
 			continue
 		}
@@ -136,7 +137,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	totalAmountCurrencySrc += metadata.BridgingFee + metadata.OperationFee
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
-		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
+		DestinationAddress: cardanoDestChainFeeAddress,
 		Amount:             new(big.Int).SetUint64(feeCurrencyDst),
 		AmountWrapped:      new(big.Int).SetUint64(0),
 	})
@@ -206,6 +207,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
@@ -215,7 +218,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			break
 		}
 
-		if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiverAddr == cardanoDestChainFeeAddress {
 			if receiver.IsNativeTokenOnSource() {
 				return fmt.Errorf("fee receiver metadata invalid: %v", metadata)
 			}

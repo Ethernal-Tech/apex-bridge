@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -27,39 +28,36 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
-		config := &oCore.AppConfig{
-			CardanoChains: map[string]*oCore.CardanoChainConfig{
-				common.ChainIDStrPrime: {
-					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:         wallet.TestNetNetwork,
-						UtxoMinAmount:     utxoMinValue,
-						MinFeeForBridging: minFeeForBridging,
-					},
-					BridgingAddresses: oCore.BridgingAddresses{
-						BridgingAddress: primeBridgingAddr,
-						FeeAddress:      primeBridgingFeeAddr,
-					},
-					FeeAddrBridgingAmount: feeAddrBridgingAmount,
-				},
-			},
-			EthChains: map[string]*oCore.EthChainConfig{
-				common.ChainIDStrNexus: {
-					BridgingAddresses: oCore.EthBridgingAddresses{
-						BridgingAddress: nexusBridgingAddr,
-					},
-					MinFeeForBridging: minFeeForBridging,
-				},
-			},
-			BridgingSettings: oCore.BridgingSettings{
-				MaxReceiversPerBridgingRequest: 3,
-				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-			},
-			RefundEnabled: refundEnabled,
-		}
-		config.FillOut()
+	proc := NewEthBridgingRequestedProcessor(hclog.NewNullLogger())
 
-		return config
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+
+	appConfig := &oCore.AppConfig{
+		BridgingAddressesManager: brAddrManagerMock,
+		CardanoChains: map[string]*oCore.CardanoChainConfig{
+			common.ChainIDStrPrime: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkID:     wallet.TestNetNetwork,
+					UtxoMinAmount: utxoMinValue,
+				},
+				MinFeeForBridging:     minFeeForBridging,
+				FeeAddrBridgingAmount: feeAddrBridgingAmount,
+			},
+		},
+		EthChains: map[string]*oCore.EthChainConfig{
+			common.ChainIDStrNexus: {
+				BridgingAddresses: oCore.EthBridgingAddresses{
+					BridgingAddress: nexusBridgingAddr,
+				},
+				MinFeeForBridging: minFeeForBridging,
+			},
+		},
+		BridgingSettings: oCore.BridgingSettings{
+			MaxReceiversPerBridgingRequest: 3,
+			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+		},
 	}
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {

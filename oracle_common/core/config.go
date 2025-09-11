@@ -57,7 +57,6 @@ type EthChainConfig struct {
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
 	ChainID                  string                   `json:"-"`
-	BridgingAddresses        BridgingAddresses        `json:"-"`
 	NetworkAddress           string                   `json:"networkAddress"`
 	StartBlockHash           string                   `json:"startBlockHash"`
 	StartSlot                uint64                   `json:"startSlot"`
@@ -106,17 +105,30 @@ type TryCountLimits struct {
 }
 
 type AppConfig struct {
-	RunMode                  common.VCRunMode               `json:"-"`
-	RefundEnabled            bool                           `json:"refundEnabled"`
-	ValidatorDataDir         string                         `json:"validatorDataDir"`
-	ValidatorConfigPath      string                         `json:"validatorConfigPath"`
-	CardanoChains            map[string]*CardanoChainConfig `json:"cardanoChains"`
-	EthChains                map[string]*EthChainConfig     `json:"ethChains"`
-	Bridge                   BridgeConfig                   `json:"bridge"`
-	Settings                 AppSettings                    `json:"appSettings"`
-	BridgingSettings         BridgingSettings               `json:"bridgingSettings"`
-	RetryUnprocessedSettings RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
-	TryCountLimits           TryCountLimits                 `json:"tryCountLimits"`
+	RunMode                  common.VCRunMode                `json:"-"`
+	BridgingAddressesManager common.BridgingAddressesManager `json:"-"`
+	RefundEnabled            bool                            `json:"refundEnabled"`
+	ValidatorDataDir         string                          `json:"validatorDataDir"`
+	ValidatorConfigPath      string                          `json:"validatorConfigPath"`
+	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
+	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
+	Bridge                   BridgeConfig                    `json:"bridge"`
+	Settings                 AppSettings                     `json:"appSettings"`
+	BridgingSettings         BridgingSettings                `json:"bridgingSettings"`
+	RetryUnprocessedSettings RetryUnprocessedSettings        `json:"retryUnprocessedSettings"`
+	TryCountLimits           TryCountLimits                  `json:"tryCountLimits"`
+}
+
+func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
+	chainIDNum := common.ToNumChainID(chainID)
+
+	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
+}
+
+func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
+	chainIDNum := common.ToNumChainID(chainID)
+
+	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
 }
 
 func (appConfig *AppConfig) FillOut() {
@@ -174,7 +186,6 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 	return sendtx.ChainConfig{
 		CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
 		TxProvider:            txProvider,
-		MultiSigAddr:          config.BridgingAddresses.BridgingAddress,
 		TestNetMagic:          uint(config.NetworkMagic),
 		TTLSlotNumberInc:      config.TTLSlotNumberInc,
 		MinUtxoValue:          config.UtxoMinAmount,
@@ -194,7 +205,6 @@ func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
 	}
 
 	return sendtx.ChainConfig{
-		MultiSigAddr:         config.BridgingAddresses.BridgingAddress,
 		MinBridgingFeeAmount: feeValue.Uint64(),
 	}
 }

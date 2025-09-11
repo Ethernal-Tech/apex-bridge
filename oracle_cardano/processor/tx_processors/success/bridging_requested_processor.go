@@ -81,7 +81,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	switch {
 	case cardanoDestConfig != nil:
-		feeAddress = cardanoDestConfig.BridgingAddresses.FeeAddress
+		feeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
 		feeCurrencyDst = new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)
 	case ethDestConfig != nil:
 		feeAddress = common.EthZeroAddr
@@ -184,6 +184,8 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
@@ -200,7 +202,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 				break
 			}
 
-			if receiverAddr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+			if receiverAddr == cardanoDestChainFeeAddress {
 				feeSum += receiver.Amount
 			} else {
 				receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(receiver.Amount))

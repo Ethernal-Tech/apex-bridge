@@ -71,11 +71,12 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	totalAmount := big.NewInt(0)
 
 	cardanoDestConfig, _ := oUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
 
 	receivers := make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
 
 	for _, receiver := range metadata.Transactions {
-		if receiver.Address == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiver.Address == cardanoDestChainFeeAddress {
 			// fee address will be added at the end
 			continue
 		}
@@ -96,7 +97,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	totalAmountCurrencyDst := new(big.Int).Add(totalAmount, feeCurrencyDfmDst)
 
 	receivers = append(receivers, oCore.BridgingRequestReceiver{
-		DestinationAddress: cardanoDestConfig.BridgingAddresses.FeeAddress,
+		DestinationAddress: cardanoDestChainFeeAddress,
 		Amount:             feeCurrencyDfmDst,
 		AmountWrapped:      big.NewInt(0),
 	})
@@ -140,6 +141,8 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("destination chain not registered: %v", metadata.DestinationChainID)
 	}
 
+	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+
 	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
 		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v",
 			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
@@ -164,7 +167,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 			break
 		}
 
-		if receiver.Address == cardanoDestConfig.BridgingAddresses.FeeAddress {
+		if receiver.Address == cardanoDestChainFeeAddress {
 			feeSum.Add(feeSum, receiver.Amount)
 		} else {
 			receiverAmountSum.Add(receiverAmountSum, receiver.Amount)

@@ -39,9 +39,10 @@ func NewCardanoChainObserver(
 	config *cCore.CardanoChainConfig,
 	txsReceiver core.CardanoTxsReceiver, oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
+	bridgingAddressesManager common.BridgingAddressesManager,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, syncerConfig := loadSyncerConfigs(config)
+	indexerConfig, syncerConfig := loadSyncerConfigs(config, bridgingAddressesManager)
 
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
@@ -151,15 +152,20 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 
 func loadSyncerConfigs(
 	config *cCore.CardanoChainConfig,
+	bridgingAddressesManager common.BridgingAddressesManager,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
 
-	addressesOfInterest := append([]string{
-		config.BridgingAddresses.BridgingAddress,
-		config.BridgingAddresses.FeeAddress,
-	}, config.OtherAddressesOfInterest...)
+	chainID := common.ToNumChainID(config.ChainID)
+
+	addressesOfInterest := append(
+		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),
+			bridgingAddressesManager.GetFeeMultisigAddress(chainID),
+		),
+		config.OtherAddressesOfInterest...,
+	)
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{

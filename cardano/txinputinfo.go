@@ -1,18 +1,22 @@
 package cardanotx
 
 import (
+	"errors"
+
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+var (
+	ErrInsufficientChange = errors.New("insufficient change, special consolidation required")
+)
+
 type TxInputInfos struct {
-	MultiSig    *TxInputInfo
+	MultiSig    []*TxInputInfo
 	MultiSigFee *TxInputInfo
 }
 
-type TxOutputs struct {
-	Outputs []cardanowallet.TxOutput
-	Sum     map[string]uint64
-}
+type TxOutputs = common.TxOutputs
 
 type TxInputInfo struct {
 	cardanowallet.TxInputs
@@ -26,6 +30,7 @@ type CertificatesWithScript struct {
 }
 
 type CertificatesData struct {
-	Certificates    []*CertificatesWithScript
-	RegistrationFee uint64
+	Certificates      []*CertificatesWithScript
+	RegistrationFee   uint64
+	DeregistrationFee uint64
 }
