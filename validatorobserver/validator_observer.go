@@ -47,17 +47,11 @@ func NewValidatorSetObserver(
 		timeout:             timeout,
 	}
 
-	validatorSetPending, err := bridgeSmartContract.IsNewValidatorSetPending()
-	if err != nil {
-		return newValidatorSet, fmt.Errorf("error checking if new validator set is pending: %w", err)
-	}
-
-	err = newValidatorSet.initValidatorSet()
+	// isPending must not be initialized here, otherwise batchers won't be notified through execute method
+	err := newValidatorSet.initValidatorSet()
 	if err != nil {
 		return newValidatorSet, fmt.Errorf("error initializing validator set: %w", err)
 	}
-
-	newValidatorSet.validatorSetPending = validatorSetPending
 
 	return newValidatorSet, nil
 }
