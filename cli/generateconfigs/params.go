@@ -748,6 +748,11 @@ func (p *generateConfigsParams) Execute(
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+			AllowedDirections: map[string][]string{
+				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus},
+				common.ChainIDStrVector: {common.ChainIDStrPrime, common.ChainIDStrNexus},
+				common.ChainIDStrNexus:  {common.ChainIDStrPrime, common.ChainIDStrVector},
+			},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,

@@ -644,6 +644,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+			AllowedDirections: map[string][]string{
+				common.ChainIDStrPrime:   {common.ChainIDStrCardano},
+				common.ChainIDStrCardano: {common.ChainIDStrPrime},
+			},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,

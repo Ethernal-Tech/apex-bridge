@@ -11,6 +11,8 @@ type SettingsResponse struct {
 	MinOperationFee map[string]uint64 `json:"minOperationFee"`
 	// For each chain, the minimum allowed UTXO value
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
+	// For each chain, all allowed bridging directions
+	AllowedDirections map[string][]string `json:"allowedDirections"`
 	// Minimum value allowed to be bridged
 	MinValueToBridge uint64 `json:"minValueToBridge"`
 	// Maximum amount of currency allowed to be bridged
@@ -48,6 +50,7 @@ func NewSettingsResponse(
 		MinChainFeeForBridging:         minFeeForBridgingMap,
 		MinOperationFee:                minOperationFeeMap,
 		MinUtxoChainValue:              minUtxoMap,
+		AllowedDirections:              appConfig.BridgingSettings.AllowedDirections,
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
