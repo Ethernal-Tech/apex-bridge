@@ -68,7 +68,10 @@ func getStakingCertificates(
 }
 
 func getOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction,
+	cardanoConfig *cardano.CardanoChainConfig,
+	feeAddress string,
+	logger hclog.Logger,
 ) (cardano.TxOutputs, bool, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 	isRedistribution := false
@@ -93,7 +96,10 @@ func getOutputs(
 				data.Amount += receiver.Amount.Uint64()
 			} else {
 				data.Amount += receiver.Amount.Uint64() - cardanoConfig.MinFeeForBridging
-				//receiversMap[feeAddress].Amount += cardanoConfig.MinFeeForBridging
+
+				feeData := receiversMap[feeAddress]
+				feeData.Amount += cardanoConfig.MinFeeForBridging
+				receiversMap[feeAddress] = feeData
 			}
 
 			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {

@@ -203,14 +203,16 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	txOutputs, isRedistribution, err := getOutputs(confirmedTransactions, cco.config, cco.logger)
+	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
+
+	txOutputs, isRedistribution, err := getOutputs(confirmedTransactions, cco.config, feeMultisigAddress, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(confirmedTransactions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve utxos for refund txs: %w", err)
+		return nil, nil, err
 	}
 
 	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
@@ -230,10 +232,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	cco.logger.Debug("Chosen multisig addresses to pay from",
 		"chain", common.ToStrChainID(data.ChainID), "addresses", multisigAddresses)
 
-	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
-
 	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress, isRedistribution)
+		multisigAddresses, feeMultisigAddress, isRedistribution, common.FlattenMatrix(refundUtxosPerConfirmedTx))
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
@@ -558,6 +558,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string, isRedistribution bool,
+	refundUtxos []*indexer.TxInputOutput,
 ) (*utxoSelectionResult, error) {
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
@@ -618,6 +619,27 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 			if err != nil {
 				return nil, err
 			}
+
+			multisigUtxoMap := make(map[string]struct{}, len(multisigUtxos))
+			for _, utxo := range multisigUtxos {
+				multisigUtxoMap[utxo.String()] = struct{}{}
+			}
+
+			unusedRefunUtxos := make([]*indexer.TxInputOutput, 0, len(refundUtxos))
+
+			// make sure we are not adding already added utxos - should not happen if oracle is correctly implemented
+			// however, it happened that oracle was not correctly implemented, and this is a fix to unstuck the bridge
+			for _, refundUtxo := range refundUtxos {
+				if refundUtxo.Output.Address != addressAndAmount.Address {
+					unusedRefunUtxos = append(unusedRefunUtxos, refundUtxo)
+				}
+
+				if _, exists := multisigUtxoMap[refundUtxo.String()]; !exists {
+					multisigUtxos = append(multisigUtxos, refundUtxo) // add refund UTXOs to multisig UTXOs
+				}
+			}
+
+			refundUtxos = unusedRefunUtxos
 		}
 
 		cco.logger.Debug("UTXOs chosen", addressAndAmount.Address, multisigUtxos)

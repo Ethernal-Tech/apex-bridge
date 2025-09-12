@@ -3,12 +3,14 @@ package successtxprocessors
 import (
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -94,7 +96,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	var recognizeToken bool
 
 	for idx, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
+		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
 		}
 
@@ -170,7 +172,7 @@ func (p *RefundRequestProcessorImpl) validate(
 	var recognizeToken bool
 
 	for _, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
+		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
 		}
 
@@ -208,7 +210,8 @@ func (p *RefundRequestProcessorImpl) validate(
 		}
 	}
 
-	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr)
+	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)))
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
@@ -228,7 +231,8 @@ func (p *RefundRequestProcessorImpl) validate(
 }
 
 func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
-	config *cCore.CardanoChainConfig, tx *core.CardanoTx, receiverAddr string,
+	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
+	receiverAddr string, bridgingAddresses []string,
 ) (uint64, error) {
 	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	if err != nil {
@@ -247,7 +251,7 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 	tokenNameToAmount := make(map[string]uint64)
 
 	for _, out := range tx.Outputs {
-		if out.Address != config.BridgingAddresses.BridgingAddress {
+		if !slices.Contains(bridgingAddresses, out.Address) {
 			continue
 		}
 
