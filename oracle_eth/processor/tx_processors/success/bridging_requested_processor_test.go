@@ -242,7 +242,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
 
-	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim - origin chain not registered 1", func(t *testing.T) {
 		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: testChainID,
@@ -274,7 +274,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "origin chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim - origin chain not registered", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim - origin chain not registered 2", func(t *testing.T) {
 		metadata, err := core.MarshalEthMetadata(core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrNexus,
