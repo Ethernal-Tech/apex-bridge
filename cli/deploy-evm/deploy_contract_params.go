@@ -206,7 +206,7 @@ func (ip *deployContractParams) Execute(
 		return nil, err
 	}
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.evmPrivateKey, ip.privateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.evmPrivateKey, ip.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
