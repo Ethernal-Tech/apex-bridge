@@ -745,7 +745,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
