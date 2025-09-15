@@ -25,13 +25,18 @@ type BridgingRequestEthMetadata struct {
 	FeeAmount          *big.Int                                `json:"fa"`
 }
 
+type RefundBridgingRequestEthMetadata struct {
+	BridgingTxType common.BridgingTxType `json:"t"`
+	SenderAddr     string                `json:"s"`
+}
+
 type BatchExecutedEthMetadata struct {
 	BridgingTxType common.BridgingTxType `json:"t"`
 	BatchNonceID   uint64                `json:"n"`
 }
 
 func MarshalEthMetadata[
-	T BaseEthMetadata | BridgingRequestEthMetadata | BatchExecutedEthMetadata,
+	T BaseEthMetadata | BridgingRequestEthMetadata | RefundBridgingRequestEthMetadata | BatchExecutedEthMetadata,
 ](
 	metadata T,
 ) (
@@ -46,7 +51,7 @@ func MarshalEthMetadata[
 }
 
 func UnmarshalEthMetadata[
-	T BaseEthMetadata | BridgingRequestEthMetadata | BatchExecutedEthMetadata,
+	T BaseEthMetadata | BridgingRequestEthMetadata | RefundBridgingRequestEthMetadata | BatchExecutedEthMetadata,
 ](
 	data []byte,
 ) (

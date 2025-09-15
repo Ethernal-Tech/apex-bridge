@@ -182,8 +182,19 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 		if event.IsFailedClaim {
 			for _, tx := range txs {
 				tx.IncrementBatchTryCount()
-				tx.IncrementSubmitTryCount()
+				tx.ResetSubmitTryCount()
 				tx.SetLastTimeTried(time.Time{})
+
+				for _, batchTx := range event.TxHashes {
+					if common.ToStrChainID(batchTx.SourceChainID) == tx.GetChainID() &&
+						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
+						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
+						tx.IncrementRefundTryCount()
+
+						break
+					}
+				}
+
 				newUnprocessedTxs = append(newUnprocessedTxs, tx)
 			}
 		} else {
@@ -297,6 +308,23 @@ func (sp *CardanoStateProcessor) findRejectedTxInPending(
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
+		}
+
+		return tx, nil
+	case cCore.RRCClaimType:
+		rrcIndex := event.Index.Uint64()
+		if rrcIndex >= uint64(len(claims.RefundRequestClaims)) {
+			return nil, fmt.Errorf(
+				"invalid NotEnoughFundsEvent.Index: %d. RRCs len: %d", rrcIndex, len(claims.RefundRequestClaims))
+		}
+
+		rrc := claims.RefundRequestClaims[rrcIndex]
+
+		tx, exists := allPendingMap[string(
+			core.ToCardanoTxKey(common.ToStrChainID(rrc.OriginChainId), rrc.OriginTransactionHash))]
+		if !exists {
+			return nil, fmt.Errorf(
+				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
 		}
 
 		return tx, nil
@@ -428,7 +456,8 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
+			txProcessor.GetType() == common.TxTypeRefundRequest {
 			pendingTxs = append(pendingTxs, unprocessedTx)
 		} else {
 			key := string(unprocessedTx.ToCardanoTxKey())
@@ -583,29 +612,42 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 	bridgeClaims *cCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) {
-	if len(bridgeClaims.BridgingRequestClaims) > 0 {
+	if len(bridgeClaims.BridgingRequestClaims) > 0 || len(bridgeClaims.RefundRequestClaims) > 0 {
 		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
 		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
 			notRejectedMap[string(tx.ToCardanoTxKey())] = true
 		}
 
-		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
-			srcChainID := common.ToStrChainID(brClaim.SourceChainId)
-			key := core.ToCardanoTxKey(srcChainID, brClaim.ObservedTransactionHash)
+		updateToSubmittedToBridge := func(
+			sourceChainId uint8, observedTransactionHash [32]byte, destinationChainId uint8, isRefund bool,
+		) {
+			srcChainID := common.ToStrChainID(sourceChainId)
+			key := core.ToCardanoTxKey(srcChainID, observedTransactionHash)
 
 			if !notRejectedMap[string(key)] {
-				continue
+				return
 			}
 
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
-				common.NewBridgingRequestStateKey(srcChainID, brClaim.ObservedTransactionHash),
-				common.ToStrChainID(brClaim.DestinationChainId))
+				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
+				common.ToStrChainID(destinationChainId))
 
 			if err != nil {
 				sp.logger.Error(
-					"error while updating a bridging request state to SubmittedToBridge",
-					"srcChainId", srcChainID, "srcTxHash", brClaim.ObservedTransactionHash, "err", err)
+					"error while updating a bridging request state to",
+					"state", common.BridgingRequestStateStatusStr(common.BridgingRequestStatusSubmittedToBridge, isRefund),
+					"srcChainId", srcChainID, "srcTxHash", observedTransactionHash, "err", err)
 			}
+		}
+
+		for _, brClaim := range bridgeClaims.BridgingRequestClaims {
+			updateToSubmittedToBridge(
+				brClaim.SourceChainId, brClaim.ObservedTransactionHash, brClaim.DestinationChainId, false)
+		}
+
+		for _, rrClaim := range bridgeClaims.RefundRequestClaims {
+			updateToSubmittedToBridge(
+				rrClaim.OriginChainId, rrClaim.OriginTransactionHash, rrClaim.OriginChainId, true)
 		}
 	}
 
@@ -613,9 +655,10 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 		txProcessor, err := sp.txProcessors.getSuccess(tx, sp.appConfig)
 		if err != nil {
 			sp.logger.Error("Failed to get tx processor for processed tx", "tx", tx, "err", err)
-		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest {
+		} else if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
+			txProcessor.GetType() == common.TxTypeRefundRequest {
 			err := bridgingRequestStateUpdater.Invalid(common.NewBridgingRequestStateKey(
-				tx.OriginChainID, common.Hash(tx.Hash)))
+				tx.OriginChainID, common.Hash(tx.Hash), false))
 
 			if err != nil {
 				sp.logger.Error(
