@@ -59,6 +59,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			UtxoMinAmount:         ccConfig.UtxoMinAmount,
 			MaxFeeUtxoCount:       ccConfig.MaxFeeUtxoCount,
 			MaxUtxoCount:          ccConfig.MaxUtxoCount,
+			MinFeeForBridging:     ccConfig.MinFeeForBridging,
 			TakeAtLeastUtxoCount:  ccConfig.TakeAtLeastUtxoCount,
 		}).Serialize()
 
@@ -76,6 +77,7 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			TTLBlockNumberInc:      ecConfig.TTLBlockNumberInc,
 			BlockRoundingThreshold: ecConfig.BlockRoundingThreshold,
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
+			MinFeeForBridging:      ecConfig.MinFeeForBridging,
 			TestMode:               ecConfig.TestMode,
 		}).Serialize()
 

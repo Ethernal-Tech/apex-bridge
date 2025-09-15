@@ -11,6 +11,10 @@ const (
 
 	MinFeeForBridgingDefault = uint64(1_000_010)
 	MinUtxoAmountDefault     = uint64(1_000_000)
+
+	BridgingConfirmedTxType ConfirmedTxType = 0
+	DefundConfirmedTxType   ConfirmedTxType = 1
+	RefundConfirmedTxType   ConfirmedTxType = 2
 )
 
 var (
@@ -19,21 +23,28 @@ var (
 
 type Hash [HashSize]byte
 
+type TxOutputIndex uint16
+
 type BridgingRequestStateKey struct {
 	SourceChainID string
 	SourceTxHash  Hash
+	IsRefund      bool
 }
 
-func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash) BridgingRequestStateKey {
+func NewBridgingRequestStateKey(sourceChainID string, sourceTxHash Hash, isRefund bool) BridgingRequestStateKey {
 	return BridgingRequestStateKey{
 		SourceChainID: sourceChainID,
 		SourceTxHash:  sourceTxHash,
+		IsRefund:      isRefund,
 	}
 }
 
 type NewBridgingRequestStateModel struct {
 	SourceTxHash Hash
+	IsRefund     bool
 }
+
+type ConfirmedTxType uint8
 
 func (h Hash) String() string {
 	return hex.EncodeToString(h[:])

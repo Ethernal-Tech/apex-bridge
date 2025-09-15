@@ -69,8 +69,7 @@ func ValidateOutputsHaveTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) e
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 
 	for _, out := range tx.Outputs {
-		if len(out.Tokens) > 0 && (out.Address == chainConfig.BridgingAddresses.BridgingAddress ||
-			out.Address == chainConfig.BridgingAddresses.FeeAddress) {
+		if len(out.Tokens) > 0 && out.Address == chainConfig.BridgingAddresses.BridgingAddress {
 			return fmt.Errorf("tx %s has output (%s, %d), with token count %d",
 				tx.Hash, out.Address, out.Amount, len(out.Tokens))
 		}
@@ -103,4 +102,14 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	}
 
 	return multisigUtxoOutput, nil
+}
+
+func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
+	for _, chain := range appConfing.BridgingSettings.AllowedDirections[srcChainID] {
+		if chain == destChainID {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
 }

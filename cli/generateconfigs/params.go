@@ -655,7 +655,7 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 	}
 
 	vcConfig := &vcCore.AppConfig{
-		RefundEnabled:       false,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -744,6 +744,11 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+			AllowedDirections: map[string][]string{
+				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus},
+				common.ChainIDStrVector: {common.ChainIDStrPrime, common.ChainIDStrNexus},
+				common.ChainIDStrNexus:  {common.ChainIDStrPrime, common.ChainIDStrVector},
+			},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,

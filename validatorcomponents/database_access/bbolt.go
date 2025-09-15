@@ -44,7 +44,7 @@ func (bd *BBoltDatabase) Close() error {
 }
 
 // AddBridgingRequestState implements core.Database.
-func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestState) error {
+func (bd *BBoltDatabase) AddBridgingRequestState(state *common.BridgingRequestState) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDBKey())) > 0 {
 			return fmt.Errorf("trying to add a BridgingRequestState that already exists")
@@ -64,7 +64,7 @@ func (bd *BBoltDatabase) AddBridgingRequestState(state *core.BridgingRequestStat
 }
 
 // UpdateBridgingRequestState implements core.Database.
-func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestState) error {
+func (bd *BBoltDatabase) UpdateBridgingRequestState(state *common.BridgingRequestState) error {
 	return bd.db.Update(func(tx *bbolt.Tx) error {
 		if len(tx.Bucket(bridgingRequestStatesBucket).Get(state.ToDBKey())) == 0 {
 			return fmt.Errorf("trying to update a BridgingRequestState that does not exist")
@@ -87,10 +87,10 @@ func (bd *BBoltDatabase) UpdateBridgingRequestState(state *core.BridgingRequestS
 func (bd *BBoltDatabase) GetBridgingRequestState(
 	sourceChainID string, sourceTxHash common.Hash,
 ) (
-	result *core.BridgingRequestState, err error,
+	result *common.BridgingRequestState, err error,
 ) {
 	err = bd.db.View(func(tx *bbolt.Tx) error {
-		data := tx.Bucket(bridgingRequestStatesBucket).Get(core.ToBridgingRequestStateDBKey(sourceChainID, sourceTxHash))
+		data := tx.Bucket(bridgingRequestStatesBucket).Get(common.ToBridgingRequestStateDBKey(sourceChainID, sourceTxHash))
 		if len(data) > 0 {
 			return json.Unmarshal(data, &result)
 		}
