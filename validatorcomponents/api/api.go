@@ -97,8 +97,16 @@ func (api *APIImpl) Start() {
 			Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
 			Handler:           api.handler,
 			ReadHeaderTimeout: 3 * time.Second,
-			ConnContext:       func(ctx context.Context, c net.Conn) context.Context { return srvCtx },
-			BaseContext:       func(l net.Listener) context.Context { return srvCtx },
+			BaseContext: func(l net.Listener) context.Context {
+				cc, _ := context.WithCancel(srvCtx)
+
+				return cc
+			},
+			ConnContext: func(ctx context.Context, c net.Conn) context.Context {
+				cc, _ := context.WithCancel(ctx)
+
+				return cc
+			},
 		}
 
 		err := api.server.ListenAndServe()
