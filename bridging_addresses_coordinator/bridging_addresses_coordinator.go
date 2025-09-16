@@ -351,9 +351,14 @@ func (c *BridgingAddressesCoordinatorImpl) processNativeTokens(
 
 		requiredTokenAmounts[tokenName] -= tokensTakenFromAddress
 		addrAmount.includeInTx[tokenName] = tokensTakenFromAddress
+		addrAmount.totalTokenAmounts[tokenName] -= tokensTakenFromAddress
 
 		if requiredTokenAmounts[tokenName] == 0 {
 			delete(requiredTokenAmounts, tokenName)
+		}
+
+		if addrAmount.totalTokenAmounts[tokenName] == 0 {
+			delete(addrAmount.totalTokenAmounts, tokenName)
 		}
 	}
 }
