@@ -15,17 +15,20 @@ import (
 )
 
 const (
-	bridgingAddrsCountFlag = "bridging-addresses-count"
+	bridgingAddrsCountFlag      = "bridging-addresses-count"
+	stakeBridgingAddrsCountFlag = "stake-bridging-addresses-count"
 
-	bridgingAddrsCountFlagDesc = "count of bridging addresses"
+	bridgingAddrsCountFlagDesc      = "count of bridging addresses"
+	stakeBridgingAddrsCountFlagDesc = "count of stake bridging addresses"
 )
 
 type updateBridgingAddrsCountParams struct {
-	chainID            string
-	bridgingAddrsCount uint8
-	bridgeNodeURL      string
-	bridgePrivateKey   string
-	privateKeyConfig   string
+	chainID                 string
+	bridgingAddrsCount      int8
+	stakeBridgingAddrsCount int8
+	bridgeNodeURL           string
+	bridgePrivateKey        string
+	privateKeyConfig        string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -38,8 +41,8 @@ func (params *updateBridgingAddrsCountParams) ValidateFlags() error {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
 	}
 
-	if params.bridgingAddrsCount < 1 {
-		return fmt.Errorf("--%s flag not specified or less than 1", bridgeAddrIdxFlag)
+	if params.bridgingAddrsCount == 0 {
+		return fmt.Errorf("--%s flag cannot be zero", bridgeAddrIdxFlag)
 	}
 
 	if params.bridgePrivateKey == "" && params.privateKeyConfig == "" {
@@ -67,6 +70,27 @@ func (params *updateBridgingAddrsCountParams) Execute(outputter common.OutputFor
 		return nil, err
 	}
 
+	bridgeContract, err := contractbinding.NewBridgeContract(
+		apexBridgeScAddress,
+		txHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
+
+	bridgingAddrsCount, err := resolveAddrCountParam(ctx, func(opts *bind.CallOpts) (uint8, error) {
+		return bridgeContract.GetBridgingAddressesCount(opts, chainIDInt)
+	}, params.bridgingAddrsCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve bridging addresses count: %w", err)
+	}
+
+	stakeBridgingAddrsCount, err := resolveAddrCountParam(ctx, func(opts *bind.CallOpts) (uint8, error) {
+		return bridgeContract.GetStakeBridgingAddressesCount(opts, chainIDInt)
+	}, params.stakeBridgingAddrsCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve stake bridging addresses count: %w", err)
+	}
+
 	contract, err := contractbinding.NewAdminContract(
 		apexBridgeAdminScAddress,
 		txHelper.GetClient())
@@ -81,7 +105,7 @@ func (params *updateBridgingAddrsCountParams) Execute(outputter common.OutputFor
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"updateBridgingAddrsCount", chainIDInt, params.bridgingAddrsCount)
+		"updateBridgingAddrsCount", chainIDInt, bridgingAddrsCount, stakeBridgingAddrsCount)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +114,7 @@ func (params *updateBridgingAddrsCountParams) Execute(outputter common.OutputFor
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.UpdateBridgingAddrsCount(opts, chainIDInt, params.bridgingAddrsCount)
+			return contract.UpdateBridgingAddrsCount(opts, chainIDInt, bridgingAddrsCount, stakeBridgingAddrsCount)
 		})
 	if err != nil {
 		return nil, err
@@ -117,11 +141,18 @@ func (params *updateBridgingAddrsCountParams) RegisterFlags(cmd *cobra.Command) 
 		chainIDFlagDesc,
 	)
 
-	cmd.Flags().Uint8Var(
+	cmd.Flags().Int8Var(
 		&params.bridgingAddrsCount,
 		bridgingAddrsCountFlag,
-		0,
+		-1,
 		bridgingAddrsCountFlagDesc,
+	)
+
+	cmd.Flags().Int8Var(
+		&params.stakeBridgingAddrsCount,
+		stakeBridgingAddrsCountFlag,
+		-1,
+		stakeBridgingAddrsCountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -146,6 +177,19 @@ func (params *updateBridgingAddrsCountParams) RegisterFlags(cmd *cobra.Command) 
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)
+	cmd.MarkFlagsOneRequired(bridgingAddrsCountFlag, stakeBridgingAddrsCountFlag)
+}
+
+func resolveAddrCountParam(
+	ctx context.Context,
+	contractFunc func(*bind.CallOpts) (uint8, error),
+	paramValue int8,
+) (uint8, error) {
+	if paramValue < 0 {
+		return contractFunc(&bind.CallOpts{Context: ctx})
+	}
+
+	return uint8(paramValue), nil
 }
 
 var (
