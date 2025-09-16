@@ -30,6 +30,24 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 	return false
 }
 
+func GetUnknownTokensMap(txOut indexer.TxOutput, knownTokens ...wallet.Token) map[string]uint64 {
+	knownTokensMap := make(map[string]bool, len(knownTokens))
+
+	for _, t := range knownTokens {
+		knownTokensMap[t.String()] = true
+	}
+
+	retVal := make(map[string]uint64)
+
+	for _, token := range txOut.Tokens {
+		if _, exists := knownTokensMap[token.TokenName()]; !exists {
+			retVal[token.TokenName()] = token.Amount
+		}
+	}
+
+	return retVal
+}
+
 func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 	knownTokens := make([]wallet.Token, len(cardanoConfig.NativeTokens))
 

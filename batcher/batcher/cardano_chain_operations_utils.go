@@ -71,12 +71,14 @@ func getOutputs(
 	txs []eth.ConfirmedTransaction,
 	cardanoConfig *cardano.CardanoChainConfig,
 	feeAddress string,
+	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
 	logger hclog.Logger,
-) (cardano.TxOutputs, bool, error) {
+) (cardano.TxOutputs, bool, map[string][]cardanowallet.TokenAmount, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 	isRedistribution := false
+	refundUnknownTokens := make(map[string][]cardanowallet.TokenAmount)
 
-	for _, transaction := range txs {
+	for txIndex, transaction := range txs {
 		// stake delegation tx are not processed in this way
 		if transaction.TransactionType == uint8(common.StakeConfirmedTxType) {
 			continue
@@ -112,19 +114,19 @@ func getOutputs(
 					if transaction.TransactionType == uint8(common.DefundConfirmedTxType) {
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return cardano.TxOutputs{}, false, nil, err
 						}
 					} else if transaction.TransactionType == uint8(common.RefundConfirmedTxType) {
 						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
 						token, err = cardanoConfig.GetNativeToken(origDstChainID)
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return cardano.TxOutputs{}, false, nil, err
 						}
 					} else {
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return cardano.TxOutputs{}, false, nil, err
 						}
 					}
 
@@ -133,6 +135,17 @@ func getOutputs(
 					}
 				} else {
 					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+				}
+			}
+
+			if transaction.TransactionType == uint8(common.RefundConfirmedTxType) {
+				for _, utxo := range refundUtxosPerConfirmedTx[txIndex] {
+					for _, token := range utxo.Output.Tokens {
+						refundUnknownTokens[receiver.DestinationAddress] = append(
+							refundUnknownTokens[receiver.DestinationAddress],
+							cardanowallet.NewTokenAmount(cardanowallet.NewToken(token.PolicyID, token.Name), token.Amount),
+						)
+					}
 				}
 			}
 
@@ -172,7 +185,7 @@ func getOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, isRedistribution, nil
+	return result, isRedistribution, refundUnknownTokens, nil
 }
 
 // createUtxoSelectionAmounts creates a copy of desired amounts with adjusted ADA amount for UTXO selection

@@ -205,15 +205,17 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
-	txOutputs, isRedistribution, err := getOutputs(confirmedTransactions, cco.config, feeMultisigAddress, cco.logger)
+	refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(confirmedTransactions)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(confirmedTransactions)
+	txOutputs, isRedistribution, refundUnkownTokens, err := getOutputs(confirmedTransactions, cco.config, feeMultisigAddress, refundUtxosPerConfirmedTx, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	cco.logger.Debug("txOutputs", txOutputs)
 
 	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
 		"outputs", txOutputs.Outputs, "redistribution", isRedistribution)
@@ -288,6 +290,34 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	} else {
 		addrAndAmountToDeduct = multisigAddresses
 	}
+
+	cco.logger.Debug("refundUnkownTokens", refundUnkownTokens)
+	cco.logger.Debug("txOutputs.Outputs", txOutputs.Outputs)
+
+	for address, tokens := range refundUnkownTokens {
+		for i, output := range txOutputs.Outputs {
+			if output.Addr == address {
+				txOutputs.Outputs[i].Tokens = append(txOutputs.Outputs[i].Tokens, tokens...)
+			}
+		}
+	}
+
+	cco.logger.Debug("txOutputs.Outputs", txOutputs.Outputs)
+
+	cco.logger.Debug("unknownUtxosAtBridgingAddresses", unknownUtxosAtBridgingAddresses)
+	cco.logger.Debug("addrAndAmountToDeduct", addrAndAmountToDeduct)
+
+	for addr, tokens := range unknownUtxosAtBridgingAddresses {
+		for _, addrAndAmnt := range addrAndAmountToDeduct {
+			if addrAndAmnt.Address == addr {
+				for token, amnt := range tokens {
+					addrAndAmnt.TokensAmounts[token] = amnt
+				}
+			}
+		}
+	}
+
+	cco.logger.Debug("addrAndAmountToDeduct", addrAndAmountToDeduct)
 
 	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "txInputs", txInputs)
@@ -726,8 +756,14 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 
 func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 	confirmedTxs []eth.ConfirmedTransaction,
-) ([][]*indexer.TxInputOutput, error) {
+) ([][]*indexer.TxInputOutput, map[string]map[string]uint64, error) {
 	utxosPerConfirmedTxs := make([][]*indexer.TxInputOutput, len(confirmedTxs))
+	unknownUtxosAtBridgingAddresses := make(map[string]map[string]uint64)
+
+	knownTokens, err := cardano.GetKnownTokens(cco.config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get known tokens: %w", err)
+	}
 
 	for i, ct := range confirmedTxs {
 		if len(ct.OutputIndexes) == 0 {
@@ -754,8 +790,10 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 			// for now return error
 			txOutput, err := cco.db.GetTxOutput(txInput)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get tx output for %v: %w", txInput, err)
+				return nil, nil, fmt.Errorf("failed to get tx output for %v: %w", txInput, err)
 			}
+
+			unknownUtxosAtBridgingAddresses[txOutput.Address] = cardano.GetUnknownTokensMap(txOutput, knownTokens...)
 
 			utxosPerConfirmedTxs[i][j] = &indexer.TxInputOutput{
 				Input:  txInput,
@@ -764,7 +802,7 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 		}
 	}
 
-	return utxosPerConfirmedTxs, nil
+	return utxosPerConfirmedTxs, unknownUtxosAtBridgingAddresses, nil
 }
 
 func (cco *CardanoChainOperations) getCertificateData(

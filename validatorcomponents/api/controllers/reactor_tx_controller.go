@@ -67,7 +67,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txInfo, err := c.createTx(requestBody)
+	txInfo, err := c.createTx(r.Context(), requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
@@ -181,7 +181,7 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (c *ReactorTxControllerImpl) createTx(ctx context.Context, requestBody request.CreateBridgingTxRequest) (
 	*sendtx.TxInfo, error,
 ) {
 	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs()
@@ -201,7 +201,7 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	txInfo, _, err := txSender.CreateBridgingTx(
-		context.Background(),
+		ctx,
 		sendtx.BridgingTxInput{
 			SrcChainID:      requestBody.SourceChainID,
 			DstChainID:      requestBody.DestinationChainID,
