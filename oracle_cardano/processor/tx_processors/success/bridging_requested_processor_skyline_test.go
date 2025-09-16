@@ -52,6 +52,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	testChainID := "test"
 
 	proc := NewSkylineBridgingRequestedProcessor(hclog.NewNullLogger(), map[string]*chain.CardanoChainInfo{
 		common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
@@ -107,6 +108,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 			MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
+			AllowedDirections: map[string][]string{
+				common.ChainIDStrPrime:   {common.ChainIDStrCardano, testChainID},
+				common.ChainIDStrCardano: {common.ChainIDStrPrime},
+				testChainID:              {common.ChainIDStrPrime},
+			},
 		},
 	}
 	appConfig.FillOut()
@@ -274,10 +280,38 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	})
 
 	//nolint:dupl
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim - transaction direction not allowed - invalid destination chain", func(t *testing.T) {
+		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: transactionDirectionNotSupportedMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrCardano,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: testChainID,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
@@ -302,10 +336,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim unsupported chain id found in tx", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
-			DestinationChainID: common.ChainIDStrCardano,
+			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
@@ -324,12 +358,13 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: destinationChainNonRegisteredMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: "invalid",
+			OriginChainID: testChainID,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim less than minOperationFee", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1727,7 +1762,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim - native token - invalid #2", func(t *testing.T) {
-		const destinationChainID = common.ChainIDStrPrime
+		const destinationChainID = common.ChainIDStrCardano
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{

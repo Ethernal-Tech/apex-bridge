@@ -94,6 +94,16 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	return multisigUtxoOutput, nil
 }
 
+func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
+	for _, chain := range appConfing.BridgingSettings.AllowedDirections[srcChainID] {
+		if chain == destChainID {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
+}
+
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
 	return slices.Contains(appConfig.GetBridgingMultisigAddresses(chainID), addr)
 }

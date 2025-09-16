@@ -503,6 +503,14 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
+```shell
+$ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \
+        --bridge-url http://localhost:12001 \
+        --chain prime \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
 # How to get bridge and gateway smart contract version
 ```shell
 apex-bridge sc-version \

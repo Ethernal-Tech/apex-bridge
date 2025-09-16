@@ -27,10 +27,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
 		vectorBridgingAddr    = "addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "addr_test1vzv206r2s6c5y3rr9eexxnlppz8lm048empp8zvtwjkn9cqleec9x"
+		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	testChainID := "test"
 
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
 
@@ -64,6 +66,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		BridgingSettings: cCore.BridgingSettings{
 			MaxReceiversPerBridgingRequest: 3,
 			MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+			AllowedDirections: map[string][]string{
+				common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
+				common.ChainIDStrVector: {common.ChainIDStrPrime},
+				common.ChainIDStrNexus:  {common.ChainIDStrPrime},
+				testChainID:             {common.ChainIDStrPrime},
+			},
 		},
 	}
 	appConfig.FillOut()
@@ -232,10 +240,67 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	//nolint:dupl
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim - transaction direction not allowed", func(t *testing.T) {
+		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: transactionDirectionNotSupportedMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: testChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
+		}
+		
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: transactionDirectionNotSupportedMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "transaction direction not allowed")
+	})
+
+	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
+		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: testChainID,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
@@ -276,15 +341,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
-	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
-		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+	t.Run("ValidateAndAddClaim - unsupported chain id found in tx", func(t *testing.T) {
+		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
-			DestinationChainID: common.ChainIDStrVector,
+			DestinationChainID: common.ChainIDStrPrime,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
-		require.NotNil(t, metadata)
+		require.NotNil(t, originChainNonRegisteredMetadata)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -293,14 +358,39 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: primeBridgingAddr, Amount: 3},
 			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: originChainNonRegisteredMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: testChainID,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unsupported chain id found in tx")
+	})
 
-		tx := indexer.Tx{
-			Metadata: metadata,
-			Outputs:  txOutputs,
+	t.Run("ValidateAndAddClaim origin chain not registered", func(t *testing.T) {
+		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrVector,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, originChainNonRegisteredMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 1},
+			{Address: "addr2", Amount: 2},
+			{Address: primeBridgingAddr, Amount: 3},
+			{Address: primeBridgingFeeAddr, Amount: 4},
 		}
-
-		cardanoTx := &core.CardanoTx{
-			Tx:            tx,
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: originChainNonRegisteredMetadata,
+				Outputs:  txOutputs,
+			},
 			OriginChainID: "invalid",
 		}
 
@@ -321,14 +411,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
-		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrNexus,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
-		require.NotNil(t, metadata)
+		require.NotNil(t, transactionDirectionNotSupportedMetadata)
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
@@ -337,14 +427,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: vectorBridgingAddr, Amount: 3},
 			{Address: vectorBridgingAddr, Amount: 4},
 		}
-
-		tx := indexer.Tx{
-			Metadata: metadata,
-			Outputs:  txOutputs,
-		}
-
-		cardanoTx := &core.CardanoTx{
-			Tx:            tx,
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: transactionDirectionNotSupportedMetadata,
+				Outputs:  txOutputs,
+			},
 			OriginChainID: common.ChainIDStrVector,
 		}
 

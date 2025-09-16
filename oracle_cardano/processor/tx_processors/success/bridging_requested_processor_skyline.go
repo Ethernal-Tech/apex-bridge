@@ -165,6 +165,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	if err := utils.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
+		return err
+	}
+
 	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
 		return err
 	}
