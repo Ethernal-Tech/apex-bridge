@@ -70,7 +70,7 @@ func (c *CardanoTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txRaw, txHash, err := c.createTx(requestBody)
+	txRaw, txHash, err := c.createTx(r.Context(), requestBody)
 	if err != nil {
 		utils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
@@ -210,7 +210,7 @@ func (c *CardanoTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (c *CardanoTxControllerImpl) createTx(ctx context.Context, requestBody request.CreateBridgingTxRequest) (
 	string, string, error,
 ) {
 	sourceChainConfig := c.oracleConfig.CardanoChains[requestBody.SourceChainID]
@@ -251,7 +251,7 @@ func (c *CardanoTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	txRawBytes, txHash, err := bridgingTxSender.CreateTx(
-		context.Background(), requestBody.DestinationChainID,
+		ctx, requestBody.DestinationChainID,
 		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
 		sourceChainConfig.UtxoMinAmount,
 	)
