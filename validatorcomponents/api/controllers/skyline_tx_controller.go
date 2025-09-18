@@ -66,7 +66,7 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 		return
 	}
 
-	txInfo, bridgingRequestMetadata, err := sc.createTx(requestBody)
+	txInfo, bridgingRequestMetadata, err := sc.createTx(r.Context(), requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, sc.logger)
 
@@ -199,7 +199,7 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (sc *SkylineTxControllerImpl) createTx(ctx context.Context, requestBody request.CreateBridgingTxRequest) (
 	*sendtx.TxInfo, *sendtx.BridgingRequestMetadata, error,
 ) {
 	txSenderChainsConfig, err := sc.oracleConfig.ToSendTxChainConfigs()
@@ -223,7 +223,7 @@ func (sc *SkylineTxControllerImpl) createTx(requestBody request.CreateBridgingTx
 	}
 
 	txInfo, metadata, err := txSender.CreateBridgingTx(
-		context.Background(),
+		ctx,
 		sendtx.BridgingTxInput{
 			SrcChainID:      requestBody.SourceChainID,
 			DstChainID:      requestBody.DestinationChainID,
