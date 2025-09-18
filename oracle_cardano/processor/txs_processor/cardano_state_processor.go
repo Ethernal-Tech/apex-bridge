@@ -95,6 +95,7 @@ func (sp *CardanoStateProcessor) RunChecks(
 	chainID string,
 	maxClaimsToGroup int,
 	priority uint8,
+	isValidatorSetPending bool,
 ) {
 	expectedTxs, err := sp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
@@ -129,8 +130,8 @@ func (sp *CardanoStateProcessor) RunChecks(
 			"for chainID", sp.state.blockInfo.ChainID,
 			"blockInfo", sp.state.blockInfo)
 
-		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
-		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
+		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
+		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -406,6 +407,7 @@ func (sp *CardanoStateProcessor) constructBridgeClaimsBlockInfo(
 func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	bridgeClaims *cCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.CardanoTx
 
@@ -444,6 +446,10 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 
 			onInvalidTx(unprocessedTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 
@@ -506,6 +512,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 func (sp *CardanoStateProcessor) checkExpectedTxs(
 	bridgeClaims *cCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantExpiredTxs []*core.BridgeExpectedCardanoTx
 
@@ -575,6 +582,10 @@ func (sp *CardanoStateProcessor) checkExpectedTxs(
 
 			onInvalidTx(expiredTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 

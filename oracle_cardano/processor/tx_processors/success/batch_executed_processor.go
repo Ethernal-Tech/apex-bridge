@@ -61,8 +61,12 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 }
 
 func (*BatchExecutedProcessorImpl) validate(
-	tx *core.CardanoTx, _ *common.BatchExecutedMetadata, appConfig *cCore.AppConfig,
+	tx *core.CardanoTx, metadata *common.BatchExecutedMetadata, appConfig *cCore.AppConfig,
 ) error {
 	// after BridgingTxType and inputs are validated, no further validation needed
+	if metadata.IsFeeOnlyTx > 0 {
+		return utils.ValidateFeeOnlyTxInputs(tx, appConfig)
+	}
+
 	return utils.ValidateTxInputs(tx, appConfig)
 }

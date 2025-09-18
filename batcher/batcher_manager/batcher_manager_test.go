@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -53,9 +54,13 @@ func TestBatcherManagerCreation(t *testing.T) {
 			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
 			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
-			}, map[string]eventTrackerStore.EventTrackerStore{
+			},
+			map[string]*indexer.BlockIndexer{
+				common.ChainIDStrPrime: {},
+			},
+			map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
-			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, nil, 1*time.Millisecond, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
 
@@ -72,8 +77,8 @@ func TestBatcherManagerCreation(t *testing.T) {
 
 		_, err := NewBatcherManager(context.Background(),
 			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
-			map[string]indexer.Database{}, map[string]eventTrackerStore.EventTrackerStore{},
-			&common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			map[string]indexer.Database{}, nil, map[string]eventTrackerStore.EventTrackerStore{},
+			&common.BridgingRequestStateUpdaterMock{ReturnNil: true}, nil, 1*time.Millisecond, hclog.NewNullLogger())
 		require.ErrorContains(t, err, "database not exists")
 	})
 
@@ -92,9 +97,13 @@ func TestBatcherManagerCreation(t *testing.T) {
 			invalidConfig, secretsMngr, &eth.BridgeSmartContractMock{},
 			map[string]indexer.Database{
 				common.ChainIDStrPrime: &indexer.DatabaseMock{},
-			}, map[string]eventTrackerStore.EventTrackerStore{
+			},
+			map[string]*indexer.BlockIndexer{
+				common.ChainIDStrPrime: {},
+			},
+			map[string]eventTrackerStore.EventTrackerStore{
 				common.ChainIDStrVector: eventTrackerStore.NewTestTrackerStore(t),
-			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, hclog.NewNullLogger())
+			}, &common.BridgingRequestStateUpdaterMock{ReturnNil: true}, nil, 1*time.Millisecond, hclog.NewNullLogger())
 		require.NoError(t, err)
 	})
 }

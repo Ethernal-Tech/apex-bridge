@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -54,17 +55,38 @@ func (df *EthBridgeDataFetcherImpl) GetBatchTransactions(
 
 func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.BridgeExpectedEthTx, error) {
 	for retries := 1; retries <= MaxRetries; retries++ {
-		lastBatchRawTx, err := df.bridgeSC.GetRawTransactionFromLastBatch(df.ctx, chainID)
+		lastBatchRawTx, batchType, err := df.bridgeSC.GetRawTransactionAndBatchTypeFromLastBatch(df.ctx, chainID)
 		if err == nil {
 			if len(lastBatchRawTx) == 0 {
 				return nil, nil
 			}
 
-			tx, err := eth.NewEVMSmartContractTransaction(lastBatchRawTx)
-			if err != nil {
-				df.logger.Error("Failed to parse evm tx", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
+			var txData struct {
+				BatchNonceID uint64
+				TTL          uint64
+			}
 
-				return nil, fmt.Errorf("failed to parse evm tx. err: %w", err)
+			if batchType == uint8(batcher.Normal) {
+				tx, err := eth.NewEVMSmartContractTransaction(lastBatchRawTx)
+				if err != nil {
+					df.logger.Error("Failed to parse evm tx", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
+
+					return nil, fmt.Errorf("failed to parse evm tx. err: %w", err)
+				}
+
+				txData.BatchNonceID = tx.BatchNonceID
+				txData.TTL = tx.TTL
+			} else {
+				tx, err := eth.NewEVMValidatorSetChangeTransaction(lastBatchRawTx)
+				if err != nil {
+					df.logger.Error("Failed to parse validator set change evm tx",
+						"rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
+
+					return nil, fmt.Errorf("failed to parse evm tx. err: %w", err)
+				}
+
+				txData.BatchNonceID = tx.BatchNonceID
+				txData.TTL = tx.TTL.Uint64()
 			}
 
 			txHash, err := common.Keccak256(lastBatchRawTx)
@@ -74,7 +96,7 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 
 			expectedTxMetadata := core.BatchExecutedEthMetadata{
 				BridgingTxType: common.BridgingTxTypeBatchExecution,
-				BatchNonceID:   tx.BatchNonceID,
+				BatchNonceID:   txData.BatchNonceID,
 			}
 
 			txMetadata, err := core.MarshalEthMetadata(expectedTxMetadata)
@@ -85,7 +107,7 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 			expectedTx := &core.BridgeExpectedEthTx{
 				ChainID:  chainID,
 				Hash:     ethgo.BytesToHash(txHash),
-				TTL:      tx.TTL,
+				TTL:      txData.TTL,
 				Metadata: txMetadata,
 				Priority: 0,
 			}

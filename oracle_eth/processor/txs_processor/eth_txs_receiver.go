@@ -134,6 +134,8 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 	depositEventSig := events[0]
 	withdrawEventSig := events[1]
 	fundedEventSig := events[2]
+	// validator set change occurred
+	vscEventSig := events[3]
 
 	contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
 	if err != nil {
@@ -241,7 +243,39 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		}
 
 		txValue = funded.Value
+	case vscEventSig:
+		vsc, err := contract.GatewayFilterer.ParseValidatorSetUpdatedGW(parsedLog)
+		if err != nil {
+			r.logger.Error("failed to parse validator set updated gw event", "err", err)
 
+			return nil, err
+		}
+
+		evmTx, err := eth.NewEVMValidatorSetChangeTransaction(vsc.Data)
+		if err != nil {
+			r.logger.Error("failed to create new evm smart contract tx", "err", err)
+
+			return nil, err
+		}
+
+		batchExecutedMetadata := core.BatchExecutedEthMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+			BatchNonceID:   evmTx.BatchNonceID,
+		}
+
+		metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
+		if err != nil {
+			r.logger.Error("failed to marshal metadata", "err", err)
+
+			return nil, err
+		}
+
+		evmTxHash, err := common.Keccak256(vsc.Data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create txHash. err: %w", err)
+		}
+
+		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
 	default:
 		r.logger.Error("unknown event type in log", "log", log)
 

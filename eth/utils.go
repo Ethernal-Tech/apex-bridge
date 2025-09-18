@@ -109,7 +109,7 @@ func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 		return nil, err
 	}
 
-	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited"})
+	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited", "ValidatorSetUpdatedGW"})
 }
 
 func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {
