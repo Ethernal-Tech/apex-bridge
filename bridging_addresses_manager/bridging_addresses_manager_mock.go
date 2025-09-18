@@ -13,16 +13,16 @@ type BridgingAddressesManagerMock struct {
 // Ensure interface compliance
 var _ common.BridgingAddressesManager = (*BridgingAddressesManagerMock)(nil)
 
-func (m *BridgingAddressesManagerMock) GetAllPaymentAddresses(chainID uint8) []string {
-	args := m.Called(chainID)
+func (m *BridgingAddressesManagerMock) GetAllPaymentAddresses(chainID uint8, addressType common.AddressType) []string {
+	args := m.Called(chainID, addressType)
 
 	arg0, _ := args.Get(0).([]string)
 
 	return arg0
 }
 
-func (m *BridgingAddressesManagerMock) GetAllStakeAddresses(chainID uint8) []string {
-	args := m.Called(chainID)
+func (m *BridgingAddressesManagerMock) GetAllStakeAddresses(chainID uint8, addressType common.AddressType) []string {
+	args := m.Called(chainID, addressType)
 
 	arg0, _ := args.Get(0).([]string)
 

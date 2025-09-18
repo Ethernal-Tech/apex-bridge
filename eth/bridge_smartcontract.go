@@ -32,6 +32,7 @@ type IBridgeSmartContract interface {
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
 	GetBridgingAddressesCount(ctx context.Context, chainID string) (uint8, error)
+	GetStakeBridgingAddressesCount(ctx context.Context, chainID string) (uint8, error)
 }
 
 type BridgeSmartContractImpl struct {
@@ -350,6 +351,31 @@ func (bsc *BridgeSmartContractImpl) GetBridgingAddressesCount(
 	}, common.ToNumChainID(chainID))
 	if err != nil {
 		return 0, fmt.Errorf("error while GetBridgingAddressesCount: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetStakeBridgingAddressesCount(
+	ctx context.Context, chainID string,
+) (uint8, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.GetStakeBridgingAddressesCount(&bind.CallOpts{
+		Context: ctx,
+	}, common.ToNumChainID(chainID))
+	if err != nil {
+		return 0, fmt.Errorf("error while GetStakeBridgingAddressesCount: %w", bsc.ethHelper.ProcessError(err))
 	}
 
 	return result, nil

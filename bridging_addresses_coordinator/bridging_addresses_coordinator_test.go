@@ -38,7 +38,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address currency", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -75,7 +75,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address currency not enough funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -109,7 +109,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 2 address currency", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -160,7 +160,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address native", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -210,7 +210,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 	//nolint:dupl
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address native, not enough native funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -256,7 +256,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 	//nolint:dupl
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address native, not enough currency funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", mock.Anything, true).
@@ -302,7 +302,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address native 2 currency", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
@@ -362,7 +362,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 2 address native 2 currency 2", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
@@ -437,7 +437,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch spec consolidation", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
@@ -485,7 +485,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		dbMock := &indexer.DatabaseMock{}
 
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
@@ -582,7 +582,7 @@ func TestRedistributeTokens(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatch 1 address", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)
@@ -637,7 +637,7 @@ func TestRedistributeTokens(t *testing.T) {
 	t.Run("GetAddressesAndAmountsForBatch 2 addresses", func(t *testing.T) {
 		addresses := []string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return(addresses, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", addresses[0], true).
@@ -691,7 +691,7 @@ func TestRedistributeTokens(t *testing.T) {
 		expectedAmounts := []uint64{333333334, 333333333, 333333333}
 
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return(addresses, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", addresses[0], true).
@@ -745,7 +745,7 @@ func TestRedistributeTokens(t *testing.T) {
 		addresses := []string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp", "addr3"}
 
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return(addresses, nil)
 
 		dbMock := &indexer.DatabaseMock{}
 		dbMock.On("GetAllTxOutputs", addresses[0], true).
@@ -811,7 +811,7 @@ func TestRedistributeTokens(t *testing.T) {
 		expectedTokens := []uint64{1000000, 0, 0}
 
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return(addresses, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return(addresses, nil)
 
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)
@@ -908,7 +908,7 @@ func TestRedistributeTokens(t *testing.T) {
 
 	t.Run("GetAddressesAndAmountsForBatch 1 address not enough funds", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr"}, nil)
 
 		token, err := cardanowallet.NewTokenWithFullName(tokenName, true)
 		require.NoError(t, err)

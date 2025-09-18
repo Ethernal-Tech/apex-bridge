@@ -27,8 +27,8 @@ type IStartable interface {
 }
 
 type BridgingAddressesManager interface {
-	GetAllPaymentAddresses(chainID uint8) []string
-	GetAllStakeAddresses(chainID uint8) []string
+	GetAllPaymentAddresses(chainID uint8, addressType AddressType) []string
+	GetAllStakeAddresses(chainID uint8, addressType AddressType) []string
 	GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool)
 	GetStakeAddressIndex(chainID uint8, address string) (uint8, bool)
 	GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool)

@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +32,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	proc := NewEthBridgingRequestedProcessor(hclog.NewNullLogger())
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime, mock.Anything).Return([]string{primeBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
 
 	appConfig := &oCore.AppConfig{

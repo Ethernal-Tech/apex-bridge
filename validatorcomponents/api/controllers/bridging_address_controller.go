@@ -91,6 +91,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 		chainIDStr, bridgingAddress), c.logger)
 }
 
+// TODO: return rewardsBridgingAddresses too?
 func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	c.logger.Debug("getAllBridgingAddresses request", "query values", queryValues, "url", r.URL)
@@ -107,7 +108,7 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
+	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewAllBridgingAddressesResponse(
 		bridgingAddresses), c.logger)

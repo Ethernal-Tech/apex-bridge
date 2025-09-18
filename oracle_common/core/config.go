@@ -126,10 +126,11 @@ func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
 	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
 }
 
+// TODO: should it return RewardPaymentAddresses too?
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
 	chainIDNum := common.ToNumChainID(chainID)
 
-	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
+	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum, common.AddressTypeNormal)
 }
 
 func (appConfig *AppConfig) FillOut() {

@@ -25,9 +25,10 @@ cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 - Generate bridge bindings with the command:
 ```shell
 BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
+solc --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" \
+       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild \
+       --optimize --via-ir --overwrite
+abigen --abi ./contractbinding/contractbuild/Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
 ```
 - Generate nexus bindings with the command:
@@ -452,10 +453,12 @@ $ apex-bridge bridge-admin deregister-stake-address \
 $ apex-bridge bridge-admin update-bridging-addrs-count \
         --bridge-url http://localhost:12001 \
         --bridging-addresses-count 5 \
+        --stake-bridging-addresses-count 3 \
         --chain prime \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- at least one of `--bridging-addresses-count` or `--stake-bridging-addresses-count` must be set.
 
 ```shell
 $ apex-bridge bridge-admin get-validators-data \

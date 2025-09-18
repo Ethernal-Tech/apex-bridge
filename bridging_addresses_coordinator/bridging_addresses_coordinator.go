@@ -277,7 +277,7 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 		return nil, fmt.Errorf("failed to get appropriate db for chain %s", chainIDStr)
 	}
 
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
+	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
 
 	addrAmounts := make([]addrAmount, 0, len(addresses))
 	potentialInputs := make([]*indexer.TxInputOutput, 0)
@@ -438,7 +438,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
 	db := c.dbs[common.ToStrChainID(chainID)]
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
+	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
 
 	if containsNativeTokens {
 		return common.AddressAndAmount{Address: addresses[0], AddressIndex: 0}, nil

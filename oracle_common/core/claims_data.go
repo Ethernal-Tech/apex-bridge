@@ -142,6 +142,8 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	sb.WriteString(common.ToStrChainID(c.SourceChainId))
 	sb.WriteString("\nDestinationChainID = ")
 	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
+	sb.WriteString("\nBridgeAddrIndex = ")
+	sb.WriteString(fmt.Sprintf("%d", c.BridgeAddrIndex))
 
 	return sb.String()
 }

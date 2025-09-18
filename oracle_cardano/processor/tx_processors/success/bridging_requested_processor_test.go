@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,10 +38,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	proc := NewBridgingRequestedProcessor(hclog.NewNullLogger())
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime, mock.Anything).Return([]string{primeBridgingAddr}, nil)
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector, mock.Anything).Return([]string{vectorBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
 
 	appConfig := &cCore.AppConfig{

@@ -92,7 +92,7 @@ func TestCardanoChainObserver(t *testing.T) {
 	txsReceiverMock.On("NewUnprocessedTxs", mock.Anything, mock.Anything).Return(error(nil))
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
-	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju5uv")
 
 	initDB := func(t *testing.T) indexer.Database {

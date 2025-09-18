@@ -152,9 +152,19 @@ func (ip *createAddressParams) Execute(
 	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 
+	rewardBrAddressesCnt, err := bridgeContract.GetStakeBridgingAddressesCount(ctx, ip.chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("Reward bridging addresses count retreived %d:\n", rewardBrAddressesCnt)))
+	_, _ = outputter.Write([]byte("\n"))
+	outputter.WriteOutput()
+
 	cmdResult := CmdResult{
-		AddressAndPolicyScripts: make([]AddressAndPolicyScripts, bridgingAddressesCnt),
-		ShowPolicyScripts:       ip.showPolicyScript,
+		AddressAndPolicyScripts:    make([]AddressAndPolicyScripts, bridgingAddressesCnt),
+		RewardAddrAndPolicyScripts: make([]AddressAndPolicyScripts, rewardBrAddressesCnt),
+		ShowPolicyScripts:          ip.showPolicyScript,
 	}
 
 	keyHashes, err := cardanotx.NewApexKeyHashes(validatorsData)
@@ -181,6 +191,21 @@ func (ip *createAddressParams) Execute(
 		}
 
 		cmdResult.AddressAndPolicyScripts[i] = AddressAndPolicyScripts{
+			ApexAddresses: addrs,
+			PolicyScripts: policyScripts}
+	}
+
+	for i := range rewardBrAddressesCnt {
+		policyScripts := cardanotx.NewApexPolicyScripts(keyHashes, uint64(i+common.FirstRewardBridgingAddressIndex))
+
+		addrs, err := cardanotx.NewApexAddresses(cliBinary, ip.testnetMagic, policyScripts)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO check bridgeContract.SetChainAdditionalData(
+
+		cmdResult.RewardAddrAndPolicyScripts[i] = AddressAndPolicyScripts{
 			ApexAddresses: addrs,
 			PolicyScripts: policyScripts}
 	}

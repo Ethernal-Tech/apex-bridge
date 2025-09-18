@@ -17,7 +17,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	proc := NewBatchExecutedProcessor(hclog.NewNullLogger())
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
-	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr_bridging"}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_bridging"}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr_fee")
 
 	appConfig := cCore.AppConfig{
@@ -113,7 +113,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		cardanoChains := make(map[string]*cCore.CardanoChainConfig)
 
 		brAddrManMock := &brAddrManager.BridgingAddressesManagerMock{}
-		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr1"}, nil)
 		brAddrManMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr2")
 
 		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{}
@@ -185,7 +185,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 		cardanoChains := make(map[string]*cCore.CardanoChainConfig)
 
 		brAddrManMock := &brAddrManager.BridgingAddressesManagerMock{}
-		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{"addr1"}, nil)
+		brAddrManMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr1"}, nil)
 		brAddrManMock.On("GetFeeMultisigAddress", mock.Anything).Return("addr2")
 
 		cardanoChains[common.ChainIDStrPrime] = &cCore.CardanoChainConfig{}

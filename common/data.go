@@ -5,6 +5,7 @@ import (
 )
 
 type VCRunMode string
+type AddressType uint8
 
 const (
 	HashSize = 32
@@ -37,6 +38,12 @@ const (
 	StakeRegDelConfirmedTxSubType StakeConfirmedTxSubType = 0
 	StakeDelConfirmedTxSubType    StakeConfirmedTxSubType = 1
 	StakeDeregConfirmedTxSubType  StakeConfirmedTxSubType = 2
+
+	AddressTypeNormal AddressType = 0
+	AddressTypeReward AddressType = 1
+	AddressTypeBoth   AddressType = 2
+
+	FirstRewardBridgingAddressIndex uint8 = 100
 )
 
 type Hash [HashSize]byte
