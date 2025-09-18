@@ -45,11 +45,19 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 		knownTokens[i] = token
 	}
 
-	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		common.ToNumChainID(tx.OriginChainID), 0)
+	stakedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.StakedToken)
+	if err != nil {
+		return err
+	}
+
+	originChainID := common.ToNumChainID(tx.OriginChainID)
+
+	zeroAddress, ok := appConfig.BridgingAddressesManager.GetZeroIndexAddress(originChainID)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}
+
+	rewardZeroAddress, rewardZeroAddrExists := appConfig.BridgingAddressesManager.GetZeroIndexRewardAddress(originChainID)
 
 	for _, out := range tx.Outputs {
 		if !IsBridgingAddrForChain(appConfig, tx.OriginChainID, out.Address) &&
@@ -57,9 +65,28 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 			continue
 		}
 
+		addressIdx, ok := appConfig.BridgingAddressesManager.GetPaymentAddressIndex(originChainID, out.Address)
+		if !ok {
+			return fmt.Errorf("failed to get address index %s from bridging address manager", out.Address)
+		}
+
+		var zeroAddr string
+		var knownTokensForAddress []wallet.Token
+
+		if addressIdx >= common.FirstRewardBridgingAddressIndex {
+			if !rewardZeroAddrExists {
+				return fmt.Errorf("reward zero address doesn't exist")
+			}
+
+			zeroAddr = rewardZeroAddress
+			knownTokensForAddress = []wallet.Token{stakedToken}
+		} else {
+			zeroAddr = zeroAddress
+			knownTokensForAddress = knownTokens
+		}
+
 		// We allow only bridging via first address with native tokens
-		knownTokensForAddress := knownTokens
-		if out.Address != zeroAddress {
+		if out.Address != zeroAddr {
 			knownTokensForAddress = nil
 		}
 

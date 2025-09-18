@@ -26,6 +26,7 @@ type CardanoChainConfig struct {
 	MaxUtxoCount          uint                             `json:"maxUtxoCount"`
 	TakeAtLeastUtxoCount  uint                             `json:"takeAtLeastUtxoCount"`
 	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	StakedToken           sendtx.TokenExchangeConfig       `json:"stakedToken"`
 }
 
 // GetChainType implements ChainSpecificConfig.

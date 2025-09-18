@@ -244,6 +244,22 @@ func (b *BridgingAddressesManagerImpl) GetStakeAddressIndex(chainID uint8, addre
 	)
 }
 
+func (b *BridgingAddressesManagerImpl) GetZeroIndexAddress(chainID uint8) (string, bool) {
+	return getAddressFromIndex(
+		0,
+		b.bridgingPaymentAddresses[chainID],
+		b.bridgingRewardPaymentAddresses[chainID],
+	)
+}
+
+func (b *BridgingAddressesManagerImpl) GetZeroIndexRewardAddress(chainID uint8) (string, bool) {
+	return getAddressFromIndex(
+		common.FirstRewardBridgingAddressIndex,
+		b.bridgingPaymentAddresses[chainID],
+		b.bridgingRewardPaymentAddresses[chainID],
+	)
+}
+
 func (b *BridgingAddressesManagerImpl) GetFeeMultisigAddress(chainID uint8) string {
 	return b.feeMultisigAddresses[chainID]
 }

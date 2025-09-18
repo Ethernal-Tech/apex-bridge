@@ -30,8 +30,9 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsForBatch(
 func (m *BridgingAddressesCoordinatorMock) GetAddressToBridgeTo(
 	chainID uint8,
 	contansNativeTokens bool,
+	isReward bool,
 ) (common.AddressAndAmount, error) {
-	args := m.Called(chainID)
+	args := m.Called(chainID, contansNativeTokens, isReward)
 
 	arg0, _ := args.Get(0).(common.AddressAndAmount)
 

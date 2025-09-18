@@ -50,6 +50,58 @@ func NewBridgingAddressesCoordinator(
 	}
 }
 
+func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
+	chainID uint8,
+	containsNativeTokens bool,
+	isReward bool,
+) (common.AddressAndAmount, error) {
+	// Go through all addresses and find the one with the least amount of tokens
+	// chose that one and send whole amount to it
+
+	addressType := common.AddressTypeNormal
+	firstAddressIndex := uint8(0)
+
+	if isReward {
+		addressType = common.AddressTypeReward
+		firstAddressIndex = common.FirstRewardBridgingAddressIndex
+	}
+
+	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, addressType)
+
+	if containsNativeTokens {
+		return common.AddressAndAmount{Address: addresses[0], AddressIndex: firstAddressIndex}, nil
+	}
+
+	minAmount := uint64(0)
+	index := 0
+	db := c.dbs[common.ToStrChainID(chainID)]
+
+	for i, address := range addresses {
+		utxos, err := db.GetAllTxOutputs(address, true)
+		if err != nil {
+			return common.AddressAndAmount{}, err
+		}
+
+		amount := uint64(0)
+		for _, utxo := range utxos {
+			amount += utxo.Output.Amount
+		}
+
+		if amount == 0 {
+			return common.AddressAndAmount{Address: address, AddressIndex: uint8(i) + firstAddressIndex}, nil //nolint:gosec
+		}
+
+		if i == 0 {
+			minAmount = amount
+		} else if amount < minAmount {
+			minAmount = amount
+			index = i
+		}
+	}
+
+	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index) + firstAddressIndex}, nil //nolint:gosec
+}
+
 func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	chainID uint8,
 	cardanoCliBinary string,
@@ -429,48 +481,6 @@ func (c *BridgingAddressesCoordinatorImpl) spendCurrencyFromAddress(
 	addrAmount.insufficientChange = true
 
 	return defaultMinChange
-}
-
-func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
-	chainID uint8,
-	containsNativeTokens bool,
-) (common.AddressAndAmount, error) {
-	// Go through all addresses and find the one with the least amount of tokens
-	// chose that one and send whole amount to it
-	db := c.dbs[common.ToStrChainID(chainID)]
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
-
-	if containsNativeTokens {
-		return common.AddressAndAmount{Address: addresses[0], AddressIndex: 0}, nil
-	}
-
-	minAmount := uint64(0)
-	index := 0
-
-	for i, address := range addresses {
-		utxos, err := db.GetAllTxOutputs(address, true)
-		if err != nil {
-			return common.AddressAndAmount{}, err
-		}
-
-		amount := uint64(0)
-		for _, utxo := range utxos {
-			amount += utxo.Output.Amount
-		}
-
-		if amount == 0 {
-			return common.AddressAndAmount{Address: address, AddressIndex: uint8(i)}, nil //nolint:gosec
-		}
-
-		if i == 0 {
-			minAmount = amount
-		} else if amount < minAmount {
-			minAmount = amount
-			index = i
-		}
-	}
-
-	return common.AddressAndAmount{Address: addresses[index], AddressIndex: uint8(index)}, nil //nolint:gosec
 }
 
 func validateTokenFunds(

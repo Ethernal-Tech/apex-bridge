@@ -61,7 +61,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 	if !exists || len(containsNativeTokensArr) == 0 {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
-			errors.New("chainId missing from query"), c.logger)
+			errors.New("containsNativeTokens missing from query"), c.logger)
 
 		return
 	}
@@ -75,10 +75,28 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 		return
 	}
 
+	isRewardArr, exists := queryValues["isReward"]
+	if !exists || len(isRewardArr) == 0 {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			errors.New("isReward missing from query"), c.logger)
+
+		return
+	}
+
+	isReward, err := strconv.ParseBool(isRewardArr[0])
+	if err != nil {
+		apiUtils.WriteErrorResponse(
+			w, r, http.StatusBadRequest,
+			fmt.Errorf("invalid isReward value: %w", err), c.logger)
+
+		return
+	}
+
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID, containsNativeTokens)
+	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID, containsNativeTokens, isReward)
 	if err != nil {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
@@ -91,7 +109,6 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 		chainIDStr, bridgingAddress), c.logger)
 }
 
-// TODO: return rewardsBridgingAddresses too?
 func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	c.logger.Debug("getAllBridgingAddresses request", "query values", queryValues, "url", r.URL)
@@ -108,8 +125,11 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	chainIDStr := chainIDArr[0]
 	chainID := common.ToNumChainID(chainIDStr)
 
-	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
+	// TODO: send all addresses together (AddressTypeBoth)
+	response := response.NewAllBridgingAddressesResponse(
+		c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal),
+		c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeReward),
+	)
 
-	apiUtils.WriteResponse(w, r, http.StatusOK, response.NewAllBridgingAddressesResponse(
-		bridgingAddresses), c.logger)
+	apiUtils.WriteResponse(w, r, http.StatusOK, response, c.logger)
 }

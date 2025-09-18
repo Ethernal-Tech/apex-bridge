@@ -130,7 +130,7 @@ func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
 	chainIDNum := common.ToNumChainID(chainID)
 
-	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum, common.AddressTypeNormal)
+	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum, common.AddressTypeBoth)
 }
 
 func (appConfig *AppConfig) FillOut() {

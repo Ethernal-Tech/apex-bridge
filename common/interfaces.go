@@ -33,6 +33,8 @@ type BridgingAddressesManager interface {
 	GetStakeAddressIndex(chainID uint8, address string) (uint8, bool)
 	GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool)
 	GetStakeAddressFromIndex(chainID uint8, index uint8) (string, bool)
+	GetZeroIndexAddress(chainID uint8) (string, bool)
+	GetZeroIndexRewardAddress(chainID uint8) (string, bool)
 	GetPaymentPolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetFeeMultisigAddress(chainID uint8) string
@@ -60,5 +62,5 @@ type BridgingAddressesCoordinator interface {
 		isRedistribution bool,
 		protocolParams []byte,
 		txOutputs TxOutputs) ([]AddressAndAmount, bool, error)
-	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool) (AddressAndAmount, error)
+	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool, isReward bool) (AddressAndAmount, error)
 }

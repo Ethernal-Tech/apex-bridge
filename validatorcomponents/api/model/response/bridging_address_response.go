@@ -24,12 +24,16 @@ func NewBridgingAddressResponse(
 type AllBridgingAddressesResponse struct {
 	// Bridging addresses
 	Addresses []string `json:"addresses"`
+	// Reward bridging addresses
+	RewardAddresses []string `json:"RewardAddresses"`
 } // @name AllBridgingAddressesResponse
 
 func NewAllBridgingAddressesResponse(
 	bridgingAddresses []string,
+	rewardBridgingAddresses []string,
 ) *AllBridgingAddressesResponse {
 	return &AllBridgingAddressesResponse{
-		Addresses: bridgingAddresses,
+		Addresses:       bridgingAddresses,
+		RewardAddresses: rewardBridgingAddresses,
 	}
 }

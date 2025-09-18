@@ -485,20 +485,39 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 		dbMock := &indexer.DatabaseMock{}
 
-		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, mock.Anything).Return([]string{"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp"}, nil)
+		addresses := []string{
+			"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr",
+			"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp",
+		}
+
+		rewardAddrs := []string{
+			"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szkl",
+			"addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szgt",
+		}
+
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, common.AddressTypeNormal).Return(addresses, nil)
+		bridgingAddressesManagerMock.On("GetAllPaymentAddresses", mock.Anything, common.AddressTypeReward).Return(rewardAddrs, nil)
 
 		coordinator := NewBridgingAddressesCoordinator(bridgingAddressesManagerMock, map[string]indexer.Database{
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
 		t.Run("contains native tokens", func(t *testing.T) {
-			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, true)
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, true, false)
 			require.NoError(t, err)
 			require.Equal(t, uint8(0), addrAmount.AddressIndex)
+			require.Equal(t, addresses[0], addrAmount.Address)
+		})
+
+		t.Run("contains native tokens with reward address", func(t *testing.T) {
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, true, true)
+			require.NoError(t, err)
+			require.Equal(t, common.FirstRewardBridgingAddressIndex, addrAmount.AddressIndex)
+			require.Equal(t, rewardAddrs[0], addrAmount.Address)
 		})
 
 		t.Run("no native tokens 0", func(t *testing.T) {
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
+			dbMock.On("GetAllTxOutputs", addresses[0], true).
 				Return([]*indexer.TxInputOutput{
 					{
 						Input: indexer.TxInput{
@@ -509,7 +528,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 						},
 					},
 				}, error(nil)).Once()
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp", true).
+			dbMock.On("GetAllTxOutputs", addresses[1], true).
 				Return([]*indexer.TxInputOutput{
 					{
 						Input: indexer.TxInput{
@@ -521,13 +540,14 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false)
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, false)
 			require.NoError(t, err)
 			require.Equal(t, uint8(0), addrAmount.AddressIndex)
+			require.Equal(t, addresses[0], addrAmount.Address)
 		})
 
 		t.Run("no native tokens 1", func(t *testing.T) {
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
+			dbMock.On("GetAllTxOutputs", addresses[0], true).
 				Return([]*indexer.TxInputOutput{
 					{
 						Input: indexer.TxInput{
@@ -538,7 +558,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 						},
 					},
 				}, error(nil)).Once()
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp", true).
+			dbMock.On("GetAllTxOutputs", addresses[1], true).
 				Return([]*indexer.TxInputOutput{
 					{
 						Input: indexer.TxInput{
@@ -550,15 +570,16 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false)
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, false)
 			require.NoError(t, err)
 			require.Equal(t, uint8(1), addrAmount.AddressIndex)
+			require.Equal(t, addresses[1], addrAmount.Address)
 		})
 
 		t.Run("no native tokens 0, 0 currency", func(t *testing.T) {
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", true).
+			dbMock.On("GetAllTxOutputs", addresses[0], true).
 				Return([]*indexer.TxInputOutput{}, error(nil)).Once()
-			dbMock.On("GetAllTxOutputs", "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpp", true).
+			dbMock.On("GetAllTxOutputs", addresses[1], true).
 				Return([]*indexer.TxInputOutput{
 					{
 						Input: indexer.TxInput{
@@ -570,9 +591,91 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false)
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, false)
 			require.NoError(t, err)
 			require.Equal(t, uint8(0), addrAmount.AddressIndex)
+			require.Equal(t, addresses[0], addrAmount.Address)
+		})
+
+		t.Run("no native tokens with reward address 0", func(t *testing.T) {
+			dbMock.On("GetAllTxOutputs", rewardAddrs[0], true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 1_000_000,
+						},
+					},
+				}, error(nil)).Once()
+			dbMock.On("GetAllTxOutputs", rewardAddrs[1], true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 3_000_000,
+						},
+					},
+				}, error(nil)).Once()
+
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, true)
+			require.NoError(t, err)
+			require.Equal(t, common.FirstRewardBridgingAddressIndex, addrAmount.AddressIndex)
+			require.Equal(t, rewardAddrs[0], addrAmount.Address)
+		})
+
+		t.Run("no native tokens with reward address 1", func(t *testing.T) {
+			dbMock.On("GetAllTxOutputs", rewardAddrs[0], true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 3_000_000,
+						},
+					},
+				}, error(nil)).Once()
+			dbMock.On("GetAllTxOutputs", rewardAddrs[1], true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 1_000_000,
+						},
+					},
+				}, error(nil)).Once()
+
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, true)
+			require.NoError(t, err)
+			require.Equal(t, uint8(1)+common.FirstRewardBridgingAddressIndex, addrAmount.AddressIndex)
+			require.Equal(t, rewardAddrs[1], addrAmount.Address)
+		})
+
+		t.Run("no native tokens 0, 0 currency with reward address", func(t *testing.T) {
+			dbMock.On("GetAllTxOutputs", rewardAddrs[0], true).
+				Return([]*indexer.TxInputOutput{}, error(nil)).Once()
+			dbMock.On("GetAllTxOutputs", rewardAddrs[1], true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 1_000_000,
+						},
+					},
+				}, error(nil)).Once()
+
+			addrAmount, err := coordinator.GetAddressToBridgeTo(chainID, false, true)
+			require.NoError(t, err)
+			require.Equal(t, common.FirstRewardBridgingAddressIndex, addrAmount.AddressIndex)
+			require.Equal(t, rewardAddrs[0], addrAmount.Address)
 		})
 	})
 }
