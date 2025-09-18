@@ -154,8 +154,8 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 	}
 
 	vs.lock.Unlock()
-
 	vs.validatorSetStream <- pendingValidatorSet
+	vs.logger.Info("validator set update", "isPending", isPending)
 
 	return nil
 }
