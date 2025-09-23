@@ -104,6 +104,17 @@ func getOutputs(
 				receiversMap[feeAddress] = feeData
 			}
 
+			if transaction.TransactionType == uint8(common.RefundConfirmedTxType) {
+				for _, utxo := range refundUtxosPerConfirmedTx[txIndex] {
+					for _, token := range utxo.Output.Tokens {
+						refundUnknownTokens[receiver.DestinationAddress] = append(
+							refundUnknownTokens[receiver.DestinationAddress],
+							cardanowallet.NewTokenAmount(cardanowallet.NewToken(token.PolicyID, token.Name), token.Amount),
+						)
+					}
+				}
+			}
+
 			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 				if len(data.Tokens) == 0 {
 					var (
@@ -122,6 +133,13 @@ func getOutputs(
 						if err != nil {
 							return cardano.TxOutputs{}, false, nil, err
 						}
+
+						refundUnknownTokens[receiver.DestinationAddress] = append(
+							refundUnknownTokens[receiver.DestinationAddress],
+							cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
+						)
+
+						continue
 					} else {
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
@@ -135,17 +153,6 @@ func getOutputs(
 					}
 				} else {
 					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
-				}
-			}
-
-			if transaction.TransactionType == uint8(common.RefundConfirmedTxType) {
-				for _, utxo := range refundUtxosPerConfirmedTx[txIndex] {
-					for _, token := range utxo.Output.Tokens {
-						refundUnknownTokens[receiver.DestinationAddress] = append(
-							refundUnknownTokens[receiver.DestinationAddress],
-							cardanowallet.NewTokenAmount(cardanowallet.NewToken(token.PolicyID, token.Name), token.Amount),
-						)
-					}
 				}
 			}
 

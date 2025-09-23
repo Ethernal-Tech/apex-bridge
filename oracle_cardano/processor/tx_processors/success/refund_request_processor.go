@@ -100,19 +100,27 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			continue
 		}
 
+		zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+			common.ToNumChainID(tx.OriginChainID), 0)
+		if !ok {
+			return fmt.Errorf("failed to get zero address from bridging address manager")
+		}
+
 		for _, token := range out.Tokens {
 			recognizeToken = false
 
-			for _, tExc := range chainConfig.NativeTokens {
-				confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
-				if err != nil {
-					return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
-				}
+			if zeroAddress == out.Address {
+				for _, tExc := range chainConfig.NativeTokens {
+					confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+					if err != nil {
+						return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+					}
 
-				if confToken.String() == token.TokenName() {
-					recognizeToken = true
+					if confToken.String() == token.TokenName() {
+						recognizeToken = true
 
-					break
+						break
+					}
 				}
 			}
 
