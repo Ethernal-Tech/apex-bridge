@@ -212,13 +212,17 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
+	if len(unknownUtxosAtBridgingAddresses) > 0 {
+		cco.logger.Debug("Unknown utxos at bridging addresses", "unknownUtxosAtBridgingAddresses", unknownUtxosAtBridgingAddresses)
+	}
+
 	txOutputs, isRedistribution, refundUnkownTokens, err := getOutputs(confirmedTransactions, cco.config, feeMultisigAddress, refundUtxosPerConfirmedTx, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
-		"outputs", txOutputs.Outputs, "redistribution", isRedistribution)
+		"outputs", txOutputs.Outputs, "redistribution", isRedistribution, "refundUnkownTokens", refundUnkownTokens)
 
 	multisigAddresses, isRedistribution, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmountsForBatch(
 		data.ChainID,
@@ -246,24 +250,29 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 			return nil, multisigAddresses, fmt.Errorf("failed to get index for address %s on chain %s", addr, common.ToStrChainID(data.ChainID))
 		}
 
+		addrFound := false
 		for i, addrAmnt := range multisigAddresses {
 			if addrAmnt.AddressIndex == index {
 				for token, amnt := range tokens {
 					multisigAddresses[i].TokensAmounts[token] += amnt
+					multisigAddresses[i].UtxoCount++
 				}
 
-				continue
+				addrFound = true
+				break
 			}
 		}
 
-		multisigAddresses = append(multisigAddresses, common.AddressAndAmount{
-			AddressIndex:      index,
-			Address:           addr,
-			TokensAmounts:     tokens,
-			IncludeChange:     0,
-			UtxoCount:         0,
-			ShouldConsolidate: false,
-		})
+		if !addrFound {
+			multisigAddresses = append(multisigAddresses, common.AddressAndAmount{
+				AddressIndex:      index,
+				Address:           addr,
+				TokensAmounts:     tokens,
+				IncludeChange:     0,
+				UtxoCount:         1,
+				ShouldConsolidate: false,
+			})
+		}
 	}
 
 	slotNumber, err := cco.getSlotNumber()
