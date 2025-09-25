@@ -243,7 +243,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim - transaction direction not allowed", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),

@@ -285,7 +285,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim - transaction direction not allowed - invalid destination chain", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -429,7 +428,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "unsupported chain id found in tx")
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim less than minOperationFee", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1609,6 +1607,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
 		proc := NewSkylineBridgingRequestedProcessor(
 			refundRequestProcessorMock,
 			hclog.NewNullLogger(),
