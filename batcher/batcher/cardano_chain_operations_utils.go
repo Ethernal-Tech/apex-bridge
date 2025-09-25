@@ -122,25 +122,20 @@ func getOutputs(
 						token cardanowallet.Token
 					)
 
-					if transaction.TransactionType == uint8(common.DefundConfirmedTxType) {
+					switch transaction.TransactionType {
+					case uint8(common.DefundConfirmedTxType):
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
 							return cardano.TxOutputs{}, false, nil, err
 						}
-					} else if transaction.TransactionType == uint8(common.RefundConfirmedTxType) {
+					case uint8(common.RefundConfirmedTxType):
 						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
+
 						token, err = cardanoConfig.GetNativeToken(origDstChainID)
 						if err != nil {
 							return cardano.TxOutputs{}, false, nil, err
 						}
-
-						refundUnknownTokens[receiver.DestinationAddress] = append(
-							refundUnknownTokens[receiver.DestinationAddress],
-							cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
-						)
-
-						continue
-					} else {
+					default:
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {

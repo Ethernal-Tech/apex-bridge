@@ -207,16 +207,19 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
-	refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(confirmedTransactions, data.ChainID)
+	refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err :=
+		cco.getUtxosFromRefundTransactions(confirmedTransactions, data.ChainID)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(unknownUtxosAtBridgingAddresses) > 0 {
-		cco.logger.Debug("Unknown utxos at bridging addresses", "unknownUtxosAtBridgingAddresses", unknownUtxosAtBridgingAddresses)
+		cco.logger.Debug("Unknown utxos at bridging addresses",
+			"unknownUtxosAtBridgingAddresses", unknownUtxosAtBridgingAddresses)
 	}
 
-	txOutputs, isRedistribution, refundUnkownTokens, err := getOutputs(confirmedTransactions, cco.config, feeMultisigAddress, refundUtxosPerConfirmedTx, cco.logger)
+	txOutputs, isRedistribution, refundUnkownTokens, err := getOutputs(
+		confirmedTransactions, cco.config, feeMultisigAddress, refundUtxosPerConfirmedTx, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -239,7 +242,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		"chain", common.ToStrChainID(data.ChainID), "addresses", multisigAddresses)
 
 	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress, isRedistribution, common.FlattenMatrix(refundUtxosPerConfirmedTx), data.ChainID)
+		multisigAddresses, feeMultisigAddress, isRedistribution,
+		common.FlattenMatrix(refundUtxosPerConfirmedTx), data.ChainID)
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
@@ -247,10 +251,12 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	for addr, tokens := range unknownUtxosAtBridgingAddresses {
 		index, ok := cco.bridgingAddressesManager.GetPaymentAddressIndex(data.ChainID, addr)
 		if !ok {
-			return nil, multisigAddresses, fmt.Errorf("failed to get index for address %s on chain %s", addr, common.ToStrChainID(data.ChainID))
+			return nil, multisigAddresses, fmt.Errorf("failed to get index for address %s on chain %s",
+				addr, common.ToStrChainID(data.ChainID))
 		}
 
 		addrFound := false
+
 		for i, addrAmnt := range multisigAddresses {
 			if addrAmnt.AddressIndex == index {
 				for token, amnt := range tokens {
@@ -259,6 +265,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 				}
 
 				addrFound = true
+
 				break
 			}
 		}
@@ -675,10 +682,12 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		// chosen multisig addrs doesn't contain address that contains the refund utxo
 		// that we need to include into the transaction so we need to add it
 		alreadyPopulated := slices.Collect(maps.Keys(chosenMultisigUtxos))
+
 		for _, refundUtxo := range refundUtxos {
 			index, ok := cco.bridgingAddressesManager.GetPaymentAddressIndex(chainID, refundUtxo.Output.Address)
 			if !ok {
-				return nil, fmt.Errorf("failed to get index for address %s on chain %s", refundUtxo.Output.Address, common.ToStrChainID(chainID))
+				return nil, fmt.Errorf("failed to get index for address %s on chain %s",
+					refundUtxo.Output.Address, common.ToStrChainID(chainID))
 			}
 
 			if slices.Contains(alreadyPopulated, index) {
@@ -688,6 +697,7 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 				for _, utxo := range chosenMultisigUtxos[index] {
 					if utxo.String() == refundUtxo.String() {
 						shouldSkip = true
+
 						break
 					}
 				}
@@ -824,7 +834,7 @@ func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 				return nil, nil, fmt.Errorf("failed to get tx output for %v: %w", txInput, err)
 			}
 
-			unknownTokensMap := make(map[string]uint64)
+			var unknownTokensMap map[string]uint64
 			if txOutput.Address == zeroAddr {
 				unknownTokensMap = cardano.GetUnknownTokensMap(txOutput, knownTokens...)
 			} else {
