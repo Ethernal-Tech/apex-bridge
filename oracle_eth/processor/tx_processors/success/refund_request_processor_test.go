@@ -35,10 +35,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 						UtxoMinAmount:     utxoMinValue,
 						MinFeeForBridging: minFeeForBridging,
 					},
-					BridgingAddresses: oCore.BridgingAddresses{
-						BridgingAddress: primeBridgingAddr,
-						FeeAddress:      primeBridgingFeeAddr,
-					},
 				},
 			},
 			EthChains: map[string]*oCore.EthChainConfig{

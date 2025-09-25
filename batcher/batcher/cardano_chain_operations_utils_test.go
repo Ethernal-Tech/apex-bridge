@@ -352,7 +352,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, isRedistribution, err := getOutputs(txs, cco.config, hclog.NewNullLogger())
+	res, isRedistribution, _, err := getOutputs(txs, cco.config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	assert.False(t, isRedistribution)
@@ -454,23 +454,23 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, isRedistribution, err := getOutputs(txs, config, hclog.NewNullLogger())
+	outputs, isRedistribution, _, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
-
 	assert.False(t, isRedistribution)
+
 	require.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   addr2,
 			Amount: 51,
 			Tokens: []cardanowallet.TokenAmount{
-				cardanowallet.NewTokenAmount(token, 102),
+				cardanowallet.NewTokenAmount(primeToken, 102),
 			},
 		},
 		{
 			Addr:   addr1,
 			Amount: 102,
 			Tokens: []cardanowallet.TokenAmount{
-				cardanowallet.NewTokenAmount(token, 205),
+				cardanowallet.NewTokenAmount(primeToken, 205),
 			},
 		},
 		{
@@ -479,7 +479,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}, outputs.Outputs)
 	require.Len(t, outputs.Sum, 2)
-	require.Equal(t, uint64(307), outputs.Sum[token.String()])
+	require.Equal(t, uint64(307), outputs.Sum[primeToken.String()])
 	require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
 
 	t.Run("GetOutputs with redistribute tokens transaction", func(t *testing.T) {
@@ -487,7 +487,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			TransactionType: uint8(common.RedistributionConfirmedTxType),
 		})
 
-		outputs, isRedistribution, err := getOutputs(txs, config, hclog.NewNullLogger())
+		outputs, isRedistribution, _, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		assert.True(t, isRedistribution)
@@ -496,14 +496,14 @@ func Test_skylineGetOutputs(t *testing.T) {
 				Addr:   addr2,
 				Amount: 51,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 102),
+					cardanowallet.NewTokenAmount(primeToken, 102),
 				},
 			},
 			{
 				Addr:   addr1,
 				Amount: 102,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount(token, 205),
+					cardanowallet.NewTokenAmount(primeToken, 205),
 				},
 			},
 			{
@@ -512,7 +512,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			},
 		}, outputs.Outputs)
 		require.Len(t, outputs.Sum, 2)
-		require.Equal(t, uint64(307), outputs.Sum[token.String()])
+		require.Equal(t, uint64(307), outputs.Sum[primeToken.String()])
 		require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
 	})
 }

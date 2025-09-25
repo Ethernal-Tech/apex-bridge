@@ -172,7 +172,19 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
+	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
+
+	t.Run("GetPaymentAddressFromIndex returns error", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to get zero address for chain vector")
+	})
+
 	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
@@ -209,10 +221,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			}, error(nil)).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+		require.ErrorContains(t, err, "test err")
 	})
 
-	t.Run("GetLatestBlockPoint return error", func(t *testing.T) {
+	t.Run("GetLatestBlockPoint fee multisig does not have any utxo", func(t *testing.T) {
 		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
 		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
@@ -237,11 +249,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 					},
 				},
 			}, error(nil))
-		dbMock.On("GetLatestBlockPoint").Return((*indexer.BlockPoint)(nil), testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "test err")
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
 	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
@@ -253,18 +264,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get payment policy script for address")
-	})
-
-	t.Run("GetPaymentAddressFromIndex return false", func(t *testing.T) {
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("", false).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get payment address for address index")
 	})
 
 	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
@@ -431,6 +430,8 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancelCtx()
 
+	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+
 	t.Run("GetStakePolicyScript returns false", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
 
@@ -447,6 +448,20 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get stake address from index")
 	})
+
+	t.Run("GetFeeMultisigAddress returns false", func(t *testing.T) {
+		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return("", false).Once()
+
+		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "test err")
+	})
+
+	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr, true)
+	bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true)
 
 	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
@@ -540,35 +555,6 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get payment policy script for address")
-	})
-
-	t.Run("GetPaymentAddressFromIndex return false", func(t *testing.T) {
-		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
-		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("", false).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get payment address for address index")
-	})
-
-	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
-		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
-		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get fee policy script for chain")
 	})
 
 	t.Run("should pass", func(t *testing.T) {
@@ -710,6 +696,10 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		require.ErrorContains(t, err, "failed to get stake address from index")
 	})
 
+	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr, true)
+	bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything).Return(script, true)
+	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+
 	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true).Once()
@@ -802,35 +792,6 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to get payment policy script for address")
-	})
-
-	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
-		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
-		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("", false).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get payment address for address index")
-	})
-
-	t.Run("GetFeePolicyScript return false", func(t *testing.T) {
-		bridgingAddressesManagerMock.On("GetStakePolicyScript", mock.Anything, mock.Anything).Return(script, true)
-		bridgingAddressesManagerMock.On("GetStakeAddressFromIndex", mock.Anything, mock.Anything).Return("stake_test1uqehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gssrtvn", true)
-		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, nil).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
-		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
-		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true).Once()
-		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(nil, false).Once()
-
-		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get fee policy script for chain")
 	})
 
 	t.Run("should pass", func(t *testing.T) {
@@ -2008,7 +1969,10 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -2079,8 +2043,10 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		},
 	}
 
+	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96v", true)
+
 	t.Run("getUtxosFromRefundTransactions no refund pass", func(t *testing.T) {
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		refundUtxosPerConfirmedTx, _, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
 
 		for _, refundUtxo := range refundUtxosPerConfirmedTx {
@@ -2112,8 +2078,9 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
+		fmt.Println(unknownUtxosAtBridgingAddresses)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
 			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
@@ -2173,8 +2140,9 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
+		refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
+		fmt.Println(unknownUtxosAtBridgingAddresses)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
 			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
@@ -2198,6 +2166,8 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 	}
 	multisigAddr := "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k"
 	feeAddr := "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8"
+	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+	bridgingAddressesManagerMock.On("GetPaymentAddressIndex", mock.Anything, mock.Anything).Return(multisigAddr, true)
 	cco := &CardanoChainOperations{
 		config: &cardano.CardanoChainConfig{
 			MaxFeeUtxoCount: 1,
@@ -2209,17 +2179,18 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				},
 			},
 		},
-		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
-		db:               dbMock,
-		txProvider:       txProviderMock,
-		logger:           hclog.NewNullLogger(),
+		bridgingAddressesManager: bridgingAddressesManagerMock,
+		cardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork),
+		db:                       dbMock,
+		txProvider:               txProviderMock,
+		logger:                   hclog.NewNullLogger(),
 	}
 
 	t.Run("empty fee", func(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 
-		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, multisigAddr, false)
+		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, feeAddr, false, nil, common.ChainIDIntPrime)
 		require.ErrorContains(t, err, "fee")
 	})
 
@@ -2299,7 +2270,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			})
+			}}, feeAddr, false, nil, common.ChainIDIntPrime)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
@@ -2373,13 +2344,13 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, false)
+			}}, feeAddr, false, refundUtxos, common.ChainIDIntPrime)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
-			multisigUtxos[0], multisigUtxos[2],
+			allMultisigUtxos[0], allMultisigUtxos[1], refundUtxos[0],
 		}, utxoSelectionResult.multisigUtxos[0])
-		require.Equal(t, feeUtxos[:cco.config.MaxFeeUtxoCount], utxoSelectionResult.feeUtxos)
+		require.Equal(t, allFeeUtxos[:cco.config.MaxFeeUtxoCount], utxoSelectionResult.feeUtxos)
 	})
 }
 
