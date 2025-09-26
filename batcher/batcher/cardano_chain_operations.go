@@ -347,7 +347,7 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 	[]cardanowallet.TxOutput,
 	error,
 ) {
-	refundUtxoInputs := make(map[uint8][]*indexer.TxInputOutput, len(refundUtxos))
+	refundUtxoInputs := make(map[uint8][]*indexer.TxInputOutput)
 	refundUtxoOutputs := make([]cardanowallet.TxOutput, 2*len(refundUtxos))
 
 	// process refund utxos by adding them into inputs, and creating outputs
