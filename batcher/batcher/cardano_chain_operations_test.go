@@ -174,13 +174,12 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
 
-	t.Run("GetPaymentAddressFromIndex returns error", func(t *testing.T) {
+	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
 		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), testError).Once()
-		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, false).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to get zero address for chain vector")
+		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
@@ -221,7 +220,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			}, error(nil)).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-		require.ErrorContains(t, err, "test err")
+		require.ErrorContains(t, err, "fee multisig does not have any utxo")
 	})
 
 	t.Run("GetLatestBlockPoint fee multisig does not have any utxo", func(t *testing.T) {
@@ -249,10 +248,11 @@ func TestGenerateBatchTransaction(t *testing.T) {
 					},
 				},
 			}, error(nil))
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, testError).Once()
 
 		_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "fee multisig does not have any utxo")
+		require.ErrorContains(t, err, "test err")
 	})
 
 	t.Run("GetPaymentPolicyScript return false", func(t *testing.T) {
@@ -2046,7 +2046,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96v", true)
 
 	t.Run("getUtxosFromRefundTransactions no refund pass", func(t *testing.T) {
-		refundUtxosPerConfirmedTx, _, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
 
 		for _, refundUtxo := range refundUtxosPerConfirmedTx {
@@ -2078,9 +2078,8 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
-		fmt.Println(unknownUtxosAtBridgingAddresses)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
 			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
@@ -2140,9 +2139,8 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, unknownUtxosAtBridgingAddresses, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
 		require.NoError(t, err)
-		fmt.Println(unknownUtxosAtBridgingAddresses)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
 			// if it is the last transaction in the collection (the one assigned as a refund), it should contain outputs, while others should be empty.
@@ -2190,7 +2188,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 
-		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, feeAddr, false, nil, common.ChainIDIntPrime)
+		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, feeAddr, false, 0, common.ChainIDIntPrime)
 		require.ErrorContains(t, err, "fee")
 	})
 
@@ -2270,7 +2268,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, false, nil, common.ChainIDIntPrime)
+			}}, feeAddr, false, 0, common.ChainIDIntPrime)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
@@ -2344,11 +2342,11 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, false, refundUtxos, common.ChainIDIntPrime)
+			}}, feeAddr, false, len(refundUtxos), common.ChainIDIntPrime)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
-			allMultisigUtxos[0], allMultisigUtxos[1], refundUtxos[0],
+			allMultisigUtxos[1],
 		}, utxoSelectionResult.multisigUtxos[0])
 		require.Equal(t, allFeeUtxos[:cco.config.MaxFeeUtxoCount], utxoSelectionResult.feeUtxos)
 	})

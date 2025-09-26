@@ -66,8 +66,10 @@ func CreateTx(
 		})
 	}
 
-	for _, multisig := range refundTxInputInfos.MultiSig {
-		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
+	if refundTxInputInfos != nil {
+		for _, multisig := range refundTxInputInfos.MultiSig {
+			builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
+		}
 	}
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)

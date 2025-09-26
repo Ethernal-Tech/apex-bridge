@@ -352,7 +352,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, isRedistribution, _, err := getOutputs(txs, cco.config, feeAddr, nil, hclog.NewNullLogger())
+	res, isRedistribution, err := getOutputs(txs, cco.config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	assert.False(t, isRedistribution)
@@ -454,7 +454,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, isRedistribution, _, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
+	outputs, isRedistribution, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
 	assert.False(t, isRedistribution)
 
@@ -487,7 +487,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 			TransactionType: uint8(common.RedistributionConfirmedTxType),
 		})
 
-		outputs, isRedistribution, _, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
+		outputs, isRedistribution, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		assert.True(t, isRedistribution)

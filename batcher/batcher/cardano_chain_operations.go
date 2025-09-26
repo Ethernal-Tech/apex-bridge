@@ -251,7 +251,8 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, multisigAddresses, err
 	}
 
-	refundUtxoInputs, refundUtxoOutputs, err := cco.prepareRefundInputsOutputs(data.ChainID, refundUtxos, refundUtxoReceivers)
+	refundUtxoInputs, refundUtxoOutputs, err :=
+		cco.prepareRefundInputsOutputs(data.ChainID, refundUtxos, refundUtxoReceivers)
 	if err != nil {
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare refund inputs/outputs. err: %w", err)
 	}
@@ -348,7 +349,7 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 	error,
 ) {
 	refundUtxoInputs := make(map[uint8][]*indexer.TxInputOutput)
-	refundUtxoOutputs := make([]cardanowallet.TxOutput, 2*len(refundUtxos))
+	refundUtxoOutputs := make([]cardanowallet.TxOutput, 0, 2*len(refundUtxos))
 
 	// process refund utxos by adding them into inputs, and creating outputs
 	for _, refundUtxo := range refundUtxos {
