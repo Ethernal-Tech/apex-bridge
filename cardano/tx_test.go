@@ -90,7 +90,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		_, _, err := CreateTx(
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
-		require.ErrorContains(t, err, "no inputs found for multisig (0) or fee multisig (1)")
+		require.ErrorContains(t, err, "no inputs found for either multisig (0) and refund (0) or fee multisig (1)")
 	})
 	t.Run("empty fee multisig inputs", func(t *testing.T) {
 		txInputsInfos.MultiSig[0].TxInputs = wallet.TxInputs{
@@ -110,7 +110,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		_, _, err := CreateTx(
 			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
-		require.ErrorContains(t, err, "no inputs found for multisig (1) or fee multisig (0)")
+		require.ErrorContains(t, err, "no inputs found for either multisig (1) and refund (0) or fee multisig (0)")
 	})
 	t.Run("not enough funds on multisig", func(t *testing.T) {
 		txInputsInfos.MultiSig = []*TxInputInfo{

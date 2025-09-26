@@ -28,8 +28,18 @@ func CreateTx(
 	}
 
 	feeLn := len(txInputInfos.MultiSigFee.Inputs)
-	if certificatesData == nil && (multisigLn == 0 || feeLn == 0) {
-		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", multisigLn, feeLn)
+
+	refundLn := 0
+
+	if refundTxInputInfos != nil {
+		for _, multisig := range refundTxInputInfos.MultiSig {
+			refundLn += len(multisig.Inputs)
+		}
+	}
+
+	if certificatesData == nil && ((multisigLn == 0 && refundLn == 0) || feeLn == 0) {
+		return nil, "", fmt.Errorf("no inputs found for either multisig (%d) and refund (%d) or fee multisig (%d)",
+			multisigLn, refundLn, feeLn)
 	}
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)

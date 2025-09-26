@@ -364,7 +364,7 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 		tokens := make([]cardanowallet.TokenAmount, len(refundUtxo.Output.Tokens))
 		for i, t := range refundUtxo.Output.Tokens {
 			tokens[i] = cardanowallet.NewTokenAmount(
-				cardanowallet.NewToken(t.PolicyID, t.TokenName()),
+				cardanowallet.NewToken(t.PolicyID, t.Name),
 				t.Amount,
 			)
 		}
