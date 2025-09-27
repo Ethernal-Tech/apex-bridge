@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
@@ -103,4 +104,154 @@ func Test_GetKnownTokens(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retTokens))
 	require.Equal(t, token2, retTokens[0])
+}
+
+func Test_subtractTxOutputsFromSumMap(t *testing.T) {
+	tok1, err := GetNativeTokenFromName("3.31")
+	require.NoError(t, err)
+
+	tok2, err := GetNativeTokenFromName("3.32")
+	require.NoError(t, err)
+
+	tok3, err := GetNativeTokenFromName("3.33")
+	require.NoError(t, err)
+
+	tok4, err := GetNativeTokenFromName("3.34")
+	require.NoError(t, err)
+
+	vals := subtractTxOutputsFromSumMap(map[string]uint64{
+		wallet.AdaTokenName: 200,
+		tok1.String():       400,
+		tok2.String():       500,
+		tok4.String():       1000,
+	}, []wallet.TxOutput{
+		wallet.NewTxOutput("", 100, wallet.NewTokenAmount(tok1, 200), wallet.NewTokenAmount(tok2, 205)),
+		wallet.NewTxOutput("", 50, wallet.NewTokenAmount(tok1, 150), wallet.NewTokenAmount(tok3, 300)),
+		wallet.NewTxOutput("", 10, wallet.NewTokenAmount(tok2, 300)),
+	})
+
+	require.Equal(t, map[string]uint64{
+		wallet.AdaTokenName: 40,
+		tok1.String():       50,
+		tok4.String():       1000,
+	}, vals)
+}
+
+func Test_filterOutTokenUtxos(t *testing.T) {
+	multisigUtxos := []*indexer.TxInputOutput{
+		{
+			Input: indexer.TxInput{Index: 0},
+			Output: indexer.TxOutput{
+				Amount: 30,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   40,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Index: 1},
+			Output: indexer.TxOutput{
+				Amount: 40,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   30,
+					},
+					{
+						PolicyID: "1",
+						Name:     "2",
+						Amount:   30,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Index: 2},
+			Output: indexer.TxOutput{
+				Amount: 50,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "1",
+						Name:     "1",
+						Amount:   51,
+					},
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   21,
+					},
+				},
+			},
+		},
+		{
+			Input: indexer.TxInput{Index: 3},
+			Output: indexer.TxOutput{
+				Amount: 2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: "3",
+						Name:     "1",
+						Amount:   7,
+					},
+				},
+			},
+		},
+	}
+
+	t.Run("filter out all the tokens", func(t *testing.T) {
+		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos)
+		require.Len(t, resTxInputOutput, 0)
+	})
+
+	t.Run("filter out all the tokens except the one with specified token name", func(t *testing.T) {
+		tok, err := GetNativeTokenFromName("1.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok)
+		require.Len(t, resTxInputOutput, 1)
+		require.Equal(
+			t,
+			indexer.TxInput{Index: 0},
+			resTxInputOutput[0].Input,
+		)
+	})
+
+	t.Run("filter out InputOutput with invalid token even if it contains valid token as well", func(t *testing.T) {
+		tok, err := GetNativeTokenFromName("3.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok)
+		require.Len(t, resTxInputOutput, 1)
+		require.Equal(
+			t,
+			indexer.TxInput{Index: 3},
+			resTxInputOutput[0].Input,
+		)
+	})
+
+	t.Run("filter out all the tokens except those with specified token names", func(t *testing.T) {
+		tok1, err := GetNativeTokenFromName("3.31")
+		require.NoError(t, err)
+
+		tok2, err := GetNativeTokenFromName("1.31")
+		require.NoError(t, err)
+
+		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok1, tok2)
+		require.Len(t, resTxInputOutput, 3)
+		require.Equal(
+			t,
+			indexer.TxInput{Index: 0},
+			resTxInputOutput[0].Input,
+		)
+		require.Equal(
+			t,
+			2,
+			len(resTxInputOutput[1].Output.Tokens),
+		)
+	})
 }

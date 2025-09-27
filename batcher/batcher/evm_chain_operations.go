@@ -61,7 +61,6 @@ func NewEVMChainOperations(
 // GenerateBatchTransaction implements core.ChainOperations.
 func (cco *EVMChainOperations) GenerateBatchTransaction(
 	ctx context.Context,
-	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	batchNonceID uint64,
@@ -213,7 +212,7 @@ func newEVMSmartContractTransaction(
 	}
 
 	// every batcher should have same order
-	sort.Slice(receivers, func(i, j int) bool {
+	sort.SliceStable(receivers, func(i, j int) bool {
 		return receivers[i].Address.Cmp(receivers[j].Address) < 0
 	})
 

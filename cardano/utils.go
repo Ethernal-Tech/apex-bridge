@@ -30,6 +30,24 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 	return false
 }
 
+func GetUnknownTokensMap(txOut indexer.TxOutput, knownTokens ...wallet.Token) map[string]uint64 {
+	knownTokensMap := make(map[string]bool, len(knownTokens))
+
+	for _, t := range knownTokens {
+		knownTokensMap[t.String()] = true
+	}
+
+	retVal := make(map[string]uint64)
+
+	for _, token := range txOut.Tokens {
+		if _, exists := knownTokensMap[token.TokenName()]; !exists {
+			retVal[token.TokenName()] = token.Amount
+		}
+	}
+
+	return retVal
+}
+
 func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 	knownTokens := make([]wallet.Token, len(cardanoConfig.NativeTokens))
 
@@ -57,4 +75,86 @@ func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {
 	}
 
 	return 0
+}
+
+func CalculateMinUtxoCurrencyAmount(
+	cardanoCliBinary string, protocolParams []byte,
+	addr string, txInputOutputs []*indexer.TxInputOutput, txOutputs []wallet.TxOutput,
+) (uint64, error) {
+	sumMap := subtractTxOutputsFromSumMap(GetSumMapFromTxInputOutput(txInputOutputs), txOutputs)
+
+	tokens, err := wallet.GetTokensFromSumMap(sumMap)
+	if err != nil {
+		return 0, err
+	}
+
+	txBuilder, err := wallet.NewTxBuilder(cardanoCliBinary)
+	if err != nil {
+		return 0, err
+	}
+
+	defer txBuilder.Dispose()
+
+	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(wallet.TxOutput{
+		Addr:   addr,
+		Amount: sumMap[wallet.AdaTokenName],
+		Tokens: tokens,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return minUtxo, nil
+}
+
+func subtractTxOutputsFromSumMap(
+	sumMap map[string]uint64, txOutputs []wallet.TxOutput,
+) map[string]uint64 {
+	updateTokenInMap := func(tokenName string, amount uint64) {
+		if existingAmount, exists := sumMap[tokenName]; exists {
+			if existingAmount > amount {
+				sumMap[tokenName] = existingAmount - amount
+			} else {
+				delete(sumMap, tokenName)
+			}
+		}
+	}
+
+	for _, out := range txOutputs {
+		updateTokenInMap(wallet.AdaTokenName, out.Amount)
+
+		for _, token := range out.Tokens {
+			updateTokenInMap(token.TokenName(), token.Amount)
+		}
+	}
+
+	return sumMap
+}
+
+func GetSumMapFromTxInputOutput(utxos []*indexer.TxInputOutput) map[string]uint64 {
+	totalSum := map[string]uint64{}
+
+	for _, utxo := range utxos {
+		totalSum[wallet.AdaTokenName] += utxo.Output.Amount
+
+		for _, token := range utxo.Output.Tokens {
+			totalSum[token.TokenName()] += token.Amount
+		}
+	}
+
+	return totalSum
+}
+
+func FilterOutUtxosWithUnknownTokens(
+	utxos []*indexer.TxInputOutput, excludingTokens ...wallet.Token,
+) []*indexer.TxInputOutput {
+	result := make([]*indexer.TxInputOutput, 0, len(utxos))
+
+	for _, utxo := range utxos {
+		if !UtxoContainsUnknownTokens(utxo.Output, excludingTokens...) {
+			result = append(result, utxo)
+		}
+	}
+
+	return result
 }

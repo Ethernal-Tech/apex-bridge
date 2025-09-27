@@ -42,7 +42,7 @@ func Test_GetPolicyScripts_And_GetMultisigAddresses(t *testing.T) {
 	keyHashes, err := NewApexKeyHashes(validatorsData)
 	require.NoError(t, err)
 
-	ps := NewApexPolicyScripts(keyHashes)
+	ps := NewApexPolicyScripts(keyHashes, 0)
 
 	addr, err := NewApexAddresses(
 		wallet.ResolveCardanoCliBinary(wallet.TestNetNetwork), wallet.TestNetProtocolMagic, ps)

@@ -67,7 +67,7 @@ func (c *ReactorTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *htt
 		return
 	}
 
-	txInfo, err := c.createTx(requestBody)
+	txInfo, err := c.createTx(r.Context(), requestBody)
 	if err != nil {
 		apiUtils.WriteErrorResponse(w, r, http.StatusInternalServerError, err, c.logger)
 
@@ -97,6 +97,8 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 		return fmt.Errorf("destination chain not registered: %v", requestBody.DestinationChainID)
 	}
 
+	cardanoDestChainFeeAddress := c.oracleConfig.GetFeeMultisigAddress(requestBody.DestinationChainID)
+
 	if len(requestBody.Transactions) > c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
 		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, requestBody: %v",
 			len(requestBody.Transactions), c.oracleConfig.BridgingSettings.MaxReceiversPerBridgingRequest, requestBody)
@@ -125,7 +127,7 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 			// if fee address is specified in transactions just add amount to the fee sum
 			// otherwise keep this transaction
-			if receiver.Addr == cardanoDestConfig.BridgingAddresses.FeeAddress {
+			if receiver.Addr == cardanoDestChainFeeAddress {
 				feeSum += receiver.Amount
 			} else {
 				transactions = append(transactions, receiver)
@@ -179,7 +181,7 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	return nil
 }
 
-func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxRequest) (
+func (c *ReactorTxControllerImpl) createTx(ctx context.Context, requestBody request.CreateBridgingTxRequest) (
 	*sendtx.TxInfo, error,
 ) {
 	txSenderChainsConfig, err := c.oracleConfig.ToSendTxChainConfigs()
@@ -199,10 +201,16 @@ func (c *ReactorTxControllerImpl) createTx(requestBody request.CreateBridgingTxR
 	}
 
 	txInfo, _, err := txSender.CreateBridgingTx(
-		context.Background(),
-		requestBody.SourceChainID, requestBody.DestinationChainID,
-		requestBody.SenderAddr, receivers, requestBody.BridgingFee,
-		0,
+		ctx,
+		sendtx.BridgingTxInput{
+			SrcChainID:      requestBody.SourceChainID,
+			DstChainID:      requestBody.DestinationChainID,
+			SenderAddr:      requestBody.SenderAddr,
+			Receivers:       receivers,
+			BridgingAddress: requestBody.BridgingAddress,
+			BridgingFee:     requestBody.BridgingFee,
+			OperationFee:    0,
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build tx: %w", err)

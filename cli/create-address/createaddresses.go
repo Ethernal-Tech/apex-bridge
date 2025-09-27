@@ -12,8 +12,8 @@ var params = &createAddressParams{}
 
 func GetCreateAddressCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create-address",
-		Short:   "creates a multisig address from multiple Cardano verification keys.",
+		Use:     "create-addresses",
+		Short:   "creates multiple bridging multisig addresses using multiple Cardano verification keys.",
 		PreRunE: runPreRun,
 		Run:     runCommand,
 	}

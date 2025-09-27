@@ -3,12 +3,14 @@ package successtxprocessors
 import (
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -94,23 +96,31 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	var recognizeToken bool
 
 	for idx, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
+		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
+		}
+
+		zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+			common.ToNumChainID(tx.OriginChainID), 0)
+		if !ok {
+			return fmt.Errorf("failed to get zero address from bridging address manager")
 		}
 
 		for _, token := range out.Tokens {
 			recognizeToken = false
 
-			for _, tExc := range chainConfig.NativeTokens {
-				confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
-				if err != nil {
-					return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
-				}
+			if zeroAddress == out.Address {
+				for _, tExc := range chainConfig.NativeTokens {
+					confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+					if err != nil {
+						return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+					}
 
-				if confToken.String() == token.TokenName() {
-					recognizeToken = true
+					if confToken.String() == token.TokenName() {
+						recognizeToken = true
 
-					break
+						break
+					}
 				}
 			}
 
@@ -170,8 +180,14 @@ func (p *RefundRequestProcessorImpl) validate(
 	var recognizeToken bool
 
 	for _, out := range tx.Outputs {
-		if out.Address != chainConfig.BridgingAddresses.BridgingAddress {
+		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
+		}
+
+		zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+			common.ToNumChainID(tx.OriginChainID), 0)
+		if !ok {
+			return fmt.Errorf("failed to get zero address from bridging address manager")
 		}
 
 		amountSum.Add(amountSum, new(big.Int).SetUint64(out.Amount))
@@ -183,16 +199,18 @@ func (p *RefundRequestProcessorImpl) validate(
 				for _, token := range out.Tokens {
 					recognizeToken = false
 
-					for _, tExc := range chainConfig.NativeTokens {
-						confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
-						if err != nil {
-							return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
-						}
+					if zeroAddress == out.Address {
+						for _, tExc := range chainConfig.NativeTokens {
+							confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+							if err != nil {
+								return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+							}
 
-						if confToken.String() == token.TokenName() {
-							recognizeToken = true
+							if confToken.String() == token.TokenName() {
+								recognizeToken = true
 
-							break
+								break
+							}
 						}
 					}
 
@@ -208,7 +226,8 @@ func (p *RefundRequestProcessorImpl) validate(
 		}
 	}
 
-	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr)
+	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)))
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
@@ -228,7 +247,8 @@ func (p *RefundRequestProcessorImpl) validate(
 }
 
 func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
-	config *cCore.CardanoChainConfig, tx *core.CardanoTx, receiverAddr string,
+	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
+	receiverAddr string, bridgingAddresses []string,
 ) (uint64, error) {
 	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	if err != nil {
@@ -247,7 +267,7 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 	tokenNameToAmount := make(map[string]uint64)
 
 	for _, out := range tx.Outputs {
-		if out.Address != config.BridgingAddresses.BridgingAddress {
+		if !slices.Contains(bridgingAddresses, out.Address) {
 			continue
 		}
 

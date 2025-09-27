@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
@@ -39,18 +40,22 @@ func TestRefundRequestedProcessor(t *testing.T) {
 	token, _ := wallet.NewTokenWithFullNameTry("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e")
 	tokenAmount := wallet.NewTokenAmount(token, 2_000_000)
 
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
+
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
+			BridgingAddressesManager: brAddrManagerMock,
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:         wallet.TestNetNetwork,
 						UtxoMinAmount:     utxoMinValue,
 						MinFeeForBridging: minFeeForBridging,
-					},
-					BridgingAddresses: cCore.BridgingAddresses{
-						BridgingAddress: primeBridgingAddr,
-						FeeAddress:      primeBridgingFeeAddr,
 					},
 				},
 				common.ChainIDStrVector: {
@@ -59,10 +64,6 @@ func TestRefundRequestedProcessor(t *testing.T) {
 						UtxoMinAmount:     utxoMinValue,
 						OgmiosURL:         "http://ogmios.vector.testnet.apexfusion.org:1337",
 						MinFeeForBridging: minFeeForBridging,
-					},
-					BridgingAddresses: cCore.BridgingAddresses{
-						BridgingAddress: vectorBridgingAddr,
-						FeeAddress:      vectorBridgingFeeAddr,
 					},
 				},
 			},
@@ -490,8 +491,16 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntCardano).Return([]string{cardanoBridgingAddr}, nil)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntCardano).Return(cardanoBridgingFeeAddr)
+
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
+			BridgingAddressesManager: brAddrManagerMock,
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -509,9 +518,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 						},
 						MinFeeForBridging: minFeeForBridging,
 					},
-					BridgingAddresses: cCore.BridgingAddresses{
-						BridgingAddress: primeBridgingAddr,
-					},
 					MinOperationFee: minOperationFee,
 				},
 				common.ChainIDStrCardano: {
@@ -526,16 +532,16 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 						},
 						MinFeeForBridging: minFeeForBridging,
 					},
-					BridgingAddresses: cCore.BridgingAddresses{
-						BridgingAddress: cardanoBridgingAddr,
-						FeeAddress:      cardanoBridgingFeeAddr,
-					},
 					MinOperationFee: minOperationFee,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
+				AllowedDirections: map[string][]string{
+					common.ChainIDStrPrime:  {common.ChainIDStrVector},
+					common.ChainIDStrVector: {common.ChainIDStrPrime},
+				},
 			},
 			RefundEnabled: refundEnabled,
 		}
@@ -570,7 +576,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "failed to unmarshal metadata")
 	})
 
-	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim invalid sender address", func(t *testing.T) {
 		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BaseMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
 		})
@@ -585,8 +591,48 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			Tx: indexer.Tx{
 				Metadata: relevantButNotFullMetadata,
 			},
+			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.ErrorContains(t, err, "unsupported chain id found in tx")
+		require.ErrorContains(t, err, "invalid sender addr")
+	})
+
+	t.Run("ValidateAndAddClaim insufficient metadata", func(t *testing.T) {
+		relevantButNotFullMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: "invalid",
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, relevantButNotFullMetadata)
+
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  10_000_000,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: wrappedTokenAmountPrime.PolicyID,
+						Name:     wrappedTokenAmountPrime.Name,
+						Amount:   2_000_000,
+					},
+				},
+			},
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: relevantButNotFullMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.ErrorContains(t, err, "unsupported destination chain id found in metadata")
 	})
 
 	//nolint:dupl
