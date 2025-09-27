@@ -308,6 +308,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: transactionDirectionNotSupportedMetadata,
 				Outputs:  txOutputs,
 			},
+			OriginChainID: common.ChainIDStrCardano,
 		}
 
 		appConfig := getAppConfig(false)
@@ -325,13 +326,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			chainInfos,
 		)
 
-		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
-			Tx: indexer.Tx{
-				Metadata: transactionDirectionNotSupportedMetadata,
-				Outputs:  txOutputs,
-			},
-			OriginChainID: common.ChainIDStrCardano,
-		}, appConfig)
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "transaction direction not allowed")
 	})
