@@ -95,15 +95,15 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 	var recognizeToken bool
 
+	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+		common.ToNumChainID(tx.OriginChainID), 0)
+	if !ok {
+		return fmt.Errorf("failed to get zero address from bridging address manager")
+	}
+
 	for idx, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
-		}
-
-		zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-			common.ToNumChainID(tx.OriginChainID), 0)
-		if !ok {
-			return fmt.Errorf("failed to get zero address from bridging address manager")
 		}
 
 		for _, token := range out.Tokens {
@@ -174,6 +174,12 @@ func (p *RefundRequestProcessorImpl) validate(
 		return err
 	}
 
+	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+		common.ToNumChainID(tx.OriginChainID), 0)
+	if !ok {
+		return fmt.Errorf("failed to get zero address from bridging address manager")
+	}
+
 	amountSum := big.NewInt(0)
 	unknownNativeTokensUtxoCnt := uint(0)
 
@@ -184,33 +190,25 @@ func (p *RefundRequestProcessorImpl) validate(
 			continue
 		}
 
-		zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-			common.ToNumChainID(tx.OriginChainID), 0)
-		if !ok {
-			return fmt.Errorf("failed to get zero address from bridging address manager")
-		}
-
 		amountSum.Add(amountSum, new(big.Int).SetUint64(out.Amount))
 
 		if len(out.Tokens) > 0 {
-			if chainConfig.NativeTokens == nil {
+			if chainConfig.NativeTokens == nil || zeroAddress != out.Address {
 				unknownNativeTokensUtxoCnt++
 			} else {
 				for _, token := range out.Tokens {
 					recognizeToken = false
 
-					if zeroAddress == out.Address {
-						for _, tExc := range chainConfig.NativeTokens {
-							confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
-							if err != nil {
-								return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
-							}
+					for _, tExc := range chainConfig.NativeTokens {
+						confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
+						if err != nil {
+							return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
+						}
 
-							if confToken.String() == token.TokenName() {
-								recognizeToken = true
+						if confToken.String() == token.TokenName() {
+							recognizeToken = true
 
-								break
-							}
+							break
 						}
 					}
 
