@@ -2046,7 +2046,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 	bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return("addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96v", true)
 
 	t.Run("getUtxosFromRefundTransactions no refund pass", func(t *testing.T) {
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
 		require.NoError(t, err)
 
 		for _, refundUtxo := range refundUtxosPerConfirmedTx {
@@ -2078,7 +2078,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
 		require.NoError(t, err)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
@@ -2139,7 +2139,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		})
 
-		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs, common.ChainIDIntPrime)
+		refundUtxosPerConfirmedTx, err := cco.getUtxosFromRefundTransactions(txs)
 		require.NoError(t, err)
 
 		for i, refundUtxo := range refundUtxosPerConfirmedTx {
@@ -2188,7 +2188,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		dbMock.On("GetAllTxOutputs", multisigAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 		dbMock.On("GetAllTxOutputs", feeAddr, true).Return([]*indexer.TxInputOutput{}, nil).Once()
 
-		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, feeAddr, false, 0, common.ChainIDIntPrime)
+		_, err := cco.getUTXOsForNormalBatch([]common.AddressAndAmount{}, feeAddr, false, 0)
 		require.ErrorContains(t, err, "fee")
 	})
 
@@ -2268,7 +2268,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, false, 0, common.ChainIDIntPrime)
+			}}, feeAddr, false, 0)
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{
@@ -2342,7 +2342,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 				TokensAmounts: map[string]uint64{
 					cardanowallet.AdaTokenName: 2_000_000,
 				},
-			}}, feeAddr, false, len(refundUtxos), common.ChainIDIntPrime)
+			}}, feeAddr, false, len(refundUtxos))
 
 		require.NoError(t, err)
 		require.Equal(t, []*indexer.TxInputOutput{

@@ -206,7 +206,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	feeMultisigAddress := cco.bridgingAddressesManager.GetFeeMultisigAddress(data.ChainID)
 
 	refundUtxosPerConfirmedTx, err :=
-		cco.getUtxosFromRefundTransactions(confirmedTransactions, data.ChainID)
+		cco.getUtxosFromRefundTransactions(confirmedTransactions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -246,7 +246,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
 		multisigAddresses, feeMultisigAddress, isRedistribution,
-		len(refundUtxos), data.ChainID)
+		len(refundUtxos))
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
@@ -644,7 +644,7 @@ func (cco *CardanoChainOperations) getUTXOsForConsolidation(
 
 func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string, isRedistribution bool,
-	refundUtxosCnt int, chainID uint8,
+	refundUtxosCnt int,
 ) (*utxoSelectionResult, error) {
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
@@ -789,9 +789,9 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 	}, nil
 }
 
+// this only handles special type of refund - when utxo contains unknown native tokens
 func (cco *CardanoChainOperations) getUtxosFromRefundTransactions(
 	confirmedTxs []eth.ConfirmedTransaction,
-	chainID uint8,
 ) ([][]*indexer.TxInputOutput, error) {
 	utxosPerConfirmedTxs := make([][]*indexer.TxInputOutput, len(confirmedTxs))
 
