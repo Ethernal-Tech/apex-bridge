@@ -15,7 +15,7 @@ func CreateTx(
 	timeToLive uint64,
 	metadataBytes []byte,
 	txInputInfos *TxInputInfos,
-	refundTxInputInfos *TxInputInfos,
+	refundTxMultisigInputs []*TxInputInfo,
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
@@ -31,10 +31,8 @@ func CreateTx(
 
 	refundLn := 0
 
-	if refundTxInputInfos != nil {
-		for _, multisig := range refundTxInputInfos.MultiSig {
-			refundLn += len(multisig.Inputs)
-		}
+	for _, multisig := range refundTxMultisigInputs {
+		refundLn += len(multisig.Inputs)
 	}
 
 	if certificatesData == nil && ((multisigLn == 0 && refundLn == 0) || feeLn == 0) {
@@ -76,10 +74,8 @@ func CreateTx(
 		})
 	}
 
-	if refundTxInputInfos != nil {
-		for _, multisig := range refundTxInputInfos.MultiSig {
-			builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
-		}
+	for _, multisig := range refundTxMultisigInputs {
+		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)

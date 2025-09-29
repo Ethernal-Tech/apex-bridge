@@ -43,6 +43,11 @@ type utxoSelectionResult struct {
 	chosenMultisigUtxosCount int
 }
 
+type refundUtxoWithReceiverAddr struct {
+	Utxo *indexer.TxInputOutput
+	Addr string
+}
+
 type CardanoChainOperations struct {
 	config                       *cardano.CardanoChainConfig
 	wallet                       *cardano.ApexCardanoWallet
@@ -234,25 +239,37 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	cco.logger.Debug("Chosen multisig addresses to pay from",
 		"chain", common.ToStrChainID(data.ChainID), "addresses", multisigAddresses)
 
-	refundUtxos := make(map[string]*indexer.TxInputOutput)
-	refundUtxoReceivers := make(map[string]string)
+	alreadyUsed := map[string]struct{}{}
+	refundUtxos := make([]refundUtxoWithReceiverAddr, 0, len(refundUtxosPerConfirmedTx))
 
 	for i, refundUtxosForConfirmedTx := range refundUtxosPerConfirmedTx {
 		for _, utxo := range refundUtxosForConfirmedTx {
-			refundUtxos[utxo.String()] = utxo
-			refundUtxoReceivers[utxo.String()] = confirmedTransactions[i].Receivers[0].DestinationAddress
+			key := utxo.Input.String()
+
+			if _, exists := alreadyUsed[key]; exists {
+				cco.logger.Warn("refund utxo already",
+					"chainID", data.ChainID, "batchID", data.BatchNonceID, "input", key)
+
+				continue
+			}
+
+			alreadyUsed[key] = struct{}{}
+
+			refundUtxos = append(refundUtxos, refundUtxoWithReceiverAddr{
+				Utxo: utxo,
+				Addr: confirmedTransactions[i].Receivers[0].DestinationAddress,
+			})
 		}
 	}
 
 	utxoSelectionResult, err := cco.getUTXOsForNormalBatch(
-		multisigAddresses, feeMultisigAddress, isRedistribution,
-		len(refundUtxos))
+		multisigAddresses, feeMultisigAddress, isRedistribution, len(refundUtxos))
 	if err != nil {
 		return nil, multisigAddresses, err
 	}
 
 	refundUtxoInputs, refundUtxoOutputs, err :=
-		cco.prepareRefundInputsOutputs(data.ChainID, refundUtxos, refundUtxoReceivers)
+		cco.prepareRefundInputsOutputs(data.ChainID, refundUtxos)
 	if err != nil {
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare refund inputs/outputs. err: %w", err)
 	}
@@ -304,7 +321,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "txInputs", txInputs)
 	cco.logger.Debug("REFUND TX INPUTS", "batchID", data.BatchNonceID,
-		"chain", common.ToStrChainID(data.ChainID), "refundTxInputs", refundTxInputs)
+		"chain", common.ToStrChainID(data.ChainID), "refundTxInputs", refundTxInputs.MultiSig)
 	cco.logger.Debug("TX OUTPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "txOutputs.Outputs", txOutputs.Outputs)
 
@@ -316,7 +333,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		slotNumber+cco.config.TTLSlotNumberInc,
 		data.Metadata,
 		txInputs,
-		refundTxInputs,
+		refundTxInputs.MultiSig,
 		txOutputs.Outputs,
 		certificateData,
 		addrAndAmountToDeduct,
@@ -341,8 +358,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 	chainID uint8,
-	refundUtxos map[string]*indexer.TxInputOutput,
-	refundUtxoReceivers map[string]string,
+	refundUtxos []refundUtxoWithReceiverAddr,
 ) (
 	map[uint8][]*indexer.TxInputOutput,
 	[]cardanowallet.TxOutput,
@@ -352,17 +368,18 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 	refundUtxoOutputs := make([]cardanowallet.TxOutput, 0, 2*len(refundUtxos))
 
 	// process refund utxos by adding them into inputs, and creating outputs
-	for _, refundUtxo := range refundUtxos {
-		index, ok := cco.bridgingAddressesManager.GetPaymentAddressIndex(chainID, refundUtxo.Output.Address)
+	for _, obj := range refundUtxos {
+		index, ok := cco.bridgingAddressesManager.GetPaymentAddressIndex(
+			chainID, obj.Utxo.Output.Address)
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to get index for address %s on chain %s",
-				refundUtxo.Output.Address, common.ToStrChainID(chainID))
+				obj.Utxo.Output.Address, common.ToStrChainID(chainID))
 		}
 
-		refundUtxoInputs[index] = append(refundUtxoInputs[index], refundUtxo)
+		refundUtxoInputs[index] = append(refundUtxoInputs[index], obj.Utxo)
 
-		tokens := make([]cardanowallet.TokenAmount, len(refundUtxo.Output.Tokens))
-		for i, t := range refundUtxo.Output.Tokens {
+		tokens := make([]cardanowallet.TokenAmount, len(obj.Utxo.Output.Tokens))
+		for i, t := range obj.Utxo.Output.Tokens {
 			tokens[i] = cardanowallet.NewTokenAmount(
 				cardanowallet.NewToken(t.PolicyID, t.Name),
 				t.Amount,
@@ -370,8 +387,8 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 		}
 
 		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
-			Addr:   refundUtxoReceivers[refundUtxo.String()],
-			Amount: refundUtxo.Output.Amount - cco.config.MinFeeForBridging,
+			Addr:   obj.Addr,
+			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridging,
 			Tokens: tokens,
 		})
 
