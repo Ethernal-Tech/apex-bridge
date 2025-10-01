@@ -179,6 +179,7 @@ func TestPackNumbersToBytes(t *testing.T) {
 	input2 := []uint64{784834, 347834, 34893, 121, 0, 378273}
 	input3 := []float32{0.3, 8.11, 89.8989, -189892.9}
 	input4 := MyInts{-32768, 32767, 0, 20}
+	input5 := make([]int, 0, 5)
 
 	bytes := PackNumbersToBytes(input1)
 
@@ -203,11 +204,28 @@ func TestPackNumbersToBytes(t *testing.T) {
 	result4, err := UnpackNumbersToBytes[MyInts](bytes)
 	require.NoError(t, err)
 	assert.Equal(t, input4, result4)
+
+	bytes = PackNumbersToBytes(input5)
+
+	result5, err := UnpackNumbersToBytes[[]int](bytes)
+	require.NoError(t, err)
+	assert.Equal(t, input5, result5)
+
+	result6, err := UnpackNumbersToBytes[[]int]([]byte{})
+	require.NoError(t, err)
+	assert.Equal(t, []int{}, result6)
 }
 
 func TestNumbersToString(t *testing.T) {
 	assert.Equal(t, "1, 7, -3, 9090, 889", NumbersToString([]int{1, 7, -3, 9090, 889}))
 	assert.Equal(t, "-1.01, 7, -3.56, 9090, 8.8", NumbersToString([]float32{-1.01, 7, -3.56, 9090, 8.8}))
+}
+
+func TestFlattenMatrix(t *testing.T) {
+	data := [][]int{
+		{1, 2}, {3}, {}, nil, {4, 7, 6}, {},
+	}
+	assert.Equal(t, []int{1, 2, 3, 4, 7, 6}, FlattenMatrix(data))
 }
 
 func TestLastN(t *testing.T) {

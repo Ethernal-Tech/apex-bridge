@@ -14,7 +14,8 @@ func CreateTx(
 	protocolParams []byte,
 	timeToLive uint64,
 	metadataBytes []byte,
-	txInputInfos TxInputInfos,
+	txInputInfos *TxInputInfos,
+	refundTxMultisigInputs []*TxInputInfo,
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
@@ -27,8 +28,16 @@ func CreateTx(
 	}
 
 	feeLn := len(txInputInfos.MultiSigFee.Inputs)
-	if certificatesData == nil && (multisigLn == 0 || feeLn == 0) {
-		return nil, "", fmt.Errorf("no inputs found for multisig (%d) or fee multisig (%d)", multisigLn, feeLn)
+
+	refundLn := 0
+
+	for _, multisig := range refundTxMultisigInputs {
+		refundLn += len(multisig.Inputs)
+	}
+
+	if certificatesData == nil && ((multisigLn == 0 && refundLn == 0) || feeLn == 0) {
+		return nil, "", fmt.Errorf("no inputs found for either multisig (%d) and refund (%d) or fee multisig (%d)",
+			multisigLn, refundLn, feeLn)
 	}
 
 	builder, err := cardanowallet.NewTxBuilder(cardanoCliBinary)
@@ -63,6 +72,10 @@ func CreateTx(
 		builder.AddOutputs(cardanowallet.TxOutput{
 			Addr: txInputInfos.MultiSigFee.Address,
 		})
+	}
+
+	for _, multisig := range refundTxMultisigInputs {
+		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)

@@ -68,12 +68,16 @@ func getStakingCertificates(
 }
 
 func getOutputs(
-	txs []eth.ConfirmedTransaction, cardanoConfig *cardano.CardanoChainConfig, logger hclog.Logger,
+	txs []eth.ConfirmedTransaction,
+	cardanoConfig *cardano.CardanoChainConfig,
+	feeAddress string,
+	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
+	logger hclog.Logger,
 ) (cardano.TxOutputs, bool, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
 	isRedistribution := false
 
-	for _, transaction := range txs {
+	for txIndex, transaction := range txs {
 		// stake delegation tx are not processed in this way
 		if transaction.TransactionType == uint8(common.StakeConfirmedTxType) {
 			continue
@@ -87,9 +91,22 @@ func getOutputs(
 			continue
 		}
 
+		// refund for unknown tokens will be handled later
+		if transaction.TransactionType == uint8(common.RefundConfirmedTxType) && len(refundUtxosPerConfirmedTx[txIndex]) > 0 {
+			continue
+		}
+
 		for _, receiver := range transaction.Receivers {
 			data := receiversMap[receiver.DestinationAddress]
-			data.Amount += receiver.Amount.Uint64()
+			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
+				data.Amount += receiver.Amount.Uint64()
+			} else {
+				data.Amount += receiver.Amount.Uint64() - cardanoConfig.MinFeeForBridging
+
+				feeData := receiversMap[feeAddress]
+				feeData.Amount += cardanoConfig.MinFeeForBridging
+				receiversMap[feeAddress] = feeData
+			}
 
 			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
 				if len(data.Tokens) == 0 {
@@ -98,13 +115,20 @@ func getOutputs(
 						token cardanowallet.Token
 					)
 
-					if (transaction.TransactionType == uint8(common.DefundConfirmedTxType)) ||
-						(transaction.TransactionType == uint8(common.RefundConfirmedTxType)) {
+					switch transaction.TransactionType {
+					case uint8(common.DefundConfirmedTxType):
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
 							return cardano.TxOutputs{}, false, err
 						}
-					} else {
+					case uint8(common.RefundConfirmedTxType):
+						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
+
+						token, err = cardanoConfig.GetNativeToken(origDstChainID)
+						if err != nil {
+							return cardano.TxOutputs{}, false, err
+						}
+					default:
 						token, err = cardanoConfig.GetNativeToken(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {

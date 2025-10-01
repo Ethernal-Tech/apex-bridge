@@ -19,17 +19,20 @@ import (
 var _ core.CardanoTxSuccessProcessor = (*BridgingRequestedProcessorSkylineImpl)(nil)
 
 type BridgingRequestedProcessorSkylineImpl struct {
-	logger hclog.Logger
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor
+	logger                 hclog.Logger
 
 	chainInfos map[string]*chain.CardanoChainInfo
 }
 
 func NewSkylineBridgingRequestedProcessor(
+	refundRequestProcessor core.CardanoTxSuccessRefundProcessor,
 	logger hclog.Logger, chainInfos map[string]*chain.CardanoChainInfo,
 ) *BridgingRequestedProcessorSkylineImpl {
 	return &BridgingRequestedProcessorSkylineImpl{
-		logger:     logger.Named("bridging_requested_processor_skyline"),
-		chainInfos: chainInfos,
+		refundRequestProcessor: refundRequestProcessor,
+		logger:                 logger.Named("bridging_requested_processor"),
+		chainInfos:             chainInfos,
 	}
 }
 
@@ -46,11 +49,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 ) error {
 	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal metadata: tx: %v, err: %w", tx, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
 	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
-		return fmt.Errorf("ValidateAndAddClaim called for irrelevant tx: %v", tx)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}
 
 	p.logger.Debug("Validating relevant tx", "txHash", tx.Hash, "metadata", metadata)
@@ -59,10 +64,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 	if err == nil {
 		return p.addBridgingRequestClaim(claims, tx, metadata, appConfig)
 	} else {
-		//nolint:godox
-		// TODO: Refund
-		// p.addRefundRequestClaim(claims, tx, metadata)
-		return fmt.Errorf("validation failed for tx: %s, err: %w", tx.Hash, err)
+		return p.refundRequestProcessor.HandleBridgingProcessorError(
+			claims, tx, appConfig, err, "validation failed for tx")
 	}
 }
 
@@ -159,39 +162,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	return nil
 }
 
-/*
-func (*BridgingRequestedProcessorSkylineImpl) addRefundRequestClaim(
-	claims *core.BridgeClaims, tx *core.CardanoTx, metadata *common.BridgingRequestMetadata,
-) {
-
-		var outputUtxos []core.Utxo
-		for _, output := range tx.Outputs {
-			outputUtxos = append(outputUtxos, core.Utxo{
-				Address: output.Address,
-				Amount:  output.Amount,
-			})
-		}
-
-		// what goes into UtxoTransaction
-		claim := core.RefundRequestClaim{
-			TxHash:             tx.Hash,
-			RetryCounter:       0,
-			RefundToAddress:    metadata.SenderAddr,
-			DestinationChainId: metadata.DestinationChainId,
-			OutputUtxos:        outputUtxos,
-			UtxoTransaction:    core.UtxoTransaction{},
-		}
-
-		claims.RefundRequest = append(claims.RefundRequest, claim)
-
-		p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", core.RefundRequestClaimString(claim))
-}
-*/
-
 func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	tx *core.CardanoTx, metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
+		return err
+	}
+
 	if err := utils.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
 		return err
 	}

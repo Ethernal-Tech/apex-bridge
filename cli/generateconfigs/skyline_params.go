@@ -568,6 +568,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
+		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
 		CardanoChains: map[string]*oCore.CardanoChainConfig{
@@ -588,13 +589,13 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens:          nativeTokensPrime,
+					MinFeeForBridging:     p.primeMinFeeForBridging,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
 				StartSlot:                primeStartingSlot,
 				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
-				MinFeeForBridging:        p.primeMinFeeForBridging,
 				MinOperationFee:          p.primeMinOperationFee,
 				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
 			},
@@ -615,13 +616,13 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens:          nativeTokensCardano,
+					MinFeeForBridging:     p.cardanoMinFeeForBridging,
 				},
 				NetworkAddress:           p.cardanoNetworkAddress,
 				StartBlockHash:           cardanoStartingHash,
 				StartSlot:                cardanoStartingSlot,
 				ConfirmationBlockCount:   p.cardanoBlockConfirmationCount,
 				OtherAddressesOfInterest: []string{},
-				MinFeeForBridging:        p.cardanoMinFeeForBridging,
 				MinOperationFee:          p.cardanoMinOperationFee,
 				FeeAddrBridgingAmount:    p.cardanoUtxoMinAmount,
 			},
@@ -652,6 +653,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
+		},
+		TryCountLimits: oCore.TryCountLimits{
+			MaxBatchTryCount:  70,
+			MaxSubmitTryCount: 50,
+			MaxRefundTryCount: 50,
 		},
 		Settings: oCore.AppSettings{
 			Logger: logger.LoggerConfig{
