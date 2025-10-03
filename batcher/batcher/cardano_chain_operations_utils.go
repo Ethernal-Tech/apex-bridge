@@ -53,7 +53,7 @@ func getStakingCertificates(
 	}
 
 	if tx.TransactionSubType == uint8(common.StakeDeregConfirmedTxSubType) {
-		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress)
+		deregCert, err := cliUtils.CreateDeregistrationCertificate(multisigStakeAddress, keyRegDepositAmount)
 		if err != nil {
 			return nil, 0, errors.Join(errSkipConfirmedTx, err)
 		}

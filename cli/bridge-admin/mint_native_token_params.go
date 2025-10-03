@@ -338,6 +338,7 @@ func createMintTx(
 	)
 	builder.AddOutputs(cardanowallet.TxOutput{
 		Addr:   senderAddr,
+		Amount: inputs.Sum[cardanowallet.AdaTokenName] - desiredLovelaceAmount,
 		Tokens: append(senderTokens, token),
 	})
 
