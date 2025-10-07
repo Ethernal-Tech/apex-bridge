@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
@@ -65,7 +66,9 @@ func (cco *CardanoChainOperations) SendTx(
 		return err
 	}
 
-	tip, err := cco.txProvider.GetTip(ctx)
+	tip, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (cardanowallet.QueryTipData, error) {
+		return cco.txProvider.GetTip(ctx)
+	})
 	if err == nil {
 		cco.logger.Info("confirmed batch - sending tx current tip",
 			"block", tip.Block, "slot", tip.Slot, "hash", tip.Hash)

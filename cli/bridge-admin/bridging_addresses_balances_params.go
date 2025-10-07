@@ -9,6 +9,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -178,7 +179,11 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 				return nil, err
 			}
 
-			ogmiosUtxos, err := txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
+			ogmiosUtxos, err := infracommon.ExecuteWithRetry(
+				context.Background(),
+				func(ctx context.Context) ([]cardanowallet.Utxo, error) {
+					return txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
+				})
 			if err != nil {
 				return nil, err
 			}
