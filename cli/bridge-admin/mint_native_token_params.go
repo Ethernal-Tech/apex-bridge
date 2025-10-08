@@ -169,7 +169,9 @@ func (m *mintNativeTokenParams) Execute(outputter common.OutputFormatter) (commo
 	validitySlot := m.validitySlot
 
 	if m.validitySlotInc > 0 {
-		tipData, err := txProvider.GetTip(ctx)
+		tipData, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (cardanowallet.QueryTipData, error) {
+			return txProvider.GetTip(ctx)
+		})
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve tip data: %w", err)
 		}
