@@ -182,7 +182,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 			ogmiosUtxos, err := infracommon.ExecuteWithRetry(
 				context.Background(),
 				func(ctx context.Context) ([]cardanowallet.Utxo, error) {
-					return txProvider.GetUtxos(context.Background(), chainWalletAddr[chainID])
+					return txProvider.GetUtxos(ctx, chainWalletAddr[chainID])
 				})
 			if err != nil {
 				return nil, err
