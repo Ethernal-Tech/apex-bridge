@@ -98,12 +98,12 @@ func (api *APIImpl) Start() {
 			Handler:           api.handler,
 			ReadHeaderTimeout: 3 * time.Second,
 			BaseContext: func(l net.Listener) context.Context {
-				cc, _ := context.WithCancel(srvCtx)
+				cc := context.WithValue(srvCtx, "type", "base")
 
 				return cc
 			},
 			ConnContext: func(ctx context.Context, c net.Conn) context.Context {
-				cc, _ := context.WithCancel(ctx)
+				cc := context.WithValue(ctx, "connection", c)
 
 				return cc
 			},
@@ -158,11 +158,6 @@ func (api *APIImpl) Dispose() error {
 	}
 
 	api.logger.Debug("Finished disposing")
-
-	err = utils.CheckAndTerminateProcessOnPort(api.logger, api.apiConfig.Port)
-	if err != nil {
-		api.logger.Error("Failed to kill the process", "port", api.apiConfig.Port, "err", err)
-	}
 
 	return errors.Join(apiErrors...)
 }

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -57,25 +56,17 @@ func FormatProcessOnPort(port uint32) string {
 }
 
 func ProcessOnPort(port uint32) (string, error) {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ss -tulpn | grep %d", port)) //nolint:gosec
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}'", port)) //nolint:gosec
 
 	// Run the command and capture the output
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("cmd failed or no results found: %w", err)
+		return "", fmt.Errorf("cmd failed: %w", err)
 	}
 
-	result := out.String()
-	re := regexp.MustCompile(`users:\(\((.*?)\)\)`)
-	match := re.FindStringSubmatch(result)
-
-	if len(match) > 1 {
-		return match[1], nil
-	}
-
-	return "", nil
+	return out.String(), nil
 }
 
 func NewAPILogger(appConfig *core.AppConfig) (hclog.Logger, error) {
@@ -90,42 +81,4 @@ func NewAPILogger(appConfig *core.AppConfig) (hclog.Logger, error) {
 	}
 
 	return apiLogger, nil
-}
-
-func isProcessOnPort(port uint32) (bool, error) {
-	command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}'", port)
-	cmd := exec.Command("bash", "-c", command)
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	if err := cmd.Run(); err != nil {
-		return false, err
-	}
-
-	return out.String() != "", nil
-}
-
-func CheckAndTerminateProcessOnPort(logger hclog.Logger, port uint32) error {
-	logger.Debug("Checking if port is still in use...")
-
-	exists, err := isProcessOnPort(port)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		logger.Debug("Process is still active. Terminating the process...", "port", port)
-
-		command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}' | xargs kill -9", port)
-		cmd := exec.Command("bash", "-c", command)
-
-		if err := cmd.Run(); err != nil {
-			return err
-		}
-	}
-
-	logger.Debug("Process is terminated successfully", "port", port)
-
-	return nil
 }
