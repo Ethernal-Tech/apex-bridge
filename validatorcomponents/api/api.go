@@ -159,6 +159,11 @@ func (api *APIImpl) Dispose() error {
 
 	api.logger.Debug("Finished disposing")
 
+	err = utils.CheckAndTerminateProcessOnPort(api.logger, api.apiConfig.Port)
+	if err != nil {
+		api.logger.Error("Failed to kill the process", "port", api.apiConfig.Port, "err", err)
+	}
+
 	return errors.Join(apiErrors...)
 }
 

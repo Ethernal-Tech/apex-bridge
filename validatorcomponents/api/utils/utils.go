@@ -91,3 +91,41 @@ func NewAPILogger(appConfig *core.AppConfig) (hclog.Logger, error) {
 
 	return apiLogger, nil
 }
+
+func isProcessOnPort(port uint32) (bool, error) {
+	command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}'", port)
+	cmd := exec.Command("bash", "-c", command)
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	if err := cmd.Run(); err != nil {
+		return false, err
+	}
+
+	return out.String() != "", nil
+}
+
+func CheckAndTerminateProcessOnPort(logger hclog.Logger, port uint32) error {
+	logger.Debug("Checking if port is still in use...")
+
+	exists, err := isProcessOnPort(port)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		logger.Debug("Process is still active. Terminating the process...", "port", port)
+
+		command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}' | xargs kill -9", port)
+		cmd := exec.Command("bash", "-c", command)
+
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	logger.Debug("Process is terminated successfully", "port", port)
+
+	return nil
+}
