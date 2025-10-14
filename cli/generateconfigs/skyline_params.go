@@ -693,6 +693,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 	var (
 		nativeTokensPrime   []sendtx.TokenExchangeConfig
 		nativeTokensCardano []sendtx.TokenExchangeConfig
+		nativeTokensVector  []sendtx.TokenExchangeConfig
 	)
 
 	if p.primeCardanoWrappedTokenName != "" {
@@ -709,6 +710,15 @@ func (p *skylineGenerateConfigsParams) Execute(
 			{
 				DstChainID: common.ChainIDStrPrime,
 				TokenName:  p.cardanoPrimeWrappedTokenName,
+			},
+		}
+	}
+
+	if p.vectorCardanoWrappedTokenName != "" {
+		nativeTokensVector = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrCardano,
+				TokenName:  p.vectorCardanoWrappedTokenName,
 			},
 		}
 	}
@@ -790,6 +800,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MaxUtxoCount:          defaultMaxUtxoCount,
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					MinFeeForBridging:     p.vectorMinFeeForBridging,
+					NativeTokens:          nativeTokensVector,
 				},
 				NetworkAddress:           p.vectorNetworkAddress,
 				StartBlockHash:           vectorStartingHash,
