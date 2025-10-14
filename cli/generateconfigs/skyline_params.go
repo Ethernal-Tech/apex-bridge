@@ -32,7 +32,7 @@ const (
 	vectorMinOperationFeeFlag     = "vector-min-operation-fee"
 	vectorMinOperationFeeFlagDesc = "minimal operation fee for vector"
 
-	vectorCardanoWrappedTokenNameFlag     = "prime-cardano-token-name"
+	vectorCardanoWrappedTokenNameFlag     = "vector-cardano-token-name"
 	vectorCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
 
 	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
@@ -141,8 +141,9 @@ type skylineGenerateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 
-	cardanoPrimeWrappedTokenName string
-	primeCardanoWrappedTokenName string
+	cardanoPrimeWrappedTokenName  string
+	primeCardanoWrappedTokenName  string
+	vectorCardanoWrappedTokenName string
 
 	emptyBlocksThreshold uint
 }
@@ -272,6 +273,12 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if p.cardanoPrimeWrappedTokenName != "" {
 		if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
 			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
+		}
+	}
+
+	if p.vectorCardanoWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.vectorCardanoWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", vectorCardanoWrappedTokenNameFlag)
 		}
 	}
 
@@ -630,6 +637,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		cardanoPrimeWrappedTokenNameFlag,
 		"",
 		cardanoPrimeWrappedTokenNameFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorCardanoWrappedTokenName,
+		vectorCardanoWrappedTokenNameFlag,
+		"",
+		vectorCardanoWrappedTokenNameFlagDesc,
 	)
 
 	cmd.Flags().UintVar(
