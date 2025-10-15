@@ -118,6 +118,7 @@ type skylineGenerateConfigsParams struct {
 	vectorStartingBlock          string
 	vectorUtxoMinAmount          uint64
 	vectorMinFeeForBridging      uint64
+	vectorMinOperationFee        uint64
 	vectorBlockConfirmationCount uint
 
 	bridgeNodeURL   string
@@ -528,6 +529,12 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		common.MinFeeForBridgingDefault,
 		vectorMinFeeForBridgingFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.vectorMinOperationFee,
+		vectorMinOperationFeeFlag,
+		common.MinOperationFeeOnVector,
+		vectorMinOperationFeeFlagDesc,
+	)
 	cmd.Flags().UintVar(
 		&p.vectorBlockConfirmationCount,
 		vectorBlockConfirmationCountFlag,
@@ -889,6 +896,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 	cardanoChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrCardano].CardanoChainConfig)
 	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 
+	//nolint:dupl
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
