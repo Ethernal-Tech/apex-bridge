@@ -270,6 +270,10 @@ func parseFnArguments(input string) []any {
 			args[i] = ethcommon.HexToAddress(arg)
 		} else if isHash(arg) {
 			args[i] = ethcommon.HexToHash(arg)
+		} else if strings.EqualFold(arg, "true") {
+			args[i] = true
+		} else if strings.EqualFold(arg, "false") {
+			args[i] = false
 		} else if strings.HasSuffix(arg, "u") {
 			numStr := strings.TrimSuffix(arg, "u")
 			if n, err := strconv.ParseUint(numStr, 10, 8); err == nil {
