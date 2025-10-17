@@ -43,15 +43,16 @@ type utxoSelectionResult struct {
 }
 
 type CardanoChainOperations struct {
-	config                       *cardano.CardanoChainConfig
-	wallet                       *cardano.ApexCardanoWallet
-	txProvider                   cardanowallet.ITxDataRetriever
-	db                           indexer.Database
-	gasLimiter                   eth.GasLimitHolder
-	cardanoCliBinary             string
-	bridgingAddressesManager     common.BridgingAddressesManager
-	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
-	logger                       hclog.Logger
+	config                         *cardano.CardanoChainConfig
+	wallet                         *cardano.ApexCardanoWallet
+	txProvider                     cardanowallet.ITxDataRetriever
+	db                             indexer.Database
+	gasLimiter                     eth.GasLimitHolder
+	cardanoCliBinary               string
+	bridgingAddressesManager       common.BridgingAddressesManager
+	rewardBridgingAddressesManager common.BridgingAddressesManager
+	bridgingAddressesCoordinator   common.BridgingAddressesCoordinator
+	logger                         hclog.Logger
 }
 
 func NewCardanoChainOperations(
@@ -60,6 +61,7 @@ func NewCardanoChainOperations(
 	secretsManager secrets.SecretsManager,
 	chainID string,
 	bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
@@ -85,10 +87,11 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter: eth.NewGasLimitHolder(submitBatchMinGasLimit,
 			submitBatchMaxGasLimit, submitBatchStepsGasLimit),
-		db:                           db,
-		logger:                       logger,
-		bridgingAddressesManager:     bridgingAddressesManager,
-		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
+		db:                             db,
+		logger:                         logger,
+		bridgingAddressesManager:       bridgingAddressesManager,
+		rewardBridgingAddressesManager: rewardBridgingAddressesManager,
+		bridgingAddressesCoordinator:   bridgingAddressesCoordinator,
 	}, nil
 }
 

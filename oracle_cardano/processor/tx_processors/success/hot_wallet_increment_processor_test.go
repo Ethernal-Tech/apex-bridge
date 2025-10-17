@@ -26,13 +26,28 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime, mock.Anything).Return([]string{primeBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector, mock.Anything).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
+	brAddrManagerMock.On("GetFirstIndexAddress", common.ChainIDIntVector).Return(vectorBridgingAddr, true)
+	brAddrManagerMock.On("GetFirstIndexAddress", common.ChainIDIntPrime).Return(primeBridgingAddr, true)
+
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntPrime, primeBridgingAddr).Return(uint8(0), true)
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntVector, vectorBridgingAddr).Return(uint8(0), true)
+
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntPrime, primeBridgingFeeAddr).Return(uint8(0), false)
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntVector, vectorBridgingFeeAddr).Return(uint8(0), false)
+	brAddrManagerMock.On("GetPaymentAddressIndex", mock.Anything, mock.Anything).Return(uint8(0), false)
+
+	rewardBrAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	rewardBrAddrManagerMock.On("GetFirstIndexAddress", mock.Anything).Return("", false)
+	rewardBrAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{}, nil)
+	rewardBrAddrManagerMock.On("GetPaymentAddressIndex", mock.Anything, mock.Anything).Return(uint8(0), false)
 
 	appConfig := &cCore.AppConfig{
-		BridgingAddressesManager: brAddrManagerMock,
+		BridgingAddressesManager:       brAddrManagerMock,
+		RewardBridgingAddressesManager: rewardBrAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				/* BridgingAddresses: cCore.BridgingAddresses{

@@ -154,16 +154,29 @@ func NewValidatorComponents(
 		ctx,
 		appConfig.CardanoChains,
 		bridgeSmartContract,
+		false,
 		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridging addresses manager: %w", err)
 	}
 
+	rewardBridgingAddressesManager, err := bam.NewBridgingAdressesManager(
+		ctx,
+		appConfig.CardanoChains,
+		bridgeSmartContract,
+		true,
+		logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create reward bridging addresses manager: %w", err)
+	}
+
 	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
-		bridgingAddressesManager, cardanoIndexerDbs, appConfig.CardanoChains, logger)
+		bridgingAddressesManager, rewardBridgingAddressesManager, cardanoIndexerDbs, appConfig.CardanoChains, logger)
 
 	oracleConfig.BridgingAddressesManager = bridgingAddressesManager
+	oracleConfig.RewardBridgingAddressesManager = rewardBridgingAddressesManager
 
 	cardanoOracleObj, err := cardanoOracle.NewCardanoOracle(
 		ctx, oracleDB, typeRegister, oracleConfig,
@@ -192,7 +205,7 @@ func NewValidatorComponents(
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
-		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager,
+		cardanoIndexerDbs, ethIndexerDbs, bridgingRequestStateManager, bridgingAddressesManager, rewardBridgingAddressesManager,
 		bridgingAddressesCoordinator, logger.Named("batcher"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create batcher manager: %w", err)
@@ -220,7 +233,7 @@ func NewValidatorComponents(
 				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(
-				bridgingAddressesCoordinator, bridgingAddressesManager, apiLogger.Named("bridging_address_controller")),
+				bridgingAddressesCoordinator, bridgingAddressesManager, rewardBridgingAddressesManager, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))

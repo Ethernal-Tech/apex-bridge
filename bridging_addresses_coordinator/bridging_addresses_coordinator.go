@@ -28,25 +28,28 @@ type tokensAmountPerAddress struct {
 }
 
 type BridgingAddressesCoordinatorImpl struct {
-	bridgingAddressesManager common.BridgingAddressesManager
-	dbs                      map[string]indexer.Database
-	cardanoChains            map[string]*oracleCore.CardanoChainConfig
-	logger                   hclog.Logger
+	bridgingAddressesManager       common.BridgingAddressesManager
+	rewardBridgingAddressesManager common.BridgingAddressesManager
+	dbs                            map[string]indexer.Database
+	cardanoChains                  map[string]*oracleCore.CardanoChainConfig
+	logger                         hclog.Logger
 }
 
 var _ common.BridgingAddressesCoordinator = (*BridgingAddressesCoordinatorImpl)(nil)
 
 func NewBridgingAddressesCoordinator(
 	bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 	dbs map[string]indexer.Database,
 	cardanoChains map[string]*oracleCore.CardanoChainConfig,
 	logger hclog.Logger,
 ) common.BridgingAddressesCoordinator {
 	return &BridgingAddressesCoordinatorImpl{
-		bridgingAddressesManager: bridgingAddressesManager,
-		dbs:                      dbs,
-		cardanoChains:            cardanoChains,
-		logger:                   logger,
+		bridgingAddressesManager:       bridgingAddressesManager,
+		rewardBridgingAddressesManager: rewardBridgingAddressesManager,
+		dbs:                            dbs,
+		cardanoChains:                  cardanoChains,
+		logger:                         logger,
 	}
 }
 
@@ -58,15 +61,14 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressToBridgeTo(
 	// Go through all addresses and find the one with the least amount of tokens
 	// chose that one and send whole amount to it
 
-	addressType := common.AddressTypeNormal
-	firstAddressIndex := uint8(0)
-
+	bridgingAddressesManager := c.bridgingAddressesManager
 	if isReward {
-		addressType = common.AddressTypeReward
-		firstAddressIndex = common.FirstRewardBridgingAddressIndex
+		bridgingAddressesManager = c.rewardBridgingAddressesManager
 	}
 
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, addressType)
+	firstAddressIndex := bridgingAddressesManager.GetFirstIndex()
+
+	addresses := bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
 	if containsNativeTokens {
 		return common.AddressAndAmount{Address: addresses[0], AddressIndex: firstAddressIndex}, nil
@@ -329,7 +331,7 @@ func (c *BridgingAddressesCoordinatorImpl) getTokensAmountByAddr(
 		return nil, fmt.Errorf("failed to get appropriate db for chain %s", chainIDStr)
 	}
 
-	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal)
+	addresses := c.bridgingAddressesManager.GetAllPaymentAddresses(chainID)
 
 	addrAmounts := make([]addrAmount, 0, len(addresses))
 	potentialInputs := make([]*indexer.TxInputOutput, 0)

@@ -27,14 +27,14 @@ type IStartable interface {
 }
 
 type BridgingAddressesManager interface {
-	GetAllPaymentAddresses(chainID uint8, addressType AddressType) []string
-	GetAllStakeAddresses(chainID uint8, addressType AddressType) []string
+	GetAllPaymentAddresses(chainID uint8) []string
+	GetAllStakeAddresses(chainID uint8) []string
 	GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool)
 	GetStakeAddressIndex(chainID uint8, address string) (uint8, bool)
 	GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool)
 	GetStakeAddressFromIndex(chainID uint8, index uint8) (string, bool)
-	GetZeroIndexAddress(chainID uint8) (string, bool)
-	GetZeroIndexRewardAddress(chainID uint8) (string, bool)
+	GetFirstIndexAddress(chainID uint8) (string, bool)
+	GetFirstIndex() uint8
 	GetPaymentPolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetFeeMultisigAddress(chainID uint8) string

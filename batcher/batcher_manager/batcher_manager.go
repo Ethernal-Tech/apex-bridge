@@ -32,6 +32,7 @@ func NewBatcherManager(
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 	bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
@@ -52,6 +53,7 @@ func NewBatcherManager(
 				cardanoIndexerDbs,
 				secretsManager,
 				bridgingAddressesManager,
+				rewardBridgingAddressesManager,
 				bridgingAddressesCoordinator,
 				logger,
 			)
@@ -98,6 +100,7 @@ func (bm *BatchManagerImpl) Start() {
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
 	secretsManager secrets.SecretsManager, bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	logger hclog.Logger,
 ) (core.ChainOperations, error) {
@@ -112,6 +115,7 @@ func getCardanoOperations(
 		secretsManager,
 		config.ChainID,
 		bridgingAddressesManager,
+		rewardBridgingAddressesManager,
 		bridgingAddressesCoordinator,
 		logger,
 	)

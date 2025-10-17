@@ -13,16 +13,16 @@ type BridgingAddressesManagerMock struct {
 // Ensure interface compliance
 var _ common.BridgingAddressesManager = (*BridgingAddressesManagerMock)(nil)
 
-func (m *BridgingAddressesManagerMock) GetAllPaymentAddresses(chainID uint8, addressType common.AddressType) []string {
-	args := m.Called(chainID, addressType)
+func (m *BridgingAddressesManagerMock) GetAllPaymentAddresses(chainID uint8) []string {
+	args := m.Called(chainID)
 
 	arg0, _ := args.Get(0).([]string)
 
 	return arg0
 }
 
-func (m *BridgingAddressesManagerMock) GetAllStakeAddresses(chainID uint8, addressType common.AddressType) []string {
-	args := m.Called(chainID, addressType)
+func (m *BridgingAddressesManagerMock) GetAllStakeAddresses(chainID uint8) []string {
+	args := m.Called(chainID)
 
 	arg0, _ := args.Get(0).([]string)
 
@@ -55,6 +55,18 @@ func (m *BridgingAddressesManagerMock) GetStakeAddressFromIndex(chainID uint8, i
 	args := m.Called(chainID, index)
 
 	return args.String(0), args.Bool(1)
+}
+
+func (m *BridgingAddressesManagerMock) GetFirstIndexAddress(chainID uint8) (string, bool) {
+	args := m.Called(chainID)
+
+	return args.String(0), args.Bool(1)
+}
+
+func (m *BridgingAddressesManagerMock) GetFirstIndex() uint8 {
+	args := m.Called()
+
+	return args.Get(0).(uint8)
 }
 
 func (m *BridgingAddressesManagerMock) GetPaymentPolicyScript(chainID uint8, index uint8) (*wallet.PolicyScript, bool) {

@@ -16,6 +16,7 @@ import (
 type BridgingAddressControllerImpl struct {
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
 	bridgingAddressManager       common.BridgingAddressesManager
+	rewardBridgingAddressManager common.BridgingAddressesManager
 	logger                       hclog.Logger
 }
 
@@ -24,11 +25,13 @@ var _ apiCore.APIController = (*BridgingAddressControllerImpl)(nil)
 func NewBridgingAddressController(
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	bridgingAddressManager common.BridgingAddressesManager,
+	rewardBridgingAddressManager common.BridgingAddressesManager,
 	logger hclog.Logger,
 ) *BridgingAddressControllerImpl {
 	return &BridgingAddressControllerImpl{
 		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
 		bridgingAddressManager:       bridgingAddressManager,
+		rewardBridgingAddressManager: rewardBridgingAddressManager,
 		logger:                       logger,
 	}
 }
@@ -127,8 +130,8 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 
 	// TODO: send all addresses together (AddressTypeBoth)
 	response := response.NewAllBridgingAddressesResponse(
-		c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeNormal),
-		c.bridgingAddressManager.GetAllPaymentAddresses(chainID, common.AddressTypeReward),
+		c.bridgingAddressManager.GetAllPaymentAddresses(chainID),
+		c.rewardBridgingAddressManager.GetAllPaymentAddresses(chainID),
 	)
 
 	apiUtils.WriteResponse(w, r, http.StatusOK, response, c.logger)

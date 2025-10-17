@@ -40,9 +40,10 @@ func NewCardanoChainObserver(
 	txsReceiver core.CardanoTxsReceiver, oracleDB core.CardanoTxsProcessorDB,
 	indexerDB indexer.Database,
 	bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 	logger hclog.Logger,
 ) (*CardanoChainObserverImpl, error) {
-	indexerConfig, syncerConfig := loadSyncerConfigs(config, bridgingAddressesManager)
+	indexerConfig, syncerConfig := loadSyncerConfigs(config, bridgingAddressesManager, rewardBridgingAddressesManager)
 
 	err := initOracleState(indexerDB,
 		oracleDB, config.StartBlockHash, config.StartSlot, config.InitialUtxos, config.ChainID, logger)
@@ -153,6 +154,7 @@ func (co *CardanoChainObserverImpl) ErrorCh() <-chan error {
 func loadSyncerConfigs(
 	config *cCore.CardanoChainConfig,
 	bridgingAddressesManager common.BridgingAddressesManager,
+	rewardBridgingAddressesManager common.BridgingAddressesManager,
 ) (*indexer.BlockIndexerConfig, *gouroboros.BlockSyncerConfig) {
 	networkAddress := strings.TrimPrefix(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
@@ -161,11 +163,13 @@ func loadSyncerConfigs(
 	chainID := common.ToNumChainID(config.ChainID)
 
 	addressesOfInterest := append(
-		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID, common.AddressTypeBoth),
+		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),
 			bridgingAddressesManager.GetFeeMultisigAddress(chainID),
 		),
-		config.OtherAddressesOfInterest...,
+		rewardBridgingAddressesManager.GetAllPaymentAddresses(chainID)...,
 	)
+
+	addressesOfInterest = append(addressesOfInterest, config.OtherAddressesOfInterest...)
 
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{

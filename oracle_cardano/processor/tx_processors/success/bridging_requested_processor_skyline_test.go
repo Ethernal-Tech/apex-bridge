@@ -56,6 +56,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	stakedTokenPrime, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("stakedApex"))), true,
+	)
+	require.NoError(t, err)
+
+	stakedTokenCardano, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("stakedCardano"))), true,
+	)
+	require.NoError(t, err)
+
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 	testChainID := "test"
@@ -66,16 +80,30 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	})
 
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime, mock.Anything).Return([]string{primeBridgingAddr, primeBridgingAddr2}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr, primeBridgingAddr2}, nil)
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(1)).Return(primeBridgingAddr2, true)
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntCardano, uint8(0)).Return(cardanoBridgingAddr, true)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
-	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntCardano, mock.Anything).Return([]string{cardanoBridgingAddr}, nil)
+	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntCardano).Return([]string{cardanoBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntCardano).Return(cardanoBridgingFeeAddr)
+	brAddrManagerMock.On("GetFirstIndexAddress", common.ChainIDIntCardano).Return(cardanoBridgingAddr, true)
+	brAddrManagerMock.On("GetFirstIndexAddress", common.ChainIDIntPrime).Return(primeBridgingAddr, true)
+
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntPrime, primeBridgingAddr).Return(uint8(0), true)
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntPrime, primeBridgingAddr2).Return(uint8(1), true)
+	brAddrManagerMock.On("GetPaymentAddressIndex", common.ChainIDIntCardano, cardanoBridgingAddr).Return(uint8(0), true)
+
+	brAddrManagerMock.On("GetPaymentAddressIndex", mock.Anything, mock.Anything).Return(uint8(0), false)
+
+	rewardBrAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
+	rewardBrAddrManagerMock.On("GetFirstIndexAddress", mock.Anything).Return("", false)
+	rewardBrAddrManagerMock.On("GetAllPaymentAddresses", mock.Anything).Return([]string{}, nil)
+	rewardBrAddrManagerMock.On("GetPaymentAddressIndex", mock.Anything, mock.Anything).Return(uint8(0), false)
 
 	appConfig := &cCore.AppConfig{
-		BridgingAddressesManager: brAddrManagerMock,
+		BridgingAddressesManager:       brAddrManagerMock,
+		RewardBridgingAddressesManager: rewardBrAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
 				CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -91,6 +119,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 							TokenName:  wrappedTokenPrime.String(),
 						},
 					},
+					StakedToken: sendtx.TokenExchangeConfig{
+						DstChainID: common.ChainIDStrCardano,
+						TokenName:  stakedTokenPrime.String(),
+					},
 				},
 				MinFeeForBridging: minFeeForBridging,
 				MinOperationFee:   minOperationFee,
@@ -104,6 +136,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 							DstChainID: common.ChainIDStrPrime,
 							TokenName:  wrappedTokenCardano.String(),
 						},
+					},
+					StakedToken: sendtx.TokenExchangeConfig{
+						DstChainID: common.ChainIDStrPrime,
+						TokenName:  stakedTokenCardano.String(),
 					},
 				},
 				MinFeeForBridging: minFeeForBridging,
@@ -760,6 +796,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			newAppConfig.CardanoChains[common.ChainIDStrCardano].ChainID = common.ChainIDStrCardano
 			newAppConfig.CardanoChains[common.ChainIDStrPrime].ChainID = common.ChainIDStrPrime
 			newAppConfig.BridgingAddressesManager = appConfig.BridgingAddressesManager
+			newAppConfig.RewardBridgingAddressesManager = appConfig.RewardBridgingAddressesManager
 
 			srcChainID, dstChainID := common.ChainIDStrPrime, common.ChainIDStrCardano
 			txOutput := &indexer.TxOutput{

@@ -14,20 +14,17 @@ import (
 )
 
 type BridgingAddressesManagerImpl struct {
-	bridgingPaymentAddresses           map[uint8][]string
-	bridgingPaymentPolicyScripts       map[uint8][]*cardanowallet.PolicyScript
-	bridgingStakeAddresses             map[uint8][]string
-	bridgingStakePolicyScripts         map[uint8][]*cardanowallet.PolicyScript
-	bridgingRewardPaymentAddresses     map[uint8][]string
-	bridgingRewardPaymentPolicyScripts map[uint8][]*cardanowallet.PolicyScript
-	bridgingRewardStakeAddresses       map[uint8][]string
-	bridgingRewardStakePolicyScripts   map[uint8][]*cardanowallet.PolicyScript
-	feeMultisigAddresses               map[uint8]string
-	feeMultisigPolicyScripts           map[uint8]*cardanowallet.PolicyScript
+	bridgingPaymentAddresses     map[uint8][]string
+	bridgingPaymentPolicyScripts map[uint8][]*cardanowallet.PolicyScript
+	bridgingStakeAddresses       map[uint8][]string
+	bridgingStakePolicyScripts   map[uint8][]*cardanowallet.PolicyScript
+	feeMultisigAddresses         map[uint8]string
+	feeMultisigPolicyScripts     map[uint8]*cardanowallet.PolicyScript
 
 	cardanoChains       map[string]*oracleCore.CardanoChainConfig
 	ctx                 context.Context
 	bridgeSmartContract eth.IBridgeSmartContract
+	isReward            bool
 	logger              hclog.Logger
 }
 
@@ -37,6 +34,7 @@ func NewBridgingAdressesManager(
 	ctx context.Context,
 	cardanoChains map[string]*oracleCore.CardanoChainConfig,
 	bridgeSmartContract eth.IBridgeSmartContract,
+	isReward bool,
 	logger hclog.Logger,
 ) (common.BridgingAddressesManager, error) {
 	registeredChains, err := fetchRegisteredChains(ctx, bridgeSmartContract, logger)
@@ -48,12 +46,16 @@ func NewBridgingAdressesManager(
 	bridgingStakeAddresses := make(map[uint8][]string)
 	bridgingPaymentPolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
 	bridgingStakePolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
-	bridgingRewardPaymentAddresses := make(map[uint8][]string)
-	bridgingRewardStakeAddresses := make(map[uint8][]string)
-	bridgingRewardPaymentPolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
-	bridgingRewardStakePolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
 	feeMultisigAddresses := make(map[uint8]string)
 	feeMultisigPolicyScripts := make(map[uint8]*cardanowallet.PolicyScript)
+
+	logPrefix := ""
+	firstIndex := uint8(0)
+
+	if isReward {
+		logPrefix = "Reward "
+		firstIndex = common.FirstRewardBridgingAddressIndex
+	}
 
 	for _, registeredChain := range registeredChains {
 		chainIDStr := common.ToStrChainID(registeredChain.Id)
@@ -68,10 +70,10 @@ func NewBridgingAdressesManager(
 
 		keyHashes, err := cardano.NewApexKeyHashes(validatorsData)
 		if err != nil {
-			return nil, fmt.Errorf("error while executing NewApexKeyHashes for bridging addresses component. err: %w", err)
+			return nil, fmt.Errorf("error while executing NewApexKeyHashes for %sbridging addresses component. err: %w", logPrefix, err)
 		}
 
-		numberOfAddresses, numberOfRewardAddresses, err := fetchAddressCounts(ctx, bridgeSmartContract, chainIDStr, logger)
+		numberOfAddresses, err := fetchAddressCounts(ctx, bridgeSmartContract, chainIDStr, isReward, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +81,7 @@ func NewBridgingAdressesManager(
 		chainConfig := cardanoChains[chainIDStr]
 
 		for i := range uint64(numberOfAddresses) {
-			policyScripts := cardano.NewApexPolicyScripts(keyHashes, i)
+			policyScripts := cardano.NewApexPolicyScripts(keyHashes, i+uint64(firstIndex))
 			bridgingPaymentPolicyScripts[registeredChain.Id] =
 				append(bridgingPaymentPolicyScripts[registeredChain.Id], policyScripts.Multisig.Payment)
 
@@ -89,7 +91,7 @@ func NewBridgingAdressesManager(
 			addrs, err := cardano.NewApexAddresses(
 				cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
 			if err != nil {
-				return nil, fmt.Errorf("error while executing NewApexAddresses for bridging addresses component. err: %w", err)
+				return nil, fmt.Errorf("error while executing NewApexAddresses for %sbridging addresses component. err: %w", logPrefix, err)
 			}
 
 			bridgingPaymentAddresses[registeredChain.Id] =
@@ -98,166 +100,131 @@ func NewBridgingAdressesManager(
 			bridgingStakeAddresses[registeredChain.Id] =
 				append(bridgingStakeAddresses[registeredChain.Id], addrs.Multisig.Stake)
 
-			if i == 0 {
+			if i == 0 && !isReward {
 				feeMultisigAddresses[registeredChain.Id] = addrs.Fee.Payment
 				feeMultisigPolicyScripts[registeredChain.Id] = policyScripts.Fee.Payment
 			}
 		}
 
-		for i := range uint64(numberOfRewardAddresses) {
-			policyScripts := cardano.NewApexPolicyScripts(keyHashes, uint64(common.FirstRewardBridgingAddressIndex)+i)
-			bridgingRewardPaymentPolicyScripts[registeredChain.Id] =
-				append(bridgingRewardPaymentPolicyScripts[registeredChain.Id], policyScripts.Multisig.Payment)
+		msg := fmt.Sprintf(
+			"%sBridging addresses manager initialized for %s chain\n"+
+				" - Payment addresses (%d): %v",
+			logPrefix,
+			chainIDStr,
+			len(bridgingPaymentAddresses[registeredChain.Id]),
+			bridgingPaymentAddresses[registeredChain.Id])
 
-			bridgingRewardStakePolicyScripts[registeredChain.Id] =
-				append(bridgingRewardStakePolicyScripts[registeredChain.Id], policyScripts.Multisig.Stake)
-
-			addrs, err := cardano.NewApexAddresses(
-				cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
-			if err != nil {
-				return nil, fmt.Errorf("error while executing NewApexAddresses for bridging addresses component. err: %w", err)
-			}
-
-			bridgingRewardPaymentAddresses[registeredChain.Id] =
-				append(bridgingRewardPaymentAddresses[registeredChain.Id], addrs.Multisig.Payment)
-
-			bridgingRewardStakeAddresses[registeredChain.Id] =
-				append(bridgingRewardStakeAddresses[registeredChain.Id], addrs.Multisig.Stake)
+		if !isReward {
+			msg += fmt.Sprintf("\n - Fee address: %s", feeMultisigAddresses[registeredChain.Id])
 		}
 
-		logger.Debug(
-			fmt.Sprintf("Bridging addresses manager initialized for %s chain\n"+
-				" - Payment addresses (%d): %v\n"+
-				" - Reward addresses (%d): %v\n"+
-				" - Fee address: %s",
-				chainIDStr,
-				len(bridgingPaymentAddresses[registeredChain.Id]),
-				bridgingPaymentAddresses[registeredChain.Id],
-				len(bridgingRewardPaymentAddresses[registeredChain.Id]),
-				bridgingRewardPaymentAddresses[registeredChain.Id],
-				feeMultisigAddresses[registeredChain.Id]))
+		logger.Debug(msg)
 	}
 
 	return &BridgingAddressesManagerImpl{
-		bridgingPaymentAddresses:           bridgingPaymentAddresses,
-		bridgingStakeAddresses:             bridgingStakeAddresses,
-		bridgingPaymentPolicyScripts:       bridgingPaymentPolicyScripts,
-		bridgingStakePolicyScripts:         bridgingStakePolicyScripts,
-		bridgingRewardPaymentAddresses:     bridgingRewardPaymentAddresses,
-		bridgingRewardStakeAddresses:       bridgingRewardStakeAddresses,
-		bridgingRewardPaymentPolicyScripts: bridgingRewardPaymentPolicyScripts,
-		bridgingRewardStakePolicyScripts:   bridgingRewardStakePolicyScripts,
-		feeMultisigAddresses:               feeMultisigAddresses,
-		feeMultisigPolicyScripts:           feeMultisigPolicyScripts,
-		cardanoChains:                      cardanoChains,
-		ctx:                                ctx,
-		bridgeSmartContract:                bridgeSmartContract,
-		logger:                             logger,
+		bridgingPaymentAddresses:     bridgingPaymentAddresses,
+		bridgingStakeAddresses:       bridgingStakeAddresses,
+		bridgingPaymentPolicyScripts: bridgingPaymentPolicyScripts,
+		bridgingStakePolicyScripts:   bridgingStakePolicyScripts,
+		feeMultisigAddresses:         feeMultisigAddresses,
+		feeMultisigPolicyScripts:     feeMultisigPolicyScripts,
+		isReward:                     isReward,
+		cardanoChains:                cardanoChains,
+		ctx:                          ctx,
+		bridgeSmartContract:          bridgeSmartContract,
+		logger:                       logger,
 	}, nil
 }
 
-func (b *BridgingAddressesManagerImpl) GetAllPaymentAddresses(chainID uint8, addressType common.AddressType) []string {
-	switch addressType {
-	case common.AddressTypeNormal:
-		return b.bridgingPaymentAddresses[chainID]
-	case common.AddressTypeReward:
-		return b.bridgingRewardPaymentAddresses[chainID]
-	default:
-		return append(
-			b.bridgingPaymentAddresses[chainID],
-			b.bridgingRewardPaymentAddresses[chainID]...,
-		)
-	}
+func (b *BridgingAddressesManagerImpl) GetAllPaymentAddresses(chainID uint8) []string {
+	return b.bridgingPaymentAddresses[chainID]
 }
 
-func (b *BridgingAddressesManagerImpl) GetAllStakeAddresses(chainID uint8, addressType common.AddressType) []string {
-	switch addressType {
-	case common.AddressTypeNormal:
-		return b.bridgingStakeAddresses[chainID]
-	case common.AddressTypeReward:
-		return b.bridgingRewardStakeAddresses[chainID]
-	default:
-		return append(
-			b.bridgingStakeAddresses[chainID],
-			b.bridgingRewardStakeAddresses[chainID]...,
-		)
-	}
+func (b *BridgingAddressesManagerImpl) GetAllStakeAddresses(chainID uint8) []string {
+	return b.bridgingStakeAddresses[chainID]
 }
 
 func (b *BridgingAddressesManagerImpl) GetPaymentPolicyScript(
 	chainID uint8, index uint8,
 ) (*cardanowallet.PolicyScript, bool) {
-	return getPolicyScriptFromIndex(
+	if validIdx := b.validateIndex(index); !validIdx {
+		return nil, false
+	}
+
+	return b.getPolicyScriptFromIndex(
 		index,
 		b.bridgingPaymentPolicyScripts[chainID],
-		b.bridgingRewardPaymentPolicyScripts[chainID],
 	)
 }
 
 func (b *BridgingAddressesManagerImpl) GetStakePolicyScript(
 	chainID uint8, index uint8,
 ) (*cardanowallet.PolicyScript, bool) {
-	return getPolicyScriptFromIndex(
+	if validIdx := b.validateIndex(index); !validIdx {
+		return nil, false
+	}
+
+	return b.getPolicyScriptFromIndex(
 		index,
 		b.bridgingStakePolicyScripts[chainID],
-		b.bridgingRewardStakePolicyScripts[chainID],
 	)
 }
 
 func (b *BridgingAddressesManagerImpl) GetPaymentAddressFromIndex(chainID uint8, index uint8) (string, bool) {
-	return getAddressFromIndex(
+	if validIdx := b.validateIndex(index); !validIdx {
+		return "", false
+	}
+
+	return b.getAddressFromIndex(
 		index,
 		b.bridgingPaymentAddresses[chainID],
-		b.bridgingRewardPaymentAddresses[chainID],
 	)
 }
 
 func (b *BridgingAddressesManagerImpl) GetPaymentAddressIndex(chainID uint8, address string) (uint8, bool) {
-	if index, found := findAddressIndex(b.bridgingPaymentAddresses[chainID], address, 0); found {
-		return index, true
-	}
-
-	return findAddressIndex(
-		b.bridgingRewardPaymentAddresses[chainID],
+	return b.findAddressIndex(
+		b.bridgingPaymentAddresses[chainID],
 		address,
-		common.FirstRewardBridgingAddressIndex,
 	)
 }
 
 func (b *BridgingAddressesManagerImpl) GetStakeAddressFromIndex(chainID uint8, index uint8) (string, bool) {
-	return getAddressFromIndex(
+	if validIdx := b.validateIndex(index); !validIdx {
+		return "", false
+	}
+
+	return b.getAddressFromIndex(
 		index,
 		b.bridgingStakeAddresses[chainID],
-		b.bridgingRewardStakeAddresses[chainID],
 	)
 }
 
 func (b *BridgingAddressesManagerImpl) GetStakeAddressIndex(chainID uint8, address string) (uint8, bool) {
-	if index, found := findAddressIndex(b.bridgingStakeAddresses[chainID], address, 0); found {
-		return index, true
+	return b.findAddressIndex(
+		b.bridgingStakeAddresses[chainID],
+		address,
+	)
+}
+
+func (b *BridgingAddressesManagerImpl) GetFirstIndexAddress(chainID uint8) (string, bool) {
+	firstIndex := uint8(0)
+
+	if b.isReward {
+		firstIndex = common.FirstRewardBridgingAddressIndex
 	}
 
-	return findAddressIndex(
-		b.bridgingRewardStakeAddresses[chainID],
-		address,
-		common.FirstRewardBridgingAddressIndex,
+	return b.getAddressFromIndex(
+		firstIndex,
+		b.bridgingPaymentAddresses[chainID],
 	)
 }
 
-func (b *BridgingAddressesManagerImpl) GetZeroIndexAddress(chainID uint8) (string, bool) {
-	return getAddressFromIndex(
-		0,
-		b.bridgingPaymentAddresses[chainID],
-		b.bridgingRewardPaymentAddresses[chainID],
-	)
-}
+func (b *BridgingAddressesManagerImpl) GetFirstIndex() uint8 {
+	if b.isReward {
+		return common.FirstRewardBridgingAddressIndex
+	}
 
-func (b *BridgingAddressesManagerImpl) GetZeroIndexRewardAddress(chainID uint8) (string, bool) {
-	return getAddressFromIndex(
-		common.FirstRewardBridgingAddressIndex,
-		b.bridgingPaymentAddresses[chainID],
-		b.bridgingRewardPaymentAddresses[chainID],
-	)
+	return uint8(0)
 }
 
 func (b *BridgingAddressesManagerImpl) GetFeeMultisigAddress(chainID uint8) string {
@@ -320,99 +287,88 @@ func fetchAddressCounts(
 	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	chainID string,
+	isReward bool,
 	logger hclog.Logger,
-) (uint8, uint8, error) {
-	var numberOfAddresses, numberOfRewardAddresses uint8
+) (uint8, error) {
+	var numberOfAddresses uint8
 
-	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-		numberOfAddresses, err = bridgeSmartContract.GetBridgingAddressesCount(ctxInner, chainID)
-		if err != nil {
-			logger.Error("Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying...",
-				"chainID", chainID, "err", err)
-		}
+	// Choose appropriate function and error message based on isReward flag
+	getCountFunc := bridgeSmartContract.GetBridgingAddressesCount
+	errorMessage := "Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying..."
+	finalErrorMessage := "error during RetryForever of GetBridgingAddressesCount"
 
-		return err
-	})
-	if err != nil {
-		return 0, 0, fmt.Errorf("error while RetryForever of GetBridgingAddressesCount for %s. err: %w", chainID, err)
+	if isReward {
+		getCountFunc = bridgeSmartContract.GetStakeBridgingAddressesCount
+		errorMessage = "Failed to GetStakeBridgingAddressesCount while creating Bridging Address Manager. Retrying..."
+		finalErrorMessage = "error during RetryForever of GetStakeBridgingAddressesCount"
 	}
 
-	err = common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-		numberOfRewardAddresses, err = bridgeSmartContract.GetStakeBridgingAddressesCount(ctxInner, chainID)
+	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) error {
+		var err error
+		numberOfAddresses, err = getCountFunc(ctxInner, chainID)
 		if err != nil {
-			logger.Error("Failed to GetStakeBridgingAddressesCount while creating Bridging Address Manager. Retrying...",
-				"chainID", chainID, "err", err)
+			logger.Error(errorMessage, "chainID", chainID, "err", err)
 		}
-
 		return err
 	})
+
 	if err != nil {
-		return 0, 0, fmt.Errorf("error while RetryForever of GetStakeBridgingAddressesCount for %s. err: %w", chainID, err)
+		return 0, fmt.Errorf("%s for %s: %w", finalErrorMessage, chainID, err)
 	}
 
-	return numberOfAddresses, numberOfRewardAddresses, nil
+	return numberOfAddresses, nil
 }
 
-func findAddressIndex(
+func (b *BridgingAddressesManagerImpl) findAddressIndex(
 	addresses []string,
 	target string,
-	offset uint8,
 ) (uint8, bool) {
+	firstIndex := b.GetFirstIndex()
+
 	for i, addr := range addresses {
 		if addr == target {
-			return uint8(i) + offset, true //nolint:gosec
+			return uint8(i) + firstIndex, true //nolint:gosec
 		}
 	}
 
 	return 0, false
 }
 
-func getAddressFromIndex(
+func (b *BridgingAddressesManagerImpl) getAddressFromIndex(
 	index uint8,
-	normal []string,
-	reward []string,
+	addresses []string,
 ) (string, bool) {
-	var (
-		addrs         []string
-		adjustedIndex uint8
-	)
+	arrayIndex := index
 
-	if index < common.FirstRewardBridgingAddressIndex {
-		addrs = normal
-		adjustedIndex = index
-	} else {
-		addrs = reward
-		adjustedIndex = index - common.FirstRewardBridgingAddressIndex
+	if b.isReward {
+		arrayIndex = index - common.FirstRewardBridgingAddressIndex
 	}
 
-	if addrs == nil || int(adjustedIndex) >= len(addrs) {
+	if addresses == nil || int(arrayIndex) >= len(addresses) {
 		return "", false
 	}
 
-	return addrs[adjustedIndex], true
+	return addresses[arrayIndex], true
 }
 
-func getPolicyScriptFromIndex(
-	index uint8,
-	normal []*cardanowallet.PolicyScript,
-	reward []*cardanowallet.PolicyScript,
-) (*cardanowallet.PolicyScript, bool) {
-	var (
-		scripts       []*cardanowallet.PolicyScript
-		adjustedIndex uint8
-	)
+func (b *BridgingAddressesManagerImpl) validateIndex(index uint8) bool {
+	return (b.isReward && index >= common.FirstRewardBridgingAddressIndex) ||
+		(!b.isReward && index < common.FirstRewardBridgingAddressIndex)
+}
 
-	if index < common.FirstRewardBridgingAddressIndex {
-		scripts = normal
-		adjustedIndex = index
-	} else {
-		scripts = reward
-		adjustedIndex = index - common.FirstRewardBridgingAddressIndex
+func (b *BridgingAddressesManagerImpl) getPolicyScriptFromIndex(
+	index uint8,
+	policyScripts []*cardanowallet.PolicyScript,
+) (*cardanowallet.PolicyScript, bool) {
+	arrayIndex := index
+
+	if b.isReward {
+		arrayIndex = index - common.FirstRewardBridgingAddressIndex
 	}
 
-	if scripts == nil || int(adjustedIndex) >= len(scripts) {
+	if policyScripts == nil || int(arrayIndex) >= len(policyScripts) {
 		return nil, false
 	}
 
-	return scripts[adjustedIndex], true
+	return policyScripts[arrayIndex], true
 }

@@ -106,18 +106,19 @@ type TryCountLimits struct {
 }
 
 type AppConfig struct {
-	RunMode                  common.VCRunMode                `json:"-"`
-	BridgingAddressesManager common.BridgingAddressesManager `json:"-"`
-	RefundEnabled            bool                            `json:"refundEnabled"`
-	ValidatorDataDir         string                          `json:"validatorDataDir"`
-	ValidatorConfigPath      string                          `json:"validatorConfigPath"`
-	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
-	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
-	Bridge                   BridgeConfig                    `json:"bridge"`
-	Settings                 AppSettings                     `json:"appSettings"`
-	BridgingSettings         BridgingSettings                `json:"bridgingSettings"`
-	RetryUnprocessedSettings RetryUnprocessedSettings        `json:"retryUnprocessedSettings"`
-	TryCountLimits           TryCountLimits                  `json:"tryCountLimits"`
+	RunMode                        common.VCRunMode                `json:"-"`
+	BridgingAddressesManager       common.BridgingAddressesManager `json:"-"`
+	RewardBridgingAddressesManager common.BridgingAddressesManager `json:"-"`
+	RefundEnabled                  bool                            `json:"refundEnabled"`
+	ValidatorDataDir               string                          `json:"validatorDataDir"`
+	ValidatorConfigPath            string                          `json:"validatorConfigPath"`
+	CardanoChains                  map[string]*CardanoChainConfig  `json:"cardanoChains"`
+	EthChains                      map[string]*EthChainConfig      `json:"ethChains"`
+	Bridge                         BridgeConfig                    `json:"bridge"`
+	Settings                       AppSettings                     `json:"appSettings"`
+	BridgingSettings               BridgingSettings                `json:"bridgingSettings"`
+	RetryUnprocessedSettings       RetryUnprocessedSettings        `json:"retryUnprocessedSettings"`
+	TryCountLimits                 TryCountLimits                  `json:"tryCountLimits"`
 }
 
 func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
@@ -130,7 +131,9 @@ func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
 	chainIDNum := common.ToNumChainID(chainID)
 
-	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum, common.AddressTypeBoth)
+	return append(
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum),
+		appConfig.RewardBridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)...)
 }
 
 func (appConfig *AppConfig) FillOut() {
