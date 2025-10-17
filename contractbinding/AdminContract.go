@@ -31,7 +31,7 @@ var (
 
 // AdminContractMetaData contains all meta data concerning the AdminContract contract.
 var AdminContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"BridgingAddrCountAlreadyInit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgeAddrIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgingAddrCount\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgingAddrCount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"InvalidStakeTransactionSubType\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgingAddresses\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotUpgradeAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_blocksCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxBlocksCount\",\"type\":\"uint256\"}],\"name\":\"TooManyBlocks\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_claimsCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxClaimsCount\",\"type\":\"uint256\"}],\"name\":\"TooManyClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_receiversCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxReceiversCount\",\"type\":\"uint256\"}],\"name\":\"TooManyReceivers\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"StakeOperationFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"TokensRedistributionFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainWrappedTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint256\"}],\"name\":\"UpdatedMaxNumberOfTransactions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint256\"}],\"name\":\"UpdatedTimeoutBlocksNumber\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"bridgingAddresses\",\"outputs\":[{\"internalType\":\"contractBridgingAddresses\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amountWrapped\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainWrappedTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"}],\"name\":\"redistributeBridgingAddrsTokens\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridgingAddresses\",\"type\":\"address\"}],\"name\":\"setBridgingAddrsDependency\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgeAddrIndex\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"stakePoolId\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"transactionSubType\",\"type\":\"uint8\"}],\"name\":\"stakeAddressOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgingAddrsCount\",\"type\":\"uint8\"}],\"name\":\"updateBridgingAddrsCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainWrappedTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"}],\"name\":\"updateMaxNumberOfTransactions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"name\":\"updateTimeoutBlocksNumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"AddrNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_claimTransactionHash\",\"type\":\"uint8\"}],\"name\":\"AlreadyProposed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"BridgingAddrCountAlreadyInit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"CanNotCreateBatchYet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ChainIsNotRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_coloredCoinId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"ColoredCoinNotNotRegisteredOnChain\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"token\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_requestedAmount\",\"type\":\"uint256\"}],\"name\":\"DefundRequestTooHigh\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgeAddrIndex\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgeAddrIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_bridgingAddrCount\",\"type\":\"uint8\"}],\"name\":\"InvalidBridgingAddrCount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"data\",\"type\":\"string\"}],\"name\":\"InvalidData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"InvalidStakeTransactionSubType\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_availableAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_decreaseAmount\",\"type\":\"uint256\"}],\"name\":\"NegativeChainTokenAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotAdminContract\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridge\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotBridgingAddresses\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotFundAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatches\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSignedBatchesOrClaims\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotUpgradeAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_blocksCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxBlocksCount\",\"type\":\"uint256\"}],\"name\":\"TooManyBlocks\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_claimsCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxClaimsCount\",\"type\":\"uint256\"}],\"name\":\"TooManyClaims\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_receiversCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxReceiversCount\",\"type\":\"uint256\"}],\"name\":\"TooManyReceivers\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amountWrapped\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_coloredCoinId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"}],\"name\":\"ChainDefunded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"DefundFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_newFundAdmin\",\"type\":\"address\"}],\"name\":\"FundAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"claimeType\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"availableAmount\",\"type\":\"uint256\"}],\"name\":\"NotEnoughFunds\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_transactionSubType\",\"type\":\"uint8\"}],\"name\":\"StakeOperationFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"TokensRedistributionFailedAfterMultipleRetries\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainWrappedTokenQuantity\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"coloredCoinId\",\"type\":\"uint8\"}],\"name\":\"UpdatedChainColoredCoinQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isIncrement\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"UpdatedChainWrappedTokenQuantity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint256\"}],\"name\":\"UpdatedMaxNumberOfTransactions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint256\"}],\"name\":\"UpdatedTimeoutBlocksNumber\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"newChainProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"newChainRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_coloredTokenId\",\"type\":\"uint8\"}],\"name\":\"newColoredCoinProposal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint8\",\"name\":\"_coloredTokenId\",\"type\":\"uint8\"}],\"name\":\"newColoredCoinRegistered\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"bridgingAddresses\",\"outputs\":[{\"internalType\":\"contractBridgingAddresses\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amountWrapped\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_coloredCoinId\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"_defundAddress\",\"type\":\"string\"}],\"name\":\"defund\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"fundAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"}],\"name\":\"getChainWrappedTokenQuantity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_upgradeAdmin\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"}],\"name\":\"redistributeBridgingAddrsTokens\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bridgingAddresses\",\"type\":\"address\"}],\"name\":\"setBridgingAddrsDependency\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chainTokens\",\"type\":\"address\"}],\"name\":\"setChainTokensDependency\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_claimsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_fundAdmin\",\"type\":\"address\"}],\"name\":\"setFundAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgeAddrIndex\",\"type\":\"uint8\"},{\"internalType\":\"string\",\"name\":\"stakePoolId\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"transactionSubType\",\"type\":\"uint8\"}],\"name\":\"stakeAddressOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"bridgingAddrsCount\",\"type\":\"uint8\"}],\"name\":\"updateBridgingAddrsCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainColoredCointQuantity\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_coloredCoinId\",\"type\":\"uint8\"}],\"name\":\"updateChainColoredCoinQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"bool\",\"name\":\"_isIncrease\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_chainWrappedTokenQuantity\",\"type\":\"uint256\"}],\"name\":\"updateChainWrappedTokenQuantity\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_maxNumberOfTransactions\",\"type\":\"uint16\"}],\"name\":\"updateMaxNumberOfTransactions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_timeoutBlocksNumber\",\"type\":\"uint8\"}],\"name\":\"updateTimeoutBlocksNumber\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
 }
 
 // AdminContractABI is the input ABI used to generate the binding from.
@@ -397,25 +397,25 @@ func (_AdminContract *AdminContractCallerSession) Version() (string, error) {
 	return _AdminContract.Contract.Version(&_AdminContract.CallOpts)
 }
 
-// Defund is a paid mutator transaction binding the contract method 0x77aa493a.
+// Defund is a paid mutator transaction binding the contract method 0x188eda05.
 //
-// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, string _defundAddress) returns()
-func (_AdminContract *AdminContractTransactor) Defund(opts *bind.TransactOpts, _chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _defundAddress string) (*types.Transaction, error) {
-	return _AdminContract.contract.Transact(opts, "defund", _chainId, _amount, _amountWrapped, _defundAddress)
+// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress) returns()
+func (_AdminContract *AdminContractTransactor) Defund(opts *bind.TransactOpts, _chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _coloredCoinId uint8, _defundAddress string) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "defund", _chainId, _amount, _amountWrapped, _coloredCoinId, _defundAddress)
 }
 
-// Defund is a paid mutator transaction binding the contract method 0x77aa493a.
+// Defund is a paid mutator transaction binding the contract method 0x188eda05.
 //
-// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, string _defundAddress) returns()
-func (_AdminContract *AdminContractSession) Defund(_chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _defundAddress string) (*types.Transaction, error) {
-	return _AdminContract.Contract.Defund(&_AdminContract.TransactOpts, _chainId, _amount, _amountWrapped, _defundAddress)
+// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress) returns()
+func (_AdminContract *AdminContractSession) Defund(_chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _coloredCoinId uint8, _defundAddress string) (*types.Transaction, error) {
+	return _AdminContract.Contract.Defund(&_AdminContract.TransactOpts, _chainId, _amount, _amountWrapped, _coloredCoinId, _defundAddress)
 }
 
-// Defund is a paid mutator transaction binding the contract method 0x77aa493a.
+// Defund is a paid mutator transaction binding the contract method 0x188eda05.
 //
-// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, string _defundAddress) returns()
-func (_AdminContract *AdminContractTransactorSession) Defund(_chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _defundAddress string) (*types.Transaction, error) {
-	return _AdminContract.Contract.Defund(&_AdminContract.TransactOpts, _chainId, _amount, _amountWrapped, _defundAddress)
+// Solidity: function defund(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress) returns()
+func (_AdminContract *AdminContractTransactorSession) Defund(_chainId uint8, _amount *big.Int, _amountWrapped *big.Int, _coloredCoinId uint8, _defundAddress string) (*types.Transaction, error) {
+	return _AdminContract.Contract.Defund(&_AdminContract.TransactOpts, _chainId, _amount, _amountWrapped, _coloredCoinId, _defundAddress)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x485cc955.
@@ -500,6 +500,27 @@ func (_AdminContract *AdminContractSession) SetBridgingAddrsDependency(_bridging
 // Solidity: function setBridgingAddrsDependency(address _bridgingAddresses) returns()
 func (_AdminContract *AdminContractTransactorSession) SetBridgingAddrsDependency(_bridgingAddresses common.Address) (*types.Transaction, error) {
 	return _AdminContract.Contract.SetBridgingAddrsDependency(&_AdminContract.TransactOpts, _bridgingAddresses)
+}
+
+// SetChainTokensDependency is a paid mutator transaction binding the contract method 0xba78c43c.
+//
+// Solidity: function setChainTokensDependency(address _chainTokens) returns()
+func (_AdminContract *AdminContractTransactor) SetChainTokensDependency(opts *bind.TransactOpts, _chainTokens common.Address) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "setChainTokensDependency", _chainTokens)
+}
+
+// SetChainTokensDependency is a paid mutator transaction binding the contract method 0xba78c43c.
+//
+// Solidity: function setChainTokensDependency(address _chainTokens) returns()
+func (_AdminContract *AdminContractSession) SetChainTokensDependency(_chainTokens common.Address) (*types.Transaction, error) {
+	return _AdminContract.Contract.SetChainTokensDependency(&_AdminContract.TransactOpts, _chainTokens)
+}
+
+// SetChainTokensDependency is a paid mutator transaction binding the contract method 0xba78c43c.
+//
+// Solidity: function setChainTokensDependency(address _chainTokens) returns()
+func (_AdminContract *AdminContractTransactorSession) SetChainTokensDependency(_chainTokens common.Address) (*types.Transaction, error) {
+	return _AdminContract.Contract.SetChainTokensDependency(&_AdminContract.TransactOpts, _chainTokens)
 }
 
 // SetDependencies is a paid mutator transaction binding the contract method 0x8389cb18.
@@ -605,6 +626,27 @@ func (_AdminContract *AdminContractSession) UpdateBridgingAddrsCount(_chainId ui
 // Solidity: function updateBridgingAddrsCount(uint8 _chainId, uint8 bridgingAddrsCount) returns()
 func (_AdminContract *AdminContractTransactorSession) UpdateBridgingAddrsCount(_chainId uint8, bridgingAddrsCount uint8) (*types.Transaction, error) {
 	return _AdminContract.Contract.UpdateBridgingAddrsCount(&_AdminContract.TransactOpts, _chainId, bridgingAddrsCount)
+}
+
+// UpdateChainColoredCoinQuantity is a paid mutator transaction binding the contract method 0x1fd4a285.
+//
+// Solidity: function updateChainColoredCoinQuantity(uint8 _chainId, bool _isIncrease, uint256 _chainColoredCointQuantity, uint8 _coloredCoinId) returns()
+func (_AdminContract *AdminContractTransactor) UpdateChainColoredCoinQuantity(opts *bind.TransactOpts, _chainId uint8, _isIncrease bool, _chainColoredCointQuantity *big.Int, _coloredCoinId uint8) (*types.Transaction, error) {
+	return _AdminContract.contract.Transact(opts, "updateChainColoredCoinQuantity", _chainId, _isIncrease, _chainColoredCointQuantity, _coloredCoinId)
+}
+
+// UpdateChainColoredCoinQuantity is a paid mutator transaction binding the contract method 0x1fd4a285.
+//
+// Solidity: function updateChainColoredCoinQuantity(uint8 _chainId, bool _isIncrease, uint256 _chainColoredCointQuantity, uint8 _coloredCoinId) returns()
+func (_AdminContract *AdminContractSession) UpdateChainColoredCoinQuantity(_chainId uint8, _isIncrease bool, _chainColoredCointQuantity *big.Int, _coloredCoinId uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateChainColoredCoinQuantity(&_AdminContract.TransactOpts, _chainId, _isIncrease, _chainColoredCointQuantity, _coloredCoinId)
+}
+
+// UpdateChainColoredCoinQuantity is a paid mutator transaction binding the contract method 0x1fd4a285.
+//
+// Solidity: function updateChainColoredCoinQuantity(uint8 _chainId, bool _isIncrease, uint256 _chainColoredCointQuantity, uint8 _coloredCoinId) returns()
+func (_AdminContract *AdminContractTransactorSession) UpdateChainColoredCoinQuantity(_chainId uint8, _isIncrease bool, _chainColoredCointQuantity *big.Int, _coloredCoinId uint8) (*types.Transaction, error) {
+	return _AdminContract.Contract.UpdateChainColoredCoinQuantity(&_AdminContract.TransactOpts, _chainId, _isIncrease, _chainColoredCointQuantity, _coloredCoinId)
 }
 
 // UpdateChainTokenQuantity is a paid mutator transaction binding the contract method 0x0504334f.
@@ -1081,14 +1123,17 @@ func (it *AdminContractChainDefundedIterator) Close() error {
 
 // AdminContractChainDefunded represents a ChainDefunded event raised by the AdminContract contract.
 type AdminContractChainDefunded struct {
-	ChainId uint8
-	Amount  *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
+	ChainId       uint8
+	Amount        *big.Int
+	AmountWrapped *big.Int
+	ColoredCoinId uint8
+	DefundAddress string
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterChainDefunded is a free log retrieval operation binding the contract event 0xce8ca6f0aead771734dd729750170b73fbb3147d90cd4273c1bbcfe669bbf69d.
+// FilterChainDefunded is a free log retrieval operation binding the contract event 0xad5dd91afa8a1e4f3178f08eebedf9c2c78a4e3927219422cc1c547086cfe81f.
 //
-// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount)
+// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress)
 func (_AdminContract *AdminContractFilterer) FilterChainDefunded(opts *bind.FilterOpts) (*AdminContractChainDefundedIterator, error) {
 
 	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "ChainDefunded")
@@ -1098,9 +1143,9 @@ func (_AdminContract *AdminContractFilterer) FilterChainDefunded(opts *bind.Filt
 	return &AdminContractChainDefundedIterator{contract: _AdminContract.contract, event: "ChainDefunded", logs: logs, sub: sub}, nil
 }
 
-// WatchChainDefunded is a free log subscription operation binding the contract event 0xce8ca6f0aead771734dd729750170b73fbb3147d90cd4273c1bbcfe669bbf69d.
+// WatchChainDefunded is a free log subscription operation binding the contract event 0xad5dd91afa8a1e4f3178f08eebedf9c2c78a4e3927219422cc1c547086cfe81f.
 //
-// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount)
+// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress)
 func (_AdminContract *AdminContractFilterer) WatchChainDefunded(opts *bind.WatchOpts, sink chan<- *AdminContractChainDefunded) (event.Subscription, error) {
 
 	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "ChainDefunded")
@@ -1135,9 +1180,9 @@ func (_AdminContract *AdminContractFilterer) WatchChainDefunded(opts *bind.Watch
 	}), nil
 }
 
-// ParseChainDefunded is a log parse operation binding the contract event 0xce8ca6f0aead771734dd729750170b73fbb3147d90cd4273c1bbcfe669bbf69d.
+// ParseChainDefunded is a log parse operation binding the contract event 0xad5dd91afa8a1e4f3178f08eebedf9c2c78a4e3927219422cc1c547086cfe81f.
 //
-// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount)
+// Solidity: event ChainDefunded(uint8 _chainId, uint256 _amount, uint256 _amountWrapped, uint8 _coloredCoinId, string _defundAddress)
 func (_AdminContract *AdminContractFilterer) ParseChainDefunded(log types.Log) (*AdminContractChainDefunded, error) {
 	event := new(AdminContractChainDefunded)
 	if err := _AdminContract.contract.UnpackLog(event, "ChainDefunded", log); err != nil {
@@ -2099,6 +2144,153 @@ func (_AdminContract *AdminContractFilterer) WatchTokensRedistributionFailedAfte
 func (_AdminContract *AdminContractFilterer) ParseTokensRedistributionFailedAfterMultipleRetries(log types.Log) (*AdminContractTokensRedistributionFailedAfterMultipleRetries, error) {
 	event := new(AdminContractTokensRedistributionFailedAfterMultipleRetries)
 	if err := _AdminContract.contract.UnpackLog(event, "TokensRedistributionFailedAfterMultipleRetries", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractUpdatedChainColoredCoinQuantityIterator is returned from FilterUpdatedChainColoredCoinQuantity and is used to iterate over the raw logs and unpacked data for UpdatedChainColoredCoinQuantity events raised by the AdminContract contract.
+type AdminContractUpdatedChainColoredCoinQuantityIterator struct {
+	Event *AdminContractUpdatedChainColoredCoinQuantity // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractUpdatedChainColoredCoinQuantityIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractUpdatedChainColoredCoinQuantity)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractUpdatedChainColoredCoinQuantity)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractUpdatedChainColoredCoinQuantityIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractUpdatedChainColoredCoinQuantityIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractUpdatedChainColoredCoinQuantity represents a UpdatedChainColoredCoinQuantity event raised by the AdminContract contract.
+type AdminContractUpdatedChainColoredCoinQuantity struct {
+	ChainId                   *big.Int
+	IsIncrement               bool
+	ChainWrappedTokenQuantity *big.Int
+	ColoredCoinId             uint8
+	Raw                       types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpdatedChainColoredCoinQuantity is a free log retrieval operation binding the contract event 0x33bdd91ad83fdac38306f21ec695db1ca4b7b63528b2b8eaa6d0d70d2a3d007d.
+//
+// Solidity: event UpdatedChainColoredCoinQuantity(uint256 indexed chainId, bool isIncrement, uint256 chainWrappedTokenQuantity, uint8 coloredCoinId)
+func (_AdminContract *AdminContractFilterer) FilterUpdatedChainColoredCoinQuantity(opts *bind.FilterOpts, chainId []*big.Int) (*AdminContractUpdatedChainColoredCoinQuantityIterator, error) {
+
+	var chainIdRule []interface{}
+	for _, chainIdItem := range chainId {
+		chainIdRule = append(chainIdRule, chainIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "UpdatedChainColoredCoinQuantity", chainIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractUpdatedChainColoredCoinQuantityIterator{contract: _AdminContract.contract, event: "UpdatedChainColoredCoinQuantity", logs: logs, sub: sub}, nil
+}
+
+// WatchUpdatedChainColoredCoinQuantity is a free log subscription operation binding the contract event 0x33bdd91ad83fdac38306f21ec695db1ca4b7b63528b2b8eaa6d0d70d2a3d007d.
+//
+// Solidity: event UpdatedChainColoredCoinQuantity(uint256 indexed chainId, bool isIncrement, uint256 chainWrappedTokenQuantity, uint8 coloredCoinId)
+func (_AdminContract *AdminContractFilterer) WatchUpdatedChainColoredCoinQuantity(opts *bind.WatchOpts, sink chan<- *AdminContractUpdatedChainColoredCoinQuantity, chainId []*big.Int) (event.Subscription, error) {
+
+	var chainIdRule []interface{}
+	for _, chainIdItem := range chainId {
+		chainIdRule = append(chainIdRule, chainIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "UpdatedChainColoredCoinQuantity", chainIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractUpdatedChainColoredCoinQuantity)
+				if err := _AdminContract.contract.UnpackLog(event, "UpdatedChainColoredCoinQuantity", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpdatedChainColoredCoinQuantity is a log parse operation binding the contract event 0x33bdd91ad83fdac38306f21ec695db1ca4b7b63528b2b8eaa6d0d70d2a3d007d.
+//
+// Solidity: event UpdatedChainColoredCoinQuantity(uint256 indexed chainId, bool isIncrement, uint256 chainWrappedTokenQuantity, uint8 coloredCoinId)
+func (_AdminContract *AdminContractFilterer) ParseUpdatedChainColoredCoinQuantity(log types.Log) (*AdminContractUpdatedChainColoredCoinQuantity, error) {
+	event := new(AdminContractUpdatedChainColoredCoinQuantity)
+	if err := _AdminContract.contract.UnpackLog(event, "UpdatedChainColoredCoinQuantity", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -3100,6 +3292,312 @@ func (_AdminContract *AdminContractFilterer) WatchNewChainRegistered(opts *bind.
 func (_AdminContract *AdminContractFilterer) ParseNewChainRegistered(log types.Log) (*AdminContractNewChainRegistered, error) {
 	event := new(AdminContractNewChainRegistered)
 	if err := _AdminContract.contract.UnpackLog(event, "newChainRegistered", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractNewColoredCoinProposalIterator is returned from FilterNewColoredCoinProposal and is used to iterate over the raw logs and unpacked data for NewColoredCoinProposal events raised by the AdminContract contract.
+type AdminContractNewColoredCoinProposalIterator struct {
+	Event *AdminContractNewColoredCoinProposal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractNewColoredCoinProposalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractNewColoredCoinProposal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractNewColoredCoinProposal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractNewColoredCoinProposalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractNewColoredCoinProposalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractNewColoredCoinProposal represents a NewColoredCoinProposal event raised by the AdminContract contract.
+type AdminContractNewColoredCoinProposal struct {
+	ChainId        uint8
+	ColoredTokenId uint8
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterNewColoredCoinProposal is a free log retrieval operation binding the contract event 0x9bba0e1a89bbd208c9e7a7e27514b42b3b78fd5f1e2c2e1734fb2a984e32ac29.
+//
+// Solidity: event newColoredCoinProposal(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) FilterNewColoredCoinProposal(opts *bind.FilterOpts, _chainId []uint8, _coloredTokenId []uint8) (*AdminContractNewColoredCoinProposalIterator, error) {
+
+	var _chainIdRule []interface{}
+	for _, _chainIdItem := range _chainId {
+		_chainIdRule = append(_chainIdRule, _chainIdItem)
+	}
+	var _coloredTokenIdRule []interface{}
+	for _, _coloredTokenIdItem := range _coloredTokenId {
+		_coloredTokenIdRule = append(_coloredTokenIdRule, _coloredTokenIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "newColoredCoinProposal", _chainIdRule, _coloredTokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractNewColoredCoinProposalIterator{contract: _AdminContract.contract, event: "newColoredCoinProposal", logs: logs, sub: sub}, nil
+}
+
+// WatchNewColoredCoinProposal is a free log subscription operation binding the contract event 0x9bba0e1a89bbd208c9e7a7e27514b42b3b78fd5f1e2c2e1734fb2a984e32ac29.
+//
+// Solidity: event newColoredCoinProposal(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) WatchNewColoredCoinProposal(opts *bind.WatchOpts, sink chan<- *AdminContractNewColoredCoinProposal, _chainId []uint8, _coloredTokenId []uint8) (event.Subscription, error) {
+
+	var _chainIdRule []interface{}
+	for _, _chainIdItem := range _chainId {
+		_chainIdRule = append(_chainIdRule, _chainIdItem)
+	}
+	var _coloredTokenIdRule []interface{}
+	for _, _coloredTokenIdItem := range _coloredTokenId {
+		_coloredTokenIdRule = append(_coloredTokenIdRule, _coloredTokenIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "newColoredCoinProposal", _chainIdRule, _coloredTokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractNewColoredCoinProposal)
+				if err := _AdminContract.contract.UnpackLog(event, "newColoredCoinProposal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNewColoredCoinProposal is a log parse operation binding the contract event 0x9bba0e1a89bbd208c9e7a7e27514b42b3b78fd5f1e2c2e1734fb2a984e32ac29.
+//
+// Solidity: event newColoredCoinProposal(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) ParseNewColoredCoinProposal(log types.Log) (*AdminContractNewColoredCoinProposal, error) {
+	event := new(AdminContractNewColoredCoinProposal)
+	if err := _AdminContract.contract.UnpackLog(event, "newColoredCoinProposal", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AdminContractNewColoredCoinRegisteredIterator is returned from FilterNewColoredCoinRegistered and is used to iterate over the raw logs and unpacked data for NewColoredCoinRegistered events raised by the AdminContract contract.
+type AdminContractNewColoredCoinRegisteredIterator struct {
+	Event *AdminContractNewColoredCoinRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AdminContractNewColoredCoinRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AdminContractNewColoredCoinRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AdminContractNewColoredCoinRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AdminContractNewColoredCoinRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AdminContractNewColoredCoinRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AdminContractNewColoredCoinRegistered represents a NewColoredCoinRegistered event raised by the AdminContract contract.
+type AdminContractNewColoredCoinRegistered struct {
+	ChainId        uint8
+	ColoredTokenId uint8
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterNewColoredCoinRegistered is a free log retrieval operation binding the contract event 0xea0706674eeb919f3ea7b59c5448180a3afb59e31b580443ef2ab8b7fd5b3e30.
+//
+// Solidity: event newColoredCoinRegistered(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) FilterNewColoredCoinRegistered(opts *bind.FilterOpts, _chainId []uint8, _coloredTokenId []uint8) (*AdminContractNewColoredCoinRegisteredIterator, error) {
+
+	var _chainIdRule []interface{}
+	for _, _chainIdItem := range _chainId {
+		_chainIdRule = append(_chainIdRule, _chainIdItem)
+	}
+	var _coloredTokenIdRule []interface{}
+	for _, _coloredTokenIdItem := range _coloredTokenId {
+		_coloredTokenIdRule = append(_coloredTokenIdRule, _coloredTokenIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.FilterLogs(opts, "newColoredCoinRegistered", _chainIdRule, _coloredTokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AdminContractNewColoredCoinRegisteredIterator{contract: _AdminContract.contract, event: "newColoredCoinRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchNewColoredCoinRegistered is a free log subscription operation binding the contract event 0xea0706674eeb919f3ea7b59c5448180a3afb59e31b580443ef2ab8b7fd5b3e30.
+//
+// Solidity: event newColoredCoinRegistered(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) WatchNewColoredCoinRegistered(opts *bind.WatchOpts, sink chan<- *AdminContractNewColoredCoinRegistered, _chainId []uint8, _coloredTokenId []uint8) (event.Subscription, error) {
+
+	var _chainIdRule []interface{}
+	for _, _chainIdItem := range _chainId {
+		_chainIdRule = append(_chainIdRule, _chainIdItem)
+	}
+	var _coloredTokenIdRule []interface{}
+	for _, _coloredTokenIdItem := range _coloredTokenId {
+		_coloredTokenIdRule = append(_coloredTokenIdRule, _coloredTokenIdItem)
+	}
+
+	logs, sub, err := _AdminContract.contract.WatchLogs(opts, "newColoredCoinRegistered", _chainIdRule, _coloredTokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AdminContractNewColoredCoinRegistered)
+				if err := _AdminContract.contract.UnpackLog(event, "newColoredCoinRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNewColoredCoinRegistered is a log parse operation binding the contract event 0xea0706674eeb919f3ea7b59c5448180a3afb59e31b580443ef2ab8b7fd5b3e30.
+//
+// Solidity: event newColoredCoinRegistered(uint8 indexed _chainId, uint8 indexed _coloredTokenId)
+func (_AdminContract *AdminContractFilterer) ParseNewColoredCoinRegistered(log types.Log) (*AdminContractNewColoredCoinRegistered, error) {
+	event := new(AdminContractNewColoredCoinRegistered)
+	if err := _AdminContract.contract.UnpackLog(event, "newColoredCoinRegistered", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
