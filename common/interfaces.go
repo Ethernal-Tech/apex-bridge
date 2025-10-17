@@ -37,6 +37,10 @@ type BridgingAddressesManager interface {
 	GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetFeeMultisigAddress(chainID uint8) string
 	GetFeeMultisigPolicyScript(chainID uint8) (*cardanowallet.PolicyScript, bool)
+
+	GetCustodialAddress(chainID uint8) (string, bool)
+	GetMintigValidatorAddress(chainID uint8) (string, bool)
+	GetRelayerAddress(chainID uint8) (string, bool)
 }
 
 type AddressAndAmount struct {

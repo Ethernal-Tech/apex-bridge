@@ -222,3 +222,15 @@ func (b *BridgingAddressesManagerImpl) GetFeeMultisigPolicyScript(chainID uint8)
 
 	return script, ok
 }
+
+func (b *BridgingAddressesManagerImpl) GetCustodialAddress(chainID uint8) (string, bool) {
+	panic("unimplemented")
+}
+
+func (b *BridgingAddressesManagerImpl) GetMintigValidatorAddress(chainID uint8) (string, bool) {
+	panic("unimplemented")
+}
+
+func (b *BridgingAddressesManagerImpl) GetRelayerAddress(chainID uint8) (string, bool) {
+	panic("unimplemented")
+}
