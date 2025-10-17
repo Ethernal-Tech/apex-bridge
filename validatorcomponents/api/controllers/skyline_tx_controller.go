@@ -224,14 +224,15 @@ func (sc *SkylineTxControllerImpl) createTx(ctx context.Context, requestBody req
 
 	txInfo, metadata, err := txSender.CreateBridgingTx(
 		ctx,
-		sendtx.BridgingTxInput{
-			SrcChainID:      requestBody.SourceChainID,
-			DstChainID:      requestBody.DestinationChainID,
-			SenderAddr:      requestBody.SenderAddr,
-			Receivers:       receivers,
-			BridgingAddress: requestBody.BridgingAddress,
-			BridgingFee:     requestBody.BridgingFee,
-			OperationFee:    requestBody.OperationFee,
+		sendtx.BridgingTxDto{
+			SrcChainID:             requestBody.SourceChainID,
+			DstChainID:             requestBody.DestinationChainID,
+			SenderAddr:             requestBody.SenderAddr,
+			SenderAddrPolicyScript: requestBody.SenderAddrPolicyScript,
+			Receivers:              receivers,
+			BridgingAddress:        requestBody.BridgingAddress,
+			BridgingFee:            requestBody.BridgingFee,
+			OperationFee:           requestBody.OperationFee,
 		},
 	)
 	if err != nil {
