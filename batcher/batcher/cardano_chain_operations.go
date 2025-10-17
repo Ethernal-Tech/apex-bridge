@@ -12,7 +12,6 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -439,11 +438,7 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		return nil, err
 	}
 
-	protocolParams, err := infracommon.ExecuteWithRetry(
-		ctx, func(ctx context.Context) ([]byte, error) {
-			return cco.txProvider.GetProtocolParameters(ctx)
-		},
-	)
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, err
 	}
