@@ -202,14 +202,15 @@ func (c *ReactorTxControllerImpl) createTx(ctx context.Context, requestBody requ
 
 	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
-		sendtx.BridgingTxInput{
-			SrcChainID:      requestBody.SourceChainID,
-			DstChainID:      requestBody.DestinationChainID,
-			SenderAddr:      requestBody.SenderAddr,
-			Receivers:       receivers,
-			BridgingAddress: requestBody.BridgingAddress,
-			BridgingFee:     requestBody.BridgingFee,
-			OperationFee:    0,
+		sendtx.BridgingTxDto{
+			SrcChainID:             requestBody.SourceChainID,
+			DstChainID:             requestBody.DestinationChainID,
+			SenderAddr:             requestBody.SenderAddr,
+			SenderAddrPolicyScript: requestBody.SenderAddrPolicyScript,
+			Receivers:              receivers,
+			BridgingAddress:        requestBody.BridgingAddress,
+			BridgingFee:            requestBody.BridgingFee,
+			OperationFee:           0,
 		},
 	)
 	if err != nil {

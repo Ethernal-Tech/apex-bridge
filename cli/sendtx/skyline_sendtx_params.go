@@ -350,7 +350,7 @@ func (p *sendSkylineTxParams) Execute(
 
 	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
-		sendtx.BridgingTxInput{
+		sendtx.BridgingTxDto{
 			SrcChainID:      p.chainIDSrc,
 			DstChainID:      p.chainIDDst,
 			SenderAddr:      senderAddr.String(),
