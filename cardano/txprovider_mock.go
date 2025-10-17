@@ -85,6 +85,14 @@ func (m *TxProviderTestMock) GetStakePools(ctx context.Context) ([]string, error
 	return arg0, args.Error(1)
 }
 
+func (m *TxProviderTestMock) EvaluateTx(ctx context.Context, rawTx []byte) (cardanowallet.QueryEvaluateTxData, error) {
+	args := m.Called(ctx, rawTx)
+
+	arg0, _ := args.Get(0).(cardanowallet.QueryEvaluateTxData)
+
+	return arg0, args.Error(1)
+}
+
 func (m *TxProviderTestMock) Dispose() {
 	m.Called()
 }
