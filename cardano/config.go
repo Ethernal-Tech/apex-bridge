@@ -27,6 +27,8 @@ type CardanoChainConfig struct {
 	MinFeeForBridging     uint64                           `json:"minFeeForBridging"`
 	TakeAtLeastUtxoCount  uint                             `json:"takeAtLeastUtxoCount"`
 	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	MintingScriptTxInput  cardanowallet.TxInput            `json:"mintingScriptTxInput"`
+	RelayerAddress        string                           `json:"relayerAddress"`
 }
 
 // GetChainType implements ChainSpecificConfig.

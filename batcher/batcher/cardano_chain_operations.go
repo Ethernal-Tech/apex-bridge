@@ -406,12 +406,8 @@ func (cco *CardanoChainOperations) getPlutusMintData(data *batchInitialData, con
 
 	if len(tokens) > 0 {
 		// TODO: Get ref script utxo hash#index from config
-		txInReference := cardanowallet.TxInput{}
-
-		relayerAddr, ok := cco.bridgingAddressesManager.GetRelayerAddress(data.ChainID)
-		if !ok {
-			return nil, fmt.Errorf("failed to get relayer address for chain %s", common.ToStrChainID(data.ChainID))
-		}
+		txInReference := cco.config.MintingScriptTxInput
+		relayerAddr := cco.config.RelayerAddress
 
 		relayerUtxos, err := cco.db.GetAllTxOutputs(relayerAddr, true)
 		if err != nil {

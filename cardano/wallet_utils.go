@@ -91,6 +91,15 @@ func NewApexPolicyScripts(keyHashes ApexKeyHashes, addressIndex uint64) ApexPoli
 	}
 }
 
+func NewCustodialPolicyScript(keyHashes KeyHashesContainer) PolicyScriptsContainer {
+	//nolint:gosec
+	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(keyHashes.Payment))))
+
+	return PolicyScriptsContainer{
+		Payment: wallet.NewCustodialPolicyScript(keyHashes.Payment, quorumCount, wallet.WithAfter(0)),
+	}
+}
+
 func NewAddressContainer(
 	cardanoCliBinary string, networkMagic uint, policyScripts PolicyScriptsContainer,
 ) (addr AddressContainer, err error) {

@@ -21,6 +21,9 @@ type BridgingAddressesManagerImpl struct {
 	feeMultisigAddresses         map[uint8]string
 	feeMultisigPolicyScripts     map[uint8]*cardanowallet.PolicyScript
 
+	custodialAddress       map[uint8]string
+	custodialPolicyScripts map[uint8]*cardanowallet.PolicyScript
+
 	cardanoChains       map[string]*oracleCore.CardanoChainConfig
 	ctx                 context.Context
 	bridgeSmartContract eth.IBridgeSmartContract
@@ -35,46 +38,32 @@ func NewBridgingAdressesManager(
 	bridgeSmartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) (common.BridgingAddressesManager, error) {
-	var (
-		registeredChains  []eth.Chain
-		validatorsData    []eth.ValidatorChainData
-		numberOfAddresses uint8
-	)
-
-	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-		registeredChains, err = bridgeSmartContract.GetAllRegisteredChains(ctxInner)
-		if err != nil {
-			logger.Error("Failed to GetAllRegisteredChains while creating Bridging Address Manager. Retrying...", "err", err)
-		}
-
-		return err
-	})
+	registeredChains, err := getRegisteredChains(ctx, bridgeSmartContract, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error while RetryForever of GetAllRegisteredChains in Bridging Address Manager. err: %w", err)
 	}
 
-	bridgingPaymentAddresses := make(map[uint8][]string)
-	bridgingStakeAddresses := make(map[uint8][]string)
-	bridgingPaymentPolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
-	bridgingStakePolicyScripts := make(map[uint8][]*cardanowallet.PolicyScript)
-	feeMultisigAddresses := make(map[uint8]string)
-	feeMultisigPolicyScripts := make(map[uint8]*cardanowallet.PolicyScript)
+	manager := &BridgingAddressesManagerImpl{
+		bridgingPaymentAddresses:     make(map[uint8][]string),
+		bridgingStakeAddresses:       make(map[uint8][]string),
+		bridgingPaymentPolicyScripts: make(map[uint8][]*cardanowallet.PolicyScript),
+		bridgingStakePolicyScripts:   make(map[uint8][]*cardanowallet.PolicyScript),
+		feeMultisigAddresses:         make(map[uint8]string),
+		feeMultisigPolicyScripts:     make(map[uint8]*cardanowallet.PolicyScript),
+		cardanoChains:                cardanoChains,
+		ctx:                          ctx,
+		bridgeSmartContract:          bridgeSmartContract,
+		logger:                       logger,
+	}
 
 	for _, registeredChain := range registeredChains {
-		chainIDStr := common.ToStrChainID(registeredChain.Id)
+		registeredChainId := registeredChain.Id
+		chainIDStr := common.ToStrChainID(registeredChainId)
 		if !common.IsExistingChainID(chainIDStr) || registeredChain.ChainType != 0 {
 			continue
 		}
 
-		err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			validatorsData, err = bridgeSmartContract.GetValidatorsChainData(ctxInner, chainIDStr)
-			if err != nil {
-				logger.Error("Failed to GetValidatorsChainData while creating Bridging Address Manager. Retrying...",
-					"chainID", chainIDStr, "err", err)
-			}
-
-			return err
-		})
+		validatorsData, err := getValidatorsChainData(ctx, bridgeSmartContract, chainIDStr, logger)
 		if err != nil {
 			return nil, fmt.Errorf("error while RetryForever of GetValidatorsChainData for %s. err: %w", chainIDStr, err)
 		}
@@ -84,15 +73,7 @@ func NewBridgingAdressesManager(
 			return nil, fmt.Errorf("error while executing NewApexKeyHashes for bridging addresses component. err: %w", err)
 		}
 
-		err = common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
-			numberOfAddresses, err = bridgeSmartContract.GetBridgingAddressesCount(ctxInner, chainIDStr)
-			if err != nil {
-				logger.Error("Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying...",
-					"chainID", chainIDStr, "err", err)
-			}
-
-			return err
-		})
+		numberOfAddresses, err := getBridgingAddressesCount(ctx, bridgeSmartContract, chainIDStr, logger)
 		if err != nil {
 			return nil, fmt.Errorf("error while RetryForever of GetBridgingAddressesCount for %s. err: %w", chainIDStr, err)
 		}
@@ -100,49 +81,23 @@ func NewBridgingAdressesManager(
 		chainConfig := cardanoChains[chainIDStr]
 
 		for i := range uint64(numberOfAddresses) {
-			policyScripts := cardano.NewApexPolicyScripts(keyHashes, i)
-			bridgingPaymentPolicyScripts[registeredChain.Id] =
-				append(bridgingPaymentPolicyScripts[registeredChain.Id], policyScripts.Multisig.Payment)
-
-			bridgingStakePolicyScripts[registeredChain.Id] =
-				append(bridgingStakePolicyScripts[registeredChain.Id], policyScripts.Multisig.Stake)
-
-			addrs, err := cardano.NewApexAddresses(
-				cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
-			if err != nil {
-				return nil, fmt.Errorf("error while executing NewApexAddresses for bridging addresses component. err: %w", err)
-			}
-
-			bridgingPaymentAddresses[registeredChain.Id] =
-				append(bridgingPaymentAddresses[registeredChain.Id], addrs.Multisig.Payment)
-
-			bridgingStakeAddresses[registeredChain.Id] =
-				append(bridgingStakeAddresses[registeredChain.Id], addrs.Multisig.Stake)
-
-			if i == 0 {
-				feeMultisigAddresses[registeredChain.Id] = addrs.Fee.Payment
-				feeMultisigPolicyScripts[registeredChain.Id] = policyScripts.Fee.Payment
+			if err := manager.buildBridgingAddress(registeredChainId, &keyHashes, chainConfig, i); err != nil {
+				return nil, fmt.Errorf("failed to build bridging address %d for %s. err: %w", i, chainIDStr, err)
 			}
 		}
 
+		if err := manager.buildCustodialAddress(registeredChainId, &keyHashes, chainConfig); err != nil {
+			return nil, fmt.Errorf("failed to build custodial address for %s. err: %w", chainIDStr, err)
+		}
+
 		logger.Debug(
-			fmt.Sprintf("Bridging addresses manager initialized for %s chain with %d payment addresses: %v and fee address %s",
-				chainIDStr, len(bridgingPaymentAddresses[registeredChain.Id]),
-				bridgingPaymentAddresses[registeredChain.Id], feeMultisigAddresses[registeredChain.Id]))
+			fmt.Sprintf("Bridging addresses manager initialized for %s chain with %d payment addresses: %v, custodial address %s and fee address %s",
+				chainIDStr, len(manager.bridgingPaymentAddresses[registeredChainId]),
+				manager.bridgingPaymentAddresses[registeredChainId], manager.custodialAddress[registeredChainId],
+				manager.feeMultisigAddresses[registeredChainId]))
 	}
 
-	return &BridgingAddressesManagerImpl{
-		bridgingPaymentAddresses:     bridgingPaymentAddresses,
-		bridgingStakeAddresses:       bridgingStakeAddresses,
-		bridgingPaymentPolicyScripts: bridgingPaymentPolicyScripts,
-		bridgingStakePolicyScripts:   bridgingStakePolicyScripts,
-		feeMultisigAddresses:         feeMultisigAddresses,
-		feeMultisigPolicyScripts:     feeMultisigPolicyScripts,
-		cardanoChains:                cardanoChains,
-		ctx:                          ctx,
-		bridgeSmartContract:          bridgeSmartContract,
-		logger:                       logger,
-	}, nil
+	return manager, nil
 }
 
 func (b *BridgingAddressesManagerImpl) GetAllPaymentAddresses(chainID uint8) []string {
@@ -224,13 +179,96 @@ func (b *BridgingAddressesManagerImpl) GetFeeMultisigPolicyScript(chainID uint8)
 }
 
 func (b *BridgingAddressesManagerImpl) GetCustodialAddress(chainID uint8) (string, bool) {
-	panic("unimplemented")
+	custodialAddr, ok := b.custodialAddress[chainID]
+
+	return custodialAddr, ok
 }
 
-func (b *BridgingAddressesManagerImpl) GetMintigValidatorAddress(chainID uint8) (string, bool) {
-	panic("unimplemented")
+func (b *BridgingAddressesManagerImpl) buildBridgingAddress(
+	chainID uint8,
+	keyHashes *cardano.ApexKeyHashes,
+	chainConfig *oracleCore.CardanoChainConfig,
+	index uint64,
+) error {
+	policyScripts := cardano.NewApexPolicyScripts(*keyHashes, index)
+
+	b.bridgingPaymentPolicyScripts[chainID] =
+		append(b.bridgingPaymentPolicyScripts[chainID], policyScripts.Multisig.Payment)
+
+	b.bridgingStakePolicyScripts[chainID] =
+		append(b.bridgingStakePolicyScripts[chainID], policyScripts.Multisig.Stake)
+
+	addrs, err := cardano.NewApexAddresses(
+		cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), policyScripts)
+	if err != nil {
+		return fmt.Errorf("error while executing NewApexAddresses for bridging addresses component. err: %w", err)
+	}
+
+	b.bridgingPaymentAddresses[chainID] =
+		append(b.bridgingPaymentAddresses[chainID], addrs.Multisig.Payment)
+
+	b.bridgingStakeAddresses[chainID] =
+		append(b.bridgingStakeAddresses[chainID], addrs.Multisig.Stake)
+
+	if index == 0 {
+		b.feeMultisigAddresses[chainID] = addrs.Fee.Payment
+		b.feeMultisigPolicyScripts[chainID] = policyScripts.Fee.Payment
+	}
+
+	return nil
 }
 
-func (b *BridgingAddressesManagerImpl) GetRelayerAddress(chainID uint8) (string, bool) {
-	panic("unimplemented")
+func (b *BridgingAddressesManagerImpl) buildCustodialAddress(
+	chainID uint8,
+	keyHashes *cardano.ApexKeyHashes,
+	chainConfig *oracleCore.CardanoChainConfig,
+) error {
+	custodialPolicyScript := cardano.NewCustodialPolicyScript(keyHashes.Multisig)
+	b.custodialPolicyScripts[chainID] = custodialPolicyScript.Payment
+
+	addrs, err := cardano.NewAddressContainer(
+		cardanowallet.ResolveCardanoCliBinary(chainConfig.NetworkID), uint(chainConfig.NetworkMagic), custodialPolicyScript)
+	if err != nil {
+		return fmt.Errorf("error while executing NewApexAddresses for custodial address. err: %w", err)
+	}
+
+	b.custodialAddress[chainID] = addrs.Payment
+
+	return nil
+}
+
+func getRegisteredChains(ctx context.Context, bridge eth.IBridgeSmartContract, logger hclog.Logger) ([]eth.Chain, error) {
+	var chains []eth.Chain
+	err := common.RetryForever(ctx, 2*time.Second, func(inner context.Context) (err error) {
+		chains, err = bridge.GetAllRegisteredChains(inner)
+		if err != nil {
+			logger.Error("Failed to GetAllRegisteredChains while creating Bridging Address Manager. Retrying...", "err", err)
+		}
+		return err
+	})
+	return chains, err
+}
+
+func getValidatorsChainData(ctx context.Context, bridge eth.IBridgeSmartContract, chainID string, logger hclog.Logger) ([]eth.ValidatorChainData, error) {
+	var data []eth.ValidatorChainData
+	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+		data, err = bridge.GetValidatorsChainData(ctxInner, chainID)
+		if err != nil {
+			logger.Error("Failed to GetValidatorsChainData while creating Bridging Address Manager. Retrying...", "chainID", chainID, "err", err)
+		}
+		return err
+	})
+	return data, err
+}
+
+func getBridgingAddressesCount(ctx context.Context, bridge eth.IBridgeSmartContract, chainID string, logger hclog.Logger) (uint8, error) {
+	var count uint8
+	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
+		count, err = bridge.GetBridgingAddressesCount(ctxInner, chainID)
+		if err != nil {
+			logger.Error("Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying...", "chainID", chainID, "err", err)
+		}
+		return err
+	})
+	return count, err
 }

@@ -142,6 +142,24 @@ func (appConfig *AppConfig) FillOut() {
 	}
 }
 
+/* func (appConfig *AppConfig) GetMintingScriptTxInput(chainID string) (*indexer.TxInput, bool) {
+	cardanoChainCfg, ok := appConfig.CardanoChains[chainID]
+	if !ok {
+		return nil, false
+	}
+
+	return &cardanoChainCfg.MintingScriptTxInput, true
+}
+
+func (appConfig *AppConfig) GetRelayerAddress(chainID string) (string, bool) {
+	cardanoChainCfg, ok := appConfig.CardanoChains[chainID]
+	if !ok {
+		return "", false
+	}
+
+	return cardanoChainCfg.RelayerAddress, true
+} */
+
 func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, error) {
 	if config.OgmiosURL != "" {
 		return cardanowallet.NewTxProviderOgmios(config.OgmiosURL), nil
