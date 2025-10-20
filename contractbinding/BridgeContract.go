@@ -100,6 +100,7 @@ type IBridgeStructsConfirmedTransaction struct {
 	StakePoolId             string
 	BridgeAddrIndex         uint8
 	TransactionSubType      uint8
+	ColoredCoinId			uint8
 }
 
 // IBridgeStructsHotWalletIncrementClaim is an auto generated low-level Go binding around an user-defined struct.

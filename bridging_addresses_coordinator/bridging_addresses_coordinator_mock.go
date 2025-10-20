@@ -2,6 +2,7 @@ package bridgingaddressscoordinator
 
 import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -18,13 +19,14 @@ func (m *BridgingAddressesCoordinatorMock) GetAddressesAndAmountsForBatch(
 	isRedistribution bool,
 	protocolParams []byte,
 	txOutputs common.TxOutputs,
+	tokens []cardanowallet.MintTokenAmount,
 ) ([]common.AddressAndAmount, bool, error) {
-	args := m.Called(chainID, cardanoCliBinary, isRedistribution, protocolParams, txOutputs)
+	args := m.Called(chainID, cardanoCliBinary, isRedistribution, protocolParams, txOutputs, tokens)
 
 	arg0, _ := args.Get(0).([]common.AddressAndAmount)
 	arg1, _ := args.Get(0).(bool)
 
-	return arg0, arg1, args.Error(1)
+	return arg0, arg1, args.Error(2)
 }
 
 func (m *BridgingAddressesCoordinatorMock) GetAddressToBridgeTo(

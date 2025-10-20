@@ -56,6 +56,7 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	isRedistribution bool,
 	protocolParams []byte,
 	txOutputs cardanotx.TxOutputs,
+	mintTokens []cardanowallet.MintTokenAmount,
 ) ([]common.AddressAndAmount, bool, error) {
 	// Go through all addresses, sort them by the total amount of tokens (descending),
 	// and choose the one with the biggest amount
@@ -77,6 +78,28 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	totalTokenAmounts, err := c.getTokensAmountByAddr(chainID)
 	if err != nil {
 		return nil, isRedistribution, err
+	}
+
+	if len(mintTokens) > 0 {
+		// Tokens that will be minted in the transaction could be already locked in the addr0
+		// we will include them all in the transaction
+		// if there are none avaialble we remove them from required tokens
+		index := 0
+		for i, addrAmount := range totalTokenAmounts.addrAmounts {
+			if addrAmount.addressIndex == 0 {
+				index = i
+				break
+			}
+		}
+
+		for _, mintToken := range mintTokens {
+			amount := totalTokenAmounts.addrAmounts[index].totalTokenAmounts[mintToken.Token.Name]
+			if amount > 0 {
+				requiredTokenAmounts[mintToken.Token.Name] = amount
+			} else {
+				delete(requiredTokenAmounts, mintToken.Token.Name)
+			}
+		}
 	}
 
 	changeMinUtxo, err := cardanotx.CalculateMinUtxoCurrencyAmount(

@@ -34,3 +34,19 @@ type CertificatesData struct {
 	RegistrationFee   uint64
 	DeregistrationFee uint64
 }
+
+type ExecutionUnitData struct {
+	CollateralPercentage uint64
+	ExecutionUnitPrices  cardanowallet.ProtocolParametersPriceMemorySteps
+	MaxTxExecutionUnits  cardanowallet.ProtocolParametersMemorySteps
+}
+
+type PlutusMintData struct {
+	Tokens            []cardanowallet.MintTokenAmount
+	TxInReference     cardanowallet.TxInput
+	Collateral        cardanowallet.TxInputs
+	CollateralAddress string
+	TokensPolicyID    string
+	TxProvider        cardanowallet.ITxDataRetriever
+	ExecutionUnitData ExecutionUnitData
+}

@@ -319,6 +319,20 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	return params.StakeAddressDeposit, nil
 }
 
+func extractPlutusExecutionParams(protocolParams []byte) (cardano.ExecutionUnitData, error) {
+	var params cardanowallet.ProtocolParameters
+
+	if err := json.Unmarshal(protocolParams, &params); err != nil {
+		return cardano.ExecutionUnitData{}, err
+	}
+
+	return cardano.ExecutionUnitData{
+		CollateralPercentage: params.CollateralPercentage,
+		ExecutionUnitPrices:  params.ExecutionUnitPrices,
+		MaxTxExecutionUnits:  params.MaxTxExecutionUnits,
+	}, nil
+}
+
 type addressConsolidation struct {
 	Address      string
 	AddressIndex uint8

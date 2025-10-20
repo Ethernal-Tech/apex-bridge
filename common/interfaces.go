@@ -63,6 +63,7 @@ type BridgingAddressesCoordinator interface {
 		cardanoCliBinary string,
 		isRedistribution bool,
 		protocolParams []byte,
-		txOutputs TxOutputs) ([]AddressAndAmount, bool, error)
+		txOutputs TxOutputs,
+		tokens []cardanowallet.MintTokenAmount) ([]AddressAndAmount, bool, error)
 	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool) (AddressAndAmount, error)
 }

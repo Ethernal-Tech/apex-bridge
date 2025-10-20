@@ -1,7 +1,9 @@
 package cardanotx
 
 import (
+	"context"
 	"fmt"
+	"math"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -9,6 +11,7 @@ import (
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
 func CreateTx(
+	ctx context.Context,
 	cardanoCliBinary string,
 	testNetMagic uint,
 	protocolParams []byte,
@@ -19,6 +22,7 @@ func CreateTx(
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
+	txPlutusMintData *PlutusMintData,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
@@ -119,9 +123,63 @@ func CreateTx(
 		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
 
+	if txPlutusMintData != nil {
+		builder.AddPlutusTokenMints(txPlutusMintData.Tokens, txPlutusMintData.TxInReference, txPlutusMintData.TokensPolicyID)
+		builder.AddCollateralInputs(txPlutusMintData.Collateral.Inputs)
+		builder.AddCollateralOutput(cardanowallet.NewTxOutput(txPlutusMintData.CollateralAddress, 0))
+		builder.SetTotalCollateral(0)
+	}
+
 	calcFee, err := builder.CalculateFee(0)
 	if err != nil {
 		return nil, "", err
+	}
+
+	if txPlutusMintData != nil {
+		txRaw, _, err := builder.UncheckedBuild()
+		if err != nil {
+			return nil, "", err
+		}
+
+		data, err := txPlutusMintData.TxProvider.EvaluateTx(ctx, txRaw)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if data.CPU > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps {
+			return nil, "", fmt.Errorf("cpu exceeds max tx execution units: %d > %d", data.CPU, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps)
+		}
+
+		if data.Memory > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory {
+			return nil, "", fmt.Errorf("memory exceeds max tx execution units: %d > %d", data.Memory, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory)
+		}
+
+		builder.SetExecutionUnitParams(data.CPU, data.Memory)
+
+		// Calculate exact fee by using calcFee + plutus execution cost
+		plutusExecutionCost := uint64(math.Ceil(
+			txPlutusMintData.ExecutionUnitData.ExecutionUnitPrices.PriceMemory*float64(data.CPU) +
+				txPlutusMintData.ExecutionUnitData.ExecutionUnitPrices.PriceSteps*float64(data.Memory),
+		))
+		calcFee += plutusExecutionCost
+
+		// Calculate total collateral as protocolParams.collateralPercentage * calcFee
+		totalCollateral := uint64(math.Ceil(
+			float64(calcFee) * float64(txPlutusMintData.ExecutionUnitData.CollateralPercentage) / 100,
+		))
+
+		if totalCollateral > txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] {
+			return nil, "", fmt.Errorf("total collateral is greater than collateral input amount: %d > %d", totalCollateral, txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName])
+		}
+
+		builder.SetTotalCollateral(totalCollateral)
+
+		collateralOutput := txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] - totalCollateral
+		if collateralOutput < common.MinUtxoAmountDefault {
+			return nil, "", fmt.Errorf("collateral output is less than min utxo amount: %d < %d", collateralOutput, common.MinUtxoAmountDefault)
+		}
+
+		builder.UpdateCollateralOutputAmount(-1, collateralOutput)
 	}
 
 	builder.SetFee(calcFee)
