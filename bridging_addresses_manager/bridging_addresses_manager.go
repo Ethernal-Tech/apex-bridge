@@ -50,6 +50,8 @@ func NewBridgingAdressesManager(
 		bridgingStakePolicyScripts:   make(map[uint8][]*cardanowallet.PolicyScript),
 		feeMultisigAddresses:         make(map[uint8]string),
 		feeMultisigPolicyScripts:     make(map[uint8]*cardanowallet.PolicyScript),
+		custodialAddress:             make(map[uint8]string),
+		custodialPolicyScripts:       make(map[uint8]*cardanowallet.PolicyScript),
 		cardanoChains:                cardanoChains,
 		ctx:                          ctx,
 		bridgeSmartContract:          bridgeSmartContract,
@@ -249,19 +251,30 @@ func getRegisteredChains(ctx context.Context, bridge eth.IBridgeSmartContract, l
 	return chains, err
 }
 
-func getValidatorsChainData(ctx context.Context, bridge eth.IBridgeSmartContract, chainID string, logger hclog.Logger) ([]eth.ValidatorChainData, error) {
+func getValidatorsChainData(
+	ctx context.Context,
+	bridge eth.IBridgeSmartContract,
+	chainID string,
+	logger hclog.Logger,
+) ([]eth.ValidatorChainData, error) {
 	var data []eth.ValidatorChainData
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		data, err = bridge.GetValidatorsChainData(ctxInner, chainID)
 		if err != nil {
-			logger.Error("Failed to GetValidatorsChainData while creating Bridging Address Manager. Retrying...", "chainID", chainID, "err", err)
+			logger.Error("Failed to GetValidatorsChainData while creating Bridging Address Manager. Retrying...", "chainID",
+				chainID, "err", err)
 		}
 		return err
 	})
 	return data, err
 }
 
-func getBridgingAddressesCount(ctx context.Context, bridge eth.IBridgeSmartContract, chainID string, logger hclog.Logger) (uint8, error) {
+func getBridgingAddressesCount(
+	ctx context.Context,
+	bridge eth.IBridgeSmartContract,
+	chainID string,
+	logger hclog.Logger,
+) (uint8, error) {
 	var count uint8
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		count, err = bridge.GetBridgingAddressesCount(ctxInner, chainID)
