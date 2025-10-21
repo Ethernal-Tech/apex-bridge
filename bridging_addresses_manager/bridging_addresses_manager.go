@@ -225,7 +225,7 @@ func (b *BridgingAddressesManagerImpl) buildCustodialAddress(
 	keyHashes *cardano.ApexKeyHashes,
 	chainConfig *oracleCore.CardanoChainConfig,
 ) error {
-	custodialPolicyScript := cardano.NewCustodialPolicyScript(keyHashes.Multisig)
+	custodialPolicyScript := cardano.NewCustodialPolicyScriptContainer(keyHashes.Multisig, 0)
 	b.custodialPolicyScripts[chainID] = custodialPolicyScript.Payment
 
 	addrs, err := cardano.NewAddressContainer(

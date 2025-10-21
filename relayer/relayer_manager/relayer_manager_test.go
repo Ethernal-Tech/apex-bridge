@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
@@ -20,10 +21,8 @@ import (
 )
 
 func TestRelayerManagerConfig(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "rl-mngr-config")
-	require.NoError(t, err)
-
-	defer os.RemoveAll(testDir)
+	testDir, _, cleanup := setupTestSecretsManager(t)
+	defer cleanup()
 
 	jsonData := []byte(`{
 		"blockFrostUrl": "http://hello.com",
@@ -36,12 +35,14 @@ func TestRelayerManagerConfig(t *testing.T) {
 	expectedConfig := &core.RelayerManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
 			common.ChainIDStrPrime: {
-				ChainType:     "Cardano",
-				ChainSpecific: rawMessage,
+				ChainType:      "Cardano",
+				ChainSpecific:  rawMessage,
+				RelayerDataDir: testDir,
 			},
 			common.ChainIDStrVector: {
-				ChainType:     "CardaNo",
-				ChainSpecific: rawMessage,
+				ChainType:      "CardaNo",
+				ChainSpecific:  rawMessage,
+				RelayerDataDir: testDir,
 			},
 		},
 		Bridge: core.BridgeConfig{
@@ -69,7 +70,8 @@ func TestRelayerManagerConfig(t *testing.T) {
 
 	assert.NotEmpty(t, loadedConfig.Chains)
 
-	for _, chainConfig := range loadedConfig.Chains {
+	for chainId, chainConfig := range loadedConfig.Chains {
+		chainConfig.ChainID = chainId
 		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, hclog.NewNullLogger())
 		require.NoError(t, err)
 
@@ -85,18 +87,10 @@ func TestRelayerManagerConfig(t *testing.T) {
 }
 
 func Test_getRelayersAndConfigurations(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "rl-mngr-config-t")
-	require.NoError(t, err)
+	testDir, secretsMngr, cleanup := setupTestSecretsManager(t)
+	defer cleanup()
 
-	defer os.RemoveAll(testDir)
-
-	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: testDir,
-		Type: secrets.Local,
-	})
-	require.NoError(t, err)
-
-	_, err = eth.CreateAndSaveRelayerEVMPrivateKey(secretsMngr, common.ChainIDStrNexus, true)
+	_, err := eth.CreateAndSaveRelayerEVMPrivateKey(secretsMngr, common.ChainIDStrNexus, true)
 	require.NoError(t, err)
 
 	allRegisteredChains := []eth.Chain{
@@ -121,6 +115,7 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 				ChainSpecific: json.RawMessage([]byte(`{
 					"blockFrostUrl": "http://hello.com"
 				}`)),
+				RelayerDataDir: testDir,
 			},
 			common.ChainIDStrVector: {
 				ChainType:     common.ChainTypeCardanoStr,
@@ -144,4 +139,26 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 	require.Len(t, chainsConfigs, 2)
 	require.True(t, chainsConfigs[common.ChainIDStrPrime].ChainID != "")
 	require.True(t, chainsConfigs[common.ChainIDStrNexus].ChainID != "")
+}
+
+func setupTestSecretsManager(t *testing.T) (string, secrets.SecretsManager, func()) {
+	t.Helper()
+
+	testDir, err := os.MkdirTemp("", "rl-mngr-config")
+	require.NoError(t, err)
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: testDir,
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	for _, chainID := range []string{common.ChainIDStrPrime, common.ChainIDStrVector} {
+		_, err = cardanotx.GenerateWallet(secretsMngr, chainID, true, true)
+		require.NoError(t, err)
+	}
+
+	cleanup := func() { os.RemoveAll(testDir) }
+
+	return testDir, secretsMngr, cleanup
 }

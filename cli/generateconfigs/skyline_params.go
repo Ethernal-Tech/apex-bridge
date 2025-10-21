@@ -3,6 +3,7 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,22 @@ const (
 
 	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
 	cardanoPrimeWrappedTokenNameFlagDesc = "wrapped token name for Prime Apex"
+
+	primeMintingScriptTxInputHashFlag       = "prime-minting-script-tx-input-hash"
+	primeMintingScriptTxInputHashFlagDesc   = "tx input hash used for referencing minting script for prime"
+	cardanoMintingScriptTxInputHashFlag     = "cardano-minting-script-tx-input-hash"
+	cardanoMintingScriptTxInputHashFlagDesc = "tx input hash used for referencing minting script for cardano"
+
+	primeMintingScriptTxInputIndexFlag       = "prime-minting-script-tx-input-index"
+	primeMintingScriptTxInputIndexFlagDesc   = "tx input index used for referencing minting script for prime"
+	cardanoMintingScriptTxInputIndexFlag     = "cardano-minting-script-tx-input-index"
+	cardanoMintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script for cardano"
+
+	primeRelayerAddressFlag     = "prime-relayer-address"
+	primeRelayerAddressFlagDesc = "relayer address for prime"
+
+	cardanoRelayerAddressFlag     = "cardano-relayer-address"
+	cardanoRelayerAddressFlagDesc = "relayer address for cardano"
 
 	cardanoNetworkAddressFlag         = "cardano-network-address"
 	cardanoNetworkMagicFlag           = "cardano-network-magic"
@@ -123,6 +140,14 @@ type skylineGenerateConfigsParams struct {
 
 	cardanoPrimeWrappedTokenName string
 	primeCardanoWrappedTokenName string
+
+	primeMintingScriptTxInputHash    string
+	primeMintingScriptTxInputIndex   int64
+	cardanoMintingScriptTxInputHash  string
+	cardanoMintingScriptTxInputIndex int64
+
+	primeRelayerAddress   string
+	cardanoRelayerAddress string
 
 	emptyBlocksThreshold uint
 }
@@ -224,6 +249,30 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
 			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
 		}
+	}
+
+	if p.primeMintingScriptTxInputHash == "" {
+		return fmt.Errorf("missing %s", primeMintingScriptTxInputHashFlag)
+	}
+
+	if p.cardanoMintingScriptTxInputHash == "" {
+		return fmt.Errorf("missing %s", cardanoMintingScriptTxInputHashFlag)
+	}
+
+	if p.primeMintingScriptTxInputIndex < 0 || p.primeMintingScriptTxInputIndex > math.MaxUint32 {
+		return fmt.Errorf("invalid prime minting script tx input index: %d", p.primeMintingScriptTxInputIndex)
+	}
+
+	if p.cardanoMintingScriptTxInputIndex < 0 || p.cardanoMintingScriptTxInputIndex > math.MaxUint32 {
+		return fmt.Errorf("invalid cardano minting script tx input index: %d", p.cardanoMintingScriptTxInputIndex)
+	}
+
+	if p.primeRelayerAddress == "" {
+		return fmt.Errorf("missing %s", primeRelayerAddressFlag)
+	}
+
+	if p.cardanoRelayerAddress == "" {
+		return fmt.Errorf("missing %s", cardanoRelayerAddressFlag)
 	}
 
 	return nil
@@ -511,6 +560,48 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&p.primeMintingScriptTxInputHash,
+		primeMintingScriptTxInputHashFlag,
+		"",
+		primeMintingScriptTxInputHashFlagDesc,
+	)
+
+	cmd.Flags().Int64Var(
+		&p.primeMintingScriptTxInputIndex,
+		primeMintingScriptTxInputIndexFlag,
+		-1,
+		primeMintingScriptTxInputIndexFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.cardanoMintingScriptTxInputHash,
+		cardanoMintingScriptTxInputHashFlag,
+		"",
+		cardanoMintingScriptTxInputHashFlagDesc,
+	)
+
+	cmd.Flags().Int64Var(
+		&p.cardanoMintingScriptTxInputIndex,
+		cardanoMintingScriptTxInputIndexFlag,
+		-1,
+		cardanoMintingScriptTxInputIndexFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.primeRelayerAddress,
+		primeRelayerAddressFlag,
+		"",
+		primeRelayerAddressFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.cardanoRelayerAddress,
+		cardanoRelayerAddressFlag,
+		"",
+		cardanoRelayerAddressFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
@@ -590,6 +681,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens:          nativeTokensPrime,
 					MinFeeForBridging:     p.primeMinFeeForBridging,
+					MintingScriptTxInput: wallet.TxInput{
+						Hash:  p.primeMintingScriptTxInputHash,
+						Index: uint32(p.primeMintingScriptTxInputIndex),
+					},
+					RelayerAddress: p.primeRelayerAddress,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
 				StartBlockHash:           primeStartingHash,
@@ -617,6 +713,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
 					NativeTokens:          nativeTokensCardano,
 					MinFeeForBridging:     p.cardanoMinFeeForBridging,
+					MintingScriptTxInput: wallet.TxInput{
+						Hash:  p.cardanoMintingScriptTxInputHash,
+						Index: uint32(p.cardanoMintingScriptTxInputIndex),
+					},
+					RelayerAddress: p.cardanoRelayerAddress,
 				},
 				NetworkAddress:           p.cardanoNetworkAddress,
 				StartBlockHash:           cardanoStartingHash,
@@ -711,14 +812,18 @@ func (p *skylineGenerateConfigsParams) Execute(
 		},
 		Chains: map[string]rCore.ChainConfig{
 			common.ChainIDStrPrime: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: primeChainSpecificJSONRaw,
+				ChainType:         common.ChainTypeCardanoStr,
+				DbsPath:           filepath.Join(p.dbsPath, "relayer"),
+				ChainSpecific:     primeChainSpecificJSONRaw,
+				RelayerDataDir:    cleanPath(p.relayerDataDir),
+				RelayerConfigPath: cleanPath(p.relayerConfigPath),
 			},
 			common.ChainIDStrCardano: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: cardanoChainSpecificJSONRaw,
+				ChainType:         common.ChainTypeCardanoStr,
+				DbsPath:           filepath.Join(p.dbsPath, "relayer"),
+				ChainSpecific:     cardanoChainSpecificJSONRaw,
+				RelayerDataDir:    cleanPath(p.relayerDataDir),
+				RelayerConfigPath: cleanPath(p.relayerConfigPath),
 			},
 		},
 		PullTimeMilis: 1000,

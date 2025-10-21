@@ -71,7 +71,7 @@ func GetChainSpecificOperations(
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case common.ChainTypeCardanoStr:
-		return NewCardanoChainOperations(config.ChainSpecific, logger)
+		return NewCardanoChainOperations(config, logger)
 	case common.ChainTypeEVMStr:
 		return NewEVMChainOperations(config.ChainSpecific, config.ChainID, chain.AddressMultisig, logger)
 	default:

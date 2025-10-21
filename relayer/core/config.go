@@ -20,10 +20,12 @@ type RelayerConfiguration struct {
 }
 
 type ChainConfig struct {
-	ChainID       string          `json:"id,omitempty"`
-	ChainType     string          `json:"type"`
-	DbsPath       string          `json:"dbsPath"`
-	ChainSpecific json.RawMessage `json:"config"`
+	ChainID           string          `json:"id,omitempty"`
+	ChainType         string          `json:"type"`
+	DbsPath           string          `json:"dbsPath"`
+	ChainSpecific     json.RawMessage `json:"config"`
+	RelayerDataDir    string          `json:"relayerDataDir"`
+	RelayerConfigPath string          `json:"relayerConfigPath"`
 }
 
 type RelayerManagerConfiguration struct {

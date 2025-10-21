@@ -54,33 +54,34 @@ func TestBridgingAddressesManager(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, bridgingAddressesManager)
 
-	paymentAddress := "addr1x8xqwh43y8auuzw9h0mdgwv4d7f4pn40klvpxjyejvmz807djgaeaq93dzfh6e5dvyhg0eqzmlce6mnml30hku2ds4nq9d70gz"
-	stakeAddress := "stake178xeywu7szck3ymav6xkzt58uspdluvadealchmmw9xc2esjp3n8j"
+	expectedPaymentAddress := "addr1x8xqwh43y8auuzw9h0mdgwv4d7f4pn40klvpxjyejvmz807djgaeaq93dzfh6e5dvyhg0eqzmlce6mnml30hku2ds4nq9d70gz"
+	expectedStakeAddress := "stake178xeywu7szck3ymav6xkzt58uspdluvadealchmmw9xc2esjp3n8j"
+	expectedCustodialAddress := "addr1x8xqwh43y8auuzw9h0mdgwv4d7f4pn40klvpxjyejvmz807djgaeaq93dzfh6e5dvyhg0eqzmlce6mnml30hku2ds4nq9d70gz"
 
 	t.Run("GetAllPaymentAddresses", func(t *testing.T) {
 		paymentAddresses := bridgingAddressesManager.GetAllPaymentAddresses(1)
-		require.Equal(t, paymentAddresses, []string{paymentAddress})
+		require.Equal(t, paymentAddresses, []string{expectedPaymentAddress})
 	})
 
 	t.Run("GetAllStakeAddresses", func(t *testing.T) {
 		stakeAddresses := bridgingAddressesManager.GetAllStakeAddresses(1)
-		require.Equal(t, stakeAddresses, []string{stakeAddress})
+		require.Equal(t, stakeAddresses, []string{expectedStakeAddress})
 	})
 
 	t.Run("GetPaymentAddressFromIndex", func(t *testing.T) {
 		paymentAddress, ok := bridgingAddressesManager.GetPaymentAddressFromIndex(1, 0)
 		require.True(t, ok)
-		require.Equal(t, paymentAddress, paymentAddress)
+		require.Equal(t, paymentAddress, expectedPaymentAddress)
 	})
 
 	t.Run("GetStakeAddressFromIndex", func(t *testing.T) {
 		stakeAddress, ok := bridgingAddressesManager.GetStakeAddressFromIndex(1, 0)
 		require.True(t, ok)
-		require.Equal(t, stakeAddress, stakeAddress)
+		require.Equal(t, stakeAddress, expectedStakeAddress)
 	})
 
 	t.Run("GetPaymentAddressIndex ok", func(t *testing.T) {
-		paymentAddressIndex, ok := bridgingAddressesManager.GetPaymentAddressIndex(1, paymentAddress)
+		paymentAddressIndex, ok := bridgingAddressesManager.GetPaymentAddressIndex(1, expectedPaymentAddress)
 		require.True(t, ok)
 		require.Equal(t, paymentAddressIndex, uint8(0))
 	})
@@ -92,7 +93,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 	})
 
 	t.Run("GetStakeAddressIndex ok", func(t *testing.T) {
-		stakeAddressIndex, ok := bridgingAddressesManager.GetStakeAddressIndex(1, stakeAddress)
+		stakeAddressIndex, ok := bridgingAddressesManager.GetStakeAddressIndex(1, expectedStakeAddress)
 		require.True(t, ok)
 		require.Equal(t, stakeAddressIndex, uint8(0))
 	})
@@ -123,5 +124,17 @@ func TestBridgingAddressesManager(t *testing.T) {
 	t.Run("GetAllStakeAddresses not ok", func(t *testing.T) {
 		stakeAddresses := bridgingAddressesManager.GetAllStakeAddresses(2)
 		require.Equal(t, stakeAddresses, []string(nil))
+	})
+
+	t.Run("GetCustodialAddress ok", func(t *testing.T) {
+		custodialAddress, ok := bridgingAddressesManager.GetCustodialAddress(1)
+		require.True(t, ok)
+		require.Equal(t, custodialAddress, expectedCustodialAddress)
+	})
+
+	t.Run("GetCustodialAddress not ok", func(t *testing.T) {
+		custodialAddress, ok := bridgingAddressesManager.GetCustodialAddress(2)
+		require.False(t, ok)
+		require.Equal(t, custodialAddress, "")
 	})
 }

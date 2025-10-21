@@ -5,13 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
+	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
+	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -174,10 +179,28 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 		"potentialFee": 300000
 		}`)
 
+	testDir, err := os.MkdirTemp("", "relayer-www")
+	require.NoError(t, err)
+
+	secretsDir := filepath.Join(testDir, "stp")
+
+	defer os.RemoveAll(testDir)
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: secretsDir,
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = cardanotx.GenerateWallet(secretsMngr, common.ChainIDStrPrime, true, true)
+	require.NoError(t, err)
+
 	t.Run("invalid chain type", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
-			ChainType:     "Invalid",
-			ChainSpecific: json.RawMessage(""),
+			ChainType:      "Invalid",
+			ChainID:        common.ChainIDStrPrime,
+			ChainSpecific:  json.RawMessage(""),
+			RelayerDataDir: secretsDir,
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
@@ -188,8 +211,10 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 
 	t.Run("invalid cardano json config", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
-			ChainType:     "Cardano",
-			ChainSpecific: json.RawMessage(""),
+			ChainType:      "Cardano",
+			ChainID:        common.ChainIDStrPrime,
+			ChainSpecific:  json.RawMessage(""),
+			RelayerDataDir: secretsDir,
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
@@ -200,8 +225,10 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 
 	t.Run("valid cardano config", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
-			ChainType:     "Cardano",
-			ChainSpecific: json.RawMessage(jsonData),
+			ChainType:      "Cardano",
+			ChainID:        common.ChainIDStrPrime,
+			ChainSpecific:  json.RawMessage(jsonData),
+			RelayerDataDir: secretsDir,
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
@@ -211,8 +238,10 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 
 	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
-			ChainType:     "CaRdAnO",
-			ChainSpecific: json.RawMessage(jsonData),
+			ChainType:      "CaRdAnO",
+			ChainID:        common.ChainIDStrPrime,
+			ChainSpecific:  json.RawMessage(jsonData),
+			RelayerDataDir: secretsDir,
 		}
 
 		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
