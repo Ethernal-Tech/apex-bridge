@@ -388,7 +388,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 
 	txInfo, _, err := txSender.CreateBridgingTx(
 		ctx,
-		sendtx.BridgingTxInput{
+		sendtx.BridgingTxDto{
 			SrcChainID:      ip.chainIDSrc,
 			DstChainID:      ip.chainIDDst,
 			SenderAddr:      senderAddr.String(),
