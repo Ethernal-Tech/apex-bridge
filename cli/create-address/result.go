@@ -25,17 +25,21 @@ func (r CmdResult) GetOutput() string {
 	for i, addrAndPolicyScript := range r.AddressAndPolicyScripts {
 		args := []string{
 			fmt.Sprintf("Multisig Address|%s", addrAndPolicyScript.Multisig.Payment),
+			fmt.Sprintf("\n"),
 		}
 
 		if addrAndPolicyScript.Multisig.Stake != "" {
 			args = append(args, fmt.Sprintf("Multisig Stake Address|%s", addrAndPolicyScript.Multisig.Stake))
+			args = append(args, fmt.Sprintf("\n"))
 		}
 
 		if i == 0 {
 			args = append(args, fmt.Sprintf("Fee Payer Address|%s", addrAndPolicyScript.Fee.Payment))
+			args = append(args, fmt.Sprintf("\n"))
 
 			if addrAndPolicyScript.Fee.Stake != "" {
 				args = append(args, fmt.Sprintf("Fee Payer Stake Address|%s", addrAndPolicyScript.Fee.Stake))
+				args = append(args, fmt.Sprintf("\n"))
 			}
 		}
 
