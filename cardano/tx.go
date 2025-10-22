@@ -147,11 +147,15 @@ func CreateTx(
 		}
 
 		if data.CPU > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps {
-			return nil, "", fmt.Errorf("cpu exceeds max tx execution units: %d > %d", data.CPU, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps)
+			return nil, "", fmt.Errorf(
+				"cpu exceeds max tx execution units: %d > %d",
+				data.CPU, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps)
 		}
 
 		if data.Memory > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory {
-			return nil, "", fmt.Errorf("memory exceeds max tx execution units: %d > %d", data.Memory, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory)
+			return nil, "", fmt.Errorf(
+				"memory exceeds max tx execution units: %d > %d",
+				data.Memory, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory)
 		}
 
 		builder.SetExecutionUnitParams(data.CPU, data.Memory)
@@ -169,14 +173,17 @@ func CreateTx(
 		))
 
 		if totalCollateral > txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] {
-			return nil, "", fmt.Errorf("total collateral is greater than collateral input amount: %d > %d", totalCollateral, txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName])
+			return nil, "", fmt.Errorf(
+				"total collateral is greater than collateral input amount: %d > %d",
+				totalCollateral, txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName])
 		}
 
 		builder.SetTotalCollateral(totalCollateral)
 
 		collateralOutput := txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] - totalCollateral
 		if collateralOutput < common.MinUtxoAmountDefault {
-			return nil, "", fmt.Errorf("collateral output is less than min utxo amount: %d < %d", collateralOutput, common.MinUtxoAmountDefault)
+			return nil, "", fmt.Errorf(
+				"collateral output is less than min utxo amount: %d < %d", collateralOutput, common.MinUtxoAmountDefault)
 		}
 
 		builder.UpdateCollateralOutputAmount(-1, collateralOutput)

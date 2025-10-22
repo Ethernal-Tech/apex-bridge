@@ -83,11 +83,13 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	if len(mintTokens) > 0 {
 		// Tokens that will be minted in the transaction could be already locked in the addr0
 		// we will include them all in the transaction
-		// if there are none avaialble we remove them from required tokens
+		// if there are none available we remove them from required tokens
 		index := 0
+
 		for i, addrAmount := range totalTokenAmounts.addrAmounts {
 			if addrAmount.addressIndex == 0 {
 				index = i
+
 				break
 			}
 		}

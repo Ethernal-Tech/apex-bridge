@@ -59,8 +59,9 @@ func NewBridgingAdressesManager(
 	}
 
 	for _, registeredChain := range registeredChains {
-		registeredChainId := registeredChain.Id
-		chainIDStr := common.ToStrChainID(registeredChainId)
+		registeredChainID := registeredChain.Id
+		chainIDStr := common.ToStrChainID(registeredChainID)
+
 		if !common.IsExistingChainID(chainIDStr) || registeredChain.ChainType != 0 {
 			continue
 		}
@@ -83,20 +84,22 @@ func NewBridgingAdressesManager(
 		chainConfig := cardanoChains[chainIDStr]
 
 		for i := range uint64(numberOfAddresses) {
-			if err := manager.buildBridgingAddress(registeredChainId, &keyHashes, chainConfig, i); err != nil {
+			if err := manager.buildBridgingAddress(registeredChainID, &keyHashes, chainConfig, i); err != nil {
 				return nil, fmt.Errorf("failed to build bridging address %d for %s. err: %w", i, chainIDStr, err)
 			}
 		}
 
-		if err := manager.buildCustodialAddress(registeredChainId, &keyHashes, chainConfig); err != nil {
+		if err := manager.buildCustodialAddress(registeredChainID, &keyHashes, chainConfig); err != nil {
 			return nil, fmt.Errorf("failed to build custodial address for %s. err: %w", chainIDStr, err)
 		}
 
 		logger.Debug(
-			fmt.Sprintf("Bridging addresses manager initialized for %s chain with %d payment addresses: %v, custodial address %s and fee address %s",
-				chainIDStr, len(manager.bridgingPaymentAddresses[registeredChainId]),
-				manager.bridgingPaymentAddresses[registeredChainId], manager.custodialAddress[registeredChainId],
-				manager.feeMultisigAddresses[registeredChainId]))
+			fmt.Sprintf(
+				"Bridging addresses manager initialized for %s chain with %d payment addresses: "+
+					"%v, custodial address %s and fee address %s",
+				chainIDStr, len(manager.bridgingPaymentAddresses[registeredChainID]),
+				manager.bridgingPaymentAddresses[registeredChainID], manager.custodialAddress[registeredChainID],
+				manager.feeMultisigAddresses[registeredChainID]))
 	}
 
 	return manager, nil
@@ -239,15 +242,20 @@ func (b *BridgingAddressesManagerImpl) buildCustodialAddress(
 	return nil
 }
 
-func getRegisteredChains(ctx context.Context, bridge eth.IBridgeSmartContract, logger hclog.Logger) ([]eth.Chain, error) {
+func getRegisteredChains(
+	ctx context.Context, bridge eth.IBridgeSmartContract, logger hclog.Logger,
+) ([]eth.Chain, error) {
 	var chains []eth.Chain
+
 	err := common.RetryForever(ctx, 2*time.Second, func(inner context.Context) (err error) {
 		chains, err = bridge.GetAllRegisteredChains(inner)
 		if err != nil {
 			logger.Error("Failed to GetAllRegisteredChains while creating Bridging Address Manager. Retrying...", "err", err)
 		}
+
 		return err
 	})
+
 	return chains, err
 }
 
@@ -258,14 +266,17 @@ func getValidatorsChainData(
 	logger hclog.Logger,
 ) ([]eth.ValidatorChainData, error) {
 	var data []eth.ValidatorChainData
+
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		data, err = bridge.GetValidatorsChainData(ctxInner, chainID)
 		if err != nil {
 			logger.Error("Failed to GetValidatorsChainData while creating Bridging Address Manager. Retrying...", "chainID",
 				chainID, "err", err)
 		}
+
 		return err
 	})
+
 	return data, err
 }
 
@@ -276,12 +287,17 @@ func getBridgingAddressesCount(
 	logger hclog.Logger,
 ) (uint8, error) {
 	var count uint8
+
 	err := common.RetryForever(ctx, 2*time.Second, func(ctxInner context.Context) (err error) {
 		count, err = bridge.GetBridgingAddressesCount(ctxInner, chainID)
 		if err != nil {
-			logger.Error("Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying...", "chainID", chainID, "err", err)
+			logger.Error(
+				"Failed to GetBridgingAddressesCount while creating Bridging Address Manager. Retrying...",
+				"chainID", chainID, "err", err)
 		}
+
 		return err
 	})
+
 	return count, err
 }

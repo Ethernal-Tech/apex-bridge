@@ -174,14 +174,6 @@ func TestGenerateBatchTransaction(t *testing.T) {
 
 	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
 
-	// t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
-	// 	bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), false, testError).Once()
-	//
-	// 	_, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
-	// 	require.Error(t, err)
-	// 	require.ErrorContains(t, err, "test err")
-	// })
-
 	t.Run("GetAddressesAndAmountsForBatch returns error", func(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]common.AddressAndAmount(nil), false, testError).Once()
@@ -346,6 +338,700 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		require.NotNil(t, signatures.Multisig)
 		require.NotNil(t, signatures.Fee)
 		require.Nil(t, signatures.MultsigStake)
+	})
+}
+
+func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	minUtxoAmount := new(big.Int).SetUint64(1_000)
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	_, err = cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000
+			}`))
+	dbMock := &indexer.DatabaseMock{}
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
+
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	token1, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Test", false)
+	// token2, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Test1", false)
+
+	cco.txProvider = txProviderMock
+	cco.config.SlotRoundingThreshold = 100
+	cco.config.MaxFeeUtxoCount = 4
+	cco.config.MaxUtxoCount = 50
+	cco.config.RelayerAddress = "addr_test1wzwn2c0aseh84desjrextluhrznf0dne8pfs0m2memm94rgfq33sa"
+	cco.config.MintingScriptTxInput = cardanowallet.TxInput{
+		Hash:  "1577af51dc0f4737d3b57a6e42763747e875865393468044cfd4c7e397c5d5d0",
+		Index: 0,
+	}
+	// Tokeni na vector-u koji dolaze sa prime-a (kontra logika)
+	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
+		{
+			DstChainID: common.ChainIDStrPrime,
+			TokenName:  token1.String(),
+			Mint:       true,
+		},
+		// {
+		// 	DstChainID: common.ChainIDStrPrime,
+		// 	TokenName:  token2.String(),
+		// },
+	}
+
+	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
+	confirmedTransactions[0] = eth.ConfirmedTransaction{
+		Nonce:       1,
+		BlockHeight: big.NewInt(1),
+		Receivers: []eth.BridgeReceiver{{
+			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+			Amount:             minUtxoAmount,
+			AmountWrapped:      big.NewInt(1000000),
+		}},
+		TransactionType:    uint8(common.BridgingConfirmedTxType),
+		TotalWrappedAmount: big.NewInt(1000000),
+		DestinationChainId: common.ToNumChainID(common.ChainIDStrVector),
+		SourceChainId:      common.ToNumChainID(common.ChainIDStrPrime),
+	}
+	batchNonceID := uint64(1)
+	destinationChain := common.ChainIDStrVector
+	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
+	keys := []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"5a12073b94bfbdfcbb7cb985eed1f35f5eeafaf57912905f654f41bf",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+	}
+	script := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	bridgingAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, script, script)
+	require.NoError(t, err)
+
+	keys = []string{
+		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
+		"adefefdd0dec7d8044285998b51d6cf39b4d8fb613c695045d021ac4",
+		"44496c06524d52d56d024f9f0b93bd3d54efd559254c7ddf35def911",
+	}
+	feeScript := cardanowallet.NewPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, feeScript, feeScript)
+	require.NoError(t, err)
+
+	addressAndAmountRet := []common.AddressAndAmount{
+		{
+			AddressIndex:  0,
+			Address:       bridgingAddr,
+			TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64()},
+		},
+	}
+
+	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancelCtx()
+
+	bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr)
+
+	t.Run("single token 0 locked should pass", func(t *testing.T) {
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil)).Twice()
+
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 5000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+			Memory: 1000,
+			CPU:    10,
+		}, nil).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	//nolint:dupl
+	t.Run("single token some locked should pass", func(t *testing.T) {
+		addressAndAmountRet := []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token1.String(): 10000},
+			},
+		}
+
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token1.PolicyID,
+								Name:     token1.Name,
+								Amount:   10000,
+							},
+						},
+					},
+				},
+			}, error(nil)).Twice()
+
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 5000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+			Memory: 1000,
+			CPU:    10,
+		}, nil).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	//nolint:dupl
+	t.Run("single token more locked should pass", func(t *testing.T) {
+		addressAndAmountRet := []common.AddressAndAmount{
+			{
+				AddressIndex:  0,
+				Address:       bridgingAddr,
+				TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token1.String(): 10000},
+			},
+		}
+
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: token1.PolicyID,
+								Name:     token1.Name,
+								Amount:   10000000,
+							},
+						},
+					},
+				},
+			}, error(nil)).Twice()
+
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0013"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 5000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+			Memory: 1000,
+			CPU:    10,
+		}, nil).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
+	})
+
+	// To be uncommented when multi-token mint/burn is supported
+	/*
+		confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
+			Nonce:       2,
+			BlockHeight: big.NewInt(1),
+			Receivers: []eth.BridgeReceiver{{
+				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
+				Amount:             minUtxoAmount,
+				AmountWrapped:      big.NewInt(1000000),
+			}},
+			TransactionType:    uint8(common.BridgingConfirmedTxType),
+			TotalWrappedAmount: big.NewInt(1000000),
+			DestinationChainId: common.ToNumChainID(common.ChainIDStrVector),
+			SourceChainId:      common.ToNumChainID(common.ChainIDStrPrime),
+		})
+
+		t.Run("multiple tokens 0 locked should pass", func(t *testing.T) {
+			bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+			dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+			bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+			bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+			bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+			dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Twice()
+
+			dbMock.On("GetAllTxOutputs", feeAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0013"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 5000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+				Memory: 1000,
+				CPU:    10,
+			}, nil).Once()
+
+			result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+			require.NoError(t, err)
+			require.NotNil(t, result.TxRaw)
+			require.NotEqual(t, "", result.TxHash)
+		})
+
+		t.Run("multiple tokens some locked should pass", func(t *testing.T) {
+			addressAndAmountRet := []common.AddressAndAmount{
+				{
+					AddressIndex:  0,
+					Address:       bridgingAddr,
+					TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token2.String(): 10000},
+				},
+			}
+
+			bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+			dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+			bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+			bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+			bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+			dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+							Tokens: []indexer.TokenAmount{
+								{
+									PolicyID: token2.PolicyID,
+									Name:     token2.Name,
+									Amount:   10000,
+								},
+							},
+						},
+					},
+				}, error(nil)).Twice()
+
+			dbMock.On("GetAllTxOutputs", feeAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0013"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 5000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+				Memory: 1000,
+				CPU:    10,
+			}, nil).Once()
+
+			result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+			require.NoError(t, err)
+			require.NotNil(t, result.TxRaw)
+			require.NotEqual(t, "", result.TxHash)
+		})
+
+		t.Run("multiple tokens burn for second token should pass", func(t *testing.T) {
+			addressAndAmountRet := []common.AddressAndAmount{
+				{
+					AddressIndex:  0,
+					Address:       bridgingAddr,
+					TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token2.String(): 10000000},
+				},
+			}
+
+			bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+			dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+			bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+			bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+			bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+			dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+							Tokens: []indexer.TokenAmount{
+								{
+									PolicyID: token2.PolicyID,
+									Name:     token2.Name,
+									Amount:   10000000,
+								},
+							},
+						},
+					},
+				}, error(nil)).Twice()
+
+			dbMock.On("GetAllTxOutputs", feeAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0013"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 5000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+				Memory: 1000,
+				CPU:    10,
+			}, nil).Once()
+
+			result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+			require.NoError(t, err)
+			require.NotNil(t, result.TxRaw)
+			require.NotEqual(t, "", result.TxHash)
+		})
+
+		t.Run("multiple tokens burn for first token should pass", func(t *testing.T) {
+			addressAndAmountRet := []common.AddressAndAmount{
+				{
+					AddressIndex:  0,
+					Address:       bridgingAddr,
+					TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token1.String(): 10000000},
+				},
+			}
+
+			bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+			dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+			bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+			bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+			bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+			dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+							Tokens: []indexer.TokenAmount{
+								{
+									PolicyID: token1.PolicyID,
+									Name:     token1.Name,
+									Amount:   10000000,
+								},
+							},
+						},
+					},
+				}, error(nil)).Twice()
+
+			dbMock.On("GetAllTxOutputs", feeAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0013"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 5000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+				Memory: 1000,
+				CPU:    10,
+			}, nil).Once()
+
+			result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+			require.NoError(t, err)
+			require.NotNil(t, result.TxRaw)
+			require.NotEqual(t, "", result.TxHash)
+		})
+
+		t.Run("multiple tokens burn for both tokens should pass", func(t *testing.T) {
+			addressAndAmountRet := []common.AddressAndAmount{
+				{
+					AddressIndex:  0,
+					Address:       bridgingAddr,
+					TokensAmounts: map[string]uint64{"lovelace": minUtxoAmount.Uint64(), token1.String(): 10000000, token2.String(): 10000000},
+				},
+			}
+
+			bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+			dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+			bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+			bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
+			bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+			dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+							Tokens: []indexer.TokenAmount{
+								{
+									PolicyID: token1.PolicyID,
+									Name:     token1.Name,
+									Amount:   10000000,
+								},
+								{
+									PolicyID: token2.PolicyID,
+									Name:     token2.Name,
+									Amount:   10000000,
+								},
+							},
+						},
+					},
+				}, error(nil)).Twice()
+
+			dbMock.On("GetAllTxOutputs", feeAddr, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0012"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 4000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
+				Return([]*indexer.TxInputOutput{
+					{
+						Input: indexer.TxInput{
+							Hash: indexer.NewHashFromHexString("0x0013"),
+						},
+						Output: indexer.TxOutput{
+							Amount: 5000000,
+						},
+					},
+				}, error(nil)).Once()
+
+			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
+				Memory: 1000,
+				CPU:    10,
+			}, nil).Once()
+
+			result, err := cco.GenerateBatchTransaction(ctx, destinationChain, confirmedTransactions, batchNonceID)
+			require.NoError(t, err)
+			require.NotNil(t, result.TxRaw)
+			require.NotEqual(t, "", result.TxHash)
+		})
+	*/
+
+	t.Run("should pass with redistribution", func(t *testing.T) {
+		redistributionConfirmedTx := make([]eth.ConfirmedTransaction, 1)
+		redistributionConfirmedTx[0] = eth.ConfirmedTransaction{
+			Nonce:           1,
+			BlockHeight:     big.NewInt(1),
+			TransactionType: uint8(common.RedistributionConfirmedTxType),
+		}
+
+		bridgingAddressCoordinatorMock.On("GetAddressesAndAmountsForBatch", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(addressAndAmountRet, false, nil).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigAddress", mock.Anything).Return(feeAddr).Once()
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{BlockSlot: 50}, nil).Once()
+		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true).Once()
+		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
+
+		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+					},
+				},
+			}, error(nil)).Twice()
+		dbMock.On("GetAllTxOutputs", feeAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 2000000,
+					},
+				},
+			}, error(nil)).Once()
+
+		result, err := cco.GenerateBatchTransaction(ctx, destinationChain, redistributionConfirmedTx, batchNonceID)
+		require.NoError(t, err)
+		require.NotNil(t, result.TxRaw)
+		require.NotEqual(t, "", result.TxHash)
 	})
 }
 
