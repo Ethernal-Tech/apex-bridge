@@ -33,6 +33,18 @@ var (
 		ChainIDIntNexus:   ChainIDStrNexus,
 		ChainIDIntCardano: ChainIDStrCardano,
 	}
+
+	reactorChains = []string{
+		ChainIDStrPrime,
+		ChainIDStrVector,
+		ChainIDStrNexus,
+	}
+
+	skylineChains = []string{
+		ChainIDStrPrime,
+		ChainIDStrCardano,
+		ChainIDStrVector,
+	}
 )
 
 func ToNumChainID(chainIDStr string) chainIDNum {
@@ -48,13 +60,23 @@ func IsExistingChainID(chainIDStr string) bool {
 }
 
 func IsExistingReactorChainID(chainIDStr string) bool {
-	_, exists := chainStrToInt[chainIDStr]
+	for _, chainID := range reactorChains {
+		if chainID == chainIDStr {
+			return true
+		}
+	}
 
-	return exists && chainIDStr != ChainIDStrCardano
+	return false
 }
 
 func IsExistingSkylineChainID(chainIDStr string) bool {
-	return chainIDStr == ChainIDStrPrime || chainIDStr == ChainIDStrCardano
+	for _, chainID := range skylineChains {
+		if chainID == chainIDStr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func IsEVMChainID(chainIDStr string) bool {

@@ -98,11 +98,8 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	minFeeForBridging := common.MinFeeForBridgingOnPrime
-
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		minFeeForBridging = common.MinFeeForBridgingOnCardano
-	}
+	srcChainConfig := getChainConfig(p.chainIDSrc)
+	minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
 
 	if p.feeAmount.Uint64() < minFeeForBridging {
 		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
@@ -114,12 +111,6 @@ func (p *sendSkylineTxParams) validateFlags() error {
 	}
 
 	p.operationFeeAmount = operationFeeAmount
-
-	minOperationFee := common.MinOperationFeeOnPrime
-
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		minOperationFee = common.MinOperationFeeOnCardano
-	}
 
 	if p.operationFeeAmount.Uint64() < minOperationFee {
 		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
@@ -291,29 +282,8 @@ func (p *sendSkylineTxParams) Execute(
 	receivers := toCardanoMetadataForSkyline(p.receiversParsed, p.tokenFullNameSrc)
 	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
 
-	utxoAmountSrc := common.MinUtxoAmountDefaultPrime
-	utxoAmountDest := common.MinUtxoAmountDefaultCardano
-
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		utxoAmountSrc = common.MinUtxoAmountDefaultCardano
-		utxoAmountDest = common.MinUtxoAmountDefaultPrime
-	}
-
-	minFeeForBridgingSrc := common.MinFeeForBridgingOnPrime
-	minFeeForBridgingDest := common.MinFeeForBridgingOnCardano
-
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		minFeeForBridgingSrc = common.MinFeeForBridgingOnCardano
-		minFeeForBridgingDest = common.MinFeeForBridgingOnPrime
-	}
-
-	minOperationFeeSrc := common.MinOperationFeeOnPrime
-	minOperationFeeDest := common.MinOperationFeeOnCardano
-
-	if p.chainIDSrc == common.ChainIDStrCardano {
-		minOperationFeeSrc = common.MinOperationFeeOnCardano
-		minOperationFeeDest = common.MinOperationFeeOnPrime
-	}
+	srcConfig := getChainConfig(p.chainIDSrc)
+	dstConfig := getChainConfig(p.chainIDDst)
 
 	var srcNativeTokens []sendtx.TokenExchangeConfig
 	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
@@ -330,15 +300,15 @@ func (p *sendSkylineTxParams) Execute(
 				TxProvider:            cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
 				TestNetMagic:          p.testnetMagicSrc,
 				TTLSlotNumberInc:      ttlSlotNumberInc,
-				MinBridgingFeeAmount:  minFeeForBridgingSrc,
-				MinOperationFeeAmount: minOperationFeeSrc,
-				MinUtxoValue:          utxoAmountSrc,
+				MinBridgingFeeAmount:  srcConfig.MinFeeForBridging,
+				MinOperationFeeAmount: srcConfig.MinOperationFee,
+				MinUtxoValue:          srcConfig.MinUtxoAmount,
 				NativeTokens:          srcNativeTokens,
 			},
 			p.chainIDDst: {
-				MinUtxoValue:          utxoAmountDest,
-				MinBridgingFeeAmount:  minFeeForBridgingDest,
-				MinOperationFeeAmount: minOperationFeeDest,
+				MinUtxoValue:          dstConfig.MinUtxoAmount,
+				MinBridgingFeeAmount:  dstConfig.MinFeeForBridging,
+				MinOperationFeeAmount: dstConfig.MinOperationFee,
 			},
 		},
 	)
@@ -420,4 +390,12 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 	}
 
 	return metadataReceivers
+}
+
+func getChainConfig(chainID string) common.MinConfig {
+	if cfg, ok := common.ChainMinConfig[chainID]; ok {
+		return cfg
+	}
+
+	return common.ChainMinConfig["default"]
 }

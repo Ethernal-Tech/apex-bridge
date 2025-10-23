@@ -6,22 +6,19 @@ import (
 
 type VCRunMode string
 
+type MinConfig struct {
+	MinOperationFee   uint64
+	MinFeeForBridging uint64
+	MinUtxoAmount     uint64
+}
+
 const (
 	HashSize = 32
 
 	EthZeroAddr = "0x0000000000000000000000000000000000000000"
 
-	MinOperationFeeOnCardano = uint64(0)
-	MinOperationFeeOnPrime   = uint64(0)
-	MinOperationFeeOnVector  = uint64(0)
-
-	MinFeeForBridgingDefault   = uint64(1_000_010)
-	MinFeeForBridgingOnCardano = uint64(1_000_010)
-	MinFeeForBridgingOnPrime   = uint64(1_000_010)
-
-	MinUtxoAmountDefault        = uint64(1_000_000)
-	MinUtxoAmountDefaultCardano = uint64(1_000_000)
-	MinUtxoAmountDefaultPrime   = uint64(1_000_000)
+	MinFeeForBridgingDefault = uint64(1_000_010)
+	MinUtxoAmountDefault     = uint64(1_000_000)
 
 	PotentialFeeDefault           = 250_000
 	MaxInputsPerBridgingTxDefault = 50
@@ -38,6 +35,31 @@ const (
 	StakeRegDelConfirmedTxSubType StakeConfirmedTxSubType = 0
 	StakeDelConfirmedTxSubType    StakeConfirmedTxSubType = 1
 	StakeDeregConfirmedTxSubType  StakeConfirmedTxSubType = 2
+)
+
+var (
+	ChainMinConfig = map[string]MinConfig{
+		ChainIDStrPrime: {
+			MinOperationFee:   uint64(0),
+			MinFeeForBridging: uint64(1_000_010),
+			MinUtxoAmount:     uint64(1_000_000),
+		},
+		ChainIDStrCardano: {
+			MinOperationFee:   uint64(0),
+			MinFeeForBridging: uint64(1_000_010),
+			MinUtxoAmount:     uint64(1_000_000),
+		},
+		ChainIDStrVector: {
+			MinOperationFee:   uint64(0),
+			MinFeeForBridging: uint64(1_000_010),
+			MinUtxoAmount:     uint64(1_000_000),
+		},
+		"default": {
+			MinOperationFee:   uint64(0),
+			MinFeeForBridging: MinFeeForBridgingDefault,
+			MinUtxoAmount:     MinUtxoAmountDefault,
+		},
+	}
 )
 
 type Hash [HashSize]byte
