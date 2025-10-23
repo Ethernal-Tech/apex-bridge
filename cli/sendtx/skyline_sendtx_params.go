@@ -98,7 +98,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	srcChainConfig := getChainConfig(p.chainIDSrc)
+	srcChainConfig := common.GetChainConfig(p.chainIDSrc)
 	minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
 
 	if p.feeAmount.Uint64() < minFeeForBridging {
@@ -282,8 +282,8 @@ func (p *sendSkylineTxParams) Execute(
 	receivers := toCardanoMetadataForSkyline(p.receiversParsed, p.tokenFullNameSrc)
 	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
 
-	srcConfig := getChainConfig(p.chainIDSrc)
-	dstConfig := getChainConfig(p.chainIDDst)
+	srcConfig := common.GetChainConfig(p.chainIDSrc)
+	dstConfig := common.GetChainConfig(p.chainIDDst)
 
 	var srcNativeTokens []sendtx.TokenExchangeConfig
 	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
@@ -390,12 +390,4 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 	}
 
 	return metadataReceivers
-}
-
-func getChainConfig(chainID string) common.MinConfig {
-	if cfg, ok := common.ChainMinConfig[chainID]; ok {
-		return cfg
-	}
-
-	return common.ChainMinConfig["default"]
 }
