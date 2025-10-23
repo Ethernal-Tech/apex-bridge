@@ -1,5 +1,7 @@
 package common
 
+import "slices"
+
 type chainIDNum = uint8
 
 const (
@@ -60,23 +62,11 @@ func IsExistingChainID(chainIDStr string) bool {
 }
 
 func IsExistingReactorChainID(chainIDStr string) bool {
-	for _, chainID := range reactorChains {
-		if chainID == chainIDStr {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(reactorChains, chainIDStr)
 }
 
 func IsExistingSkylineChainID(chainIDStr string) bool {
-	for _, chainID := range skylineChains {
-		if chainID == chainIDStr {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(skylineChains, chainIDStr)
 }
 
 func IsEVMChainID(chainIDStr string) bool {
