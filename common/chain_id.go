@@ -54,7 +54,7 @@ func IsExistingReactorChainID(chainIDStr string) bool {
 }
 
 func IsExistingSkylineChainID(chainIDStr string) bool {
-	return chainIDStr == ChainIDStrPrime || chainIDStr == ChainIDStrCardano
+	return chainIDStr == ChainIDStrPrime || chainIDStr == ChainIDStrCardano || chainIDStr == ChainIDStrVector
 }
 
 func IsEVMChainID(chainIDStr string) bool {
