@@ -13,6 +13,7 @@ const (
 
 	MinOperationFeeOnCardano = uint64(0)
 	MinOperationFeeOnPrime   = uint64(0)
+	MinOperationFeeOnVector  = uint64(0)
 
 	MinFeeForBridgingDefault   = uint64(1_000_010)
 	MinFeeForBridgingOnCardano = uint64(1_000_010)

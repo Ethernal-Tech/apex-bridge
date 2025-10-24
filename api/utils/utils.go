@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 
 	"github.com/Ethernal-Tech/apex-bridge/api/model/response"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -57,25 +56,17 @@ func FormatProcessOnPort(port uint32) string {
 }
 
 func ProcessOnPort(port uint32) (string, error) {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ss -tulpn | grep %d", port)) //nolint:gosec
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $2}'", port)) //nolint:gosec
 
 	// Run the command and capture the output
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("cmd failed or no results found: %w", err)
+		return "", fmt.Errorf("cmd failed: %w", err)
 	}
 
-	result := out.String()
-	re := regexp.MustCompile(`users:\(\((.*?)\)\)`)
-	match := re.FindStringSubmatch(result)
-
-	if len(match) > 1 {
-		return match[1], nil
-	}
-
-	return "", nil
+	return out.String(), nil
 }
 
 func NewAPILogger(appConfig *core.AppConfig) (hclog.Logger, error) {

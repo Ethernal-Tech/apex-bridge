@@ -27,8 +27,11 @@ const (
 	primeMinOperationFeeFlag     = "prime-min-operation-fee"
 	primeMinOperationFeeFlagDesc = "minimal operation fee for prime"
 
-	primeCardanoWrappedTokenNameFlag     = "prime-cardano-token-name"
-	primeCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
+	vectorMinOperationFeeFlag     = "vector-min-operation-fee"
+	vectorMinOperationFeeFlagDesc = "minimal operation fee for vector"
+
+	vectorCardanoWrappedTokenNameFlag     = "vector-cardano-token-name"
+	vectorCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
 
 	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
 	cardanoPrimeWrappedTokenNameFlagDesc = "wrapped token name for Prime Apex"
@@ -117,6 +120,21 @@ type skylineGenerateConfigsParams struct {
 	cardanoMinOperationFee        uint64
 	cardanoBlockConfirmationCount uint
 
+	vectorNetworkAddress         string
+	vectorNetworkMagic           uint32
+	vectorNetworkID              uint32
+	vectorOgmiosURL              string
+	vectorBlockfrostURL          string
+	vectorBlockfrostAPIKey       string
+	vectorSocketPath             string
+	vectorTTLSlotInc             uint64
+	vectorSlotRoundingThreshold  uint64
+	vectorStartingBlock          string
+	vectorUtxoMinAmount          uint64
+	vectorMinFeeForBridging      uint64
+	vectorMinOperationFee        uint64
+	vectorBlockConfirmationCount uint
+
 	bridgeNodeURL   string
 	bridgeSCAddress string
 
@@ -138,8 +156,8 @@ type skylineGenerateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 
-	cardanoPrimeWrappedTokenName string
-	primeCardanoWrappedTokenName string
+	cardanoPrimeWrappedTokenName  string
+	vectorCardanoWrappedTokenName string
 
 	primeMintingScriptTxInputHash    string
 	primeMintingScriptTxInputIndex   int64
@@ -187,6 +205,23 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("invalid cardano ogmios url: %s", p.cardanoOgmiosURL)
 	}
 
+	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
+		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
+	}
+
+	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
+		return fmt.Errorf("specify at least one of: %s, %s, %s",
+			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
+	}
+
+	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
+		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
+	}
+
+	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
+		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
+	}
+
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
@@ -225,6 +260,13 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		}
 	}
 
+	if p.vectorStartingBlock != "" {
+		parts := strings.Split(p.vectorStartingBlock, ":")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return fmt.Errorf("invalid vector starting block: %s", p.vectorStartingBlock)
+		}
+	}
+
 	if p.primeMinFeeForBridging < p.primeUtxoMinAmount {
 		return fmt.Errorf("prime minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
 			p.primeMinFeeForBridging, p.primeUtxoMinAmount)
@@ -235,14 +277,13 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 			p.cardanoMinFeeForBridging, p.cardanoUtxoMinAmount)
 	}
 
-	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+	if p.vectorMinFeeForBridging < p.vectorUtxoMinAmount {
+		return fmt.Errorf("vector minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
+			p.vectorMinFeeForBridging, p.vectorUtxoMinAmount)
 	}
 
-	if p.primeCardanoWrappedTokenName != "" {
-		if _, err := wallet.NewTokenWithFullNameTry(p.primeCardanoWrappedTokenName); err != nil {
-			return fmt.Errorf("invalid token name %s", primeCardanoWrappedTokenNameFlag)
-		}
+	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
+		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
 	if p.cardanoPrimeWrappedTokenName != "" {
@@ -273,6 +314,12 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 
 	if p.cardanoRelayerAddress == "" {
 		return fmt.Errorf("missing %s", cardanoRelayerAddressFlag)
+	}
+
+	if p.vectorCardanoWrappedTokenName != "" {
+		if _, err := wallet.NewTokenWithFullNameTry(p.vectorCardanoWrappedTokenName); err != nil {
+			return fmt.Errorf("invalid token name %s", vectorCardanoWrappedTokenNameFlag)
+		}
 	}
 
 	return nil
@@ -450,6 +497,91 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.vectorNetworkAddress,
+		vectorNetworkAddressFlag,
+		"",
+		vectorNetworkAddressFlagDesc,
+	)
+	cmd.Flags().Uint32Var(
+		&p.vectorNetworkMagic,
+		vectorNetworkMagicFlag,
+		defaultNetworkMagic,
+		vectorNetworkMagicFlagDesc,
+	)
+	cmd.Flags().Uint32Var(
+		&p.vectorNetworkID,
+		vectorNetworkIDFlag,
+		uint32(wallet.MainNetNetwork),
+		vectorNetworkIDFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorOgmiosURL,
+		vectorOgmiosURLFlag,
+		"",
+		vectorOgmiosURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorBlockfrostURL,
+		vectorBlockfrostURLFlag,
+		"",
+		vectorBlockfrostURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorBlockfrostAPIKey,
+		vectorBlockfrostAPIKeyFlag,
+		"",
+		vectorBlockfrostAPIKeyFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorSocketPath,
+		vectorSocketPathFlag,
+		"",
+		vectorSocketPathFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorTTLSlotInc,
+		vectorTTLSlotIncFlag,
+		defaultVectorTTLSlotNumberInc,
+		vectorTTLSlotIncFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorSlotRoundingThreshold,
+		vectorSlotRoundingThresholdFlag,
+		defaultVectorSlotRoundingThreshold,
+		vectorSlotRoundingThresholdFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorStartingBlock,
+		vectorStartingBlockFlag,
+		"",
+		vectorStartingBlockFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorUtxoMinAmount,
+		vectorUtxoMinAmountFlag,
+		common.MinUtxoAmountDefault,
+		vectorUtxoMinAmountFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorMinFeeForBridging,
+		vectorMinFeeForBridgingFlag,
+		common.MinFeeForBridgingDefault,
+		vectorMinFeeForBridgingFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.vectorMinOperationFee,
+		vectorMinOperationFeeFlag,
+		common.MinOperationFeeOnVector,
+		vectorMinOperationFeeFlagDesc,
+	)
+	cmd.Flags().UintVar(
+		&p.vectorBlockConfirmationCount,
+		vectorBlockConfirmationCountFlag,
+		defaultVectorBlockConfirmationCount,
+		vectorBlockConfirmationCountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.bridgeNodeURL,
 		bridgeNodeURLFlag,
 		"",
@@ -541,16 +673,16 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&p.primeCardanoWrappedTokenName,
-		primeCardanoWrappedTokenNameFlag,
-		"",
-		primeCardanoWrappedTokenNameFlagDesc,
-	)
-	cmd.Flags().StringVar(
 		&p.cardanoPrimeWrappedTokenName,
 		cardanoPrimeWrappedTokenNameFlag,
 		"",
 		cardanoPrimeWrappedTokenNameFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.vectorCardanoWrappedTokenName,
+		vectorCardanoWrappedTokenNameFlag,
+		"",
+		vectorCardanoWrappedTokenNameFlagDesc,
 	)
 
 	cmd.Flags().UintVar(
@@ -606,6 +738,7 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
 	cmd.MarkFlagsMutuallyExclusive(cardanoBlockfrostURLFlag, cardanoSocketPathFlag, cardanoOgmiosURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
 func (p *skylineGenerateConfigsParams) Execute(
@@ -634,25 +767,31 @@ func (p *skylineGenerateConfigsParams) Execute(
 		return nil, err
 	}
 
+	vectorStartingSlot, vectorStartingHash, err := parseStartingBlock(p.vectorStartingBlock)
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		nativeTokensPrime   []sendtx.TokenExchangeConfig
 		nativeTokensCardano []sendtx.TokenExchangeConfig
+		nativeTokensVector  []sendtx.TokenExchangeConfig
 	)
-
-	if p.primeCardanoWrappedTokenName != "" {
-		nativeTokensPrime = []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: common.ChainIDStrCardano,
-				TokenName:  p.primeCardanoWrappedTokenName,
-			},
-		}
-	}
 
 	if p.cardanoPrimeWrappedTokenName != "" {
 		nativeTokensCardano = []sendtx.TokenExchangeConfig{
 			{
 				DstChainID: common.ChainIDStrPrime,
 				TokenName:  p.cardanoPrimeWrappedTokenName,
+			},
+		}
+	}
+
+	if p.vectorCardanoWrappedTokenName != "" {
+		nativeTokensVector = []sendtx.TokenExchangeConfig{
+			{
+				DstChainID: common.ChainIDStrCardano,
+				TokenName:  p.vectorCardanoWrappedTokenName,
 			},
 		}
 	}
@@ -727,6 +866,32 @@ func (p *skylineGenerateConfigsParams) Execute(
 				MinOperationFee:          p.cardanoMinOperationFee,
 				FeeAddrBridgingAmount:    p.cardanoUtxoMinAmount,
 			},
+			common.ChainIDStrVector: {
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					NetworkMagic:          p.vectorNetworkMagic,
+					NetworkID:             wallet.CardanoNetworkType(p.vectorNetworkID),
+					TTLSlotNumberInc:      p.vectorTTLSlotInc,
+					OgmiosURL:             p.vectorOgmiosURL,
+					BlockfrostURL:         p.vectorBlockfrostURL,
+					BlockfrostAPIKey:      p.vectorBlockfrostAPIKey,
+					SocketPath:            p.vectorSocketPath,
+					PotentialFee:          300000,
+					SlotRoundingThreshold: p.vectorSlotRoundingThreshold,
+					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
+					UtxoMinAmount:         p.vectorUtxoMinAmount,
+					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
+					MaxUtxoCount:          defaultMaxUtxoCount,
+					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
+					MinFeeForBridging:     p.vectorMinFeeForBridging,
+					NativeTokens:          nativeTokensVector,
+				},
+				NetworkAddress:           p.vectorNetworkAddress,
+				StartBlockHash:           vectorStartingHash,
+				StartSlot:                vectorStartingSlot,
+				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
+				OtherAddressesOfInterest: []string{},
+				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
+			},
 		},
 		Bridge: oCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -738,6 +903,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 				EmptyBlocksThreshold: map[string]uint{
 					common.ChainIDStrPrime:   p.emptyBlocksThreshold,
 					common.ChainIDStrCardano: p.emptyBlocksThreshold,
+					common.ChainIDStrVector:  p.emptyBlocksThreshold,
 				},
 			},
 		},
@@ -748,7 +914,8 @@ func (p *skylineGenerateConfigsParams) Execute(
 			MaxBridgingClaimsToGroup:       5,
 			AllowedDirections: map[string][]string{
 				common.ChainIDStrPrime:   {common.ChainIDStrCardano},
-				common.ChainIDStrCardano: {common.ChainIDStrPrime},
+				common.ChainIDStrCardano: {common.ChainIDStrPrime, common.ChainIDStrVector},
+				common.ChainIDStrVector:  {common.ChainIDStrCardano},
 			},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
@@ -803,7 +970,9 @@ func (p *skylineGenerateConfigsParams) Execute(
 
 	primeChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrPrime].CardanoChainConfig)
 	cardanoChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrCardano].CardanoChainConfig)
+	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 
+	//nolint:dupl
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
@@ -824,6 +993,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 				ChainSpecific:     cardanoChainSpecificJSONRaw,
 				RelayerDataDir:    cleanPath(p.relayerDataDir),
 				RelayerConfigPath: cleanPath(p.relayerConfigPath),
+			},
+			common.ChainIDStrVector: {
+				ChainType:     common.ChainTypeCardanoStr,
+				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
+				ChainSpecific: vectorChainSpecificJSONRaw,
 			},
 		},
 		PullTimeMilis: 1000,
