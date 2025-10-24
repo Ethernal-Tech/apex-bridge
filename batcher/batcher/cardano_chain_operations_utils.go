@@ -25,7 +25,7 @@ func getStakingCertificates(
 ) (*cardano.CertificatesWithScript, uint64, error) {
 	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
 
-	certs := make([]cardanowallet.ICertificate, 0)
+	certs := make([]cardanowallet.ICardanoArtifact, 0)
 
 	// Generate certificates
 	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)

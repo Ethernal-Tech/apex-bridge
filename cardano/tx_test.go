@@ -526,7 +526,7 @@ func TestCreateTx(t *testing.T) {
 		Certificates: []*CertificatesWithScript{
 			{
 				PolicyScript: policyScriptMultiSig,
-				Certificates: []wallet.ICertificate{registrationCert, delegationCert},
+				Certificates: []wallet.ICardanoArtifact{registrationCert, delegationCert},
 			},
 		},
 		RegistrationFee: keyRegDepositAmount,

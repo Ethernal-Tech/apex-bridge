@@ -26,7 +26,7 @@ type TxInputInfo struct {
 
 type CertificatesWithScript struct {
 	PolicyScript *cardanowallet.PolicyScript
-	Certificates []cardanowallet.ICertificate
+	Certificates []cardanowallet.ICardanoArtifact
 }
 
 type CertificatesData struct {

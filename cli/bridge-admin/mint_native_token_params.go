@@ -316,7 +316,7 @@ func createMintTx(
 		senderAddr,
 		cardanowallet.AddSumMaps(
 			cardanowallet.GetUtxosSum(allUtxos),
-			cardanowallet.GetTokensSumMap(token)))
+			cardanowallet.GetTokensSumMap(token)), nil)
 	if err != nil {
 		return nil, "", err
 	}
