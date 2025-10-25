@@ -1,5 +1,7 @@
 package common
 
+import "slices"
+
 type chainIDNum = uint8
 
 const (
@@ -33,6 +35,18 @@ var (
 		ChainIDIntNexus:   ChainIDStrNexus,
 		ChainIDIntCardano: ChainIDStrCardano,
 	}
+
+	reactorChains = []string{
+		ChainIDStrPrime,
+		ChainIDStrVector,
+		ChainIDStrNexus,
+	}
+
+	skylineChains = []string{
+		ChainIDStrPrime,
+		ChainIDStrCardano,
+		ChainIDStrVector,
+	}
 )
 
 func ToNumChainID(chainIDStr string) chainIDNum {
@@ -48,13 +62,11 @@ func IsExistingChainID(chainIDStr string) bool {
 }
 
 func IsExistingReactorChainID(chainIDStr string) bool {
-	_, exists := chainStrToInt[chainIDStr]
-
-	return exists && chainIDStr != ChainIDStrCardano
+	return slices.Contains(reactorChains, chainIDStr)
 }
 
 func IsExistingSkylineChainID(chainIDStr string) bool {
-	return chainIDStr == ChainIDStrPrime || chainIDStr == ChainIDStrCardano
+	return slices.Contains(skylineChains, chainIDStr)
 }
 
 func IsEVMChainID(chainIDStr string) bool {
