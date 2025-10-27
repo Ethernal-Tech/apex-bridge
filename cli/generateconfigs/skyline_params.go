@@ -292,33 +292,21 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		}
 	}
 
-	if p.primeMintingScriptTxInputHash == "" {
-		return fmt.Errorf("missing %s", primeMintingScriptTxInputHashFlag)
-	}
-
-	if p.cardanoMintingScriptTxInputHash == "" {
-		return fmt.Errorf("missing %s", cardanoMintingScriptTxInputHashFlag)
-	}
-
-	if p.primeMintingScriptTxInputIndex < 0 || p.primeMintingScriptTxInputIndex > math.MaxUint32 {
-		return fmt.Errorf("invalid prime minting script tx input index: %d", p.primeMintingScriptTxInputIndex)
-	}
-
-	if p.cardanoMintingScriptTxInputIndex < 0 || p.cardanoMintingScriptTxInputIndex > math.MaxUint32 {
-		return fmt.Errorf("invalid cardano minting script tx input index: %d", p.cardanoMintingScriptTxInputIndex)
-	}
-
-	if p.primeRelayerAddress == "" {
-		return fmt.Errorf("missing %s", primeRelayerAddressFlag)
-	}
-
-	if p.cardanoRelayerAddress == "" {
-		return fmt.Errorf("missing %s", cardanoRelayerAddressFlag)
-	}
-
 	if p.vectorCardanoWrappedTokenName != "" {
 		if _, err := wallet.NewTokenWithFullNameTry(p.vectorCardanoWrappedTokenName); err != nil {
 			return fmt.Errorf("invalid token name %s", vectorCardanoWrappedTokenNameFlag)
+		}
+	}
+
+	if p.primeMintingScriptTxInputHash != "" {
+		if p.primeMintingScriptTxInputIndex < 0 || p.primeMintingScriptTxInputIndex > math.MaxUint32 {
+			return fmt.Errorf("invalid prime minting script tx input index: %d", p.primeMintingScriptTxInputIndex)
+		}
+	}
+
+	if p.cardanoMintingScriptTxInputHash != "" {
+		if p.cardanoMintingScriptTxInputIndex < 0 || p.cardanoMintingScriptTxInputIndex > math.MaxUint32 {
+			return fmt.Errorf("invalid cardano minting script tx input index: %d", p.cardanoMintingScriptTxInputIndex)
 		}
 	}
 
@@ -995,9 +983,11 @@ func (p *skylineGenerateConfigsParams) Execute(
 				RelayerConfigPath: cleanPath(p.relayerConfigPath),
 			},
 			common.ChainIDStrVector: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: vectorChainSpecificJSONRaw,
+				ChainType:         common.ChainTypeCardanoStr,
+				DbsPath:           filepath.Join(p.dbsPath, "relayer"),
+				ChainSpecific:     vectorChainSpecificJSONRaw,
+				RelayerDataDir:    cleanPath(p.relayerDataDir),
+				RelayerConfigPath: cleanPath(p.relayerConfigPath),
 			},
 		},
 		PullTimeMilis: 1000,
