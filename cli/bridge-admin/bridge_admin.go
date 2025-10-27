@@ -21,6 +21,7 @@ var (
 	updateBridgingAddrsCountParamsData   = &updateBridgingAddrsCountParams{}
 	redistributeBrAddrsTokensParamsData  = &redistributeBridgingAddrsTokensParams{}
 	stakeDeregistrationParamsData        = &stakeDeregParams{}
+	deployCardanoScriptParamsData        = &deployCardanoScriptParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -128,6 +129,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(stakeDeregistrationParamsData),
 	}
+	deployCardanoScriptCmd := &cobra.Command{
+		Use:   "deploy-cardano-script",
+		Short: "deploy cardano script",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return deployCardanoScriptParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(deployCardanoScriptParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -142,6 +151,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	updateBridgingAddrsCountParamsData.RegisterFlags(updateBridgingAddrsCountCmd)
 	redistributeBrAddrsTokensParamsData.RegisterFlags(redistributeTokensCmd)
 	stakeDeregistrationParamsData.RegisterFlags(deregisterStakeCmd)
+	deployCardanoScriptParamsData.RegisterFlags(deployCardanoScriptCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -163,6 +173,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		updateBridgingAddrsCountCmd,
 		redistributeTokensCmd,
 		deregisterStakeCmd,
+		deployCardanoScriptCmd,
 	)
 
 	return cmd

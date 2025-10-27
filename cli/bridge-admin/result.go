@@ -43,3 +43,22 @@ func (r successResult) GetOutput() string {
 
 	return buffer.String()
 }
+
+type deployCardanoScriptResult struct {
+	TxHash           string `json:"txHash"`
+	PlutusAddr       string `json:"plutusAddr"`
+	RefScriptUtxoIdx uint32 `json:"refScriptUtxoIdx"`
+}
+
+func (d deployCardanoScriptResult) GetOutput() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(common.FormatKV(
+		[]string{
+			fmt.Sprintf("Plutus script address|%s", d.PlutusAddr),
+			fmt.Sprintf("Reference Script Utxo Hash|%s", d.TxHash),
+			fmt.Sprintf("Reference Script Utxo Index|%d", d.RefScriptUtxoIdx),
+		}))
+
+	return buffer.String()
+}

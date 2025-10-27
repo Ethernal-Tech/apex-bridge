@@ -810,7 +810,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MinFeeForBridging:     p.primeMinFeeForBridging,
 					MintingScriptTxInput: wallet.TxInput{
 						Hash:  p.primeMintingScriptTxInputHash,
-						Index: uint32(p.primeMintingScriptTxInputIndex),
+						Index: uint32(p.primeMintingScriptTxInputIndex), //nolint:gosec
 					},
 					RelayerAddress: p.primeRelayerAddress,
 				},
@@ -842,7 +842,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 					MinFeeForBridging:     p.cardanoMinFeeForBridging,
 					MintingScriptTxInput: wallet.TxInput{
 						Hash:  p.cardanoMintingScriptTxInputHash,
-						Index: uint32(p.cardanoMintingScriptTxInputIndex),
+						Index: uint32(p.cardanoMintingScriptTxInputIndex), //nolint:gosec
 					},
 					RelayerAddress: p.cardanoRelayerAddress,
 				},
