@@ -14,13 +14,26 @@ type AddressAndPolicyScripts struct {
 	PolicyScripts cardanotx.ApexPolicyScripts
 }
 
+type Custodial struct {
+	Address      string
+	PolicyScript wallet.IPolicyScript
+}
+
 type CmdResult struct {
 	AddressAndPolicyScripts []AddressAndPolicyScripts
+	Custodial               *Custodial
 	ShowPolicyScripts       bool
 }
 
 func (r CmdResult) GetOutput() string {
 	var buffer bytes.Buffer
+
+	if r.Custodial != nil {
+		_, _ = buffer.WriteString(common.FormatKV([]string{
+			fmt.Sprintf("Custodial Address|%s", r.Custodial.Address),
+		}))
+		_, _ = buffer.WriteString("\n")
+	}
 
 	for i, addrAndPolicyScript := range r.AddressAndPolicyScripts {
 		args := []string{
@@ -62,6 +75,10 @@ func (r CmdResult) GetOutput() string {
 			showPS("Multisig Stake Policy Script", addrAndPolicyScript.PolicyScripts.Multisig.Stake)
 			showPS("Fee Payer Payment Policy Script", addrAndPolicyScript.PolicyScripts.Fee.Payment)
 			showPS("Fee Payer Stake Policy Script", addrAndPolicyScript.PolicyScripts.Fee.Stake)
+
+			if r.Custodial != nil {
+				showPS("Custodial Payment Policy Script", r.Custodial.PolicyScript)
+			}
 		}
 	}
 
