@@ -480,6 +480,17 @@ $ apex-bridge bridge-admin mint-native-token \
 - optional `--validity-slot NUMBER` or `--validity-slot-inc NUMBER` flag. Second one uses ogmios `getTipData`.slot + inc
 
 ```shell
+$ apex-bridge bridge-admin deploy-cardano-script \
+        --key PRIME_WALLET_PRIVATE_KEY \
+        --ogmios http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --network-id 1 \
+        --testnet-magic 3311 \
+        --nft-policy-id 14b249936a64cbc96bde5a46e04174e7fb58b565103d0c3a32f8d61f \
+        --nft-name-hex 54657374546F6B656E
+```
+- optional `--plutus-script-dir`
+
+```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \
         --config ./config.json \
         --indexer-dbs-path /e2e-bridge-data-tmp-Test_OnlyRunApexBridge_WithNexusAndVector/validator_1/bridging-dbs/validatorcomponents \

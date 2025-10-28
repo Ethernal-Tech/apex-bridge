@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -17,6 +18,12 @@ import (
 const (
 	plutusScriptDirFlag     = "plutus-script-dir"
 	plutusScriptDirFlagDesc = "directory containing Plutus script files"
+
+	nftPolicyIDFlag     = "nft-policy-id"
+	nftPolicyIDFlagDesc = "the policy ID of the NFT used in the minting policy"
+
+	nftNameHexFlag     = "nft-name-hex"
+	nftNameHexFlagDesc = "the name of the NFT in hex format"
 
 	plutusScriptBuildFile = "build.js"
 )
@@ -34,6 +41,8 @@ type deployCardanoScriptParams struct {
 	testnetMagic       uint
 	ogmiosURL          string
 	plutusScriptDir    string
+	nftPolicyID        string
+	nftNameHex         string
 
 	wallet *cardanowallet.Wallet
 }
@@ -61,6 +70,16 @@ func (d *deployCardanoScriptParams) ValidateFlags() error {
 
 	if !common.IsValidHTTPURL(d.ogmiosURL) {
 		return fmt.Errorf("invalid --%s: %s", ogmiosURLFlag, d.ogmiosURL)
+	}
+
+	hexRe := regexp.MustCompile(`^[0-9a-fA-F]+$`)
+
+	if !hexRe.MatchString(d.nftPolicyID) {
+		return fmt.Errorf("invalid --%s value %s", nftPolicyIDFlag, d.nftPolicyID)
+	}
+
+	if !hexRe.MatchString(d.nftNameHex) {
+		return fmt.Errorf("invalid --%s value %s", nftNameHexFlag, d.nftNameHex)
 	}
 
 	return nil
@@ -108,6 +127,20 @@ func (d *deployCardanoScriptParams) RegisterFlags(cmd *cobra.Command) {
 		"",
 		plutusScriptDirFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&d.nftPolicyID,
+		nftPolicyIDFlag,
+		"",
+		nftPolicyIDFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&d.nftNameHex,
+		nftNameHexFlag,
+		"",
+		nftNameHexFlagDesc,
+	)
 }
 
 // Execute implements common.CliCommandExecutor.
@@ -120,10 +153,9 @@ func (d *deployCardanoScriptParams) Execute(outputter common.OutputFormatter) (c
 		ctx,
 		outputter,
 		plutusScriptPath,
+		d,
 		cardanowallet.CardanoNetworkType(d.networkID),
-		d.testnetMagic,
 		txProvider,
-		d.wallet,
 	)
 	if err != nil {
 		return nil, err
@@ -136,11 +168,11 @@ func (d *deployCardanoScriptParams) Execute(outputter common.OutputFormatter) (c
 }
 
 func deployCardanoScript(
-	ctx context.Context, outputter common.OutputFormatter, plutusScriptPath string,
-	networkType cardanowallet.CardanoNetworkType, networkMagic uint,
-	txProvider cardanowallet.ITxProvider, wallet *cardanowallet.Wallet,
+	ctx context.Context, outputter common.OutputFormatter,
+	plutusScriptPath string, d *deployCardanoScriptParams,
+	networkType cardanowallet.CardanoNetworkType, txProvider cardanowallet.ITxProvider,
 ) (*deployCardanoScriptResult, error) {
-	cmd := exec.Command("node", plutusScriptPath)
+	cmd := exec.Command("node", plutusScriptPath, d.nftPolicyID, d.nftNameHex) //nolint:gosec
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -153,7 +185,7 @@ func deployCardanoScript(
 	}
 
 	deploymentTxRes, err := createDeployCardanoScriptTx(
-		ctx, networkType, networkMagic, txProvider, wallet,
+		ctx, networkType, d.testnetMagic, txProvider, d.wallet,
 		plutusScript,
 	)
 	if err != nil {
@@ -165,10 +197,18 @@ func deployCardanoScript(
 		return nil, err
 	}
 
+	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkType)
+
+	policyID, err := cardanowallet.NewCliUtils(cardanoCliBinary).GetPolicyID(plutusScript)
+	if err != nil {
+		return nil, err
+	}
+
 	return &deployCardanoScriptResult{
 		TxHash:           deploymentTxRes.txHash,
 		PlutusAddr:       deploymentTxRes.plutusAddr,
 		RefScriptUtxoIdx: refScriptUtxo.Index,
+		PolicyID:         policyID,
 	}, nil
 }
 
@@ -223,7 +263,13 @@ func createDeployCardanoScriptTx(
 		Tokens: senderTokens,
 	})
 
-	txSigned, txHash, err := finalizeAndSignTx(txCtx.Builder, wallet, inputs.Sum[cardanowallet.AdaTokenName], potentialMinUtxo, minUtxo)
+	txSigned, txHash, err := finalizeAndSignTx(
+		txCtx.Builder,
+		wallet,
+		inputs.Sum[cardanowallet.AdaTokenName],
+		potentialMinUtxo,
+		minUtxo,
+	)
 	if err != nil {
 		return nil, err
 	}

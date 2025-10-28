@@ -39,6 +39,7 @@ func prepareCardanoTxBuilder(
 	})
 	if err != nil {
 		builder.Dispose()
+
 		return nil, err
 	}
 
@@ -47,6 +48,7 @@ func prepareCardanoTxBuilder(
 	})
 	if err != nil {
 		builder.Dispose()
+
 		return nil, err
 	}
 
