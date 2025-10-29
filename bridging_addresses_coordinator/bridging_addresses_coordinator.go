@@ -80,6 +80,9 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		return nil, isRedistribution, err
 	}
 
+	c.logger.Debug("Required token amounts", requiredTokenAmounts)
+	c.logger.Debug("Mint token amounts", mintTokens)
+
 	if len(mintTokens) > 0 {
 		// Tokens that will be minted in the transaction could be already locked in the addr0
 		// we will include them all in the transaction
@@ -95,14 +98,19 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		}
 
 		for _, mintToken := range mintTokens {
-			amount := totalTokenAmounts.addrAmounts[index].totalTokenAmounts[mintToken.Token.Name]
+			c.logger.Debug("Processing minted token", mintToken.Token.String())
+			amount := totalTokenAmounts.addrAmounts[index].totalTokenAmounts[mintToken.Token.String()]
+
 			if amount > 0 {
-				requiredTokenAmounts[mintToken.Token.Name] = amount
+				requiredTokenAmounts[mintToken.Token.String()] = amount
 			} else {
-				delete(requiredTokenAmounts, mintToken.Token.Name)
+				c.logger.Debug("Minted token not found in addr0, removing from required tokens")
+				delete(requiredTokenAmounts, mintToken.Token.String())
 			}
 		}
 	}
+
+	c.logger.Debug("Required token amounts", requiredTokenAmounts)
 
 	changeMinUtxo, err := cardanotx.CalculateMinUtxoCurrencyAmount(
 		cardanoCliBinary, protocolParams, totalTokenAmounts.addrAmounts[0].address,

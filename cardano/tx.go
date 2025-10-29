@@ -84,6 +84,10 @@ func CreateTx(
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
+	if txInputInfos.Custodial != nil {
+		builder.AddInputsWithScript(txInputInfos.Custodial.PolicyScript, txInputInfos.Custodial.Inputs...)
+	}
+
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigChangeTxOutput := cardanowallet.TxOutput{}
 

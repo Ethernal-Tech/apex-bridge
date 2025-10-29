@@ -14,6 +14,7 @@ var (
 type TxInputInfos struct {
 	MultiSig    []*TxInputInfo
 	MultiSigFee *TxInputInfo
+	Custodial   *TxInputInfo
 }
 
 type TxOutputs = common.TxOutputs

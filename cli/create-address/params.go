@@ -196,7 +196,7 @@ func (ip *createAddressParams) Execute(
 	}
 
 	if ip.custodialAddress {
-		policyScript := cardanotx.NewCustodialPolicyScriptContainer(keyHashes.Fee, 0)
+		policyScript := cardanotx.NewCustodialPolicyScriptContainer(keyHashes.Multisig, 0)
 
 		addr, err := cardanotx.NewAddressContainer(
 			cliBinary, ip.testnetMagic, policyScript)

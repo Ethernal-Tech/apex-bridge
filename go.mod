@@ -2,6 +2,8 @@ module github.com/Ethernal-Tech/apex-bridge
 
 go 1.23.1
 
+replace github.com/Ethernal-Tech/cardano-infrastructure => ../cardano-infrastructure
+
 require (
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20250528092816-8bae2459dff6
 	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20251028121526-fc77cb35c6e9

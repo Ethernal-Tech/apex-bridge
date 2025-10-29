@@ -189,6 +189,12 @@ func (b *BridgingAddressesManagerImpl) GetCustodialAddress(chainID uint8) (strin
 	return custodialAddr, ok
 }
 
+func (b *BridgingAddressesManagerImpl) GetCustodialPolicyScript(chainID uint8) (*cardanowallet.PolicyScript, bool) {
+	script, ok := b.custodialPolicyScripts[chainID]
+
+	return script, ok
+}
+
 func (b *BridgingAddressesManagerImpl) buildBridgingAddress(
 	chainID uint8,
 	keyHashes *cardano.ApexKeyHashes,

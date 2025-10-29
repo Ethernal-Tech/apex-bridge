@@ -771,6 +771,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			{
 				DstChainID: common.ChainIDStrPrime,
 				TokenName:  p.cardanoPrimeWrappedTokenName,
+				Mint:       true, // TODO: make configurable
 			},
 		}
 	}
