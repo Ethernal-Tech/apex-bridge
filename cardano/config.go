@@ -28,6 +28,7 @@ type CardanoChainConfig struct {
 	TakeAtLeastUtxoCount  uint                             `json:"takeAtLeastUtxoCount"`
 	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
 	MintingScriptTxInput  cardanowallet.TxInput            `json:"mintingScriptTxInput"`
+	CustodialNft          cardanowallet.Token              `json:"custodialNft"`
 	RelayerAddress        string                           `json:"relayerAddress"`
 }
 

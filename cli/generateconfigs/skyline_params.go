@@ -46,6 +46,16 @@ const (
 	cardanoMintingScriptTxInputIndexFlag     = "cardano-minting-script-tx-input-index"
 	cardanoMintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script for cardano"
 
+	primeNftPolicyIDFlag       = "prime-nft-policy-id"
+	primeNftPolicyIDFlagDesc   = "the policy ID of the NFT used in the minting policy for prime"
+	cardanoNftPolicyIDFlag     = "cardano-nft-policy-id"
+	cardanoNftPolicyIDFlagDesc = "the policy ID of the NFT used in the minting policy for cardano"
+
+	primeNftNameFlag       = "prime-nft-name"
+	primeNftNameFlagDesc   = "the name of the NFT used in the minting policy for prime"
+	cardanoNftNameFlag     = "cardano-nft-name"
+	cardanoNftNameFlagDesc = "the name of the NFT used in the minting policy for cardano"
+
 	primeRelayerAddressFlag     = "prime-relayer-address"
 	primeRelayerAddressFlagDesc = "relayer address for prime"
 
@@ -163,6 +173,11 @@ type skylineGenerateConfigsParams struct {
 	primeMintingScriptTxInputIndex   int64
 	cardanoMintingScriptTxInputHash  string
 	cardanoMintingScriptTxInputIndex int64
+
+	primeNftPolicyID   string
+	primeNftName       string
+	cardanoNftPolicyID string
+	cardanoNftName     string
 
 	primeRelayerAddress   string
 	cardanoRelayerAddress string
@@ -302,11 +317,27 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		if p.primeMintingScriptTxInputIndex < 0 || p.primeMintingScriptTxInputIndex > math.MaxUint32 {
 			return fmt.Errorf("invalid prime minting script tx input index: %d", p.primeMintingScriptTxInputIndex)
 		}
+
+		if p.primeNftPolicyID == "" {
+			return fmt.Errorf("missing %s", primeNftPolicyIDFlag)
+		}
+
+		if p.primeNftName == "" {
+			return fmt.Errorf("missing %s", primeNftNameFlag)
+		}
 	}
 
 	if p.cardanoMintingScriptTxInputHash != "" {
 		if p.cardanoMintingScriptTxInputIndex < 0 || p.cardanoMintingScriptTxInputIndex > math.MaxUint32 {
 			return fmt.Errorf("invalid cardano minting script tx input index: %d", p.cardanoMintingScriptTxInputIndex)
+		}
+
+		if p.cardanoNftPolicyID == "" {
+			return fmt.Errorf("missing %s", cardanoNftPolicyIDFlag)
+		}
+
+		if p.cardanoNftName == "" {
+			return fmt.Errorf("missing %s", cardanoNftNameFlag)
 		}
 	}
 
@@ -709,6 +740,34 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.primeNftPolicyID,
+		primeNftPolicyIDFlag,
+		"",
+		primeNftPolicyIDFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.primeNftName,
+		primeNftNameFlag,
+		"",
+		primeNftNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.cardanoNftPolicyID,
+		cardanoNftPolicyIDFlag,
+		"",
+		cardanoNftPolicyIDFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.cardanoNftName,
+		cardanoNftNameFlag,
+		"",
+		cardanoNftNameFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.primeRelayerAddress,
 		primeRelayerAddressFlag,
 		"",
@@ -813,6 +872,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 						Hash:  p.primeMintingScriptTxInputHash,
 						Index: uint32(p.primeMintingScriptTxInputIndex), //nolint:gosec
 					},
+					CustodialNft:   wallet.NewToken(p.primeNftPolicyID, p.primeNftName),
 					RelayerAddress: p.primeRelayerAddress,
 				},
 				NetworkAddress:           p.primeNetworkAddress,
@@ -845,6 +905,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 						Hash:  p.cardanoMintingScriptTxInputHash,
 						Index: uint32(p.cardanoMintingScriptTxInputIndex), //nolint:gosec
 					},
+					CustodialNft:   wallet.NewToken(p.cardanoNftPolicyID, p.cardanoNftName),
 					RelayerAddress: p.cardanoRelayerAddress,
 				},
 				NetworkAddress:           p.cardanoNetworkAddress,

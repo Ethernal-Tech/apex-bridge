@@ -502,6 +502,23 @@ func (cco *CardanoChainOperations) prepareMultisigInputsForNormalBatch(
 	return txInputs, nil
 }
 
+func (cco *CardanoChainOperations) findCustodialTxOutput(custodialAddr string) (*indexer.TxInputOutput, error) {
+	txOutputs, err := cco.db.GetAllTxOutputs(custodialAddr, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve UTXOs for address %s: %w", custodialAddr, err)
+	}
+
+	for _, out := range txOutputs {
+		tokens := out.Output.Tokens
+		if len(tokens) == 1 &&
+			tokens[0].Equals(cco.config.CustodialNft.PolicyID, cco.config.CustodialNft.Name, 1) {
+			return out, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no custodial UTXO containing the expected NFT found at address %s", custodialAddr)
+}
+
 func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
 	chainID uint8, txInputs *cardano.TxInputInfos, getOutputsData *getOutputsData,
 ) error {
@@ -515,33 +532,21 @@ func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
 		return fmt.Errorf("failed to get custodial policy script for chain: %s", common.ToStrChainID(chainID))
 	}
 
-	txOutputs, err := cco.db.GetAllTxOutputs(custodialAddr, true)
+	custodialTxOutput, err := cco.findCustodialTxOutput(custodialAddr)
 	if err != nil {
-		return fmt.Errorf("failed to get custodial utxos")
+		return err
 	}
 
 	txInputs.Custodial = &cardano.TxInputInfo{
-		TxInputs:     convertUTXOsToTxInputs(txOutputs),
+		TxInputs:     convertUTXOsToTxInputs([]*indexer.TxInputOutput{custodialTxOutput}),
 		PolicyScript: custodialPolicyScript,
 		Address:      custodialAddr,
 	}
 
-	var (
-		amount uint64
-		tokens []cardanowallet.TokenAmount
-	)
-
-	for _, io := range txOutputs {
-		amount += io.Output.Amount
-
-		for _, token := range io.Output.Tokens {
-			tokens = append(tokens,
-				cardanowallet.NewTokenAmount(cardanowallet.NewToken(token.PolicyID, token.Name), token.Amount))
-		}
-	}
+	custodialNft := cardanowallet.NewTokenAmount(cco.config.CustodialNft, 1)
 
 	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs,
-		cardanowallet.NewTxOutput(custodialAddr, amount, tokens...))
+		cardanowallet.NewTxOutput(custodialAddr, custodialTxOutput.Output.Amount, custodialNft))
 
 	return nil
 }
