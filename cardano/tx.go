@@ -137,6 +137,7 @@ func CreateOnlyFeeTx(
 
 	builder.AddInputsWithScript(feeTxInput.PolicyScript, feeTxInput.Inputs...)
 
+	// expecting fee and payment when signing, but only fee is provided, so we multiply by 2
 	calcFee, err := builder.CalculateFee(feeTxInput.PolicyScript.GetCount() * 2)
 	if err != nil {
 		return nil, "", err

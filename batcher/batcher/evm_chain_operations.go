@@ -24,6 +24,13 @@ var (
 	_ core.ChainOperations = (*EVMChainOperations)(nil)
 )
 
+const (
+	ExecutedOnEVMChainStatus = 2
+	FailedOnEVMChainStatus   = 3
+)
+
+const deadbeef = "0xdeadbeef"
+
 type EVMChainOperations struct {
 	config       *cardano.BatcherEVMChainConfig
 	privateKey   *bn256.PrivateKey
@@ -140,9 +147,9 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	}
 
 	switch status {
-	case 2:
+	case ExecutedOnEVMChainStatus:
 		// vsc tx executed on evm chain, send final
-		txRaw := []byte("0xdeadbeef")
+		txRaw := []byte(deadbeef)
 
 		txsHashBytes, err := common.Keccak256(txRaw)
 		if err != nil {
@@ -156,7 +163,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 			TxRaw:     txRaw,
 			TxHash:    txHash,
 		}, nil
-	case 3:
+	case FailedOnEVMChainStatus:
 		// vsc tx failed on evm chain, resend
 		batch, err := createVSCTxFn()
 

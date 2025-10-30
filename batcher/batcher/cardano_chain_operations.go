@@ -977,7 +977,8 @@ func (cco *CardanoChainOperations) startVSUSync() {
 	})
 }
 
+// checkVSUSync checks if the VSU sync is completed before allowing to create VSU txs
 func (cco *CardanoChainOperations) checkVSUSync() {
 	cco.vsuMutex.Lock()
-	cco.vsuMutex.Unlock()
+	defer cco.vsuMutex.Unlock()
 }

@@ -126,6 +126,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	finalized := b.newValidatorSet.finalized
 	b.newValidatorSet.RUnlock()
 
+	// prevent finalized VSU from being sent again
 	if finalized {
 		return 0, nil
 	}
