@@ -7,7 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var paramsData = &generateConfigsParams{}
+const cardanoChainUse = "cardano-chain"
+const evmChainUse = "evm-chain"
+
+var (
+	paramsData = &generateConfigsParams{}
+
+	cardanoChainParamsData = &cardanoChainGenerateConfigsParams{}
+	evmChainParamsData     = &evmChainGenerateConfigsParams{}
+)
 
 func GetGenerateConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -17,13 +25,39 @@ func GetGenerateConfigsCommand() *cobra.Command {
 		Run:     runCommand,
 	}
 
+	cmdCardanoChain := &cobra.Command{
+		Use:     cardanoChainUse,
+		Short:   "add cardano chain config to config json file",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(cardanoChainParamsData),
+	}
+	cmdEvmChain := &cobra.Command{
+		Use:     evmChainUse,
+		Short:   "add evm chain config to config json file",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(evmChainParamsData),
+	}
+
 	paramsData.setFlags(cmd)
+
+	cardanoChainParamsData.setFlags(cmdCardanoChain)
+	evmChainParamsData.setFlags(cmdEvmChain)
+
+	cmd.AddCommand(cmdCardanoChain)
+	cmd.AddCommand(cmdEvmChain)
 
 	return cmd
 }
 
-func runPreRun(_ *cobra.Command, _ []string) error {
-	return paramsData.validateFlags()
+func runPreRun(cb *cobra.Command, _ []string) error {
+	switch cb.Use {
+	case cardanoChainUse:
+		return cardanoChainParamsData.validateFlags()
+	case evmChainUse:
+		return evmChainParamsData.validateFlags()
+	default:
+		return paramsData.validateFlags()
+	}
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
