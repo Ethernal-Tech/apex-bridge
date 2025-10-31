@@ -33,8 +33,14 @@ const (
 	vectorCardanoWrappedTokenNameFlag     = "vector-cardano-token-name"
 	vectorCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
 
+	vectorCardanoMintWrappedTokenFlag     = "vector-cardano-mint-wrapped-token"
+	vectorCardanoMintWrappedTokenFlagDesc = "whether to mint wrapped token for Cardano Ada"
+
 	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
 	cardanoPrimeWrappedTokenNameFlagDesc = "wrapped token name for Prime Apex"
+
+	cardanoPrimeMintWrappedTokenFlag     = "cardano-prime-mint-wrapped-token"
+	cardanoPrimeMintWrappedTokenFlagDesc = "whether to mint wrapped token for Prime Apex"
 
 	primeMintingScriptTxInputHashFlag       = "prime-minting-script-tx-input-hash"
 	primeMintingScriptTxInputHashFlagDesc   = "tx input hash used for referencing minting script for prime"
@@ -168,6 +174,9 @@ type skylineGenerateConfigsParams struct {
 
 	cardanoPrimeWrappedTokenName  string
 	vectorCardanoWrappedTokenName string
+
+	cardanoPrimeMintWrappedToken  bool
+	vectorCardanoMintWrappedToken bool
 
 	primeMintingScriptTxInputHash    string
 	primeMintingScriptTxInputIndex   int64
@@ -704,6 +713,20 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		vectorCardanoWrappedTokenNameFlagDesc,
 	)
 
+	cmd.Flags().BoolVar(
+		&p.cardanoPrimeMintWrappedToken,
+		cardanoPrimeMintWrappedTokenFlag,
+		false,
+		cardanoPrimeMintWrappedTokenFlagDesc,
+	)
+
+	cmd.Flags().BoolVar(
+		&p.vectorCardanoMintWrappedToken,
+		vectorCardanoMintWrappedTokenFlag,
+		false,
+		vectorCardanoMintWrappedTokenFlagDesc,
+	)
+
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
@@ -830,7 +853,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			{
 				DstChainID: common.ChainIDStrPrime,
 				TokenName:  p.cardanoPrimeWrappedTokenName,
-				Mint:       true, // TODO: make configurable
+				Mint:       p.cardanoPrimeMintWrappedToken,
 			},
 		}
 	}
@@ -840,6 +863,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			{
 				DstChainID: common.ChainIDStrCardano,
 				TokenName:  p.vectorCardanoWrappedTokenName,
+				Mint:       p.vectorCardanoMintWrappedToken,
 			},
 		}
 	}
