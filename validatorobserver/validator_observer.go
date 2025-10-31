@@ -53,7 +53,7 @@ func NewValidatorSetObserver(
 	}
 
 	// isPending must not be initialized here, otherwise batchers won't be notified through execute method
-	err := newValidatorSet.initValidatorSet(ctx)
+	err := newValidatorSet.initValidatorSet()
 	if err != nil {
 		return newValidatorSet, fmt.Errorf("error initializing validator set: %w", err)
 	}
@@ -242,30 +242,38 @@ func (vs *ValidatorSetObserverImpl) updateSlotNumbers(
 	return nil
 }
 
-func (vs *ValidatorSetObserverImpl) initValidatorSet(ctx context.Context) error {
+func (vs *ValidatorSetObserverImpl) initValidatorSet() error {
 	validators := make(map[string]ValidatorsChainData)
 
-	var registeredChains []eth.Chain
-	var err error
-	common.RetryForever(ctx, time.Second*5, func(ctx context.Context) error {
-		registeredChains, err = vs.bridgeSmartContract.GetAllRegisteredChains(vs.context)
+	var (
+		registeredChains []eth.Chain
+		err              error
+	)
+
+	if err = common.RetryForever(vs.context, time.Second*5, func(ctx context.Context) error {
+		registeredChains, err = vs.bridgeSmartContract.GetAllRegisteredChains(ctx)
 		if err != nil {
-			vs.logger.Error("Error getting registered chain. Retry...", "err", err.Error())
+			vs.logger.Error("Error getting registered chain. Retry...", "err", err)
 		}
 
 		return err
-	})
+	}); err != nil {
+		return fmt.Errorf("error while RetryForever of GetAllRegisteredChains %w", err)
+	}
 
 	for _, chain := range registeredChains {
 		var validatorsData []eth.ValidatorChainData
-		common.RetryForever(ctx, 5*time.Second, func(ctx context.Context) error {
-			validatorsData, err = vs.bridgeSmartContract.GetValidatorsChainData(vs.context, common.ToStrChainID(chain.Id))
+
+		if err = common.RetryForever(vs.context, 5*time.Second, func(ctx context.Context) error {
+			validatorsData, err = vs.bridgeSmartContract.GetValidatorsChainData(ctx, common.ToStrChainID(chain.Id))
 			if err != nil {
-				vs.logger.Error("Error getting validators data for chain. Retry...", "chain id", chain.Id, "err", err.Error())
+				vs.logger.Error("Error getting validators data for chain. Retry...", "chain id", chain.Id, "err", err)
 			}
 
 			return err
-		})
+		}); err != nil {
+			return fmt.Errorf("error while RetryForever of GetValidatorsData %w", err)
+		}
 
 		validatorKeys := []eth.ValidatorChainData{}
 		for _, data := range validatorsData {
@@ -273,15 +281,19 @@ func (vs *ValidatorSetObserverImpl) initValidatorSet(ctx context.Context) error 
 				Key: data.Key,
 			})
 		}
+
 		var lastObservedBlock eth.CardanoBlock
-		common.RetryForever(ctx, 5*time.Second, func(ctx context.Context) error {
-			lastObservedBlock, err = vs.bridgeSmartContract.GetLastObservedBlock(vs.context, common.ToStrChainID(chain.Id))
+
+		if err = common.RetryForever(vs.context, 5*time.Second, func(ctx context.Context) error {
+			lastObservedBlock, err = vs.bridgeSmartContract.GetLastObservedBlock(ctx, common.ToStrChainID(chain.Id))
 			if err != nil {
-				vs.logger.Error("Error getting last cardano block for chain. Retry...", "chain id", chain.Id, "err", err.Error())
+				vs.logger.Error("Error getting last cardano block for chain. Retry...", "chain id", chain.Id, "err", err)
 			}
 
 			return err
-		})
+		}); err != nil {
+			return fmt.Errorf("error while RetryForever of GetLastObservedBlock %w", err)
+		}
 
 		validators[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
 			Keys:       validatorKeys,

@@ -267,7 +267,6 @@ func TestExecute(t *testing.T) {
 	chainID := common.ChainIDStrPrime
 
 	t.Run("Successful execution with pending validator set", func(t *testing.T) {
-
 		observer.validators = ValidatorsPerChain{
 			chainID: ValidatorsChainData{Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}}}}
 		observer.validatorSetPending = false
@@ -330,7 +329,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(validatorsData, nil)
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock, nil).Once()
 
-		err := observer.initValidatorSet(ctx)
+		err := observer.initValidatorSet()
 		assert.NoError(t, err)
 
 		observer.lock.RLock()
@@ -374,7 +373,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock1, nil).Once()
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID2).Return(lastBlock2, nil).Once()
 
-		err := newObserver.initValidatorSet(ctx)
+		err := newObserver.initValidatorSet()
 		assert.NoError(t, err)
 
 		newObserver.lock.RLock()
@@ -409,7 +408,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(validatorsData, nil)
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock, nil)
 
-		err := newObserver.initValidatorSet(ctx)
+		err := newObserver.initValidatorSet()
 		assert.NoError(t, err)
 
 		newObserver.lock.RLock()
