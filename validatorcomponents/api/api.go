@@ -16,7 +16,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type cardanoAPIContextKey string
+
 const (
+	cardanoAPIBaseContextKey cardanoAPIContextKey = "cardanoAPIBaseContextKey"
+	cardanoAPIConnContextKey cardanoAPIContextKey = "cardanoAPIConnContextKey"
+
 	apiStartDelay = 5 * time.Second
 )
 
@@ -90,15 +95,16 @@ func (api *APIImpl) Start() {
 	err := common.RetryForever(api.ctx, apiStartDelay, func(ctx context.Context) error {
 		api.logger.Debug("Trying to start api")
 
-		srvCtx, cancelFunc := context.WithCancel(ctx)
-		defer cancelFunc()
-
 		api.server = &http.Server{
 			Addr:              fmt.Sprintf(":%d", api.apiConfig.Port),
 			Handler:           api.handler,
 			ReadHeaderTimeout: 3 * time.Second,
-			ConnContext:       func(ctx context.Context, c net.Conn) context.Context { return srvCtx },
-			BaseContext:       func(l net.Listener) context.Context { return srvCtx },
+			BaseContext: func(l net.Listener) context.Context {
+				return context.WithValue(api.ctx, cardanoAPIBaseContextKey, api.apiConfig.Port)
+			},
+			ConnContext: func(ctx context.Context, c net.Conn) context.Context {
+				return context.WithValue(ctx, cardanoAPIConnContextKey, c)
+			},
 		}
 
 		err := api.server.ListenAndServe()
