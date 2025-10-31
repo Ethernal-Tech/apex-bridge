@@ -154,11 +154,10 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 	var (
 		generatedBatchData    *core.GeneratedBatchTxData
 		confirmedTransactions []eth.ConfirmedTransaction
-		forceSend             bool
 	)
 
 	if b.newValidatorSet.isValidatorPending() {
-		forceSend, generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
+		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
 			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators,
 			b.lastBatch.id, uint8(b.lastBatch.batchType))
 	} else {
@@ -186,7 +185,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 			b.config.Chain.ChainID, err)
 	}
 
-	if generatedBatchData.TxHash == b.lastBatch.txHash && !forceSend {
+	if generatedBatchData.TxHash == b.lastBatch.txHash {
 		// there is nothing different to submit
 		b.logger.Debug("generated batch is the same as the previous one",
 			"batchID", batchID, "txHash", b.lastBatch.txHash,

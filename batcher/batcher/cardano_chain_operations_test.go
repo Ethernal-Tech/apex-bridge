@@ -1326,7 +1326,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 			BlockHash: indexer.Hash{},
 		}, nil)
 
-		_, generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
+		generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
 			nextBatchID, bridgeSmartContractMock, validatorobserver.ValidatorsPerChain{
 				common.ChainIDStrPrime: {
 					Keys:       newValidatorChainData,

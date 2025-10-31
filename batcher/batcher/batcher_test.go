@@ -425,10 +425,10 @@ type cardanoChainOperationsMock struct {
 func (c *cardanoChainOperationsMock) CreateValidatorSetChangeTx(ctx context.Context, chainID string,
 	nextBatchID uint64, bridgeSmartContract eth.IBridgeSmartContract,
 	validatorsKeys validatorobserver.ValidatorsPerChain, lastBatchID uint64, lastBatchType uint8,
-) (bool, *core.GeneratedBatchTxData, error) {
+) (*core.GeneratedBatchTxData, error) {
 	args := c.Called(ctx, chainID, nextBatchID, bridgeSmartContract, validatorsKeys, lastBatchID, lastBatchType)
 
-	return args.Get(0).(bool), args.Get(1).(*core.GeneratedBatchTxData), args.Error(2)
+	return args.Get(0).(*core.GeneratedBatchTxData), args.Error(1)
 }
 
 var _ core.ChainOperations = (*cardanoChainOperationsMock)(nil)

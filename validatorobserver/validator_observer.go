@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const (
+	// Special flag for Blade chain
+	BladeFlag = uint8(0xFF)
+)
+
 type ValidatorSetObserverImpl struct {
 	context             context.Context
 	validatorSetStream  chan *ValidatorsPerChain
@@ -48,7 +53,7 @@ func NewValidatorSetObserver(
 	}
 
 	// isPending must not be initialized here, otherwise batchers won't be notified through execute method
-	err := newValidatorSet.initValidatorSet()
+	err := newValidatorSet.initValidatorSet(ctx)
 	if err != nil {
 		return newValidatorSet, fmt.Errorf("error initializing validator set: %w", err)
 	}
@@ -74,22 +79,15 @@ func (vs *ValidatorSetObserverImpl) Start() {
 }
 
 func (vs *ValidatorSetObserverImpl) execute() error {
-	// Check if the initialization is complete
-	if len(vs.validators) == 0 {
-		// try to initialize the validator set
-		err := vs.initValidatorSet()
-		if err != nil {
-			return fmt.Errorf("error initializing validator set, err: %w", err)
-		}
-	}
-
 	isPending, err := vs.bridgeSmartContract.IsNewValidatorSetPending()
 	if err != nil {
 		return err
 	}
 
-	// check if same state
-	if isPending == vs.IsValidatorSetPending() {
+	// when validator set changes to pending update delta
+	// when it goes back to not pending, do not update isPending state
+	// after that, bridge needs to be restarted to fetch new validator set and addresses
+	if !isPending || isPending == vs.IsValidatorSetPending() {
 		return nil
 	}
 
@@ -128,8 +126,6 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 
 	vs.lock.Lock()
 
-	vs.validatorSetPending = isPending
-
 	if isPending {
 		validatorSetCopy := vs.validators.Clone()
 
@@ -152,6 +148,8 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 		pendingValidatorSet = &validatorSetCopy
 		vs.validators = validatorSetCopy
 	}
+
+	vs.validatorSetPending = isPending
 
 	vs.lock.Unlock()
 	vs.validatorSetStream <- pendingValidatorSet
@@ -213,7 +211,7 @@ func (vs *ValidatorSetObserverImpl) removeValidators(
 
 func (vs *ValidatorSetObserverImpl) addValidators(validators ValidatorsPerChain, chainsDeltas []eth.ValidatorSet) {
 	for _, chainDelta := range chainsDeltas {
-		if chainDelta.ChainId == uint8(0xFF) {
+		if chainDelta.ChainId == BladeFlag {
 			continue
 		}
 
@@ -244,19 +242,30 @@ func (vs *ValidatorSetObserverImpl) updateSlotNumbers(
 	return nil
 }
 
-func (vs *ValidatorSetObserverImpl) initValidatorSet() error {
+func (vs *ValidatorSetObserverImpl) initValidatorSet(ctx context.Context) error {
 	validators := make(map[string]ValidatorsChainData)
 
-	registeredChains, err := vs.bridgeSmartContract.GetAllRegisteredChains(vs.context)
-	if err != nil {
-		return fmt.Errorf("error getting registered chains: %w", err)
-	}
+	var registeredChains []eth.Chain
+	var err error
+	common.RetryForever(ctx, time.Second*5, func(ctx context.Context) error {
+		registeredChains, err = vs.bridgeSmartContract.GetAllRegisteredChains(vs.context)
+		if err != nil {
+			vs.logger.Error("Error getting registered chain. Retry...", "err", err.Error())
+		}
+
+		return err
+	})
 
 	for _, chain := range registeredChains {
-		validatorsData, err := vs.bridgeSmartContract.GetValidatorsChainData(vs.context, common.ToStrChainID(chain.Id))
-		if err != nil {
-			return fmt.Errorf("error getting validators chain data for chain %s: %w", common.ToStrChainID(chain.Id), err)
-		}
+		var validatorsData []eth.ValidatorChainData
+		common.RetryForever(ctx, 5*time.Second, func(ctx context.Context) error {
+			validatorsData, err = vs.bridgeSmartContract.GetValidatorsChainData(vs.context, common.ToStrChainID(chain.Id))
+			if err != nil {
+				vs.logger.Error("Error getting validators data for chain. Retry...", "chain id", chain.Id, "err", err.Error())
+			}
+
+			return err
+		})
 
 		validatorKeys := []eth.ValidatorChainData{}
 		for _, data := range validatorsData {
@@ -264,11 +273,15 @@ func (vs *ValidatorSetObserverImpl) initValidatorSet() error {
 				Key: data.Key,
 			})
 		}
+		var lastObservedBlock eth.CardanoBlock
+		common.RetryForever(ctx, 5*time.Second, func(ctx context.Context) error {
+			lastObservedBlock, err = vs.bridgeSmartContract.GetLastObservedBlock(vs.context, common.ToStrChainID(chain.Id))
+			if err != nil {
+				vs.logger.Error("Error getting last cardano block for chain. Retry...", "chain id", chain.Id, "err", err.Error())
+			}
 
-		lastObservedBlock, err := vs.bridgeSmartContract.GetLastObservedBlock(vs.context, common.ToStrChainID(chain.Id))
-		if err != nil {
-			return fmt.Errorf("error getting last observed block for chain %s: %w", common.ToStrChainID(chain.Id), err)
-		}
+			return err
+		})
 
 		validators[common.ToStrChainID(chain.Id)] = ValidatorsChainData{
 			Keys:       validatorKeys,

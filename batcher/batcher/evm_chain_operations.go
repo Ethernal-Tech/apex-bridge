@@ -79,7 +79,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	validatorsKeys validatorobserver.ValidatorsPerChain,
 	lastBatchID uint64,
 	lastBatchType uint8,
-) (bool, *core.GeneratedBatchTxData, error) {
+) (*core.GeneratedBatchTxData, error) {
 	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
 		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
 		if err != nil {
@@ -137,13 +137,13 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		// vsc tx not sent, send it. It is not possible to get here otherwise.
 		batch, err := createVSCTxFn()
 
-		return false, batch, err
+		return batch, err
 	}
 
 	// vsc tx sent, check its status and resend if needed
 	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, lastBatchID)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	switch status {
@@ -153,12 +153,12 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 
 		txsHashBytes, err := common.Keccak256(txRaw)
 		if err != nil {
-			return false, nil, err
+			return nil, err
 		}
 
 		txHash := hex.EncodeToString(txsHashBytes)
 
-		return false, &core.GeneratedBatchTxData{
+		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     txRaw,
 			TxHash:    txHash,
@@ -167,9 +167,9 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		// vsc tx failed on evm chain, resend
 		batch, err := createVSCTxFn()
 
-		return true, batch, err
+		return batch, err
 	default:
-		return false, nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
+		return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, nextBatchID-1)
 	}
 }
 

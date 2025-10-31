@@ -769,20 +769,20 @@ func (cco *CardanoChainOperations) GenerateMultisigAddress(
 func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys validatorobserver.ValidatorsPerChain,
 	lastBatchID uint64, lastBatchType uint8,
-) (bool, *core.GeneratedBatchTxData, error) {
+) (*core.GeneratedBatchTxData, error) {
 	cco.checkVSUSync()
 
 	// get validators data
 	validatorsData, ok := validatorsKeys[chainID]
 	if !ok {
-		return false, nil, fmt.Errorf("couldn't find keys for chain:%s", chainID)
+		return nil, fmt.Errorf("couldn't find keys for chain:%s", chainID)
 	}
 
 	// new validator set policy, multisig & fee address
 	_, newAddresses, err :=
 		generatePolicyAndMultisig(&validatorsKeys, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	cco.logger.Debug("NEW MULTISIG & FEE ADDRESS",
@@ -794,7 +794,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	// get active validator set from bridge smart contract
 	activeValidatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	// active validator set policy, multisig & fee address
@@ -805,29 +805,29 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			},
 		}, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	// get filtered & limited utxos
 	multisigUtxos, feeUtxos, isFeeOnly, err := cco.getUTXOsForValidatorChange(
 		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment, validatorsData.SlotNumber)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	// if there are no transactions
 	// or only one transaction with an amount less than twice the minimum UTXO amount
 	// return the validator final
 	if len(feeUtxos) == 0 || (len(feeUtxos) == 1 && feeUtxos[0].Output.Amount < common.MinUtxoAmountDefault*2) {
-		return false, &core.GeneratedBatchTxData{
+		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
-			TxHash:    "deadbeef",
+			TxHash:    deadbeef,
 		}, nil
 	}
 
@@ -841,13 +841,13 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 
 	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataStruct)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	// last slot number from indexer
 	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	var (
@@ -877,7 +877,7 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			output,
 		)
 		if err != nil {
-			return false, nil, err
+			return nil, err
 		}
 	} else {
 		var sum uint64
@@ -914,11 +914,11 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			outputs,
 		)
 		if err != nil {
-			return false, nil, err
+			return nil, err
 		}
 	}
 
-	return true, &core.GeneratedBatchTxData{
+	return &core.GeneratedBatchTxData{
 		BatchType: uint8(ValidatorSet),
 		TxRaw:     txRaw,
 		TxHash:    txHash,

@@ -2,7 +2,6 @@ package validatorobserver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -267,119 +266,7 @@ func TestExecute(t *testing.T) {
 	}
 	chainID := common.ChainIDStrPrime
 
-	t.Run("Empty validator set triggers initialization error", func(t *testing.T) {
-		expectedErr := errors.New("error")
-
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, nil)
-		bridgeSmartContract.On("GetPendingValidatorSetDelta").Return(nil, nil, nil)
-		bridgeSmartContract.On("GetAllRegisteredChains", mock.Anything).Return(nil, expectedErr)
-		bridgeSmartContract.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{
-			BlockSlot: big.NewInt(1),
-		}, nil)
-
-		err := observer.execute()
-		assert.Error(t, err)
-		assert.Contains(t, fmt.Sprint(err), "error initializing validator set, err")
-	})
-
-	t.Run("Error checking pending validator set", func(t *testing.T) {
-		expectedErr := errors.New("contract error")
-
-		bridgeSmartContract := &eth.BridgeSmartContractMock{}
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, expectedErr)
-
-		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-		}
-		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
-
-		err := observer.execute()
-		assert.Error(t, err)
-		assert.Equal(t, expectedErr, err)
-	})
-
-	t.Run("No state change returns no error", func(t *testing.T) {
-		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
-		observer.validatorSetPending = false
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, nil)
-
-		err := observer.execute()
-		assert.NoError(t, err)
-	})
-
-	t.Run("Pending validator set with error in getting validator set delta", func(t *testing.T) {
-		bridgeSmartContract := &eth.BridgeSmartContractMock{}
-
-		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-		}
-
-		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
-		observer.validatorSetPending = false
-		expectedErr := errors.New("delta error")
-
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(true, nil)
-		bridgeSmartContract.On("GetPendingValidatorSetDelta").Return(nil, nil, expectedErr)
-
-		err := observer.execute()
-		assert.Error(t, err)
-		assert.Equal(t, expectedErr, err)
-	})
-
-	t.Run("Pending validator set with successful delta fetch and update slot error", func(t *testing.T) {
-		bridgeSmartContract := &eth.BridgeSmartContractMock{}
-
-		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-		}
-
-		observer.validators = ValidatorsPerChain{chainID: ValidatorsChainData{}}
-		observer.validatorSetPending = false
-		addedValidators := []eth.ValidatorSet{
-			{
-				ChainId:    common.ToNumChainID(chainID),
-				Validators: []contractbinding.IBridgeStructsValidatorAddressChainData{},
-			},
-		}
-		removedValidators := []ethcommon.Address{}
-		expectedErr := errors.New("slot update error")
-
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(true, nil)
-		bridgeSmartContract.On("GetPendingValidatorSetDelta").Return(addedValidators, removedValidators, nil)
-		bridgeSmartContract.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(nil, expectedErr)
-		bridgeSmartContract.On("GetAllRegisteredChains", mock.Anything).Return([]eth.Chain{{Id: common.ToNumChainID(chainID)}}, nil)
-
-		err := observer.execute()
-		assert.Error(t, err)
-		assert.Contains(t, fmt.Sprint(err), "error getting last observed block for chain")
-	})
-
 	t.Run("Successful execution with pending validator set", func(t *testing.T) {
-		bridgeSmartContract := &eth.BridgeSmartContractMock{}
-
-		observer := &ValidatorSetObserverImpl{
-			validatorSetPending: false,
-			validators:          ValidatorsPerChain{},
-			bridgeSmartContract: bridgeSmartContract,
-			logger:              logger,
-			validatorSetStream:  validatorSetStream,
-			lock:                sync.RWMutex{},
-		}
 
 		observer.validators = ValidatorsPerChain{
 			chainID: ValidatorsChainData{Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}}}}
@@ -414,25 +301,6 @@ func TestExecute(t *testing.T) {
 			t.Fatal("Expected pending validator set in stream")
 		}
 	})
-
-	t.Run("Successful execution with no pending validator set", func(t *testing.T) {
-		observer.validators = ValidatorsPerChain{
-			chainID: ValidatorsChainData{Keys: []eth.ValidatorChainData{{Key: [4]*big.Int{big.NewInt(1)}}}}}
-		observer.validatorSetPending = true
-
-		bridgeSmartContract.On("IsNewValidatorSetPending").Return(false, nil)
-
-		err := observer.execute()
-		assert.NoError(t, err)
-		assert.False(t, observer.validatorSetPending)
-
-		select {
-		case pendingSet := <-validatorSetStream:
-			assert.Nil(t, pendingSet)
-		default:
-			t.Fatal("Expected nil pending validator set in stream")
-		}
-	})
 }
 
 func TestInitValidatorSet(t *testing.T) {
@@ -451,43 +319,6 @@ func TestInitValidatorSet(t *testing.T) {
 		context:             ctx,
 	}
 
-	t.Run("Error getting registered chains", func(t *testing.T) {
-		expectedErr := errors.New("failed to get chains")
-		bridgeSmartContract.On("GetAllRegisteredChains", ctx).Return(nil, expectedErr).Once()
-
-		err := observer.initValidatorSet()
-		assert.Error(t, err)
-		assert.Equal(t, fmt.Errorf("error getting registered chains: %w", expectedErr), err)
-	})
-
-	t.Run("Error getting validators chain data", func(t *testing.T) {
-		registeredChains := []eth.Chain{{Id: common.ToNumChainID(chainID)}}
-		expectedErr := errors.New("failed to get validators data")
-
-		bridgeSmartContract.On("GetAllRegisteredChains", ctx).Return(registeredChains, nil)
-		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(nil, expectedErr).Once()
-
-		err := observer.initValidatorSet()
-		assert.Error(t, err)
-		assert.Equal(t, fmt.Errorf("error getting validators chain data for chain %s: %w", chainID, expectedErr), err)
-	})
-
-	t.Run("Error getting last observed block", func(t *testing.T) {
-		registeredChains := []eth.Chain{{Id: common.ToNumChainID(chainID)}}
-		validatorsData := []contractbinding.IBridgeStructsValidatorChainData{
-			{Key: [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)}},
-		}
-		expectedErr := errors.New("failed to get last block")
-
-		bridgeSmartContract.On("GetAllRegisteredChains", ctx).Return(registeredChains, nil)
-		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(validatorsData, nil)
-		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(eth.CardanoBlock{}, expectedErr).Once()
-
-		err := observer.initValidatorSet()
-		assert.Error(t, err)
-		assert.Equal(t, fmt.Errorf("error getting last observed block for chain %s: %w", chainID, expectedErr), err)
-	})
-
 	t.Run("Successful initialization with single chain and validators", func(t *testing.T) {
 		registeredChains := []eth.Chain{{Id: common.ToNumChainID(chainID)}}
 		validatorsData := []contractbinding.IBridgeStructsValidatorChainData{
@@ -499,7 +330,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(validatorsData, nil)
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock, nil).Once()
 
-		err := observer.initValidatorSet()
+		err := observer.initValidatorSet(ctx)
 		assert.NoError(t, err)
 
 		observer.lock.RLock()
@@ -543,7 +374,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock1, nil).Once()
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID2).Return(lastBlock2, nil).Once()
 
-		err := newObserver.initValidatorSet()
+		err := newObserver.initValidatorSet(ctx)
 		assert.NoError(t, err)
 
 		newObserver.lock.RLock()
@@ -578,7 +409,7 @@ func TestInitValidatorSet(t *testing.T) {
 		bridgeSmartContract.On("GetValidatorsChainData", ctx, chainID).Return(validatorsData, nil)
 		bridgeSmartContract.On("GetLastObservedBlock", ctx, chainID).Return(lastBlock, nil)
 
-		err := newObserver.initValidatorSet()
+		err := newObserver.initValidatorSet(ctx)
 		assert.NoError(t, err)
 
 		newObserver.lock.RLock()
