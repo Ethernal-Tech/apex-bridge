@@ -1,7 +1,6 @@
 package cligenerateconfigs
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"path/filepath"
@@ -9,115 +8,19 @@ import (
 	"time"
 
 	apiCore "github.com/Ethernal-Tech/apex-bridge/api/core"
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
-)
-
-const (
-	primeMinOperationFeeFlag     = "prime-min-operation-fee"
-	primeMinOperationFeeFlagDesc = "minimal operation fee for prime"
-
-	vectorMinOperationFeeFlag     = "vector-min-operation-fee"
-	vectorMinOperationFeeFlagDesc = "minimal operation fee for vector"
-
-	vectorCardanoWrappedTokenNameFlag     = "vector-cardano-token-name"
-	vectorCardanoWrappedTokenNameFlagDesc = "wrapped token name for Cardano Ada"
-
-	cardanoPrimeWrappedTokenNameFlag     = "cardano-prime-token-name"
-	cardanoPrimeWrappedTokenNameFlagDesc = "wrapped token name for Prime Apex"
-
-	cardanoNetworkAddressFlag         = "cardano-network-address"
-	cardanoNetworkMagicFlag           = "cardano-network-magic"
-	cardanoNetworkIDFlag              = "cardano-network-id"
-	cardanoOgmiosURLFlag              = "cardano-ogmios-url"
-	cardanoBlockfrostURLFlag          = "cardano-blockfrost-url"
-	cardanoBlockfrostAPIKeyFlag       = "cardano-blockfrost-api-key" //nolint:gosec
-	cardanoSocketPathFlag             = "cardano-socket-path"
-	cardanoTTLSlotIncFlag             = "cardano-ttl-slot-inc"
-	cardanoSlotRoundingThresholdFlag  = "cardano-slot-rounding-threshold"
-	cardanoStartingBlockFlag          = "cardano-starting-block"
-	cardanoUtxoMinAmountFlag          = "cardano-utxo-min-amount"
-	cardanoMinFeeForBridgingFlag      = "cardano-min-fee-for-bridging"
-	cardanoMinOperationFeeFlag        = "cardano-min-operation-fee"
-	cardanoBlockConfirmationCountFlag = "cardano-block-confirmation-count"
-
-	cardanoNetworkAddressFlagDesc         = "(mandatory) address of cardano network"
-	cardanoNetworkMagicFlagDesc           = "cardano network magic (default 0)"
-	cardanoNetworkIDFlagDesc              = "cardano network id"
-	cardanoOgmiosURLFlagDesc              = "ogmios URL for cardano network"
-	cardanoBlockfrostURLFlagDesc          = "blockfrost URL for cardano network"
-	cardanoBlockfrostAPIKeyFlagDesc       = "blockfrost API key for cardano network" //nolint:gosec
-	cardanoSocketPathFlagDesc             = "socket path for cardano network"
-	cardanoTTLSlotIncFlagDesc             = "TTL slot increment for cardano"
-	cardanoSlotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for cardano. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	cardanoStartingBlockFlagDesc          = "slot: hash of the block from where to start cardano oracle / cardano block submitter"                                                                                   //nolint:lll
-	cardanoUtxoMinAmountFlagDesc          = "minimal UTXO value for cardano"
-	cardanoMinFeeForBridgingFlagDesc      = "minimal bridging fee for cardano"
-	cardanoMinOperationFeeFlagDesc        = "minimal operation fee for cardano"
-	cardanoBlockConfirmationCountFlagDesc = "block confirmation count for cardano"
-
-	defaultCardanoBlockConfirmationCount = 10
-	defaultCardanoTTLSlotNumberInc       = 1800 + defaultCardanoBlockConfirmationCount*10 // BlockTimeSeconds
-	defaultCardanoSlotRoundingThreshold  = 60
 )
 
 var defaultMaxTokenAmountAllowedToBridge = new(big.Int).SetUint64(1_000_000_000_000)
 
 type skylineGenerateConfigsParams struct {
-	primeNetworkAddress         string
-	primeNetworkMagic           uint32
-	primeNetworkID              uint32
-	primeOgmiosURL              string
-	primeBlockfrostURL          string
-	primeBlockfrostAPIKey       string
-	primeSocketPath             string
-	primeTTLSlotInc             uint64
-	primeSlotRoundingThreshold  uint64
-	primeStartingBlock          string
-	primeUtxoMinAmount          uint64
-	primeMinFeeForBridging      uint64
-	primeMinOperationFee        uint64
-	primeBlockConfirmationCount uint
-
-	cardanoNetworkAddress         string
-	cardanoNetworkMagic           uint32
-	cardanoNetworkID              uint32
-	cardanoOgmiosURL              string
-	cardanoBlockfrostURL          string
-	cardanoBlockfrostAPIKey       string
-	cardanoSocketPath             string
-	cardanoTTLSlotInc             uint64
-	cardanoSlotRoundingThreshold  uint64
-	cardanoStartingBlock          string
-	cardanoUtxoMinAmount          uint64
-	cardanoMinFeeForBridging      uint64
-	cardanoMinOperationFee        uint64
-	cardanoBlockConfirmationCount uint
-
-	vectorNetworkAddress         string
-	vectorNetworkMagic           uint32
-	vectorNetworkID              uint32
-	vectorOgmiosURL              string
-	vectorBlockfrostURL          string
-	vectorBlockfrostAPIKey       string
-	vectorSocketPath             string
-	vectorTTLSlotInc             uint64
-	vectorSlotRoundingThreshold  uint64
-	vectorStartingBlock          string
-	vectorUtxoMinAmount          uint64
-	vectorMinFeeForBridging      uint64
-	vectorMinOperationFee        uint64
-	vectorBlockConfirmationCount uint
-
 	bridgeNodeURL   string
 	bridgeSCAddress string
 
@@ -139,64 +42,10 @@ type skylineGenerateConfigsParams struct {
 	relayerDataDir    string
 	relayerConfigPath string
 
-	cardanoPrimeWrappedTokenName  string
-	vectorCardanoWrappedTokenName string
-
 	emptyBlocksThreshold uint
 }
 
 func (p *skylineGenerateConfigsParams) validateFlags() error {
-	if !common.IsValidNetworkAddress(p.primeNetworkAddress) {
-		return fmt.Errorf("invalid %s: %s", primeNetworkAddressFlag, p.primeNetworkAddress)
-	}
-
-	if p.primeBlockfrostURL == "" && p.primeSocketPath == "" && p.primeOgmiosURL == "" {
-		return fmt.Errorf("specify at least one of: %s, %s, %s",
-			primeBlockfrostURLFlag, primeSocketPathFlag, primeOgmiosURLFlag)
-	}
-
-	if p.primeBlockfrostURL != "" && !common.IsValidHTTPURL(p.primeBlockfrostURL) {
-		return fmt.Errorf("invalid prime blockfrost url: %s", p.primeBlockfrostURL)
-	}
-
-	if p.primeOgmiosURL != "" && !common.IsValidHTTPURL(p.primeOgmiosURL) {
-		return fmt.Errorf("invalid prime ogmios url: %s", p.primeOgmiosURL)
-	}
-
-	if !common.IsValidNetworkAddress(p.cardanoNetworkAddress) {
-		return fmt.Errorf("invalid %s: %s", cardanoNetworkAddressFlag, p.cardanoNetworkAddress)
-	}
-
-	if p.cardanoBlockfrostURL == "" && p.cardanoSocketPath == "" && p.cardanoOgmiosURL == "" {
-		return fmt.Errorf("specify at least one of: %s, %s, %s",
-			cardanoBlockfrostURLFlag, cardanoSocketPathFlag, cardanoOgmiosURLFlag)
-	}
-
-	if p.cardanoBlockfrostURL != "" && !common.IsValidHTTPURL(p.cardanoBlockfrostURL) {
-		return fmt.Errorf("invalid cardano blockfrost url: %s", p.cardanoBlockfrostURL)
-	}
-
-	if p.cardanoOgmiosURL != "" && !common.IsValidHTTPURL(p.cardanoOgmiosURL) {
-		return fmt.Errorf("invalid cardano ogmios url: %s", p.cardanoOgmiosURL)
-	}
-
-	if !common.IsValidNetworkAddress(p.vectorNetworkAddress) {
-		return fmt.Errorf("invalid %s: %s", vectorNetworkAddressFlag, p.vectorNetworkAddress)
-	}
-
-	if p.vectorBlockfrostURL == "" && p.vectorSocketPath == "" && p.vectorOgmiosURL == "" {
-		return fmt.Errorf("specify at least one of: %s, %s, %s",
-			vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
-	}
-
-	if p.vectorBlockfrostURL != "" && !common.IsValidHTTPURL(p.vectorBlockfrostURL) {
-		return fmt.Errorf("invalid vector blockfrost url: %s", p.vectorBlockfrostURL)
-	}
-
-	if p.vectorOgmiosURL != "" && !common.IsValidHTTPURL(p.vectorOgmiosURL) {
-		return fmt.Errorf("invalid vector ogmios url: %s", p.vectorOgmiosURL)
-	}
-
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
 	}
@@ -221,317 +70,14 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		}
 	}
 
-	if p.primeStartingBlock != "" {
-		parts := strings.Split(p.primeStartingBlock, ":")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("invalid prime starting block: %s", p.primeStartingBlock)
-		}
-	}
-
-	if p.cardanoStartingBlock != "" {
-		parts := strings.Split(p.cardanoStartingBlock, ":")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("invalid cardano starting block: %s", p.cardanoStartingBlock)
-		}
-	}
-
-	if p.vectorStartingBlock != "" {
-		parts := strings.Split(p.vectorStartingBlock, ":")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("invalid vector starting block: %s", p.vectorStartingBlock)
-		}
-	}
-
-	if p.primeMinFeeForBridging < p.primeUtxoMinAmount {
-		return fmt.Errorf("prime minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
-			p.primeMinFeeForBridging, p.primeUtxoMinAmount)
-	}
-
-	if p.cardanoMinFeeForBridging < p.cardanoUtxoMinAmount {
-		return fmt.Errorf("cardano minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
-			p.cardanoMinFeeForBridging, p.cardanoUtxoMinAmount)
-	}
-
-	if p.vectorMinFeeForBridging < p.vectorUtxoMinAmount {
-		return fmt.Errorf("vector minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
-			p.vectorMinFeeForBridging, p.vectorUtxoMinAmount)
-	}
-
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
-	}
-
-	if p.cardanoPrimeWrappedTokenName != "" {
-		if _, err := wallet.NewTokenWithFullNameTry(p.cardanoPrimeWrappedTokenName); err != nil {
-			return fmt.Errorf("invalid token name %s", cardanoPrimeWrappedTokenNameFlag)
-		}
-	}
-
-	if p.vectorCardanoWrappedTokenName != "" {
-		if _, err := wallet.NewTokenWithFullNameTry(p.vectorCardanoWrappedTokenName); err != nil {
-			return fmt.Errorf("invalid token name %s", vectorCardanoWrappedTokenNameFlag)
-		}
 	}
 
 	return nil
 }
 
 func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(
-		&p.primeNetworkAddress,
-		primeNetworkAddressFlag,
-		"",
-		primeNetworkAddressFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.primeNetworkMagic,
-		primeNetworkMagicFlag,
-		defaultNetworkMagic,
-		primeNetworkMagicFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.primeNetworkID,
-		primeNetworkIDFlag,
-		uint32(wallet.MainNetNetwork),
-		primeNetworkIDFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeOgmiosURL,
-		primeOgmiosURLFlag,
-		"",
-		primeOgmiosURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeBlockfrostURL,
-		primeBlockfrostURLFlag,
-		"",
-		primeBlockfrostURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeBlockfrostAPIKey,
-		primeBlockfrostAPIKeyFlag,
-		"",
-		primeBlockfrostAPIKeyFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeSocketPath,
-		primeSocketPathFlag,
-		"",
-		primeSocketPathFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.primeTTLSlotInc,
-		primeTTLSlotIncFlag,
-		defaultPrimeTTLSlotNumberInc,
-		primeTTLSlotIncFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.primeSlotRoundingThreshold,
-		primeSlotRoundingThresholdFlag,
-		defaultPrimeSlotRoundingThreshold,
-		primeSlotRoundingThresholdFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.primeStartingBlock,
-		primeStartingBlockFlag,
-		"",
-		primeStartingBlockFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.primeUtxoMinAmount,
-		primeUtxoMinAmountFlag,
-		common.MinUtxoAmountDefault,
-		primeUtxoMinAmountFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.primeMinFeeForBridging,
-		primeMinFeeForBridgingFlag,
-		common.MinFeeForBridgingDefault,
-		primeMinFeeForBridgingFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.primeMinOperationFee,
-		primeMinOperationFeeFlag,
-		common.ChainMinConfig[common.ChainIDStrPrime].MinOperationFee,
-		primeMinOperationFeeFlagDesc,
-	)
-	cmd.Flags().UintVar(
-		&p.primeBlockConfirmationCount,
-		primeBlockConfirmationCountFlag,
-		defaultPrimeBlockConfirmationCount,
-		primeBlockConfirmationCountFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&p.cardanoNetworkAddress,
-		cardanoNetworkAddressFlag,
-		"",
-		cardanoNetworkAddressFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.cardanoNetworkMagic,
-		cardanoNetworkMagicFlag,
-		defaultNetworkMagic,
-		cardanoNetworkMagicFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.cardanoNetworkID,
-		cardanoNetworkIDFlag,
-		uint32(wallet.MainNetNetwork),
-		cardanoNetworkIDFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.cardanoOgmiosURL,
-		cardanoOgmiosURLFlag,
-		"",
-		cardanoOgmiosURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.cardanoBlockfrostURL,
-		cardanoBlockfrostURLFlag,
-		"",
-		cardanoBlockfrostURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.cardanoBlockfrostAPIKey,
-		cardanoBlockfrostAPIKeyFlag,
-		"",
-		cardanoBlockfrostAPIKeyFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.cardanoSocketPath,
-		cardanoSocketPathFlag,
-		"",
-		cardanoSocketPathFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.cardanoTTLSlotInc,
-		cardanoTTLSlotIncFlag,
-		defaultCardanoTTLSlotNumberInc,
-		cardanoTTLSlotIncFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.cardanoSlotRoundingThreshold,
-		cardanoSlotRoundingThresholdFlag,
-		defaultCardanoSlotRoundingThreshold,
-		cardanoSlotRoundingThresholdFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.cardanoStartingBlock,
-		cardanoStartingBlockFlag,
-		"",
-		cardanoStartingBlockFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.cardanoUtxoMinAmount,
-		cardanoUtxoMinAmountFlag,
-		common.MinUtxoAmountDefault,
-		cardanoUtxoMinAmountFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.cardanoMinFeeForBridging,
-		cardanoMinFeeForBridgingFlag,
-		common.MinFeeForBridgingDefault,
-		cardanoMinFeeForBridgingFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.cardanoMinOperationFee,
-		cardanoMinOperationFeeFlag,
-		common.ChainMinConfig[common.ChainIDStrCardano].MinOperationFee,
-		cardanoMinOperationFeeFlagDesc,
-	)
-	cmd.Flags().UintVar(
-		&p.cardanoBlockConfirmationCount,
-		cardanoBlockConfirmationCountFlag,
-		defaultCardanoBlockConfirmationCount,
-		cardanoBlockConfirmationCountFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&p.vectorNetworkAddress,
-		vectorNetworkAddressFlag,
-		"",
-		vectorNetworkAddressFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.vectorNetworkMagic,
-		vectorNetworkMagicFlag,
-		defaultNetworkMagic,
-		vectorNetworkMagicFlagDesc,
-	)
-	cmd.Flags().Uint32Var(
-		&p.vectorNetworkID,
-		vectorNetworkIDFlag,
-		uint32(wallet.MainNetNetwork),
-		vectorNetworkIDFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorOgmiosURL,
-		vectorOgmiosURLFlag,
-		"",
-		vectorOgmiosURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorBlockfrostURL,
-		vectorBlockfrostURLFlag,
-		"",
-		vectorBlockfrostURLFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorBlockfrostAPIKey,
-		vectorBlockfrostAPIKeyFlag,
-		"",
-		vectorBlockfrostAPIKeyFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorSocketPath,
-		vectorSocketPathFlag,
-		"",
-		vectorSocketPathFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.vectorTTLSlotInc,
-		vectorTTLSlotIncFlag,
-		defaultVectorTTLSlotNumberInc,
-		vectorTTLSlotIncFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.vectorSlotRoundingThreshold,
-		vectorSlotRoundingThresholdFlag,
-		defaultVectorSlotRoundingThreshold,
-		vectorSlotRoundingThresholdFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorStartingBlock,
-		vectorStartingBlockFlag,
-		"",
-		vectorStartingBlockFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.vectorUtxoMinAmount,
-		vectorUtxoMinAmountFlag,
-		common.MinUtxoAmountDefault,
-		vectorUtxoMinAmountFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.vectorMinFeeForBridging,
-		vectorMinFeeForBridgingFlag,
-		common.MinFeeForBridgingDefault,
-		vectorMinFeeForBridgingFlagDesc,
-	)
-	cmd.Flags().Uint64Var(
-		&p.vectorMinOperationFee,
-		vectorMinOperationFeeFlag,
-		common.ChainMinConfig[common.ChainIDStrVector].MinOperationFee,
-		vectorMinOperationFeeFlagDesc,
-	)
-	cmd.Flags().UintVar(
-		&p.vectorBlockConfirmationCount,
-		vectorBlockConfirmationCountFlag,
-		defaultVectorBlockConfirmationCount,
-		vectorBlockConfirmationCountFlagDesc,
-	)
-
 	cmd.Flags().StringVar(
 		&p.bridgeNodeURL,
 		bridgeNodeURLFlag,
@@ -623,19 +169,6 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		relayerConfigPathFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&p.cardanoPrimeWrappedTokenName,
-		cardanoPrimeWrappedTokenNameFlag,
-		"",
-		cardanoPrimeWrappedTokenNameFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.vectorCardanoWrappedTokenName,
-		vectorCardanoWrappedTokenNameFlag,
-		"",
-		vectorCardanoWrappedTokenNameFlagDesc,
-	)
-
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
@@ -645,9 +178,6 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
-	cmd.MarkFlagsMutuallyExclusive(primeBlockfrostAPIKeyFlag, primeSocketPathFlag, primeOgmiosURLFlag)
-	cmd.MarkFlagsMutuallyExclusive(cardanoBlockfrostURLFlag, cardanoSocketPathFlag, cardanoOgmiosURLFlag)
-	cmd.MarkFlagsMutuallyExclusive(vectorBlockfrostURLFlag, vectorSocketPathFlag, vectorOgmiosURLFlag)
 }
 
 func (p *skylineGenerateConfigsParams) Execute(
@@ -666,132 +196,12 @@ func (p *skylineGenerateConfigsParams) Execute(
 		}
 	}
 
-	primeStartingSlot, primeStartingHash, err := parseStartingBlock(p.primeStartingBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	cardanoStartingSlot, cardanoStartingHash, err := parseStartingBlock(p.cardanoStartingBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	vectorStartingSlot, vectorStartingHash, err := parseStartingBlock(p.vectorStartingBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		nativeTokensPrime   []sendtx.TokenExchangeConfig
-		nativeTokensCardano []sendtx.TokenExchangeConfig
-		nativeTokensVector  []sendtx.TokenExchangeConfig
-	)
-
-	if p.cardanoPrimeWrappedTokenName != "" {
-		nativeTokensCardano = []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: common.ChainIDStrPrime,
-				TokenName:  p.cardanoPrimeWrappedTokenName,
-			},
-		}
-	}
-
-	if p.vectorCardanoWrappedTokenName != "" {
-		nativeTokensVector = []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: common.ChainIDStrCardano,
-				TokenName:  p.vectorCardanoWrappedTokenName,
-			},
-		}
-	}
-
 	vcConfig := &vcCore.AppConfig{
 		RunMode:             common.SkylineMode,
 		RefundEnabled:       true,
 		ValidatorDataDir:    cleanPath(p.validatorDataDir),
 		ValidatorConfigPath: cleanPath(p.validatorConfig),
-		CardanoChains: map[string]*oCore.CardanoChainConfig{
-			common.ChainIDStrPrime: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.primeNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.primeNetworkID),
-					TTLSlotNumberInc:      p.primeTTLSlotInc,
-					OgmiosURL:             p.primeOgmiosURL,
-					BlockfrostURL:         p.primeBlockfrostURL,
-					BlockfrostAPIKey:      p.primeBlockfrostAPIKey,
-					SocketPath:            p.primeSocketPath,
-					PotentialFee:          300000,
-					SlotRoundingThreshold: p.primeSlotRoundingThreshold,
-					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					UtxoMinAmount:         p.primeUtxoMinAmount,
-					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
-					MaxUtxoCount:          defaultMaxUtxoCount,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens:          nativeTokensPrime,
-					MinFeeForBridging:     p.primeMinFeeForBridging,
-				},
-				NetworkAddress:           p.primeNetworkAddress,
-				StartBlockHash:           primeStartingHash,
-				StartSlot:                primeStartingSlot,
-				ConfirmationBlockCount:   p.primeBlockConfirmationCount,
-				OtherAddressesOfInterest: []string{},
-				MinOperationFee:          p.primeMinOperationFee,
-				FeeAddrBridgingAmount:    p.primeUtxoMinAmount,
-			},
-			common.ChainIDStrCardano: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.cardanoNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.cardanoNetworkID),
-					TTLSlotNumberInc:      p.cardanoTTLSlotInc,
-					OgmiosURL:             p.cardanoOgmiosURL,
-					BlockfrostURL:         p.cardanoBlockfrostURL,
-					BlockfrostAPIKey:      p.cardanoBlockfrostAPIKey,
-					SocketPath:            p.cardanoSocketPath,
-					PotentialFee:          300000,
-					SlotRoundingThreshold: p.cardanoSlotRoundingThreshold,
-					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					UtxoMinAmount:         p.cardanoUtxoMinAmount,
-					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
-					MaxUtxoCount:          defaultMaxUtxoCount,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					NativeTokens:          nativeTokensCardano,
-					MinFeeForBridging:     p.cardanoMinFeeForBridging,
-				},
-				NetworkAddress:           p.cardanoNetworkAddress,
-				StartBlockHash:           cardanoStartingHash,
-				StartSlot:                cardanoStartingSlot,
-				ConfirmationBlockCount:   p.cardanoBlockConfirmationCount,
-				OtherAddressesOfInterest: []string{},
-				MinOperationFee:          p.cardanoMinOperationFee,
-				FeeAddrBridgingAmount:    p.cardanoUtxoMinAmount,
-			},
-			common.ChainIDStrVector: {
-				CardanoChainConfig: cardanotx.CardanoChainConfig{
-					NetworkMagic:          p.vectorNetworkMagic,
-					NetworkID:             wallet.CardanoNetworkType(p.vectorNetworkID),
-					TTLSlotNumberInc:      p.vectorTTLSlotInc,
-					OgmiosURL:             p.vectorOgmiosURL,
-					BlockfrostURL:         p.vectorBlockfrostURL,
-					BlockfrostAPIKey:      p.vectorBlockfrostAPIKey,
-					SocketPath:            p.vectorSocketPath,
-					PotentialFee:          300000,
-					SlotRoundingThreshold: p.vectorSlotRoundingThreshold,
-					NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-					UtxoMinAmount:         p.vectorUtxoMinAmount,
-					MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
-					MaxUtxoCount:          defaultMaxUtxoCount,
-					TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-					MinFeeForBridging:     p.vectorMinFeeForBridging,
-					NativeTokens:          nativeTokensVector,
-				},
-				NetworkAddress:           p.vectorNetworkAddress,
-				StartBlockHash:           vectorStartingHash,
-				StartSlot:                vectorStartingSlot,
-				ConfirmationBlockCount:   p.vectorBlockConfirmationCount,
-				OtherAddressesOfInterest: []string{},
-				FeeAddrBridgingAmount:    p.vectorUtxoMinAmount,
-			},
-		},
+		CardanoChains:       map[string]*oCore.CardanoChainConfig{},
 		Bridge: oCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
@@ -799,11 +209,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,
-				EmptyBlocksThreshold: map[string]uint{
-					common.ChainIDStrPrime:   p.emptyBlocksThreshold,
-					common.ChainIDStrCardano: p.emptyBlocksThreshold,
-					common.ChainIDStrVector:  p.emptyBlocksThreshold,
-				},
+				EmptyBlocksThreshold:      map[string]uint{},
 			},
 		},
 		BridgingSettings: oCore.BridgingSettings{
@@ -811,11 +217,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
-			AllowedDirections: map[string][]string{
-				common.ChainIDStrPrime:   {common.ChainIDStrCardano},
-				common.ChainIDStrCardano: {common.ChainIDStrPrime, common.ChainIDStrVector},
-				common.ChainIDStrVector:  {common.ChainIDStrCardano},
-			},
+			AllowedDirections:              map[string][]string{},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
@@ -867,34 +269,13 @@ func (p *skylineGenerateConfigsParams) Execute(
 		Telemetry: telemetryConfig,
 	}
 
-	primeChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrPrime].CardanoChainConfig)
-	cardanoChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrCardano].CardanoChainConfig)
-	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
-
-	//nolint:dupl
 	rConfig := &rCore.RelayerManagerConfiguration{
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,
 			SmartContractAddress: p.bridgeSCAddress,
 		},
-		Chains: map[string]rCore.ChainConfig{
-			common.ChainIDStrPrime: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: primeChainSpecificJSONRaw,
-			},
-			common.ChainIDStrCardano: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: cardanoChainSpecificJSONRaw,
-			},
-			common.ChainIDStrVector: {
-				ChainType:     common.ChainTypeCardanoStr,
-				DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-				ChainSpecific: vectorChainSpecificJSONRaw,
-			},
-		},
+		Chains:        map[string]rCore.ChainConfig{},
 		PullTimeMilis: 1000,
 		Logger: logger.LoggerConfig{
 			LogFilePath:         filepath.Join(p.logsPath, "relayer.log"),
