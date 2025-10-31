@@ -377,6 +377,7 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
 	require.NoError(t, err)
 
+	nft, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Test", false)
 	token1, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Test", false)
 	// token2, _ := cardanowallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.Test1", false)
 
@@ -389,7 +390,8 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 		Hash:  "1577af51dc0f4737d3b57a6e42763747e875865393468044cfd4c7e397c5d5d0",
 		Index: 0,
 	}
-	// Tokeni na vector-u koji dolaze sa prime-a (kontra logika)
+	cco.config.CustodialNft = nft
+	// Tokens that come from prime and are minted on vector
 	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
 		{
 			DstChainID: common.ChainIDStrPrime,
@@ -437,6 +439,10 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 	feeAddr, err := cliUtils.GetPolicyScriptBaseAddress(cardanowallet.TestNetProtocolMagic, feeScript, feeScript)
 	require.NoError(t, err)
 
+	custodialScript := cardanowallet.NewCustodialPolicyScript(keys, 2, cardanowallet.WithAfter(0))
+	custodialAddr, err := cliUtils.GetPolicyScriptEnterpriseAddress(cardanowallet.TestNetProtocolMagic, custodialScript)
+	require.NoError(t, err)
+
 	addressAndAmountRet := []common.AddressAndAmount{
 		{
 			AddressIndex:  0,
@@ -456,6 +462,26 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialAddress", mock.Anything).Return(custodialAddr, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialPolicyScript", mock.Anything).Return(custodialScript, true).Once()
+		dbMock.On("GetAllTxOutputs", custodialAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: nft.PolicyID,
+								Name:     nft.Name,
+								Amount:   1,
+							},
+						},
+					},
+				},
+			}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -519,6 +545,31 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialAddress", mock.Anything).Return(custodialAddr, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialPolicyScript", mock.Anything).Return(custodialScript, true).Once()
+		dbMock.On("GetAllTxOutputs", custodialAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: nft.PolicyID,
+								Name:     nft.Name,
+								Amount:   1,
+							},
+						},
+					},
+				},
+			}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
@@ -589,6 +640,31 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 		bridgingAddressesManagerMock.On("GetPaymentPolicyScript", mock.Anything, mock.Anything).Return(script, true).Once()
 		bridgingAddressesManagerMock.On("GetPaymentAddressFromIndex", mock.Anything, mock.Anything).Return(bridgingAddr, true)
 		bridgingAddressesManagerMock.On("GetFeeMultisigPolicyScript", mock.Anything, mock.Anything).Return(feeScript, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialAddress", mock.Anything).Return(custodialAddr, true).Once()
+		bridgingAddressesManagerMock.On("GetCustodialPolicyScript", mock.Anything).Return(custodialScript, true).Once()
+		dbMock.On("GetAllTxOutputs", custodialAddr, true).
+			Return([]*indexer.TxInputOutput{
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: nft.PolicyID,
+								Name:     nft.Name,
+								Amount:   1,
+							},
+						},
+					},
+				},
+			}, error(nil)).Once()
 		dbMock.On("GetAllTxOutputs", bridgingAddr, true).
 			Return([]*indexer.TxInputOutput{
 				{
