@@ -101,11 +101,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 
 		ttl := big.NewInt(0).SetUint64((cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
 
-		keys := make([]eth.ValidatorChainData, 0, len(validatorsKeys[chainID].Keys))
-
-		for _, key := range validatorsKeys[chainID].Keys {
-			keys = append(keys, key)
-		}
+		keys := append([]eth.ValidatorChainData(nil), validatorsKeys[chainID].Keys...)
 
 		tx := eth.EVMValidatorSetChangeTx{
 			BatchNonceID:        nextBatchID,
