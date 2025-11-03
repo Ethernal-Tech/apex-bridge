@@ -285,7 +285,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
 			MaxUtxoCount:          defaultMaxUtxoCount,
 			TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-			MinFeeForBridging:     p.minFeeForBridging,
 		},
 		NetworkAddress:           p.networkAddress,
 		StartBlockHash:           startingHash,
@@ -293,6 +292,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		ConfirmationBlockCount:   p.blockConfirmationCount,
 		OtherAddressesOfInterest: []string{},
 		FeeAddrBridgingAmount:    p.utxoMinAmount,
+		MinFeeForBridging:        p.minFeeForBridging,
 	}
 
 	if vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold == nil {
