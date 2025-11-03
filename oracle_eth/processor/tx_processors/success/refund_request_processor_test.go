@@ -31,9 +31,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			CardanoChains: map[string]*oCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:         wallet.TestNetNetwork,
-						UtxoMinAmount:     utxoMinValue,
-						MinFeeForBridging: minFeeForBridging,
+						NetworkID:                wallet.TestNetNetwork,
+						UtxoMinAmount:            utxoMinValue,
+						DefaultMinFeeForBridging: minFeeForBridging,
+						MinFeeForBridgingTokens:  minFeeForBridging,
 					},
 				},
 			},

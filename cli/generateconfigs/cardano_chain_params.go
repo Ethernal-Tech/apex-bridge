@@ -17,42 +17,44 @@ import (
 )
 
 const (
-	chainIDStringFlag          = "chain-id"
-	networkAddressFlag         = "network-address"
-	networkMagicFlag           = "network-magic"
-	networkIDFlag              = "network-id"
-	ogmiosURLFlag              = "ogmios-url"
-	blockfrostURLFlag          = "blockfrost-url"
-	blockfrostAPIKeyFlag       = "blockfrost-api-key"
-	socketPathFlag             = "socket-path"
-	ttlSlotIncFlag             = "ttl-slot-inc"
-	slotRoundingThresholdFlag  = "slot-rounding-threshold"
-	startingBlockFlag          = "starting-block"
-	utxoMinAmountFlag          = "utxo-min-amount"
-	minFeeForBridgingFlag      = "min-fee-for-bridging"
-	minOperationFeeFlag        = "min-operation-fee"
-	blockConfirmationCountFlag = "block-confirmation-count"
-	allowedDirectionsFlag      = "allowed-directions"
+	chainIDStringFlag           = "chain-id"
+	networkAddressFlag          = "network-address"
+	networkMagicFlag            = "network-magic"
+	networkIDFlag               = "network-id"
+	ogmiosURLFlag               = "ogmios-url"
+	blockfrostURLFlag           = "blockfrost-url"
+	blockfrostAPIKeyFlag        = "blockfrost-api-key"
+	socketPathFlag              = "socket-path"
+	ttlSlotIncFlag              = "ttl-slot-inc"
+	slotRoundingThresholdFlag   = "slot-rounding-threshold"
+	startingBlockFlag           = "starting-block"
+	utxoMinAmountFlag           = "utxo-min-amount"
+	minFeeForBridgingFlag       = "min-fee-for-bridging"
+	minFeeForBridgingTokensFlag = "min-fee-for-bridging-tokens" //nolint:gosec
+	minOperationFeeFlag         = "min-operation-fee"
+	blockConfirmationCountFlag  = "block-confirmation-count"
+	allowedDirectionsFlag       = "allowed-directions"
 
 	nativeTokenDestinationChainIDFlag = "native-token-destination-chain-id"
 	nativeTokenNameFlag               = "native-token-name"
 
-	chainIDStringFlagDesc          = "(mandatory) chain id string for the chain config"
-	networkAddressFlagDesc         = "(mandatory) address of network"
-	networkMagicFlagDesc           = "network magic (default 0)"
-	networkIDFlagDesc              = "network id"
-	ogmiosURLFlagDesc              = "ogmios URL chain network"
-	blockfrostURLFlagDesc          = "blockfrost URL for chain network"
-	blockfrostAPIKeyFlagDesc       = "blockfrost API key for chain network" //nolint:gosec
-	socketPathFlagDesc             = "socket path for chain network"
-	ttlSlotIncFlagDesc             = "TTL slot increment"
-	slotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for the chain. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	startingBlockFlagDesc          = "slot: hash of the block from where to start oracle / block submitter for the chain"                                                                                       //nolint:lll
-	utxoMinAmountFlagDesc          = "minimal UTXO value for the chain"
-	minFeeForBridgingFlagDesc      = "minimal bridging fee for the chain"
-	minOperationFeeFlagDesc        = "minimal operation fee for the chain"
-	blockConfirmationCountFlagDesc = "block confirmation count for the chain"
-	allowedDirectionsFlagDesc      = "allowed bridging directions for the chain"
+	chainIDStringFlagDesc           = "(mandatory) chain id string for the chain config"
+	networkAddressFlagDesc          = "(mandatory) address of network"
+	networkMagicFlagDesc            = "network magic (default 0)"
+	networkIDFlagDesc               = "network id"
+	ogmiosURLFlagDesc               = "ogmios URL chain network"
+	blockfrostURLFlagDesc           = "blockfrost URL for chain network"
+	blockfrostAPIKeyFlagDesc        = "blockfrost API key for chain network" //nolint:gosec
+	socketPathFlagDesc              = "socket path for chain network"
+	ttlSlotIncFlagDesc              = "TTL slot increment"
+	slotRoundingThresholdFlagDesc   = "defines the upper limit used for rounding slot values for the chain. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	startingBlockFlagDesc           = "slot: hash of the block from where to start oracle / block submitter for the chain"                                                                                       //nolint:lll
+	utxoMinAmountFlagDesc           = "minimal UTXO value for the chain"
+	minFeeForBridgingFlagDesc       = "minimal bridging fee for the chain"
+	minFeeForBridgingTokensFlagDesc = "minimal bridging fee for bridging tokens for the chain" //nolint:gosec
+	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
+	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
+	allowedDirectionsFlagDesc       = "allowed bridging directions for the chain"
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
 	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
@@ -67,21 +69,22 @@ const (
 type cardanoChainGenerateConfigsParams struct {
 	chainIDString string
 
-	networkAddress         string
-	networkMagic           uint32
-	networkID              uint32
-	ogmiosURL              string
-	blockfrostURL          string
-	blockfrostAPIKey       string
-	socketPath             string
-	ttlSlotInc             uint64
-	slotRoundingThreshold  uint64
-	startingBlock          string
-	utxoMinAmount          uint64
-	minFeeForBridging      uint64
-	minOperationFee        uint64
-	blockConfirmationCount uint
-	allowedDirections      []string
+	networkAddress          string
+	networkMagic            uint32
+	networkID               uint32
+	ogmiosURL               string
+	blockfrostURL           string
+	blockfrostAPIKey        string
+	socketPath              string
+	ttlSlotInc              uint64
+	slotRoundingThreshold   uint64
+	startingBlock           string
+	utxoMinAmount           uint64
+	minFeeForBridging       uint64
+	minFeeForBridgingTokens uint64
+	minOperationFee         uint64
+	blockConfirmationCount  uint
+	allowedDirections       []string
 
 	nativeTokenName               string
 	nativeTokenDestinationChainID string
@@ -125,8 +128,13 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 	}
 
 	if p.minFeeForBridging < p.utxoMinAmount {
-		return fmt.Errorf("%s minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
+		return fmt.Errorf("%s default minimal fee for bridging: %d should't be less than minimal UTXO amount: %d",
 			p.chainIDString, p.minFeeForBridging, p.utxoMinAmount)
+	}
+
+	if p.minFeeForBridgingTokens < p.utxoMinAmount {
+		return fmt.Errorf("%s minimal fee for bridging tokens: %d should't be less than minimal UTXO amount: %d",
+			p.chainIDString, p.minFeeForBridgingTokens, p.utxoMinAmount)
 	}
 
 	if p.nativeTokenName != "" {
@@ -222,6 +230,12 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		minFeeForBridgingFlag,
 		common.MinFeeForBridgingDefault,
 		minFeeForBridgingFlagDesc,
+	)
+	cmd.Flags().Uint64Var(
+		&p.minFeeForBridgingTokens,
+		minFeeForBridgingTokensFlag,
+		common.MinFeeForBridgingDefault,
+		minFeeForBridgingTokensFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.minOperationFee,
@@ -327,22 +341,23 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 
 	vcConfig.CardanoChains[p.chainIDString] = &oCore.CardanoChainConfig{
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
-			NetworkMagic:          p.networkMagic,
-			NetworkID:             wallet.CardanoNetworkType(p.networkID),
-			TTLSlotNumberInc:      p.ttlSlotInc,
-			OgmiosURL:             p.ogmiosURL,
-			BlockfrostURL:         p.blockfrostURL,
-			BlockfrostAPIKey:      p.blockfrostAPIKey,
-			SocketPath:            p.socketPath,
-			PotentialFee:          300000,
-			SlotRoundingThreshold: p.slotRoundingThreshold,
-			NoBatchPeriodPercent:  defaultNoBatchPeriodPercent,
-			UtxoMinAmount:         p.utxoMinAmount,
-			MaxFeeUtxoCount:       defaultMaxFeeUtxoCount,
-			MaxUtxoCount:          defaultMaxUtxoCount,
-			TakeAtLeastUtxoCount:  defaultTakeAtLeastUtxoCount,
-			NativeTokens:          nativeTokens,
-			MinFeeForBridging:     p.minFeeForBridging,
+			NetworkMagic:             p.networkMagic,
+			NetworkID:                wallet.CardanoNetworkType(p.networkID),
+			TTLSlotNumberInc:         p.ttlSlotInc,
+			OgmiosURL:                p.ogmiosURL,
+			BlockfrostURL:            p.blockfrostURL,
+			BlockfrostAPIKey:         p.blockfrostAPIKey,
+			SocketPath:               p.socketPath,
+			PotentialFee:             300000,
+			SlotRoundingThreshold:    p.slotRoundingThreshold,
+			NoBatchPeriodPercent:     defaultNoBatchPeriodPercent,
+			UtxoMinAmount:            p.utxoMinAmount,
+			MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
+			MaxUtxoCount:             defaultMaxUtxoCount,
+			TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
+			NativeTokens:             nativeTokens,
+			DefaultMinFeeForBridging: p.minFeeForBridging,
+			MinFeeForBridgingTokens:  p.minFeeForBridgingTokens,
 		},
 		NetworkAddress:           p.networkAddress,
 		StartBlockHash:           startingHash,

@@ -97,18 +97,25 @@ func getOutputs(
 		}
 
 		for _, receiver := range transaction.Receivers {
+			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
+
 			data := receiversMap[receiver.DestinationAddress]
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
 			} else {
-				data.Amount += receiver.Amount.Uint64() - cardanoConfig.MinFeeForBridging
+				minBridgingFee := cardanoConfig.DefaultMinFeeForBridging
+				if hasTokens {
+					minBridgingFee = cardanoConfig.MinFeeForBridgingTokens
+				}
+
+				data.Amount += receiver.Amount.Uint64() - minBridgingFee
 
 				feeData := receiversMap[feeAddress]
-				feeData.Amount += cardanoConfig.MinFeeForBridging
+				feeData.Amount += minBridgingFee
 				receiversMap[feeAddress] = feeData
 			}
 
-			if receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0 {
+			if hasTokens {
 				if len(data.Tokens) == 0 {
 					var (
 						err   error

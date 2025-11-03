@@ -388,13 +388,13 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 
 		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
 			Addr:   obj.Addr,
-			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridging,
+			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridgingTokens,
 			Tokens: tokens,
 		})
 
 		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
 			Addr:   cco.bridgingAddressesManager.GetFeeMultisigAddress(chainID),
-			Amount: cco.config.MinFeeForBridging,
+			Amount: cco.config.MinFeeForBridgingTokens,
 		})
 	}
 
