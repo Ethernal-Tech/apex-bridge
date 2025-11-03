@@ -516,7 +516,11 @@ func (cco *CardanoChainOperations) findCustodialTxOutput(custodialAddr string) (
 	for _, out := range txOutputs {
 		tokens := out.Output.Tokens
 		if len(tokens) == 1 &&
-			tokens[0].Equals(cco.config.CustodialNft.PolicyID, cco.config.CustodialNft.Name, 1) {
+			tokens[0].Equals(indexer.TokenAmount{
+				PolicyID: cco.config.CustodialNft.PolicyID,
+				Name:     cco.config.CustodialNft.Name,
+				Amount:   1,
+			}) {
 			return out, nil
 		}
 	}
