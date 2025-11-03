@@ -172,7 +172,8 @@ func deployCardanoScript(
 	plutusScriptPath string, d *deployCardanoScriptParams,
 	networkType cardanowallet.CardanoNetworkType, txProvider cardanowallet.ITxProvider,
 ) (*deployCardanoScriptResult, error) {
-	cmd := exec.Command("node", plutusScriptPath, d.nftPolicyID, d.nftNameHex) //nolint:gosec
+	// run build.js to build the Plutus script
+	cmd := exec.Command("node", plutusScriptPath, "--nft-policy", d.nftPolicyID, "--nft-name", d.nftNameHex) //nolint:gosec
 
 	out, err := cmd.Output()
 	if err != nil {

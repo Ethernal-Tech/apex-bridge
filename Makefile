@@ -36,3 +36,8 @@ swag-install:
 .PHONY: swag-generate
 swag-generate:
 	swag init --parseDependency -g api/api.go -o docs/oracle-api -ot yaml
+
+.PHONY: update-cardano-contracts
+update-cardano-contracts:
+	git submodule update --remote --init cardano-smart-contracts && \
+	cd cardano-smart-contracts/ && npm i && cd ..
