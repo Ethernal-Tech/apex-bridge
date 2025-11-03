@@ -147,7 +147,7 @@ func getOutputs(
 					if shouldMint {
 						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
 							Token:  token,
-							Amount: receiver.AmountWrapped.Int64(),
+							Amount: receiver.AmountWrapped.Uint64(),
 						})
 					}
 

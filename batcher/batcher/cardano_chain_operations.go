@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -405,8 +406,12 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	for i, mintToken := range mintTokens {
 		tokensPolicyID = mintToken.PolicyID
+		mintAmount := new(big.Int).Sub(
+			new(big.Int).SetUint64(mintToken.Amount),
+			new(big.Int).SetUint64(availableLockedTokens[mintToken.String()]),
+		)
 		tokens[i] = cardanowallet.NewMintTokenAmount(
-			mintToken.Token, mintToken.Amount-int64(availableLockedTokens[mintToken.String()])) //nolint:gosec
+			mintToken.Token, mintAmount.Uint64(), mintAmount.Sign() < -1)
 	}
 
 	relayerAddr := cco.config.RelayerAddress
