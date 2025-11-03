@@ -411,7 +411,7 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 			new(big.Int).SetUint64(availableLockedTokens[mintToken.String()]),
 		)
 		tokens[i] = cardanowallet.NewMintTokenAmount(
-			mintToken.Token, mintAmount.Uint64(), mintAmount.Sign() < -1)
+			mintToken.Token, mintAmount.Uint64(), mintAmount.Sign() == -1)
 	}
 
 	relayerAddr := cco.config.RelayerAddress
