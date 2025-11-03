@@ -39,12 +39,10 @@ type skylineGenerateConfigsParams struct {
 
 	telemetry string
 
-	relayerDataDir    string
-	relayerConfigPath string
-
 	emptyBlocksThreshold uint
 }
 
+//nolint:dupl
 func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
@@ -68,10 +66,6 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 			(len(parts) == 2 && !common.IsValidNetworkAddress(strings.TrimSpace(parts[1]))) {
 			return fmt.Errorf("invalid telemetry: %s", p.telemetry)
 		}
-	}
-
-	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
-		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
 	return nil
@@ -156,19 +150,6 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		telemetryFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&p.relayerDataDir,
-		relayerDataDirFlag,
-		"",
-		relayerDataDirFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.relayerConfigPath,
-		relayerConfigPathFlag,
-		"",
-		relayerConfigPathFlagDesc,
-	)
-
 	cmd.Flags().UintVar(
 		&p.emptyBlocksThreshold,
 		emptyBlocksThresholdFlag,
@@ -177,7 +158,6 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
 
 func (p *skylineGenerateConfigsParams) Execute(
