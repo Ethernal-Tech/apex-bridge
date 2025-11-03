@@ -475,6 +475,36 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 						Tokens: []indexer.TokenAmount{
 							{
 								PolicyID: nft.PolicyID,
+								Name:     "nonCustodial",
+								Amount:   1,
+							},
+						},
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: nft.PolicyID,
+								Name:     nft.Name,
+								Amount:   2,
+							},
+						},
+					},
+				},
+				{
+					Input: indexer.TxInput{
+						Hash: indexer.NewHashFromHexString("0x0012"),
+					},
+					Output: indexer.TxOutput{
+						Amount: 4000000,
+						Tokens: []indexer.TokenAmount{
+							{
+								PolicyID: nft.PolicyID,
 								Name:     nft.Name,
 								Amount:   1,
 							},
