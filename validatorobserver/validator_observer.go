@@ -88,6 +88,11 @@ func (vs *ValidatorSetObserverImpl) execute() error {
 	// when it goes back to not pending, do not update isPending state
 	// after that, bridge needs to be restarted to fetch new validator set and addresses
 	if !isPending || isPending == vs.IsValidatorSetPending() {
+		if vs.IsValidatorSetPending() && !isPending {
+			// validator set is no longer pending, but we do not update the state here, just log it
+			vs.logger.Info("validator set update", "isPending", isPending)
+		}
+
 		return nil
 	}
 

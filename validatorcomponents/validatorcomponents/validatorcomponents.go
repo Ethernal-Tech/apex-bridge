@@ -118,8 +118,6 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to create validator set observer: %w", err)
 	}
 
-	fmt.Printf("Validator set observer created: %+v\n", validatorSetObserver)
-
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))
