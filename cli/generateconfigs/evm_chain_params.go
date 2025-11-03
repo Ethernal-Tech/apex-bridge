@@ -242,13 +242,16 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		return nil, fmt.Errorf("failed to load validator components config json: %w", err)
 	}
 
-	chainSpecificJSONRaw, _ := json.Marshal(cardanotx.RelayerEVMChainConfig{
+	chainSpecificJSONRaw, err := json.Marshal(cardanotx.RelayerEVMChainConfig{
 		NodeURL:          p.evmChainNodeURL,
 		DataDir:          cleanPath(p.relayerDataDir),
 		ConfigPath:       cleanPath(p.relayerConfigPath),
 		DynamicTx:        true,
 		GasFeeMultiplier: p.evmRelayerGasFeeMultiplier,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal chain specific config to json: %w", err)
+	}
 
 	if rConfig.Chains == nil {
 		rConfig.Chains = make(map[string]rCore.ChainConfig)

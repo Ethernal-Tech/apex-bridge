@@ -376,7 +376,10 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		return nil, fmt.Errorf("failed to load validator components config json: %w", err)
 	}
 
-	chainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[p.chainIDString].CardanoChainConfig)
+	chainSpecificJSONRaw, err := json.Marshal(vcConfig.CardanoChains[p.chainIDString].CardanoChainConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal chain specific config to json: %w", err)
+	}
 
 	if rConfig.Chains == nil {
 		rConfig.Chains = make(map[string]rCore.ChainConfig)
