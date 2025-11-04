@@ -186,7 +186,7 @@ $ apex-bridge generate-configs cardano-chain \
         --output-validator-components-file-name "vc_config.json"
 ```
 
-Add evm chain config minimal example
+Evm chain config all options
 ``` shell
 $ apex-bridge generate-configs evm-chain \
         --evm-node-url <node URL> \
