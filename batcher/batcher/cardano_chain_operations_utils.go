@@ -103,10 +103,7 @@ func getOutputs(
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
 			} else {
-				minBridgingFee := cardanoConfig.DefaultMinFeeForBridging
-				if hasTokens {
-					minBridgingFee = cardanoConfig.MinFeeForBridgingTokens
-				}
+				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee
 

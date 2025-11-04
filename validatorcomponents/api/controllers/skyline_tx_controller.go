@@ -161,10 +161,7 @@ func (sc *SkylineTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 	requestBody.BridgingFee += feeSum
 	requestBody.Transactions = transactions
 
-	minBridgingFee := cardanoSrcConfig.DefaultMinFeeForBridging
-	if wrappedTokenAmountSum.Sign() > 0 {
-		minBridgingFee = cardanoSrcConfig.MinFeeForBridgingTokens
-	}
+	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(wrappedTokenAmountSum.Sign() > 0)
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {

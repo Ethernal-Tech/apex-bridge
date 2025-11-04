@@ -232,10 +232,7 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
 
-	minBridgingFee := chainConfig.DefaultMinFeeForBridging
-	if hasTokens {
-		minBridgingFee = chainConfig.MinFeeForBridgingTokens
-	}
+	minBridgingFee := chainConfig.GetMinBridgingFee(hasTokens)
 
 	if amountSum.Cmp(new(big.Int).SetUint64(minBridgingFee+calculatedMinUtxo)) == -1 {
 		return fmt.Errorf(

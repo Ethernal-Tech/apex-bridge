@@ -275,10 +275,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
 	nativeCurrencyAmountSum.Add(nativeCurrencyAmountSum, new(big.Int).SetUint64(metadata.OperationFee))
 
-	minBridgingFee := cardanoSrcConfig.DefaultMinFeeForBridging
-	if hasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0 {
-		minBridgingFee = cardanoSrcConfig.MinFeeForBridgingTokens
-	}
+	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(hasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0)
 
 	if metadata.BridgingFee < minBridgingFee {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
