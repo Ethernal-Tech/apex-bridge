@@ -1047,6 +1047,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 	vectorChainSpecificJSONRaw, _ := json.Marshal(vcConfig.CardanoChains[common.ChainIDStrVector].CardanoChainConfig)
 
 	rConfig := &rCore.RelayerManagerConfiguration{
+		RunMode: common.SkylineMode,
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,

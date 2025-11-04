@@ -21,9 +21,6 @@ import (
 )
 
 func TestRelayerManagerConfig(t *testing.T) {
-	testDir, _, cleanup := setupTestSecretsManager(t)
-	defer cleanup()
-
 	jsonData := []byte(`{
 		"blockFrostUrl": "http://hello.com",
 		"testnetMagic": 2,
@@ -32,58 +29,81 @@ func TestRelayerManagerConfig(t *testing.T) {
 
 	rawMessage := json.RawMessage(jsonData)
 
-	expectedConfig := &core.RelayerManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			common.ChainIDStrPrime: {
-				ChainType:      "Cardano",
-				ChainSpecific:  rawMessage,
-				RelayerDataDir: testDir,
-			},
-			common.ChainIDStrVector: {
-				ChainType:      "CardaNo",
-				ChainSpecific:  rawMessage,
-				RelayerDataDir: testDir,
-			},
-		},
-		Bridge: core.BridgeConfig{
-			NodeURL:              "dummyNode", // will be our node,
-			SmartContractAddress: "0x3786783",
-		},
-		PullTimeMilis: 1000,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   filepath.Join(testDir, "relayer_logs"),
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
+	testCases := []struct {
+		name           string
+		runMode        common.VCRunMode
+		includeDataDir bool
+	}{
+		{"Skyline mode", common.SkylineMode, true},
+		{"Reactor mode", common.ReactorMode, false},
 	}
 
-	configFilePath := filepath.Join(testDir, "config.json")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testDir, _, cleanup := setupTestSecretsManager(t)
+			defer cleanup()
 
-	bytes, err := json.Marshal(expectedConfig)
-	require.NoError(t, err)
+			relayerDataDir := ""
+			if tc.includeDataDir {
+				relayerDataDir = testDir
+			}
 
-	require.NoError(t, os.WriteFile(configFilePath, bytes, 0770))
+			expectedConfig := &core.RelayerManagerConfiguration{
+				RunMode: tc.runMode,
+				Chains: map[string]core.ChainConfig{
+					common.ChainIDStrPrime: {
+						ChainType:      "Cardano",
+						ChainSpecific:  rawMessage,
+						RelayerDataDir: relayerDataDir,
+					},
+					common.ChainIDStrVector: {
+						ChainType:      "CardaNo",
+						ChainSpecific:  rawMessage,
+						RelayerDataDir: relayerDataDir,
+					},
+				},
+				Bridge: core.BridgeConfig{
+					NodeURL:              "dummyNode", // will be our node,
+					SmartContractAddress: "0x3786783",
+				},
+				PullTimeMilis: 1000,
+				Logger: logger.LoggerConfig{
+					LogFilePath:   filepath.Join(testDir, "relayer_logs"),
+					LogLevel:      hclog.Debug,
+					JSONLogFormat: false,
+					AppendFile:    true,
+				},
+			}
 
-	loadedConfig, err := LoadConfig(configFilePath)
-	require.NoError(t, err)
+			configFilePath := filepath.Join(testDir, "config.json")
 
-	assert.NotEmpty(t, loadedConfig.Chains)
+			bytes, err := json.Marshal(expectedConfig)
+			require.NoError(t, err)
 
-	for chainID, chainConfig := range loadedConfig.Chains {
-		chainConfig.ChainID = chainID
-		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, hclog.NewNullLogger())
-		require.NoError(t, err)
+			require.NoError(t, os.WriteFile(configFilePath, bytes, 0770))
 
-		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, hclog.NewNullLogger())
-		require.NoError(t, err)
+			loadedConfig, err := LoadConfig(configFilePath)
+			require.NoError(t, err)
 
-		assert.Equal(t, expectedOp, loadedOp)
+			assert.NotEmpty(t, loadedConfig.Chains)
+
+			for chainID, chainConfig := range loadedConfig.Chains {
+				chainConfig.ChainID = chainID
+				expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, tc.runMode, hclog.NewNullLogger())
+				require.NoError(t, err)
+
+				loadedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, tc.runMode, hclog.NewNullLogger())
+				require.NoError(t, err)
+
+				assert.Equal(t, expectedOp, loadedOp)
+			}
+
+			assert.Equal(t, expectedConfig.RunMode, loadedConfig.RunMode)
+			assert.Equal(t, expectedConfig.Bridge, loadedConfig.Bridge)
+			assert.Equal(t, expectedConfig.PullTimeMilis, loadedConfig.PullTimeMilis)
+			assert.Equal(t, expectedConfig.Logger, loadedConfig.Logger)
+		})
 	}
-
-	assert.Equal(t, expectedConfig.Bridge, loadedConfig.Bridge)
-	assert.Equal(t, expectedConfig.PullTimeMilis, loadedConfig.PullTimeMilis)
-	assert.Equal(t, expectedConfig.Logger, loadedConfig.Logger)
 }
 
 func Test_getRelayersAndConfigurations(t *testing.T) {

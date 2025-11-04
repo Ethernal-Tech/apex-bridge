@@ -203,7 +203,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			RelayerDataDir: secretsDir,
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.ReactorMode, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unknown chain type")
@@ -217,13 +217,25 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			RelayerDataDir: secretsDir,
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.ReactorMode, hclog.NewNullLogger())
 		require.Nil(t, chainOp)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "failed to unmarshal Cardano configuration")
 	})
 
-	t.Run("valid cardano config", func(t *testing.T) {
+	t.Run("valid reactor cardano config", func(t *testing.T) {
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "Cardano",
+			ChainID:       common.ChainIDStrPrime,
+			ChainSpecific: json.RawMessage(jsonData),
+		}
+
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.ReactorMode, hclog.NewNullLogger())
+		require.NotNil(t, chainOp)
+		require.NoError(t, err)
+	})
+
+	t.Run("valid skyline cardano config", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
 			ChainType:      "Cardano",
 			ChainID:        common.ChainIDStrPrime,
@@ -231,12 +243,24 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			RelayerDataDir: secretsDir,
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.SkylineMode, hclog.NewNullLogger())
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})
 
-	t.Run("valid cardano config check case sensitivity", func(t *testing.T) {
+	t.Run("valid reactor cardano config check case sensitivity", func(t *testing.T) {
+		chainSpecificConfig := core.ChainConfig{
+			ChainType:     "CaRdAnO",
+			ChainID:       common.ChainIDStrPrime,
+			ChainSpecific: json.RawMessage(jsonData),
+		}
+
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.ReactorMode, hclog.NewNullLogger())
+		require.NotNil(t, chainOp)
+		require.NoError(t, err)
+	})
+
+	t.Run("valid skyline cardano config check case sensitivity", func(t *testing.T) {
 		chainSpecificConfig := core.ChainConfig{
 			ChainType:      "CaRdAnO",
 			ChainID:        common.ChainIDStrPrime,
@@ -244,7 +268,7 @@ func TestRelayerGetChainSpecificOperations(t *testing.T) {
 			RelayerDataDir: secretsDir,
 		}
 
-		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, hclog.NewNullLogger())
+		chainOp, err := GetChainSpecificOperations(chainSpecificConfig, eth.Chain{}, common.SkylineMode, hclog.NewNullLogger())
 		require.NotNil(t, chainOp)
 		require.NoError(t, err)
 	})

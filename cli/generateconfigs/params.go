@@ -815,6 +815,7 @@ func (p *generateConfigsParams) Execute(
 	})
 
 	rConfig := &rCore.RelayerManagerConfiguration{
+		RunMode: common.ReactorMode,
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,

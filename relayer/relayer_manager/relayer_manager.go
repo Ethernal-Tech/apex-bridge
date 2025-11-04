@@ -133,7 +133,7 @@ func getRelayersAndConfigurations(
 		chainConfig.ChainID = chainID
 		newChainsConfigs[chainID] = chainConfig
 
-		operations, err := relayer.GetChainSpecificOperations(chainConfig, chainData, logger)
+		operations, err := relayer.GetChainSpecificOperations(chainConfig, chainData, config.RunMode, logger)
 		if err != nil {
 			return nil, nil, err
 		}

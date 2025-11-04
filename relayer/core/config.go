@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
 )
 
@@ -29,6 +30,7 @@ type ChainConfig struct {
 }
 
 type RelayerManagerConfiguration struct {
+	RunMode       common.VCRunMode       `json:"runMode"`
 	Bridge        BridgeConfig           `json:"bridge"`
 	Chains        map[string]ChainConfig `json:"chains"`
 	PullTimeMilis uint64                 `json:"pullTime"`
