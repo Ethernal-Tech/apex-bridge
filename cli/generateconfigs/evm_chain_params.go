@@ -239,7 +239,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 
 	rConfig, err := common.LoadJSON[rCore.RelayerManagerConfiguration](rConfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load validator components config json: %w", err)
+		return nil, fmt.Errorf("failed to load relayer components config json: %w", err)
 	}
 
 	chainSpecificJSONRaw, err := json.Marshal(cardanotx.RelayerEVMChainConfig{
