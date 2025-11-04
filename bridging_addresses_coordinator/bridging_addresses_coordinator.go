@@ -73,15 +73,12 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 	requiredCurrencyAmount := requiredTokenAmounts[cardanowallet.AdaTokenName]
 
 	c.logger.Debug("GetAddressesAndAmountsForBatch", "chain", common.ToStrChainID(chainID),
-		"requiredTokenAmounts", requiredTokenAmounts)
+		"requiredTokenAmounts", requiredTokenAmounts, "Mint token amounts", mintTokens)
 
 	totalTokenAmounts, err := c.getTokensAmountByAddr(chainID)
 	if err != nil {
 		return nil, isRedistribution, err
 	}
-
-	c.logger.Debug("Required token amounts", requiredTokenAmounts)
-	c.logger.Debug("Mint token amounts", mintTokens)
 
 	if len(mintTokens) > 0 {
 		// Tokens that will be minted in the transaction could be already locked in the addr0
@@ -98,14 +95,13 @@ func (c *BridgingAddressesCoordinatorImpl) GetAddressesAndAmountsForBatch(
 		}
 
 		for _, mintToken := range mintTokens {
-			c.logger.Debug("Processing minted token", mintToken.Token.String())
-			amount := totalTokenAmounts.addrAmounts[index].totalTokenAmounts[mintToken.Token.String()]
+			tokenName := mintToken.Token.String()
+			amount := totalTokenAmounts.addrAmounts[index].totalTokenAmounts[tokenName]
 
 			if amount > 0 {
-				requiredTokenAmounts[mintToken.Token.String()] = amount
+				requiredTokenAmounts[tokenName] = amount
 			} else {
-				c.logger.Debug("Minted token not found in addr0, removing from required tokens")
-				delete(requiredTokenAmounts, mintToken.Token.String())
+				delete(requiredTokenAmounts, tokenName)
 			}
 		}
 	}

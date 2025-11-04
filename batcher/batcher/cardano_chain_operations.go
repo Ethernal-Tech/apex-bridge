@@ -234,7 +234,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
 		"outputs", getOutputsData.TxOutputs.Outputs, "redistribution", getOutputsData.IsRedistribution)
 
-	mintTokens := make([]cardanowallet.MintTokenAmount, 0)
+	var mintTokens []cardanowallet.MintTokenAmount
 	if txPlutusMintData != nil {
 		mintTokens = txPlutusMintData.Tokens
 	}
@@ -522,6 +522,7 @@ func (cco *CardanoChainOperations) findCustodialTxOutput(custodialAddr string) (
 
 	for _, out := range txOutputs {
 		tokens := out.Output.Tokens
+		// nft token has to be the only token in utxo by design
 		if len(tokens) == 1 &&
 			tokens[0].Equals(indexer.TokenAmount{
 				PolicyID: cco.config.CustodialNft.PolicyID,
@@ -561,6 +562,7 @@ func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
 
 	custodialNft := cardanowallet.NewTokenAmount(cco.config.CustodialNft, 1)
 
+	// custodial address must receive back it's nft token in standalone output
 	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs,
 		cardanowallet.NewTxOutput(custodialAddr, custodialTxOutput.Output.Amount, custodialNft))
 

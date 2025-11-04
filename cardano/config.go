@@ -100,14 +100,12 @@ func (config CardanoChainConfig) GetNativeTokenData(
 	shouldMint = false
 
 	for _, dst := range config.NativeTokens {
-		if dst.DstChainID != dstChainID {
-			continue
+		if dst.DstChainID == dstChainID {
+			tokenName = dst.TokenName
+			shouldMint = dst.Mint
+
+			break
 		}
-
-		tokenName = dst.TokenName
-		shouldMint = dst.Mint
-
-		break
 	}
 
 	if tokenName == "" {
