@@ -232,14 +232,14 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
-		return nil, fmt.Errorf("failed to create validator components config json: %w", err)
+		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
 	}
 
 	rConfigPath := filepath.Join(outputDirPath, p.outputRelayerFileName)
 
 	rConfig, err := common.LoadJSON[rCore.RelayerManagerConfiguration](rConfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load relayer components config json: %w", err)
+		return nil, fmt.Errorf("failed to load relayer config json: %w", err)
 	}
 
 	chainSpecificJSONRaw, err := json.Marshal(cardanotx.RelayerEVMChainConfig{
@@ -264,7 +264,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {
-		return nil, fmt.Errorf("failed to create relayer config json: %w", err)
+		return nil, fmt.Errorf("failed to update relayer config json: %w", err)
 	}
 
 	return &CmdResult{
