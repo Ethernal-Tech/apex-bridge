@@ -105,42 +105,10 @@ All options
 ``` shell
 $ go run ./main.go generate-configs \
         --validator-data-dir <path to bridge chain data directory when using local secrets manager> \
-        --validator-config <path to bridge chain secrets manager config file> \        
+        --validator-config <path to bridge chain secrets manager config file> \
         --output-dir <path to config jsons output directory> \
         --output-validator-components-file-name <validator components config json output file name>.json \
         --output-relayer-file-name <relayer config json output file name>.json \
-        --prime-network-address <address of prime network> \
-        --prime-network-id <network id of prime network> \
-        --prime-network-magic <network magic of prime network> \
-        --prime-ogmios-url <ogmios URL for prime network> \
-        --prime-blockfrost-url <blockfrost URL for prime network> \
-        --prime-blockfrost-api-key <blockfrost API key for prime network> \
-        --prime-socket-path <socket path for prime network> \
-        --prime-ttl-slot-inc <ttl slot increment for prime> \
-        --prime-slot-rounding-threshold <prime slot rounding threshold> \
-        --prime-starting-block <slot:hash> \
-        --prime-utxo-min-amount <minimal UTXO value for prime> \
-        --prime-min-fee-for-bridging <minimal bridging fee for prime> \
-        --prime-block-confirmation-count <block confirmation count for prime> \
-        --vector-network-address <address of vector network> \
-        --vector-network-magic <network magic of vector network> \
-        --vector-network-id <network id of vector network> \
-        --vector-blockfrost-url <blockfrost URL for vector network> \
-        --vector-ogmios-url <ogmios URL for vector network> \
-        --vector-blockfrost-api-key <blockfrost API key for vector network> \
-        --vector-socket-path <socket path for vector network> \
-        --vector-ttl-slot-inc <ttl slot increment for vector> \
-        --vector-slot-rounding-threshold <vector slot rounding threshold> \
-        --vector-starting-block <slot:hash> \
-        --vector-utxo-min-amount <minimal UTXO value for vector> \
-        --vector-min-fee-for-bridging<minimal bridging fee for vector> \
-        --vector-block-confirmation-count <block confirmation count for vector> \
-        --nexus-node-url <nexus node URL> \
-        --nexus-ttl-block-inc <nexus ttl block increment> \
-        --nexus-block-rounding-threshold <nexus block rounding threshold> \
-        --nexus-starting-block <block number> \
-        --nexus-min-fee-for-bridging <minimal bridging fee for nexus> \
-        --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
         --relayer-data-dir <relayer data dir for secrets> \
@@ -159,16 +127,77 @@ Minimal example
 $ go run ./main.go generate-configs \
         --validator-data-dir ./blade-dir \
         --relayer-data-dir ./blade-dir \
-        --prime-network-address localhost:13001 \
-        --prime-network-magic 142 \
-        --prime-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
-        --vector-network-address localhost:23001 \
-        --vector-network-magic 242 \
-        --vector-blockfrost-url https://cardano-preview.blockfrost.io/api/v0 \
-        --nexus-node-url localhost:5500 \
         --bridge-node-url https://polygon-mumbai-pokt.nodies.app \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
         --api-keys test_api_key_1
+```
+
+Cardano chain all options
+``` shell
+$ apex-bridge generate-configs cardano-chain \
+        --network-address <address of the chain network> \
+        --network-magic <network magic of the chain network> \
+        --network-id <network id of the chain network> \
+        --ogmios-url <ogmios URL for the chain network> \
+        --blockfrost-url <blockfrost URL for the chain network> \
+        --blockfrost-api-key <blockfrost API key> \
+        --socket-path <socket path for the chain network> \
+        --ttl-slot-inc <ttl slot increment> \
+        --slot-rounding-threshold <slot rounding threshold> \
+        --starting-block <slot:hash> \
+        --utxo-min-amount <minimal UTXO value for the chain> \
+        --min-fee-for-bridging <minimal bridging fee> \
+        --block-confirmation-count <block confirmation count> \
+        --chain-id <chain id> \
+        --allowed-directions <allowed bridging directions> \
+        --output-validator-components-file-name <validator components config json output file name> \
+        --output-relayer-file-name <relayer config json output file name>
+```
+
+Add cardano chain config minimal example
+``` shell
+$ apex-bridge generate-configs cardano-chain \
+        --network-address localhost:13001 \
+        --network-magic 142 \
+        --network-id 3 \
+        --ogmios-url https://prime.ogmios.com \
+        --ttl-slot-inc 6 \
+        --min-fee-for-bridging 10000000 \
+        --block-confirmation-count 10 \
+        --chain-id "prime" \
+        --allowed-directions "vector" \
+        --output-validator-components-file-name "vc_config.json"
+```
+
+Evm chain config all options
+``` shell
+$ apex-bridge generate-configs evm-chain \
+        --evm-node-url <node URL> \
+        --evm-ttl-block-inc <ttl block increment> \
+        --evm-block-rounding-threshold <block rounding threshold> \
+        --evm-starting-block <block number> \
+        --evm-min-fee-for-bridging <minimal bridging fee> \
+        --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
+        --chain-id <evm chain id> \
+        --allowed-directions <allowed bridging directions> \
+        --allowed-directions <allowed bridging directions> \
+        --output-validator-components-file-name <validator components config json output file name> \
+        --output-relayer-file-name <relayer config json output file name>
+```
+
+Add evm chain config minimal example
+``` shell
+$ apex-bridge generate-configs evm-chain \
+        --evm-node-url localhost:5500 \
+        --evm-ttl-block-inc 10 \
+        --evm-block-rounding-threshold 5 \
+        --evm-starting-block 3 \
+        --evm-min-fee-for-bridging 10000000 \
+        --evm-relayer-gas-fee-multiplier 4 \
+        --chain-id "nexus" \
+        --allowed-directions "prime" \
+        --allowed-directions "vector" \
+        --output-validator-components-file-name "vc_config.json"
 ```
 
 # Example of sending a transaction from the prime to the vector
