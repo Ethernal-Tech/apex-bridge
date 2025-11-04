@@ -23,6 +23,7 @@ func CreateTx(
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
 	txPlutusMintData *PlutusMintData,
+	additionalWitnessCount int,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
@@ -134,7 +135,7 @@ func CreateTx(
 		builder.SetTotalCollateral(0)
 	}
 
-	calcFee, err := builder.CalculateFee(0)
+	calcFee, err := builder.SetAdditionalWitnessCount(additionalWitnessCount).CalculateFee(0)
 	if err != nil {
 		return nil, "", err
 	}

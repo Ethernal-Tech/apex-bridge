@@ -341,6 +341,12 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		addrAndAmountToDeduct = multisigAddresses
 	}
 
+	additionalWitnessCount := 0
+
+	if cco.config.RelayerAddress != "" {
+		additionalWitnessCount = 1
+	}
+
 	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "txInputs", txInputs)
 	cco.logger.Debug("REFUND TX INPUTS", "batchID", data.BatchNonceID,
@@ -362,6 +368,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		certificateData,
 		addrAndAmountToDeduct,
 		txPlutusMintData,
+		additionalWitnessCount,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -675,6 +682,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		nil,
 		utxosForConsolidationRet.chosenMultisigAddresses,
 		nil,
+		0,
 	)
 	if err != nil {
 		return nil, err
