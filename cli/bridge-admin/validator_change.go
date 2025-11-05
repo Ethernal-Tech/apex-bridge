@@ -22,11 +22,11 @@ const (
 )
 
 type setValidatorChangeParams struct {
-	nodeURL            string
-	privateKey         string
-	privateKeyConfig   string
-	validatorSetChange bool
-	contractAddress    string
+	nodeURL          string
+	privateKey       string
+	privateKeyConfig string
+	validatorChange  *bool
+	contractAddress  string
 }
 
 func (v *setValidatorChangeParams) ValidateFlags() error {
@@ -68,7 +68,7 @@ func (v *setValidatorChangeParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().BoolVar(
-		&v.validatorSetChange,
+		v.validatorChange,
 		validatorChangeFlag,
 		false,
 		validatorChangeDesc,
@@ -121,7 +121,7 @@ func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (co
 		estimatedGas, _, err := txHelper.EstimateGas(
 			ctx, wallet.GetAddress(),
 			contractAddress, nil, 1.2,
-			parsedABI, "setValidatorSetChange", v.validatorSetChange)
+			parsedABI, "setValidatorSetChange", v.validatorChange)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas for admin smart contract: %w", err)
 		}
@@ -135,7 +135,7 @@ func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (co
 
 				return contract.SetValidatorChange(
 					txOpts,
-					v.validatorSetChange,
+					*v.validatorChange,
 				)
 			},
 		)
