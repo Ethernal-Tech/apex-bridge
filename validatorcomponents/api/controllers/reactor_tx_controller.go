@@ -162,12 +162,12 @@ func (c *ReactorTxControllerImpl) validateAndFillOutCreateBridgingTxRequest(
 
 	// this is just convinient way to setup default min fee
 	if requestBody.BridgingFee == 0 {
-		requestBody.BridgingFee = cardanoSrcConfig.MinFeeForBridging
+		requestBody.BridgingFee = cardanoSrcConfig.DefaultMinFeeForBridging
 	}
 
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(requestBody.BridgingFee))
 
-	if requestBody.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
+	if requestBody.BridgingFee < cardanoSrcConfig.DefaultMinFeeForBridging {
 		return fmt.Errorf("bridging fee in request body is less than minimum: %v", requestBody)
 	}
 

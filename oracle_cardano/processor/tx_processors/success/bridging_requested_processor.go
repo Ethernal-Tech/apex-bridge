@@ -241,9 +241,9 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	metadata.BridgingFee += feeSum
 	receiverAmountSum.Add(receiverAmountSum, new(big.Int).SetUint64(metadata.BridgingFee))
 
-	if metadata.BridgingFee < cardanoSrcConfig.MinFeeForBridging {
+	if metadata.BridgingFee < cardanoSrcConfig.DefaultMinFeeForBridging {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
-			metadata.BridgingFee, cardanoSrcConfig.MinFeeForBridging, metadata)
+			metadata.BridgingFee, cardanoSrcConfig.DefaultMinFeeForBridging, metadata)
 	}
 
 	if receiverAmountSum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {

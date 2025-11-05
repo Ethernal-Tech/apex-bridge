@@ -413,7 +413,8 @@ func Test_skylineGetOutputs(t *testing.T) {
 				TokenName:  cardanoToken.String(),
 			},
 		},
-		MinFeeForBridging: 100,
+		DefaultMinFeeForBridging: 200,
+		MinFeeForBridgingTokens:  100,
 	}
 
 	txs := []eth.ConfirmedTransaction{

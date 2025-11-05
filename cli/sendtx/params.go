@@ -365,18 +365,20 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			ip.chainIDSrc: {
-				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
-				TestNetMagic:         ip.testnetMagicSrc,
-				TTLSlotNumberInc:     ttlSlotNumberInc,
-				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
-				MinUtxoValue:         common.MinUtxoAmountDefault,
-				PotentialFee:         potentialFee,
+				CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
+				TestNetMagic:             ip.testnetMagicSrc,
+				TTLSlotNumberInc:         ttlSlotNumberInc,
+				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
+				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
+				MinUtxoValue:             common.MinUtxoAmountDefault,
+				PotentialFee:             potentialFee,
 			},
 			ip.chainIDDst: {
-				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
-				PotentialFee:         potentialFee,
+				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				DefaultMinFeeForBridging: common.MinFeeForBridgingDefault,
+				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
+				PotentialFee:             potentialFee,
 			},
 		},
 	)

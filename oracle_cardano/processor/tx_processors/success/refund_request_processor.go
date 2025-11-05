@@ -183,7 +183,7 @@ func (p *RefundRequestProcessorImpl) validate(
 	amountSum := big.NewInt(0)
 	unknownNativeTokensUtxoCnt := uint(0)
 
-	var recognizeToken bool
+	var hasTokens, recognizeToken bool
 
 	for _, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
@@ -193,6 +193,8 @@ func (p *RefundRequestProcessorImpl) validate(
 		amountSum.Add(amountSum, new(big.Int).SetUint64(out.Amount))
 
 		if len(out.Tokens) > 0 {
+			hasTokens = true
+
 			if chainConfig.NativeTokens == nil || zeroAddress != out.Address {
 				unknownNativeTokensUtxoCnt++
 			} else {
@@ -230,10 +232,12 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
 
-	if amountSum.Cmp(new(big.Int).SetUint64(chainConfig.MinFeeForBridging+calculatedMinUtxo)) == -1 {
+	minBridgingFee := chainConfig.GetMinBridgingFee(hasTokens)
+
+	if amountSum.Cmp(new(big.Int).SetUint64(minBridgingFee+calculatedMinUtxo)) == -1 {
 		return fmt.Errorf(
 			"sum of amounts to the bridging address: %v is less than the minimum required for refund: %v",
-			amountSum, chainConfig.MinFeeForBridging+calculatedMinUtxo)
+			amountSum, minBridgingFee+calculatedMinUtxo)
 	}
 
 	if appConfig.EthChains[metadata.DestinationChainID] == nil &&

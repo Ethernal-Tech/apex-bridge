@@ -185,16 +185,17 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 	}
 
 	return sendtx.ChainConfig{
-		CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:            txProvider,
-		TestNetMagic:          uint(config.NetworkMagic),
-		TTLSlotNumberInc:      config.TTLSlotNumberInc,
-		MinUtxoValue:          config.UtxoMinAmount,
-		NativeTokens:          config.NativeTokens,
-		MinBridgingFeeAmount:  config.MinFeeForBridging,
-		MinOperationFeeAmount: config.MinOperationFee,
-		PotentialFee:          config.PotentialFee,
-		ProtocolParameters:    nil,
+		CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:               txProvider,
+		TestNetMagic:             uint(config.NetworkMagic),
+		TTLSlotNumberInc:         config.TTLSlotNumberInc,
+		MinUtxoValue:             config.UtxoMinAmount,
+		NativeTokens:             config.NativeTokens,
+		DefaultMinFeeForBridging: config.DefaultMinFeeForBridging,
+		MinFeeForBridgingTokens:  config.MinFeeForBridgingTokens,
+		MinOperationFeeAmount:    config.MinOperationFee,
+		PotentialFee:             config.PotentialFee,
+		ProtocolParameters:       nil,
 	}, nil
 }
 
@@ -206,6 +207,6 @@ func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
 	}
 
 	return sendtx.ChainConfig{
-		MinBridgingFeeAmount: feeValue.Uint64(),
+		DefaultMinFeeForBridging: feeValue.Uint64(),
 	}
 }

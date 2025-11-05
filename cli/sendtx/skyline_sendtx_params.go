@@ -296,19 +296,21 @@ func (p *sendSkylineTxParams) Execute(
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary:      cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:            cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				TestNetMagic:          p.testnetMagicSrc,
-				TTLSlotNumberInc:      ttlSlotNumberInc,
-				MinBridgingFeeAmount:  srcConfig.MinFeeForBridging,
-				MinOperationFeeAmount: srcConfig.MinOperationFee,
-				MinUtxoValue:          srcConfig.MinUtxoAmount,
-				NativeTokens:          srcNativeTokens,
+				CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:               cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
+				TestNetMagic:             p.testnetMagicSrc,
+				TTLSlotNumberInc:         ttlSlotNumberInc,
+				DefaultMinFeeForBridging: srcConfig.MinFeeForBridging,
+				MinFeeForBridgingTokens:  srcConfig.MinFeeForBridging,
+				MinOperationFeeAmount:    srcConfig.MinOperationFee,
+				MinUtxoValue:             srcConfig.MinUtxoAmount,
+				NativeTokens:             srcNativeTokens,
 			},
 			p.chainIDDst: {
-				MinUtxoValue:          dstConfig.MinUtxoAmount,
-				MinBridgingFeeAmount:  dstConfig.MinFeeForBridging,
-				MinOperationFeeAmount: dstConfig.MinOperationFee,
+				MinUtxoValue:             dstConfig.MinUtxoAmount,
+				DefaultMinFeeForBridging: dstConfig.MinFeeForBridging,
+				MinFeeForBridgingTokens:  dstConfig.MinFeeForBridging,
+				MinOperationFeeAmount:    dstConfig.MinOperationFee,
 			},
 		},
 	)
