@@ -38,7 +38,7 @@ func (*SettingsControllerImpl) GetPathPrefix() string {
 func (c *SettingsControllerImpl) GetEndpoints() []*core.APIEndpoint {
 	return []*core.APIEndpoint{
 		{Path: "Get", Method: http.MethodGet, Handler: c.getSettings, APIKeyAuth: true},
-		{Path: "ValidatorChangeStatus", Method: http.MethodGet, Handler: c.getValidatorSetChangeStatus, APIKeyAuth: true},
+		{Path: "GetValidatorChangeStatus", Method: http.MethodGet, Handler: c.getValidatorSetChangeStatus, APIKeyAuth: true},
 		{Path: "GetMultiSigBridgingAddr", Method: http.MethodGet, Handler: c.getMultiSigBridgingAddr, APIKeyAuth: true},
 	}
 }
