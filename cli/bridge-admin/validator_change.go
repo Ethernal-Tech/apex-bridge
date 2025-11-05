@@ -80,8 +80,6 @@ func (v *setValidatorChangeParams) RegisterFlags(cmd *cobra.Command) {
 		"",
 		contractAddressFlagDesc,
 	)
-
-	cmd.MarkFlagRequired(validatorChangeFlag)
 }
 
 func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
