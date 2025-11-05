@@ -22,6 +22,7 @@ import (
 const (
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
+	adminSCAddressFlag  = "admin-sc-address"
 
 	validatorDataDirFlag = "validator-data-dir"
 	validatorConfigFlag  = "validator-config"
@@ -42,6 +43,7 @@ const (
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
+	adminSCAddressFlagDesc  = "(mandatory) admin smart contract address on bridge chain"
 
 	validatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
 	validatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
@@ -82,6 +84,7 @@ var (
 type generateConfigsParams struct {
 	bridgeNodeURL   string
 	bridgeSCAddress string
+	adminSCAddress  string
 
 	validatorDataDir string
 	validatorConfig  string
@@ -106,6 +109,10 @@ func (p *generateConfigsParams) validateFlags() error {
 
 	if p.bridgeSCAddress == "" {
 		return fmt.Errorf("missing %s", bridgeSCAddressFlag)
+	}
+
+	if p.adminSCAddress == "" {
+		return fmt.Errorf("missing %s", adminSCAddressFlag)
 	}
 
 	if p.validatorDataDir == "" && p.validatorConfig == "" {
@@ -139,6 +146,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddressFlag,
 		"",
 		bridgeSCAddressFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&p.adminSCAddress,
+		adminSCAddressFlag,
+		"",
+		adminSCAddressFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -230,9 +244,10 @@ func (p *generateConfigsParams) Execute() (common.ICommandResult, error) {
 		CardanoChains:       map[string]*oCore.CardanoChainConfig{},
 		EthChains:           map[string]*oCore.EthChainConfig{},
 		Bridge: oCore.BridgeConfig{
-			NodeURL:              p.bridgeNodeURL,
-			DynamicTx:            false,
-			SmartContractAddress: p.bridgeSCAddress,
+			NodeURL:                    p.bridgeNodeURL,
+			DynamicTx:                  false,
+			BridgeSmartContractAddress: p.bridgeSCAddress,
+			AdminSmartContractAddress:  p.adminSCAddress,
 			SubmitConfig: oCore.SubmitConfig{
 				ConfirmedBlocksThreshold:  20,
 				ConfirmedBlocksSubmitTime: 3000,

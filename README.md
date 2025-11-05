@@ -24,19 +24,23 @@ cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 ```
 - Generate bridge bindings with the command:
 ```shell
-BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
-       --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts
+(cd "$BASEPATH" && npx hardhat compile)
+rm -rf ./contractbinding/contractbuild && mkdir ./contractbinding/contractbuild
+cat "${BASEPATH}/artifacts/contracts/Bridge.sol/Bridge.json" | jq .abi >> ./contractbinding/contractbuild/Bridge.sol.abi
+abigen --abi ./contractbinding/contractbuild/Bridge.sol.abi --pkg main --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+cat "${BASEPATH}/artifacts/contracts/Admin.sol/Admin.json" | jq .abi >> ./contractbinding/contractbuild/Admin.sol.abi
+abigen --abi ./contractbinding/contractbuild/Admin.sol.abi --pkg main --type AdminContract --out ./contractbinding/AdminContract.go --pkg contractbinding
+rm -rf ./contractbinding/contractbuild
 ```
 - Generate nexus bindings with the command:
 ```shell
-BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Gateway.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi --pkg main \
-       --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway
+(cd "$BASEPATH" && npx hardhat compile)
+rm -rf ./contractbinding/contractbuild && mkdir ./contractbinding/contractbuild
+cat "${BASEPATH}/artifacts/contracts/Gateway.sol/Gateway.json" | jq .abi >> ./contractbinding/contractbuild/GatewayContract.sol.abi
+abigen --abi ./contractbinding/contractbuild/GatewayContract.sol.abi --pkg main --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
+rm -rf ./contractbinding/contractbuild
 ```
 
 # How to generate blade secrets
