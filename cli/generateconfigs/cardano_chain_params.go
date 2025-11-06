@@ -46,22 +46,23 @@ const (
 
 	relayerAddressFlag = "relayer-address"
 
-	chainIDStringFlagDesc          = "(mandatory) chain id string for the chain config"
-	networkAddressFlagDesc         = "(mandatory) address of network"
-	networkMagicFlagDesc           = "network magic (default 0)"
-	networkIDFlagDesc              = "network id"
-	ogmiosURLFlagDesc              = "ogmios URL chain network"
-	blockfrostURLFlagDesc          = "blockfrost URL for chain network"
-	blockfrostAPIKeyFlagDesc       = "blockfrost API key for chain network" //nolint:gosec
-	socketPathFlagDesc             = "socket path for chain network"
-	ttlSlotIncFlagDesc             = "TTL slot increment"
-	slotRoundingThresholdFlagDesc  = "defines the upper limit used for rounding slot values for the chain. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
-	startingBlockFlagDesc          = "slot: hash of the block from where to start oracle / block submitter for the chain"                                                                                       //nolint:lll
-	utxoMinAmountFlagDesc          = "minimal UTXO value for the chain"
-	minFeeForBridgingFlagDesc      = "minimal bridging fee for the chain"
-	minOperationFeeFlagDesc        = "minimal operation fee for the chain"
-	blockConfirmationCountFlagDesc = "block confirmation count for the chain"
-	allowedDirectionsFlagDesc      = "allowed bridging directions for the chain"
+	chainIDStringFlagDesc           = "(mandatory) chain id string for the chain config"
+	networkAddressFlagDesc          = "(mandatory) address of network"
+	networkMagicFlagDesc            = "network magic (default 0)"
+	networkIDFlagDesc               = "network id"
+	ogmiosURLFlagDesc               = "ogmios URL chain network"
+	blockfrostURLFlagDesc           = "blockfrost URL for chain network"
+	blockfrostAPIKeyFlagDesc        = "blockfrost API key for chain network" //nolint:gosec
+	socketPathFlagDesc              = "socket path for chain network"
+	ttlSlotIncFlagDesc              = "TTL slot increment"
+	slotRoundingThresholdFlagDesc   = "defines the upper limit used for rounding slot values for the chain. Any slot value between 0 and `slotRoundingThreshold` will be rounded to `slotRoundingThreshold` etc" //nolint:lll
+	startingBlockFlagDesc           = "slot: hash of the block from where to start oracle / block submitter for the chain"                                                                                       //nolint:lll
+	utxoMinAmountFlagDesc           = "minimal UTXO value for the chain"
+	minFeeForBridgingFlagDesc       = "minimal bridging fee for the chain"
+	minFeeForBridgingTokensFlagDesc = "minimal bridging fee for bridging tokens for the chain" //nolint:gosec
+	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
+	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
+	allowedDirectionsFlagDesc       = "allowed bridging directions for the chain"
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
 	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
