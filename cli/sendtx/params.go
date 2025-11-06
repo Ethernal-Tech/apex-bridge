@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -29,7 +30,8 @@ const (
 	receiverFlag        = "receiver"
 	networkIDSrcFlag    = "network-id-src"
 	testnetMagicFlag    = "testnet-src"
-	chainIDFlag         = "chain-dst"
+	srcChainIDFlag      = "chain-src"
+	dstChainIDFlag      = "chain-dst"
 	multisigAddrSrcFlag = "addr-multisig-src"
 	feeAmountFlag       = "fee"
 	ogmiosURLDstFlag    = "ogmios-dst"
@@ -43,7 +45,8 @@ const (
 	receiverFlagDesc        = "receiver addr:amount"
 	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
 	networkIDSrcFlagDesc    = "source network id"
-	chainIDFlagDesc         = "destination chain ID (prime, vector, etc)"
+	srcChainIDFlagDesc      = "source chain ID (prime, vector, etc)"
+	dstChainIDFlagDesc      = "destination chain ID (prime, vector, etc)"
 	multisigAddrSrcFlagDesc = "source multisig address"
 	feeAmountFlagDesc       = "amount for multisig fee addr"
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
@@ -68,16 +71,16 @@ type receiverAmount struct {
 	Amount       *big.Int
 }
 
-func ToTxOutput(receivers []*receiverAmount) []cardanowallet.TxOutput {
-	txOutputs := make([]cardanowallet.TxOutput, len(receivers))
+func ToCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
+	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
-		txOutputs[idx] = cardanowallet.TxOutput{
+		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
 			Addr:   rec.ReceiverAddr,
 			Amount: rec.Amount.Uint64(),
 		}
 	}
 
-	return txOutputs
+	return metadataReceivers
 }
 
 func ToGatewayStruct(receivers []*receiverAmount) ([]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int) {
@@ -103,6 +106,7 @@ type sendTxParams struct {
 	privateKeyRaw      string
 	stakePrivateKeyRaw string
 	receivers          []string
+	chainIDSrc         string
 	chainIDDst         string
 	feeString          string
 
@@ -135,8 +139,12 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
+	if !common.IsExistingChainID(ip.chainIDSrc) {
+		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
+	}
+
 	if !common.IsExistingChainID(ip.chainIDDst) {
-		return fmt.Errorf("--%s flag not specified", chainIDFlag)
+		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
 	feeAmount, ok := new(big.Int).SetString(ip.feeString, 0)
@@ -262,10 +270,17 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.chainIDDst,
-		chainIDFlag,
+		&ip.chainIDSrc,
+		srcChainIDFlag,
 		"",
-		chainIDFlagDesc,
+		srcChainIDFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.chainIDDst,
+		dstChainIDFlag,
+		"",
+		dstChainIDFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -330,26 +345,39 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 }
 
 func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
+	ctx := context.Background()
+
 	switch ip.txType {
 	case common.ChainTypeEVMStr:
-		return ip.executeEvm(outputter)
+		return ip.executeEvm(ctx, outputter)
 	case common.ChainTypeCardanoStr, "":
-		return ip.executeCardano(outputter)
+		return ip.executeCardano(ctx, outputter)
 	default:
 		return nil, fmt.Errorf("txType not supported")
 	}
 }
 
-func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	receivers := ToTxOutput(ip.receiversParsed)
+func (ip *sendTxParams) executeCardano(
+	ctx context.Context, outputter common.OutputFormatter) (common.ICommandResult, error) {
+	receivers := ToCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
-	cardanoCliBinary := cardanowallet.ResolveCardanoCliBinary(networkID)
-	txSender := cardanotx.NewBridgingTxSender(
-		cardanoCliBinary,
-		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
-		cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-		ip.testnetMagicSrc, ip.multisigAddrSrc, ttlSlotNumberInc,
-		potentialFee,
+	txSender := sendtx.NewTxSender(
+		map[string]sendtx.ChainConfig{
+			ip.chainIDSrc: {
+				CardanoCliBinary:     cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLSrc),
+				TestNetMagic:         ip.testnetMagicSrc,
+				TTLSlotNumberInc:     ttlSlotNumberInc,
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
+				MinUtxoValue:         common.MinUtxoAmountDefault,
+				PotentialFee:         potentialFee,
+			},
+			ip.chainIDDst: {
+				TxProvider:           cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+				MinBridgingFeeAmount: common.MinFeeForBridgingDefault,
+				PotentialFee:         potentialFee,
+			},
+		},
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -357,9 +385,17 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(),
-		receivers, ip.feeAmount.Uint64(), common.MinUtxoAmountDefault)
+	txInfo, _, err := txSender.CreateBridgingTx(
+		ctx,
+		sendtx.BridgingTxDto{
+			SrcChainID:      ip.chainIDSrc,
+			DstChainID:      ip.chainIDDst,
+			SenderAddr:      senderAddr.String(),
+			Receivers:       receivers,
+			BridgingAddress: ip.multisigAddrSrc,
+			BridgingFee:     ip.feeAmount.Uint64(),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -367,19 +403,18 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SendTx(context.Background(), txRaw, ip.wallet)
+	err = txSender.SubmitTx(ctx, ip.chainIDSrc, txInfo.TxRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txHash)))
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
 	if ip.ogmiosURLDst != "" {
-		err = txSender.WaitForTx(
-			context.Background(), receivers, cardanowallet.AdaTokenName,
-			infracommon.WithRetryCount(waitForAmountRetryCount),
-			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
+		err = waitForTxOnCardano(
+			ctx, cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}
@@ -392,7 +427,15 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 			return nil, err
 		}
 
-		err = waitForAmounts(context.Background(), txHelper.GetClient(), ip.receiversParsed)
+		receivers := make([]*receiverAmount, len(ip.receiversParsed))
+		for i, rec := range ip.receiversParsed {
+			receivers[i] = &receiverAmount{
+				ReceiverAddr: rec.ReceiverAddr,
+				Amount:       common.DfmToWei(rec.Amount),
+			}
+		}
+
+		err = waitForTxOnEvm(ctx, txHelper.GetClient(), receivers)
 		if err != nil {
 			return nil, err
 		}
@@ -402,11 +445,12 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
 		Receipts:   ip.receiversParsed,
-		TxHash:     txHash,
+		TxHash:     txInfo.TxHash,
 	}, nil
 }
 
-func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICommandResult, error) {
+func (ip *sendTxParams) executeEvm(
+	ctx context.Context, outputter common.OutputFormatter) (common.ICommandResult, error) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
@@ -470,16 +514,17 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	if ip.ogmiosURLDst != "" {
-		cardanoReceivers := ToTxOutput(ip.receiversParsed)
-		for i := range cardanoReceivers {
-			cardanoReceivers[i].Amount = 1 // just need to see if there is some change
+		receivers := make([]*receiverAmount, len(ip.receiversParsed))
+		for i, rec := range ip.receiversParsed {
+			receivers[i] = &receiverAmount{
+				ReceiverAddr: rec.ReceiverAddr,
+				Amount:       common.WeiToDfm(rec.Amount),
+			}
 		}
 
-		err = cardanotx.WaitForTx(
-			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
-			cardanoReceivers, cardanowallet.AdaTokenName,
-			infracommon.WithRetryCount(waitForAmountRetryCount),
-			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
+		err = waitForTxOnCardano(
+			ctx, cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			receivers)
 		if err != nil {
 			return nil, err
 		}
@@ -496,7 +541,30 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}, nil
 }
 
-func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*receiverAmount) error {
+func waitForTxOnEvm(
+	ctx context.Context, client *ethclient.Client, receivers []*receiverAmount) error {
+	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
+		return client.BalanceAt(ctx, common.HexToAddress(addr), nil)
+	})
+}
+
+func waitForTxOnCardano(
+	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever, receivers []*receiverAmount) error {
+	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
+		utxos, err := txUtxoRetriever.GetUtxos(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		sum := cardanowallet.GetUtxosSum(utxos)
+
+		return new(big.Int).SetUint64(sum[cardanowallet.AdaTokenName]), nil
+	})
+}
+
+func waitForTx(ctx context.Context, receivers []*receiverAmount,
+	getBalanceFn func(ctx context.Context, addr string) (*big.Int, error),
+) error {
 	errs := make([]error, len(receivers))
 	wg := sync.WaitGroup{}
 
@@ -506,11 +574,9 @@ func waitForAmounts(ctx context.Context, client *ethclient.Client, receivers []*
 		go func(idx int, recv *receiverAmount) {
 			defer wg.Done()
 
-			addr := common.HexToAddress(recv.ReceiverAddr)
-			_, errs[idx] = common.WaitForAmount(
-				ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
-					return client.BalanceAt(ctx, addr, nil)
-				}, infracommon.WithRetryCount(waitForAmountRetryCount),
+			_, errs[idx] = common.WaitForAmount(ctx, recv.Amount, func(ctx context.Context) (*big.Int, error) {
+				return getBalanceFn(ctx, recv.ReceiverAddr)
+			}, infracommon.WithRetryCount(waitForAmountRetryCount),
 				infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		}(i, x)
 	}

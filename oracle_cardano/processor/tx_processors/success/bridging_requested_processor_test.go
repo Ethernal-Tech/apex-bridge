@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -241,10 +242,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim - transaction direction not allowed", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -284,10 +285,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
 		destinationChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: testChainID,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, destinationChainNonRegisteredMetadata)
@@ -327,10 +328,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim - unsupported chain id found in tx", func(t *testing.T) {
 		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrPrime,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, originChainNonRegisteredMetadata)
@@ -372,10 +373,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
 		originChainNonRegisteredMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, originChainNonRegisteredMetadata)
@@ -416,10 +417,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim forbidden transaction direction", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrNexus,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -459,10 +460,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {
 		bridgingAddrNotFoundInUtxosMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, bridgingAddrNotFoundInUtxosMetadata)
@@ -501,10 +502,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim multiple utxos to bridging addr", func(t *testing.T) {
 		multipleUtxosToBridgingAddrMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, multipleUtxosToBridgingAddrMetadata)
@@ -542,14 +543,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim number of receivers greater than maximum allowed", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -587,11 +588,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee amount is too low", func(t *testing.T) {
 		feeAddrNotInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 			BridgingFee: minFeeForBridging - 1,
 		})
@@ -630,12 +631,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee amount is specified in receivers", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
 			},
 			BridgingFee: 100,
 		})
@@ -671,12 +672,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: 2},
 			},
 		})
 		require.NoError(t, err)
@@ -715,12 +716,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 1", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
-				{Address: cardanotx.AddrToMetaDataAddr(
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
+				{Address: sendtx.AddrToMetaDataAddr(
 					"addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"), Amount: utxoMinValue},
 			},
 		})
@@ -760,12 +761,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	//nolint:dupl
 	t.Run("ValidateAndAddClaim invalid receiver addr in metadata 2", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
-				{Address: cardanotx.AddrToMetaDataAddr(
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: utxoMinValue},
+				{Address: sendtx.AddrToMetaDataAddr(
 					"stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"), Amount: utxoMinValue},
 			},
 		})
@@ -804,12 +805,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
-				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -847,12 +848,12 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
-				{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 			},
 		})
 		require.NoError(t, err)
@@ -890,11 +891,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
 		feeInReceiversLessThanMinMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
-			Transactions: []common.BridgingRequestMetadataTransaction{
-				{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging - 1},
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging - 1},
 			},
 		})
 		require.NoError(t, err)
@@ -934,15 +935,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
-			{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: maxAmountAllowedToBridge.Uint64() + 1},
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+			{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: maxAmountAllowedToBridge.Uint64() + 1},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 		})
 		require.NoError(t, err)
@@ -984,15 +985,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		const destinationChainID = common.ChainIDStrVector
 
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
-		receivers := []common.BridgingRequestMetadataTransaction{
-			{Address: cardanotx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
-			{Address: cardanotx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
+			{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: destinationChainID,
-			SenderAddr:         cardanotx.AddrToMetaDataAddr("addr1"),
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions:       receivers,
 		})
 		require.NoError(t, err)
