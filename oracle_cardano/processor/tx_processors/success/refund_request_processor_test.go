@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 
-	token, _ := wallet.NewTokenAmountWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", 2_000_000, true)
+	token, _ := wallet.NewTokenWithFullNameTry("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e")
+	tokenAmount := wallet.NewTokenAmount(token, 2_000_000)
 
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
 		appConfig := &cCore.AppConfig{
@@ -180,10 +182,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim unsuported sender chainID", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{validPrimeTestAddress},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -213,10 +215,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim invalid sender address", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{"invalid_address"},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -246,10 +248,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim outputs contains more unknown tokens than allowed", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{validPrimeTestAddress},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -332,10 +334,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim sum of amounts less than the minimum required", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{validPrimeTestAddress},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
@@ -353,7 +355,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 					{
 						PolicyID: token.PolicyID,
 						Name:     token.Name,
-						Amount:   token.Amount,
+						Amount:   tokenAmount.Amount,
 					},
 				},
 			},
@@ -375,10 +377,10 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         []string{validPrimeTestAddress},
-			Transactions:       []common.BridgingRequestMetadataTransaction{},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
@@ -396,7 +398,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 					{
 						PolicyID: token.PolicyID,
 						Name:     token.Name,
-						Amount:   token.Amount,
+						Amount:   tokenAmount.Amount,
 					},
 				},
 			},
