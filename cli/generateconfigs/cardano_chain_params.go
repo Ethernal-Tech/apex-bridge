@@ -193,12 +193,6 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 		}
 	}
 
-	if p.relayerAddress != "" {
-		if p.relayerDataDir == "" && p.relayerConfigPath == "" {
-			return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
-		}
-	}
-
 	return nil
 }
 
@@ -414,6 +408,16 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	vcConfig, err := common.LoadJSON[vcCore.AppConfig](vcConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load validator components config json: %w", err)
+	}
+
+	if vcConfig.RunMode == common.SkylineMode {
+		if p.relayerAddress == "" {
+			return nil, fmt.Errorf("missing %s", relayerAddressFlag)
+		}
+
+		if p.relayerDataDir == "" && p.relayerConfigPath == "" {
+			return nil, fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+		}
 	}
 
 	startingSlot, startingHash, err := parseStartingBlock(p.startingBlock)

@@ -117,7 +117,7 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		consolidationType := cco.getConsolidationType(err)
 		cco.logger.Warn("consolidation batch generation started", "err", err, "consolidationType", consolidationType.String())
 
-		txData, err = cco.generateConsolidationTransaction(data, chosenMultisigAddresses, consolidationType)
+		txData, err = cco.generateConsolidationTransaction(ctx, data, chosenMultisigAddresses, consolidationType)
 		if err != nil {
 			err = fmt.Errorf("consolidation batch failed: %w", err)
 		}
@@ -395,7 +395,7 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 		return nil, nil
 	}
 
-	tokens := make([]cardanowallet.MintTokenAmount, len(mintTokens))
+	tokens := make([]cardanowallet.MintTokenAmount, 0, len(mintTokens))
 	tokensPolicyID := ""
 
 	// Populate map of locked tokens from the addr0
@@ -411,14 +411,18 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	availableLockedTokens := cardano.GetSumMapFromTxInputOutput(addr0Utxos)
 
-	for i, mintToken := range mintTokens {
+	for _, mintToken := range mintTokens {
 		tokensPolicyID = mintToken.PolicyID
 		mintAmount := new(big.Int).Sub(
 			new(big.Int).SetUint64(mintToken.Amount),
 			new(big.Int).SetUint64(availableLockedTokens[mintToken.String()]),
 		)
-		tokens[i] = cardanowallet.NewMintTokenAmount(
-			mintToken.Token, mintAmount.Uint64(), mintAmount.Sign() == -1)
+
+		mintAmountSign := mintAmount.Sign()
+		if mintAmountSign != 0 {
+			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
+				mintToken.Token, mintAmount.Uint64(), mintAmountSign == -1))
+		}
 	}
 
 	relayerAddr := cco.config.RelayerAddress
@@ -587,6 +591,7 @@ func (cco *CardanoChainOperations) getConsolidationType(err error) core.Consolid
 }
 
 func (cco *CardanoChainOperations) generateConsolidationTransaction(
+	ctx context.Context,
 	data *batchInitialData,
 	chosenMultisigAddresses []common.AddressAndAmount,
 	consolidationType core.ConsolidationType,
@@ -675,7 +680,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
-		context.TODO(),
+		ctx,
 		cco.cardanoCliBinary,
 		uint(cco.config.NetworkMagic),
 		data.ProtocolParams,

@@ -1772,7 +1772,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -1792,7 +1792,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -1832,7 +1832,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -1865,7 +1865,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -1918,7 +1918,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		result, err := cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -1974,7 +1974,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		result, err := cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -2141,7 +2141,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
-		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		result, err := cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr,
@@ -2413,7 +2413,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr1,
@@ -2436,7 +2436,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr1,
@@ -2479,7 +2479,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr1,
@@ -2515,7 +2515,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		_, err = cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		_, err = cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr1,
@@ -2589,7 +2589,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		data, err := cco.createBatchInitialData(ctx, destinationChain, batchID)
 		require.NoError(t, err)
 
-		result, err := cco.generateConsolidationTransaction(data, []common.AddressAndAmount{
+		result, err := cco.generateConsolidationTransaction(ctx, data, []common.AddressAndAmount{
 			{
 				AddressIndex:  0,
 				Address:       bridgingAddr1,
