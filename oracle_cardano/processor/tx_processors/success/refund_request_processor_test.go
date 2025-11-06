@@ -53,17 +53,17 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			CardanoChains: map[string]*cCore.CardanoChainConfig{
 				common.ChainIDStrPrime: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:         wallet.TestNetNetwork,
-						UtxoMinAmount:     utxoMinValue,
-						MinFeeForBridging: minFeeForBridging,
+						NetworkID:                wallet.TestNetNetwork,
+						UtxoMinAmount:            utxoMinValue,
+						DefaultMinFeeForBridging: minFeeForBridging,
 					},
 				},
 				common.ChainIDStrVector: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
-						NetworkID:         wallet.TestNetNetwork,
-						UtxoMinAmount:     utxoMinValue,
-						OgmiosURL:         "http://ogmios.vector.testnet.apexfusion.org:1337",
-						MinFeeForBridging: minFeeForBridging,
+						NetworkID:                wallet.TestNetNetwork,
+						UtxoMinAmount:            utxoMinValue,
+						OgmiosURL:                "http://ogmios.vector.testnet.apexfusion.org:1337",
+						DefaultMinFeeForBridging: minFeeForBridging,
 					},
 				},
 			},
@@ -460,15 +460,17 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 func TestSkylineRefundRequestedProcessor(t *testing.T) {
 	const (
-		utxoMinValue            = 1000000
-		minFeeForBridging       = 1000010
-		minOperationFee         = 1000010
-		primeBridgingAddr       = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-		primeBridgingFeeAddr    = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		cardanoBridgingAddr     = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		cardanoBridgingFeeAddr  = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
-		validPrimeTestAddress   = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		validCardanoTestAddress = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		utxoMinValue             = 1000000
+		minFeeForBridging        = 1000010
+		defaultMinFeeForBridging = 2000010
+		minFeeForBridgingTokens  = 1000010
+		minOperationFee          = 1000010
+		primeBridgingAddr        = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingFeeAddr     = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		cardanoBridgingAddr      = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		cardanoBridgingFeeAddr   = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
+		validPrimeTestAddress    = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		validCardanoTestAddress  = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
 
 		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 	)
@@ -516,7 +518,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 								TokenName:  wrappedTokenPrime.String(),
 							},
 						},
-						MinFeeForBridging: minFeeForBridging,
+						DefaultMinFeeForBridging: defaultMinFeeForBridging,
+						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
 					MinOperationFee: minOperationFee,
 				},
@@ -530,7 +533,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 								TokenName:  wrappedTokenCardano.String(),
 							},
 						},
-						MinFeeForBridging: minFeeForBridging,
+						DefaultMinFeeForBridging: defaultMinFeeForBridging,
+						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
 					MinOperationFee: minOperationFee,
 				},
@@ -788,7 +792,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.ErrorContains(t, err, "more UTxOs with unknown tokens than allowed")
 	})
 
-	t.Run("ValidateAndAddClaim sum of amounts less than the minimum required", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim sum of amounts less than the minimum required - currency", func(t *testing.T) {
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrCardano,
@@ -807,7 +811,43 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			{Address: "addr2", Amount: 500_000},
 			{
 				Address: primeBridgingAddr,
-				Amount:  500_000,
+				Amount:  minFeeForBridgingTokens + 1_500_000,
+			},
+			{Address: primeBridgingFeeAddr, Amount: 600_000},
+		}
+
+		tx := indexer.Tx{
+			Metadata: metadata,
+			Outputs:  txOutputs,
+		}
+
+		err = proc.ValidateAndAddClaim(claims, &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.ErrorContains(t, err, "less than the minimum required for refund")
+	})
+
+	t.Run("ValidateAndAddClaim sum of amounts less than the minimum required - token", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         []string{validPrimeTestAddress},
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+
+		appConfig := getAppConfig(true)
+
+		txOutputs := []*indexer.TxOutput{
+			{Address: "addr1", Amount: 500_000},
+			{Address: "addr2", Amount: 500_000},
+			{
+				Address: primeBridgingAddr,
+				Amount:  minFeeForBridgingTokens + 1_000_000,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: wrappedTokenPrime.PolicyID,
@@ -936,7 +976,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			{Address: "addr2", Amount: 500_000},
 			{
 				Address: primeBridgingAddr,
-				Amount:  2_500_000,
+				Amount:  minFeeForBridgingTokens + 1_500_000,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: wrappedTokenPrime.PolicyID,

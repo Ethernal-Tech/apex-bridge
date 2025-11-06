@@ -11,25 +11,26 @@ import (
 )
 
 type CardanoChainConfig struct {
-	NetworkID             cardanowallet.CardanoNetworkType `json:"networkID"`
-	NetworkMagic          uint32                           `json:"testnetMagic"`
-	OgmiosURL             string                           `json:"ogmiosUrl,omitempty"`
-	BlockfrostURL         string                           `json:"blockfrostUrl,omitempty"`
-	BlockfrostAPIKey      string                           `json:"blockfrostApiKey,omitempty"`
-	SocketPath            string                           `json:"socketPath,omitempty"`
-	PotentialFee          uint64                           `json:"potentialFee"`
-	TTLSlotNumberInc      uint64                           `json:"ttlSlotNumberIncrement"`
-	SlotRoundingThreshold uint64                           `json:"slotRoundingThreshold"`
-	NoBatchPeriodPercent  float64                          `json:"noBatchPeriodPercent"`
-	UtxoMinAmount         uint64                           `json:"minUtxoAmount"`
-	MaxFeeUtxoCount       uint                             `json:"maxFeeUtxoCount"`
-	MaxUtxoCount          uint                             `json:"maxUtxoCount"`
-	MinFeeForBridging     uint64                           `json:"minFeeForBridging"`
-	TakeAtLeastUtxoCount  uint                             `json:"takeAtLeastUtxoCount"`
-	NativeTokens          []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
-	MintingScriptTxInput  cardanowallet.TxInput            `json:"mintingScriptTxInput"`
-	CustodialNft          cardanowallet.Token              `json:"custodialNft"`
-	RelayerAddress        string                           `json:"relayerAddress"`
+	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
+	NetworkMagic             uint32                           `json:"testnetMagic"`
+	OgmiosURL                string                           `json:"ogmiosUrl,omitempty"`
+	BlockfrostURL            string                           `json:"blockfrostUrl,omitempty"`
+	BlockfrostAPIKey         string                           `json:"blockfrostApiKey,omitempty"`
+	SocketPath               string                           `json:"socketPath,omitempty"`
+	PotentialFee             uint64                           `json:"potentialFee"`
+	TTLSlotNumberInc         uint64                           `json:"ttlSlotNumberIncrement"`
+	SlotRoundingThreshold    uint64                           `json:"slotRoundingThreshold"`
+	NoBatchPeriodPercent     float64                          `json:"noBatchPeriodPercent"`
+	UtxoMinAmount            uint64                           `json:"minUtxoAmount"`
+	MaxFeeUtxoCount          uint                             `json:"maxFeeUtxoCount"`
+	MaxUtxoCount             uint                             `json:"maxUtxoCount"`
+	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
+	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
+	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
+	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	MintingScriptTxInput     cardanowallet.TxInput            `json:"mintingScriptTxInput"`
+	CustodialNft             cardanowallet.Token              `json:"custodialNft"`
+	RelayerAddress           string                           `json:"relayerAddress"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -65,6 +66,14 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
+}
+
+func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
+	if isNativeToken {
+		return config.MinFeeForBridgingTokens
+	}
+
+	return config.DefaultMinFeeForBridging
 }
 
 func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {

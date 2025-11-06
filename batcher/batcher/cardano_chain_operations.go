@@ -474,15 +474,18 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 			)
 		}
 
+		// using cco.Config.MinFeeForBridgingTokens here without checking if there are native tokens
+		// because this is a special refund case that only happens when someone sends unknown tokens
+		// to the bridging address. So here we assume that there are tokens to be returned
 		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
 			Addr:   obj.Addr,
-			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridging,
+			Amount: obj.Utxo.Output.Amount - cco.config.MinFeeForBridgingTokens,
 			Tokens: tokens,
 		})
 
 		refundUtxoOutputs = append(refundUtxoOutputs, cardanowallet.TxOutput{
 			Addr:   cco.bridgingAddressesManager.GetFeeMultisigAddress(chainID),
-			Amount: cco.config.MinFeeForBridging,
+			Amount: cco.config.MinFeeForBridgingTokens,
 		})
 	}
 
