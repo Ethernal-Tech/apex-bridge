@@ -37,7 +37,6 @@ const (
 
 	nativeTokenDestinationChainIDFlag = "native-token-destination-chain-id"
 	nativeTokenNameFlag               = "native-token-name"
-	mintNativeTokenFlag               = "mint-native-token" // #nosec G101 false positive: CLI flag, not a secret
 
 	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
 	mintingScriptTxInputIndexFlag = "minting-script-tx-input-index"
@@ -65,7 +64,6 @@ const (
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
 	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
-	mintNativeTokenFlagDesc               = "whether to mint native token on the chain"
 
 	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
 	mintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script"
@@ -102,7 +100,6 @@ type cardanoChainGenerateConfigsParams struct {
 
 	nativeTokenName               string
 	nativeTokenDestinationChainID string
-	mintNativeToken               bool
 
 	mintingScriptTxInputHash  string
 	mintingScriptTxInputIndex int64
@@ -314,12 +311,6 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		"",
 		nativeTokenDestinationChainIDFlagDesc,
 	)
-	cmd.Flags().BoolVar(
-		&p.mintNativeToken,
-		mintNativeTokenFlag,
-		false,
-		mintNativeTokenFlagDesc,
-	)
 
 	// Minting script params
 	cmd.Flags().StringVar(
@@ -423,7 +414,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			{
 				DstChainID: p.nativeTokenDestinationChainID,
 				TokenName:  p.nativeTokenName,
-				Mint:       p.mintNativeToken,
 			},
 		}
 	}
