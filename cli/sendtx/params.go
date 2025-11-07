@@ -352,13 +352,15 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 		potentialFee,
 	)
 
+	ctx := context.Background()
+
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
 
 	txRaw, txHash, err := txSender.CreateTx(
-		context.Background(), ip.chainIDDst, senderAddr.String(),
+		ctx, ip.chainIDDst, senderAddr.String(),
 		receivers, ip.feeAmount.Uint64(), common.MinUtxoAmountDefault)
 	if err != nil {
 		return nil, err
@@ -367,7 +369,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	err = txSender.SendTx(context.Background(), txRaw, ip.wallet)
+	err = txSender.SendTx(ctx, txRaw, ip.wallet)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +379,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 
 	if ip.ogmiosURLDst != "" {
 		err = txSender.WaitForTx(
-			context.Background(), receivers, cardanowallet.AdaTokenName,
+			ctx, receivers, cardanowallet.AdaTokenName,
 			infracommon.WithRetryCount(waitForAmountRetryCount),
 			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
 		if err != nil {
@@ -392,7 +394,7 @@ func (ip *sendTxParams) executeCardano(outputter common.OutputFormatter) (common
 			return nil, err
 		}
 
-		err = waitForAmounts(context.Background(), txHelper.GetClient(), ip.receiversParsed)
+		err = waitForAmounts(ctx, txHelper.GetClient(), ip.receiversParsed)
 		if err != nil {
 			return nil, err
 		}
@@ -411,6 +413,8 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	chainID := common.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
+
+	ctx := context.Background()
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
@@ -436,7 +440,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		context.Background(), wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
+		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
 		abi, "withdraw", chainID, receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
@@ -445,7 +449,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet,
+	tx, err := txHelper.SendTx(ctx, wallet,
 		bind.TransactOpts{
 			GasLimit: estimatedGas,
 			Value:    totalAmount,
@@ -462,7 +466,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String())
+	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
@@ -476,7 +480,7 @@ func (ip *sendTxParams) executeEvm(outputter common.OutputFormatter) (common.ICo
 		}
 
 		err = cardanotx.WaitForTx(
-			context.Background(), cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
+			ctx, cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
 			cardanoReceivers, cardanowallet.AdaTokenName,
 			infracommon.WithRetryCount(waitForAmountRetryCount),
 			infracommon.WithRetryWaitTime(waitForAmountWaitTime))
