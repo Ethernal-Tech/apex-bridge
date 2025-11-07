@@ -29,6 +29,3 @@ contractbuild
 
 */keys
 /blade-dir
-
-# Node.js dependencies
-node_modules/

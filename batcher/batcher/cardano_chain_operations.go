@@ -432,6 +432,8 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 		return nil, fmt.Errorf("failed to get utxos from address %s", relayerAddr)
 	}
 
+	relayerUtxos = cardano.FilterOutUtxosWithUnknownTokens(relayerUtxos)
+
 	executionUnitData, err := extractPlutusExecutionParams(data.ProtocolParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract plutus execution params: %w", err)
