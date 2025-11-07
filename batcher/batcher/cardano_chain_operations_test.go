@@ -386,11 +386,11 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 	cco.config.MaxFeeUtxoCount = 4
 	cco.config.MaxUtxoCount = 50
 	cco.config.RelayerAddress = "addr_test1wzwn2c0aseh84desjrextluhrznf0dne8pfs0m2memm94rgfq33sa"
-	cco.config.MintingScriptTxInput = cardanowallet.TxInput{
+	cco.config.MintingScriptTxInput = &cardanowallet.TxInput{
 		Hash:  "1577af51dc0f4737d3b57a6e42763747e875865393468044cfd4c7e397c5d5d0",
 		Index: 0,
 	}
-	cco.config.CustodialNft = nft
+	cco.config.CustodialNft = &nft
 	// Tokens that come from prime and are minted on vector
 	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
 		{

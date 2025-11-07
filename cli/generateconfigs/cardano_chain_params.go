@@ -436,6 +436,22 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		}
 	}
 
+	var (
+		mintingScriptTxInput *wallet.TxInput
+		custodialNFT         *wallet.Token
+	)
+
+	if p.mintingScriptTxInputHash != "" {
+		mintingScriptTxInput = &wallet.TxInput{
+			Hash:  p.mintingScriptTxInputHash,
+			Index: uint32(p.mintingScriptTxInputIndex), //nolint:gosec
+		}
+		custodialNFT = &wallet.Token{
+			PolicyID: p.nftPolicyID,
+			Name:     p.nftName,
+		}
+	}
+
 	if vcConfig.CardanoChains == nil {
 		vcConfig.CardanoChains = make(map[string]*oCore.CardanoChainConfig)
 	}
@@ -459,10 +475,9 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			NativeTokens:             nativeTokens,
 			DefaultMinFeeForBridging: p.minFeeForBridging,
 			MinFeeForBridgingTokens:  p.minFeeForBridgingTokens,
-			MintingScriptTxInput: wallet.NewTxInput(
-				p.mintingScriptTxInputHash, uint32(p.mintingScriptTxInputIndex)), //nolint:gosec
-			CustodialNft:   wallet.NewToken(p.nftPolicyID, p.nftName),
-			RelayerAddress: p.relayerAddress,
+			MintingScriptTxInput:     mintingScriptTxInput,
+			CustodialNft:             custodialNFT,
+			RelayerAddress:           p.relayerAddress,
 		},
 		NetworkAddress:           p.networkAddress,
 		StartBlockHash:           startingHash,

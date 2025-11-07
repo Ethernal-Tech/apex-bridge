@@ -439,7 +439,7 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	return &cardano.PlutusMintData{
 		Tokens:            tokens,
-		TxInReference:     cco.config.MintingScriptTxInput,
+		TxInReference:     *cco.config.MintingScriptTxInput,
 		Collateral:        convertUTXOsToTxInputs(relayerUtxos),
 		CollateralAddress: relayerAddr,
 		TokensPolicyID:    tokensPolicyID,
@@ -567,7 +567,7 @@ func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
 		Address:      custodialAddr,
 	}
 
-	custodialNft := cardanowallet.NewTokenAmount(cco.config.CustodialNft, 1)
+	custodialNft := cardanowallet.NewTokenAmount(*cco.config.CustodialNft, 1)
 
 	// custodial address must receive back it's nft token in standalone output
 	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs,
