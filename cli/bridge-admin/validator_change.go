@@ -103,19 +103,19 @@ func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (co
 
 	contractAddress := common.HexToAddress(v.contractAddress)
 
+	contract, err := contractbinding.NewAdminContract(
+		contractAddress,
+		txHelper.GetClient())
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to admin smart contract: %w", err)
+	}
+
+	parsedABI, err := contractbinding.AdminContractMetaData.GetAbi()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse admin smart contract abi: %w", err)
+	}
+
 	transaction, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
-		contract, err := contractbinding.NewAdminContract(
-			contractAddress,
-			txHelper.GetClient())
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to admin smart contract: %w", err)
-		}
-
-		parsedABI, err := contractbinding.AdminContractMetaData.GetAbi()
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse admin smart contract abi: %w", err)
-		}
-
 		estimatedGas, _, err := txHelper.EstimateGas(
 			ctx, wallet.GetAddress(),
 			contractAddress, nil, 1.2,

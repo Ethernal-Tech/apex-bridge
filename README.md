@@ -115,6 +115,7 @@ $ go run ./main.go generate-configs \
         --output-relayer-file-name <relayer config json output file name>.json \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
+        --admin-sc-address <admin smart contract address on bridge chain> \
         --relayer-data-dir <relayer data dir for secrets> \
         --relayer-config <relayer secrets config file path> \
         --dbs-path <path to where databases will be stored> \
@@ -413,4 +414,15 @@ apex-bridge sc-version \
         --addr 0xaBef000000000000000000000000000000000004:Slots \
         --addr 0xaBef000000000000000000000000000000000005:Validators \
         --addr 0xaBef000000000000000000000000000000000006:Admin \
+```
+
+# How to set bridge and apex-web to validator-change mode
+
+``` shell
+$ apex-bridge bridge-admin validator-change \
+        --url http://127.0.0.1:12013 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --key-config /path/config.json \
+        --validator-change (true/false) \
+        --contract-addr <admin contract address>
 ```
