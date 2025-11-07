@@ -201,13 +201,13 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 	for {
 		receipt, err := t.client.TransactionReceipt(ctx, txHash)
 		if err == nil && receipt != nil {
-			return receipt, nil
+			return receipt, err
 		}
 
 		if t.receiptIsRetryErr(err) {
 			tryCounter++
 			if tryCounter >= t.receiptRetriesCnt {
-				return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", txHashStr)
+				return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed, err: %w", txHashStr, err)
 			}
 		}
 
