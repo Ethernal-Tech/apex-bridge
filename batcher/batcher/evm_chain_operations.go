@@ -78,60 +78,9 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	lastBatchID uint64,
 	lastBatchType uint8,
 ) (*core.GeneratedBatchTxData, error) {
-	createVSCTxFn := func() (*core.GeneratedBatchTxData, error) {
-		lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
-		if err != nil {
-			return nil, err
-		}
-
-		blockRounded, err := getNumberWithRoundingThreshold(
-			lastProcessedBlock, cco.config.BlockRoundingThreshold, cco.config.NoBatchPeriodPercent)
-		if err != nil {
-			return nil, err
-		}
-
-		currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetID(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		validatorSetNumber := big.NewInt(0).Add(currentValidatorSetNumber, big.NewInt(1))
-
-		ttl := big.NewInt(0).SetUint64((cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, nextBatchID)))
-
-		keys := append([]eth.ValidatorChainData(nil), validatorsKeys[chainID].Keys...)
-
-		tx := eth.EVMValidatorSetChangeTx{
-			BatchNonceID:        nextBatchID,
-			ValidatorsSetNumber: validatorSetNumber,
-			TTL:                 ttl,
-			ValidatorsChainData: keys,
-		}
-
-		txsBytes, err := tx.Pack()
-		if err != nil {
-			return nil, err
-		}
-
-		txsHashBytes, err := common.Keccak256(txsBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		txHash := hex.EncodeToString(txsHashBytes)
-
-		return &core.GeneratedBatchTxData{
-			BatchType: uint8(ValidatorSet),
-			TxRaw:     txsBytes,
-			TxHash:    txHash,
-		}, nil
-	}
-
 	if lastBatchType != uint8(ValidatorSet) {
 		// vsc tx not sent, send it. It is not possible to get here otherwise.
-		batch, err := createVSCTxFn()
-
-		return batch, err
+		return cco.createVSCTxFn(ctx, nextBatchID, validatorsKeys[chainID].Keys)
 	}
 
 	// vsc tx sent, check its status and resend if needed
@@ -159,9 +108,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 		}, nil
 	default:
 		// vsc tx pending or failed on evm chain, resend
-		batch, err := createVSCTxFn()
-
-		return batch, err
+		return cco.createVSCTxFn(ctx, nextBatchID, validatorsKeys[chainID].Keys)
 	}
 }
 
@@ -333,4 +280,54 @@ func newEVMSmartContractTransaction(
 func (cco *EVMChainOperations) GenerateMultisigAddress(
 	validators *validatorobserver.ValidatorsPerChain, chainID string) error {
 	return nil
+}
+
+func (cco *EVMChainOperations) createVSCTxFn(
+	ctx context.Context,
+	batchID uint64,
+	validatorsChainData []eth.ValidatorChainData,
+) (*core.GeneratedBatchTxData, error) {
+	lastProcessedBlock, err := cco.db.GetLastProcessedBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	blockRounded, err := getNumberWithRoundingThreshold(
+		lastProcessedBlock, cco.config.BlockRoundingThreshold, cco.config.NoBatchPeriodPercent)
+	if err != nil {
+		return nil, err
+	}
+
+	currentValidatorSetNumber, err := cco.bridgeSC.GetCurrentValidatorSetID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	validatorSetNumber := big.NewInt(0).Add(currentValidatorSetNumber, big.NewInt(1))
+	ttl := new(big.Int).SetUint64(cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchID))
+
+	keys := append([]eth.ValidatorChainData(nil), validatorsChainData...)
+
+	tx := eth.EVMValidatorSetChangeTx{
+		BatchNonceID:        batchID,
+		ValidatorsSetNumber: validatorSetNumber,
+		TTL:                 ttl,
+		ValidatorsChainData: keys,
+	}
+
+	txsBytes, err := tx.Pack()
+	if err != nil {
+		return nil, err
+	}
+
+	txsHashBytes, err := common.Keccak256(txsBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &core.GeneratedBatchTxData{
+		BatchType: uint8(ValidatorSet),
+		TxRaw:     txsBytes,
+		TxHash:    hex.EncodeToString(txsHashBytes),
+	}, nil
 }
