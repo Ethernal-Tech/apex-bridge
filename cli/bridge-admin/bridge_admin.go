@@ -78,7 +78,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		Use:   "set-validator-change",
 		Short: "set-validator-change",
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			return nil
+			return setValidatorChange.ValidateFlags()
 		},
 		Run: common.GetCliRunCommand(setValidatorChange),
 	}

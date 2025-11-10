@@ -25,7 +25,7 @@ type setValidatorChangeParams struct {
 	nodeURL          string
 	privateKey       string
 	privateKeyConfig string
-	validatorChange  *bool
+	validatorChange  bool
 	contractAddress  string
 }
 
@@ -68,7 +68,7 @@ func (v *setValidatorChangeParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().BoolVar(
-		v.validatorChange,
+		&v.validatorChange,
 		validatorChangeFlag,
 		false,
 		validatorChangeDesc,
@@ -133,7 +133,7 @@ func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (co
 
 				return contract.SetValidatorChange(
 					txOpts,
-					*v.validatorChange,
+					v.validatorChange,
 				)
 			},
 		)
