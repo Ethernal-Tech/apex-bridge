@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"sort"
 
@@ -25,9 +24,7 @@ var (
 )
 
 const (
-	PendingOnEVMChainStatus  = 1
 	ExecutedOnEVMChainStatus = 2
-	FailedOnEVMChainStatus   = 3
 )
 
 const deadbeef = "0xdeadbeef"
@@ -160,14 +157,11 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 			TxRaw:     txRaw,
 			TxHash:    txHash,
 		}, nil
-	case PendingOnEVMChainStatus,
-		FailedOnEVMChainStatus:
+	default:
 		// vsc tx pending or failed on evm chain, resend
 		batch, err := createVSCTxFn()
 
 		return batch, err
-	default:
-		return nil, fmt.Errorf("unexpected status %d for batch with ID %d", status, lastBatchID)
 	}
 }
 
