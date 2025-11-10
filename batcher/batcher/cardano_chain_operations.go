@@ -224,7 +224,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	txPlutusMintData, err := cco.getPlutusMintData(data, getOutputsData.MintTokens)
+	txPlutusMintData, err := cco.getPlutusMintData(ctx, data, getOutputsData.MintTokens)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -389,6 +389,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 }
 
 func (cco *CardanoChainOperations) getPlutusMintData(
+	ctx context.Context,
 	data *batchInitialData, mintTokens []cardanowallet.MintTokenAmount,
 ) (*cardano.PlutusMintData, error) {
 	if len(mintTokens) == 0 {
@@ -427,12 +428,35 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	relayerAddr := cco.config.RelayerAddress
 
-	relayerUtxos, err := cco.db.GetAllTxOutputs(relayerAddr, true)
+	relayerUtxos, err := cco.txProvider.GetUtxos(ctx, relayerAddr) // cco.db.GetAllTxOutputs(relayerAddr, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get utxos from address %s", relayerAddr)
 	}
 
-	relayerUtxos = cardano.FilterOutUtxosWithUnknownTokens(relayerUtxos)
+	// filter out unknown tokens
+	filteredUtxos := make([]cardanowallet.Utxo, 0, len(relayerUtxos))
+
+	for _, utxo := range relayerUtxos {
+		if len(utxo.Tokens) == 0 {
+			filteredUtxos = append(filteredUtxos, utxo)
+		}
+	}
+
+	sort.SliceStable(filteredUtxos, func(i, j int) bool {
+		return relayerUtxos[i].Amount > relayerUtxos[j].Amount
+	})
+
+	relayerTxInputs := make([]cardanowallet.TxInput, 1)
+	sum := map[string]uint64{}
+
+	// take largest utxo as collateral
+	relayerTxInputs[0] = cardanowallet.TxInput{
+		Hash:  filteredUtxos[0].Hash,
+		Index: filteredUtxos[0].Index,
+	}
+	sum[cardanowallet.AdaTokenName] += filteredUtxos[0].Amount
+
+	cco.logger.Debug("Relayer tx inputs", "txInputs", relayerTxInputs, "sum", sum)
 
 	executionUnitData, err := extractPlutusExecutionParams(data.ProtocolParams)
 	if err != nil {
@@ -440,9 +464,12 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 	}
 
 	return &cardano.PlutusMintData{
-		Tokens:            tokens,
-		TxInReference:     *cco.config.MintingScriptTxInput,
-		Collateral:        convertUTXOsToTxInputs(relayerUtxos),
+		Tokens:        tokens,
+		TxInReference: *cco.config.MintingScriptTxInput,
+		Collateral: cardanowallet.TxInputs{
+			Inputs: relayerTxInputs,
+			Sum:    sum,
+		},
 		CollateralAddress: relayerAddr,
 		TokensPolicyID:    tokensPolicyID,
 		TxProvider:        cco.txProvider,

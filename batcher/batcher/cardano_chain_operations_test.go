@@ -536,15 +536,12 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-			Return([]*indexer.TxInputOutput{
+		txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
 				{
-					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0x0013"),
-					},
-					Output: indexer.TxOutput{
-						Amount: 5000000,
-					},
+					Hash:   common.NewHashFromHexString("0x0013").String(),
+					Index:  0,
+					Amount: 5000000,
 				},
 			}, error(nil)).Once()
 
@@ -631,15 +628,12 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-			Return([]*indexer.TxInputOutput{
+		txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
 				{
-					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0x0013"),
-					},
-					Output: indexer.TxOutput{
-						Amount: 5000000,
-					},
+					Hash:   common.NewHashFromHexString("0x0013").String(),
+					Index:  0,
+					Amount: 5000000,
 				},
 			}, error(nil)).Once()
 
@@ -726,15 +720,12 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 				},
 			}, error(nil)).Once()
 
-		dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-			Return([]*indexer.TxInputOutput{
+		txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
 				{
-					Input: indexer.TxInput{
-						Hash: indexer.NewHashFromHexString("0x0013"),
-					},
-					Output: indexer.TxOutput{
-						Amount: 5000000,
-					},
+					Hash:   common.NewHashFromHexString("0x0013").String(),
+					Index:  0,
+					Amount: 5000000,
 				},
 			}, error(nil)).Once()
 
@@ -795,17 +786,14 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-				Return([]*indexer.TxInputOutput{
-					{
-						Input: indexer.TxInput{
-							Hash: indexer.NewHashFromHexString("0x0013"),
-						},
-						Output: indexer.TxOutput{
-							Amount: 5000000,
-						},
-					},
-				}, error(nil)).Once()
+			txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
+				{
+					Hash: common.NewHashFromHexString("0x0013").String(),
+					Index: 0,
+					Amount: 5000000,
+				},
+			}, error(nil)).Once()
 
 			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
 				Memory: 1000,
@@ -863,17 +851,14 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-				Return([]*indexer.TxInputOutput{
-					{
-						Input: indexer.TxInput{
-							Hash: indexer.NewHashFromHexString("0x0013"),
-						},
-						Output: indexer.TxOutput{
-							Amount: 5000000,
-						},
-					},
-				}, error(nil)).Once()
+			txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
+				{
+					Hash: common.NewHashFromHexString("0x0013").String(),
+					Index: 0,
+					Amount: 5000000,
+				},
+			}, error(nil)).Once()
 
 			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
 				Memory: 1000,
@@ -931,17 +916,14 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-				Return([]*indexer.TxInputOutput{
-					{
-						Input: indexer.TxInput{
-							Hash: indexer.NewHashFromHexString("0x0013"),
-						},
-						Output: indexer.TxOutput{
-							Amount: 5000000,
-						},
-					},
-				}, error(nil)).Once()
+			txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
+				{
+					Hash: common.NewHashFromHexString("0x0013").String(),
+					Index: 0,
+					Amount: 5000000,
+				},
+			}, error(nil)).Once()
 
 			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
 				Memory: 1000,
@@ -999,17 +981,14 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-				Return([]*indexer.TxInputOutput{
-					{
-						Input: indexer.TxInput{
-							Hash: indexer.NewHashFromHexString("0x0013"),
-						},
-						Output: indexer.TxOutput{
-							Amount: 5000000,
-						},
-					},
-				}, error(nil)).Once()
+			txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
+				{
+					Hash: common.NewHashFromHexString("0x0013").String(),
+					Index: 0,
+					Amount: 5000000,
+				},
+			}, error(nil)).Once()
 
 			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
 				Memory: 1000,
@@ -1072,17 +1051,14 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 					},
 				}, error(nil)).Once()
 
-			dbMock.On("GetAllTxOutputs", cco.config.RelayerAddress, true).
-				Return([]*indexer.TxInputOutput{
-					{
-						Input: indexer.TxInput{
-							Hash: indexer.NewHashFromHexString("0x0013"),
-						},
-						Output: indexer.TxOutput{
-							Amount: 5000000,
-						},
-					},
-				}, error(nil)).Once()
+			txProviderMock.On("GetUtxos", mock.Anything, cco.config.RelayerAddress).
+			Return([]cardanowallet.Utxo{
+				{
+					Hash: common.NewHashFromHexString("0x0013").String(),
+					Index: 0,
+					Amount: 5000000,
+				},
+			}, error(nil)).Once()
 
 			txProviderMock.On("EvaluateTx", mock.Anything, mock.Anything).Return(cardanowallet.QueryEvaluateTxData{
 				Memory: 1000,

@@ -163,7 +163,6 @@ func loadSyncerConfigs(
 	addressesOfInterest := append(
 		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),
 			bridgingAddressesManager.GetFeeMultisigAddress(chainID),
-			config.RelayerAddress,
 		),
 		config.OtherAddressesOfInterest...,
 	)
