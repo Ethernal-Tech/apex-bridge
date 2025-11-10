@@ -102,10 +102,13 @@ func NewValidatorComponents(
 	)
 
 	oracleBridgeSmartContract := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
+		appConfig.Bridge.BridgeSmartContractAddress, ethHelper)
 
 	bridgeSmartContract := eth.NewBridgeSmartContract(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
+		appConfig.Bridge.BridgeSmartContractAddress, ethHelper)
+
+	adminSmartContract := eth.NewOracleAdminSmartContract(
+		appConfig.Bridge.AdminSmartContractAddress, ethHelper)
 
 	err = fixChainsAndAddresses(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
@@ -174,7 +177,7 @@ func NewValidatorComponents(
 	}
 
 	logger.Info("Batcher configuration info", "address", wallet.GetAddress(), "bridge", appConfig.Bridge.NodeURL,
-		"contract", appConfig.Bridge.SmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
+		"contract", appConfig.Bridge.BridgeSmartContractAddress, "dynamicTx", appConfig.Bridge.DynamicTx)
 
 	batcherManager, err := batchermanager.NewBatcherManager(
 		ctx, batcherConfig, secretsManager, bridgeSmartContract,
@@ -204,7 +207,7 @@ func NewValidatorComponents(
 			controllers.NewOracleStateController(
 				appConfig, bridgingRequestStateManager, cardanoIndexerDbs, ethIndexerDbs,
 				getAddressesMap(oracleConfig.CardanoChains), apiLogger.Named("oracle_state")),
-			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
+			controllers.NewSettingsController(appConfig, adminSmartContract, apiLogger.Named("settings_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))

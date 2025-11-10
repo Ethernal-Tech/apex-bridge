@@ -65,10 +65,11 @@ type SubmitConfig struct {
 }
 
 type BridgeConfig struct {
-	NodeURL              string       `json:"nodeUrl"`
-	DynamicTx            bool         `json:"dynamicTx"`
-	SmartContractAddress string       `json:"scAddress"`
-	SubmitConfig         SubmitConfig `json:"submitConfig"`
+	NodeURL                    string       `json:"nodeUrl"`
+	DynamicTx                  bool         `json:"dynamicTx"`
+	BridgeSmartContractAddress string       `json:"bridgeSCAddress"`
+	AdminSmartContractAddress  string       `json:"adminSCAddress"`
+	SubmitConfig               SubmitConfig `json:"submitConfig"`
 }
 
 type AppSettings struct {
