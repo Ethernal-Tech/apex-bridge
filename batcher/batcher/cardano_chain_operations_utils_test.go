@@ -352,11 +352,11 @@ func Test_reactorGetOutputs(t *testing.T) {
 		},
 	}
 
-	res, isRedistribution, err := getOutputs(txs, cco.config, feeAddr, nil, hclog.NewNullLogger())
+	getOutputsData, err := getOutputs(txs, cco.config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
 
-	assert.False(t, isRedistribution)
-	assert.Equal(t, uint64(6830), res.Sum[cardanowallet.AdaTokenName])
+	assert.False(t, getOutputsData.IsRedistribution)
+	assert.Equal(t, uint64(6830), getOutputsData.TxOutputs.Sum[cardanowallet.AdaTokenName])
 	assert.Equal(t, []cardanowallet.TxOutput{
 		{
 			Addr:   "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
@@ -378,7 +378,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 			Addr:   "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 			Amount: 220,
 		},
-	}, res.Outputs)
+	}, getOutputsData.TxOutputs.Outputs)
 }
 
 func Test_skylineGetOutputs(t *testing.T) {
@@ -455,9 +455,9 @@ func Test_skylineGetOutputs(t *testing.T) {
 		},
 	}
 
-	outputs, isRedistribution, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
+	getOutputsData, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 	require.NoError(t, err)
-	assert.False(t, isRedistribution)
+	assert.False(t, getOutputsData.IsRedistribution)
 
 	require.Equal(t, []cardanowallet.TxOutput{
 		{
@@ -478,20 +478,20 @@ func Test_skylineGetOutputs(t *testing.T) {
 			Addr:   addr3,
 			Amount: 8,
 		},
-	}, outputs.Outputs)
-	require.Len(t, outputs.Sum, 2)
-	require.Equal(t, uint64(307), outputs.Sum[primeToken.String()])
-	require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
+	}, getOutputsData.TxOutputs.Outputs)
+	require.Len(t, getOutputsData.TxOutputs.Sum, 2)
+	require.Equal(t, uint64(307), getOutputsData.TxOutputs.Sum[primeToken.String()])
+	require.Equal(t, uint64(161), getOutputsData.TxOutputs.Sum[cardanowallet.AdaTokenName])
 
 	t.Run("GetOutputs with redistribute tokens transaction", func(t *testing.T) {
 		txs = append(txs, eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RedistributionConfirmedTxType),
 		})
 
-		outputs, isRedistribution, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
+		getOutputsData, err := getOutputs(txs, config, feeAddr, nil, hclog.NewNullLogger())
 		require.NoError(t, err)
 
-		assert.True(t, isRedistribution)
+		assert.True(t, getOutputsData.IsRedistribution)
 		require.Equal(t, []cardanowallet.TxOutput{
 			{
 				Addr:   addr2,
@@ -511,10 +511,10 @@ func Test_skylineGetOutputs(t *testing.T) {
 				Addr:   addr3,
 				Amount: 8,
 			},
-		}, outputs.Outputs)
-		require.Len(t, outputs.Sum, 2)
-		require.Equal(t, uint64(307), outputs.Sum[primeToken.String()])
-		require.Equal(t, uint64(161), outputs.Sum[cardanowallet.AdaTokenName])
+		}, getOutputsData.TxOutputs.Outputs)
+		require.Len(t, getOutputsData.TxOutputs.Sum, 2)
+		require.Equal(t, uint64(307), getOutputsData.TxOutputs.Sum[primeToken.String()])
+		require.Equal(t, uint64(161), getOutputsData.TxOutputs.Sum[cardanowallet.AdaTokenName])
 	})
 }
 

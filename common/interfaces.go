@@ -37,6 +37,8 @@ type BridgingAddressesManager interface {
 	GetStakePolicyScript(chainID uint8, index uint8) (*cardanowallet.PolicyScript, bool)
 	GetFeeMultisigAddress(chainID uint8) string
 	GetFeeMultisigPolicyScript(chainID uint8) (*cardanowallet.PolicyScript, bool)
+	GetCustodialAddress(chainID uint8) (string, bool)
+	GetCustodialPolicyScript(chainID uint8) (*cardanowallet.PolicyScript, bool)
 }
 
 type AddressAndAmount struct {
@@ -59,6 +61,7 @@ type BridgingAddressesCoordinator interface {
 		cardanoCliBinary string,
 		isRedistribution bool,
 		protocolParams []byte,
-		txOutputs TxOutputs) ([]AddressAndAmount, bool, error)
+		txOutputs TxOutputs,
+		tokens []cardanowallet.MintTokenAmount) ([]AddressAndAmount, bool, error)
 	GetAddressToBridgeTo(chainID uint8, containsNativeTokens bool) (AddressAndAmount, error)
 }

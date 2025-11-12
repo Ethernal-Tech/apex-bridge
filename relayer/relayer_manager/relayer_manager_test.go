@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/relayer/core"
@@ -20,11 +21,6 @@ import (
 )
 
 func TestRelayerManagerConfig(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "rl-mngr-config")
-	require.NoError(t, err)
-
-	defer os.RemoveAll(testDir)
-
 	jsonData := []byte(`{
 		"blockFrostUrl": "http://hello.com",
 		"testnetMagic": 2,
@@ -33,70 +29,88 @@ func TestRelayerManagerConfig(t *testing.T) {
 
 	rawMessage := json.RawMessage(jsonData)
 
-	expectedConfig := &core.RelayerManagerConfiguration{
-		Chains: map[string]core.ChainConfig{
-			common.ChainIDStrPrime: {
-				ChainType:     "Cardano",
-				ChainSpecific: rawMessage,
-			},
-			common.ChainIDStrVector: {
-				ChainType:     "CardaNo",
-				ChainSpecific: rawMessage,
-			},
-		},
-		Bridge: core.BridgeConfig{
-			NodeURL:              "dummyNode", // will be our node,
-			SmartContractAddress: "0x3786783",
-		},
-		PullTimeMilis: 1000,
-		Logger: logger.LoggerConfig{
-			LogFilePath:   filepath.Join(testDir, "relayer_logs"),
-			LogLevel:      hclog.Debug,
-			JSONLogFormat: false,
-			AppendFile:    true,
-		},
+	testCases := []struct {
+		name           string
+		runMode        common.VCRunMode
+		includeDataDir bool
+	}{
+		{"Skyline mode", common.SkylineMode, true},
+		{"Reactor mode", common.ReactorMode, false},
 	}
 
-	configFilePath := filepath.Join(testDir, "config.json")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testDir, _, cleanup := setupTestSecretsManager(t)
+			defer cleanup()
 
-	bytes, err := json.Marshal(expectedConfig)
-	require.NoError(t, err)
+			relayerDataDir := ""
+			if tc.includeDataDir {
+				relayerDataDir = testDir
+			}
 
-	require.NoError(t, os.WriteFile(configFilePath, bytes, 0770))
+			expectedConfig := &core.RelayerManagerConfiguration{
+				RunMode: tc.runMode,
+				Chains: map[string]core.ChainConfig{
+					common.ChainIDStrPrime: {
+						ChainType:      "Cardano",
+						ChainSpecific:  rawMessage,
+						RelayerDataDir: relayerDataDir,
+					},
+					common.ChainIDStrVector: {
+						ChainType:      "CardaNo",
+						ChainSpecific:  rawMessage,
+						RelayerDataDir: relayerDataDir,
+					},
+				},
+				Bridge: core.BridgeConfig{
+					NodeURL:              "dummyNode", // will be our node,
+					SmartContractAddress: "0x3786783",
+				},
+				PullTimeMilis: 1000,
+				Logger: logger.LoggerConfig{
+					LogFilePath:   filepath.Join(testDir, "relayer_logs"),
+					LogLevel:      hclog.Debug,
+					JSONLogFormat: false,
+					AppendFile:    true,
+				},
+			}
 
-	loadedConfig, err := LoadConfig(configFilePath)
-	require.NoError(t, err)
+			configFilePath := filepath.Join(testDir, "config.json")
 
-	assert.NotEmpty(t, loadedConfig.Chains)
+			bytes, err := json.Marshal(expectedConfig)
+			require.NoError(t, err)
 
-	for _, chainConfig := range loadedConfig.Chains {
-		expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, hclog.NewNullLogger())
-		require.NoError(t, err)
+			require.NoError(t, os.WriteFile(configFilePath, bytes, 0770))
 
-		loadedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, hclog.NewNullLogger())
-		require.NoError(t, err)
+			loadedConfig, err := LoadConfig(configFilePath)
+			require.NoError(t, err)
 
-		assert.Equal(t, expectedOp, loadedOp)
+			assert.NotEmpty(t, loadedConfig.Chains)
+
+			for chainID, chainConfig := range loadedConfig.Chains {
+				chainConfig.ChainID = chainID
+				expectedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, tc.runMode, hclog.NewNullLogger())
+				require.NoError(t, err)
+
+				loadedOp, err := relayer.GetChainSpecificOperations(chainConfig, eth.Chain{}, tc.runMode, hclog.NewNullLogger())
+				require.NoError(t, err)
+
+				assert.Equal(t, expectedOp, loadedOp)
+			}
+
+			assert.Equal(t, expectedConfig.RunMode, loadedConfig.RunMode)
+			assert.Equal(t, expectedConfig.Bridge, loadedConfig.Bridge)
+			assert.Equal(t, expectedConfig.PullTimeMilis, loadedConfig.PullTimeMilis)
+			assert.Equal(t, expectedConfig.Logger, loadedConfig.Logger)
+		})
 	}
-
-	assert.Equal(t, expectedConfig.Bridge, loadedConfig.Bridge)
-	assert.Equal(t, expectedConfig.PullTimeMilis, loadedConfig.PullTimeMilis)
-	assert.Equal(t, expectedConfig.Logger, loadedConfig.Logger)
 }
 
 func Test_getRelayersAndConfigurations(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "rl-mngr-config-t")
-	require.NoError(t, err)
+	testDir, secretsMngr, cleanup := setupTestSecretsManager(t)
+	defer cleanup()
 
-	defer os.RemoveAll(testDir)
-
-	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
-		Path: testDir,
-		Type: secrets.Local,
-	})
-	require.NoError(t, err)
-
-	_, err = eth.CreateAndSaveRelayerEVMPrivateKey(secretsMngr, common.ChainIDStrNexus, true)
+	_, err := eth.CreateAndSaveRelayerEVMPrivateKey(secretsMngr, common.ChainIDStrNexus, true)
 	require.NoError(t, err)
 
 	allRegisteredChains := []eth.Chain{
@@ -121,6 +135,7 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 				ChainSpecific: json.RawMessage([]byte(`{
 					"blockFrostUrl": "http://hello.com"
 				}`)),
+				RelayerDataDir: testDir,
 			},
 			common.ChainIDStrVector: {
 				ChainType:     common.ChainTypeCardanoStr,
@@ -144,4 +159,26 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 	require.Len(t, chainsConfigs, 2)
 	require.True(t, chainsConfigs[common.ChainIDStrPrime].ChainID != "")
 	require.True(t, chainsConfigs[common.ChainIDStrNexus].ChainID != "")
+}
+
+func setupTestSecretsManager(t *testing.T) (string, secrets.SecretsManager, func()) {
+	t.Helper()
+
+	testDir, err := os.MkdirTemp("", "rl-mngr-config")
+	require.NoError(t, err)
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: testDir,
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	for _, chainID := range []string{common.ChainIDStrPrime, common.ChainIDStrVector} {
+		_, err = cardanotx.GenerateWallet(secretsMngr, chainID, true, true)
+		require.NoError(t, err)
+	}
+
+	cleanup := func() { os.RemoveAll(testDir) }
+
+	return testDir, secretsMngr, cleanup
 }

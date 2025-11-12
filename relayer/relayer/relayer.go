@@ -66,12 +66,12 @@ func (r *RelayerImpl) execute(ctx context.Context) error {
 
 // GetChainSpecificOperations returns the chain-specific operations based on the chain type
 func GetChainSpecificOperations(
-	config core.ChainConfig, chain eth.Chain, logger hclog.Logger,
+	config core.ChainConfig, chain eth.Chain, vcRunMode common.VCRunMode, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	// Create the appropriate chain-specific configuration based on the chain type
 	switch strings.ToLower(config.ChainType) {
 	case common.ChainTypeCardanoStr:
-		return NewCardanoChainOperations(config.ChainSpecific, logger)
+		return NewCardanoChainOperations(config, vcRunMode, logger)
 	case common.ChainTypeEVMStr:
 		return NewEVMChainOperations(config.ChainSpecific, config.ChainID, chain.AddressMultisig, logger)
 	default:

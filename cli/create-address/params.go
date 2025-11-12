@@ -23,6 +23,7 @@ const (
 	bridgePrivateKeyFlag = "bridge-key"
 	privateKeyConfigFlag = "key-config"
 	showPolicyScrFlag    = "show-policy-script"
+	custodialAddrFlag    = "generate-custodial-address"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
@@ -32,6 +33,7 @@ const (
 	bridgePrivateKeyFlagDesc = "private key for bridge admin"
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 	showPolicyScrFlagDesc    = "show policy script"
+	custodialAddrFlagDesc    = "generate custodial address"
 )
 
 type createAddressParams struct {
@@ -44,6 +46,7 @@ type createAddressParams struct {
 	bridgePrivateKey string
 	privateKeyConfig string
 	showPolicyScript bool
+	custodialAddress bool
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -119,6 +122,13 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		showPolicyScrFlagDesc,
 	)
 
+	cmd.Flags().BoolVar(
+		&ip.custodialAddress,
+		custodialAddrFlag,
+		false,
+		custodialAddrFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
@@ -183,6 +193,21 @@ func (ip *createAddressParams) Execute(
 		cmdResult.AddressAndPolicyScripts[i] = AddressAndPolicyScripts{
 			ApexAddresses: addrs,
 			PolicyScripts: policyScripts}
+	}
+
+	if ip.custodialAddress {
+		policyScript := cardanotx.NewCustodialPolicyScriptContainer(keyHashes.Multisig, 0)
+
+		addr, err := cardanotx.NewAddressContainer(
+			cliBinary, ip.testnetMagic, policyScript)
+		if err != nil {
+			return nil, err
+		}
+
+		cmdResult.Custodial = &Custodial{
+			Address:      addr.Payment,
+			PolicyScript: policyScript.Payment,
+		}
 	}
 
 	return &cmdResult, nil

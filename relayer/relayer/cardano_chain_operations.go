@@ -2,7 +2,6 @@ package relayer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -17,16 +16,19 @@ import (
 var _ core.ChainOperations = (*CardanoChainOperations)(nil)
 
 type CardanoChainOperations struct {
+	vcRunMode        common.VCRunMode
 	txProvider       cardanowallet.ITxProvider
 	cardanoCliBinary string
+	wallet           *cardanotx.ApexCardanoWallet
 	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
-	jsonConfig json.RawMessage,
+	chainConfig core.ChainConfig,
+	vcRunMode common.VCRunMode,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
-	config, err := cardanotx.NewCardanoChainConfig(jsonConfig)
+	config, err := cardanotx.NewCardanoChainConfig(chainConfig.ChainSpecific)
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +38,26 @@ func NewCardanoChainOperations(
 		return nil, fmt.Errorf("failed to create tx provider: %w", err)
 	}
 
+	var cardanoWallet *cardanotx.ApexCardanoWallet
+
+	if vcRunMode == common.SkylineMode {
+		secretsManager, err := common.GetSecretsManager(
+			chainConfig.RelayerDataDir, chainConfig.RelayerConfigPath, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create secrets manager: %w", err)
+		}
+
+		cardanoWallet, err = cardanotx.LoadWallet(secretsManager, chainConfig.ChainID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &CardanoChainOperations{
+		vcRunMode:        vcRunMode,
 		txProvider:       txProvider,
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		wallet:           cardanoWallet,
 		logger:           logger,
 	}, nil
 }
@@ -77,6 +96,15 @@ func (cco *CardanoChainOperations) SendTx(
 	}
 
 	defer txBuilder.Dispose()
+
+	if cco.vcRunMode == common.SkylineMode {
+		relayerMultisigWitness, err := txBuilder.CreateTxWitness(smartContractData.RawTransaction, cco.wallet.MultiSig)
+		if err != nil {
+			return err
+		}
+
+		witnesses = append(witnesses, relayerMultisigWitness)
+	}
 
 	txSigned, err := txBuilder.AssembleTxWitnesses(smartContractData.RawTransaction, witnesses)
 	if err != nil {

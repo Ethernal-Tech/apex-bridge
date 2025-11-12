@@ -167,6 +167,11 @@ func loadSyncerConfigs(
 		config.OtherAddressesOfInterest...,
 	)
 
+	custodialAddr, present := bridgingAddressesManager.GetCustodialAddress(chainID)
+	if present {
+		addressesOfInterest = append(addressesOfInterest, custodialAddr)
+	}
+
 	indexerConfig := &indexer.BlockIndexerConfig{
 		StartingBlockPoint: &indexer.BlockPoint{
 			BlockSlot: config.StartSlot,

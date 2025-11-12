@@ -25,7 +25,7 @@ func getStakingCertificates(
 ) (*cardano.CertificatesWithScript, uint64, error) {
 	cliUtils := cardanowallet.NewCliUtils(cardanoCliBinary)
 
-	certs := make([]cardanowallet.ICertificate, 0)
+	certs := make([]cardanowallet.ICardanoArtifact, 0)
 
 	// Generate certificates
 	keyRegDepositAmount, err := extractStakeKeyDepositAmount(data.ProtocolParams)
@@ -67,14 +67,21 @@ func getStakingCertificates(
 	}, keyRegDepositAmount, nil
 }
 
+type getOutputsData struct {
+	TxOutputs        cardano.TxOutputs
+	IsRedistribution bool
+	MintTokens       []cardanowallet.MintTokenAmount
+}
+
 func getOutputs(
 	txs []eth.ConfirmedTransaction,
 	cardanoConfig *cardano.CardanoChainConfig,
 	feeAddress string,
 	refundUtxosPerConfirmedTx [][]*indexer.TxInputOutput,
 	logger hclog.Logger,
-) (cardano.TxOutputs, bool, error) {
+) (*getOutputsData, error) {
 	receiversMap := map[string]cardanowallet.TxOutput{}
+	mintTokens := make([]cardanowallet.MintTokenAmount, 0)
 	isRedistribution := false
 
 	for txIndex, transaction := range txs {
@@ -115,29 +122,37 @@ func getOutputs(
 			if hasTokens {
 				if len(data.Tokens) == 0 {
 					var (
-						err   error
-						token cardanowallet.Token
+						err        error
+						token      cardanowallet.Token
+						shouldMint bool
 					)
 
 					switch transaction.TransactionType {
 					case uint8(common.DefundConfirmedTxType):
 						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return nil, err
 						}
 					case uint8(common.RefundConfirmedTxType):
 						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
 
 						token, err = cardanoConfig.GetNativeToken(origDstChainID)
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return nil, err
 						}
 					default:
-						token, err = cardanoConfig.GetNativeToken(
+						token, shouldMint, err = cardanoConfig.GetNativeTokenData(
 							common.ToStrChainID(transaction.SourceChainId))
 						if err != nil {
-							return cardano.TxOutputs{}, false, err
+							return nil, err
 						}
+					}
+
+					if shouldMint {
+						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
+							Token:  token,
+							Amount: receiver.AmountWrapped.Uint64(),
+						})
 					}
 
 					data.Tokens = []cardanowallet.TokenAmount{
@@ -184,7 +199,11 @@ func getOutputs(
 		return result.Outputs[i].Addr < result.Outputs[j].Addr
 	})
 
-	return result, isRedistribution, nil
+	return &getOutputsData{
+		TxOutputs:        result,
+		IsRedistribution: isRedistribution,
+		MintTokens:       mintTokens,
+	}, nil
 }
 
 // createUtxoSelectionAmounts creates a copy of desired amounts with adjusted ADA amount for UTXO selection
@@ -321,6 +340,20 @@ func extractStakeKeyDepositAmount(protocolParams []byte) (uint64, error) {
 	}
 
 	return params.StakeAddressDeposit, nil
+}
+
+func extractPlutusExecutionParams(protocolParams []byte) (cardano.ExecutionUnitData, error) {
+	var params cardanowallet.ProtocolParameters
+
+	if err := json.Unmarshal(protocolParams, &params); err != nil {
+		return cardano.ExecutionUnitData{}, err
+	}
+
+	return cardano.ExecutionUnitData{
+		CollateralPercentage: params.CollateralPercentage,
+		ExecutionUnitPrices:  params.ExecutionUnitPrices,
+		MaxTxExecutionUnits:  params.MaxTxExecutionUnits,
+	}, nil
 }
 
 type addressConsolidation struct {

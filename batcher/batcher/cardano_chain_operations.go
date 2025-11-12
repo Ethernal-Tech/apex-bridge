@@ -110,13 +110,13 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txData, chosenMultisigAddresses, err := cco.generateBatchTransaction(data, confirmedTransactions)
+	txData, chosenMultisigAddresses, err := cco.generateBatchTransaction(ctx, data, confirmedTransactions)
 
 	if cco.shouldConsolidate(err) {
 		consolidationType := cco.getConsolidationType(err)
 		cco.logger.Warn("consolidation batch generation started", "err", err, "consolidationType", consolidationType.String())
 
-		txData, err = cco.generateConsolidationTransaction(data, chosenMultisigAddresses, consolidationType)
+		txData, err = cco.generateConsolidationTransaction(ctx, data, chosenMultisigAddresses, consolidationType)
 		if err != nil {
 			err = fmt.Errorf("consolidation batch failed: %w", err)
 		}
@@ -196,6 +196,7 @@ func (cco *CardanoChainOperations) Submit(
 }
 
 func (cco *CardanoChainOperations) generateBatchTransaction(
+	ctx context.Context,
 	data *batchInitialData,
 	confirmedTransactions []eth.ConfirmedTransaction,
 ) (
@@ -216,21 +217,34 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, nil, err
 	}
 
-	txOutputs, isRedistribution, err := getOutputs(
+	getOutputsData, err := getOutputs(
 		confirmedTransactions, cco.config, feeMultisigAddress, refundUtxosPerConfirmedTx, cco.logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	txPlutusMintData, err := cco.getPlutusMintData(ctx, data, getOutputsData.MintTokens)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cco.logger.Debug("Mint tokens data", txPlutusMintData)
+
 	cco.logger.Debug("Getting addresses and amounts", "chain", common.ToStrChainID(data.ChainID),
-		"outputs", txOutputs.Outputs, "redistribution", isRedistribution)
+		"outputs", getOutputsData.TxOutputs.Outputs, "redistribution", getOutputsData.IsRedistribution)
+
+	var mintTokens []cardanowallet.MintTokenAmount
+	if txPlutusMintData != nil {
+		mintTokens = txPlutusMintData.Tokens
+	}
 
 	multisigAddresses, isRedistribution, err := cco.bridgingAddressesCoordinator.GetAddressesAndAmountsForBatch(
 		data.ChainID,
 		cco.cardanoCliBinary,
-		isRedistribution,
+		getOutputsData.IsRedistribution,
 		data.ProtocolParams,
-		txOutputs,
+		getOutputsData.TxOutputs,
+		mintTokens,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -274,7 +288,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare refund inputs/outputs. err: %w", err)
 	}
 
-	txOutputs.Outputs = append(txOutputs.Outputs, refundUtxoOutputs...)
+	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs, refundUtxoOutputs...)
 
 	slotNumber, err := cco.getSlotNumber()
 	if err != nil {
@@ -284,16 +298,24 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	cco.logger.Info("Creating batch tx", "batchID", data.BatchNonceID,
 		"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
 		"slot", slotNumber, "multisig", utxoSelectionResult.chosenMultisigUtxosCount+len(refundUtxoInputs),
-		"fee", len(utxoSelectionResult.feeUtxos), "outputs", len(txOutputs.Outputs))
+		"fee", len(utxoSelectionResult.feeUtxos), "outputs", len(getOutputsData.TxOutputs.Outputs))
 
 	refundTxInputs, err := cco.prepareMultisigInputsForNormalBatch(data.ChainID, refundUtxoInputs)
 	if err != nil {
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare refund inputs for multisig: %w", err)
 	}
 
-	txInputs, err := cco.prepareMultisigInputsForNormalBatch(data.ChainID, utxoSelectionResult.multisigUtxos)
+	txInputs, err := cco.prepareMultisigInputsForNormalBatch(
+		data.ChainID, utxoSelectionResult.multisigUtxos)
 	if err != nil {
 		return nil, multisigAddresses, fmt.Errorf("failed to prepare inputs for multisig: %w", err)
+	}
+
+	if len(mintTokens) > 0 {
+		err := cco.prepareCustodialInputsForNormalBatch(data.ChainID, txInputs, getOutputsData)
+		if err != nil {
+			return nil, multisigAddresses, fmt.Errorf("failed to prepare custodial inputs and outputs: %w", err)
+		}
 	}
 
 	feePolicyScript, ok := cco.bridgingAddressesManager.GetFeeMultisigPolicyScript(data.ChainID)
@@ -310,7 +332,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	var addrAndAmountToDeduct []common.AddressAndAmount
 
 	if isRedistribution {
-		txOutputs.Outputs, err = addRedistributionOutputs(txOutputs.Outputs, multisigAddresses)
+		getOutputsData.TxOutputs.Outputs, err = addRedistributionOutputs(getOutputsData.TxOutputs.Outputs, multisigAddresses)
 		if err != nil {
 			return nil, multisigAddresses, err
 		}
@@ -318,15 +340,22 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		addrAndAmountToDeduct = multisigAddresses
 	}
 
+	additionalWitnessCount := 0
+
+	if cco.config.RelayerAddress != "" {
+		additionalWitnessCount = 1
+	}
+
 	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "txInputs", txInputs)
 	cco.logger.Debug("REFUND TX INPUTS", "batchID", data.BatchNonceID,
 		"chain", common.ToStrChainID(data.ChainID), "refundTxInputs", refundTxInputs.MultiSig)
 	cco.logger.Debug("TX OUTPUTS", "batchID", data.BatchNonceID,
-		"chain", common.ToStrChainID(data.ChainID), "txOutputs.Outputs", txOutputs.Outputs)
+		"chain", common.ToStrChainID(data.ChainID), "txOutputs.Outputs", getOutputsData.TxOutputs.Outputs)
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
+		ctx,
 		cco.cardanoCliBinary,
 		uint(cco.config.NetworkMagic),
 		data.ProtocolParams,
@@ -334,9 +363,11 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		data.Metadata,
 		txInputs,
 		refundTxInputs.MultiSig,
-		txOutputs.Outputs,
+		getOutputsData.TxOutputs.Outputs,
 		certificateData,
 		addrAndAmountToDeduct,
+		txPlutusMintData,
+		additionalWitnessCount,
 	)
 	if err != nil {
 		return nil, multisigAddresses, err
@@ -354,6 +385,95 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 		IsPaymentSignNeeded: hasBridgingTx,
 		BatchType:           eth.BatchTypeNormal,
 	}, multisigAddresses, nil
+}
+
+func (cco *CardanoChainOperations) getPlutusMintData(
+	ctx context.Context,
+	data *batchInitialData, mintTokens []cardanowallet.MintTokenAmount,
+) (*cardano.PlutusMintData, error) {
+	if len(mintTokens) == 0 {
+		return nil, nil
+	}
+
+	tokens := make([]cardanowallet.MintTokenAmount, 0, len(mintTokens))
+	tokensPolicyID := ""
+
+	// Populate map of locked tokens from the addr0
+	addr0Address, ok := cco.bridgingAddressesManager.GetPaymentAddressFromIndex(data.ChainID, 0)
+	if !ok {
+		return nil, fmt.Errorf("failed to get address 0 for chain %s", common.ToStrChainID(data.ChainID))
+	}
+
+	addr0Utxos, err := cco.db.GetAllTxOutputs(addr0Address, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get utxos from address %s", addr0Address)
+	}
+
+	availableLockedTokens := cardano.GetSumMapFromTxInputOutput(addr0Utxos)
+
+	for _, mintToken := range mintTokens {
+		tokensPolicyID = mintToken.PolicyID
+
+		if mintToken.Amount >= availableLockedTokens[mintToken.String()] {
+			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
+				mintToken.Token, mintToken.Amount-availableLockedTokens[mintToken.String()], false))
+		} else {
+			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
+				mintToken.Token, availableLockedTokens[mintToken.String()]-mintToken.Amount, true))
+		}
+	}
+
+	relayerAddr := cco.config.RelayerAddress
+
+	relayerUtxos, err := cco.txProvider.GetUtxos(ctx, relayerAddr) // cco.db.GetAllTxOutputs(relayerAddr, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get utxos from address %s", relayerAddr)
+	}
+
+	// filter out unknown tokens
+	filteredUtxos := make([]cardanowallet.Utxo, 0, len(relayerUtxos))
+
+	for _, utxo := range relayerUtxos {
+		if len(utxo.Tokens) == 0 {
+			filteredUtxos = append(filteredUtxos, utxo)
+		}
+	}
+
+	sort.SliceStable(filteredUtxos, func(i, j int) bool {
+		return relayerUtxos[i].Amount > relayerUtxos[j].Amount
+	})
+
+	relayerTxInputs := make([]cardanowallet.TxInput, 1)
+
+	// take largest utxo as collateral
+	relayerTxInputs[0] = cardanowallet.TxInput{
+		Hash:  filteredUtxos[0].Hash,
+		Index: filteredUtxos[0].Index,
+	}
+
+	sum := map[string]uint64{
+		cardanowallet.AdaTokenName: filteredUtxos[0].Amount,
+	}
+
+	cco.logger.Debug("Relayer tx inputs", "txInputs", relayerTxInputs, "sum", sum)
+
+	executionUnitData, err := extractPlutusExecutionParams(data.ProtocolParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract plutus execution params: %w", err)
+	}
+
+	return &cardano.PlutusMintData{
+		Tokens:        tokens,
+		TxInReference: *cco.config.MintingScriptTxInput,
+		Collateral: cardanowallet.TxInputs{
+			Inputs: relayerTxInputs,
+			Sum:    sum,
+		},
+		CollateralAddress: relayerAddr,
+		TokensPolicyID:    tokensPolicyID,
+		TxProvider:        cco.txProvider,
+		ExecutionUnitData: executionUnitData,
+	}, nil
 }
 
 func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
@@ -429,6 +549,61 @@ func (cco *CardanoChainOperations) prepareMultisigInputsForNormalBatch(
 	return txInputs, nil
 }
 
+func (cco *CardanoChainOperations) findCustodialTxOutput(custodialAddr string) (*indexer.TxInputOutput, error) {
+	txOutputs, err := cco.db.GetAllTxOutputs(custodialAddr, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve UTXOs for address %s: %w", custodialAddr, err)
+	}
+
+	for _, out := range txOutputs {
+		tokens := out.Output.Tokens
+		// nft token has to be the only token in utxo by design
+		if len(tokens) == 1 &&
+			tokens[0].Equals(indexer.TokenAmount{
+				PolicyID: cco.config.CustodialNft.PolicyID,
+				Name:     cco.config.CustodialNft.Name,
+				Amount:   1,
+			}) {
+			return out, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no custodial UTXO containing the expected NFT found at address %s", custodialAddr)
+}
+
+func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
+	chainID uint8, txInputs *cardano.TxInputInfos, getOutputsData *getOutputsData,
+) error {
+	custodialAddr, ok := cco.bridgingAddressesManager.GetCustodialAddress(chainID)
+	if !ok {
+		return fmt.Errorf("failed to get custodial address for chain: %s", common.ToStrChainID(chainID))
+	}
+
+	custodialPolicyScript, ok := cco.bridgingAddressesManager.GetCustodialPolicyScript(chainID)
+	if !ok {
+		return fmt.Errorf("failed to get custodial policy script for chain: %s", common.ToStrChainID(chainID))
+	}
+
+	custodialTxOutput, err := cco.findCustodialTxOutput(custodialAddr)
+	if err != nil {
+		return err
+	}
+
+	txInputs.Custodial = &cardano.TxInputInfo{
+		TxInputs:     convertUTXOsToTxInputs([]*indexer.TxInputOutput{custodialTxOutput}),
+		PolicyScript: custodialPolicyScript,
+		Address:      custodialAddr,
+	}
+
+	custodialNft := cardanowallet.NewTokenAmount(*cco.config.CustodialNft, 1)
+
+	// custodial address must receive back it's nft token in standalone output
+	getOutputsData.TxOutputs.Outputs = append(getOutputsData.TxOutputs.Outputs,
+		cardanowallet.NewTxOutput(custodialAddr, custodialTxOutput.Output.Amount, custodialNft))
+
+	return nil
+}
+
 func (cco *CardanoChainOperations) shouldConsolidate(err error) bool {
 	return errors.Is(err, cardanowallet.ErrUTXOsLimitReached) ||
 		errors.Is(err, errTxSizeTooBig) ||
@@ -444,6 +619,7 @@ func (cco *CardanoChainOperations) getConsolidationType(err error) core.Consolid
 }
 
 func (cco *CardanoChainOperations) generateConsolidationTransaction(
+	ctx context.Context,
 	data *batchInitialData,
 	chosenMultisigAddresses []common.AddressAndAmount,
 	consolidationType core.ConsolidationType,
@@ -532,6 +708,7 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
+		ctx,
 		cco.cardanoCliBinary,
 		uint(cco.config.NetworkMagic),
 		data.ProtocolParams,
@@ -542,6 +719,8 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 		multisigTxOutputs,
 		nil,
 		utxosForConsolidationRet.chosenMultisigAddresses,
+		nil,
+		0,
 	)
 	if err != nil {
 		return nil, err

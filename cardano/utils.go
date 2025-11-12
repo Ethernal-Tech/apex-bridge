@@ -77,10 +77,12 @@ func CalculateMinUtxoCurrencyAmount(
 
 	defer txBuilder.Dispose()
 
-	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(wallet.TxOutput{
-		Addr:   addr,
-		Amount: sumMap[wallet.AdaTokenName],
-		Tokens: tokens,
+	minUtxo, err := txBuilder.SetProtocolParameters(protocolParams).CalculateMinUtxo(wallet.TxOutputWithRefScript{
+		TxOutput: wallet.TxOutput{
+			Addr:   addr,
+			Amount: sumMap[wallet.AdaTokenName],
+			Tokens: tokens,
+		},
 	})
 	if err != nil {
 		return 0, err

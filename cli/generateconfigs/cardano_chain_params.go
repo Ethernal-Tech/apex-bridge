@@ -3,6 +3,7 @@ package cligenerateconfigs
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"path/filepath"
 	"strings"
 
@@ -38,6 +39,13 @@ const (
 	nativeTokenDestinationChainIDFlag = "native-token-destination-chain-id"
 	nativeTokenNameFlag               = "native-token-name"
 
+	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
+	mintingScriptTxInputIndexFlag = "minting-script-tx-input-index"
+	nftPolicyIDFlag               = "nft-policy-id"
+	nftNameFlag                   = "nft-name"
+
+	relayerAddressFlag = "relayer-address"
+
 	chainIDStringFlagDesc           = "(mandatory) chain id string for the chain config"
 	networkAddressFlagDesc          = "(mandatory) address of network"
 	networkMagicFlagDesc            = "network magic (default 0)"
@@ -58,6 +66,13 @@ const (
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
 	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
+
+	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
+	mintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script"
+	nftPolicyIDFlagDesc               = "the policy ID of the NFT used in the minting script"
+	nftNameFlagDesc                   = "the name of the NFT used in the minting script"
+
+	relayerAddressFlagDesc = "relayer address for paying collaterals on the chain"
 
 	defaultBlockConfirmationCount = 10
 	defaultTTLSlotNumberInc       = 1800 + defaultBlockConfirmationCount*10 // BlockTimeSeconds
@@ -88,6 +103,15 @@ type cardanoChainGenerateConfigsParams struct {
 
 	nativeTokenName               string
 	nativeTokenDestinationChainID string
+
+	mintingScriptTxInputHash  string
+	mintingScriptTxInputIndex int64
+	nftPolicyID               string
+	nftName                   string
+
+	relayerAddress    string
+	relayerDataDir    string
+	relayerConfigPath string
 
 	dbsPath string
 
@@ -147,6 +171,26 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 		(p.nativeTokenDestinationChainID == "" && p.nativeTokenName != "") {
 		return fmt.Errorf("specify both or neither of: %s, %s",
 			nativeTokenDestinationChainIDFlag, nativeTokenNameFlag)
+	}
+
+	if p.mintingScriptTxInputHash != "" {
+		if p.mintingScriptTxInputIndex < 0 || p.mintingScriptTxInputIndex > math.MaxUint32 {
+			return fmt.Errorf("invalid minting script tx input index: %d", p.mintingScriptTxInputIndex)
+		}
+
+		if p.nftPolicyID == "" {
+			return fmt.Errorf("missing %s", nftPolicyIDFlag)
+		}
+
+		if p.nftName == "" {
+			return fmt.Errorf("missing %s", nftNameFlag)
+		}
+
+		nftFullName := fmt.Sprintf("%s.%s", p.nftPolicyID, p.nftName)
+
+		if _, err := wallet.NewTokenWithFullNameTry(nftFullName); err != nil {
+			return fmt.Errorf("invalid NFT name %s", nftFullName)
+		}
 	}
 
 	return nil
@@ -276,6 +320,52 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		nativeTokenDestinationChainIDFlagDesc,
 	)
 
+	// Minting script params
+	cmd.Flags().StringVar(
+		&p.mintingScriptTxInputHash,
+		mintingScriptTxInputHashFlag,
+		"",
+		mintingScriptTxInputHashFlagDesc,
+	)
+	cmd.Flags().Int64Var(
+		&p.mintingScriptTxInputIndex,
+		mintingScriptTxInputIndexFlag,
+		-1,
+		mintingScriptTxInputIndexFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nftPolicyID,
+		nftPolicyIDFlag,
+		"",
+		nftPolicyIDFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nftName,
+		nftNameFlag,
+		"",
+		nftNameFlagDesc,
+	)
+
+	// Relayer params
+	cmd.Flags().StringVar(
+		&p.relayerAddress,
+		relayerAddressFlag,
+		"",
+		relayerAddressFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerDataDir,
+		relayerDataDirFlag,
+		"",
+		relayerDataDirFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.relayerConfigPath,
+		relayerConfigPathFlag,
+		"",
+		relayerConfigPathFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.dbsPath,
 		dbsPathFlag,
@@ -304,6 +394,7 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(blockfrostURLFlag, socketPathFlag, ogmiosURLFlag)
+	cmd.MarkFlagsMutuallyExclusive(relayerDataDirFlag, relayerConfigPathFlag)
 }
 
 func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -319,6 +410,16 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		return nil, fmt.Errorf("failed to load validator components config json: %w", err)
 	}
 
+	if vcConfig.RunMode == common.SkylineMode {
+		if p.relayerAddress == "" {
+			return nil, fmt.Errorf("missing %s", relayerAddressFlag)
+		}
+
+		if p.relayerDataDir == "" && p.relayerConfigPath == "" {
+			return nil, fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+		}
+	}
+
 	startingSlot, startingHash, err := parseStartingBlock(p.startingBlock)
 	if err != nil {
 		return nil, err
@@ -332,6 +433,22 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 				DstChainID: p.nativeTokenDestinationChainID,
 				TokenName:  p.nativeTokenName,
 			},
+		}
+	}
+
+	var (
+		mintingScriptTxInput *wallet.TxInput
+		custodialNFT         *wallet.Token
+	)
+
+	if p.mintingScriptTxInputHash != "" {
+		mintingScriptTxInput = &wallet.TxInput{
+			Hash:  p.mintingScriptTxInputHash,
+			Index: uint32(p.mintingScriptTxInputIndex), //nolint:gosec
+		}
+		custodialNFT = &wallet.Token{
+			PolicyID: p.nftPolicyID,
+			Name:     p.nftName,
 		}
 	}
 
@@ -358,6 +475,9 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			NativeTokens:             nativeTokens,
 			DefaultMinFeeForBridging: p.minFeeForBridging,
 			MinFeeForBridgingTokens:  p.minFeeForBridgingTokens,
+			MintingScriptTxInput:     mintingScriptTxInput,
+			CustodialNft:             custodialNFT,
+			RelayerAddress:           p.relayerAddress,
 		},
 		NetworkAddress:           p.networkAddress,
 		StartBlockHash:           startingHash,
@@ -401,9 +521,11 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	}
 
 	rConfig.Chains[p.chainIDString] = rCore.ChainConfig{
-		ChainType:     common.ChainTypeCardanoStr,
-		DbsPath:       filepath.Join(p.dbsPath, "relayer"),
-		ChainSpecific: chainSpecificJSONRaw,
+		ChainType:         common.ChainTypeCardanoStr,
+		DbsPath:           filepath.Join(p.dbsPath, "relayer"),
+		ChainSpecific:     chainSpecificJSONRaw,
+		RelayerDataDir:    cleanPath(p.relayerDataDir),
+		RelayerConfigPath: cleanPath(p.relayerConfigPath),
 	}
 
 	if err := common.SaveJSON(rConfigPath, rConfig, true); err != nil {

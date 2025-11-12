@@ -92,3 +92,34 @@ func (r evmCmdResult) GetOutput() string {
 
 	return buffer.String()
 }
+
+type cardanoRelayerCmdResult struct {
+	ChainID        string                `json:"chainID"`
+	Wallet         *cardanowallet.Wallet `json:"wallet"`
+	Address        string                `json:"address"`
+	showPrivateKey bool
+}
+
+func (r cardanoRelayerCmdResult) GetOutput() string {
+	var (
+		buffer bytes.Buffer
+		vals   []string
+	)
+
+	if r.showPrivateKey {
+		vals = append(vals, fmt.Sprintf("Signing Key|%s", hex.EncodeToString(r.Wallet.SigningKey)))
+	}
+
+	vals = append(vals,
+		fmt.Sprintf("Verifying Key|%s", hex.EncodeToString(r.Wallet.VerificationKey)),
+		fmt.Sprintf("Address|%s", r.Address),
+	)
+
+	buffer.WriteString("\n[RELAYER SECRETS ")
+	buffer.WriteString(r.ChainID)
+	buffer.WriteString("]\n")
+	buffer.WriteString(common.FormatKV(vals))
+	buffer.WriteString("\n")
+
+	return buffer.String()
+}

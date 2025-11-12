@@ -42,6 +42,9 @@ const (
 
 	emptyBlocksThresholdFlag = "empty-blocks-threshold"
 
+	relayerDataDirFlag    = "relayer-data-dir"
+	relayerConfigPathFlag = "relayer-config"
+
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
 
@@ -61,6 +64,9 @@ const (
 	telemetryFlagDesc = "prometheus_ip:port,datadog_ip:port"
 
 	emptyBlocksThresholdFlagDesc = "specifies the maximum number of empty blocks for blocks submitter to skip"
+
+	relayerDataDirFlagDesc    = "path to relayer secret directory when using local secrets manager"
+	relayerConfigPathFlagDesc = "path to relayer secrets manager config file"
 
 	defaultNetworkMagic                      = uint32(wallet.MainNetProtocolMagic)
 	defaultLogsPath                          = "./logs"
@@ -301,6 +307,7 @@ func (p *generateConfigsParams) Execute(
 	}
 
 	rConfig := &rCore.RelayerManagerConfiguration{
+		RunMode: common.ReactorMode,
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,

@@ -65,7 +65,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000},
-		})
+		}, nil)
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
 		require.Equal(t, uint64(10_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -102,7 +102,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000},
-		})
+		}, nil)
 		require.Error(t, err)
 		require.Nil(t, amounts)
 	})
@@ -148,7 +148,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000},
-		})
+		}, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, uint64(10_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -197,7 +197,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000, token.String(): 1000000},
-		})
+		}, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
@@ -247,7 +247,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000, token.String(): 10_000_000},
-		})
+		}, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "not enough b8b9cb79fc3317847e6aeee650093a738972e773c0702c7e5fe6e702.7465737431 token funds for batch")
 		require.Nil(t, amounts)
@@ -293,7 +293,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000, token.String(): 1000000},
-		})
+		}, nil)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "not enough lovelace token funds for batch")
@@ -350,7 +350,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000, token.String(): 500_000},
-		})
+		}, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, uint64(500_000), amounts[0].TokensAmounts[token.String()])
@@ -425,7 +425,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 10_000_000, token.String(): 500_000},
-		})
+		}, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, uint64(10000000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -475,7 +475,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 2_999_999},
-		})
+		}, nil)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "special consolidation required")
@@ -626,7 +626,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{}, nil)
 		require.NoError(t, err)
 		require.Equal(t, "addr_test1wrphkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcl6szpr", amounts[0].Address)
 		require.Equal(t, uint64(1_000_000_000), amounts[0].TokensAmounts[cardanowallet.AdaTokenName])
@@ -675,7 +675,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{}, nil)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(amounts))
 
@@ -730,7 +730,7 @@ func TestRedistributeTokens(t *testing.T) {
 			"prime": dbMock,
 		}, cardanoChains, hclog.NewNullLogger())
 
-		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{})
+		amounts, _, err := coordinator.GetAddressesAndAmountsForBatch(chainID, cardanowallet.ResolveCardanoCliBinary(cardanowallet.TestNetNetwork), true, protocolParams, common.TxOutputs{}, nil)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(amounts))
 
@@ -791,7 +791,7 @@ func TestRedistributeTokens(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 100_000_000},
-		})
+		}, nil)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(amounts))
 
@@ -894,7 +894,7 @@ func TestRedistributeTokens(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 700_000_000, token.String(): 2000000},
-		})
+		}, nil)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(amounts))
 
@@ -962,7 +962,7 @@ func TestRedistributeTokens(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 11_000_000_000},
-		})
+		}, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "not enough lovelace token funds for batch")
 
@@ -984,7 +984,7 @@ func TestRedistributeTokens(t *testing.T) {
 				},
 			},
 			Sum: map[string]uint64{"lovelace": 500_000_000, tok.String(): 3000000},
-		})
+		}, nil)
 		require.Error(t, err)
 		require.ErrorContains(t, err, fmt.Sprintf("not enough %s token funds", tok.TokenName()))
 	})

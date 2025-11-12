@@ -28,6 +28,9 @@ type CardanoChainConfig struct {
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
 	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
+	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
+	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
 }
 
 // GetChainType implements ChainSpecificConfig.
@@ -97,6 +100,33 @@ func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardan
 	}
 
 	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+}
+
+func (config CardanoChainConfig) GetNativeTokenData(
+	dstChainID string,
+) (token cardanowallet.Token, shouldMint bool, err error) {
+	tokenName := ""
+	shouldMint = false
+
+	for _, dst := range config.NativeTokens {
+		if dst.DstChainID == dstChainID {
+			tokenName = dst.TokenName
+			shouldMint = dst.Mint
+
+			break
+		}
+	}
+
+	if tokenName == "" {
+		return token, shouldMint, fmt.Errorf("no native token specified for destination: %s", dstChainID)
+	}
+
+	token, err = GetNativeTokenFromName(tokenName)
+	if err == nil {
+		return token, shouldMint, nil
+	}
+
+	return token, shouldMint, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
 }
 
 func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {

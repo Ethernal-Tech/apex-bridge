@@ -250,6 +250,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 	}
 
 	rConfig := &rCore.RelayerManagerConfiguration{
+		RunMode: common.SkylineMode,
 		Bridge: rCore.BridgeConfig{
 			NodeURL:              p.bridgeNodeURL,
 			DynamicTx:            false,

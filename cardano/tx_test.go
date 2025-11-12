@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 
@@ -89,7 +90,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "no inputs found for either multisig (0) and refund (0) or fee multisig (1)")
 	})
 	t.Run("empty fee multisig inputs", func(t *testing.T) {
@@ -109,7 +110,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "no inputs found for either multisig (1) and refund (0) or fee multisig (0)")
 	})
 	t.Run("not enough funds on multisig", func(t *testing.T) {
@@ -144,7 +145,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault * 4
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "invalid amount: has = 3000000")
 	})
 	t.Run("not enough funds on fee multisig", func(t *testing.T) {
@@ -192,7 +193,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault
 		_, _, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "invalid amount: has = 20")
 	})
 	t.Run("multisig and fee not in outputs with change for multisig", func(t *testing.T) {
@@ -226,7 +227,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -267,7 +268,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -313,7 +314,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -360,7 +361,7 @@ func TestCreateTx(t *testing.T) {
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -406,7 +407,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -451,7 +452,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 		info, err := common.ParseTxInfo(rawTx, true)
@@ -501,7 +502,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 150 + 131
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
@@ -511,6 +512,25 @@ func TestCreateTx(t *testing.T) {
 		assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
 		assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
 		assert.False(t, isInOutputs(info.Outputs, feeAddr))
+
+		t.Run("additional witnesses", func(t *testing.T) {
+			_, _, err := CreateTx(
+				context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 1)
+			require.Error(t, err)
+
+			txInputsInfos.MultiSigFee.TxInputs.Sum = map[string]uint64{wallet.AdaTokenName: 199821 - 131}
+
+			rawTx, _, err = CreateTx(
+				context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, nil, addrAndAmounts, nil, 1)
+			require.NoError(t, err)
+
+			info, err := common.ParseTxInfo(rawTx, true)
+			require.NoError(t, err)
+			require.Len(t, info.Outputs, 1)
+			assert.Equal(t, getAmountFromOutputs(info.Outputs, outputAddr), common.MinUtxoAmountDefault)
+			assert.False(t, isInOutputs(info.Outputs, multiSigAddr))
+			assert.False(t, isInOutputs(info.Outputs, feeAddr))
+		})
 	})
 
 	keyRegDepositAmount := uint64(2000000)
@@ -525,7 +545,7 @@ func TestCreateTx(t *testing.T) {
 		Certificates: []*CertificatesWithScript{
 			{
 				PolicyScript: policyScriptMultiSig,
-				Certificates: []wallet.ICertificate{registrationCert, delegationCert},
+				Certificates: []wallet.ICardanoArtifact{registrationCert, delegationCert},
 			},
 		},
 		RegistrationFee: keyRegDepositAmount,
@@ -557,7 +577,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		outputs := []wallet.TxOutput{}
 		_, _, err = CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "invalid amount")
 	})
 	t.Run("only certificates, no multisig inputs and exact fee amount", func(t *testing.T) {
@@ -574,7 +594,7 @@ func TestCreateTx(t *testing.T) {
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = 0
 
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
@@ -610,7 +630,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		outputs := []wallet.TxOutput{}
 		_, _, err = CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.ErrorContains(t, err, "invalid amount")
 	})
 	t.Run("only certificates, exact fee", func(t *testing.T) {
@@ -644,7 +664,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
@@ -690,7 +710,7 @@ func TestCreateTx(t *testing.T) {
 		}
 		addrAndAmounts[0].TokensAmounts[wallet.AdaTokenName] = common.MinUtxoAmountDefault + 150
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 
@@ -724,7 +744,7 @@ func TestCreateTx(t *testing.T) {
 					Index: 1,
 				},
 			},
-			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 212977 + 100},
+			Sum: map[string]uint64{wallet.AdaTokenName: keyRegDepositAmount + 217365 + 100},
 		}
 		outputs := []wallet.TxOutput{
 			{
@@ -741,7 +761,7 @@ func TestCreateTx(t *testing.T) {
 			},
 		}
 		rawTx, hash, err := CreateTx(
-			cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts)
+			context.Background(), cardanoCliBinary, testnetMagic, protocolParameters, 1000, nil, &txInputsInfos, nil, outputs, certData, addrAndAmounts, nil, 0)
 		require.NoError(t, err)
 		require.NotEmpty(t, hash)
 

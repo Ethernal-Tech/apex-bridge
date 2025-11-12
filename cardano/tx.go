@@ -1,14 +1,25 @@
 package cardanotx
 
 import (
+	"context"
 	"fmt"
+	"math"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+type PlutusTxParams struct {
+	CalcFee          uint64
+	TotalCollateral  uint64
+	CollateralOutput uint64
+	CPU              uint64
+	Memory           uint64
+}
+
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
 func CreateTx(
+	ctx context.Context,
 	cardanoCliBinary string,
 	testNetMagic uint,
 	protocolParams []byte,
@@ -19,6 +30,8 @@ func CreateTx(
 	outputs []cardanowallet.TxOutput,
 	certificatesData *CertificatesData,
 	addrAndAmountToDeduct []common.AddressAndAmount,
+	txPlutusMintData *PlutusMintData,
+	additionalWitnessCount int,
 ) ([]byte, string, error) {
 	// ensure there is at least one input for both the multisig and fee multisig.
 	// in case that there are no certificates for the tx
@@ -80,6 +93,10 @@ func CreateTx(
 
 	builder.AddInputsWithScript(txInputInfos.MultiSigFee.PolicyScript, txInputInfos.MultiSigFee.Inputs...)
 
+	if txInputInfos.Custodial != nil {
+		builder.AddInputsWithScript(txInputInfos.Custodial.PolicyScript, txInputInfos.Custodial.Inputs...)
+	}
+
 	for _, multisig := range txInputInfos.MultiSig {
 		multisigChangeTxOutput := cardanowallet.TxOutput{}
 
@@ -119,7 +136,19 @@ func CreateTx(
 		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
 
-	calcFee, err := builder.CalculateFee(0)
+	if txPlutusMintData != nil {
+		builder.AddPlutusTokenMints(txPlutusMintData.Tokens, txPlutusMintData.TxInReference, txPlutusMintData.TokensPolicyID)
+		builder.AddCollateralInputs(txPlutusMintData.Collateral.Inputs)
+		builder.AddCollateralOutput(cardanowallet.NewTxOutput(txPlutusMintData.CollateralAddress, 0))
+		builder.SetTotalCollateral(0)
+	}
+
+	calcFee, err := builder.SetAdditionalWitnessCount(additionalWitnessCount).CalculateFee(0)
+	if err != nil {
+		return nil, "", err
+	}
+
+	calcFee, err = handlePlutusTx(ctx, builder, txPlutusMintData, calcFee)
 	if err != nil {
 		return nil, "", err
 	}
@@ -145,6 +174,95 @@ func CreateTx(
 	}
 
 	return builder.Build()
+}
+
+func handlePlutusTx(
+	ctx context.Context,
+	builder *cardanowallet.TxBuilder,
+	txPlutusMintData *PlutusMintData,
+	initialFee uint64,
+) (uint64, error) {
+	if txPlutusMintData == nil {
+		return initialFee, nil
+	}
+
+	txRaw, _, err := builder.UncheckedBuild()
+	if err != nil {
+		return 0, err
+	}
+
+	result, err := calculatePlutusParams(ctx, txRaw, txPlutusMintData, initialFee)
+	if err != nil {
+		return 0, err
+	}
+
+	builder.SetExecutionUnitParams(result.CPU, result.Memory)
+	builder.SetTotalCollateral(result.TotalCollateral)
+	builder.UpdateCollateralOutputAmount(-1, result.CollateralOutput)
+
+	return result.CalcFee, nil
+}
+
+func calculatePlutusParams(
+	ctx context.Context,
+	txRaw []byte,
+	txPlutusMintData *PlutusMintData,
+	initialFee uint64,
+) (*PlutusTxParams, error) {
+	data, err := txPlutusMintData.TxProvider.EvaluateTx(ctx, txRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.CPU > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps {
+		return nil, fmt.Errorf(
+			"cpu exceeds max tx execution units: %d > %d",
+			data.CPU, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Steps,
+		)
+	}
+
+	if data.Memory > txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory {
+		return nil, fmt.Errorf(
+			"memory exceeds max tx execution units: %d > %d",
+			data.Memory, txPlutusMintData.ExecutionUnitData.MaxTxExecutionUnits.Memory,
+		)
+	}
+
+	// Calculate Plutus execution cost
+	plutusExecutionCost := uint64(math.Ceil(
+		txPlutusMintData.ExecutionUnitData.ExecutionUnitPrices.PriceMemory*float64(data.Memory) +
+			txPlutusMintData.ExecutionUnitData.ExecutionUnitPrices.PriceSteps*float64(data.CPU),
+	))
+
+	calcFee := initialFee + plutusExecutionCost
+
+	// Calculate total collateral
+	totalCollateral := uint64(math.Ceil(
+		float64(calcFee) * float64(txPlutusMintData.ExecutionUnitData.CollateralPercentage) / 100,
+	))
+
+	if totalCollateral > txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] {
+		return nil, fmt.Errorf(
+			"total collateral is greater than collateral input amount: %d > %d",
+			totalCollateral, txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName],
+		)
+	}
+
+	collateralOutput := txPlutusMintData.Collateral.Sum[cardanowallet.AdaTokenName] - totalCollateral
+	if collateralOutput < common.MinUtxoAmountDefault {
+		return nil, fmt.Errorf(
+			"collateral output is less than min utxo amount: %d < %d",
+			collateralOutput, common.MinUtxoAmountDefault,
+		)
+	}
+
+	return &PlutusTxParams{
+		CalcFee:          calcFee,
+		TotalCollateral:  totalCollateral,
+		CollateralOutput: collateralOutput,
+		CPU:              data.CPU,
+		Memory:           data.Memory,
+	}, nil
 }
 
 func GetOutputsSumForAddress(addr string, addrAndAmountToDeduct []common.AddressAndAmount) map[string]uint64 {

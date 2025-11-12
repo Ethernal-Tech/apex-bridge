@@ -138,6 +138,25 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			showPrivateKey: ip.showPrivateKey,
 		}, nil
 
+	case "relayer-cardano":
+		wallet, err := cardanotx.GenerateWallet(secretsManager, ip.chainID, false, ip.forceRegenerate)
+		if err != nil {
+			return nil, err
+		}
+
+		addr, err := cardanowallet.NewBaseAddress(
+			cardanowallet.TestNetNetwork, wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
+		if err != nil {
+			return nil, err
+		}
+
+		return &cardanoRelayerCmdResult{
+			ChainID:        ip.chainID,
+			Wallet:         wallet.MultiSig,
+			Address:        addr.String(),
+			showPrivateKey: ip.showPrivateKey,
+		}, nil
+
 	default:
 		isStake := walletType == "stake"
 

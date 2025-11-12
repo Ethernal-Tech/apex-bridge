@@ -69,19 +69,11 @@ func NewApexKeyHashes(
 }
 
 func NewPolicyScriptsContainer(keyHashes KeyHashesContainer, addressIndex uint64) PolicyScriptsContainer {
-	//nolint:gosec
-	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(keyHashes.Payment))))
-	//  if needed create policy script for payment only
-	if len(keyHashes.Stake) == 0 {
-		return PolicyScriptsContainer{
-			Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, wallet.WithAfter(addressIndex)),
-		}
-	}
+	return newPolicyScriptsContainer(keyHashes, addressIndex, wallet.NewPolicyScript)
+}
 
-	return PolicyScriptsContainer{
-		Payment: wallet.NewPolicyScript(keyHashes.Payment, quorumCount, wallet.WithAfter(addressIndex)),
-		Stake:   wallet.NewPolicyScript(keyHashes.Stake, quorumCount, wallet.WithAfter(addressIndex)),
-	}
+func NewCustodialPolicyScriptContainer(keyHashes KeyHashesContainer, addressIndex uint64) PolicyScriptsContainer {
+	return newPolicyScriptsContainer(keyHashes, addressIndex, wallet.NewCustodialPolicyScript)
 }
 
 func NewApexPolicyScripts(keyHashes ApexKeyHashes, addressIndex uint64) ApexPolicyScripts {
@@ -143,6 +135,29 @@ func AreVerifyingKeysTheSame(w *ApexCardanoWallet, data eth.ValidatorChainData) 
 		bytes.Equal(w.Fee.VerificationKey, bigIntToKey(data.Key[1])) &&
 		bytes.Equal(w.MultiSig.StakeVerificationKey, bigIntToKey(data.Key[2])) &&
 		bytes.Equal(w.Fee.StakeVerificationKey, bigIntToKey(data.Key[3]))
+}
+
+func newPolicyScriptsContainer(
+	keyHashes KeyHashesContainer,
+	addressIndex uint64,
+	policyScriptConstructor func([]string, int, ...wallet.PolicyScriptOption) *wallet.PolicyScript,
+) PolicyScriptsContainer {
+	//nolint:gosec
+	quorumCount := int(common.GetRequiredSignaturesForConsensus(uint64(len(keyHashes.Payment))))
+
+	opts := wallet.WithAfter(addressIndex)
+
+	//  if needed create policy script for payment only
+	if len(keyHashes.Stake) == 0 {
+		return PolicyScriptsContainer{
+			Payment: policyScriptConstructor(keyHashes.Payment, quorumCount, opts),
+		}
+	}
+
+	return PolicyScriptsContainer{
+		Payment: policyScriptConstructor(keyHashes.Payment, quorumCount, opts),
+		Stake:   policyScriptConstructor(keyHashes.Stake, quorumCount, opts),
+	}
 }
 
 func getKeyHashes(validatorsData []eth.ValidatorChainData, isFee bool) (KeyHashesContainer, error) {

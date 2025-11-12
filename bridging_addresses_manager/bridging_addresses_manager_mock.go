@@ -83,3 +83,16 @@ func (m *BridgingAddressesManagerMock) GetFeeMultisigPolicyScript(chainID uint8)
 
 	return ps, args.Bool(1)
 }
+
+func (m *BridgingAddressesManagerMock) GetCustodialAddress(chainID uint8) (string, bool) {
+	args := m.Called(chainID)
+
+	return args.String(0), args.Bool(1)
+}
+
+func (m *BridgingAddressesManagerMock) GetCustodialPolicyScript(chainID uint8) (*wallet.PolicyScript, bool) {
+	args := m.Called(chainID)
+	ps, _ := args.Get(0).(*wallet.PolicyScript)
+
+	return ps, args.Bool(1)
+}

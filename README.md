@@ -51,6 +51,13 @@ $ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with `--validator-config /path_to_config/config.json`
 - It's possible to use the `--type stake` flag if we want a wallet that includes the stake signing key as well
 
+# How to generate bls keys for cardano relayer(s)
+```shell
+$ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-cardano --show-pk
+```
+- instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
+`--validator-config path_to_config/config.json`
+
 # How to generate bls keys for evm batcher(s)
 ```shell
 $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/cardano --type evm --show-pk
@@ -96,6 +103,7 @@ $ go run ./main.go create-address \
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_PRIVATE_KEY \
+        --generate-custodial-address \
         --chain prime
 ```
 - optional `--show-policy-script` flag
@@ -112,14 +120,11 @@ $ go run ./main.go generate-configs \
         --output-relayer-file-name <relayer config json output file name>.json \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
-        --relayer-data-dir <relayer data dir for secrets> \
-        --relayer-config <relayer secrets config file path> \
         --dbs-path <path to where databases will be stored> \
         --logs-path <path to where logs will be stored> \
         --api-port <port at which API should run> \
         --api-keys <api key 1> \
-        --api-keys <api key 2> \
-        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip>
+        --api-keys <api key 2> 
 ```
 optionally, the --telemetry <prometheusip:port,datadogip:port> flag can be used if telemetry is desired
 
@@ -127,7 +132,6 @@ Minimal example
 ``` shell
 $ go run ./main.go generate-configs \
         --validator-data-dir ./blade-dir \
-        --relayer-data-dir ./blade-dir \
         --bridge-node-url https://bridge.com \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
         --api-keys test_api_key_1
@@ -137,7 +141,6 @@ Skyline minimal example
 ``` shell
 $ apex-bridge generate-configs skyline \
         --validator-data-dir ./blade-dir \
-        --relayer-data-dir ./blade-dir \
         --bridge-node-url https://bridge.com \
         --bridge-sc-address 0x816402271eE6D9078Fc8Cb537aDBDD58219485BB \
         --api-keys test_api_key_1
@@ -165,7 +168,16 @@ $ apex-bridge generate-configs cardano-chain \
         --native-token-name <wrapped token full name> \
         --allowed-directions <allowed bridging directions> \
         --output-validator-components-file-name <validator components config json output file name> \
-        --output-relayer-file-name <relayer config json output file name>
+        --output-relayer-file-name <relayer config json output file name> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
+        --dbs-path <path to where databases will be stored> \
+        --min-fee-for-bridging-tokens <minimal bridging fee for bridging tokens for the chain> \
+        --minting-script-tx-input-hash <tx input hash used for referencing minting script> \
+	--minting-script-tx-input-index <tx input index used for referencing minting script> \
+	--nft-policy-id <the policy ID of the NFT used in the minting script> \
+	--nft-name <the name of the NFT used in the minting script> \
+	--relayer-address <relayer address for paying collaterals on the chain> \
+        --output-dir <path to config jsons output directory> 
 ```
 
 Add cardano chain config minimal example
@@ -199,7 +211,12 @@ $ apex-bridge generate-configs evm-chain \
         --allowed-directions <allowed bridging directions> \
         --allowed-directions <allowed bridging directions> \
         --output-validator-components-file-name <validator components config json output file name> \
-        --output-relayer-file-name <relayer config json output file name>
+        --output-relayer-file-name <relayer config json output file name> \
+        --empty-blocks-threshold <maximum number of empty blocks for blocks submitter to skip> \
+        --dbs-path <path to where databases will be stored> \
+        --relayer-config <path to relayer secrets manager config file> \
+        --relayer-data-dir <path to relayer secret directory when using local secrets manager> \
+        --output-dir <path to config jsons output directory> 
 ```
 
 Add evm chain config minimal example
@@ -503,6 +520,17 @@ $ apex-bridge bridge-admin mint-native-token \
 ```
 - optional `--stake-key` and `--show-policy-script` flags
 - optional `--validity-slot NUMBER` or `--validity-slot-inc NUMBER` flag. Second one uses ogmios `getTipData`.slot + inc
+
+```shell
+$ apex-bridge bridge-admin deploy-cardano-script \
+        --key PRIME_WALLET_PRIVATE_KEY \
+        --ogmios http://ogmios.prime.testnet.apexfusion.org:1337 \
+        --network-id 1 \
+        --testnet-magic 3311 \
+        --nft-policy-id 14b249936a64cbc96bde5a46e04174e7fb58b565103d0c3a32f8d61f \
+        --nft-name-hex 54657374546F6B656E
+```
+- optional `--plutus-script-dir`
 
 ```shell
 $ apex-bridge bridge-admin get-bridging-addresses-balances \

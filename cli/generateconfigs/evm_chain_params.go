@@ -22,18 +22,12 @@ const (
 	evmChainMinFeeForBridgingFlag      = "evm-min-fee-for-bridging"
 	evmRelayerGasFeeMultiplierFlag     = "evm-relayer-gas-fee-multiplier"
 
-	relayerDataDirFlag    = "relayer-data-dir"
-	relayerConfigPathFlag = "relayer-config"
-
 	evmChainNodeURLFlagDesc                = "evm chain node URL"
 	evmChainTTLBlockNumberIncFlagDesc      = "TTL block increment for evm chain"
 	evmChainBlockRoundingThresholdFlagDesc = "defines the upper limit used for rounding block values for evm chain. Any block value between 0 and `blockRoundingThreshold` will be rounded to `blockRoundingThreshold` etc" //nolint:lll
 	evmChainStartingBlockFlagDesc          = "block from where to start evm chain oracle / evm chain block submitter"
 	evmChainMinFeeForBridgingFlagDesc      = "minimal bridging fee for evm chain"
 	evmRelayerGasFeeMultiplierFlagDesc     = "gas fee multiplier for evm relayer"
-
-	relayerDataDirFlagDesc    = "path to relayer secret directory when using local secrets manager"
-	relayerConfigPathFlagDesc = "path to relayer secrets manager config file"
 
 	defaultEvmBlockConfirmationCount    = 1
 	defaultEvmSyncBatchSize             = 20
