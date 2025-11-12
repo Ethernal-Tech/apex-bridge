@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -414,15 +413,13 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	for _, mintToken := range mintTokens {
 		tokensPolicyID = mintToken.PolicyID
-		mintAmount := new(big.Int).Sub(
-			new(big.Int).SetUint64(mintToken.Amount),
-			new(big.Int).SetUint64(availableLockedTokens[mintToken.String()]),
-		)
 
-		mintAmountSign := mintAmount.Sign()
-		if mintAmountSign != 0 {
+		if mintToken.Amount >= availableLockedTokens[mintToken.String()] {
 			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
-				mintToken.Token, mintAmount.Uint64(), mintAmountSign == -1))
+				mintToken.Token, mintToken.Amount-availableLockedTokens[mintToken.String()], false))
+		} else {
+			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
+				mintToken.Token, availableLockedTokens[mintToken.String()]-mintToken.Amount, true))
 		}
 	}
 
@@ -447,14 +444,16 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 	})
 
 	relayerTxInputs := make([]cardanowallet.TxInput, 1)
-	sum := map[string]uint64{}
 
 	// take largest utxo as collateral
 	relayerTxInputs[0] = cardanowallet.TxInput{
 		Hash:  filteredUtxos[0].Hash,
 		Index: filteredUtxos[0].Index,
 	}
-	sum[cardanowallet.AdaTokenName] += filteredUtxos[0].Amount
+
+	sum := map[string]uint64{
+		cardanowallet.AdaTokenName: filteredUtxos[0].Amount,
+	}
 
 	cco.logger.Debug("Relayer tx inputs", "txInputs", relayerTxInputs, "sum", sum)
 
