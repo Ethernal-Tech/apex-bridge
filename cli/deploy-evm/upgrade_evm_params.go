@@ -147,6 +147,7 @@ func (ip *upgradeEVMParams) Execute(
 	updateFuncsArgs := make([]string, len(ip.contracts))
 
 	for i, x := range ip.contracts {
+		fmt.Printf("contract: %d flag: %s \n", i, x)
 		ss := strings.Split(x, ":")
 		if n := len(ss); n < 2 || n > 4 {
 			return nil, fmt.Errorf("invalid --%s number %d", contractFlag, i)
@@ -169,6 +170,14 @@ func (ip *upgradeEVMParams) Execute(
 
 		if len(ss) > 3 {
 			updateFuncsArgs[i] = ss[3]
+		}
+
+		if len(ss) > 3 {
+			fmt.Printf("parsed contract %d: contract: %s, addr: %s, func: %s, args: %s \n", i, contracts[i], proxyAddrs[i], updateFuncs[i], updateFuncsArgs[i])
+		} else if len(ss) > 2 {
+			fmt.Printf("parsed contract %d: contract: %s, addr: %s, func: %s \n", i, contracts[i], proxyAddrs[i], updateFuncs[i])
+		} else {
+			fmt.Printf("parsed contract %d: contract: %s, addr: %s \n", i, contracts[i], proxyAddrs[i])
 		}
 	}
 
