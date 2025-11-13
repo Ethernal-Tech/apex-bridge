@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -53,6 +55,7 @@ type evmChainGenerateConfigsParams struct {
 	emptyBlocksThreshold       uint
 
 	allowedDirections []string
+	coloredCoins      []string
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -81,6 +84,45 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 		if err := validateAllowedDirectionFormat(dirStr); err != nil {
 			return fmt.Errorf("invalid %s format: %w", allowedDirectionsFlag, err)
 		}
+	}
+
+	// Validate colored coins format
+	for _, coinStr := range p.coloredCoins {
+		if err := validateEthColoredCoinFormat(coinStr, p.chainIDString); err != nil {
+			return fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+		}
+	}
+
+	return nil
+}
+
+func validateEthColoredCoinFormat(coinStr string, chainID string) error {
+	parts := strings.Split(coinStr, ":")
+	if len(parts) != 3 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	contractAddress := strings.TrimSpace(parts[0])
+	if contractAddress == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	if !common.IsValidAddress(chainID, contractAddress) {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	tokenName := strings.TrimSpace(parts[1])
+	if tokenName == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	coloredCoinID, err := strconv.ParseUint(parts[2], 10, 8)
+	if err != nil {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	if coloredCoinID == 0 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
 	return nil
@@ -143,6 +185,13 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		allowedDirectionsFlag,
 		nil,
 		allowedDirectionsFlagDesc,
+	)
+
+	cmd.Flags().StringArrayVar(
+		&p.coloredCoins,
+		coloredCoinsFlag,
+		nil,
+		coloredCoinsFlagDesc,
 	)
 
 	// Output params
@@ -244,6 +293,18 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString][destChainID] = direction
 	}
 
+	// Parse colored coins
+	coloredCoins, err := parseEthColoredCoins(p.coloredCoins)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse colored coins: %w", err)
+	}
+
+	if vcConfig.EthChains[p.chainIDString].ColoredCoins == nil {
+		vcConfig.EthChains[p.chainIDString].ColoredCoins = make([]oCore.ColoredCoinEvm, 0)
+	}
+
+	vcConfig.EthChains[p.chainIDString].ColoredCoins = append(vcConfig.EthChains[p.chainIDString].ColoredCoins, coloredCoins...)
+
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
 	}
@@ -283,5 +344,37 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	return &CmdResult{
 		validatorComponentsConfigPath: vcConfigPath,
 		relayerConfigPath:             rConfigPath,
+	}, nil
+}
+
+func parseEthColoredCoins(s []string) ([]oCore.ColoredCoinEvm, error) {
+	result := make([]oCore.ColoredCoinEvm, 0)
+	for _, coinStr := range s {
+		coin, err := parseEthColoredCoin(coinStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
+		}
+		result = append(result, coin)
+	}
+	return result, nil
+}
+
+func parseEthColoredCoin(coinStr string) (oCore.ColoredCoinEvm, error) {
+	parts := strings.Split(coinStr, ":")
+
+	tokenName := strings.TrimSpace(parts[0])
+	if tokenName == "" {
+		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 8)
+	if err != nil {
+		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	return oCore.ColoredCoinEvm{
+		TokenName:       tokenName,
+		ColoredCoinID:   uint8(coloredCoinID),
+		ContractAddress: strings.TrimSpace(parts[2]),
 	}, nil
 }

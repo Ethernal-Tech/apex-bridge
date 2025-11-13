@@ -10,6 +10,11 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+type ColoredCoin struct {
+	TokenName     string `json:"tokenName"`
+	ColoredCoinID uint8  `json:"coloredCoinID"`
+}
+
 type CardanoChainConfig struct {
 	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
 	NetworkMagic             uint32                           `json:"testnetMagic"`
@@ -28,7 +33,7 @@ type CardanoChainConfig struct {
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
 	WrappedCurrencyTokens    []sendtx.TokenExchangeConfig     `json:"wrappedCurrencyTokens"`
-	ColoredCoins             []sendtx.TokenExchangeConfig     `json:"coloredCoins"`
+	ColoredCoins             []ColoredCoin                    `json:"coloredCoins"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
