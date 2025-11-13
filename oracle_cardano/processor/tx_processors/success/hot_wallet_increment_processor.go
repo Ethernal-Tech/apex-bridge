@@ -59,8 +59,8 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		if utils.IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
 
-			if len(chainConfig.NativeTokens) > 0 {
-				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
+			if len(chainConfig.WrappedCurrencyTokens) > 0 {
+				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.WrappedCurrencyTokens[0])
 				if err != nil {
 					return err
 				}

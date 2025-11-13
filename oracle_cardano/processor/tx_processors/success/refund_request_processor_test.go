@@ -508,7 +508,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
+						WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 							{
 								DstChainID: common.ChainIDStrVector,
 								TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
@@ -527,7 +527,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
+						WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 							{
 								DstChainID: common.ChainIDStrPrime,
 								TokenName:  wrappedTokenCardano.String(),
@@ -542,9 +542,9 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
+				AllowedDirections: cCore.AllowedDirections{
+					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
 				},
 			},
 			RefundEnabled: refundEnabled,

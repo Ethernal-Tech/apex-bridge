@@ -65,11 +65,11 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
-					common.ChainIDStrNexus:  {common.ChainIDStrPrime},
-					testChainID:             {common.ChainIDStrPrime},
+				AllowedDirections: cCore.AllowedDirections{
+					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, common.ChainIDStrNexus: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrNexus:  {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					testChainID:             {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
 				},
 			},
 

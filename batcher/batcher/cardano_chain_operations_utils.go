@@ -129,7 +129,7 @@ func getOutputs(
 
 					switch transaction.TransactionType {
 					case uint8(common.DefundConfirmedTxType):
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.WrappedCurrencyTokens[0])
 						if err != nil {
 							return nil, err
 						}

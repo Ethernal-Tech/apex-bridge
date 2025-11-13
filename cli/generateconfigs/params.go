@@ -254,7 +254,7 @@ func (p *generateConfigsParams) Execute(
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
-			AllowedDirections:              map[string][]string{},
+			AllowedDirections:              oCore.AllowedDirections{},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
@@ -375,4 +375,92 @@ func parseStartingBlock(s string) (uint64, string, error) {
 	}
 
 	return val, parts[1], nil
+}
+
+// validateAllowedDirectionFormat validates the format of a single allowed direction string.
+// Expected format: destChainID:currencyAllowed:wrappedAllowed:coloredCoins
+// Example: "chain1:true:true:1,2,3" or "chain2:true:false:"
+func validateAllowedDirectionFormat(dirStr string) error {
+	parts := strings.Split(dirStr, ":")
+	if len(parts) != 4 {
+		return fmt.Errorf("expected format 'destChainID:currencyAllowed:wrappedAllowed:coloredCoins', got: %s", dirStr)
+	}
+
+	destChainID := strings.TrimSpace(parts[0])
+	if destChainID == "" {
+		return fmt.Errorf("destination chain ID cannot be empty")
+	}
+
+	currencyAllowed := strings.TrimSpace(strings.ToLower(parts[1]))
+	if currencyAllowed != "true" && currencyAllowed != "false" {
+		return fmt.Errorf("currencyAllowed must be 'true' or 'false', got: %s", parts[1])
+	}
+
+	wrappedAllowed := strings.TrimSpace(strings.ToLower(parts[2]))
+	if wrappedAllowed != "true" && wrappedAllowed != "false" {
+		return fmt.Errorf("wrappedAllowed must be 'true' or 'false', got: %s", parts[2])
+	}
+
+	// Validate colored coins if provided
+	coloredCoinsStr := strings.TrimSpace(parts[3])
+	if coloredCoinsStr != "" {
+		coins := strings.Split(coloredCoinsStr, ",")
+		for _, coinStr := range coins {
+			coinStr = strings.TrimSpace(coinStr)
+			if coinStr == "" {
+				continue
+			}
+			if _, err := strconv.ParseUint(coinStr, 10, 64); err != nil {
+				return fmt.Errorf("invalid colored coin value '%s': %w", coinStr, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// parseAllowedDirections parses a slice of allowed direction strings into a map.
+// Returns map[destChainID]AllowedDirection
+func parseAllowedDirections(dirStrs []string) (map[string]oCore.AllowedDirection, error) {
+	result := make(map[string]oCore.AllowedDirection)
+
+	for _, dirStr := range dirStrs {
+		parts := strings.Split(dirStr, ":")
+		if len(parts) != 4 {
+			return nil, fmt.Errorf("invalid format: %s", dirStr)
+		}
+
+		destChainID := strings.TrimSpace(parts[0])
+		currencyAllowed := strings.ToLower(strings.TrimSpace(parts[1])) == "true"
+		wrappedAllowed := strings.ToLower(strings.TrimSpace(parts[2])) == "true"
+		coloredCoinsStr := strings.TrimSpace(parts[3])
+
+		var coloredCoins []uint64
+		if coloredCoinsStr != "" {
+			coins := strings.Split(coloredCoinsStr, ",")
+			for _, coinStr := range coins {
+				coinStr = strings.TrimSpace(coinStr)
+				if coinStr == "" {
+					continue
+				}
+				coin, err := strconv.ParseUint(coinStr, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid colored coin value '%s': %w", coinStr, err)
+				}
+				coloredCoins = append(coloredCoins, coin)
+			}
+		}
+
+		if coloredCoins == nil {
+			coloredCoins = []uint64{}
+		}
+
+		result[destChainID] = oCore.AllowedDirection{
+			CurrencyBirdgingAllowed: currencyAllowed,
+			WrappedBridgingAllowed:  wrappedAllowed,
+			ColoredCoins:            coloredCoins,
+		}
+	}
+
+	return result, nil
 }

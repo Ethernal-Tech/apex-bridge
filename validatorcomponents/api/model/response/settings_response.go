@@ -1,6 +1,7 @@
 package response
 
 import (
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 )
@@ -17,7 +18,7 @@ type SettingsResponse struct {
 	// For each chain, the minimum allowed UTXO value
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
 	// For each chain, all allowed bridging directions
-	AllowedDirections map[string][]string `json:"allowedDirections"`
+	AllowedDirections oracleCore.AllowedDirections `json:"allowedDirections"`
 	// For each chain, all defined native tokens
 	NativeTokens map[string][]sendtx.TokenExchangeConfig `json:"nativeTokens"`
 	// Minimum value allowed to be bridged
@@ -46,7 +47,7 @@ func NewSettingsResponse(
 		minFeeForBridgingMap[chainID] = chainConfig.DefaultMinFeeForBridging
 		minFeeForBridgingTokensMap[chainID] = chainConfig.MinFeeForBridgingTokens
 		minOperationFeeMap[chainID] = chainConfig.MinOperationFee
-		nativeTokensMap[chainID] = chainConfig.NativeTokens
+		nativeTokensMap[chainID] = chainConfig.WrappedCurrencyTokens
 
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount

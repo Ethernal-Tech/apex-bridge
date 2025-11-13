@@ -72,7 +72,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	token2, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
 
 	config := &CardanoChainConfig{
-		NativeTokens: []sendtx.TokenExchangeConfig{
+		WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 			{
 				DstChainID: common.ChainIDStrVector,
 				TokenName:  token1.String(),
@@ -85,7 +85,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	require.Equal(t, 1, len(retTokens))
 	require.Equal(t, token1, retTokens[0])
 
-	config.NativeTokens = append(config.NativeTokens,
+	config.WrappedCurrencyTokens = append(config.WrappedCurrencyTokens,
 		sendtx.TokenExchangeConfig{
 			DstChainID: common.ChainIDStrVector,
 			TokenName:  token2.String(),
@@ -98,7 +98,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	require.Equal(t, token1, retTokens[0])
 	require.Equal(t, token2, retTokens[1])
 
-	config.NativeTokens = config.NativeTokens[1:]
+	config.WrappedCurrencyTokens = config.WrappedCurrencyTokens[1:]
 
 	retTokens, err = GetKnownTokens(config)
 	require.NoError(t, err)

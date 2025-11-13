@@ -87,11 +87,19 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MaxAmountAllowedToBridge       *big.Int            `json:"maxAmountAllowedToBridge"`
-	MaxTokenAmountAllowedToBridge  *big.Int            `json:"maxTokenAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
-	MaxBridgingClaimsToGroup       int                 `json:"maxBridgingClaimsToGroup"`
-	AllowedDirections              map[string][]string `json:"allowedDirections"`
+	MaxAmountAllowedToBridge       *big.Int          `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  *big.Int          `json:"maxTokenAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int               `json:"maxBridgingClaimsToGroup"`
+	AllowedDirections              AllowedDirections `json:"allowedDirections"`
+}
+
+type AllowedDirections = map[string]map[string]AllowedDirection
+
+type AllowedDirection struct {
+	CurrencyBirdgingAllowed bool     `json:"currencyBirdgingAllowed"`
+	WrappedBridgingAllowed  bool     `json:"wrappedBridgingAllowed"`
+	ColoredCoins            []uint64 `json:"coloredCoins"`
 }
 
 type RetryUnprocessedSettings struct {
@@ -190,7 +198,7 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 		TestNetMagic:             uint(config.NetworkMagic),
 		TTLSlotNumberInc:         config.TTLSlotNumberInc,
 		MinUtxoValue:             config.UtxoMinAmount,
-		NativeTokens:             config.NativeTokens,
+		NativeTokens:             config.WrappedCurrencyTokens,
 		DefaultMinFeeForBridging: config.DefaultMinFeeForBridging,
 		MinFeeForBridgingTokens:  config.MinFeeForBridgingTokens,
 		MinOperationFeeAmount:    config.MinOperationFee,

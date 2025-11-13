@@ -73,7 +73,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
+						WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 							{
 								DstChainID: common.ChainIDStrVector,
 								TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
@@ -92,7 +92,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
+						WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 							{
 								DstChainID: common.ChainIDStrPrime,
 								TokenName:  wrappedTokenCardano.String(),
@@ -108,10 +108,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:   {common.ChainIDStrCardano, testChainID},
-					common.ChainIDStrCardano: {common.ChainIDStrPrime},
-					testChainID:              {common.ChainIDStrPrime},
+				AllowedDirections: cCore.AllowedDirections{
+					common.ChainIDStrPrime:   {common.ChainIDStrCardano: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrCardano: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					testChainID:              {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
 				},
 			},
 			RefundEnabled: refundEnabled,
@@ -671,7 +671,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim unknown tokens 2", func(t *testing.T) {
 		appConfig := getAppConfig(false)
-		appConfig.CardanoChains[common.ChainIDStrPrime].NativeTokens = nil
+		appConfig.CardanoChains[common.ChainIDStrPrime].WrappedCurrencyTokens = nil
 
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1274,7 +1274,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 			require.NoError(t, json.Unmarshal(bytes, &newAppConfig))
 			// because of `json:"-"`
-			newAppConfig.CardanoChains[common.ChainIDStrCardano].NativeTokens = nil
+			newAppConfig.CardanoChains[common.ChainIDStrCardano].WrappedCurrencyTokens = nil
 			newAppConfig.CardanoChains[common.ChainIDStrCardano].ChainID = common.ChainIDStrCardano
 			newAppConfig.CardanoChains[common.ChainIDStrPrime].ChainID = common.ChainIDStrPrime
 			newAppConfig.BridgingAddressesManager = appConfig.BridgingAddressesManager

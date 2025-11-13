@@ -76,6 +76,13 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
 	}
 
+	// Validate allowed directions format
+	for _, dirStr := range p.allowedDirections {
+		if err := validateAllowedDirectionFormat(dirStr); err != nil {
+			return fmt.Errorf("invalid %s format: %w", allowedDirectionsFlag, err)
+		}
+	}
+
 	return nil
 }
 
@@ -131,7 +138,7 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
-	cmd.Flags().StringSliceVar(
+	cmd.Flags().StringArrayVar(
 		&p.allowedDirections,
 		allowedDirectionsFlag,
 		nil,
@@ -220,10 +227,22 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
 
 	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
+		vcConfig.BridgingSettings.AllowedDirections = make(oCore.AllowedDirections)
 	}
 
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
+	// Parse allowed directions
+	allowedDirs, err := parseAllowedDirections(p.allowedDirections)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse allowed directions: %w", err)
+	}
+
+	if vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] == nil {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = make(map[string]oCore.AllowedDirection)
+	}
+
+	for destChainID, direction := range allowedDirs {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString][destChainID] = direction
+	}
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)

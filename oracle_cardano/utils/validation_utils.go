@@ -34,9 +34,9 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
-	knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
+	knownTokens := make([]wallet.Token, len(chainConfig.WrappedCurrencyTokens))
 
-	for i, tokenConfig := range chainConfig.NativeTokens {
+	for i, tokenConfig := range chainConfig.WrappedCurrencyTokens {
 		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
 		if err != nil {
 			return err
@@ -95,13 +95,18 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 }
 
 func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
-	for _, chain := range appConfing.BridgingSettings.AllowedDirections[srcChainID] {
-		if chain == destChainID {
-			return nil
-		}
+	_, ok := appConfing.BridgingSettings.AllowedDirections[srcChainID][destChainID]
+	if !ok {
+		return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
 	}
 
-	return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
+	// for _, transaction := range metadata.Transactions {
+	// 	if transaction.IsNativeTokenOnSource() == !allowedDirection.CurrencyBirdgingAllowed {
+	// 		return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
+	// 	}
+	// }
+
+	return nil
 }
 
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {

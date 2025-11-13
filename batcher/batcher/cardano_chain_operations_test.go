@@ -392,7 +392,7 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 	}
 	cco.config.CustodialNft = &nft
 	// Tokens that come from prime and are minted on vector
-	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
+	cco.config.WrappedCurrencyTokens = []sendtx.TokenExchangeConfig{
 		{
 			DstChainID: common.ChainIDStrPrime,
 			TokenName:  token1.String(),
@@ -2183,7 +2183,7 @@ func TestSkylineConsolidation(t *testing.T) {
 	cco.config.SlotRoundingThreshold = 100
 	cco.config.MaxFeeUtxoCount = 4
 	cco.config.MaxUtxoCount = 40
-	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
+	cco.config.WrappedCurrencyTokens = []sendtx.TokenExchangeConfig{
 		{
 			DstChainID: destinationChain,
 			TokenName:  token1.String(),
@@ -2938,7 +2938,7 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		config: &cardano.CardanoChainConfig{
 			MaxFeeUtxoCount: 1,
 			MaxUtxoCount:    3,
-			NativeTokens: []sendtx.TokenExchangeConfig{
+			WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 				{
 					DstChainID: common.ChainIDStrPrime,
 					TokenName:  token.String(),

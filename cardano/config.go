@@ -27,7 +27,8 @@ type CardanoChainConfig struct {
 	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	WrappedCurrencyTokens    []sendtx.TokenExchangeConfig     `json:"wrappedCurrencyTokens"`
+	ColoredCoins             []sendtx.TokenExchangeConfig     `json:"coloredCoins"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
@@ -77,7 +78,7 @@ func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
 }
 
 func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {
-	for _, dst := range config.NativeTokens {
+	for _, dst := range config.WrappedCurrencyTokens {
 		if dst.DstChainID != dstChainID {
 			continue
 		}
@@ -108,7 +109,7 @@ func (config CardanoChainConfig) GetNativeTokenData(
 	tokenName := ""
 	shouldMint = false
 
-	for _, dst := range config.NativeTokens {
+	for _, dst := range config.WrappedCurrencyTokens {
 		if dst.DstChainID == dstChainID {
 			tokenName = dst.TokenName
 			shouldMint = dst.Mint

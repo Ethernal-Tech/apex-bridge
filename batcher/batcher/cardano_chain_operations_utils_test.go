@@ -403,7 +403,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 
 	config := &cardano.CardanoChainConfig{
 		NetworkID: cardanowallet.MainNetNetwork,
-		NativeTokens: []sendtx.TokenExchangeConfig{
+		WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 			{
 				DstChainID: common.ChainIDStrPrime,
 				TokenName:  primeToken.String(),
