@@ -419,7 +419,7 @@ apex-bridge sc-version \
 # How to set bridge and apex-web to validator-change mode
 
 ``` shell
-$ apex-bridge bridge-admin validator-change \
+$ apex-bridge bridge-admin set-validator-change \
         --url http://127.0.0.1:12013 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --key-config /path/config.json \

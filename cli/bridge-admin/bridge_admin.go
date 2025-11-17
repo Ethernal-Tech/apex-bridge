@@ -105,6 +105,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		setMinAmountsCmd,
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
+		setValidatorChangeCmd,
 	)
 
 	return cmd
