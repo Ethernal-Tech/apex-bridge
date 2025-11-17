@@ -237,9 +237,13 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, len(event.TxHashes))
+	result := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
+	for _, hash := range event.TxHashes {
+		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
+			continue
+		}
+
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -250,7 +254,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 			return nil, err
 		}
 
-		result[idx] = tx
+		result = append(result, tx)
 	}
 
 	return result, nil

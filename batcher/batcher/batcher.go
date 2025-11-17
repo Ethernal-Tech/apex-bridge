@@ -302,11 +302,10 @@ func getBridgingRequestStateKeys(
 	txs []eth.ConfirmedTransaction, firstTxNonceID uint64, lastTxNonceID uint64,
 ) []common.BridgingRequestStateKey {
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID-firstTxNonceID+1)
-	defundHash := [32]byte(common.DefundTxHash)
 
 	for _, confirmedTx := range txs {
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
-			confirmedTx.ObservedTransactionHash != defundHash {
+			confirmedTx.TransactionType != uint8(common.DefundConfirmedTxType) {
 			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
 				common.ToStrChainID(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
 				confirmedTx.TransactionType == uint8(common.RefundConfirmedTxType)))

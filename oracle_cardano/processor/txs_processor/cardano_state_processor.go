@@ -234,9 +234,13 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	event *cCore.DBBatchInfoEvent,
 ) ([]cCore.BaseTx, error) {
-	result := make([]cCore.BaseTx, len(event.TxHashes))
+	result := make([]cCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
+	for _, hash := range event.TxHashes {
+		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
+			continue
+		}
+
 		tx, err := sp.db.GetPendingTx(
 			cCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -247,7 +251,7 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 			return nil, err
 		}
 
-		result[idx] = tx
+		result = append(result, tx)
 	}
 
 	return result, nil

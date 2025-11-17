@@ -17,10 +17,6 @@ const (
 	RefundConfirmedTxType   ConfirmedTxType = 2
 )
 
-var (
-	DefundTxHash, _ = hex.DecodeString("c74d0d70be942fd68984df57687b9f453f1321726e8db77762dee952a5c85b24")
-)
-
 type Hash [HashSize]byte
 
 type TxOutputIndex uint16
