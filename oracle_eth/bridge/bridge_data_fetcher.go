@@ -66,7 +66,8 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 				TTL          uint64
 			}
 
-			if batchType == uint8(batcher.Normal) {
+			switch batchType {
+			case uint8(batcher.Normal):
 				tx, err := eth.NewEVMSmartContractTransaction(lastBatchRawTx)
 				if err != nil {
 					df.logger.Error("Failed to parse evm tx", "rawTx", hex.EncodeToString(lastBatchRawTx), "err", err)
@@ -76,7 +77,7 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 
 				txData.BatchNonceID = tx.BatchNonceID
 				txData.TTL = tx.TTL
-			} else {
+			case uint8(batcher.ValidatorSet):
 				tx, err := eth.NewEVMValidatorSetChangeTransaction(lastBatchRawTx)
 				if err != nil {
 					df.logger.Error("Failed to parse validator set change evm tx",
@@ -87,6 +88,9 @@ func (df *EthBridgeDataFetcherImpl) FetchExpectedTx(chainID string) (*core.Bridg
 
 				txData.BatchNonceID = tx.BatchNonceID
 				txData.TTL = tx.TTL.Uint64()
+			default:
+				// ValidatorSetFinal -> no expected tx
+				return nil, nil
 			}
 
 			txHash, err := common.Keccak256(lastBatchRawTx)
