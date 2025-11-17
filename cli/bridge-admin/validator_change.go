@@ -119,7 +119,7 @@ func (v *setValidatorChangeParams) Execute(outputter common.OutputFormatter) (co
 		estimatedGas, _, err := txHelper.EstimateGas(
 			ctx, wallet.GetAddress(),
 			contractAddress, nil, 1.2,
-			parsedABI, "setValidatorSetChange", v.validatorChange)
+			parsedABI, "setValidatorChange", v.validatorChange)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas for admin smart contract: %w", err)
 		}
