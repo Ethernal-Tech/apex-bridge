@@ -18,6 +18,7 @@ type AppConfig struct {
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
 	Bridge                       oracleCore.BridgeConfig                   `json:"bridge"`
 	BridgingSettings             oracleCore.BridgingSettings               `json:"bridgingSettings"`
+	ColoredCoins                 []ColoredCoinSettings                     `json:"coloredCoins"`
 	Settings                     oracleCore.AppSettings                    `json:"appSettings"`
 	RelayerImitatorPullTimeMilis uint64                                    `json:"relayerImitatorPullTime"`
 	BatcherPullTimeMilis         uint64                                    `json:"batcherPullTime"`
@@ -25,6 +26,12 @@ type AppConfig struct {
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
 	TryCountLimits               oracleCore.TryCountLimits                 `json:"tryCountLimits"`
+}
+
+type ColoredCoinSettings struct {
+	ID                     uint8  `json:"id"`
+	Name                   string `json:"name"`
+	EcosystemOriginChainID string `json:"ecosystemOriginChainID"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (

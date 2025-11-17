@@ -29,6 +29,8 @@ type SettingsResponse struct {
 	MaxTokenAmountAllowedToBridge string `json:"maxTokenAmountAllowedToBridge"`
 	// Maximum number of receivers allowed in a bridging request
 	MaxReceiversPerBridgingRequest int `json:"maxReceiversPerBridgingRequest"`
+	// List of colored coins allowed to be bridged
+	ColoredCoins map[string][]oracleCore.ColoredCoinEvm `json:"coloredCoins"`
 } // @name SettingsResponse
 
 func NewSettingsResponse(
@@ -39,6 +41,7 @@ func NewSettingsResponse(
 	minFeeForBridgingTokensMap := make(map[string]uint64)
 	minOperationFeeMap := make(map[string]uint64)
 	nativeTokensMap := make(map[string][]sendtx.TokenExchangeConfig)
+	coloredCoins := make(map[string][]oracleCore.ColoredCoinEvm)
 
 	var maxUtxoValue uint64 = 0
 
@@ -52,10 +55,18 @@ func NewSettingsResponse(
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount
 		}
+
+		for _, coloredCoin := range chainConfig.ColoredCoins {
+			coloredCoins[chainID] = append(coloredCoins[chainID], oracleCore.ColoredCoinEvm{
+				TokenName:     coloredCoin.TokenName,
+				ColoredCoinID: coloredCoin.ColoredCoinID,
+			})
+		}
 	}
 
 	for chainID, ethConfig := range appConfig.EthChains {
 		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging
+		coloredCoins[chainID] = ethConfig.ColoredCoins
 	}
 
 	return &SettingsResponse{
@@ -69,5 +80,6 @@ func NewSettingsResponse(
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
+		ColoredCoins:                   coloredCoins,
 	}
 }

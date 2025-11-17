@@ -116,7 +116,7 @@ func validateEthColoredCoinFormat(coinStr string, chainID string) error {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	coloredCoinID, err := strconv.ParseUint(parts[2], 10, 8)
+	coloredCoinID, err := strconv.ParseUint(parts[2], 10, 16)
 	if err != nil {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
@@ -303,7 +303,8 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		vcConfig.EthChains[p.chainIDString].ColoredCoins = make([]oCore.ColoredCoinEvm, 0)
 	}
 
-	vcConfig.EthChains[p.chainIDString].ColoredCoins = append(vcConfig.EthChains[p.chainIDString].ColoredCoins, coloredCoins...)
+	vcConfig.EthChains[p.chainIDString].ColoredCoins =
+		append(vcConfig.EthChains[p.chainIDString].ColoredCoins, coloredCoins...)
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
@@ -349,13 +350,16 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 
 func parseEthColoredCoins(s []string) ([]oCore.ColoredCoinEvm, error) {
 	result := make([]oCore.ColoredCoinEvm, 0)
+
 	for _, coinStr := range s {
 		coin, err := parseEthColoredCoin(coinStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
 		}
+
 		result = append(result, coin)
 	}
+
 	return result, nil
 }
 
@@ -367,14 +371,14 @@ func parseEthColoredCoin(coinStr string) (oCore.ColoredCoinEvm, error) {
 		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 8)
+	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 16)
 	if err != nil {
 		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
 	return oCore.ColoredCoinEvm{
 		TokenName:       tokenName,
-		ColoredCoinID:   uint8(coloredCoinID),
+		ColoredCoinID:   uint16(coloredCoinID),
 		ContractAddress: strings.TrimSpace(parts[2]),
 	}, nil
 }

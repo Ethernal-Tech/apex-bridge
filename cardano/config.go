@@ -12,7 +12,7 @@ import (
 
 type ColoredCoin struct {
 	TokenName     string `json:"tokenName"`
-	ColoredCoinID uint8  `json:"coloredCoinID"`
+	ColoredCoinID uint16 `json:"coloredCoinID"`
 }
 
 type CardanoChainConfig struct {

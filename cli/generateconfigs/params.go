@@ -377,6 +377,20 @@ func parseStartingBlock(s string) (uint64, string, error) {
 	return val, parts[1], nil
 }
 
+// parseStrictBoolString trims and lowercases the input, accepting only "true" or "false".
+// Returns an error for any other value to keep the format strict.
+func parseStrictBoolString(s string) (bool, error) {
+	val := strings.TrimSpace(strings.ToLower(s))
+	switch val {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("must be 'true' or 'false', got: %s", s)
+	}
+}
+
 // validateAllowedDirectionFormat validates the format of a single allowed direction string.
 // Expected format: destChainID:currencyAllowed:wrappedAllowed:coloredCoins
 // Example: "chain1:true:true:1,2,3" or "chain2:true:false:"
@@ -391,14 +405,12 @@ func validateAllowedDirectionFormat(dirStr string) error {
 		return fmt.Errorf("destination chain ID cannot be empty")
 	}
 
-	currencyAllowed := strings.TrimSpace(strings.ToLower(parts[1]))
-	if currencyAllowed != "true" && currencyAllowed != "false" {
-		return fmt.Errorf("currencyAllowed must be 'true' or 'false', got: %s", parts[1])
+	if _, err := parseStrictBoolString(parts[1]); err != nil {
+		return fmt.Errorf("currencyAllowed %w", err)
 	}
 
-	wrappedAllowed := strings.TrimSpace(strings.ToLower(parts[2]))
-	if wrappedAllowed != "true" && wrappedAllowed != "false" {
-		return fmt.Errorf("wrappedAllowed must be 'true' or 'false', got: %s", parts[2])
+	if _, err := parseStrictBoolString(parts[2]); err != nil {
+		return fmt.Errorf("wrappedAllowed %w", err)
 	}
 
 	// Validate colored coins if provided
@@ -410,6 +422,7 @@ func validateAllowedDirectionFormat(dirStr string) error {
 			if coinStr == "" {
 				continue
 			}
+
 			if _, err := strconv.ParseUint(coinStr, 10, 64); err != nil {
 				return fmt.Errorf("invalid colored coin value '%s': %w", coinStr, err)
 			}
@@ -431,11 +444,21 @@ func parseAllowedDirections(dirStrs []string) (map[string]oCore.AllowedDirection
 		}
 
 		destChainID := strings.TrimSpace(parts[0])
-		currencyAllowed := strings.ToLower(strings.TrimSpace(parts[1])) == "true"
-		wrappedAllowed := strings.ToLower(strings.TrimSpace(parts[2])) == "true"
+
+		currencyAllowed, err := parseStrictBoolString(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("currencyAllowed %w", err)
+		}
+
+		wrappedAllowed, err := parseStrictBoolString(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("wrappedAllowed %w", err)
+		}
+
 		coloredCoinsStr := strings.TrimSpace(parts[3])
 
 		var coloredCoins []uint64
+
 		if coloredCoinsStr != "" {
 			coins := strings.Split(coloredCoinsStr, ",")
 			for _, coinStr := range coins {
@@ -443,10 +466,12 @@ func parseAllowedDirections(dirStrs []string) (map[string]oCore.AllowedDirection
 				if coinStr == "" {
 					continue
 				}
+
 				coin, err := strconv.ParseUint(coinStr, 10, 64)
 				if err != nil {
 					return nil, fmt.Errorf("invalid colored coin value '%s': %w", coinStr, err)
 				}
+
 				coloredCoins = append(coloredCoins, coin)
 			}
 		}
