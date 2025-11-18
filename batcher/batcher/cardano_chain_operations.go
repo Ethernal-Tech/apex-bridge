@@ -808,6 +808,12 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 		return nil, err
 	}
 
+	cco.logger.Debug("ACTIVE MULTISIG & FEE ADDRESS",
+		"ms", activeAddresses.Multisig.Payment,
+		"fee", activeAddresses.Fee.Payment,
+		"ms.stake", activeAddresses.Multisig.Stake,
+		"fee.stake", activeAddresses.Fee.Stake)
+
 	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
 	if err != nil {
 		return nil, err
@@ -824,6 +830,10 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 	// or only one transaction with an amount less than twice the minimum UTXO amount
 	// return the validator final
 	if len(feeUtxos) == 0 || (len(feeUtxos) == 1 && feeUtxos[0].Output.Amount < common.MinUtxoAmountDefault*2) {
+		cco.logger.Info("Creating vsu final tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"validator set cutoff slot number", validatorsData.SlotNumber)
+
 		return &core.GeneratedBatchTxData{
 			BatchType: uint8(ValidatorSetFinal),
 			TxRaw:     []byte{},
@@ -863,6 +873,11 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 			Tokens: []cardanowallet.TokenAmount{},
 		}
 
+		cco.logger.Info("Creating vsu fee only tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"slot", slotNumber, "validator set cutoff slot number", validatorsData.SlotNumber,
+			"multisig", len(multisigUtxos), "fee", len(feeUtxos), "output", output)
+
 		txRaw, txHash, err = cardano.CreateOnlyFeeTx(
 			cco.cardanoCliBinary,
 			uint(cco.config.NetworkMagic),
@@ -892,6 +907,11 @@ func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Contex
 				Tokens: []cardanowallet.TokenAmount{},
 			},
 		}
+
+		cco.logger.Info("Creating vsu normal tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"slot", slotNumber, "validator set cutoff slot number", validatorsData.SlotNumber,
+			"multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", outputs)
 
 		txRaw, txHash, err = cardano.CreateTx(
 			cco.cardanoCliBinary,

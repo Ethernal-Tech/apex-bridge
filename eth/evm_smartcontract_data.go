@@ -5,8 +5,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
+	goethcommon "github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -67,8 +68,8 @@ var (
 )
 
 type EVMSmartContractTransactionReceiver struct {
-	Address common.Address `json:"addr" abi:"receiver"`
-	Amount  *big.Int       `json:"amount" abi:"amount"`
+	Address goethcommon.Address `json:"addr" abi:"receiver"`
+	Amount  *big.Int            `json:"amount" abi:"amount"`
 }
 
 type EVMSmartContractTransaction struct {
@@ -143,4 +144,19 @@ func NewEVMValidatorSetChangeTransaction(bytes []byte) (*EVMValidatorSetChangeTx
 
 func (t *EVMValidatorSetChangeTx) Pack() ([]byte, error) {
 	return abi.Arguments{{Type: validatorSetChangeTxAbi}}.Pack(t)
+}
+
+func (vsctx EVMValidatorSetChangeTx) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(fmt.Sprintf("%d\n", vsctx.BatchNonceID))
+	sb.WriteString("ttl = ")
+	sb.WriteString(fmt.Sprintf("%d\n", vsctx.TTL))
+	sb.WriteString("validator set number = ")
+	sb.WriteString(fmt.Sprintf("%s\n", vsctx.ValidatorsSetNumber))
+	sb.WriteString("validator chain data = ")
+	sb.WriteString(fmt.Sprintf("%s\n", GetChainValidatorsDataInfoString(common.ChainIDStrNexus, vsctx.ValidatorsChainData)))
+
+	return sb.String()
 }

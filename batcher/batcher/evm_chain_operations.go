@@ -325,6 +325,14 @@ func (cco *EVMChainOperations) createVSCTxFn(
 		return nil, err
 	}
 
+	txHash := hex.EncodeToString(txsHashBytes)
+
+	cco.logger.Debug("VSC transaction data has been generated",
+		"id", batchID, "tx", tx, "hash", txHash,
+		"lastBlock", lastProcessedBlock,
+		"rounding", cco.config.BlockRoundingThreshold,
+		"noBatchPercent", cco.config.NoBatchPeriodPercent)
+
 	return &core.GeneratedBatchTxData{
 		BatchType: uint8(ValidatorSet),
 		TxRaw:     txsBytes,
