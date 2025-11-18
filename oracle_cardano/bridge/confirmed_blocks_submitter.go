@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -44,17 +45,22 @@ func NewConfirmedBlocksSubmitter(
 		latestInfo.CounterEmpty = 0
 	}
 
-	if appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB {
-		blockPoint, err := indexerDB.GetLatestBlockPoint()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create block submitter for %s: %w", chainID, err)
-		}
-
-		if latestInfo.BlockNumOrSlot < blockPoint.BlockSlot {
-			latestInfo.BlockNumOrSlot = blockPoint.BlockSlot
-			latestInfo.CounterEmpty = 0
-		}
+	if chainID == common.ChainIDStrVector {
+		latestInfo.BlockNumOrSlot = 11384557
+		latestInfo.CounterEmpty = 0
 	}
+
+	// if appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB {
+	// 	blockPoint, err := indexerDB.GetLatestBlockPoint()
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to create block submitter for %s: %w", chainID, err)
+	// 	}
+
+	// 	if latestInfo.BlockNumOrSlot < blockPoint.BlockSlot {
+	// 		latestInfo.BlockNumOrSlot = blockPoint.BlockSlot
+	// 		latestInfo.CounterEmpty = 0
+	// 	}
+	// }
 
 	return &ConfirmedBlocksSubmitterImpl{
 		bridgeSubmitter: bridgeSubmitter,
