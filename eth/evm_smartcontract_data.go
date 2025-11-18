@@ -146,17 +146,18 @@ func (t *EVMValidatorSetChangeTx) Pack() ([]byte, error) {
 	return abi.Arguments{{Type: validatorSetChangeTxAbi}}.Pack(t)
 }
 
-func (vsctx EVMValidatorSetChangeTx) String() string {
+func (t EVMValidatorSetChangeTx) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
-	sb.WriteString(fmt.Sprintf("%d\n", vsctx.BatchNonceID))
+	sb.WriteString(fmt.Sprintf("%d\n", t.BatchNonceID))
 	sb.WriteString("ttl = ")
-	sb.WriteString(fmt.Sprintf("%d\n", vsctx.TTL))
+	sb.WriteString(fmt.Sprintf("%d\n", t.TTL))
 	sb.WriteString("validator set number = ")
-	sb.WriteString(fmt.Sprintf("%s\n", vsctx.ValidatorsSetNumber))
+	sb.WriteString(fmt.Sprintf("%s\n", t.ValidatorsSetNumber))
 	sb.WriteString("validator chain data = ")
-	sb.WriteString(fmt.Sprintf("%s\n", GetChainValidatorsDataInfoString(common.ChainIDStrNexus, vsctx.ValidatorsChainData)))
+	sb.WriteString(
+		fmt.Sprintf("%s\n", GetChainValidatorsDataInfoString(common.ChainIDStrNexus, t.ValidatorsChainData)))
 
 	return sb.String()
 }

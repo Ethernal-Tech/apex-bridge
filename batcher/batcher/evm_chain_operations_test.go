@@ -355,6 +355,7 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 		db:           db,
 		ttlFormatter: testenv.GetTTLFormatter(0),
 		bridgeSC:     bsc,
+		logger:       hclog.NewNullLogger(),
 	}
 
 	// 1. We have just started the validator set change process, send vsc tx batch
