@@ -954,12 +954,22 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 		return
 	}
 
+	cco.logger.Debug("AAAAAAAAAAAA active multisig utxos",
+		"addr", multisigAddress,
+		"cnt", len(allMultisigUtxos),
+		"cutoff slot", slot)
+
 	multisigUtxos = make([]*indexer.TxInputOutput, 0, len(allMultisigUtxos))
 
 	// Filter out any UTXOs created after the given slot.
 	for _, utxo := range allMultisigUtxos {
 		if utxo.Output.Slot <= slot {
 			multisigUtxos = append(multisigUtxos, utxo)
+		} else {
+			cco.logger.Debug("AAAAAAAAAAAA skipping active multisig utxo",
+				"addr", utxo.Output.Address,
+				"amnt", utxo.Output.Amount,
+				"slot", utxo.Output.Slot)
 		}
 	}
 
@@ -968,8 +978,16 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 		return
 	}
 
+	cco.logger.Debug("AAAAAAAAAAAA eligable active multisig utxos",
+		"addr", multisigAddress,
+		"cnt", len(multisigUtxos))
+
 	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
+
+	cco.logger.Debug("AAAAAAAAAAAA active multisig utxos filtered out for tokens",
+		"addr", multisigAddress,
+		"cnt", len(multisigUtxos))
 
 	if len(feeUtxos) == 0 {
 		return
