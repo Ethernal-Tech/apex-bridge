@@ -424,7 +424,21 @@ func (cco *CardanoChainOperations) getValidatorsChainData(
 		return nil, err
 	}
 
+	cco.logger.Debug("checking validators data. wallet verification keys",
+		"MultiSig.VerificationKey", cco.wallet.MultiSig.VerificationKey,
+		"Fee.VerificationKey", cco.wallet.Fee.VerificationKey,
+		"MultiSig.StakeVerificationKey", cco.wallet.MultiSig.StakeVerificationKey,
+		"Fee.StakeVerificationKey", cco.wallet.Fee.StakeVerificationKey,
+	)
+
 	for _, data := range validatorsData {
+		cco.logger.Debug("checking validators data. sc verification keys",
+			"MultiSig.VerificationKey", cardano.BigIntToKey(data.Key[0]),
+			"Fee.VerificationKey", cardano.BigIntToKey(data.Key[1]),
+			"MultiSig.StakeVerificationKey", cardano.BigIntToKey(data.Key[2]),
+			"Fee.StakeVerificationKey", cardano.BigIntToKey(data.Key[3]),
+		)
+
 		if cardano.AreVerifyingKeysTheSame(cco.wallet, data) {
 			return validatorsData, nil
 		}
@@ -954,7 +968,7 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 		return
 	}
 
-	cco.logger.Debug("AAAAAAAAAAAA active multisig utxos",
+	cco.logger.Debug("active multisig utxos",
 		"addr", multisigAddress,
 		"cnt", len(allMultisigUtxos),
 		"cutoff slot", slot)
@@ -966,7 +980,7 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 		if utxo.Output.Slot <= slot {
 			multisigUtxos = append(multisigUtxos, utxo)
 		} else {
-			cco.logger.Debug("AAAAAAAAAAAA skipping active multisig utxo",
+			cco.logger.Debug("skipping active multisig utxo",
 				"addr", utxo.Output.Address,
 				"amnt", utxo.Output.Amount,
 				"slot", utxo.Output.Slot)
@@ -978,14 +992,14 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 		return
 	}
 
-	cco.logger.Debug("AAAAAAAAAAAA eligable active multisig utxos",
+	cco.logger.Debug("eligible active multisig utxos",
 		"addr", multisigAddress,
 		"cnt", len(multisigUtxos))
 
 	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
 	feeUtxos = filterOutTokenUtxos(feeUtxos)
 
-	cco.logger.Debug("AAAAAAAAAAAA active multisig utxos filtered out for tokens",
+	cco.logger.Debug("active multisig utxos filtered out for tokens",
 		"addr", multisigAddress,
 		"cnt", len(multisigUtxos))
 
