@@ -48,6 +48,10 @@ func NewConfirmedBlocksSubmitter(
 	if chainID == common.ChainIDStrVector {
 		latestInfo.BlockNumOrSlot = 11384557
 		latestInfo.CounterEmpty = 0
+
+		if err := oracleDB.SetBlocksSubmitterInfo(chainID, latestInfo); err != nil {
+			return nil, fmt.Errorf("error saving info: %w", err)
+		}
 	}
 
 	// if appConfig.Bridge.SubmitConfig.UpdateFromIndexerDB {
