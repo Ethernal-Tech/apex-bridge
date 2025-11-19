@@ -109,9 +109,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
 				AllowedDirections: cCore.AllowedDirections{
-					common.ChainIDStrPrime:   {common.ChainIDStrCardano: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					common.ChainIDStrCardano: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					testChainID:              {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrPrime:   {common.ChainIDStrCardano: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					common.ChainIDStrCardano: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					testChainID:              {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
 				},
 			},
 			RefundEnabled: refundEnabled,
@@ -768,9 +768,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			BridgingFee:  defaultMinFeeForBridging - 2,
@@ -825,9 +825,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 1,
+					Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
 				},
 			},
 			BridgingFee:  minFeeForBridgingTokens - 2,
@@ -881,14 +881,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 				{
-					Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address:      common.SplitString(cardanoBridgingFeeAddr, 40),
+					Amount:       defaultMinFeeForBridging * 2,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			BridgingFee:  200,
@@ -977,7 +977,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
+		require.ErrorContains(t, err, "found an utxo value below minimum value in metadata receivers")
 	})
 
 	//nolint:dupl
@@ -988,14 +988,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1046,14 +1046,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1103,14 +1103,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:       defaultMinFeeForBridging * 2,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1160,14 +1160,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:       defaultMinFeeForBridging * 2,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:       utxoMinValue,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1217,9 +1217,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging - 1,
-					IsNativeTokenOnSrc: 0,
+					Address:      sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:       defaultMinFeeForBridging - 1,
+					BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1263,7 +1263,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim direction not allowed currency+native", func(t *testing.T) {
-		for _, isNativeTokenOnSource := range []byte{0, 1} {
+		for _, bridgingType := range []sendtx.BridgingType{sendtx.BridgingTypeCurrencyOnSource, sendtx.BridgingTypeWrappedTokenOnSource} {
 			// deep copy (clone) with json marshalling
 			var newAppConfig *cCore.AppConfig
 
@@ -1285,7 +1285,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  1_000_000,
 			}
 
-			if isNativeTokenOnSource == 1 {
+			if bridgingType == sendtx.BridgingTypeWrappedTokenOnSource {
 				srcChainID, dstChainID = dstChainID, srcChainID
 				txOutput.Address = cardanoBridgingAddr
 			}
@@ -1296,9 +1296,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 				Transactions: []sendtx.BridgingRequestMetadataTransaction{
 					{
-						Address:            common.SplitString(validTestAddress, 40),
-						Amount:             1_000_000,
-						IsNativeTokenOnSrc: isNativeTokenOnSource,
+						Address:      common.SplitString(validTestAddress, 40),
+						Amount:       1_000_000,
+						BridgingType: bridgingType,
 					},
 				},
 				OperationFee: minOperationFee,
@@ -1332,14 +1332,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             defaultMinFeeForBridging * 2,
-				IsNativeTokenOnSrc: 0,
+				Address:      common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:       defaultMinFeeForBridging * 2,
+				BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 0,
-				Amount:             maxAmountAllowedToBridge.Uint64() + 1,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeCurrencyOnSource,
+				Amount:       maxAmountAllowedToBridge.Uint64() + 1,
 			},
 		}
 
@@ -1399,14 +1399,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             minFeeForBridgingTokens * 2,
-				IsNativeTokenOnSrc: 0,
+				Address:      common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:       minFeeForBridgingTokens * 2,
+				BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             maxTokenAmountAllowedToBridge.Uint64() * 2,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       maxTokenAmountAllowedToBridge.Uint64() * 2,
 			},
 		}
 
@@ -1468,9 +1468,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1533,14 +1533,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             minFeeForBridgingTokens * 2,
-				IsNativeTokenOnSrc: 0,
+				Address:      common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:       minFeeForBridgingTokens * 2,
+				BridgingType: sendtx.BridgingTypeCurrencyOnSource,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1616,9 +1616,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridgingTokens * 2,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1686,9 +1686,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridgingTokens * 2,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1765,9 +1765,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridgingTokens * 2,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1839,9 +1839,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1915,9 +1915,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -1971,9 +1971,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 
@@ -2028,9 +2028,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address:      sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
+				BridgingType: sendtx.BridgingTypeWrappedTokenOnSource,
+				Amount:       utxoMinValue,
 			},
 		}
 

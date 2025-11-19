@@ -26,6 +26,8 @@ type skylineGenerateConfigsParams struct {
 	bridgeNodeURL   string
 	bridgeSCAddress string
 
+	minColCoinsAmount uint64
+
 	validatorDataDir string
 	validatorConfig  string
 
@@ -46,7 +48,6 @@ type skylineGenerateConfigsParams struct {
 	coloredCoins []string
 }
 
-//nolint:dupl
 func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
@@ -125,6 +126,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddressFlag,
 		"",
 		bridgeSCAddressFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.minColCoinsAmount,
+		minColCoinsAmountFlag,
+		0, //TODO: set default val
+		minColCoinsAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -256,6 +264,7 @@ func (p *skylineGenerateConfigsParams) Execute(
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+			MinColCoinsAllowedToBridge:     p.minColCoinsAmount,
 			AllowedDirections:              oCore.AllowedDirections{},
 		},
 		ColoredCoins: coloredCoins,

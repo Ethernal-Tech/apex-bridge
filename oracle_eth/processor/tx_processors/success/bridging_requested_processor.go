@@ -127,7 +127,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
-	if err := core.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
+	if err := core.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata); err != nil {
 		return err
 	}
 
@@ -150,21 +150,15 @@ func (p *BridgingRequestedProcessorImpl) validate(
 
 	receiverAmountSum := big.NewInt(0)
 	feeSum := big.NewInt(0)
-	foundAUtxoValueBelowMinimumValue := false
-	foundAnInvalidReceiverAddr := false
 
 	for _, receiver := range metadata.Transactions {
 		receiverAmountDfm := common.WeiToDfm(receiver.Amount)
 		if receiverAmountDfm.Uint64() < cardanoDestConfig.UtxoMinAmount {
-			foundAUtxoValueBelowMinimumValue = true
-
-			break
+			return fmt.Errorf("found a utxo value below minimum value in metadata receivers: %v", metadata)
 		}
 
 		if !cardanotx.IsValidOutputAddress(receiver.Address, cardanoDestConfig.NetworkID) {
-			foundAnInvalidReceiverAddr = true
-
-			break
+			return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 		}
 
 		if receiver.Address == cardanoDestChainFeeAddress {
@@ -172,14 +166,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		} else {
 			receiverAmountSum.Add(receiverAmountSum, receiver.Amount)
 		}
-	}
-
-	if foundAUtxoValueBelowMinimumValue {
-		return fmt.Errorf("found a utxo value below minimum value in metadata receivers: %v", metadata)
-	}
-
-	if foundAnInvalidReceiverAddr {
-		return fmt.Errorf("found an invalid receiver addr in metadata: %v", metadata)
 	}
 
 	if appConfig.BridgingSettings.MaxAmountAllowedToBridge != nil &&

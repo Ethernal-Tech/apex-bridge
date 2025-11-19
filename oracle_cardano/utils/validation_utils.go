@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -34,7 +35,9 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
-	knownTokens := make([]wallet.Token, len(chainConfig.WrappedCurrencyTokens))
+
+	wrappedCurrencyTokensLen := len(chainConfig.WrappedCurrencyTokens)
+	knownTokens := make([]wallet.Token, wrappedCurrencyTokensLen+len(chainConfig.ColoredCoins))
 
 	for i, tokenConfig := range chainConfig.WrappedCurrencyTokens {
 		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
@@ -43,6 +46,15 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 		}
 
 		knownTokens[i] = token
+	}
+
+	for i, coloredCoin := range chainConfig.ColoredCoins {
+		token, err := cardanotx.GetNativeTokenFromName(coloredCoin.TokenName)
+		if err != nil {
+			return fmt.Errorf("failed to get native token for colored coin '%s': %w", coloredCoin.TokenName, err)
+		}
+
+		knownTokens[i+wrappedCurrencyTokensLen] = token
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
@@ -94,17 +106,43 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	return multisigUtxoOutput, nil
 }
 
-func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
-	_, ok := appConfing.BridgingSettings.AllowedDirections[srcChainID][destChainID]
+func IsTxDirectionAllowed(
+	appConfig *cCore.AppConfig, srcChainID string, metadata *common.BridgingRequestMetadata,
+) error {
+	destChainID := metadata.DestinationChainID
+
+	allowedDirection, ok := appConfig.BridgingSettings.AllowedDirections[srcChainID][destChainID]
 	if !ok {
 		return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
 	}
 
-	// for _, transaction := range metadata.Transactions {
-	// 	if transaction.IsNativeTokenOnSource() == !allowedDirection.CurrencyBirdgingAllowed {
-	// 		return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
-	// 	}
-	// }
+	for _, tx := range metadata.Transactions {
+		switch tx.BridgingType {
+		case sendtx.BridgingTypeWrappedTokenOnSource:
+			if !allowedDirection.WrappedBridgingAllowed {
+				return fmt.Errorf(
+					"wrapped-token bridging not allowed for direction %s to %s",
+					srcChainID, destChainID,
+				)
+			}
+
+		case sendtx.BridgingTypeCurrencyOnSource:
+			if !allowedDirection.CurrencyBirdgingAllowed {
+				return fmt.Errorf(
+					"currency bridging not allowed for direction %s to %s",
+					srcChainID, destChainID,
+				)
+			}
+
+		case sendtx.BridgingTypeColoredCoinOnSource:
+			if !slices.Contains(allowedDirection.ColoredCoins, tx.ColoredCoinID) {
+				return fmt.Errorf(
+					"colored coin (%d) not allowed for direction %s to %s",
+					tx.ColoredCoinID, srcChainID, destChainID,
+				)
+			}
+		}
+	}
 
 	return nil
 }

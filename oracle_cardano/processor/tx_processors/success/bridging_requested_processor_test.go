@@ -66,10 +66,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				AllowedDirections: cCore.AllowedDirections{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, common.ChainIDStrNexus: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					common.ChainIDStrNexus:  {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					testChainID:             {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}, common.ChainIDStrNexus: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}, testChainID: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					common.ChainIDStrNexus:  {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					testChainID:             {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: true, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
 				},
 			},
 

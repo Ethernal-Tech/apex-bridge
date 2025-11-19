@@ -543,8 +543,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				AllowedDirections: cCore.AllowedDirections{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
-					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint64{}}},
+					common.ChainIDStrPrime:  {common.ChainIDStrVector: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
+					common.ChainIDStrVector: {common.ChainIDStrPrime: cCore.AllowedDirection{CurrencyBirdgingAllowed: false, WrappedBridgingAllowed: true, ColoredCoins: []uint16{}}},
 				},
 			},
 			RefundEnabled: refundEnabled,

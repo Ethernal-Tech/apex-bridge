@@ -25,6 +25,8 @@ const (
 	bridgeNodeURLFlag   = "bridge-node-url"
 	bridgeSCAddressFlag = "bridge-sc-address"
 
+	minColCoinsAmountFlag = "min-colored-coins-amount"
+
 	validatorDataDirFlag = "validator-data-dir"
 	validatorConfigFlag  = "validator-config"
 
@@ -47,6 +49,8 @@ const (
 
 	bridgeNodeURLFlagDesc   = "(mandatory) node URL of bridge chain"
 	bridgeSCAddressFlagDesc = "(mandatory) bridging smart contract address on bridge chain"
+
+	minColCoinsAmountFlagDesc = "minimum amount required for colored coin bridging"
 
 	validatorDataDirFlagDesc = "path to bridge chain data directory when using local secrets manager"
 	validatorConfigFlagDesc  = "path to to bridge chain secrets manager config file"
@@ -90,6 +94,8 @@ var (
 type generateConfigsParams struct {
 	bridgeNodeURL   string
 	bridgeSCAddress string
+
+	minColCoinsAmount uint64
 
 	validatorDataDir string
 	validatorConfig  string
@@ -147,6 +153,13 @@ func (p *generateConfigsParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddressFlag,
 		"",
 		bridgeSCAddressFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.minColCoinsAmount,
+		minColCoinsAmountFlag,
+		0, //TODO: set default val
+		minColCoinsAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -254,6 +267,7 @@ func (p *generateConfigsParams) Execute(
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
+			MinColCoinsAllowedToBridge:     p.minColCoinsAmount,
 			AllowedDirections:              oCore.AllowedDirections{},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
@@ -457,7 +471,7 @@ func parseAllowedDirections(dirStrs []string) (map[string]oCore.AllowedDirection
 
 		coloredCoinsStr := strings.TrimSpace(parts[3])
 
-		var coloredCoins []uint64
+		var coloredCoins []uint16
 
 		if coloredCoinsStr != "" {
 			coins := strings.Split(coloredCoinsStr, ",")
@@ -467,17 +481,18 @@ func parseAllowedDirections(dirStrs []string) (map[string]oCore.AllowedDirection
 					continue
 				}
 
-				coin, err := strconv.ParseUint(coinStr, 10, 64)
+				val, err := strconv.ParseUint(coinStr, 10, 16)
 				if err != nil {
 					return nil, fmt.Errorf("invalid colored coin value '%s': %w", coinStr, err)
 				}
 
+				coin := uint16(val)
 				coloredCoins = append(coloredCoins, coin)
 			}
 		}
 
 		if coloredCoins == nil {
-			coloredCoins = []uint64{}
+			coloredCoins = []uint16{}
 		}
 
 		result[destChainID] = oCore.AllowedDirection{

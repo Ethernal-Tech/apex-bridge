@@ -377,6 +377,7 @@ func waitForSkylineTx(
 	})
 }
 
+// TODO: enable colored coins?
 func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName string) []sendtx.BridgingTxReceiver {
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
@@ -387,7 +388,7 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 		if sourceTokenName == cardanowallet.AdaTokenName {
 			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeCurrencyOnSource
 		} else {
-			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
+			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeWrappedTokenOnSource
 		}
 	}
 

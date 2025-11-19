@@ -98,6 +98,7 @@ type BridgingSettings struct {
 	MaxTokenAmountAllowedToBridge  *big.Int          `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int               `json:"maxBridgingClaimsToGroup"`
+	MinColCoinsAllowedToBridge     uint64            `json:"minColCoinsAllowedToBridge"`
 	AllowedDirections              AllowedDirections `json:"allowedDirections"`
 }
 
@@ -106,7 +107,7 @@ type AllowedDirections = map[string]map[string]AllowedDirection
 type AllowedDirection struct {
 	CurrencyBirdgingAllowed bool     `json:"currencyBirdgingAllowed"`
 	WrappedBridgingAllowed  bool     `json:"wrappedBridgingAllowed"`
-	ColoredCoins            []uint64 `json:"coloredCoins"`
+	ColoredCoins            []uint16 `json:"coloredCoins"`
 }
 
 type RetryUnprocessedSettings struct {
