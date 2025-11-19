@@ -31,7 +31,7 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 }
 
 func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
-	knownTokens := make([]wallet.Token, len(cardanoConfig.WrappedCurrencyTokens))
+	knownTokens := make([]wallet.Token, len(cardanoConfig.WrappedCurrencyTokens)+len(cardanoConfig.ColoredCoins))
 
 	for i, tokenConfig := range cardanoConfig.WrappedCurrencyTokens {
 		token, err := GetNativeTokenFromConfig(tokenConfig)
@@ -40,6 +40,15 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 		}
 
 		knownTokens[i] = token
+	}
+
+	for i, coloredCoin := range cardanoConfig.ColoredCoins {
+		token, err := GetNativeTokenFromName(coloredCoin.TokenName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve colored coins from config: %w", err)
+		}
+
+		knownTokens[len(cardanoConfig.WrappedCurrencyTokens)+i] = token
 	}
 
 	return knownTokens, nil

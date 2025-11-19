@@ -290,7 +290,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 			TransactionSubType: uint8(common.StakeRegDelConfirmedTxSubType),
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(100),
@@ -306,7 +306,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(50),
@@ -322,7 +322,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 					Amount:             big.NewInt(3000),
@@ -335,7 +335,7 @@ func Test_reactorGetOutputs(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(2000),
@@ -425,7 +425,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		{
 			SourceChainId:      common.ChainIDIntPrime,
 			DestinationChainId: common.ChainIDIntCardano,
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: addr1,
 					Amount:             big.NewInt(100),
@@ -441,7 +441,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 		{
 			SourceChainId:      common.ChainIDIntPrime,
 			DestinationChainId: common.ChainIDIntCardano,
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: addr3,
 					Amount:             big.NewInt(8),

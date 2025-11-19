@@ -59,7 +59,7 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		confirmedTxs := []eth.ConfirmedTransaction{
 			{
 				SourceChainId: 2,
-				Receivers: []eth.BridgeReceiver{
+				ReceiversWithColor: []eth.BridgeReceiverWithColor{
 					{
 						Amount:             new(big.Int).SetUint64(100),
 						DestinationAddress: "0xff",
@@ -134,7 +134,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
@@ -146,7 +146,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(10),
 					DestinationAddress: "0xff",
@@ -154,7 +154,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
@@ -166,7 +166,7 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
@@ -210,7 +210,7 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
 			TransactionType: uint8(common.RefundConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
@@ -222,7 +222,7 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(10),
 					DestinationAddress: "0xff",
@@ -231,7 +231,7 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 		},
 		{
 			TransactionType: uint8(common.RefundConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
@@ -243,7 +243,7 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",

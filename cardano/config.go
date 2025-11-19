@@ -110,29 +110,37 @@ func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardan
 
 func (config CardanoChainConfig) GetNativeTokenData(
 	dstChainID string,
-) (token cardanowallet.Token, shouldMint bool, err error) {
+) (token cardanowallet.Token, err error) {
 	tokenName := ""
-	shouldMint = false
 
 	for _, dst := range config.WrappedCurrencyTokens {
 		if dst.DstChainID == dstChainID {
 			tokenName = dst.TokenName
-			shouldMint = dst.Mint
 
 			break
 		}
 	}
 
 	if tokenName == "" {
-		return token, shouldMint, fmt.Errorf("no native token specified for destination: %s", dstChainID)
+		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
 	}
 
 	token, err = GetNativeTokenFromName(tokenName)
 	if err == nil {
-		return token, shouldMint, nil
+		return token, nil
 	}
 
-	return token, shouldMint, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+}
+
+func (config CardanoChainConfig) GetColoredCoin(coloredCoinID uint16) (token cardanowallet.Token, err error) {
+	for _, coloredCoin := range config.ColoredCoins {
+		if coloredCoin.ColoredCoinID == coloredCoinID {
+			return GetNativeTokenFromName(coloredCoin.TokenName)
+		}
+	}
+
+	return token, fmt.Errorf("colored coin ID: %d not found", coloredCoinID)
 }
 
 func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {

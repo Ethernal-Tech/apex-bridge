@@ -103,7 +103,7 @@ func getOutputs(
 			continue
 		}
 
-		for _, receiver := range transaction.Receivers {
+		for _, receiver := range transaction.ReceiversWithColor {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
@@ -120,46 +120,64 @@ func getOutputs(
 			}
 
 			if hasTokens {
-				if len(data.Tokens) == 0 {
-					var (
-						err        error
-						token      cardanowallet.Token
-						shouldMint bool
-					)
+				var (
+					err   error
+					token cardanowallet.Token
+				)
 
-					switch transaction.TransactionType {
-					case uint8(common.DefundConfirmedTxType):
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.WrappedCurrencyTokens[0])
-						if err != nil {
-							return nil, err
-						}
-					case uint8(common.RefundConfirmedTxType):
-						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
+				switch transaction.TransactionType {
+				case uint8(common.DefundConfirmedTxType):
+					token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.WrappedCurrencyTokens[0])
+					if err != nil {
+						return nil, err
+					}
+				case uint8(common.RefundConfirmedTxType):
+					origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
 
-						token, err = cardanoConfig.GetNativeToken(origDstChainID)
-						if err != nil {
-							return nil, err
-						}
-					default:
-						token, shouldMint, err = cardanoConfig.GetNativeTokenData(
+					token, err = cardanoConfig.GetNativeToken(origDstChainID)
+					if err != nil {
+						return nil, err
+					}
+				default:
+					if receiver.ColoredCoinId == 0 {
+						token, err = cardanoConfig.GetNativeTokenData(
 							common.ToStrChainID(transaction.SourceChainId))
-						if err != nil {
-							return nil, err
-						}
+					} else {
+						token, err = cardanoConfig.GetColoredCoin(receiver.ColoredCoinId)
 					}
 
-					if shouldMint {
-						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
-							Token:  token,
-							Amount: receiver.AmountWrapped.Uint64(),
-						})
+					if err != nil {
+						return nil, err
 					}
+				}
 
+				if receiver.ColoredCoinId != 0 {
+					mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
+						Token:  token,
+						Amount: receiver.AmountWrapped.Uint64(),
+					})
+				}
+
+				if len(data.Tokens) == 0 {
 					data.Tokens = []cardanowallet.TokenAmount{
 						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
 					}
 				} else {
-					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+					found := false
+
+					// check if the token is already in the tokens
+					for i, t := range data.Tokens {
+						if t.TokenName() == token.String() {
+							data.Tokens[i].Amount += receiver.AmountWrapped.Uint64()
+							found = true
+
+							break
+						}
+					}
+
+					if !found {
+						data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
+					}
 				}
 			}
 
