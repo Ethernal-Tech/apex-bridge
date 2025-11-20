@@ -119,11 +119,24 @@ func IsTxDirectionAllowed(
 	for _, tx := range metadata.Transactions {
 		switch tx.BridgingType {
 		case sendtx.BridgingTypeWrappedTokenOnSource:
-			if !allowedDirection.WrappedBridgingAllowed {
-				return fmt.Errorf(
-					"wrapped-token bridging not allowed for direction %s to %s",
-					srcChainID, destChainID,
-				)
+			isColoredCoinOnDest := tx.ColoredCoinID != 0
+
+			if isColoredCoinOnDest {
+				// Colored coin bridging
+				if !slices.Contains(allowedDirection.ColoredCoins, tx.ColoredCoinID) {
+					return fmt.Errorf(
+						"colored-coin bridging (ID %d) not allowed for direction %s to %s",
+						tx.ColoredCoinID, srcChainID, destChainID,
+					)
+				}
+			} else {
+				// Wrapped token bridging
+				if !allowedDirection.WrappedBridgingAllowed {
+					return fmt.Errorf(
+						"wrapped-token bridging not allowed for direction %s to %s",
+						srcChainID, destChainID,
+					)
+				}
 			}
 
 		case sendtx.BridgingTypeCurrencyOnSource:
