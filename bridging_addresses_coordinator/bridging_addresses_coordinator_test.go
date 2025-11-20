@@ -24,7 +24,7 @@ var cardanoChains = map[string]*oracleCore.CardanoChainConfig{
 	common.ChainIDStrPrime: {
 		ChainID: common.ChainIDStrPrime,
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
-			NativeTokens: []sendtx.TokenExchangeConfig{
+			WrappedCurrencyTokens: []sendtx.TokenExchangeConfig{
 				{
 					TokenName: tokenName,
 				},

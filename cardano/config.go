@@ -10,6 +10,8 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+type ColoredCoins = map[uint16]string
+
 type CardanoChainConfig struct {
 	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
 	NetworkMagic             uint32                           `json:"testnetMagic"`
@@ -27,7 +29,8 @@ type CardanoChainConfig struct {
 	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	WrappedCurrencyTokens    []sendtx.TokenExchangeConfig     `json:"wrappedCurrencyTokens"`
+	ColoredCoins             ColoredCoins                     `json:"coloredCoins"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
@@ -77,7 +80,7 @@ func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
 }
 
 func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {
-	for _, dst := range config.NativeTokens {
+	for _, dst := range config.WrappedCurrencyTokens {
 		if dst.DstChainID != dstChainID {
 			continue
 		}
@@ -104,29 +107,36 @@ func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardan
 
 func (config CardanoChainConfig) GetNativeTokenData(
 	dstChainID string,
-) (token cardanowallet.Token, shouldMint bool, err error) {
+) (token cardanowallet.Token, err error) {
 	tokenName := ""
-	shouldMint = false
 
-	for _, dst := range config.NativeTokens {
+	for _, dst := range config.WrappedCurrencyTokens {
 		if dst.DstChainID == dstChainID {
 			tokenName = dst.TokenName
-			shouldMint = dst.Mint
 
 			break
 		}
 	}
 
 	if tokenName == "" {
-		return token, shouldMint, fmt.Errorf("no native token specified for destination: %s", dstChainID)
+		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
 	}
 
 	token, err = GetNativeTokenFromName(tokenName)
 	if err == nil {
-		return token, shouldMint, nil
+		return token, nil
 	}
 
-	return token, shouldMint, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+}
+
+func (config CardanoChainConfig) GetColoredCoin(coloredCoinID uint16) (token cardanowallet.Token, err error) {
+	tokenName, ok := config.ColoredCoins[coloredCoinID]
+	if !ok {
+		return token, fmt.Errorf("colored coin ID: %d not found", coloredCoinID)
+	}
+
+	return GetNativeTokenFromName(tokenName)
 }
 
 func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {

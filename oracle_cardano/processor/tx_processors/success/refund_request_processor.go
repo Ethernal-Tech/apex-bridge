@@ -110,7 +110,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			recognizeToken = false
 
 			if zeroAddress == out.Address {
-				for _, tExc := range chainConfig.NativeTokens {
+				for _, tExc := range chainConfig.WrappedCurrencyTokens {
 					confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
 					if err != nil {
 						return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
@@ -195,13 +195,13 @@ func (p *RefundRequestProcessorImpl) validate(
 		if len(out.Tokens) > 0 {
 			hasTokens = true
 
-			if chainConfig.NativeTokens == nil || zeroAddress != out.Address {
+			if chainConfig.WrappedCurrencyTokens == nil || zeroAddress != out.Address {
 				unknownNativeTokensUtxoCnt++
 			} else {
 				for _, token := range out.Tokens {
 					recognizeToken = false
 
-					for _, tExc := range chainConfig.NativeTokens {
+					for _, tExc := range chainConfig.WrappedCurrencyTokens {
 						confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
 						if err != nil {
 							return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)

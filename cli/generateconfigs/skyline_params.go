@@ -2,8 +2,10 @@ package cligenerateconfigs
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +26,8 @@ type skylineGenerateConfigsParams struct {
 	bridgeNodeURL   string
 	bridgeSCAddress string
 
+	minColCoinsAmount uint64
+
 	validatorDataDir string
 	validatorConfig  string
 
@@ -40,9 +44,10 @@ type skylineGenerateConfigsParams struct {
 	telemetry string
 
 	emptyBlocksThreshold uint
+
+	coloredCoins []string
 }
 
-//nolint:dupl
 func (p *skylineGenerateConfigsParams) validateFlags() error {
 	if !common.IsValidHTTPURL(p.bridgeNodeURL) {
 		return fmt.Errorf("invalid %s: %s", bridgeNodeURLFlag, p.bridgeNodeURL)
@@ -68,6 +73,44 @@ func (p *skylineGenerateConfigsParams) validateFlags() error {
 		}
 	}
 
+	for _, coinStr := range p.coloredCoins {
+		if err := validateColoredCoinConfigFormat(coinStr); err != nil {
+			return fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+		}
+	}
+
+	return nil
+}
+
+func validateColoredCoinConfigFormat(coinStr string) error {
+	parts := strings.Split(coinStr, ":")
+	if len(parts) != 3 {
+		return fmt.Errorf("invalid %s format: expected 'id:name:ecosystemOriginChainID', got: %s", coloredCoinsFlag, coinStr)
+	}
+
+	id, err := strconv.ParseUint(parts[0], 10, 8)
+	if err != nil {
+		return fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+	}
+
+	if id > math.MaxUint8 {
+		return fmt.Errorf("invalid %s format: id must be less than %d", coloredCoinsFlag, math.MaxUint8)
+	}
+
+	if id == 0 {
+		return fmt.Errorf("invalid %s format: id must be greater than 0", coloredCoinsFlag)
+	}
+
+	name := strings.TrimSpace(parts[1])
+	if name == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	ecosystemOriginChainID := strings.TrimSpace(parts[2])
+	if ecosystemOriginChainID == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
 	return nil
 }
 
@@ -83,6 +126,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		bridgeSCAddressFlag,
 		"",
 		bridgeSCAddressFlagDesc,
+	)
+
+	cmd.Flags().Uint64Var(
+		&p.minColCoinsAmount,
+		minColCoinsAmountFlag,
+		0, //TODO: set default val
+		minColCoinsAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -157,6 +207,13 @@ func (p *skylineGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
+	cmd.Flags().StringArrayVar(
+		&p.coloredCoins,
+		coloredCoinsFlag,
+		nil,
+		coloredCoinsConfigFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
 
@@ -174,6 +231,16 @@ func (p *skylineGenerateConfigsParams) Execute(
 		if len(parts) == 2 {
 			telemetryConfig.DataDogAddr = strings.TrimSpace(parts[1])
 		}
+	}
+
+	coloredCoins := make([]vcCore.ColoredCoinSettings, 0)
+	for _, coinStr := range p.coloredCoins {
+		coin, err := parseColoredCoinConfig(coinStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
+		}
+
+		coloredCoins = append(coloredCoins, coin)
 	}
 
 	vcConfig := &vcCore.AppConfig{
@@ -197,8 +264,10 @@ func (p *skylineGenerateConfigsParams) Execute(
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
-			AllowedDirections:              map[string][]string{},
+			MinColCoinsAllowedToBridge:     p.minColCoinsAmount,
+			AllowedDirections:              oCore.AllowedDirections{},
 		},
+		ColoredCoins: coloredCoins,
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60 * 2048,
@@ -291,5 +360,20 @@ func (p *skylineGenerateConfigsParams) Execute(
 	return &CmdResult{
 		validatorComponentsConfigPath: vcConfigPath,
 		relayerConfigPath:             rConfigPath,
+	}, nil
+}
+
+func parseColoredCoinConfig(coinStr string) (vcCore.ColoredCoinSettings, error) {
+	parts := strings.Split(coinStr, ":")
+
+	id, err := strconv.ParseUint(parts[0], 10, 8)
+	if err != nil {
+		return vcCore.ColoredCoinSettings{}, fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+	}
+
+	return vcCore.ColoredCoinSettings{
+		ID:                     uint8(id),
+		Name:                   strings.TrimSpace(parts[1]),
+		EcosystemOriginChainID: strings.TrimSpace(parts[2]),
 	}, nil
 }

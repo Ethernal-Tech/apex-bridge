@@ -9,8 +9,9 @@ import (
 )
 
 type BridgingRequestEthMetadataTransaction struct {
-	Address string   `json:"a"`
-	Amount  *big.Int `json:"m"`
+	Address       string   `json:"a"`
+	Amount        *big.Int `json:"m"`
+	ColoredCoinID uint16   `json:"cc"`
 }
 
 type BaseEthMetadata struct {
