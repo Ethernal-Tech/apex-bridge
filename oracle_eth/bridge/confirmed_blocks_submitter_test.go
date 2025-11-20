@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	ethCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
@@ -35,13 +36,14 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 	bridgeSubmitter := &ethCore.BridgeSubmitterMock{}
 	indexerDB := &ethCore.EventStoreMock{}
 	oracleDB := &ethCore.EthTxsProcessorDBMock{}
+	vsObserver := &validatorobserver.ValidatorSetObserverMock{}
 	testErr := fmt.Errorf("test err")
 
 	t.Run("NewConfirmedBlocksSubmitter GetBlocksSubmitterInfo error", func(t *testing.T) {
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, testErr).Once()
 
 		_, err := NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, vsObserver, hclog.NewNullLogger())
 		require.ErrorIs(t, err, testErr)
 	})
 
@@ -61,7 +63,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
 
 		bs, err := NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, vsObserver, hclog.NewNullLogger())
 
 		require.NoError(t, err)
 		require.Equal(t, startBlockNum, bs.latestInfo.BlockNumOrSlot)
@@ -80,7 +82,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		indexerDB.On("GetLastProcessedBlock").Return(startSlot, nil).Once()
 
 		bs, err := NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, vsObserver, hclog.NewNullLogger())
 
 		require.NoError(t, err)
 		require.Equal(t, startSlot, bs.latestInfo.BlockNumOrSlot)
@@ -94,7 +96,7 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		oracleDB.On("GetBlocksSubmitterInfo", chainID).Return(oracleCommon.BlocksSubmitterInfo{}, nil).Once()
 
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, vsObserver, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		blocksSubmitter.Start(ctx)
@@ -153,9 +155,18 @@ func TestConfirmedBlocksSubmitter(t *testing.T) {
 		}).Return(nil).Once()
 		bridgeSubmitter.On("SubmitBlocks", chainID, submittedBlocks).Return(nil).Once()
 
+		vsObserver.On("IsValidatorSetPending").Return(true).Once()
+
 		blocksSubmitter, err := NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, hclog.NewNullLogger())
+			bridgeSubmitter, appConfig, oracleDB, indexerDB, chainID, vsObserver, hclog.NewNullLogger())
 		require.NoError(t, err)
+
+		require.NoError(t, blocksSubmitter.execute())
+
+		require.Equal(t, uint64(0), blocksSubmitter.latestInfo.BlockNumOrSlot)
+		require.Equal(t, 0, blocksSubmitter.latestInfo.CounterEmpty)
+
+		vsObserver.On("IsValidatorSetPending").Return(false).Once()
 
 		require.NoError(t, blocksSubmitter.execute())
 
