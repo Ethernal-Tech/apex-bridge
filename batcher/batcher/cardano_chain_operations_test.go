@@ -392,15 +392,9 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		Index: 0,
 	}
 	cco.config.CustodialNft = &nft
-	cco.config.ColoredCoins = []cardano.ColoredCoin{
-		{
-			TokenName:     coloredCoin1.String(),
-			ColoredCoinID: 1,
-		},
-		{
-			TokenName:     coloredCoin2.String(),
-			ColoredCoinID: 2,
-		},
+	cco.config.ColoredCoins = cardano.ColoredCoins{
+		1: coloredCoin1.String(),
+		2: coloredCoin2.String(),
 	}
 	// Tokens that come from prime and are minted on vector
 	cco.config.WrappedCurrencyTokens = []sendtx.TokenExchangeConfig{

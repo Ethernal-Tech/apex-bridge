@@ -102,12 +102,12 @@ func validateEthColoredCoinFormat(coinStr string, chainID string) error {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	contractAddress := strings.TrimSpace(parts[0])
-	if contractAddress == "" {
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	if !common.IsValidAddress(chainID, contractAddress) {
+	if coloredCoinID == 0 {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
@@ -116,12 +116,12 @@ func validateEthColoredCoinFormat(coinStr string, chainID string) error {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	coloredCoinID, err := strconv.ParseUint(parts[2], 10, 16)
-	if err != nil {
+	contractAddress := strings.TrimSpace(parts[2])
+	if contractAddress == "" {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	if coloredCoinID == 0 {
+	if !common.IsValidAddress(chainID, contractAddress) {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
@@ -300,11 +300,12 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	if vcConfig.EthChains[p.chainIDString].ColoredCoins == nil {
-		vcConfig.EthChains[p.chainIDString].ColoredCoins = make([]oCore.ColoredCoinEvm, 0)
+		vcConfig.EthChains[p.chainIDString].ColoredCoins = make(oCore.ColoredCoins)
 	}
 
-	vcConfig.EthChains[p.chainIDString].ColoredCoins =
-		append(vcConfig.EthChains[p.chainIDString].ColoredCoins, coloredCoins...)
+	for coloredCoinID, tokenName := range coloredCoins {
+		vcConfig.EthChains[p.chainIDString].ColoredCoins[coloredCoinID] = tokenName
+	}
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
@@ -348,37 +349,35 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}, nil
 }
 
-func parseEthColoredCoins(s []string) ([]oCore.ColoredCoinEvm, error) {
-	result := make([]oCore.ColoredCoinEvm, 0)
+func parseEthColoredCoins(s []string) (oCore.ColoredCoins, error) {
+	result := make(oCore.ColoredCoins)
 
 	for _, coinStr := range s {
-		coin, err := parseEthColoredCoin(coinStr)
+		coloredCoinID, coloredCoin, err := parseEthColoredCoin(coinStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
 		}
 
-		result = append(result, coin)
+		result[coloredCoinID] = coloredCoin
 	}
 
 	return result, nil
 }
 
-func parseEthColoredCoin(coinStr string) (oCore.ColoredCoinEvm, error) {
+func parseEthColoredCoin(coinStr string) (uint16, oCore.ColoredCoinEvm, error) {
 	parts := strings.Split(coinStr, ":")
 
-	tokenName := strings.TrimSpace(parts[0])
-	if tokenName == "" {
-		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
-	}
-
-	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 16)
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
 	if err != nil {
-		return oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+		return 0, oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	return oCore.ColoredCoinEvm{
+	tokenName := strings.TrimSpace(parts[1])
+
+	contractAddress := strings.TrimSpace(parts[2])
+
+	return uint16(coloredCoinID), oCore.ColoredCoinEvm{
 		TokenName:       tokenName,
-		ColoredCoinID:   uint16(coloredCoinID),
-		ContractAddress: strings.TrimSpace(parts[2]),
+		ContractAddress: contractAddress,
 	}, nil
 }

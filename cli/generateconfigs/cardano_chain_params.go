@@ -65,7 +65,7 @@ const (
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
 	allowedDirectionsFlagDesc       = "allowed bridging direction in format: destChainID:currencyAllowed:wrappedAllowed:coloredCoins (e.g., 'chain1:true:true:1,2,3' or 'chain2:true:false:'). Can be specified multiple times" //nolint:lll
-	coloredCoinsFlagDesc            = "colored coins for the chain in format: tokenName:coloredCoinID (e.g., 'token1:1,token2:2). Can be specified multiple times"                                                              //nolint:lll
+	coloredCoinsFlagDesc            = "colored coins for the chain in format: coloredCoinID:tokenName (e.g., '1:token1,2:token2). Can be specified multiple times"                                                              //nolint:lll
 	coloredCoinsConfigFlagDesc      = "colored coins for the chain in format: id:name:ecosystemOriginChainID (e.g., '1:token1:chain1,2:token2:chain2). Can be specified multiple times"                                         //nolint:lll
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
@@ -221,13 +221,13 @@ func validateColoredCoinFormat(coinStr string) error {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	tokenName := strings.TrimSpace(parts[0])
-	if tokenName == "" {
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 16)
-	if err != nil {
+	tokenName := strings.TrimSpace(parts[1])
+	if tokenName == "" {
 		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
@@ -568,11 +568,12 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	}
 
 	if vcConfig.CardanoChains[p.chainIDString].ColoredCoins == nil {
-		vcConfig.CardanoChains[p.chainIDString].ColoredCoins = make([]cardanotx.ColoredCoin, 0)
+		vcConfig.CardanoChains[p.chainIDString].ColoredCoins = make(cardanotx.ColoredCoins)
 	}
 
-	vcConfig.CardanoChains[p.chainIDString].ColoredCoins =
-		append(vcConfig.CardanoChains[p.chainIDString].ColoredCoins, coloredCoins...)
+	for coloredCoinID, tokenName := range coloredCoins {
+		vcConfig.CardanoChains[p.chainIDString].ColoredCoins[coloredCoinID] = tokenName
+	}
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
@@ -612,36 +613,30 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	}, nil
 }
 
-func parseColoredCoins(s []string) ([]cardanotx.ColoredCoin, error) {
-	result := make([]cardanotx.ColoredCoin, 0)
+func parseColoredCoins(s []string) (cardanotx.ColoredCoins, error) {
+	result := make(cardanotx.ColoredCoins)
 
 	for _, coinStr := range s {
-		coin, err := parseColoredCoin(coinStr)
+		coloredCoinID, tokenName, err := parseColoredCoin(coinStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
 		}
 
-		result = append(result, coin)
+		result[coloredCoinID] = tokenName
 	}
 
 	return result, nil
 }
 
-func parseColoredCoin(coinStr string) (cardanotx.ColoredCoin, error) {
+func parseColoredCoin(coinStr string) (uint16, string, error) {
 	parts := strings.Split(coinStr, ":")
 
-	tokenName := strings.TrimSpace(parts[0])
-	if tokenName == "" {
-		return cardanotx.ColoredCoin{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
-	}
-
-	coloredCoinID, err := strconv.ParseUint(parts[1], 10, 16)
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
 	if err != nil {
-		return cardanotx.ColoredCoin{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+		return 0, "", fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
-	return cardanotx.ColoredCoin{
-		TokenName:     tokenName,
-		ColoredCoinID: uint16(coloredCoinID),
-	}, nil
+	tokenName := strings.TrimSpace(parts[1])
+
+	return uint16(coloredCoinID), tokenName, nil
 }

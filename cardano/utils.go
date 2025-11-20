@@ -42,13 +42,15 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 		knownTokens[i] = token
 	}
 
-	for i, coloredCoin := range cardanoConfig.ColoredCoins {
-		token, err := GetNativeTokenFromName(coloredCoin.TokenName)
+	i := len(cardanoConfig.WrappedCurrencyTokens)
+	for _, coloredCoinName := range cardanoConfig.ColoredCoins {
+		token, err := GetNativeTokenFromName(coloredCoinName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve colored coins from config: %w", err)
 		}
 
-		knownTokens[len(cardanoConfig.WrappedCurrencyTokens)+i] = token
+		knownTokens[i] = token
+		i++
 	}
 
 	return knownTokens, nil

@@ -10,10 +10,7 @@ import (
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
-type ColoredCoin struct {
-	TokenName     string `json:"tokenName"`
-	ColoredCoinID uint16 `json:"coloredCoinID"`
-}
+type ColoredCoins = map[uint16]string
 
 type CardanoChainConfig struct {
 	NetworkID                cardanowallet.CardanoNetworkType `json:"networkID"`
@@ -33,7 +30,7 @@ type CardanoChainConfig struct {
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
 	WrappedCurrencyTokens    []sendtx.TokenExchangeConfig     `json:"wrappedCurrencyTokens"`
-	ColoredCoins             []ColoredCoin                    `json:"coloredCoins"`
+	ColoredCoins             ColoredCoins                     `json:"coloredCoins"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
@@ -134,13 +131,12 @@ func (config CardanoChainConfig) GetNativeTokenData(
 }
 
 func (config CardanoChainConfig) GetColoredCoin(coloredCoinID uint16) (token cardanowallet.Token, err error) {
-	for _, coloredCoin := range config.ColoredCoins {
-		if coloredCoin.ColoredCoinID == coloredCoinID {
-			return GetNativeTokenFromName(coloredCoin.TokenName)
-		}
+	tokenName, ok := config.ColoredCoins[coloredCoinID]
+	if !ok {
+		return token, fmt.Errorf("colored coin ID: %d not found", coloredCoinID)
 	}
 
-	return token, fmt.Errorf("colored coin ID: %d not found", coloredCoinID)
+	return GetNativeTokenFromName(tokenName)
 }
 
 func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {

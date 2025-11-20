@@ -36,9 +36,9 @@ type CardanoChainConfigUtxo struct {
 	Slot uint64 `json:"slot"`
 } // @name CardanoChainConfigUtxo
 
+type ColoredCoins = map[uint16]ColoredCoinEvm
 type ColoredCoinEvm struct {
 	TokenName       string `json:"tokenName"`
-	ColoredCoinID   uint16 `json:"coloredCoinID"`
 	ContractAddress string `json:"contractAddress"`
 }
 
@@ -58,7 +58,7 @@ type EthChainConfig struct {
 	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
 	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
 	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
-	ColoredCoins            []ColoredCoinEvm     `json:"coloredCoins"`
+	ColoredCoins            ColoredCoins         `json:"coloredCoins"`
 }
 
 type CardanoChainConfig struct {
