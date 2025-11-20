@@ -2,6 +2,7 @@ package cardanotx
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
@@ -139,10 +140,10 @@ func NewApexAddresses(
 }
 
 func AreVerifyingKeysTheSame(w *ApexCardanoWallet, data eth.ValidatorChainData) bool {
-	return bytes.Equal(w.MultiSig.VerificationKey, BigIntToKey(data.Key[0])) &&
-		bytes.Equal(w.Fee.VerificationKey, BigIntToKey(data.Key[1])) &&
-		bytes.Equal(w.MultiSig.StakeVerificationKey, BigIntToKey(data.Key[2])) &&
-		bytes.Equal(w.Fee.StakeVerificationKey, BigIntToKey(data.Key[3]))
+	return bytes.Equal(w.MultiSig.VerificationKey, bigIntToKey(data.Key[0])) &&
+		bytes.Equal(w.Fee.VerificationKey, bigIntToKey(data.Key[1])) &&
+		bytes.Equal(w.MultiSig.StakeVerificationKey, bigIntToKey(data.Key[2])) &&
+		bytes.Equal(w.Fee.StakeVerificationKey, bigIntToKey(data.Key[3]))
 }
 
 func getKeyHashes(validatorsData []eth.ValidatorChainData, isFee bool) (KeyHashesContainer, error) {
@@ -181,8 +182,8 @@ func getKeyHashes(validatorsData []eth.ValidatorChainData, isFee bool) (KeyHashe
 }
 
 func getKeyHashPair(paymentVerificationKey, stakeVerificationKey *big.Int) (string, string, error) {
-	paymentKeyBytes := BigIntToKey(paymentVerificationKey)
-	stakeKeyBytes := BigIntToKey(stakeVerificationKey)
+	paymentKeyBytes := bigIntToKey(paymentVerificationKey)
+	stakeKeyBytes := bigIntToKey(stakeVerificationKey)
 
 	keyHash, err := wallet.GetKeyHash(paymentKeyBytes)
 	if err != nil {
@@ -201,7 +202,42 @@ func getKeyHashPair(paymentVerificationKey, stakeVerificationKey *big.Int) (stri
 	return keyHash, stakeKeyHash, nil
 }
 
-func BigIntToKey(a *big.Int) []byte {
+func KeysDataToString(apexWallet *ApexCardanoWallet, validatorsData []eth.ValidatorChainData) string {
+	var sb strings.Builder
+
+	sb.WriteString("verifying keys of current batcher wasn't found in validators data queried from smart contract\n")
+	sb.WriteString("keys: (")
+	sb.WriteString(hex.EncodeToString(apexWallet.MultiSig.VerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.MultiSig.StakeVerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.Fee.VerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.Fee.StakeVerificationKey))
+	sb.WriteString(")\n")
+
+	sb.WriteString("validators keys: ")
+
+	for i, data := range validatorsData {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteRune('(')
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[0])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[2])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[1])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[3])))
+		sb.WriteRune(')')
+	}
+
+	return sb.String()
+}
+
+func bigIntToKey(a *big.Int) []byte {
 	if a == nil || a.BitLen() == 0 {
 		return nil
 	}

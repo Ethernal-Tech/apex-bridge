@@ -54,7 +54,7 @@ func Test_GetPolicyScripts_And_GetMultisigAddresses(t *testing.T) {
 
 func Test_BigIntToKey(t *testing.T) {
 	t.Run("less than 32 bytes", func(t *testing.T) {
-		b := BigIntToKey(big.NewInt(1))
+		b := bigIntToKey(big.NewInt(1))
 
 		require.Equal(t, 32, len(b))
 		require.Equal(t, append(make([]byte, 31), 1), b)
@@ -65,7 +65,7 @@ func Test_BigIntToKey(t *testing.T) {
 		bytes[31] = 1
 		bytes[0] = 0xFF
 
-		b := BigIntToKey(new(big.Int).SetBytes(bytes))
+		b := bigIntToKey(new(big.Int).SetBytes(bytes))
 
 		require.Equal(t, 32, len(b))
 		require.Equal(t, bytes, b)
@@ -76,7 +76,7 @@ func Test_BigIntToKey(t *testing.T) {
 		bytes[31] = 1
 		bytes[0] = 0xFF
 
-		b := BigIntToKey(new(big.Int).SetBytes(bytes))
+		b := bigIntToKey(new(big.Int).SetBytes(bytes))
 
 		require.Equal(t, 32, len(b))
 		require.Equal(t, bytes[:32], b)

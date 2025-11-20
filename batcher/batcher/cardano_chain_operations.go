@@ -424,29 +424,15 @@ func (cco *CardanoChainOperations) getValidatorsChainData(
 		return nil, err
 	}
 
-	cco.logger.Debug("checking validators data. wallet verification keys",
-		"MultiSig.VerificationKey", cco.wallet.MultiSig.VerificationKey,
-		"Fee.VerificationKey", cco.wallet.Fee.VerificationKey,
-		"MultiSig.StakeVerificationKey", cco.wallet.MultiSig.StakeVerificationKey,
-		"Fee.StakeVerificationKey", cco.wallet.Fee.StakeVerificationKey,
-	)
-
 	for _, data := range validatorsData {
-		cco.logger.Debug("checking validators data. sc verification keys",
-			"MultiSig.VerificationKey", cardano.BigIntToKey(data.Key[0]),
-			"Fee.VerificationKey", cardano.BigIntToKey(data.Key[1]),
-			"MultiSig.StakeVerificationKey", cardano.BigIntToKey(data.Key[2]),
-			"Fee.StakeVerificationKey", cardano.BigIntToKey(data.Key[3]),
-		)
-
 		if cardano.AreVerifyingKeysTheSame(cco.wallet, data) {
 			return validatorsData, nil
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"verifying keys of current batcher wasn't found in validators data queried from smart contract")
+	return nil, errors.New(cardano.KeysDataToString(cco.wallet, validatorsData))
 }
+
 func (cco *CardanoChainOperations) createBatchInitialData(
 	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
@@ -981,6 +967,8 @@ func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
 			multisigUtxos = append(multisigUtxos, utxo)
 		} else {
 			cco.logger.Debug("skipping active multisig utxo",
+				"hash", utxo.Input.Hash,
+				"indx", utxo.Input.Index,
 				"addr", utxo.Output.Address,
 				"amnt", utxo.Output.Amount,
 				"slot", utxo.Output.Slot)

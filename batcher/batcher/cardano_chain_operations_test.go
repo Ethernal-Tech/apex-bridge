@@ -189,6 +189,13 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			{
 				Key: [4]*big.Int{
 					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				},
+			},
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.StakeSigningKey), new(big.Int).SetBytes(wallet.MultiSig.StakeSigningKey),
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
 				},
 			},
 		}
@@ -1430,7 +1437,8 @@ func TestGetUTXOsForValidatorChange(t *testing.T) {
 	}, nil)
 
 	cco := CardanoChainOperations{
-		db: &db,
+		logger: hclog.NewNullLogger(),
+		db:     &db,
 		config: &cardano.CardanoChainConfig{
 			MaxUtxoCount:    10,
 			MaxFeeUtxoCount: 3,
