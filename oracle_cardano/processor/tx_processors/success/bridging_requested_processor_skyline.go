@@ -97,6 +97,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 		isCardanoDest = true
 		destChainFeeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
 		feeCurrencyDst = cardanoDestConfig.FeeAddrBridgingAmount
+
 		coloredCoinsIDToToken, err = mapColoredCoinsToNativeTokens(cardanoDestConfig.ColoredCoins)
 		if err != nil {
 			return fmt.Errorf(
@@ -126,8 +127,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 
 		var (
 			brReceiver                *cCore.BridgingRequestReceiver
-			receiverAmountCurrencyDst uint64 = 0
-			receiverAmountWrappedDst  uint64 = 0
+			receiverAmountCurrencyDst uint64
+			receiverAmountWrappedDst  uint64
 		)
 
 		if isCardanoDest {
@@ -226,6 +227,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 	}
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
+
 	destFeeAddress, isCardanoDest, err := p.getDestChainInfo(metadata, appConfig, cardanoDestConfig, ethDestConfig)
 	if err != nil {
 		return err
@@ -259,15 +261,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		}
 	}
 
-	coloredCoinsIDToToken := make(map[uint16]*cardanowallet.Token, len(cardanoDestConfig.ColoredCoins))
-
-	for _, cc := range cardanoDestConfig.ColoredCoins {
-		ccToken, err := cardanotx.GetNativeTokenFromName(cc.TokenName)
-		if err != nil {
-			return fmt.Errorf("failed to resolve native token for colored coin %s: %w", cc.TokenName, err)
-		}
-
-		coloredCoinsIDToToken[cc.ColoredCoinID] = &ccToken
+	coloredCoinsIDToToken, err := mapColoredCoinsToNativeTokens(cardanoSrcConfig.ColoredCoins)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to map colored coins to native tokens for source chain %s: %w",
+			cardanoSrcConfig.ChainID,
+			err,
+		)
 	}
 
 	if err := p.validateTokenAmounts(
@@ -380,7 +380,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 
 		if receiver.ColoredCoinID != 0 {
 			return fmt.Errorf(
-				"wrapped-token receiver on Cardano destination must have ColoredCoinId = 0 (got %d): %v", receiver.ColoredCoinID, ctx.Metadata,
+				"wrapped-token receiver on Cardano destination must have ColoredCoinId = 0 (got %d): %v",
+				receiver.ColoredCoinID, ctx.Metadata,
 			)
 		}
 
@@ -480,7 +481,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	multisigUtxo *indexer.TxOutput,
 	receiverCtx *receiverValidationContext,
 	isCardanoDest bool,
-	originChainID string, //tx.OriginChainID
+	originChainID string,
 	coloredCoinsIDToToken map[uint16]*cardanowallet.Token,
 ) error {
 	cardanoSrcConfig := receiverCtx.CardanoSrcConfig
@@ -498,7 +499,9 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	receiverCtx.NativeCurrencySum.Add(receiverCtx.NativeCurrencySum, new(big.Int).SetUint64(metadata.BridgingFee))
 	receiverCtx.NativeCurrencySum.Add(receiverCtx.NativeCurrencySum, new(big.Int).SetUint64(metadata.OperationFee))
 
-	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(receiverCtx.HasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0)
+	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(
+		receiverCtx.HasNativeTokenOnSource || len(multisigUtxo.Tokens) > 0,
+	)
 
 	if metadata.BridgingFee < minBridgingFee {
 		return fmt.Errorf("bridging fee in metadata receivers is less than minimum: fee %d, minFee %d, metadata %v",
@@ -518,17 +521,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 			if err != nil {
 				return err
 			}
-
 		} else {
-			for _, cc := range cardanoSrcConfig.ColoredCoins {
-				if cc.ColoredCoinID == receiverCtx.WrappedColCoin {
-					nativeToken, err = cardanotx.GetNativeTokenFromName(cc.TokenName)
-					if err != nil {
-						return err
-					}
-
-					break
-				}
+			nativeToken, err = cardanotx.GetNativeTokenFromName(cardanoSrcConfig.ColoredCoins[receiverCtx.WrappedColCoin])
+			if err != nil {
+				return err
 			}
 		}
 
@@ -540,18 +536,18 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 		}
 	}
 
-	for _, cc := range cardanoSrcConfig.ColoredCoins {
-		ccToken := coloredCoinsIDToToken[cc.ColoredCoinID]
+	for ccID := range cardanoSrcConfig.ColoredCoins {
+		ccToken := coloredCoinsIDToToken[ccID]
 		multisigColCoinTokenAmount := new(big.Int).SetUint64(cardanotx.GetTokenAmount(multisigUtxo, ccToken.String()))
 
-		ccAmountSum, exists := receiverCtx.ColoredCoinsSum[cc.ColoredCoinID]
+		ccAmountSum, exists := receiverCtx.ColoredCoinsSum[ccID]
 
 		// Case 1: receiver does NOT include this colored coin
 		if !exists {
 			if multisigColCoinTokenAmount.Sign() > 0 {
 				return fmt.Errorf(
 					"colored coin %d amount mismatch: expected %v but multisig has %v",
-					cc.ColoredCoinID, 0, multisigColCoinTokenAmount,
+					ccID, 0, multisigColCoinTokenAmount,
 				)
 			}
 
@@ -562,7 +558,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 		if ccAmountSum.Cmp(multisigColCoinTokenAmount) != 0 {
 			return fmt.Errorf(
 				"colored coin %d amount mismatch: expected %v but got %v",
-				cc.ColoredCoinID, ccAmountSum, multisigColCoinTokenAmount,
+				ccID, ccAmountSum, multisigColCoinTokenAmount,
 			)
 		}
 	}
@@ -575,6 +571,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	}
 
 	var err error
+
 	srcMinUtxo := cardanoSrcConfig.UtxoMinAmount
 	if receiverCtx.WrappedTokenSum.Sign() > 0 || len(receiverCtx.ColoredCoinsSum) > 0 {
 		srcMinUtxo, err = p.calculateMinUtxo(
@@ -595,7 +592,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	maxTokenAmt := receiverCtx.BridgingSettings.MaxTokenAmountAllowedToBridge
 	if maxTokenAmt != nil && maxTokenAmt.Sign() > 0 {
 		if receiverCtx.WrappedTokenSum.Cmp(maxTokenAmt) == 1 {
-			return fmt.Errorf("sum of wrapped token: %v greater than maximum allowed: %v", receiverCtx.WrappedTokenSum, maxTokenAmt)
+			return fmt.Errorf("sum of wrapped token: %v greater than maximum allowed: %v",
+				receiverCtx.WrappedTokenSum, maxTokenAmt)
 		}
 
 		for coloredCoinID, coloredCoinAmount := range receiverCtx.ColoredCoinsSum {
@@ -664,18 +662,16 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 }
 
 // mapColoredCoinsToNativeTokens returns a map from ColoredCoinID to the corresponding native token.
-func mapColoredCoinsToNativeTokens(coloredCoins []cardanotx.ColoredCoin) (map[uint16]*cardanowallet.Token, error) {
+func mapColoredCoinsToNativeTokens(coloredCoins cardanotx.ColoredCoins) (map[uint16]*cardanowallet.Token, error) {
 	coloredCoinsIDToToken := make(map[uint16]*cardanowallet.Token, len(coloredCoins))
 
-	for _, cc := range coloredCoins {
-		token, err := cardanotx.GetNativeTokenFromName(cc.TokenName)
+	for ccID, ccName := range coloredCoins {
+		ccToken, err := cardanotx.GetNativeTokenFromName(ccName)
 		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to resolve native token for colored coin %s: %w",
-				cc.TokenName, err,
-			)
+			return nil, fmt.Errorf("failed to resolve native token for colored coin %s: %w", ccName, err)
 		}
-		coloredCoinsIDToToken[cc.ColoredCoinID] = &token
+
+		coloredCoinsIDToToken[ccID] = &ccToken
 	}
 
 	return coloredCoinsIDToToken, nil

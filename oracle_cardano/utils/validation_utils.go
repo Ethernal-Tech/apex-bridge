@@ -48,13 +48,16 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 		knownTokens[i] = token
 	}
 
-	for i, coloredCoin := range chainConfig.ColoredCoins {
-		token, err := cardanotx.GetNativeTokenFromName(coloredCoin.TokenName)
+	i := int(0)
+
+	for _, ccName := range chainConfig.ColoredCoins {
+		token, err := cardanotx.GetNativeTokenFromName(ccName)
 		if err != nil {
-			return fmt.Errorf("failed to get native token for colored coin '%s': %w", coloredCoin.TokenName, err)
+			return fmt.Errorf("failed to get native token for colored coin '%s': %w", ccName, err)
 		}
 
 		knownTokens[i+wrappedCurrencyTokensLen] = token
+		i++
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(

@@ -43,6 +43,7 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 	}
 
 	i := len(cardanoConfig.WrappedCurrencyTokens)
+
 	for _, coloredCoinName := range cardanoConfig.ColoredCoins {
 		token, err := GetNativeTokenFromName(coloredCoinName)
 		if err != nil {
