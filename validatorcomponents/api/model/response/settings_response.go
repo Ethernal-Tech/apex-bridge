@@ -1,6 +1,7 @@
 package response
 
 import (
+	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 )
 
@@ -41,5 +42,33 @@ func NewSettingsResponse(
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
 		AllowedDirections:              appConfig.BridgingSettings.AllowedDirections,
+	}
+}
+
+type ValidatorChangeStatusReponse struct {
+	InProgress bool `json:"inProgress"`
+}
+
+func NewValidatorChangeStatusResponse(
+	inProgress bool,
+) *ValidatorChangeStatusReponse {
+	return &ValidatorChangeStatusReponse{
+		InProgress: inProgress,
+	}
+}
+
+type MultiSigAddressesResponse struct {
+	CardanoChains map[string]*oracleCore.BridgingAddresses `json:"bridgingAddress"`
+}
+
+func NewMultiSigAddressesResponse(appConfig *core.AppConfig) *MultiSigAddressesResponse {
+	cardanoChainsMap := make(map[string]*oracleCore.BridgingAddresses)
+
+	for chainID, chainAppConfig := range appConfig.CardanoChains {
+		cardanoChainsMap[chainID] = &chainAppConfig.BridgingAddresses
+	}
+
+	return &MultiSigAddressesResponse{
+		CardanoChains: cardanoChainsMap,
 	}
 }

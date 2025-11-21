@@ -98,6 +98,7 @@ func (sp *EthStateProcessor) RunChecks(
 	chainID string,
 	maxClaimsToGroup int,
 	priority uint8,
+	isValidatorSetPending bool,
 ) {
 	expectedTxs, err := sp.db.GetExpectedTxs(chainID, priority, 0)
 	if err != nil {
@@ -132,8 +133,8 @@ func (sp *EthStateProcessor) RunChecks(
 			"for chainID", sp.state.blockInfo.ChainID,
 			"blockInfo", sp.state.blockInfo)
 
-		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup)
-		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup)
+		sp.checkUnprocessedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
+		sp.checkExpectedTxs(bridgeClaims, maxClaimsToGroup, isValidatorSetPending)
 
 		if !bridgeClaims.CanAddMore(maxClaimsToGroup) {
 			break
@@ -236,9 +237,13 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, len(event.TxHashes))
+	result := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
 
-	for idx, hash := range event.TxHashes {
+	for _, hash := range event.TxHashes {
+		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
+			continue
+		}
+
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -249,7 +254,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 			return nil, err
 		}
 
-		result[idx] = tx
+		result = append(result, tx)
 	}
 
 	return result, nil
@@ -405,6 +410,7 @@ func (sp *EthStateProcessor) constructBridgeClaimsBlockInfo(
 func (sp *EthStateProcessor) checkUnprocessedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.EthTx
 
@@ -443,6 +449,10 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 
 			onInvalidTx(unprocessedTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 
@@ -511,6 +521,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 func (sp *EthStateProcessor) checkExpectedTxs(
 	bridgeClaims *oracleCore.BridgeClaims,
 	maxClaimsToGroup int,
+	isValidatorSetPending bool,
 ) {
 	var relevantExpiredTxs []*core.BridgeExpectedEthTx
 
@@ -578,6 +589,10 @@ func (sp *EthStateProcessor) checkExpectedTxs(
 
 			onInvalidTx(expiredTx)
 
+			continue
+		}
+
+		if isValidatorSetPending && txProcessor.GetType() != common.BridgingTxTypeBatchExecution {
 			continue
 		}
 

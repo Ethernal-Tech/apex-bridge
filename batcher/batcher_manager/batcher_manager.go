@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/batcher"
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -16,9 +18,10 @@ import (
 )
 
 type BatchManagerImpl struct {
-	ctx      context.Context
-	config   *core.BatcherManagerConfiguration
-	batchers []core.Batcher
+	ctx                  context.Context
+	config               *core.BatcherManagerConfiguration
+	batchers             []core.Batcher
+	validatorSetObserver validatorobserver.IValidatorSetObserver
 }
 
 var _ core.BatcherManager = (*BatchManagerImpl)(nil)
@@ -29,8 +32,11 @@ func NewBatcherManager(
 	secretsManager secrets.SecretsManager,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	cardanoIndexerDbs map[string]indexer.Database,
+	cardanoIndexers map[string]*indexer.BlockIndexer,
 	ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
+	observerTimeout time.Duration,
 	logger hclog.Logger,
 ) (*BatchManagerImpl, error) {
 	var (
@@ -45,12 +51,13 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs, secretsManager, logger)
+			operations, err = getCardanoOperations(chainConfig, cardanoIndexerDbs,
+				cardanoIndexers, secretsManager, observerTimeout, logger)
 			if err != nil {
 				return nil, err
 			}
 		case common.ChainTypeEVMStr:
-			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger)
+			operations, err = getEthOperations(chainConfig, ethIndexerDbs, secretsManager, logger, bridgeSmartContract)
 			if err != nil {
 				return nil, err
 			}
@@ -72,9 +79,10 @@ func NewBatcherManager(
 	}
 
 	return &BatchManagerImpl{
-		ctx:      ctx,
-		config:   config,
-		batchers: batchers,
+		ctx:                  ctx,
+		config:               config,
+		batchers:             batchers,
+		validatorSetObserver: validatorSetObserver,
 	}, nil
 }
 
@@ -82,19 +90,44 @@ func (bm *BatchManagerImpl) Start() {
 	for _, b := range bm.batchers {
 		go b.Start(bm.ctx)
 	}
+
+	go func() {
+		for {
+			select {
+			case <-bm.ctx.Done():
+				return
+			case vs := <-bm.validatorSetObserver.GetValidatorSetReader():
+				select {
+				case <-bm.ctx.Done():
+					return
+				default:
+				}
+
+				for _, b := range bm.batchers {
+					b.UpdateValidatorSet(vs)
+				}
+			}
+		}
+	}()
 }
 
 func getCardanoOperations(
 	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	cardanoIndexers map[string]*indexer.BlockIndexer, secretsManager secrets.SecretsManager,
+	observerTimeout time.Duration, logger hclog.Logger,
 ) (core.ChainOperations, error) {
 	db, exists := cardanoIndexerDbs[config.ChainID]
 	if !exists {
 		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
 	}
 
+	cardanoIndexer, exists := cardanoIndexers[config.ChainID]
+	if !exists {
+		return nil, fmt.Errorf("cardano indexer not exists for chain: %s", config.ChainID)
+	}
+
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific, db, secretsManager, config.ChainID, logger)
+		config.ChainSpecific, db, cardanoIndexer, secretsManager, config.ChainID, observerTimeout, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +137,7 @@ func getCardanoOperations(
 
 func getEthOperations(
 	config core.ChainConfig, ethIndexerDbs map[string]eventTrackerStore.EventTrackerStore,
-	secretsManager secrets.SecretsManager, logger hclog.Logger,
+	secretsManager secrets.SecretsManager, logger hclog.Logger, bridgeSC eth.IBridgeSmartContract,
 ) (core.ChainOperations, error) {
 	db, exists := ethIndexerDbs[config.ChainID]
 	if !exists {
@@ -112,7 +145,7 @@ func getEthOperations(
 	}
 
 	operations, err := batcher.NewEVMChainOperations(
-		config.ChainSpecific, secretsManager, db, config.ChainID, logger)
+		config.ChainSpecific, secretsManager, db, config.ChainID, logger, bridgeSC)
 	if err != nil {
 		return nil, err
 	}

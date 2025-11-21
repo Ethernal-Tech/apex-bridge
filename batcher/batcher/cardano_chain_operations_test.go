@@ -17,7 +17,9 @@ import (
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/indexer/gouroboros"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -26,6 +28,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type IndexerUpdaterMock struct {
+	mock.Mock
+}
+
+func (*IndexerUpdaterMock) AddNewAddressesOfInterest(address ...string) {}
 
 func TestCardanoChainOperations_IsSynchronized(t *testing.T) {
 	chainID := "prime"
@@ -115,7 +123,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -181,6 +189,13 @@ func TestGenerateBatchTransaction(t *testing.T) {
 			{
 				Key: [4]*big.Int{
 					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int),
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				},
+			},
+			{
+				Key: [4]*big.Int{
+					new(big.Int).SetBytes(wallet.MultiSig.StakeSigningKey), new(big.Int).SetBytes(wallet.MultiSig.StakeSigningKey),
+					new(big.Int).SetBytes(wallet.MultiSig.VerificationKey), new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
 				},
 			},
 		}
@@ -324,7 +339,7 @@ func Test_createBatchInitialData(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -448,7 +463,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -637,7 +652,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 
 		result, err := cco.GenerateBatchTransaction(ctx, bridgeSmartContractMock, destinationChain, confirmedTransactions, batchNonceID)
 		require.NoError(t, err)
-		require.Equal(t, true, result.IsConsolidation)
+		require.Equal(t, uint8(Consolidation), result.BatchType)
 		require.NotNil(t, result.TxRaw)
 		require.NotEqual(t, "", result.TxHash)
 	})
@@ -737,7 +752,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	cco, err := NewCardanoChainOperations(configRaw, dbMock, secretsMngr, "prime", hclog.NewNullLogger())
+	cco, err := NewCardanoChainOperations(configRaw, dbMock, nil, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	cco.txProvider = txProviderMock
@@ -1214,4 +1229,233 @@ func generateSmallUtxoOutputs(value uint64, n uint64) ([]*indexer.TxInputOutput,
 	}
 
 	return utxoOutput, returnSum
+}
+
+func Test_CreateValidatorSetChangeTx(t *testing.T) {
+	testDir, err := os.MkdirTemp("", "bat-chain-ops-tx")
+	require.NoError(t, err)
+
+	bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+
+	defer func() {
+		os.RemoveAll(testDir)
+		os.Remove(testDir)
+	}()
+
+	secretsMngr, err := secretsHelper.CreateSecretsManager(&secrets.SecretsManagerConfig{
+		Path: filepath.Join(testDir, "stp"),
+		Type: secrets.Local,
+	})
+	require.NoError(t, err)
+
+	wallet, err := cardano.GenerateWallet(secretsMngr, "prime", true, false)
+	require.NoError(t, err)
+
+	wallet2, err := cardano.GenerateWallet(secretsMngr, "prime1", true, false)
+	require.NoError(t, err)
+
+	txProviderMock := &cardano.TxProviderTestMock{
+		ReturnDefaultParameters: true,
+	}
+
+	configRaw := json.RawMessage([]byte(`{
+			"socketPath": "./socket",
+			"testnetMagic": 42,
+			"minUtxoAmount": 1000,
+			"maxFeeUtxoCount": 2,
+			"maxUtxoCount": 5,
+			"slotRoundingThreshold": 2
+			}`))
+
+	validatorsChainData := []eth.ValidatorChainData{
+		{
+			Key: [4]*big.Int{
+				new(big.Int).SetBytes(wallet.MultiSig.VerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.VerificationKey),
+				new(big.Int).SetBytes(wallet.MultiSig.StakeVerificationKey),
+				new(big.Int).SetBytes(wallet.Fee.StakeVerificationKey),
+			},
+		},
+	}
+
+	validatorPerChain := validatorobserver.ValidatorsPerChain{
+		"prime": validatorobserver.ValidatorsChainData{
+			Keys: validatorsChainData,
+		},
+	}
+
+	newValidatorChainData := append([]eth.ValidatorChainData{}, validatorsChainData[0], eth.ValidatorChainData{
+		Key: [4]*big.Int{
+			new(big.Int).SetBytes(wallet2.MultiSig.VerificationKey),
+			new(big.Int).SetBytes(wallet2.Fee.VerificationKey),
+			new(big.Int).SetBytes(wallet2.MultiSig.StakeVerificationKey),
+			new(big.Int).SetBytes(wallet2.Fee.StakeVerificationKey),
+		},
+	})
+
+	newValidatorPerChain := validatorobserver.ValidatorsPerChain{
+		"prime": validatorobserver.ValidatorsChainData{
+			Keys: newValidatorChainData,
+		},
+	}
+
+	indxUpdaterMock := &IndexerUpdaterMock{}
+	indxUpdaterMock.On("AddNewAddressesOfInterest", mock.Anything, mock.Anything).Return()
+
+	cco, err := NewCardanoChainOperations(configRaw, nil, indxUpdaterMock, secretsMngr, "prime", 1*time.Millisecond, hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	cco.txProvider = txProviderMock
+
+	_, activeAddresses, err := generatePolicyAndMultisig(&validatorPerChain, "prime", cco.cardanoCliBinary, cco.config.NetworkMagic)
+	require.NoError(t, err)
+
+	_, newAddresses, err := generatePolicyAndMultisig(&newValidatorPerChain, "prime", cco.cardanoCliBinary, cco.config.NetworkMagic)
+	require.NoError(t, err)
+
+	bridgeSmartContractMock.On("GetValidatorsChainData", mock.Anything, mock.Anything).Return(validatorsChainData, nil)
+	bridgeSmartContractMock.On("SubmitSignedBatch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	const nextBatchID = 1
+
+	runTest := func(multisigNum, feeNum uint) *indexer.TxInfo {
+		dbMock := &indexer.DatabaseMock{}
+		cco.db = dbMock
+
+		multisig := generateUTXO(multisigNum)
+		fee := generateUTXO(feeNum)
+
+		dbMock.On("GetAllTxOutputs", activeAddresses.Multisig.Payment, mock.Anything).Return(multisig, nil)
+		dbMock.On("GetAllTxOutputs", activeAddresses.Fee.Payment, mock.Anything).Return(fee, nil)
+
+		dbMock.On("GetLatestBlockPoint").Return(&indexer.BlockPoint{
+			BlockSlot: 4,
+			BlockHash: indexer.Hash{},
+		}, nil)
+
+		generatedData, err := cco.CreateValidatorSetChangeTx(context.TODO(), common.ChainIDStrPrime,
+			nextBatchID, bridgeSmartContractMock, validatorobserver.ValidatorsPerChain{
+				common.ChainIDStrPrime: {
+					Keys:       newValidatorChainData,
+					SlotNumber: 0,
+				},
+			}, 0, 0)
+		require.NoError(t, err)
+
+		if generatedData.BatchType == uint8(ValidatorSetFinal) {
+			return nil
+		}
+
+		info, err := gouroboros.ParseTxInfo(generatedData.TxRaw, true)
+		require.NoError(t, err)
+
+		return &info
+	}
+
+	t.Run("Test 10 multisig, 2 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 2)
+
+		require.Equal(t, len(info.Outputs), 2)
+		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
+		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
+
+		// max utxos = 5 => output = 3 multisig utxos & 2 fee utxos to old fee address
+		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
+	})
+
+	t.Run("Test 0 multisig, 10 fee UTXOs", func(t *testing.T) {
+		info := runTest(0, 10)
+
+		// max utxos = 5 => output = 5 utxos to new fee address reduced for fee amount
+		require.Equal(t, len(info.Outputs), 1)
+		require.Equal(t, info.Outputs[0].Address, newAddresses.Fee.Payment)
+		require.True(t, info.Outputs[0].Amount < 5*1000000)
+	})
+
+	t.Run("Test 10 multisig, 10 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 10)
+
+		require.Equal(t, len(info.Outputs), 2)
+		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
+		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
+
+		// max utxos = 5 => output = 3 multisig utxos & 2 fee utxos to old fee address
+		require.Equal(t, info.Outputs[0].Amount, uint64(3*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
+	})
+
+	t.Run("Test 2 multisig, 2 fee UTXOs", func(t *testing.T) {
+		info := runTest(2, 2)
+
+		require.Equal(t, len(info.Outputs), 2)
+		require.Equal(t, info.Outputs[0].Address, newAddresses.Multisig.Payment)
+		require.Equal(t, info.Outputs[1].Address, activeAddresses.Fee.Payment)
+
+		// max utxos = 5 => output = 2 multisig utxos & 2 fee utxos to old fee address
+		require.Equal(t, info.Outputs[0].Amount, uint64(2*1000000))
+		require.True(t, info.Outputs[1].Amount > 0)
+	})
+
+	t.Run("Test 10 multisig, 0 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 0)
+
+		// no fee utxos => finalize batch
+		require.Nil(t, info)
+	})
+
+	t.Run("Test 10 multisig, 1 fee UTXOs", func(t *testing.T) {
+		info := runTest(10, 1)
+
+		// 1 fee utxo < MinUtxoAmountDefault*2 => finalize batch
+		require.Nil(t, info)
+	})
+}
+
+func TestGetUTXOsForValidatorChange(t *testing.T) {
+	db := indexer.DatabaseMock{}
+	db.On("GetAllTxOutputs", "fee", mock.Anything).Return([]*indexer.TxInputOutput{
+		{},
+		{},
+	}, nil)
+	db.On("GetAllTxOutputs", "multisig", mock.Anything).Return([]*indexer.TxInputOutput{
+		{
+			Output: indexer.TxOutput{Address: "1", Slot: 56}, // should be omitted from the returned UTXOs
+		},
+		{
+			Output: indexer.TxOutput{Address: "2", Slot: 20},
+		},
+		{
+			Output: indexer.TxOutput{Address: "3", Slot: 83}, // should be omitted from the returned UTXOs
+		},
+		{
+			Output: indexer.TxOutput{Address: "4", Slot: 44},
+		},
+		{
+			Output: indexer.TxOutput{Address: "5", Slot: 12},
+		},
+	}, nil)
+
+	cco := CardanoChainOperations{
+		logger: hclog.NewNullLogger(),
+		db:     &db,
+		config: &cardano.CardanoChainConfig{
+			MaxUtxoCount:    10,
+			MaxFeeUtxoCount: 3,
+		},
+	}
+
+	ms, fee, onlyFee, err := cco.getUTXOsForValidatorChange("multisig", "fee", 50)
+
+	require.NoError(t, err)
+	require.Len(t, ms, 3)
+
+	correctAddr := []string{"2", "4", "5"}
+
+	for _, o := range ms {
+		require.Contains(t, correctAddr, o.Output.Address)
+	}
+
+	require.Len(t, fee, 2)
+	require.False(t, onlyFee)
 }

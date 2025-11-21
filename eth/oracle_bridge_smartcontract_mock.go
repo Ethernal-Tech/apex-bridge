@@ -38,17 +38,17 @@ func (m *OracleBridgeSmartContractMock) GetLastObservedBlock(
 }
 
 // GetRawTransactionFromLastBatch implements IOracleBridgeSmartContract.
-func (m *OracleBridgeSmartContractMock) GetRawTransactionFromLastBatch(
+func (m *OracleBridgeSmartContractMock) GetRawTransactionAndBatchTypeFromLastBatch(
 	ctx context.Context, chainID string,
-) ([]byte, error) {
+) ([]byte, uint8, error) {
 	args := m.Called()
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).([]byte)
 
-		return arg0, args.Error(1)
+		return arg0, 0, args.Error(1)
 	}
 
-	return nil, args.Error(1)
+	return nil, 0, args.Error(1)
 }
 
 // SubmitClaims implements IOracleBridgeSmartContract.

@@ -24,19 +24,23 @@ cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 ```
 - Generate bridge bindings with the command:
 ```shell
-BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
-       --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts
+(cd "$BASEPATH" && npx hardhat compile)
+rm -rf ./contractbinding/contractbuild && mkdir ./contractbinding/contractbuild
+cat "${BASEPATH}/artifacts/contracts/Bridge.sol/Bridge.json" | jq .abi >> ./contractbinding/contractbuild/Bridge.sol.abi
+abigen --abi ./contractbinding/contractbuild/Bridge.sol.abi --pkg main --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+cat "${BASEPATH}/artifacts/contracts/Admin.sol/Admin.json" | jq .abi >> ./contractbinding/contractbuild/Admin.sol.abi
+abigen --abi ./contractbinding/contractbuild/Admin.sol.abi --pkg main --type AdminContract --out ./contractbinding/AdminContract.go --pkg contractbinding
+rm -rf ./contractbinding/contractbuild
 ```
 - Generate nexus bindings with the command:
 ```shell
-BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Gateway.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi --pkg main \
-       --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway
+(cd "$BASEPATH" && npx hardhat compile)
+rm -rf ./contractbinding/contractbuild && mkdir ./contractbinding/contractbuild
+cat "${BASEPATH}/artifacts/contracts/Gateway.sol/Gateway.json" | jq .abi >> ./contractbinding/contractbuild/GatewayContract.sol.abi
+abigen --abi ./contractbinding/contractbuild/GatewayContract.sol.abi --pkg main --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
+rm -rf ./contractbinding/contractbuild
 ```
 
 # How to generate blade secrets
@@ -111,6 +115,7 @@ $ go run ./main.go generate-configs \
         --output-relayer-file-name <relayer config json output file name>.json \
         --bridge-node-url <node URL of bridge chain> \
         --bridge-sc-address <bridging smart contract address on bridge chain> \
+        --admin-sc-address <admin smart contract address on bridge chain> \
         --relayer-data-dir <relayer data dir for secrets> \
         --relayer-config <relayer secrets config file path> \
         --dbs-path <path to where databases will be stored> \
@@ -409,4 +414,15 @@ apex-bridge sc-version \
         --addr 0xaBef000000000000000000000000000000000004:Slots \
         --addr 0xaBef000000000000000000000000000000000005:Validators \
         --addr 0xaBef000000000000000000000000000000000006:Admin \
+```
+
+# How to set bridge and apex-web to validator-change mode
+
+``` shell
+$ apex-bridge bridge-admin set-validator-change \
+        --url http://127.0.0.1:12013 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --key-config /path/config.json \
+        --validator-change (true/false) \
+        --contract-addr <admin contract address>
 ```

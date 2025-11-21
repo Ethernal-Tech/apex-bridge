@@ -30,6 +30,8 @@ type CardanoChainObserverImpl struct {
 	config    *cCore.CardanoChainConfig
 	isClosed  uint32
 	logger    hclog.Logger
+
+	blockIndexer *indexer.BlockIndexer
 }
 
 var _ core.CardanoChainObserver = (*CardanoChainObserverImpl)(nil)
@@ -80,12 +82,17 @@ func NewCardanoChainObserver(
 	syncer := gouroboros.NewBlockSyncer(syncerConfig, blockIndexer, logger.Named("block_syncer"))
 
 	return &CardanoChainObserverImpl{
-		ctx:       ctx,
-		indexerDB: indexerDB,
-		syncer:    syncer,
-		logger:    logger,
-		config:    config,
+		ctx:          ctx,
+		indexerDB:    indexerDB,
+		syncer:       syncer,
+		logger:       logger,
+		config:       config,
+		blockIndexer: blockIndexer,
 	}, nil
+}
+
+func (co *CardanoChainObserverImpl) GetIndexer() *indexer.BlockIndexer {
+	return co.blockIndexer
 }
 
 func (co *CardanoChainObserverImpl) Start() error {

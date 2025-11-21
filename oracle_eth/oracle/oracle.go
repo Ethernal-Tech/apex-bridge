@@ -16,6 +16,7 @@ import (
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/tx_processors/failed"
 	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/tx_processors/success"
 	ethtxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_eth/processor/txs_processor"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/hashicorp/go-hclog"
 	"go.etcd.io/bbolt"
@@ -33,6 +34,7 @@ type OracleImpl struct {
 	ethChainObservers        []core.EthChainObserver
 	confirmedBlockSubmitters []oCore.ConfirmedBlocksSubmitter
 	db                       core.Database
+	validatorSetObserver     validatorobserver.IValidatorSetObserver
 	logger                   hclog.Logger
 }
 
@@ -47,6 +49,7 @@ func NewEthOracle(
 	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*OracleImpl, error) {
 	db := &databaseaccess.BBoltDatabase{}
@@ -93,7 +96,7 @@ func NewEthOracle(
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
 		ctx, appConfig, ethStateProcessor, bridgeDataFetcher, bridgeSubmitter,
-		bridgingRequestStateUpdater, txsProcessorLogger)
+		bridgingRequestStateUpdater, validatorSetObserver, txsProcessorLogger)
 
 	ethChainObservers := make([]core.EthChainObserver, 0, len(appConfig.EthChains))
 	confirmedBlockSubmitters := make([]oCore.ConfirmedBlocksSubmitter, 0, len(appConfig.EthChains))
@@ -102,7 +105,8 @@ func NewEthOracle(
 		indexerDB := indexerDbs[ethChainConfig.ChainID]
 
 		cbs, err := bridge.NewConfirmedBlocksSubmitter(
-			bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID, logger)
+			bridgeSubmitter, appConfig, db, indexerDB, ethChainConfig.ChainID,
+			validatorSetObserver, logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create evm block submitter for `%s`: %w", ethChainConfig.ChainID, err)
 		}
@@ -127,6 +131,7 @@ func NewEthOracle(
 		ethChainObservers:        ethChainObservers,
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
 		db:                       db,
+		validatorSetObserver:     validatorSetObserver,
 		logger:                   logger,
 	}, nil
 }

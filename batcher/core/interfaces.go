@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 )
 
 type GeneratedBatchTxData struct {
-	IsConsolidation bool
-	TxRaw           []byte
-	TxHash          string
+	BatchType uint8
+	TxRaw     []byte
+	TxHash    string
 }
 
 type BatcherManager interface {
@@ -18,6 +19,7 @@ type BatcherManager interface {
 
 type Batcher interface {
 	Start(ctx context.Context)
+	UpdateValidatorSet(validators *validatorobserver.ValidatorsPerChain)
 }
 
 type ChainOperations interface {
@@ -30,9 +32,23 @@ type ChainOperations interface {
 		ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, chainID string,
 	) (bool, error)
 	Submit(ctx context.Context, bridgeSmartContract eth.IBridgeSmartContract, batch eth.SignedBatch) error
+
+	// Update & transfer to new multisig
+	CreateValidatorSetChangeTx(ctx context.Context,
+		chainID string, nextBatchID uint64,
+		bridgeSmartContract eth.IBridgeSmartContract,
+		validatorsKeys validatorobserver.ValidatorsPerChain,
+		lastBatchID uint64, lastBatchType uint8,
+	) (*GeneratedBatchTxData, error)
+	GenerateMultisigAddress(validators *validatorobserver.ValidatorsPerChain, chainID string) error
 }
 
 // ChainSpecificConfig defines the interface for chain-specific configurations
 type ChainSpecificConfig interface {
 	GetChainType() string
+}
+
+// Defines the interface for indexer multisig address update during VS update
+type IndexerUpdater interface {
+	AddNewAddressesOfInterest(address ...string)
 }

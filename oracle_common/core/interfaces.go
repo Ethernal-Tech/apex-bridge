@@ -54,7 +54,7 @@ type SpecificChainTxsProcessorState interface {
 	GetChainType() string
 	Reset()
 	ProcessSavedEvents()
-	RunChecks(bridgeClaims *BridgeClaims, chainID string, maxClaimsToGroup int, priority uint8)
+	RunChecks(bridgeClaims *BridgeClaims, chainID string, maxClaimsToGroup int, priority uint8, isValidatorPending bool)
 	ProcessSubmitClaimsEvents(events *SubmitClaimsEvents, claims *BridgeClaims)
 	UpdateBridgingRequestStates(
 		bridgeClaims *BridgeClaims, bridgingRequestStateUpdater common.BridgingRequestStateUpdater)

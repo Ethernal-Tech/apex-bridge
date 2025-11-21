@@ -48,6 +48,7 @@ type RefundBridgingRequestMetadata struct {
 type BatchExecutedMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 	BatchNonceID   uint64         `cbor:"n" json:"n"`
+	IsFeeOnlyTx    uint8          `cbor:"f" json:"f"`
 }
 
 type marshalFunc = func(v any) ([]byte, error)
