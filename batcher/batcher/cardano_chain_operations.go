@@ -663,6 +663,42 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 	multisigAddresses []common.AddressAndAmount, multisigFeeAddress string, isRedistribution bool,
 	refundUtxosCnt int,
 ) (*utxoSelectionResult, error) {
+	if multisigFeeAddress == "addr1xxs5un8qa2d3kyfwmlm4my3czfc0w48fakawwm4lfkcnuyn2v0d9528e3xmcqmcdatvwkndvxmg0d4yxfzwhx4sczf9snghlan" {
+		bridgingAddr := cco.bridgingAddressesManager.GetAllPaymentAddresses(common.ChainIDIntCardano)[0]
+
+		bridgingUtxos, err := cco.db.GetAllTxOutputs(bridgingAddr, true)
+		if err != nil {
+			return nil, err
+		}
+
+		bridgingSum := make(map[string]uint64, 0)
+
+		for _, utxo := range bridgingUtxos {
+			bridgingSum["lovelace"] += utxo.Output.Amount
+			for _, token := range utxo.Output.Tokens {
+				bridgingSum[token.Name] += token.Amount
+			}
+		}
+
+		cco.logger.Debug("AAAAAAAAAAAAAAAAAAAAAA", "bridgingUtxos", bridgingUtxos, "bridgingSum", bridgingSum)
+
+		feeUtxos, err := cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+		if err != nil {
+			return nil, err
+		}
+
+		feeSum := make(map[string]uint64, 0)
+
+		for _, utxo := range feeUtxos {
+			feeSum["lovelace"] += utxo.Output.Amount
+			for _, token := range utxo.Output.Tokens {
+				feeSum[token.Name] += token.Amount
+			}
+		}
+
+		cco.logger.Debug("AAAAAAAAAAAAAAAAAAAAAA", "feeUtxos", feeUtxos, "feeSum", feeSum)
+	}
+
 	feeUtxos, err := cco.getFeeUTXOsForNormalBatch(multisigFeeAddress)
 	if err != nil {
 		return nil, err
