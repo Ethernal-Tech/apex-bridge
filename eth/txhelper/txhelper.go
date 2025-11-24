@@ -201,7 +201,7 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 	for {
 		receipt, err := t.client.TransactionReceipt(ctx, txHash)
 		if err == nil && receipt != nil {
-			return receipt, err
+			return receipt, nil
 		}
 
 		if t.receiptIsRetryErr(err) {
