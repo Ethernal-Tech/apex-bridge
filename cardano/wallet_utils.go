@@ -2,6 +2,7 @@ package cardanotx
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
@@ -199,6 +200,41 @@ func getKeyHashPair(paymentVerificationKey, stakeVerificationKey *big.Int) (stri
 	}
 
 	return keyHash, stakeKeyHash, nil
+}
+
+func KeysDataToString(apexWallet *ApexCardanoWallet, validatorsData []eth.ValidatorChainData) string {
+	var sb strings.Builder
+
+	sb.WriteString("verifying keys of current batcher wasn't found in validators data queried from smart contract\n")
+	sb.WriteString("keys: (")
+	sb.WriteString(hex.EncodeToString(apexWallet.MultiSig.VerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.MultiSig.StakeVerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.Fee.VerificationKey))
+	sb.WriteString(", ")
+	sb.WriteString(hex.EncodeToString(apexWallet.Fee.StakeVerificationKey))
+	sb.WriteString(")\n")
+
+	sb.WriteString("validators keys: ")
+
+	for i, data := range validatorsData {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteRune('(')
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[0])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[2])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[1])))
+		sb.WriteString(", ")
+		sb.WriteString(hex.EncodeToString(bigIntToKey(data.Key[3])))
+		sb.WriteRune(')')
+	}
+
+	return sb.String()
 }
 
 func bigIntToKey(a *big.Int) []byte {

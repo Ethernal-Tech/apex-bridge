@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCommon "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	ethCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/ethgo"
 
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -17,13 +18,14 @@ import (
 )
 
 type ConfirmedBlocksSubmitterImpl struct {
-	bridgeSubmitter oracleCommon.BridgeBlocksSubmitter
-	appConfig       *oracleCommon.AppConfig
-	chainID         string
-	oracleDB        ethCore.EthTxsProcessorDB
-	indexerDB       eventTrackerStore.EventTrackerStore
-	latestInfo      oracleCommon.BlocksSubmitterInfo
-	logger          hclog.Logger
+	bridgeSubmitter      oracleCommon.BridgeBlocksSubmitter
+	appConfig            *oracleCommon.AppConfig
+	chainID              string
+	oracleDB             ethCore.EthTxsProcessorDB
+	indexerDB            eventTrackerStore.EventTrackerStore
+	latestInfo           oracleCommon.BlocksSubmitterInfo
+	validatorSetObserver validatorobserver.IValidatorSetObserver
+	logger               hclog.Logger
 }
 
 var _ oracleCommon.ConfirmedBlocksSubmitter = (*ConfirmedBlocksSubmitterImpl)(nil)
@@ -34,6 +36,7 @@ func NewConfirmedBlocksSubmitter(
 	oracleDB ethCore.EthTxsProcessorDB,
 	indexerDB eventTrackerStore.EventTrackerStore,
 	chainID string,
+	validatorSetObserver validatorobserver.IValidatorSetObserver,
 	logger hclog.Logger,
 ) (*ConfirmedBlocksSubmitterImpl, error) {
 	latestInfo, err := oracleDB.GetBlocksSubmitterInfo(chainID)
@@ -59,13 +62,14 @@ func NewConfirmedBlocksSubmitter(
 	}
 
 	return &ConfirmedBlocksSubmitterImpl{
-		bridgeSubmitter: bridgeSubmitter,
-		appConfig:       appConfig,
-		chainID:         chainID,
-		oracleDB:        oracleDB,
-		indexerDB:       indexerDB,
-		latestInfo:      latestInfo,
-		logger:          logger.Named("confirmed_blocks_submitter_" + chainID),
+		bridgeSubmitter:      bridgeSubmitter,
+		appConfig:            appConfig,
+		chainID:              chainID,
+		oracleDB:             oracleDB,
+		indexerDB:            indexerDB,
+		latestInfo:           latestInfo,
+		validatorSetObserver: validatorSetObserver,
+		logger:               logger.Named("confirmed_blocks_submitter_" + chainID),
 	}, nil
 }
 
@@ -87,6 +91,12 @@ func (bs *ConfirmedBlocksSubmitterImpl) Start(ctx context.Context) {
 }
 
 func (bs *ConfirmedBlocksSubmitterImpl) execute() error {
+	if bs.validatorSetObserver.IsValidatorSetPending() {
+		bs.logger.Debug("Validator set is pending, skipping submitting confirmed blocks")
+
+		return nil
+	}
+
 	from := bs.latestInfo.BlockNumOrSlot
 	if from != 0 {
 		from++

@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
 	cardano "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -46,16 +49,21 @@ type CardanoChainOperations struct {
 	wallet           *cardano.ApexCardanoWallet
 	txProvider       cardanowallet.ITxDataRetriever
 	db               indexer.Database
+	indxUpdater      core.IndexerUpdater
 	gasLimiter       eth.GasLimitHolder
 	cardanoCliBinary string
+	vsuMutex         sync.Mutex
+	observerTimeout  time.Duration
 	logger           hclog.Logger
 }
 
 func NewCardanoChainOperations(
 	jsonConfig json.RawMessage,
 	db indexer.Database,
+	indxUpdater core.IndexerUpdater,
 	secretsManager secrets.SecretsManager,
 	chainID string,
+	observerTimeout time.Duration,
 	logger hclog.Logger,
 ) (*CardanoChainOperations, error) {
 	cardanoConfig, err := cardano.NewCardanoChainConfig(jsonConfig)
@@ -80,6 +88,8 @@ func NewCardanoChainOperations(
 		cardanoCliBinary: cardanowallet.ResolveCardanoCliBinary(cardanoConfig.NetworkID),
 		gasLimiter:       eth.NewGasLimitHolder(submitBatchMinGasLimit, submitBatchMaxGasLimit, submitBatchStepsGasLimit),
 		db:               db,
+		indxUpdater:      indxUpdater,
+		observerTimeout:  observerTimeout,
 		logger:           logger,
 	}, nil
 }
@@ -114,6 +124,10 @@ func (cco *CardanoChainOperations) GenerateBatchTransaction(
 // SignBatchTransaction implements core.ChainOperations.
 func (cco *CardanoChainOperations) SignBatchTransaction(
 	generatedBatchData *core.GeneratedBatchTxData) ([]byte, []byte, error) {
+	if generatedBatchData.BatchType == uint8(ValidatorSetFinal) {
+		return []byte{}, []byte{}, nil
+	}
+
 	txBuilder, err := cardanowallet.NewTxBuilder(cco.cardanoCliBinary)
 	if err != nil {
 		return nil, nil, err
@@ -290,9 +304,9 @@ func (cco *CardanoChainOperations) generateConsolidationTransaction(
 	}
 
 	return &core.GeneratedBatchTxData{
-		IsConsolidation: true,
-		TxRaw:           txRaw,
-		TxHash:          txHash,
+		BatchType: uint8(Consolidation),
+		TxRaw:     txRaw,
+		TxHash:    txHash,
 	}, nil
 }
 
@@ -416,9 +430,9 @@ func (cco *CardanoChainOperations) getValidatorsChainData(
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"verifying keys of current batcher wasn't found in validators data queried from smart contract")
+	return nil, errors.New(cardano.KeysDataToString(cco.wallet, validatorsData))
 }
+
 func (cco *CardanoChainOperations) createBatchInitialData(
 	ctx context.Context,
 	bridgeSmartContract eth.IBridgeSmartContract,
@@ -707,4 +721,304 @@ func getOutputs(
 
 func getMaxUtxoCount(config *cardano.CardanoChainConfig, prevUtxosCnt int) int {
 	return max(int(config.MaxUtxoCount)-prevUtxosCnt, 0) //nolint:gosec
+}
+
+func generatePolicyAndMultisig(validators *validatorobserver.ValidatorsPerChain,
+	chainID, cardanoCliBinary string, networkMagic uint32) (*cardano.ApexPolicyScripts, *cardano.ApexAddresses, error) {
+	if validators == nil {
+		return nil, nil, nil
+	}
+
+	validatorsData, ok := (*validators)[chainID]
+	if !ok {
+		return nil, nil, fmt.Errorf("unknown chain id")
+	}
+
+	keyHashes, err := cardano.NewApexKeyHashes(validatorsData.Keys)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	policyScripts := cardano.NewApexPolicyScripts(keyHashes)
+
+	addresses, err := cardano.NewApexAddresses(cardanoCliBinary, uint(networkMagic), policyScripts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &policyScripts, &addresses, nil
+}
+
+func (cco *CardanoChainOperations) GenerateMultisigAddress(
+	validators *validatorobserver.ValidatorsPerChain, chainID string) error {
+	_, addr, err := generatePolicyAndMultisig(validators, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
+	if err != nil {
+		return err
+	}
+
+	if addr != nil {
+		cco.indxUpdater.AddNewAddressesOfInterest(addr.Multisig.Payment, addr.Fee.Payment)
+	}
+
+	cco.startVSUSync()
+
+	return nil
+}
+
+// CreateValidatorSetChangeTx implements core.ChainOperations.
+func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchID uint64,
+	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys validatorobserver.ValidatorsPerChain,
+	lastBatchID uint64, lastBatchType uint8,
+) (*core.GeneratedBatchTxData, error) {
+	cco.checkVSUSync()
+
+	// get validators data
+	validatorsData, ok := validatorsKeys[chainID]
+	if !ok {
+		return nil, fmt.Errorf("couldn't find keys for chain:%s", chainID)
+	}
+
+	// new validator set policy, multisig & fee address
+	_, newAddresses, err :=
+		generatePolicyAndMultisig(&validatorsKeys, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
+	if err != nil {
+		return nil, err
+	}
+
+	cco.logger.Debug("NEW MULTISIG & FEE ADDRESS",
+		"ms", newAddresses.Multisig.Payment,
+		"fee", newAddresses.Fee.Payment,
+		"ms.stake", newAddresses.Multisig.Stake,
+		"fee.stake", newAddresses.Fee.Stake)
+
+	// get active validator set from bridge smart contract
+	activeValidatorsData, err := cco.getValidatorsChainData(ctx, bridgeSmartContract, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// active validator set policy, multisig & fee address
+	activePolicy, activeAddresses, err :=
+		generatePolicyAndMultisig(&validatorobserver.ValidatorsPerChain{
+			chainID: validatorobserver.ValidatorsChainData{
+				Keys: activeValidatorsData,
+			},
+		}, chainID, cco.cardanoCliBinary, cco.config.NetworkMagic)
+	if err != nil {
+		return nil, err
+	}
+
+	cco.logger.Debug("ACTIVE MULTISIG & FEE ADDRESS",
+		"ms", activeAddresses.Multisig.Payment,
+		"fee", activeAddresses.Fee.Payment,
+		"ms.stake", activeAddresses.Multisig.Stake,
+		"fee.stake", activeAddresses.Fee.Stake)
+
+	protocolParams, err := cco.txProvider.GetProtocolParameters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// get filtered & limited utxos
+	multisigUtxos, feeUtxos, isFeeOnly, err := cco.getUTXOsForValidatorChange(
+		activeAddresses.Multisig.Payment, activeAddresses.Fee.Payment, validatorsData.SlotNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// if there are no transactions
+	// or only one transaction with an amount less than twice the minimum UTXO amount
+	// return the validator final
+	if len(feeUtxos) == 0 || (len(feeUtxos) == 1 && feeUtxos[0].Output.Amount < common.MinUtxoAmountDefault*2) {
+		cco.logger.Info("Creating vsu final tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"validator set cutoff slot number", validatorsData.SlotNumber)
+
+		return &core.GeneratedBatchTxData{
+			BatchType: uint8(ValidatorSetFinal),
+			TxRaw:     []byte{},
+			TxHash:    deadbeef,
+		}, nil
+	}
+
+	metadataStruct := common.BatchExecutedMetadata{
+		BridgingTxType: common.BridgingTxTypeBatchExecution,
+		BatchNonceID:   nextBatchID,
+	}
+	if isFeeOnly {
+		metadataStruct.IsFeeOnlyTx = 1
+	}
+
+	metadata, err := common.MarshalMetadata(common.MetadataEncodingTypeJSON, metadataStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	// last slot number from indexer
+	slotNumber, err := cco.getSlotNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		txRaw  []byte
+		txHash string
+	)
+
+	if isFeeOnly {
+		// last transaction sends funds from active fee key to new fee key
+		output := cardanowallet.TxOutput{
+			Addr:   newAddresses.Fee.Payment,
+			Amount: 0,
+			Tokens: []cardanowallet.TokenAmount{},
+		}
+
+		cco.logger.Info("Creating vsu fee only tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"slot", slotNumber, "validator set cutoff slot number", validatorsData.SlotNumber,
+			"multisig", len(multisigUtxos), "fee", len(feeUtxos), "output", output)
+
+		txRaw, txHash, err = cardano.CreateOnlyFeeTx(
+			cco.cardanoCliBinary,
+			uint(cco.config.NetworkMagic),
+			protocolParams,
+			slotNumber+cco.config.TTLSlotNumberInc,
+			metadata,
+			&cardano.TxInputInfo{
+				PolicyScript: activePolicy.Fee.Payment,
+				Address:      activeAddresses.Fee.Payment,
+				TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+			},
+			output,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var sum uint64
+		for _, u := range multisigUtxos {
+			sum += u.Output.Amount
+		}
+
+		outputs := []cardanowallet.TxOutput{
+			{
+				Addr:   newAddresses.Multisig.Payment,
+				Amount: sum,
+				Tokens: []cardanowallet.TokenAmount{},
+			},
+		}
+
+		cco.logger.Info("Creating vsu normal tx", "batchID", nextBatchID,
+			"magic", cco.config.NetworkMagic, "binary", cco.cardanoCliBinary,
+			"slot", slotNumber, "validator set cutoff slot number", validatorsData.SlotNumber,
+			"multisig", len(multisigUtxos), "fee", len(feeUtxos), "outputs", outputs)
+
+		txRaw, txHash, err = cardano.CreateTx(
+			cco.cardanoCliBinary,
+			uint(cco.config.NetworkMagic),
+			protocolParams,
+			slotNumber+cco.config.TTLSlotNumberInc,
+			metadata,
+			cardano.TxInputInfos{
+				MultiSig: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Multisig.Payment,
+					Address:      activeAddresses.Multisig.Payment,
+					TxInputs:     convertUTXOsToTxInputs(multisigUtxos),
+				},
+				MultiSigFee: &cardano.TxInputInfo{
+					PolicyScript: activePolicy.Fee.Payment,
+					Address:      activeAddresses.Fee.Payment,
+					TxInputs:     convertUTXOsToTxInputs(feeUtxos),
+				},
+			},
+			outputs,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &core.GeneratedBatchTxData{
+		BatchType: uint8(ValidatorSet),
+		TxRaw:     txRaw,
+		TxHash:    txHash,
+	}, nil
+}
+
+func (cco *CardanoChainOperations) getUTXOsForValidatorChange(
+	multisigAddress, multisigFeeAddress string, slot uint64,
+) (multisigUtxos []*indexer.TxInputOutput, feeUtxos []*indexer.TxInputOutput, isFeeOnly bool, err error) {
+	// Fetch all UTXOs for the multisig address (including those after the given slot).
+	allMultisigUtxos, err := cco.db.GetAllTxOutputs(multisigAddress, true)
+	if err != nil {
+		return
+	}
+
+	cco.logger.Debug("active multisig utxos",
+		"addr", multisigAddress,
+		"cnt", len(allMultisigUtxos),
+		"cutoff slot", slot)
+
+	multisigUtxos = make([]*indexer.TxInputOutput, 0, len(allMultisigUtxos))
+
+	// Filter out any UTXOs created after the given slot.
+	for _, utxo := range allMultisigUtxos {
+		if utxo.Output.Slot <= slot {
+			multisigUtxos = append(multisigUtxos, utxo)
+		} else {
+			cco.logger.Debug("skipping active multisig utxo",
+				"hash", utxo.Input.Hash,
+				"indx", utxo.Input.Index,
+				"addr", utxo.Output.Address,
+				"amnt", utxo.Output.Amount,
+				"slot", utxo.Output.Slot)
+		}
+	}
+
+	feeUtxos, err = cco.db.GetAllTxOutputs(multisigFeeAddress, true)
+	if err != nil {
+		return
+	}
+
+	cco.logger.Debug("eligible active multisig utxos",
+		"addr", multisigAddress,
+		"cnt", len(multisigUtxos))
+
+	multisigUtxos = filterOutTokenUtxos(multisigUtxos)
+	feeUtxos = filterOutTokenUtxos(feeUtxos)
+
+	cco.logger.Debug("active multisig utxos filtered out for tokens",
+		"addr", multisigAddress,
+		"cnt", len(multisigUtxos))
+
+	if len(feeUtxos) == 0 {
+		return
+	}
+
+	if len(multisigUtxos) == 0 {
+		isFeeOnly = true
+		feeUtxos = feeUtxos[:min(cco.config.MaxUtxoCount, uint(len(feeUtxos)))]
+
+		return
+	}
+
+	feeUtxos = feeUtxos[:min(int(cco.config.MaxFeeUtxoCount), len(feeUtxos))] //nolint:gosec
+	maxUtxosCnt := min(getMaxUtxoCount(cco.config, len(feeUtxos)), len(multisigUtxos))
+	multisigUtxos = multisigUtxos[:maxUtxosCnt]
+
+	return
+}
+
+// all cardano batchers should receive VSU start event before creating VSU txs
+func (cco *CardanoChainOperations) startVSUSync() {
+	cco.vsuMutex.Lock()
+	time.AfterFunc(cco.observerTimeout, func() {
+		cco.vsuMutex.Unlock()
+	})
+}
+
+// checkVSUSync checks if the VSU sync is completed before allowing to create VSU txs
+func (cco *CardanoChainOperations) checkVSUSync() {
+	cco.vsuMutex.Lock()
+	defer cco.vsuMutex.Unlock()
 }

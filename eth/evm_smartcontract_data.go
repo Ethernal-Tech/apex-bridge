@@ -5,12 +5,13 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
+	goethcommon "github.com/ethereum/go-ethereum/common"
 )
 
 var (
-	txAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+	assetTransferTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
 			Name: "batchId",
 			Type: "uint64",
@@ -39,11 +40,36 @@ var (
 			},
 		},
 	})
+	validatorSetChangeTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{
+			Name: "batchId",
+			Type: "uint64",
+		},
+		{
+			Name: "validatorsSetNumber",
+			Type: "uint256",
+		},
+		{
+			Name: "ttl",
+			Type: "uint256",
+		},
+		{
+			Name:         "validatorsChainData",
+			Type:         "tuple[]",
+			InternalType: "struct IGatewayStructs.ValidatorChainData[]",
+			Components: []abi.ArgumentMarshaling{
+				{
+					Name: "key",
+					Type: "uint256[4]",
+				},
+			},
+		},
+	})
 )
 
 type EVMSmartContractTransactionReceiver struct {
-	Address common.Address `json:"addr" abi:"receiver"`
-	Amount  *big.Int       `json:"amount" abi:"amount"`
+	Address goethcommon.Address `json:"addr" abi:"receiver"`
+	Amount  *big.Int            `json:"amount" abi:"amount"`
 }
 
 type EVMSmartContractTransaction struct {
@@ -54,7 +80,7 @@ type EVMSmartContractTransaction struct {
 }
 
 func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction, error) {
-	dt, err := abi.Arguments{{Type: txAbi}}.Unpack(bytes)
+	dt, err := abi.Arguments{{Type: assetTransferTxAbi}}.Unpack(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +91,7 @@ func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction,
 }
 
 func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {
-	return abi.Arguments{{Type: txAbi}}.Pack(evmsctx)
+	return abi.Arguments{{Type: assetTransferTxAbi}}.Pack(evmsctx)
 }
 
 func (evmsctx EVMSmartContractTransaction) String() string {
@@ -90,6 +116,48 @@ func (evmsctx EVMSmartContractTransaction) String() string {
 		sb.WriteString(v.Amount.String())
 		sb.WriteRune(')')
 	}
+
+	return sb.String()
+}
+
+type EVMValidatorChainData struct {
+	Key [4]*big.Int `json:"key" abi:"key"`
+}
+
+type EVMValidatorSetChangeTx struct {
+	BatchNonceID        uint64               `json:"batchNonceId" abi:"batchId"`
+	ValidatorsSetNumber *big.Int             `json:"validatorsSetNumber" abi:"validatorsSetNumber"`
+	TTL                 *big.Int             `json:"ttl" abi:"ttl"`
+	ValidatorsChainData []ValidatorChainData `json:"validatorsChainData" abi:"validatorsChainData"`
+}
+
+func NewEVMValidatorSetChangeTransaction(bytes []byte) (*EVMValidatorSetChangeTx, error) {
+	dt, err := abi.Arguments{{Type: validatorSetChangeTxAbi}}.Unpack(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, _ := abi.ConvertType(dt[0], new(EVMValidatorSetChangeTx)).(*EVMValidatorSetChangeTx)
+
+	return tx, nil
+}
+
+func (t *EVMValidatorSetChangeTx) Pack() ([]byte, error) {
+	return abi.Arguments{{Type: validatorSetChangeTxAbi}}.Pack(t)
+}
+
+func (t EVMValidatorSetChangeTx) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("id = ")
+	sb.WriteString(fmt.Sprintf("%d\n", t.BatchNonceID))
+	sb.WriteString("ttl = ")
+	sb.WriteString(fmt.Sprintf("%d\n", t.TTL))
+	sb.WriteString("validator set number = ")
+	sb.WriteString(fmt.Sprintf("%s\n", t.ValidatorsSetNumber))
+	sb.WriteString("validator chain data = ")
+	sb.WriteString(
+		fmt.Sprintf("%s\n", GetChainValidatorsDataInfoString(common.ChainIDStrNexus, t.ValidatorsChainData)))
 
 	return sb.String()
 }

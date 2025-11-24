@@ -14,6 +14,7 @@ var (
 	mintNativeTokenParamsData          = &mintNativeTokenParams{}
 	validatorsDataParamsData           = &validatorsDataParams{}
 	bridgingAddressesBalancesData      = &bridgingAddressesBalancesParams{}
+	setValidatorChange                 = &setValidatorChangeParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -82,6 +83,15 @@ func GetBridgeAdminCommand() *cobra.Command {
 		Run: common.GetCliRunCommand(bridgingAddressesBalancesData),
 	}
 
+	setValidatorChangeCmd := &cobra.Command{
+		Use:   "set-validator-change",
+		Short: "set-validator-change",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return setValidatorChange.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(setValidatorChange),
+	}
+
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
 	defundParamsData.RegisterFlags(defundCmd)
@@ -90,6 +100,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	mintNativeTokenParamsData.RegisterFlags(mintNativeTokenCmd)
 	validatorsDataParamsData.RegisterFlags(validatorDataCmd)
 	bridgingAddressesBalancesData.RegisterFlags(bridgingAddressesBalancesCmd)
+	setValidatorChange.RegisterFlags(setValidatorChangeCmd)
 
 	cmd := &cobra.Command{
 		Use:   "bridge-admin",
@@ -105,6 +116,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		mintNativeTokenCmd,
 		validatorDataCmd,
 		bridgingAddressesBalancesCmd,
+		setValidatorChangeCmd,
 	)
 
 	return cmd

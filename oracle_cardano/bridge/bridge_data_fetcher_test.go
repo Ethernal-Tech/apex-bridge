@@ -50,7 +50,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchExpectedTx nil", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, nil)
+		bridgeSC.On("GetRawTransactionAndBatchTypeFromLastBatch").Return(nil, nil)
 		bridgeDataFetcher := NewCardanoBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
@@ -62,7 +62,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchExpectedTx err", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, fmt.Errorf("test err"))
+		bridgeSC.On("GetRawTransactionAndBatchTypeFromLastBatch").Return(nil, fmt.Errorf("test err"))
 		bridgeDataFetcher := NewCardanoBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
@@ -75,7 +75,7 @@ func TestBridgeDataFetcher(t *testing.T) {
 
 	t.Run("FetchExpectedTx parse tx fail", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeSC.On("GetRawTransactionFromLastBatch").Return([]byte{12, 33}, nil)
+		bridgeSC.On("GetRawTransactionAndBatchTypeFromLastBatch").Return([]byte{12, 33}, nil)
 		bridgeDataFetcher := NewCardanoBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)

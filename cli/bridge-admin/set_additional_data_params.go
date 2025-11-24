@@ -47,14 +47,18 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if ip.bridgingAddr == "" || !common.IsValidAddress(ip.chainID, ip.bridgingAddr) {
-		return fmt.Errorf("invalid --%s flag", bridgingAddrFlag)
+	if ip.bridgingAddr != "" {
+		if !common.IsValidAddress(ip.chainID, ip.bridgingAddr) {
+			return fmt.Errorf("invalid --%s flag", bridgingAddrFlag)
+		}
 	}
 
 	if common.IsEVMChainID(ip.chainID) {
 		ip.feeAddr = ""
-	} else if ip.feeAddr == "" || !common.IsValidAddress(ip.chainID, ip.feeAddr) {
-		return fmt.Errorf("invalid --%s flag", feeAddrFlag)
+	} else if ip.feeAddr != "" {
+		if !common.IsValidAddress(ip.chainID, ip.feeAddr) {
+			return fmt.Errorf("invalid --%s flag", feeAddrFlag)
+		}
 	}
 
 	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
