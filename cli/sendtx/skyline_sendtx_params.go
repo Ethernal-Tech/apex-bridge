@@ -38,6 +38,7 @@ type sendSkylineTxParams struct {
 	networkIDSrc    uint
 	testnetMagicSrc uint
 	multisigAddrSrc string
+	treasuryAddrSrc string
 	ogmiosURLDst    string
 
 	feeAmount          *big.Int
@@ -137,6 +138,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	if p.multisigAddrSrc == "" {
 		return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
+	}
+
+	if p.treasuryAddrSrc == "" {
+		return fmt.Errorf("--%s not specified", treasuryAddrSrcFlag)
 	}
 
 	if p.ogmiosURLDst == "" {
@@ -268,6 +273,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.treasuryAddrSrc,
+		treasuryAddrSrcFlag,
+		"",
+		treasuryAddrSrcFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.ogmiosURLDst,
 		ogmiosURLDstFlag,
 		"",
@@ -305,6 +317,7 @@ func (p *sendSkylineTxParams) Execute(
 				MinOperationFeeAmount:    srcConfig.MinOperationFee,
 				MinUtxoValue:             srcConfig.MinUtxoAmount,
 				NativeTokens:             srcNativeTokens,
+				TreasuryAddress:          p.treasuryAddrSrc,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,

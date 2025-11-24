@@ -95,7 +95,7 @@ func (p *HotWalletIncrementProcessor) validate(
 		return err
 	}
 
-	if _, err := utils.ValidateTxOutputs(tx, appConfig, true); err != nil {
+	if _, err := utils.ValidateTxOutputs(tx, appConfig, true, false); err != nil {
 		return err
 	}
 

@@ -65,6 +65,7 @@ type CardanoChainConfig struct {
 	InitialUtxos             []CardanoChainConfigUtxo `json:"initialUtxos"`
 	FeeAddrBridgingAmount    uint64                   `json:"feeAddressBridgingAmount"`
 	MinOperationFee          uint64                   `json:"minOperationFee"`
+	TreasuryAddress          string                   `json:"treasuryAddress"`
 }
 
 type SubmitConfig struct {
@@ -130,6 +131,10 @@ func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []strin
 	chainIDNum := common.ToNumChainID(chainID)
 
 	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
+}
+
+func (appConfig *AppConfig) GetTreasuryAddress(chainID string) string {
+	return appConfig.CardanoChains[chainID].TreasuryAddress
 }
 
 func (appConfig *AppConfig) FillOut() {

@@ -19,6 +19,8 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		vectorBridgingAddr    = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
 		vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
 		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+		primeTreasuryAddress  = "addr_test1wrz24vv4tvfqsywkxn36rv6zagys2d7euafcgv50gmggqpq4ju9av"
+		vectorTreasuryAddress = "addr_test1wrz14vv5tvfqsywkxn36rv5zagys2dscuafcgt50wdpgqpq4juzuv"
 	)
 
 	proc := NewHotWalletIncrementProcessor(hclog.NewNullLogger())
@@ -34,12 +36,14 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
+				TreasuryAddress: primeTreasuryAddress,
 				/* BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: primeBridgingAddr,
 					FeeAddress:      primeBridgingFeeAddr,
 				}, */
 			},
 			common.ChainIDStrVector: {
+				TreasuryAddress: primeTreasuryAddress,
 				/* BridgingAddresses: cCore.BridgingAddresses{
 					BridgingAddress: vectorBridgingAddr,
 					FeeAddress:      vectorBridgingFeeAddr,
@@ -95,6 +99,23 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "validation failed for tx")
+	})
+
+	t.Run("ValidateAndAddClaim treasury address in outputs", func(t *testing.T) {
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1},
+			{Address: appConfig.CardanoChains[common.ChainIDStrPrime].TreasuryAddress, Amount: 1},
+		}
+
+		err := proc.PreValidate(&core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: []byte{},
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, " is found in tx outputs, but it shouldn't be there")
 	})
 
 	t.Run("ValidateAndAddClaim unknown tokens", func(t *testing.T) {
