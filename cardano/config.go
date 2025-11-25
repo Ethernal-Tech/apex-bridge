@@ -27,7 +27,8 @@ type CardanoChainConfig struct {
 	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	DestinationChain         common.TokenPairs                `json:"destChain"`
+	Tokens                   map[uint16]common.Token          `json:"tokens"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`

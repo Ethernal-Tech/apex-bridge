@@ -1,5 +1,30 @@
 package common
 
+type EcosystemToken struct {
+	ID   uint16 `json:"id"`
+	Name string `json:"name"`
+}
+
+type DirectionConfig struct {
+	DestinationChain TokenPairs       `json:"destChain"`
+	Tokens           map[uint16]Token `json:"tokens"`
+}
+
+type TokenPairs = []TokenPair
+
+type TokenPair struct {
+	SourceTokenID         string `json:"srcTokenID"`
+	DestinationTokenID    string `json:"dstTokenID"`
+	TrackSourceToken      bool   `json:"trackSource"`
+	TrackDestinationToken bool   `json:"trackDestination"`
+}
+
+type Token struct {
+	ChainSpecific     string `json:"chainSpecific"`
+	LockUnlock        bool   `json:"lockUnlock"`
+	IsWrappedCurrency bool   `json:"isWrappedCurrency"`
+}
+
 type MinConfig struct {
 	MinOperationFee   uint64
 	MinFeeForBridging uint64

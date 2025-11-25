@@ -16,6 +16,7 @@ type AppConfig struct {
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
+	DirectionConfig              map[string]common.DirectionConfig         `json:"directionConfig"`
 	Bridge                       oracleCore.BridgeConfig                   `json:"bridge"`
 	BridgingSettings             oracleCore.BridgingSettings               `json:"bridgingSettings"`
 	Settings                     oracleCore.AppSettings                    `json:"appSettings"`
@@ -25,6 +26,7 @@ type AppConfig struct {
 	Telemetry                    telemetry.TelemetryConfig                 `json:"telemetry"`
 	RetryUnprocessedSettings     oracleCore.RetryUnprocessedSettings       `json:"retryUnprocessedSettings"`
 	TryCountLimits               oracleCore.TryCountLimits                 `json:"tryCountLimits"`
+	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
 func (appConfig *AppConfig) SeparateConfigs() (
