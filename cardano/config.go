@@ -27,7 +27,7 @@ type CardanoChainConfig struct {
 	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	DestinationChain         common.TokenPairs                `json:"destChain"`
+	DestinationChains        map[string]common.TokenPairs     `json:"destChains"`
 	Tokens                   map[uint16]common.Token          `json:"tokens"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
@@ -75,6 +75,16 @@ func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
 	}
 
 	return config.DefaultMinFeeForBridging
+}
+
+func (config CardanoChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency not found in chain config")
 }
 
 func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {

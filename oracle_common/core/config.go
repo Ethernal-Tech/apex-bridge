@@ -93,6 +93,7 @@ type BridgingSettings struct {
 	MaxTokenAmountAllowedToBridge  *big.Int            `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int                 `json:"maxBridgingClaimsToGroup"`
+	MinColCoinsAllowedToBridge     uint64              `json:"minColCoinsAllowedToBridge"`
 	AllowedDirections              map[string][]string `json:"allowedDirections"`
 }
 

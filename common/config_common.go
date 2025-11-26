@@ -6,15 +6,15 @@ type EcosystemToken struct {
 }
 
 type DirectionConfig struct {
-	DestinationChain TokenPairs       `json:"destChain"`
-	Tokens           map[uint16]Token `json:"tokens"`
+	DestinationChain map[string]TokenPairs `json:"destChain"`
+	Tokens           map[uint16]Token      `json:"tokens"`
 }
 
 type TokenPairs = []TokenPair
 
 type TokenPair struct {
-	SourceTokenID         string `json:"srcTokenID"`
-	DestinationTokenID    string `json:"dstTokenID"`
+	SourceTokenID         uint16 `json:"srcTokenID"`
+	DestinationTokenID    uint16 `json:"dstTokenID"`
 	TrackSourceToken      bool   `json:"trackSource"`
 	TrackDestinationToken bool   `json:"trackDestination"`
 }
