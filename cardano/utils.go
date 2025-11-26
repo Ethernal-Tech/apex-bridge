@@ -31,14 +31,14 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 }
 
 func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
-	knownTokens := make([]wallet.Token, 0)
+	knownTokens := make([]wallet.Token, 0, len(cardanoConfig.Tokens))
 
 	for _, tokenConfig := range cardanoConfig.Tokens {
 		if tokenConfig.ChainSpecific == wallet.AdaTokenName {
 			continue
 		}
 
-		token, err := cardanoConfig.GetTokenFromName(tokenConfig.ChainSpecific)
+		token, err := GetTokenFromName(tokenConfig.ChainSpecific)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve native tokens from config: %w", err)
 		}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 
-	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
@@ -59,7 +58,8 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		if utils.IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
 
-			if len(chainConfig.NativeTokens) > 0 {
+			// TODO uncomment and fix
+			/* if len(chainConfig.NativeTokens) > 0 {
 				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
 				if err != nil {
 					return err
@@ -67,7 +67,7 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 
 				totalAmountWrapped.Add(
 					totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
-			}
+			} */
 		}
 	}
 

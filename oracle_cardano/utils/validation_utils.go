@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 // Validate if tx inputs contain the fee address
@@ -35,15 +34,9 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
 
-	knownTokens := make([]wallet.Token, len(chainConfig.Tokens))
-
-	for i, tokenConfig := range chainConfig.Tokens {
-		token, err := cardanotx.GetNativeTokenFromName(tokenConfig.ChainSpecific)
-		if err != nil {
-			return fmt.Errorf("failed to get native token with name '%s': %w", tokenConfig.ChainSpecific, err)
-		}
-
-		knownTokens[i] = token
+	knownTokens, err := cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
+	if err != nil {
+		return fmt.Errorf("failed to get known tokens from chain config: %w", err)
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(

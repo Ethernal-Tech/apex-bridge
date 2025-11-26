@@ -92,7 +92,7 @@ func (config CardanoChainConfig) GetTokenByID(tokenID uint16) (token cardanowall
 		return token, fmt.Errorf("token not found in chain config")
 	}
 
-	return config.GetTokenFromName(tokenConfig.ChainSpecific)
+	return GetTokenFromName(tokenConfig.ChainSpecific)
 }
 
 func (config CardanoChainConfig) GetTokenData(
@@ -103,7 +103,7 @@ func (config CardanoChainConfig) GetTokenData(
 		return token, false, fmt.Errorf("token not found in chain config")
 	}
 
-	token, err = config.GetTokenFromName(tokenConfig.ChainSpecific)
+	token, err = GetTokenFromName(tokenConfig.ChainSpecific)
 	if err != nil {
 		return token, false, fmt.Errorf("failed to get token from name: %w", err)
 	}
@@ -114,14 +114,14 @@ func (config CardanoChainConfig) GetTokenData(
 func (config CardanoChainConfig) GetWrappedToken() (token cardanowallet.Token, err error) {
 	for _, tokenConfig := range config.Tokens {
 		if tokenConfig.IsWrappedCurrency {
-			return config.GetTokenFromName(tokenConfig.ChainSpecific)
+			return GetTokenFromName(tokenConfig.ChainSpecific)
 		}
 	}
 
 	return token, fmt.Errorf("wrapped token not found in chain config")
 }
 
-func (config CardanoChainConfig) GetTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
+func GetTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
 	return cardanowallet.NewTokenWithFullNameTry(tokenName)
 }
 

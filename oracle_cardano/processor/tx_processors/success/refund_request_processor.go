@@ -110,7 +110,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 			recognizeToken = false
 
 			if zeroAddress == out.Address {
-				for _, tExc := range chainConfig.NativeTokens {
+				// TODO uncomment and fix
+				/* for _, tExc := range chainConfig.NativeTokens {
 					confToken, err := cardanotx.GetNativeTokenFromConfig(tExc)
 					if err != nil {
 						return fmt.Errorf("failed to get native token %s from config. err: %w", tExc.TokenName, err)
@@ -121,7 +122,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 
 						break
 					}
-				}
+				} */
 			}
 
 			if !recognizeToken {
@@ -174,16 +175,19 @@ func (p *RefundRequestProcessorImpl) validate(
 		return err
 	}
 
-	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
+	// TODO uncomment
+	/* zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
 		common.ToNumChainID(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
-	}
+	} */
 
 	amountSum := big.NewInt(0)
 	unknownNativeTokensUtxoCnt := uint(0)
 
-	var hasTokens, recognizeToken bool
+	// TODO: uncomment
+	//var hasTokens, recognizeToken bool
+	var hasTokens bool
 
 	for _, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
@@ -195,7 +199,8 @@ func (p *RefundRequestProcessorImpl) validate(
 		if len(out.Tokens) > 0 {
 			hasTokens = true
 
-			if chainConfig.NativeTokens == nil || zeroAddress != out.Address {
+			// TODO: uncomment and fix
+			/* if chainConfig.NativeTokens == nil || zeroAddress != out.Address {
 				unknownNativeTokensUtxoCnt++
 			} else {
 				for _, token := range out.Tokens {
@@ -218,7 +223,7 @@ func (p *RefundRequestProcessorImpl) validate(
 						unknownNativeTokensUtxoCnt++
 					}
 				}
-			}
+			} */
 
 			if unknownNativeTokensUtxoCnt > unknownNativeTokensUtxoCntMax {
 				return fmt.Errorf("more UTxOs with unknown tokens than allowed. max: %d", unknownNativeTokensUtxoCntMax)

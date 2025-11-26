@@ -477,7 +477,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	for tokenID, tokenAmount := range receiverCtx.nativeTokensSum {
 		tokenName := cardanoSrcConfig.Tokens[tokenID].ChainSpecific
 
-		nativeToken, err := cardanotx.GetNativeTokenFromName(tokenName)
+		nativeToken, err := cardanotx.GetTokenFromName(tokenName)
 		if err != nil {
 			return err
 		}
@@ -548,7 +548,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) calculateMinUtxo(
 	for tokenID, tokenAmount := range nativeTokensSum {
 		tokenName := config.Tokens[tokenID].ChainSpecific
 
-		nativeToken, err := cardanotx.GetNativeTokenFromName(tokenName)
+		nativeToken, err := cardanotx.GetTokenFromName(tokenName)
 		if err != nil {
 			return 0, err
 		}
