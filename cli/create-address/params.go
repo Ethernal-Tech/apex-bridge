@@ -214,11 +214,13 @@ func (ip *createAddressParams) Execute(
 }
 
 func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
+	ctx := context.Background()
+
 	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return eth.NewEthHelperWrapper(
 			hclog.NewNullLogger(),
 			ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
-			ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+			ethtxhelper.WithInitClientAndChainIDFn(ctx),
 			ethtxhelper.WithDynamicTx(false)), nil
 	}
 
@@ -230,6 +232,6 @@ func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error
 	return eth.NewEthHelperWrapperWithWallet(
 		wallet, hclog.NewNullLogger(),
 		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
-		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
+		ethtxhelper.WithInitClientAndChainIDFn(ctx),
 		ethtxhelper.WithDynamicTx(false)), nil
 }
