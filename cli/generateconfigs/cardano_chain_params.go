@@ -12,7 +12,6 @@ import (
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	rCore "github.com/Ethernal-Tech/apex-bridge/relayer/core"
 	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -35,9 +34,6 @@ const (
 	minOperationFeeFlag         = "min-operation-fee"
 	blockConfirmationCountFlag  = "block-confirmation-count"
 	allowedDirectionsFlag       = "allowed-directions"
-
-	nativeTokenDestinationChainIDFlag = "native-token-destination-chain-id"
-	nativeTokenNameFlag               = "native-token-name"
 
 	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
 	mintingScriptTxInputIndexFlag = "minting-script-tx-input-index"
@@ -63,9 +59,6 @@ const (
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
 	allowedDirectionsFlagDesc       = "allowed bridging directions for the chain"
-
-	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
-	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
 
 	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
 	mintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script"
@@ -100,9 +93,6 @@ type cardanoChainGenerateConfigsParams struct {
 	minOperationFee         uint64
 	blockConfirmationCount  uint
 	allowedDirections       []string
-
-	nativeTokenName               string
-	nativeTokenDestinationChainID string
 
 	mintingScriptTxInputHash  string
 	mintingScriptTxInputIndex int64
@@ -159,18 +149,6 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 	if p.minFeeForBridgingTokens < p.utxoMinAmount {
 		return fmt.Errorf("%s minimal fee for bridging tokens: %d should't be less than minimal UTXO amount: %d",
 			p.chainIDString, p.minFeeForBridgingTokens, p.utxoMinAmount)
-	}
-
-	if p.nativeTokenName != "" {
-		if _, err := wallet.NewTokenWithFullNameTry(p.nativeTokenName); err != nil {
-			return fmt.Errorf("invalid token name %s", nativeTokenNameFlag)
-		}
-	}
-
-	if (p.nativeTokenDestinationChainID != "" && p.nativeTokenName == "") ||
-		(p.nativeTokenDestinationChainID == "" && p.nativeTokenName != "") {
-		return fmt.Errorf("specify both or neither of: %s, %s",
-			nativeTokenDestinationChainIDFlag, nativeTokenNameFlag)
 	}
 
 	if p.mintingScriptTxInputHash != "" {
@@ -306,20 +284,6 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		allowedDirectionsFlagDesc,
 	)
 
-	// Native token params
-	cmd.Flags().StringVar(
-		&p.nativeTokenName,
-		nativeTokenNameFlag,
-		"",
-		nativeTokenNameFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&p.nativeTokenDestinationChainID,
-		nativeTokenDestinationChainIDFlag,
-		"",
-		nativeTokenDestinationChainIDFlagDesc,
-	)
-
 	// Minting script params
 	cmd.Flags().StringVar(
 		&p.mintingScriptTxInputHash,
@@ -425,17 +389,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		return nil, err
 	}
 
-	var nativeTokens []sendtx.TokenExchangeConfig
-
-	if p.nativeTokenName != "" {
-		nativeTokens = []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: p.nativeTokenDestinationChainID,
-				TokenName:  p.nativeTokenName,
-			},
-		}
-	}
-
 	var (
 		mintingScriptTxInput *wallet.TxInput
 		custodialNFT         *wallet.Token
@@ -472,7 +425,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
 			MaxUtxoCount:             defaultMaxUtxoCount,
 			TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-			NativeTokens:             nativeTokens,
 			DefaultMinFeeForBridging: p.minFeeForBridging,
 			MinFeeForBridgingTokens:  p.minFeeForBridgingTokens,
 			MintingScriptTxInput:     mintingScriptTxInput,

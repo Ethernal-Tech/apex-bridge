@@ -22,7 +22,6 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
 	secretsHelper "github.com/Ethernal-Tech/cardano-infrastructure/secrets/helper"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -134,9 +133,10 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		Receivers: []eth.BridgeReceiver{{
+		ReceiversWithToken: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
+			TokenId:            1,
 		}},
 		TransactionType: uint8(common.BridgingConfirmedTxType),
 	}
@@ -392,26 +392,36 @@ func TestGenerateBatchTransaction_MintBurn(t *testing.T) {
 	}
 	cco.config.CustodialNft = &nft
 	// Tokens that come from prime and are minted on vector
-	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
-		{
-			DstChainID: common.ChainIDStrPrime,
-			TokenName:  token1.String(),
-			Mint:       true,
+	// cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
+	// 	{
+	// 		DstChainID: common.ChainIDStrPrime,
+	// 		TokenName:  token1.String(),
+	// 		Mint:       true,
+	// 	},
+	// 	// {
+	// 	// 	DstChainID: common.ChainIDStrPrime,
+	// 	// 	TokenName:  token2.String(),
+	// 	// },
+	// }
+
+	cco.config.Tokens = map[uint16]common.Token{
+		2: {ChainSpecific: token1.String(), LockUnlock: true},
+	}
+	cco.config.DestinationChains = map[string]common.TokenPairs{
+		common.ChainIDStrVector: {
+			{SourceTokenID: 2, DestinationTokenID: 3},
 		},
-		// {
-		// 	DstChainID: common.ChainIDStrPrime,
-		// 	TokenName:  token2.String(),
-		// },
 	}
 
 	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		Receivers: []eth.BridgeReceiver{{
+		ReceiversWithToken: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			AmountWrapped:      big.NewInt(1000000),
+			TokenId:            2,
 		}},
 		TransactionType:    uint8(common.BridgingConfirmedTxType),
 		TotalWrappedAmount: big.NewInt(1000000),
@@ -1400,9 +1410,10 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		Receivers: []eth.BridgeReceiver{{
+		ReceiversWithToken: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
+			TokenId:            1,
 		}},
 		TransactionType: uint8(common.BridgingConfirmedTxType),
 	}
@@ -2027,9 +2038,10 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
 			Nonce:       1,
 			BlockHeight: big.NewInt(1),
-			Receivers: []eth.BridgeReceiver{{
+			ReceiversWithToken: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             new(big.Int).SetUint64(3_000_000),
+				TokenId:            1,
 			}},
 			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
@@ -2183,12 +2195,22 @@ func TestSkylineConsolidation(t *testing.T) {
 	cco.config.SlotRoundingThreshold = 100
 	cco.config.MaxFeeUtxoCount = 4
 	cco.config.MaxUtxoCount = 40
-	cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
-		{
-			DstChainID: destinationChain,
-			TokenName:  token1.String(),
+	// cco.config.NativeTokens = []sendtx.TokenExchangeConfig{
+	// 	{
+	// 		DstChainID: destinationChain,
+	// 		TokenName:  token1.String(),
+	// 	},
+	// }
+
+	cco.config.Tokens = map[uint16]common.Token{
+		2: {ChainSpecific: token1.String(), LockUnlock: true},
+	}
+	cco.config.DestinationChains = map[string]common.TokenPairs{
+		common.ChainIDStrCardano: {
+			{SourceTokenID: 2, DestinationTokenID: 3},
 		},
 	}
+
 	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
 	keys := []string{
 		"846d5cb85238b2f433e3a35f1df61a4fbc2a69a705e5bbcb626ce9ae",
@@ -2265,10 +2287,11 @@ func TestSkylineConsolidation(t *testing.T) {
 			Nonce:         1,
 			BlockHeight:   big.NewInt(1),
 			SourceChainId: common.ChainIDIntCardano,
-			Receivers: []eth.BridgeReceiver{{
+			ReceiversWithToken: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             big.NewInt(2_000_000),
 				AmountWrapped:      big.NewInt(1_500_000),
+				TokenId:            2,
 			}},
 			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
@@ -2661,9 +2684,10 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
 			Nonce:       1,
 			BlockHeight: big.NewInt(1),
-			Receivers: []eth.BridgeReceiver{{
+			ReceiversWithToken: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             new(big.Int).SetUint64(3_000_000),
+				TokenId:            1,
 			}},
 			TransactionType: uint8(common.BridgingConfirmedTxType),
 		}
@@ -2749,63 +2773,74 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 	cco.config.MaxUtxoCount = 50
 	txs := []eth.ConfirmedTransaction{
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(100),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
 					Amount:             big.NewInt(200),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(400),
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(50),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(900),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
 					Amount:             big.NewInt(0),
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 					Amount:             big.NewInt(3000),
+					TokenId:            1,
 				},
 				{
 					// this one will be skipped
 					DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
 					Amount:             big.NewInt(3000),
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(2000),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(170),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(10),
+					TokenId:            1,
 				},
 			},
 		},
@@ -2839,9 +2874,10 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2}),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					TokenId:            1,
 				},
 			},
 		})
@@ -2900,9 +2936,10 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2, 3, 5}),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+					TokenId:            1,
 				},
 			},
 		})
@@ -2938,10 +2975,12 @@ func Test_getUTXOsForNormalBatch(t *testing.T) {
 		config: &cardano.CardanoChainConfig{
 			MaxFeeUtxoCount: 1,
 			MaxUtxoCount:    3,
-			NativeTokens: []sendtx.TokenExchangeConfig{
-				{
-					DstChainID: common.ChainIDStrPrime,
-					TokenName:  token.String(),
+			Tokens: map[uint16]common.Token{
+				2: {ChainSpecific: token.String(), LockUnlock: true},
+			},
+			DestinationChains: map[string]common.TokenPairs{
+				common.ChainIDStrPrime: {
+					{SourceTokenID: 2, DestinationTokenID: 3},
 				},
 			},
 		},

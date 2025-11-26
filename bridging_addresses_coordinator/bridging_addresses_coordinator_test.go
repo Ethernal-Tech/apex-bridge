@@ -9,7 +9,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
@@ -24,11 +23,19 @@ var cardanoChains = map[string]*oracleCore.CardanoChainConfig{
 	common.ChainIDStrPrime: {
 		ChainID: common.ChainIDStrPrime,
 		CardanoChainConfig: cardanotx.CardanoChainConfig{
-			NativeTokens: []sendtx.TokenExchangeConfig{
-				{
-					TokenName: tokenName,
+			Tokens: map[uint16]common.Token{
+				2: {ChainSpecific: tokenName, LockUnlock: true},
+			},
+			DestinationChains: map[string]common.TokenPairs{
+				common.ChainIDStrPrime: {
+					{SourceTokenID: 2, DestinationTokenID: 3},
 				},
 			},
+			//NativeTokens: []sendtx.TokenExchangeConfig{
+			//	{
+			//		TokenName: tokenName,
+			//	},
+			//},
 		},
 	},
 }

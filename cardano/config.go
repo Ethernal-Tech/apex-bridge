@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -87,69 +86,42 @@ func (config CardanoChainConfig) GetCurrencyID() (uint16, error) {
 	return 0, fmt.Errorf("currency not found in chain config")
 }
 
-func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {
-	for _, dst := range config.NativeTokens {
-		if dst.DstChainID != dstChainID {
-			continue
-		}
-
-		return dst.TokenName
+func (config CardanoChainConfig) GetTokenByID(tokenID uint16) (token cardanowallet.Token, err error) {
+	tokenConfig, ok := config.Tokens[tokenID]
+	if !ok {
+		return token, fmt.Errorf("token not found in chain config")
 	}
 
-	return ""
+	return config.GetTokenFromName(tokenConfig.ChainSpecific)
 }
 
-func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardanowallet.Token, err error) {
-	tokenName := config.GetNativeTokenName(dstChainID)
-	if tokenName == "" {
-		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
-	}
-
-	token, err = GetNativeTokenFromName(tokenName)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
-}
-
-func (config CardanoChainConfig) GetNativeTokenData(
-	dstChainID string,
+func (config CardanoChainConfig) GetTokenData(
+	tokenID uint16,
 ) (token cardanowallet.Token, shouldMint bool, err error) {
-	tokenName := ""
-	shouldMint = false
+	tokenConfig, ok := config.Tokens[tokenID]
+	if !ok {
+		return token, false, fmt.Errorf("token not found in chain config")
+	}
 
-	for _, dst := range config.NativeTokens {
-		if dst.DstChainID == dstChainID {
-			tokenName = dst.TokenName
-			shouldMint = dst.Mint
+	token, err = config.GetTokenFromName(tokenConfig.ChainSpecific)
+	if err != nil {
+		return token, false, fmt.Errorf("failed to get token from name: %w", err)
+	}
 
-			break
+	return token, !tokenConfig.LockUnlock, nil
+}
+
+func (config CardanoChainConfig) GetWrappedToken() (token cardanowallet.Token, err error) {
+	for _, tokenConfig := range config.Tokens {
+		if tokenConfig.IsWrappedCurrency {
+			return config.GetTokenFromName(tokenConfig.ChainSpecific)
 		}
 	}
 
-	if tokenName == "" {
-		return token, shouldMint, fmt.Errorf("no native token specified for destination: %s", dstChainID)
-	}
-
-	token, err = GetNativeTokenFromName(tokenName)
-	if err == nil {
-		return token, shouldMint, nil
-	}
-
-	return token, shouldMint, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
+	return token, fmt.Errorf("wrapped token not found in chain config")
 }
 
-func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {
-	token, err = GetNativeTokenFromName(tokenConfig.TokenName)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, fmt.Errorf("chainID: %s, err: %w", tokenConfig.DstChainID, err)
-}
-
-func GetNativeTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
+func (config CardanoChainConfig) GetTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
 	return cardanowallet.NewTokenWithFullNameTry(tokenName)
 }
 

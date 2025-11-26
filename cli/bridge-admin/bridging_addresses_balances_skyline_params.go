@@ -130,11 +130,11 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 
 				lovelaceBalance += utxo.Amount
 
-				if len(chainConfig.NativeTokens) == 0 {
+				if len(chainConfig.CardanoChainConfig.Tokens) == 0 {
 					continue
 				}
 
-				nativeToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
+				nativeToken, err := chainConfig.CardanoChainConfig.GetWrappedToken()
 				if err != nil {
 					return nil, err
 				}

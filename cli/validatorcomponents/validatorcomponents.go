@@ -44,6 +44,15 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	directionsConfig, err := common.LoadConfig[common.DirectionConfigFile](vcParams.config, "directions")
+	if err != nil {
+		outputter.SetError(err)
+
+		return
+	}
+
+	config.SetupDirectionConfig(*directionsConfig)
+
 	logger, err := loggerInfra.NewLogger(config.Settings.Logger)
 	if err != nil {
 		outputter.SetError(err)

@@ -271,7 +271,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 			refundUtxos = append(refundUtxos, refundUtxoWithReceiverAddr{
 				Utxo: utxo,
-				Addr: confirmedTransactions[i].Receivers[0].DestinationAddress,
+				Addr: confirmedTransactions[i].ReceiversWithToken[0].DestinationAddress,
 			})
 		}
 	}

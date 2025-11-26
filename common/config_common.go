@@ -5,6 +5,11 @@ type EcosystemToken struct {
 	Name string `json:"name"`
 }
 
+type DirectionConfigFile struct {
+	Directions      map[string]DirectionConfig `json:"directions"`
+	EcosystemTokens []EcosystemToken           `json:"ecosystemTokens"`
+}
+
 type DirectionConfig struct {
 	DestinationChain map[string]TokenPairs `json:"destChain"`
 	Tokens           map[uint16]Token      `json:"tokens"`

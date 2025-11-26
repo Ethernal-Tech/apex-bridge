@@ -285,14 +285,6 @@ func (p *sendSkylineTxParams) Execute(
 	srcConfig := common.GetChainConfig(p.chainIDSrc)
 	dstConfig := common.GetChainConfig(p.chainIDDst)
 
-	var srcNativeTokens []sendtx.TokenExchangeConfig
-	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
-		srcNativeTokens = append(srcNativeTokens, sendtx.TokenExchangeConfig{
-			DstChainID: p.chainIDDst,
-			TokenName:  p.tokenFullNameSrc,
-		})
-	}
-
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
@@ -304,7 +296,6 @@ func (p *sendSkylineTxParams) Execute(
 				MinFeeForBridgingTokens:  srcConfig.MinFeeForBridging,
 				MinOperationFeeAmount:    srcConfig.MinOperationFee,
 				MinUtxoValue:             srcConfig.MinUtxoAmount,
-				NativeTokens:             srcNativeTokens,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,
@@ -385,9 +376,9 @@ func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName st
 			Amount: rec.Amount.Uint64(),
 		}
 		if sourceTokenName == cardanowallet.AdaTokenName {
-			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeCurrencyOnSource
+			metadataReceivers[idx].Token = rec.TokenID
 		} else {
-			metadataReceivers[idx].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
+			metadataReceivers[idx].Token = rec.TokenID
 		}
 	}
 

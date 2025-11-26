@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,7 +42,7 @@ const (
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
-	receiverFlagDesc        = "receiver addr:amount"
+	receiverFlagDesc        = "receiver addr:amount:token-id"
 	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
 	networkIDSrcFlagDesc    = "source network id"
 	srcChainIDFlagDesc      = "source chain ID (prime, vector, etc)"
@@ -68,15 +69,16 @@ var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
 type receiverAmount struct {
 	ReceiverAddr string
 	Amount       *big.Int
+	TokenID      uint16
 }
 
 func ToCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
 		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:         rec.ReceiverAddr,
-			Amount:       rec.Amount.Uint64(),
-			BridgingType: sendtx.BridgingTypeNormal,
+			Addr:   rec.ReceiverAddr,
+			Amount: rec.Amount.Uint64(),
+			Token:  rec.TokenID,
 		}
 	}
 
@@ -211,13 +213,18 @@ func (ip *sendTxParams) validateFlags() error {
 
 	for i, x := range ip.receivers {
 		vals := strings.Split(x, ":")
-		if len(vals) != 2 {
+		if len(vals) != 3 {
 			return fmt.Errorf("--%s number %d is invalid: %s", receiverFlag, i, x)
 		}
 
 		amount, ok := new(big.Int).SetString(vals[1], 0)
 		if !ok {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
+		}
+
+		tokenID, err := strconv.ParseUint(vals[2], 10, 16)
+		if err != nil {
+			return fmt.Errorf("--%s number %d has invalid token ID: %s", receiverFlag, i, x)
 		}
 
 		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
@@ -232,6 +239,7 @@ func (ip *sendTxParams) validateFlags() error {
 		receivers = append(receivers, &receiverAmount{
 			ReceiverAddr: vals[0],
 			Amount:       amount,
+			TokenID:      uint16(tokenID),
 		})
 	}
 

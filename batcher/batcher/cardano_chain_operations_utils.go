@@ -103,7 +103,7 @@ func getOutputs(
 			continue
 		}
 
-		for _, receiver := range transaction.Receivers {
+		for _, receiver := range transaction.ReceiversWithToken {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
@@ -129,20 +129,21 @@ func getOutputs(
 
 					switch transaction.TransactionType {
 					case uint8(common.DefundConfirmedTxType):
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
+						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
 						if err != nil {
 							return nil, err
 						}
 					case uint8(common.RefundConfirmedTxType):
-						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
+						//origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
 
-						token, err = cardanoConfig.GetNativeToken(origDstChainID)
+						//token, err = cardanoConfig.GetNativeToken(origDstChainID)
+						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
 						if err != nil {
 							return nil, err
 						}
 					default:
-						token, shouldMint, err = cardanoConfig.GetNativeTokenData(
-							common.ToStrChainID(transaction.SourceChainId))
+						token, shouldMint, err = cardanoConfig.GetTokenData(
+							receiver.TokenId)
 						if err != nil {
 							return nil, err
 						}

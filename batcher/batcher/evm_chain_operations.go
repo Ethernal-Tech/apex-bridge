@@ -183,7 +183,7 @@ func newEVMSmartContractTransaction(
 	}
 
 	for _, tx := range confirmedTransactions {
-		for _, recv := range tx.Receivers {
+		for _, recv := range tx.ReceiversWithToken {
 			amount := common.DfmToWei(recv.Amount)
 			// In case a transaction is of type refund, batcher should transfer minFeeForBridging
 			// to fee payer address, and the rest is transferred to the user.

@@ -29,6 +29,21 @@ type AppConfig struct {
 	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
+func (appConfig *AppConfig) SetupDirectionConfig(directionConfig common.DirectionConfigFile) {
+	appConfig.DirectionConfig = directionConfig.Directions
+	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
+
+	for chainID, directionConfig := range directionConfig.Directions {
+		if common.IsEVMChainID(chainID) {
+			appConfig.EthChains[chainID].DestinationChain = directionConfig.DestinationChain
+			appConfig.EthChains[chainID].Tokens = directionConfig.Tokens
+		} else {
+			appConfig.CardanoChains[chainID].CardanoChainConfig.DestinationChains = directionConfig.DestinationChain
+			appConfig.CardanoChains[chainID].CardanoChainConfig.Tokens = directionConfig.Tokens
+		}
+	}
+}
+
 func (appConfig *AppConfig) SeparateConfigs() (
 	*oracleCore.AppConfig, *batcherCore.BatcherManagerConfiguration,
 ) {

@@ -59,18 +59,21 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		confirmedTxs := []eth.ConfirmedTransaction{
 			{
 				SourceChainId: 2,
-				Receivers: []eth.BridgeReceiver{
+				ReceiversWithToken: []eth.BridgeReceiver{
 					{
 						Amount:             new(big.Int).SetUint64(100),
 						DestinationAddress: "0xff",
+						TokenId:            1,
 					},
 					{
 						Amount:             new(big.Int).SetUint64(1000),
 						DestinationAddress: "0xaa",
+						TokenId:            1,
 					},
 					{
 						Amount:             new(big.Int).SetUint64(10),
 						DestinationAddress: "cc",
+						TokenId:            1,
 					},
 				},
 			},
@@ -134,46 +137,53 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(200),
 					DestinationAddress: "0xfa",
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(10),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
+					TokenId:            1,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(11),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
+					TokenId:            1,
 				},
 				{
 					Amount:             feeAmount,
 					DestinationAddress: common.EthZeroAddr,
+					TokenId:            1,
 				},
 			},
 		},
@@ -210,47 +220,54 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
 			TransactionType: uint8(common.RefundConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(200),
 					DestinationAddress: "0xfa",
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(10),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 			},
 		},
 		{
 			TransactionType: uint8(common.RefundConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
+					TokenId:            1,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(11),
 					DestinationAddress: "0xff",
+					TokenId:            1,
 				},
 			},
 		},
 		{
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithToken: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
+					TokenId:            1,
 				},
 				{
 					Amount:             feeAmount,
 					DestinationAddress: common.EthZeroAddr,
+					TokenId:            1,
 				},
 			},
 		},
