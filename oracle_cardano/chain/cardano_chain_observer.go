@@ -218,14 +218,19 @@ func initOracleState(
 		return nil
 	}
 
-	if err := oracleDB.ClearAllTxs(chainID); err != nil {
-		return err
-	}
-
-	return db.OpenTx().DeleteAllTxOutputsPhysically().SetLatestBlockPoint(&indexer.BlockPoint{
+	return db.OpenTx().SetLatestBlockPoint(&indexer.BlockPoint{
 		BlockSlot: blockSlot,
 		BlockHash: blockHash,
-	}).AddTxOutputs(convertUtxos(utxos)).Execute()
+	}).Execute()
+
+	// if err := oracleDB.ClearAllTxs(chainID); err != nil {
+	// 	return err
+	// }
+
+	// return db.OpenTx().DeleteAllTxOutputsPhysically().SetLatestBlockPoint(&indexer.BlockPoint{
+	// 	BlockSlot: blockSlot,
+	// 	BlockHash: blockHash,
+	// }).AddTxOutputs(convertUtxos(utxos)).Execute()
 }
 
 func convertUtxos(input []cCore.CardanoChainConfigUtxo) (output []*indexer.TxInputOutput) {
