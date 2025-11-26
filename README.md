@@ -25,19 +25,19 @@ cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 - Generate bridge bindings with the command:
 ```shell
 BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
-       --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
-```
-- Generate nexus bindings with the command:
-```shell
-BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
 solc --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" \
        --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild \
        --optimize --via-ir --overwrite
 abigen --abi ./contractbinding/contractbuild/Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
+```
+- Generate nexus bindings with the command:
+```shell
+BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-evm-gateway/
+solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
+       --abi ${BASEPATH}contracts/Gateway.sol -o ./contractbinding/contractbuild --optimize
+abigen --abi ./contractbinding/contractbuild/contracts_Gateway_sol_Gateway.abi --pkg main \
+       --type Gateway --out ./contractbinding/GatewayContract.go --pkg contractbinding
 ```
 
 # How to generate blade secrets
