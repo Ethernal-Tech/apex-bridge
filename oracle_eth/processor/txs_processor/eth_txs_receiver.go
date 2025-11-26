@@ -213,6 +213,7 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 			txs[idx] = core.BridgingRequestEthMetadataTransaction{
 				Amount:  tx.Amount,
 				Address: tx.Receiver,
+				TokenID: tx.TokenId,
 			}
 		}
 

@@ -34,12 +34,13 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
-	knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
 
-	for i, tokenConfig := range chainConfig.NativeTokens {
-		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
+	knownTokens := make([]wallet.Token, len(chainConfig.Tokens))
+
+	for i, tokenConfig := range chainConfig.Tokens {
+		token, err := cardanotx.GetNativeTokenFromName(tokenConfig.ChainSpecific)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get native token with name '%s': %w", tokenConfig.ChainSpecific, err)
 		}
 
 		knownTokens[i] = token

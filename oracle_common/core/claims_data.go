@@ -21,7 +21,7 @@ type BridgingRequestClaim = contractbinding.IBridgeStructsBridgingRequestClaim
 type BatchExecutedClaim = contractbinding.IBridgeStructsBatchExecutedClaim
 type BatchExecutionFailedClaim = contractbinding.IBridgeStructsBatchExecutionFailedClaim
 type RefundRequestClaim = contractbinding.IBridgeStructsRefundRequestClaim
-type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiver
+type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiverWithToken
 type HotWalletIncrementClaim = contractbinding.IBridgeStructsHotWalletIncrementClaim
 
 type BridgeClaims struct {

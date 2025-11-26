@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -211,4 +212,14 @@ func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
 	return sendtx.ChainConfig{
 		DefaultMinFeeForBridging: feeValue.Uint64(),
 	}
+}
+
+func (config EthChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency not found in chain config")
 }
