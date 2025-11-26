@@ -1,8 +1,8 @@
 package response
 
 import (
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 )
 
 type SettingsResponse struct {
@@ -16,10 +16,8 @@ type SettingsResponse struct {
 	MinOperationFee map[string]uint64 `json:"minOperationFee"`
 	// For each chain, the minimum allowed UTXO value
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
-	// For each chain, all allowed bridging directions
-	AllowedDirections map[string][]string `json:"allowedDirections"`
-	// For each chain, all defined native tokens
-	NativeTokens map[string][]sendtx.TokenExchangeConfig `json:"nativeTokens"`
+	// For each chain, the direction config
+	DirectionConfig map[string]common.DirectionConfig `json:"directionConfig"`
 	// Minimum value allowed to be bridged
 	MinValueToBridge uint64 `json:"minValueToBridge"`
 	// Maximum amount of currency allowed to be bridged
@@ -37,7 +35,6 @@ func NewSettingsResponse(
 	minFeeForBridgingMap := make(map[string]uint64)
 	minFeeForBridgingTokensMap := make(map[string]uint64)
 	minOperationFeeMap := make(map[string]uint64)
-	nativeTokensMap := make(map[string][]sendtx.TokenExchangeConfig)
 
 	var maxUtxoValue uint64 = 0
 
@@ -46,7 +43,6 @@ func NewSettingsResponse(
 		minFeeForBridgingMap[chainID] = chainConfig.DefaultMinFeeForBridging
 		minFeeForBridgingTokensMap[chainID] = chainConfig.MinFeeForBridgingTokens
 		minOperationFeeMap[chainID] = chainConfig.MinOperationFee
-		nativeTokensMap[chainID] = chainConfig.NativeTokens
 
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount
@@ -62,8 +58,7 @@ func NewSettingsResponse(
 		MinChainFeeForBridgingTokens:   minFeeForBridgingTokensMap,
 		MinOperationFee:                minOperationFeeMap,
 		MinUtxoChainValue:              minUtxoMap,
-		AllowedDirections:              appConfig.BridgingSettings.AllowedDirections,
-		NativeTokens:                   nativeTokensMap,
+		DirectionConfig:                appConfig.DirectionConfig,
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
