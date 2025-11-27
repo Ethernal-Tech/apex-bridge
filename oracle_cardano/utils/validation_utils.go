@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 // Validate if tx inputs contain the fee address
@@ -30,11 +31,21 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return fmt.Errorf("fee address not found in tx inputs")
 }
 
-func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig, isHotWallet bool) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
 
-	knownTokens, err := cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
+	var (
+		knownTokens []wallet.Token
+		err         error
+	)
+
+	if isHotWallet {
+		knownTokens, err = cardanotx.GetWrappedTokens(&chainConfig.CardanoChainConfig)
+	} else {
+		knownTokens, err = cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to get known tokens from chain config: %w", err)
 	}

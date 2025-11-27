@@ -155,7 +155,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
-	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig, false); err != nil {
 		return err
 	}
 

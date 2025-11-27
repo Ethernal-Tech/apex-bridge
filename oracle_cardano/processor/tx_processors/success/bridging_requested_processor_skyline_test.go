@@ -1,7 +1,5 @@
 package successtxprocessors
 
-// TODO uncomment and fix
-/*
 import (
 	"encoding/hex"
 	"encoding/json"
@@ -25,33 +23,49 @@ import (
 
 func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	const (
-		utxoMinValue             = 1000000
-		defaultMinFeeForBridging = 2000010
-		minFeeForBridgingTokens  = 1000010
-		minOperationFee          = 1000010
-		primeBridgingAddr        = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
-		primeBridgingAddr2       = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		primeBridgingFeeAddr     = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
-		cardanoBridgingAddr      = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		cardanoBridgingFeeAddr   = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
-		validTestAddress         = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
-		validPrimeTestAddress    = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		utxoMinValue               = 1000000
+		defaultMinFeeForBridging   = 2000010
+		minFeeForBridgingTokens    = 1000010
+		minOperationFee            = 1000010
+		minColCoinsAllowedToBridge = 100000
+		primeBridgingAddr          = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		primeBridgingAddr2         = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		primeBridgingFeeAddr       = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		cardanoBridgingAddr        = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		cardanoBridgingFeeAddr     = "addr_test1wq5dw0g9mpmjy0xd6g58kncapdf6vgcka9el4llhzwy5vhqz80tcq"
+		validTestAddress           = "addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv"
+		validPrimeTestAddress      = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
+		nexusBridgingAddr          = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
+		validNexusAddr             = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
 
 		policyID    = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 		testChainID = "test"
 	)
 
+	primeCurrencyID := uint16(1)
+	cardanoCurrencyID := uint16(2)
+	primeWrappedTokenID := uint16(3)
+	cardanoWrappedTokenID := uint16(4)
+	usdtTokenID := uint16(5)
+
 	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
 		fmt.Sprintf("%s.%s",
 			policyID,
-			hex.EncodeToString([]byte("wrappedApex"))), true,
+			hex.EncodeToString([]byte("wrappedAda"))), true,
 	)
 	require.NoError(t, err)
 
 	wrappedTokenCardano, err := wallet.NewTokenWithFullName(
 		fmt.Sprintf("%s.%s",
 			policyID,
-			hex.EncodeToString([]byte("wrappedCardano"))), true,
+			hex.EncodeToString([]byte("wrappedApex"))), true,
+	)
+	require.NoError(t, err)
+
+	usdtToken, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("USDT"))), true,
 	)
 	require.NoError(t, err)
 
@@ -75,15 +89,21 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
-							{
-								DstChainID: common.ChainIDStrVector,
-								TokenName:  fmt.Sprintf("%s.%s", policyID, hex.EncodeToString([]byte("notimportant"))),
+						DestinationChains: map[string]common.TokenPairs{
+							common.ChainIDStrCardano: []common.TokenPair{
+								{SourceTokenID: primeCurrencyID, DestinationTokenID: cardanoWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
+								{SourceTokenID: primeWrappedTokenID, DestinationTokenID: cardanoCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+								{SourceTokenID: usdtTokenID, DestinationTokenID: usdtTokenID, TrackSourceToken: false, TrackDestinationToken: false},
 							},
-							{
-								DstChainID: common.ChainIDStrCardano,
-								TokenName:  wrappedTokenPrime.String(),
+							common.ChainIDStrNexus: []common.TokenPair{
+								{SourceTokenID: usdtTokenID, DestinationTokenID: usdtTokenID, TrackSourceToken: false, TrackDestinationToken: false},
+								{SourceTokenID: primeWrappedTokenID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: false, TrackDestinationToken: false},
 							},
+						},
+						Tokens: map[uint16]common.Token{
+							primeCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+							primeWrappedTokenID: {ChainSpecific: wrappedTokenPrime.String(), LockUnlock: true, IsWrappedCurrency: true},
+							usdtTokenID:         {ChainSpecific: usdtToken.String(), LockUnlock: false, IsWrappedCurrency: false},
 						},
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
@@ -94,11 +114,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
 						NetworkID:     wallet.TestNetNetwork,
 						UtxoMinAmount: utxoMinValue,
-						NativeTokens: []sendtx.TokenExchangeConfig{
-							{
-								DstChainID: common.ChainIDStrPrime,
-								TokenName:  wrappedTokenCardano.String(),
+						DestinationChains: map[string]common.TokenPairs{
+							common.ChainIDStrPrime: []common.TokenPair{
+								{SourceTokenID: cardanoCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
+								{SourceTokenID: cardanoWrappedTokenID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
 							},
+							common.ChainIDStrNexus: []common.TokenPair{
+								{SourceTokenID: cardanoCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: false},
+							},
+						},
+						Tokens: map[uint16]common.Token{
+							cardanoCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+							cardanoWrappedTokenID: {ChainSpecific: wrappedTokenCardano.String(), LockUnlock: true, IsWrappedCurrency: true},
+							usdtTokenID:           {ChainSpecific: usdtToken.String(), LockUnlock: false, IsWrappedCurrency: false},
 						},
 						DefaultMinFeeForBridging: defaultMinFeeForBridging,
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
@@ -106,10 +134,23 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					MinOperationFee: minOperationFee,
 				},
 			},
+			EthChains: map[string]*cCore.EthChainConfig{
+				common.ChainIDStrNexus: {
+					BridgingAddresses: cCore.EthBridgingAddresses{
+						BridgingAddress: nexusBridgingAddr,
+					},
+					MinFeeForBridging: minFeeForBridgingTokens,
+					Tokens: map[uint16]common.Token{
+						usdtTokenID:         {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
+						primeWrappedTokenID: {ChainSpecific: "0x22", LockUnlock: false, IsWrappedCurrency: false},
+					},
+				},
+			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
+				MinColCoinsAllowedToBridge:     minColCoinsAllowedToBridge,
 				AllowedDirections: map[string][]string{
 					common.ChainIDStrPrime:   {common.ChainIDStrCardano, testChainID},
 					common.ChainIDStrCardano: {common.ChainIDStrPrime},
@@ -290,7 +331,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "validation failed for tx")
 	})
 
-	t.Run("ValidateAndAddClaim - transaction direction not allowed - invalid destination chain", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim - invalid destination chain", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
@@ -333,7 +374,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -673,7 +714,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	t.Run("ValidateAndAddClaim unknown tokens 2", func(t *testing.T) {
 		appConfig := getAppConfig(false)
-		appConfig.CardanoChains[common.ChainIDStrPrime].NativeTokens = nil
 
 		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -689,7 +729,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{Address: primeBridgingAddr, Amount: 1, Tokens: []indexer.TokenAmount{
 				{
 					PolicyID: policyID,
-					Name:     wrappedTokenPrime.Name,
+					Name:     wrappedTokenCardano.Name,
 					Amount:   utxoMinValue,
 				},
 			}},
@@ -770,9 +810,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 			},
 			BridgingFee:  defaultMinFeeForBridging - 2,
@@ -827,9 +867,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 1,
+					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:  utxoMinValue,
+					Token:   primeWrappedTokenID,
 				},
 			},
 			BridgingFee:  minFeeForBridgingTokens - 2,
@@ -883,14 +923,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 				{
-					Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+					Amount:  defaultMinFeeForBridging * 2,
+					Token:   primeCurrencyID,
 				},
 			},
 			BridgingFee:  200,
@@ -935,12 +975,64 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	})
 
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
+		tokensOnSrc := []uint16{primeCurrencyID, primeWrappedTokenID}
+
+		for _, tokenOnSrc := range tokensOnSrc {
+			utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+				DestinationChainID: common.ChainIDStrCardano,
+				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+				Transactions: []sendtx.BridgingRequestMetadataTransaction{
+					{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: 2, Token: tokenOnSrc},
+				},
+				OperationFee: minOperationFee,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, utxoValueBelowMinInReceiversMetadata)
+
+			claims := &cCore.BridgeClaims{}
+			txOutputs := []*indexer.TxOutput{
+				{Address: primeBridgingAddr, Amount: utxoMinValue},
+			}
+
+			tx := indexer.Tx{
+				Metadata: utxoValueBelowMinInReceiversMetadata,
+				Outputs:  txOutputs,
+			}
+
+			cardanoTx := &core.CardanoTx{
+				Tx:            tx,
+				OriginChainID: common.ChainIDStrPrime,
+			}
+
+			appConfig := getAppConfig(false)
+			refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+				SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+			}
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			refundRequestProcessorMock.On(
+				"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+			proc := NewSkylineBridgingRequestedProcessor(
+				refundRequestProcessorMock,
+				hclog.NewNullLogger(),
+				chainInfos,
+			)
+
+			err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "found an utxo value below minimum value in metadata receivers")
+		}
+	})
+
+	t.Run("ValidateAndAddClaim - eth destination - utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
-			DestinationChainID: common.ChainIDStrCardano,
+			DestinationChainID: common.ChainIDStrNexus,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
-				{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: 2},
+				{Address: sendtx.AddrToMetaDataAddr(validNexusAddr), Amount: 2, Token: cardanoCurrencyID},
 			},
 			OperationFee: minOperationFee,
 		})
@@ -949,7 +1041,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
-			{Address: primeBridgingAddr, Amount: utxoMinValue},
+			{Address: cardanoBridgingAddr, Amount: utxoMinValue},
 		}
 
 		tx := indexer.Tx{
@@ -959,7 +1051,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: common.ChainIDStrCardano,
 		}
 
 		appConfig := getAppConfig(false)
@@ -979,7 +1071,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "found a utxo value below minimum value in metadata receivers")
+		require.ErrorContains(t, err, "found an utxo value below minimum value in metadata receivers")
 	})
 
 	//nolint:dupl
@@ -990,14 +1082,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1048,14 +1140,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1098,6 +1190,397 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	t.Run("ValidateAndAddClaim invalid eth receiver addr in metadata", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrNexus,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{
+					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
+				},
+				{
+					Address: sendtx.AddrToMetaDataAddr("0x1234"),
+					Amount:  utxoMinValue,
+					Token:   primeWrappedTokenID,
+				},
+			},
+			OperationFee: minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue},
+		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid eth receiver addr in metadata")
+	})
+
+	t.Run("ValidateAndAddClaim - eth fee receiver metadata invalid", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrNexus,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{
+					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Amount:  utxoMinValue,
+					Token:   primeWrappedTokenID,
+				},
+				{
+					Address: sendtx.AddrToMetaDataAddr("0x1234"),
+					Amount:  utxoMinValue,
+					Token:   primeWrappedTokenID,
+				},
+			},
+			OperationFee: minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue},
+		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "fee receiver metadata invalid")
+	})
+
+	t.Run("ValidateAndAddClaim - non-wrapped tokens - amount less than min allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  minColCoinsAllowedToBridge - 1,
+				Token:   usdtTokenID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   utxoMinValue,
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("receiver amount of token with ID %d too low", usdtTokenID))
+	})
+
+	t.Run("ValidateAndAddClaim - non-wrapped tokens with eth destination - amount less than min allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrNexus
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(common.EthZeroAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
+				Amount:  minColCoinsAllowedToBridge - 1,
+				Token:   usdtTokenID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     "USDT",
+						Amount:   utxoMinValue,
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("receiver amount of token with ID %d too low", usdtTokenID))
+	})
+
+	//nolint:dupl
+	t.Run("ValidateAndAddClaim - non-wrapped token - amount mismatch", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  minColCoinsAllowedToBridge,
+				Token:   usdtTokenID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   utxoMinValue,
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("multisig native token with ID: %d amount mismatch", usdtTokenID))
+	})
+
+	t.Run("ValidateAndAddClaim - non-wrapped token - amount greater than max allowed", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  maxTokenAmountAllowedToBridge.Uint64() + 1,
+				Token:   usdtTokenID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     "USDT",
+						Amount:   maxTokenAmountAllowedToBridge.Uint64() + 1,
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "greater than maximum allowed")
+	})
+
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch less", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1105,14 +1588,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:  defaultMinFeeForBridging * 2,
+					Token:   primeCurrencyID,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1162,14 +1645,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging * 2,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:  defaultMinFeeForBridging * 2,
+					Token:   primeCurrencyID,
 				},
 				{
-					Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-					Amount:             utxoMinValue,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+					Amount:  utxoMinValue,
+					Token:   primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1219,9 +1702,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address:            sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
-					Amount:             defaultMinFeeForBridging - 1,
-					IsNativeTokenOnSrc: 0,
+					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
+					Amount:  defaultMinFeeForBridging - 1,
+					Token:   primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1275,12 +1758,22 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			require.NoError(t, err)
 
 			require.NoError(t, json.Unmarshal(bytes, &newAppConfig))
-			// because of `json:"-"`
-			newAppConfig.CardanoChains[common.ChainIDStrCardano].NativeTokens = nil
+
+			newAppConfig.CardanoChains[common.ChainIDStrPrime].DestinationChains = map[string]common.TokenPairs{
+				common.ChainIDStrCardano: []common.TokenPair{
+					{SourceTokenID: primeWrappedTokenID, DestinationTokenID: cardanoCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+				},
+			}
+			newAppConfig.CardanoChains[common.ChainIDStrCardano].DestinationChains = map[string]common.TokenPairs{
+				common.ChainIDStrPrime: []common.TokenPair{
+					{SourceTokenID: cardanoCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
+				},
+			}
 			newAppConfig.CardanoChains[common.ChainIDStrCardano].ChainID = common.ChainIDStrCardano
 			newAppConfig.CardanoChains[common.ChainIDStrPrime].ChainID = common.ChainIDStrPrime
 			newAppConfig.BridgingAddressesManager = appConfig.BridgingAddressesManager
 
+			tokenID := primeCurrencyID
 			srcChainID, dstChainID := common.ChainIDStrPrime, common.ChainIDStrCardano
 			txOutput := &indexer.TxOutput{
 				Address: primeBridgingAddr,
@@ -1288,6 +1781,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			}
 
 			if isNativeTokenOnSource == 1 {
+				tokenID = cardanoWrappedTokenID
 				srcChainID, dstChainID = dstChainID, srcChainID
 				txOutput.Address = cardanoBridgingAddr
 			}
@@ -1298,9 +1792,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 				Transactions: []sendtx.BridgingRequestMetadataTransaction{
 					{
-						Address:            common.SplitString(validTestAddress, 40),
-						Amount:             1_000_000,
-						IsNativeTokenOnSrc: isNativeTokenOnSource,
+						Address: common.SplitString(validTestAddress, 40),
+						Amount:  1_000_000,
+						Token:   tokenID,
 					},
 				},
 				OperationFee: minOperationFee,
@@ -1324,7 +1818,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				OriginChainID: srcChainID,
 			}, newAppConfig)
 			require.Error(t, err)
-			require.ErrorContains(t, err, "no native token specified for destination: "+common.ChainIDStrPrime)
+			require.ErrorContains(t, err, "no bridging path from source chain "+srcChainID+" to destination chain "+dstChainID)
 		}
 	})
 
@@ -1334,14 +1828,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             defaultMinFeeForBridging * 2,
-				IsNativeTokenOnSrc: 0,
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  defaultMinFeeForBridging * 2,
+				Token:   primeCurrencyID,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 0,
-				Amount:             maxAmountAllowedToBridge.Uint64() + 1,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Token:   primeCurrencyID,
+				Amount:  maxAmountAllowedToBridge.Uint64() + 1,
 			},
 		}
 
@@ -1391,7 +1885,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "sum of receiver amounts + fee")
+		require.ErrorContains(t, err, "sum of receiver amounts")
 		require.ErrorContains(t, err, "greater than maximum allowed")
 	})
 
@@ -1401,14 +1895,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             minFeeForBridgingTokens * 2,
-				IsNativeTokenOnSrc: 0,
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             maxTokenAmountAllowedToBridge.Uint64() * 2,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Token:   primeWrappedTokenID,
+				Amount:  maxTokenAmountAllowedToBridge.Uint64() * 2,
 			},
 		}
 
@@ -1470,9 +1964,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Token:   primeWrappedTokenID,
+				Amount:  utxoMinValue,
 			},
 		}
 
@@ -1535,14 +2029,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            common.SplitString(cardanoBridgingFeeAddr, 40),
-				Amount:             minFeeForBridgingTokens * 2,
-				IsNativeTokenOnSrc: 0,
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeWrappedTokenID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
+				Token:   usdtTokenID,
 			},
 		}
 
@@ -1567,6 +2066,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Name:     wrappedTokenPrime.Name,
 						Amount:   utxoMinValue,
 					},
+					{
+						PolicyID: policyID,
+						Name:     "USDT",
+						Amount:   maxTokenAmountAllowedToBridge.Uint64(),
+					},
 				},
 			},
 		}
@@ -1578,6 +2082,245 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Outputs:  txOutputs,
 			},
 			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[len(receivers)-1].DestinationAddress)
+	})
+
+	t.Run("ValidateAndAddClaim valid - currency on source", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrCardano
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeCurrencyID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  2*utxoMinValue + minOperationFee + minFeeForBridgingTokens*2,
+				Tokens:  []indexer.TokenAmount{},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[len(receivers)-1].DestinationAddress)
+	})
+
+	t.Run("ValidateAndAddClaim valid - tokens on source - eth destination", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrNexus
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: []string{common.EthZeroAddr},
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
+				Amount:  utxoMinValue,
+				Token:   primeWrappedTokenID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
+				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
+				Token:   usdtTokenID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: primeBridgingAddr,
+				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Tokens: []indexer.TokenAmount{
+					{
+						PolicyID: policyID,
+						Name:     wrappedTokenPrime.Name,
+						Amount:   utxoMinValue,
+					},
+					{
+						PolicyID: policyID,
+						Name:     "USDT",
+						Amount:   maxTokenAmountAllowedToBridge.Uint64(),
+					},
+				},
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		// require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		// require.Equal(t, receivers[0].Amount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[2].DestinationAddress)
+	})
+
+	t.Run("ValidateAndAddClaim valid - currency on source - eth destination", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrNexus
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{
+				Address: []string{common.EthZeroAddr},
+				Amount:  minFeeForBridgingTokens * 2,
+				Token:   cardanoCurrencyID,
+			},
+			{
+				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
+				Amount:  utxoMinValue,
+				Token:   cardanoCurrencyID,
+			},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+			OperationFee:       minOperationFee,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{
+				Address: cardanoBridgingAddr,
+				Amount:  utxoMinValue + minOperationFee + minFeeForBridgingTokens*2,
+			},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrCardano,
 		}
 
 		appConfig := getAppConfig(false)
@@ -1618,9 +2361,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  minFeeForBridgingTokens * 2,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Token:   primeCurrencyID,
+				Amount:  utxoMinValue,
 			},
 		}
 
@@ -1686,11 +2429,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Token:   primeWrappedTokenID,
+				Amount:  utxoMinValue,
 			},
 		}
 
@@ -1765,11 +2509,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
+				Token:   primeCurrencyID,
 			},
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeWrappedTokenID,
 			},
 		}
 
@@ -1841,9 +2586,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeWrappedTokenID,
 			},
 		}
 
@@ -1917,9 +2662,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
+				Amount:  utxoMinValue,
+				Token:   primeWrappedTokenID,
 			},
 		}
 
@@ -1973,9 +2718,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
+				Token:   primeWrappedTokenID,
+				Amount:  utxoMinValue,
 			},
 		}
 
@@ -2030,9 +2775,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address:            sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				IsNativeTokenOnSrc: 1,
-				Amount:             utxoMinValue,
+				Address: sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
+				Token:   cardanoWrappedTokenID,
+				Amount:  utxoMinValue,
 			},
 		}
 
@@ -2101,4 +2846,4 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.Equal(t, strings.Join(receivers[0].Address, ""),
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
 	})
-} */
+}

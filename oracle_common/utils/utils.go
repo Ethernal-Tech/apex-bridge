@@ -61,5 +61,6 @@ func GetTokenPair(
 		}
 	}
 
-	return nil, fmt.Errorf("no token pair found for source token ID %d", tokenID)
+	return nil, fmt.Errorf("no bridging path from source chain %s to destination chain %s with token ID %d",
+		srcChainID, destChainID, tokenID)
 }

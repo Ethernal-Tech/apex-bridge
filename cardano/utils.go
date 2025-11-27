@@ -31,7 +31,7 @@ func UtxoContainsUnknownTokens(txOut indexer.TxOutput, knownTokens ...wallet.Tok
 }
 
 func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
-	knownTokens := make([]wallet.Token, 0, len(cardanoConfig.Tokens))
+	knownTokens := make([]wallet.Token, 0)
 
 	for _, tokenConfig := range cardanoConfig.Tokens {
 		if tokenConfig.ChainSpecific == wallet.AdaTokenName {
@@ -40,13 +40,32 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 
 		token, err := GetTokenFromName(tokenConfig.ChainSpecific)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve native tokens from config: %w", err)
+			return nil, fmt.Errorf("failed to retrieve native token with name %s from config: %w", tokenConfig.ChainSpecific, err)
 		}
 
 		knownTokens = append(knownTokens, token)
 	}
 
 	return knownTokens, nil
+}
+
+func GetWrappedTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
+	wrappedTokens := make([]wallet.Token, 0)
+
+	for _, tokenConfig := range cardanoConfig.Tokens {
+		if !tokenConfig.IsWrappedCurrency {
+			continue
+		}
+
+		token, err := GetTokenFromName(tokenConfig.ChainSpecific)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve wrapped token with name %s from config: %w", tokenConfig.ChainSpecific, err)
+		}
+
+		wrappedTokens = append(wrappedTokens, token)
+	}
+
+	return wrappedTokens, nil
 }
 
 func GetTokenAmount(utxo *indexer.TxOutput, tokenName string) uint64 {

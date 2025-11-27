@@ -210,7 +210,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := p.preValidate(tx, metadata, appConfig); err != nil {
+	if err := p.preValidate(tx, appConfig); err != nil {
 		return err
 	}
 
@@ -272,14 +272,13 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 func (p *BridgingRequestedProcessorSkylineImpl) preValidate(
 	tx *core.CardanoTx,
-	metadata *common.BridgingRequestMetadata,
 	appConfig *cCore.AppConfig,
 ) error {
 	if err := p.refundRequestProcessor.HandleBridgingProcessorPreValidate(tx, appConfig); err != nil {
 		return err
 	}
 
-	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig, false); err != nil {
 		return err
 	}
 
@@ -326,7 +325,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiver(
 ) error {
 	receiverAddr := strings.Join(receiver.Address, "")
 
-	if receiverAddr == ctx.destFeeAddress {
+	if normalizeAddr(receiverAddr) == normalizeAddr(ctx.destFeeAddress) {
 		currencyID, err := ctx.cardanoSrcConfig.GetCurrencyID()
 		if err != nil {
 			return err
@@ -383,7 +382,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 		// TODO - check this one more time. Also check whether we should have MinColCoinsAllowedToBridge
 	} else if receiver.Amount < ctx.bridgingSettings.MinColCoinsAllowedToBridge {
 		return fmt.Errorf(
-			"colored coin receiver amount too low for Colored Coin %s: got %d, minimum allowed %d; metadata: %v",
+			"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v",
 			receiver.Token,
 			receiver.Amount,
 			ctx.bridgingSettings.MinColCoinsAllowedToBridge,
@@ -419,7 +418,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 	} else if receiver.Amount < ctx.bridgingSettings.MinColCoinsAllowedToBridge {
 		// check colored coin min amount
 		return fmt.Errorf(
-			"colored coin receiver amount too low for Colored Coin %s: got %d, minimum allowed %d; metadata: %v",
+			"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v",
 			receiver.Token,
 			receiver.Amount,
 			ctx.bridgingSettings.MinColCoinsAllowedToBridge,
@@ -472,8 +471,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 			metadata.BridgingFee, minBridgingFee, metadata)
 	}
 
-	// if there is at least one native token on source transfer or multi sig has tokens
-	// -> native token on source should be defined
 	for tokenID, tokenAmount := range receiverCtx.nativeTokensSum {
 		tokenName := cardanoSrcConfig.Tokens[tokenID].ChainSpecific
 
@@ -485,8 +482,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 		multisigWrappedTokenAmount := new(big.Int).SetUint64(cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String()))
 
 		if tokenAmount.Cmp(multisigWrappedTokenAmount) != 0 {
-			return fmt.Errorf("multisig native token %s amount mismatch: expected %v but got %v",
-				nativeToken.String(), tokenAmount, multisigWrappedTokenAmount)
+			return fmt.Errorf("multisig native token with ID: %d amount mismatch: expected %v but got %v",
+				tokenID, tokenAmount, multisigWrappedTokenAmount)
 		}
 	}
 
@@ -510,10 +507,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 
 	maxTokenAmt := receiverCtx.bridgingSettings.MaxTokenAmountAllowedToBridge
 	if maxTokenAmt != nil && maxTokenAmt.Sign() > 0 {
-		for tokenName, tokenAmount := range receiverCtx.nativeTokensSum {
+		for tokenID, tokenAmount := range receiverCtx.nativeTokensSum {
 			if tokenAmount.Cmp(maxTokenAmt) == 1 {
-				return fmt.Errorf("sum of native token %s: %v greater than maximum allowed: %v",
-					tokenName, tokenAmount, maxTokenAmt)
+				return fmt.Errorf("sum of native token with ID %d: %v greater than maximum allowed: %v",
+					tokenID, tokenAmount, maxTokenAmt)
 			}
 		}
 	}
@@ -692,4 +689,9 @@ func trackSourceTokenAmount(
 		// source token is wrapped currency
 		totalTokensAmount.totalAmountWrappedSrc += receiverAmount
 	}
+}
+
+func normalizeAddr(addr string) string {
+	addr = strings.ToLower(addr)
+	return strings.TrimPrefix(addr, "0x")
 }
