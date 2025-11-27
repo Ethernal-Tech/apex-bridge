@@ -103,13 +103,14 @@ func getOutputs(
 			continue
 		}
 
-		for _, receiver := range transaction.ReceiversWithToken {
+		for i, receiver := range transaction.ReceiversWithToken {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
-			} else {
+			} else if i == 0 {
+				// for refund tx, deduct min bridging fee from the first receiver from claim
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee
@@ -120,44 +121,58 @@ func getOutputs(
 			}
 
 			if hasTokens {
+				var (
+					err        error
+					token      cardanowallet.Token
+					shouldMint bool
+				)
+
+				switch transaction.TransactionType {
+				case uint8(common.DefundConfirmedTxType):
+					token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
+					if err != nil {
+						return nil, err
+					}
+				case uint8(common.RefundConfirmedTxType):
+					token, shouldMint, err = cardanoConfig.GetTokenData(receiver.TokenId)
+					if err != nil {
+						return nil, err
+					}
+				default:
+					token, shouldMint, err = cardanoConfig.GetTokenData(
+						receiver.TokenId)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				if shouldMint {
+					mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
+						Token:  token,
+						Amount: receiver.AmountWrapped.Uint64(),
+					})
+				}
+
 				if len(data.Tokens) == 0 {
-					var (
-						err        error
-						token      cardanowallet.Token
-						shouldMint bool
-					)
-
-					switch transaction.TransactionType {
-					case uint8(common.DefundConfirmedTxType):
-						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
-						if err != nil {
-							return nil, err
-						}
-					case uint8(common.RefundConfirmedTxType):
-						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
-						if err != nil {
-							return nil, err
-						}
-					default:
-						token, shouldMint, err = cardanoConfig.GetTokenData(
-							receiver.TokenId)
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					if shouldMint {
-						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
-							Token:  token,
-							Amount: receiver.AmountWrapped.Uint64(),
-						})
-					}
-
 					data.Tokens = []cardanowallet.TokenAmount{
 						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
 					}
 				} else {
-					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+					found := false
+
+					// check if the token is already in the tokens
+					for i, t := range data.Tokens {
+						if t.TokenName() == token.String() {
+							data.Tokens[i].Amount += receiver.AmountWrapped.Uint64()
+							found = true
+
+							break
+						}
+					}
+
+					if !found {
+						data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
+					}
 				}
 			}
 
