@@ -8,11 +8,13 @@ import (
 const upgradeEVMCommandUse = "upgrade"
 const deployContractCommandUse = "deploy-contract"
 const setValidatorsChainDataEVMCommandUse = "set-validators-chain-data"
+const setDependenciesCommandUse = "set-dependencies"
 
 var deployEVMParamsData = &deployEVMParams{}
 var upgradeEVMParamsData = &upgradeEVMParams{}
 var deployContractParamsData = &deployContractParams{}
 var setValidatorsChainDataEVMParamsData = &setValidatorsChainDataEVMParams{}
+var setDependenciesParamsData = &setDependenciesParams{}
 
 func GetDeployEVMCommand() *cobra.Command {
 	cmdDeployEVM := &cobra.Command{
@@ -20,6 +22,12 @@ func GetDeployEVMCommand() *cobra.Command {
 		Short:   "deploys evm gateway smart contract to evm chain (by default nexus)",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(deployEVMParamsData),
+	}
+	cmdSetDependencies := &cobra.Command{
+		Use:     setDependenciesCommandUse,
+		Short:   "call setDependencies on an already deployed contract",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(setDependenciesParamsData),
 	}
 	cmdUpgradeEVM := &cobra.Command{
 		Use:     upgradeEVMCommandUse,
@@ -44,10 +52,12 @@ func GetDeployEVMCommand() *cobra.Command {
 	upgradeEVMParamsData.setFlags(cmdUpgradeEVM)
 	deployContractParamsData.setFlags(cmdDeployContract)
 	setValidatorsChainDataEVMParamsData.setFlags(cmdSetVCDEVM)
+	setDependenciesParamsData.setFlags(cmdSetDependencies)
 
 	cmdDeployEVM.AddCommand(cmdUpgradeEVM)
 	cmdDeployEVM.AddCommand(cmdDeployContract)
 	cmdDeployEVM.AddCommand(cmdSetVCDEVM)
+	cmdDeployEVM.AddCommand(cmdSetDependencies)
 
 	return cmdDeployEVM
 }
@@ -63,6 +73,10 @@ func runPreRun(cb *cobra.Command, _ []string) error {
 
 	if cb.Use == setValidatorsChainDataEVMCommandUse {
 		return setValidatorsChainDataEVMParamsData.validateFlags()
+	}
+
+	if cb.Use == setDependenciesCommandUse {
+		return setDependenciesParamsData.validateFlags()
 	}
 
 	return deployEVMParamsData.validateFlags()

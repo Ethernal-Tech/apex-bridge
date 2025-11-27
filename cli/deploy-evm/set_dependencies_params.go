@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
@@ -15,27 +14,17 @@ import (
 )
 
 const (
-	contractNameFlag          = "contract-name"
-	contractDirFlag           = "contract-dir"
-	dependenciesAddressesFlag = "dependencies"
-	contractOwnerFlag         = "owner"
-	upgradeAdminFlag          = "upgrade-admin"
-
-	contractNameFlagDesc          = "name of the smart contract to deploy"
-	contractDirFlagDesc           = "the directory where the sc repository is cloned"
-	dependenciesAddressesFlagDesc = "addresses of dependency contracts, separated by semicolons"
-	contractOwnerFlagDesc         = "address of the contract's owner"
-	upgradeAdminFlagDesc          = "address of the contract's upgrade admin"
+	contractProxyAddrFlag     = "proxy-addr"
+	contractProxyAddrFlagDesc = "proxy address of the deployed contract to configure"
 )
 
-type deployContractParams struct {
+type setDependenciesParams struct {
 	contractName             string
 	contractDir              string
 	dependenciesAddressesStr string
 	dependenciesAddresses    []ethcommon.Address
+	contractProxyAddr        string
 
-	contractOwner    string
-	upgradeAdmin     string
 	evmPrivateKey    string
 	privateKeyConfig string
 
@@ -48,7 +37,7 @@ type deployContractParams struct {
 	gasLimit     uint64
 }
 
-func (ip *deployContractParams) validateFlags() error {
+func (ip *setDependenciesParams) validateFlags() error {
 	if !common.IsValidHTTPURL(ip.evmNodeURL) {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
@@ -73,12 +62,8 @@ func (ip *deployContractParams) validateFlags() error {
 		}
 	}
 
-	if ip.contractOwner == "" {
-		return fmt.Errorf("contract owner not specified: --%s", contractOwnerFlag)
-	}
-
-	if ip.upgradeAdmin == "" {
-		return fmt.Errorf("upgrade admin not specified: --%s", upgradeAdminFlag)
+	if ip.contractProxyAddr == "" || !ethcommon.IsHexAddress(ip.contractProxyAddr) {
+		return fmt.Errorf("invalid --%s flag", contractProxyAddrFlag)
 	}
 
 	if ip.evmPrivateKey == "" && ip.privateKeyConfig == "" {
@@ -92,7 +77,7 @@ func (ip *deployContractParams) validateFlags() error {
 	return nil
 }
 
-func (ip *deployContractParams) setFlags(cmd *cobra.Command) {
+func (ip *setDependenciesParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.contractName,
 		contractNameFlag,
@@ -112,16 +97,10 @@ func (ip *deployContractParams) setFlags(cmd *cobra.Command) {
 		dependenciesAddressesFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&ip.contractOwner,
-		contractOwnerFlag,
+		&ip.contractProxyAddr,
+		contractProxyAddrFlag,
 		"",
-		contractOwnerFlagDesc,
-	)
-	cmd.Flags().StringVar(
-		&ip.upgradeAdmin,
-		upgradeAdminFlag,
-		"",
-		upgradeAdminFlagDesc,
+		contractProxyAddrFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&ip.evmPrivateKey,
@@ -179,7 +158,7 @@ func (ip *deployContractParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
-func (ip *deployContractParams) Execute(
+func (ip *setDependenciesParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
@@ -201,12 +180,12 @@ func (ip *deployContractParams) Execute(
 		}
 	}
 
-	artifacts, err := ethcontracts.LoadArtifacts(contractDir, []string{ercProxyContractName, ip.contractName}...)
+	artifacts, err := ethcontracts.LoadArtifacts(contractDir, []string{ip.contractName}...)
 	if err != nil {
 		return nil, err
 	}
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.evmPrivateKey, ip.privateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.evmPrivateKey, ip.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
@@ -224,41 +203,12 @@ func (ip *deployContractParams) Execute(
 		return nil, err
 	}
 
-	_, _ = outputter.Write([]byte("Deploying the smart contracts has started..."))
-	outputter.WriteOutput()
-
 	ethContractUtils := ethcontracts.NewEthContractUtils(txHelper, wallet, defaultGasLimitMultiplier)
 
-	proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-		ctx, artifacts[ip.contractName], artifacts[ercProxyContractName], ip.getInitParams()...)
-	if err != nil {
-		return nil, fmt.Errorf("deploy %s has been failed: %w", ip.contractName, err)
-	}
-
-	_, _ = outputter.Write(fmt.Appendf(nil, "%s has been sent", ip.contractName))
-	outputter.WriteOutput()
-
-	contracts := []contractInfo{
-		{Name: ip.contractName, Addr: proxyTx.Address, IsProxy: true},
-		{Name: ip.contractName, Addr: tx.Address},
-	}
-
-	txHashes := []string{proxyTx.Hash, tx.Hash}
-
-	_, _ = outputter.Write([]byte("Waiting for receipts..."))
-	outputter.WriteOutput()
-
-	if _, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txHashes...); err != nil {
-		return nil, err
-	}
-
-	_, _ = outputter.Write([]byte("Transactions have been included in the blockchain. Initializing contracts..."))
-	outputter.WriteOutput()
-
 	if len(ip.dependenciesAddresses) == 0 {
-		return &cmdResult{
-			Contracts: contracts,
-		}, nil
+		_, _ = outputter.Write([]byte("No dependencies provided; nothing to set."))
+		outputter.WriteOutput()
+		return &cmdResult{}, nil
 	}
 
 	dependencies := make([]any, len(ip.dependenciesAddresses))
@@ -267,12 +217,12 @@ func (ip *deployContractParams) Execute(
 	}
 
 	txInfo, err := ethContractUtils.ExecuteMethod(
-		ctx, artifacts[ip.contractName], proxyTx.Address, "setDependencies", dependencies...)
+		ctx, artifacts[ip.contractName], ethcommon.HexToAddress(ip.contractProxyAddr), "setDependencies", dependencies...)
 	if err != nil {
 		return nil, fmt.Errorf("setDependecies for %s has been failed: %w", ip.contractName, err)
 	}
 
-	_, _ = outputter.Write(fmt.Appendf(nil, "%s initialization transaction has been sent", ip.contractName))
+	_, _ = outputter.Write(fmt.Appendf(nil, "%s setDependencies transaction has been sent. Waiting for the receipt...", ip.contractName))
 	outputter.WriteOutput()
 
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txInfo.Hash().String())
@@ -280,66 +230,5 @@ func (ip *deployContractParams) Execute(
 		return nil, err
 	}
 
-	return &cmdResult{
-		Contracts: contracts,
-	}, nil
-}
-
-func cloneAndBuildRepo(
-	contractDir string, repositoryURL, branchName string, outputter common.OutputFormatter,
-) (string, error) {
-	lastSlashIndex := strings.LastIndex(strings.TrimSuffix(repositoryURL, "/"), "/")
-	if lastSlashIndex == -1 {
-		return "", fmt.Errorf("invalid repository url: %s", repositoryURL)
-	}
-
-	repositoryName := repositoryURL[lastSlashIndex+1:]
-
-	_, _ = outputter.Write(fmt.Appendf(nil, "Cloning and building the smart contracts repository %s has been started...", repositoryURL)) //nolint:lll
-	outputter.WriteOutput()
-
-	newDir, err := ethcontracts.CloneAndBuildContracts(
-		contractDir, repositoryURL, repositoryName, evmRepositoryArtifactsDir, branchName)
-	if err != nil {
-		return "", fmt.Errorf("failed to clone and build contracts: %w", err)
-	}
-
-	return newDir, nil
-}
-
-func buildRepo(contractDir string, outputter common.OutputFormatter) error {
-	if _, err := common.ExecuteCLICommand("npm", []string{"install"}, contractDir); err != nil {
-		_, _ = outputter.Write(fmt.Appendf(nil, "Failed to execute npm install: %s", err.Error()))
-		outputter.WriteOutput()
-	}
-
-	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, contractDir); err != nil {
-		return fmt.Errorf("failed to compile smart contracts: %w", err)
-	}
-
-	return nil
-}
-
-func parseAddresses(input string) ([]string, error) {
-	addresses := strings.Split(input, ";")
-	validated := make([]string, 0, len(addresses))
-
-	for _, addr := range addresses {
-		addr = strings.TrimSpace(addr)
-
-		if !ethcommon.IsHexAddress(addr) {
-			return nil, fmt.Errorf("invalid address: %s", addr)
-		}
-
-		validated = append(validated, addr)
-	}
-
-	return validated, nil
-}
-
-func (ip *deployContractParams) getInitParams() []any {
-	return []any{
-		ethcommon.HexToAddress(ip.contractOwner),
-		ethcommon.HexToAddress(ip.upgradeAdmin),
-	}
+	return &cmdResult{}, nil
 }
