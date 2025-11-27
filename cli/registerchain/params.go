@@ -269,7 +269,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", transaction.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := ip.ethTxHelper.WaitForReceipt(context.Background(), transaction.Hash().String())
+	receipt, err := ip.ethTxHelper.WaitForReceipt(ctx, transaction.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
