@@ -8,7 +8,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/spf13/cobra"
 )
@@ -98,7 +97,7 @@ func (ip *walletCreateParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint32Var(
 		&ip.networkID,
 		networkIDFlag,
-		uint32(wallet.TestNetNetwork),
+		uint32(cardanowallet.TestNetNetwork),
 		networkIDFlagDesc,
 	)
 
@@ -154,8 +153,8 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			return nil, err
 		}
 
-		addr, err := cardanowallet.NewBaseAddress(
-			cardanowallet.CardanoNetworkType(ip.networkID), wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
+		addr, err := cardanowallet.NewBaseAddress(cardanowallet.CardanoNetworkType(ip.networkID),
+			wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
 		if err != nil {
 			return nil, err
 		}
