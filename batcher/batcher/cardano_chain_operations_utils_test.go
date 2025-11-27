@@ -407,31 +407,17 @@ func Test_skylineGetOutputs(t *testing.T) {
 	primeTokenName, _ := hex.DecodeString("526f75746533")
 	primeToken := cardanowallet.NewToken(primePolicyID, string(primeTokenName))
 
-	cardanoPolicyID := "472ccefa58a8a7b6b12087752119907b6c5c2ae0d37b8e66c30a2c85"
-	cardanoTokenName, _ := hex.DecodeString("8a3b65736583")
-	cardanoToken := cardanowallet.NewToken(cardanoPolicyID, string(cardanoTokenName))
-
 	config := &cardano.CardanoChainConfig{
 		NetworkID: cardanowallet.MainNetNetwork,
 		Tokens: map[uint16]common.Token{
 			2: {ChainSpecific: cardanowallet.AdaTokenName, LockUnlock: true},
-			3: {ChainSpecific: cardanoToken.String(), LockUnlock: true},
+			3: {ChainSpecific: primeToken.String(), LockUnlock: true},
 		},
 		DestinationChains: map[string]common.TokenPairs{
 			common.ChainIDStrPrime: {
 				{SourceTokenID: 2, DestinationTokenID: 3},
 			},
 		},
-		//NativeTokens: []sendtx.TokenExchangeConfig{
-		//	{
-		//		DstChainID: common.ChainIDStrPrime,
-		//		TokenName:  primeToken.String(),
-		//	},
-		//	{
-		//		DstChainID: common.ChainIDStrCardano,
-		//		TokenName:  cardanoToken.String(),
-		//	},
-		//},
 		DefaultMinFeeForBridging: 200,
 		MinFeeForBridgingTokens:  100,
 	}
@@ -466,7 +452,7 @@ func Test_skylineGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: addr3,
 					Amount:             big.NewInt(8),
-					TokenId:            3,
+					TokenId:            2,
 				},
 				{
 					DestinationAddress: addr1,

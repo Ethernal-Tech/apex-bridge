@@ -134,9 +134,6 @@ func getOutputs(
 							return nil, err
 						}
 					case uint8(common.RefundConfirmedTxType):
-						//origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
-
-						//token, err = cardanoConfig.GetNativeToken(origDstChainID)
 						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
 						if err != nil {
 							return nil, err
