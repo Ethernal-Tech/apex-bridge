@@ -86,6 +86,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			continue
 		}
 
+		// validation has already checked that there is no error
 		tokenPair, _ := oUtils.GetTokenPair(
 			ethSrcConfig.DestinationChain,
 			ethSrcConfig.ChainID,

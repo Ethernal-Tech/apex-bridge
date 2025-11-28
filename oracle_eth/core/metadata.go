@@ -28,9 +28,10 @@ type BridgingRequestEthMetadata struct {
 }
 
 type RefundBridgingRequestEthMetadata struct {
-	BridgingTxType     common.BridgingTxType `json:"t"`
-	SenderAddr         string                `json:"s"`
-	DestinationChainID string                `json:"d"`
+	BridgingTxType     common.BridgingTxType                   `json:"t"`
+	SenderAddr         string                                  `json:"s"`
+	DestinationChainID string                                  `json:"d"`
+	Transactions       []BridgingRequestEthMetadataTransaction `json:"tx"`
 }
 
 type BatchExecutedEthMetadata struct {
