@@ -49,7 +49,7 @@ func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")
 	}
 
-	if metadata.BridgingTxType != p.GetType() {
+	if common.BridgingTxType(metadata.BridgingTxType) != p.GetType() {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, nil, "ValidateAndAddClaim called for irrelevant tx")
 	}

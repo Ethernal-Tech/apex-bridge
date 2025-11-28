@@ -156,9 +156,8 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 				}
 				for i, token := range utxo.Output.Tokens {
 					walletUtxo.Tokens[i] = cardanowallet.TokenAmount{
-						PolicyID: token.PolicyID,
-						Name:     token.Name,
-						Amount:   token.Amount,
+						Token:  cardanowallet.NewToken(token.PolicyID, token.Name),
+						Amount: token.Amount,
 					}
 				}
 
