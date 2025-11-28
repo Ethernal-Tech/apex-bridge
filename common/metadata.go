@@ -129,7 +129,7 @@ func UnmarshalMetadata[
 		}
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("invalid metadata")
 }
 
 func MarshalMetadataMap[
