@@ -112,6 +112,15 @@ func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited"})
 }
 
+func GetGatewayRegisterTokenEventSignatures() ([]ethgo.Hash, error) {
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetEventSignatures(abi, []string{"TokenRegistered"})
+}
+
 func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {
 	abi, err := contractbinding.BridgeContractMetaData.GetAbi()
 	if err != nil {

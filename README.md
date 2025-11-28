@@ -561,6 +561,20 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
+$ apex-bridge bridge-admin register-gateway-token \
+        --node-url http://localhost:12001 \
+        --gateway-address 0x020202 \
+        --gas-limit 10_000_000 \
+        --token-sc-address 0x03030300 \
+        --token-id 2 \
+        --token-name USDT \
+        --token-symbol USDT \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--token-sc-address` is only passed if the token contract is not owned by the bridge
+
+```shell
 $ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \
         --bridge-url http://localhost:12001 \
         --chain prime \
