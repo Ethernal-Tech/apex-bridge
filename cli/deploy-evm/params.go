@@ -76,6 +76,11 @@ const (
 	NativeTokenPredicate = "NativeTokenPredicate"
 	NativeTokenWallet    = "NativeTokenWallet"
 	Validators           = "Validators"
+	MyToken              = "MyToken"
+	TokenFactory         = "TokenFactory"
+
+	MyTokenTestName   = "Test Token"
+	MyTokenTestSymbol = "TTK"
 )
 
 type deployEVMParams struct {
@@ -269,10 +274,10 @@ func (ip *deployEVMParams) Execute(
 	ctx := context.Background()
 
 	contractNames := []string{
-		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
+		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators, MyToken, TokenFactory,
 	}
 	setDependenciesData := map[string][]string{
-		Gateway:              {NativeTokenPredicate, Validators},
+		Gateway:              {NativeTokenPredicate, TokenFactory, Validators},
 		NativeTokenPredicate: {Gateway, NativeTokenWallet},
 		NativeTokenWallet:    {NativeTokenPredicate},
 		Validators:           {Gateway},
@@ -332,10 +337,16 @@ func (ip *deployEVMParams) Execute(
 	contracts := make([]contractInfo, len(contractNames)*2)
 	txHashes := make([]string, len(contractNames)*2)
 	addresses := make(map[string]ethcommon.Address, len(contractNames))
+	implAddresses := make(map[string]ethcommon.Address, len(contractNames))
 
 	for i, contractName := range contractNames {
+		initParams, err := ip.getInitParams(contractName, addresses, implAddresses)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get init parameters for contract %s: %w", contractName, err)
+		}
+
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName], ip.getInitParams(contractName)...)
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], initParams...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -355,6 +366,7 @@ func (ip *deployEVMParams) Execute(
 			Addr: tx.Address,
 		}
 		addresses[contractName] = proxyTx.Address
+		implAddresses[contractName] = tx.Address
 	}
 
 	_, _ = outputter.Write([]byte("Waiting for receipts..."))
@@ -497,14 +509,50 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithDynamicTx(false)), nil
 }
 
-func (ip *deployEVMParams) getInitParams(contractName string) []any {
+func (ip *deployEVMParams) getInitParams(
+	contractName string,
+	addresses map[string]ethcommon.Address,
+	implAddresses map[string]ethcommon.Address,
+) ([]any, error) {
 	switch strings.ToLower(contractName) {
 	case strings.ToLower(Gateway):
 		return []any{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
+		}, nil
+	case strings.ToLower(TokenFactory):
+		gatewayProxy, ok := addresses[Gateway]
+		if !ok {
+			return nil, fmt.Errorf("missing Gateway address for TokenFactory")
 		}
+
+		myTokenImpl, ok := implAddresses[MyToken]
+		if !ok {
+			return nil, fmt.Errorf("missing MyToken implementation address for TokenFactory")
+		}
+
+		nativeWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for TokenFactory")
+		}
+
+		return []any{
+			gatewayProxy,
+			myTokenImpl,
+			nativeWallet,
+		}, nil
+	case strings.ToLower(MyToken):
+		nativeTokenWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for MyToken")
+		}
+
+		return []any{
+			MyTokenTestName,
+			MyTokenTestSymbol,
+			nativeTokenWallet,
+		}, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unknown contract: %s", contractName)
 	}
 }
