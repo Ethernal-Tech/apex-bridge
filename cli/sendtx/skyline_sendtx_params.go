@@ -304,6 +304,9 @@ func (p *sendSkylineTxParams) Execute(
 				MinOperationFeeAmount:    dstConfig.MinOperationFee,
 			},
 		},
+		func(txSnd *sendtx.TxSender) {
+			txSnd.MinAmountToBridge = srcConfig.MinUtxoAmount
+		},
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, p.wallet)
