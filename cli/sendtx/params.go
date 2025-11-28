@@ -480,7 +480,7 @@ func (ip *sendTxParams) executeEvm(
 	}
 
 	estimatedGas, _, err := txHelper.EstimateGas(
-		context.Background(), wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
+		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
 		abi, "withdraw", chainID, receivers, ip.feeAmount)
 	if err != nil {
 		return nil, err
@@ -489,7 +489,7 @@ func (ip *sendTxParams) executeEvm(
 	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
 	outputter.WriteOutput()
 
-	tx, err := txHelper.SendTx(context.Background(), wallet,
+	tx, err := txHelper.SendTx(ctx, wallet,
 		bind.TransactOpts{
 			GasLimit: estimatedGas,
 			Value:    totalAmount,
@@ -506,7 +506,7 @@ func (ip *sendTxParams) executeEvm(
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
 	outputter.WriteOutput()
 
-	receipt, err := txHelper.WaitForReceipt(context.Background(), tx.Hash().String())
+	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
 	if err != nil {
 		return nil, err
 	} else if receipt.Status != types.ReceiptStatusSuccessful {
