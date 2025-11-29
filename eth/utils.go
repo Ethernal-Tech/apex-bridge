@@ -7,6 +7,8 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	reactorgatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/reactor"
+	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -103,8 +105,17 @@ func GetEventSignatures(abi *abi.ABI, events []string) ([]ethgo.Hash, error) {
 	return hashes, nil
 }
 
-func GetNexusEventSignatures() ([]ethgo.Hash, error) {
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
+func GetReactorGatewayEventSignatures() ([]ethgo.Hash, error) {
+	abi, err := reactorgatewaycontractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited"})
+}
+
+func GetSkylineGatewayEventSignatures() ([]ethgo.Hash, error) {
+	abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +124,7 @@ func GetNexusEventSignatures() ([]ethgo.Hash, error) {
 }
 
 func GetGatewayRegisterTokenEventSignatures() ([]ethgo.Hash, error) {
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}

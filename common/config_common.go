@@ -31,37 +31,43 @@ type Token struct {
 }
 
 type MinConfig struct {
-	MinOperationFee   uint64
-	MinFeeForBridging uint64
-	MinUtxoAmount     uint64
+	MinOperationFee            uint64
+	MinFeeForBridging          uint64
+	MinUtxoAmount              uint64
+	MinColCoinsAllowedToBridge uint64
 }
 
 const (
-	MinFeeForBridgingDefault = uint64(1_000_010)
-	MinUtxoAmountDefault     = uint64(1_000_000)
+	MinFeeForBridgingDefault          = uint64(1_000_010)
+	MinUtxoAmountDefault              = uint64(1_000_000)
+	MinColCoinsAllowedToBridgeDefault = uint64(1)
 )
 
 var (
 	ChainMinConfig = map[string]MinConfig{
 		ChainIDStrPrime: {
-			MinOperationFee:   uint64(0),
-			MinFeeForBridging: uint64(1_000_010),
-			MinUtxoAmount:     uint64(1_000_000),
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          uint64(1_000_010),
+			MinUtxoAmount:              uint64(1_000_000),
+			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		ChainIDStrCardano: {
-			MinOperationFee:   uint64(0),
-			MinFeeForBridging: uint64(1_000_010),
-			MinUtxoAmount:     uint64(1_000_000),
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          uint64(1_000_010),
+			MinUtxoAmount:              uint64(1_000_000),
+			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		ChainIDStrVector: {
-			MinOperationFee:   uint64(0),
-			MinFeeForBridging: uint64(1_000_010),
-			MinUtxoAmount:     uint64(1_000_000),
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          uint64(1_000_010),
+			MinUtxoAmount:              uint64(1_000_000),
+			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		"default": {
-			MinOperationFee:   uint64(0),
-			MinFeeForBridging: MinFeeForBridgingDefault,
-			MinUtxoAmount:     MinUtxoAmountDefault,
+			MinOperationFee:            uint64(0),
+			MinFeeForBridging:          MinFeeForBridgingDefault,
+			MinUtxoAmount:              MinUtxoAmountDefault,
+			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDefault,
 		},
 	}
 )

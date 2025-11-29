@@ -3,7 +3,6 @@ package successtxprocessors
 import (
 	"fmt"
 	"math/big"
-	"slices"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -13,7 +12,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
-	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -108,7 +106,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		return err
 	}
 
-	currencyTokenPair, err := cUtils.GetTokenPair(chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, currencyID)
+	currencyTokenPair, err := cUtils.GetTokenPair(
+		chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, currencyID)
 	trackCurrency := err == nil && currencyTokenPair.TrackSourceToken
 
 	wrappedTokenID, wrappedExists := chainConfig.GetWrappedTokenID()
@@ -128,7 +127,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 			} else {
 				// only wrapped tokens can be tracked on smart contracts
 				if wrappedExists && wrappedTokenID == tokenID {
-					tokenPair, err := cUtils.GetTokenPair(chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, tokenID)
+					tokenPair, err := cUtils.GetTokenPair(
+						chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, tokenID)
 
 					if err == nil && tokenPair.TrackSourceToken {
 						wrappedTokenAmount.Add(wrappedTokenAmount, new(big.Int).SetUint64(token.Amount))
@@ -239,8 +239,9 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 		return fmt.Errorf("more UTxOs with unknown tokens than allowed. max: %d", unknownNativeTokensUtxoCntMax)
 	}
 
-	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
-		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)))
+	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)),
+		p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
@@ -261,63 +262,6 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	return nil
 }
 
-func (p *RefundRequestProcessorSkylineImpl) calculateMinUtxoForRefund(
-	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
-	receiverAddr string, bridgingAddresses []string,
-) (uint64, error) {
-	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
-	if err != nil {
-		return 0, err
-	}
-
-	defer builder.Dispose()
-
-	chainInfo, exists := p.chainInfos[config.ChainID]
-	if !exists {
-		return 0, fmt.Errorf("chain info for chainID: %s, not found", config.ChainID)
-	}
-
-	builder.SetProtocolParameters(chainInfo.ProtocolParams)
-
-	tokenNameToAmount := make(map[string]uint64)
-
-	for _, out := range tx.Outputs {
-		if !slices.Contains(bridgingAddresses, out.Address) {
-			continue
-		}
-
-		for _, tok := range out.Tokens {
-			tokenNameToAmount[tok.TokenName()] += tok.Amount
-		}
-	}
-
-	tokens := make([]cardanowallet.TokenAmount, 0, len(tokenNameToAmount))
-
-	for name, amount := range tokenNameToAmount {
-		tok, err := cardanowallet.NewTokenWithFullNameTry(name)
-		if err != nil {
-			return 0, fmt.Errorf("failed to create Token. err: %w", err)
-		}
-
-		tokens = append(
-			tokens,
-			cardanowallet.NewTokenAmount(tok, amount),
-		)
-	}
-
-	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
-		builder,
-		receiverAddr,
-		cardanowallet.GetTokensSumMap(tokens...),
-		nil,
-	)
-	if err != nil {
-		return 0, err
-	}
-
-	return max(config.UtxoMinAmount, potentialTokenCost), nil
-}
-
 func (p *RefundRequestProcessorSkylineImpl) getSenderAddr(
 	config *cCore.CardanoChainConfig, metadata *common.RefundBridgingRequestMetadata,
 ) (string, error) {
@@ -334,7 +278,6 @@ func buildRefundTokenAmounts(
 	tokenAmounts map[uint16]*big.Int,
 	currencyAmountSum *big.Int,
 ) []cCore.RefundTokenAmount {
-
 	refundTokenAmounts := make([]cCore.RefundTokenAmount, 0, len(tokenAmounts))
 	currencyAdded := false
 

@@ -399,8 +399,8 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		3: {ChainSpecific: coloredCoin2.String(), LockUnlock: false},
 	}
 
-	confirmedTransactions := make([]eth.ConfirmedTransaction, 1)
-	confirmedTransactions[0] = eth.ConfirmedTransaction{
+	confirmedTransactions := make([]eth.ConfirmedTransaction, 0)
+	confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
 		ReceiversWithToken: []eth.BridgeReceiver{{
@@ -413,7 +413,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		TotalWrappedAmount: big.NewInt(1000000),
 		DestinationChainId: common.ToNumChainID(common.ChainIDStrVector),
 		SourceChainId:      common.ToNumChainID(common.ChainIDStrPrime),
-	}
+	})
 	batchNonceID := uint64(1)
 	destinationChain := common.ChainIDStrVector
 	cliUtils := cardanowallet.NewCliUtils(cardanowallet.ResolveCardanoCliBinary(cardanowallet.MainNetNetwork))
@@ -688,6 +688,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		SourceChainId:      common.ToNumChainID(common.ChainIDStrPrime),
 	})
 
+	//nolint:dupl
 	t.Run("single colored coin + wrapped currency - more locked should pass", func(t *testing.T) {
 		addressAndAmountRet := []common.AddressAndAmount{
 			{
@@ -886,6 +887,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		require.NotEqual(t, "", result.TxHash)
 	})
 
+	//nolint:dupl
 	t.Run("multiple colored coins - multiple locked should pass", func(t *testing.T) {
 		addressAndAmountRet := []common.AddressAndAmount{
 			{
@@ -955,6 +957,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		require.NotEqual(t, "", result.TxHash)
 	})
 
+	//nolint:dupl
 	t.Run("multiple colored coins - multiple locked burn 1 should pass", func(t *testing.T) {
 		addressAndAmountRet := []common.AddressAndAmount{
 			{
@@ -1024,6 +1027,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 		require.NotEqual(t, "", result.TxHash)
 	})
 
+	//nolint:dupl
 	t.Run("multiple colored coins - multiple locked burn multiple should pass", func(t *testing.T) {
 		addressAndAmountRet := []common.AddressAndAmount{
 			{

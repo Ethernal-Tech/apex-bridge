@@ -109,7 +109,7 @@ func NewEthOracle(
 
 		confirmedBlockSubmitters = append(confirmedBlockSubmitters, cbs)
 
-		eco, err := eth_chain.NewEthChainObserver(
+		eco, err := eth_chain.NewEthChainObserver(appConfig.RunMode,
 			ethChainConfig, ethTxsReceiver, db, indexerDB,
 			logger.Named("eth_chain_observer_"+ethChainConfig.ChainID))
 		if err != nil {

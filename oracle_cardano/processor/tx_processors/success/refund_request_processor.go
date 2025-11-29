@@ -168,6 +168,7 @@ func (p *RefundRequestProcessorImpl) validate(
 	unknownNativeTokensUtxoCnt := uint(0)
 
 	var hasTokens bool
+
 	wrappedToken, wrappedTokenErr := chainConfig.GetWrappedToken()
 	wrappedTokenExists := wrappedTokenErr == nil
 
@@ -199,8 +200,9 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("more UTxOs with unknown tokens than allowed. max: %d", unknownNativeTokensUtxoCntMax)
 	}
 
-	calculatedMinUtxo, err := p.calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
-		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)))
+	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(common.ToNumChainID(chainConfig.ChainID)),
+		p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)
 	}
@@ -221,9 +223,10 @@ func (p *RefundRequestProcessorImpl) validate(
 	return nil
 }
 
-func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
+func calculateMinUtxoForRefund(
 	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
 	receiverAddr string, bridgingAddresses []string,
+	chainInfos map[string]*chain.CardanoChainInfo,
 ) (uint64, error) {
 	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	if err != nil {
@@ -232,7 +235,7 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 
 	defer builder.Dispose()
 
-	chainInfo, exists := p.chainInfos[config.ChainID]
+	chainInfo, exists := chainInfos[config.ChainID]
 	if !exists {
 		return 0, fmt.Errorf("chain info for chainID: %s, not found", config.ChainID)
 	}

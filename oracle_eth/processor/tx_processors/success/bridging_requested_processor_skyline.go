@@ -256,7 +256,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 
 	for tokenID, tokenSum := range receiverTokensSum {
 		if tokenSum.Cmp(common.DfmToWei(appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge)) == 1 {
-			return fmt.Errorf("amount of tokens for receivers too high for token with ID %d: %v greater than maximum allowed: %v",
+			return fmt.Errorf(
+				"amount of tokens for receivers too high for token with ID %d: %v greater than maximum allowed: %v",
 				tokenID, tokenSum, common.DfmToWei(appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge))
 		}
 	}

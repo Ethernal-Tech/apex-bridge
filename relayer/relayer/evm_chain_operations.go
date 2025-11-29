@@ -29,6 +29,7 @@ func NewEVMChainOperations(
 	jsonConfig json.RawMessage,
 	chainID string,
 	gatewayAddress string,
+	vcRunMode common.VCRunMode,
 	logger hclog.Logger,
 ) (*EVMChainOperations, error) {
 	config, err := cardanotx.NewRelayerEVMChainConfig(jsonConfig)
@@ -69,9 +70,20 @@ func NewEVMChainOperations(
 		ethtxhelper.WithGasFeeMultiplier(config.GasFeeMultiplier),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")))
 
-	evmSmartContract, err := eth.NewEVMGatewaySmartContract(
-		gatewayAddress, txHelper, config.DepositGasLimit,
-		gasPrice, gasFeeCap, gasTipCap, logger)
+	var evmSmartContract eth.IEVMGatewaySmartContract
+
+	switch vcRunMode {
+	case common.ReactorMode:
+		evmSmartContract, err = eth.NewReactorEVMGatewaySmartContract(
+			gatewayAddress, txHelper, config.DepositGasLimit,
+			gasPrice, gasFeeCap, gasTipCap, logger)
+	case common.SkylineMode:
+		evmSmartContract, err = eth.NewSkylineEVMGatewaySmartContract(
+			gatewayAddress, txHelper, config.DepositGasLimit,
+			gasPrice, gasFeeCap, gasTipCap, logger)
+	default:
+		err = fmt.Errorf("unsupported run mode")
+	}
 	if err != nil {
 		return nil, err
 	}

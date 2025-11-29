@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -47,7 +48,7 @@ func TestEVMChainOperations(t *testing.T) {
 			"nodeUrl": "%s"
 		}`, secretsDir, nodeURL)))
 
-		ops, err := NewEVMChainOperations(configRaw, chainID, "0x0ff", hclog.NewNullLogger())
+		ops, err := NewEVMChainOperations(configRaw, chainID, "0x0ff", common.SkylineMode, hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		require.Equal(t, chainID, ops.chainID)

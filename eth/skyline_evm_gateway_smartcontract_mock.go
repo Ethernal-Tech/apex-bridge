@@ -4,18 +4,18 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/mock"
 )
 
-type EVMGatewaySmartContractMock struct {
+type SkylineEVMGatewaySmartContractMock struct {
 	mock.Mock
 }
 
-var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractMock)(nil)
+var _ ISkylineEVMGatewaySmartContract = (*SkylineEVMGatewaySmartContractMock)(nil)
 
-func (m *EVMGatewaySmartContractMock) Deposit(
+func (m *SkylineEVMGatewaySmartContractMock) Deposit(
 	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
 	args := m.Called(ctx, signature, bitmap, data)
@@ -24,13 +24,13 @@ func (m *EVMGatewaySmartContractMock) Deposit(
 }
 
 // RegisterToken implements IEVMGatewaySmartContract.
-func (m *EVMGatewaySmartContractMock) RegisterToken(
+func (m *SkylineEVMGatewaySmartContractMock) RegisterToken(
 	ctx context.Context, lockUnlockSCAddress common.Address,
 	tokenID uint16, name string, symbol string,
-) (*contractbinding.GatewayTokenRegistered, error) {
+) (*skylinegatewaycontractbinding.GatewayTokenRegistered, error) {
 	args := m.Called(ctx, lockUnlockSCAddress, tokenID, name, symbol)
 	if args.Get(0) != nil {
-		arg0, _ := args.Get(0).(*contractbinding.GatewayTokenRegistered)
+		arg0, _ := args.Get(0).(*skylinegatewaycontractbinding.GatewayTokenRegistered)
 
 		return arg0, args.Error(1)
 	}

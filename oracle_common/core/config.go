@@ -167,7 +167,7 @@ func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig
 	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
 
 	for chainID, cardanoConfig := range appConfig.CardanoChains {
-		cfg, err := cardanoConfig.ToSendTxChainConfig()
+		cfg, err := cardanoConfig.ToSendTxChainConfig(appConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -182,23 +182,33 @@ func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig
 	return result, nil
 }
 
-func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, err error) {
+func (config CardanoChainConfig) ToSendTxChainConfig(appConfig AppConfig) (res sendtx.ChainConfig, err error) {
 	txProvider, err := config.CreateTxProvider()
 	if err != nil {
 		return res, err
 	}
 
+	tokens := make(map[uint16]sendtx.ApexToken, len(config.Tokens))
+	for i, tok := range config.Tokens {
+		tokens[i] = sendtx.ApexToken{
+			FullName:          tok.ChainSpecific,
+			IsWrappedCurrency: tok.IsWrappedCurrency,
+		}
+	}
+
 	return sendtx.ChainConfig{
-		CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:               txProvider,
-		TestNetMagic:             uint(config.NetworkMagic),
-		TTLSlotNumberInc:         config.TTLSlotNumberInc,
-		MinUtxoValue:             config.UtxoMinAmount,
-		DefaultMinFeeForBridging: config.DefaultMinFeeForBridging,
-		MinFeeForBridgingTokens:  config.MinFeeForBridgingTokens,
-		MinOperationFeeAmount:    config.MinOperationFee,
-		PotentialFee:             config.PotentialFee,
-		ProtocolParameters:       nil,
+		CardanoCliBinary:           cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
+		TxProvider:                 txProvider,
+		TestNetMagic:               uint(config.NetworkMagic),
+		TTLSlotNumberInc:           config.TTLSlotNumberInc,
+		MinUtxoValue:               config.UtxoMinAmount,
+		DefaultMinFeeForBridging:   config.DefaultMinFeeForBridging,
+		MinFeeForBridgingTokens:    config.MinFeeForBridgingTokens,
+		MinOperationFeeAmount:      config.MinOperationFee,
+		PotentialFee:               config.PotentialFee,
+		MinColCoinsAllowedToBridge: appConfig.BridgingSettings.MinColCoinsAllowedToBridge,
+		Tokens:                     tokens,
+		ProtocolParameters:         nil,
 	}, nil
 }
 

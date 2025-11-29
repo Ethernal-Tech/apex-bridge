@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -47,7 +48,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(common.SkylineMode, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
@@ -59,7 +60,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(uint64(0), errors.New("test error")).Once()
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(common.SkylineMode, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.Error(t, err)
 		require.Nil(t, co)
 	})
@@ -72,7 +73,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
 
-		co, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		co, err := NewEthChainObserver(common.SkylineMode, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, co)
 
@@ -88,7 +89,7 @@ func TestEthChainObserver(t *testing.T) {
 
 		indexerDB.On("GetLastProcessedBlock").Return(dbBlockNumber, nil)
 
-		chainObserver, err := NewEthChainObserver(config, txsReceiverMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(common.SkylineMode, config, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -133,7 +134,7 @@ func TestEthChainObserver(t *testing.T) {
 		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
 		require.NoError(t, err)
 
-		chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
+		chainObserver, err := NewEthChainObserver(common.SkylineMode, testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
 		require.NoError(t, err)
 		require.NotNil(t, chainObserver)
 
@@ -246,7 +247,7 @@ func Test_LoadTrackerConfig(t *testing.T) {
 
 	scAddress := ethgo.HexToAddress("0x00")
 
-	eventSigs, err := eth.GetNexusEventSignatures()
+	eventSigs, err := eth.GetReactorGatewayEventSignatures()
 	require.NoError(t, err)
 
 	logFilter := map[ethgo.Address][]ethgo.Hash{
@@ -271,7 +272,7 @@ func Test_LoadTrackerConfig(t *testing.T) {
 	config := &oCore.EthChainConfig{}
 
 	t.Run("loadTrackerConfigs successful", func(t *testing.T) {
-		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(config, txsReceiverMock, logger))
+		require.Equal(t, expectedEventTrackerConfig, loadTrackerConfigs(common.SkylineMode, config, txsReceiverMock, logger))
 	})
 }
 
@@ -333,7 +334,7 @@ func TestEthChainObserver_Dispose(t *testing.T) {
 	indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
 	require.NoError(t, err)
 
-	chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
+	chainObserver, err := NewEthChainObserver(common.SkylineMode, testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
 	require.NoError(t, err)
 	require.NotNil(t, chainObserver)
 

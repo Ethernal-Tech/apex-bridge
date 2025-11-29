@@ -977,6 +977,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		tokensOnSrc := []uint16{primeCurrencyID, primeWrappedTokenID}
 
+		//nolint:dupl
 		for _, tokenOnSrc := range tokensOnSrc {
 			utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1026,6 +1027,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim - eth destination - utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1190,6 +1192,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim invalid eth receiver addr in metadata", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1247,6 +1250,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, "found an invalid eth receiver addr in metadata")
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim - eth fee receiver metadata invalid", func(t *testing.T) {
 		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1442,7 +1446,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.ErrorContains(t, err, fmt.Sprintf("receiver amount of token with ID %d too low", usdtTokenID))
 	})
 
-	//nolint:dupl
 	t.Run("ValidateAndAddClaim - non-wrapped token - amount mismatch", func(t *testing.T) {
 		const destinationChainID = common.ChainIDStrCardano
 

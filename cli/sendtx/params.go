@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	reactorgatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/reactor"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -69,36 +68,6 @@ var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
 type receiverAmount struct {
 	ReceiverAddr string
 	Amount       *big.Int
-	TokenID      uint16
-}
-
-func ToCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
-	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
-	for idx, rec := range receivers {
-		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:   rec.ReceiverAddr,
-			Amount: rec.Amount.Uint64(),
-			Token:  rec.TokenID,
-		}
-	}
-
-	return metadataReceivers
-}
-
-func ToGatewayStruct(receivers []*receiverAmount) ([]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int) {
-	total := big.NewInt(0)
-
-	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
-	for idx, rec := range receivers {
-		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
-			Receiver: rec.ReceiverAddr,
-			Amount:   rec.Amount,
-		}
-
-		total.Add(total, rec.Amount)
-	}
-
-	return gatewayOutputs, total
 }
 
 type sendTxParams struct {
@@ -213,18 +182,13 @@ func (ip *sendTxParams) validateFlags() error {
 
 	for i, x := range ip.receivers {
 		vals := strings.Split(x, ":")
-		if len(vals) != 3 {
+		if len(vals) != 2 {
 			return fmt.Errorf("--%s number %d is invalid: %s", receiverFlag, i, x)
 		}
 
 		amount, ok := new(big.Int).SetString(vals[1], 0)
 		if !ok {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
-		}
-
-		tokenID, err := strconv.ParseUint(vals[2], 10, 16)
-		if err != nil {
-			return fmt.Errorf("--%s number %d has invalid token ID: %s", receiverFlag, i, x)
 		}
 
 		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
@@ -239,7 +203,6 @@ func (ip *sendTxParams) validateFlags() error {
 		receivers = append(receivers, &receiverAmount{
 			ReceiverAddr: vals[0],
 			Amount:       amount,
-			TokenID:      uint16(tokenID),
 		})
 	}
 
@@ -368,7 +331,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.OutputFormatter) (
 	common.ICommandResult, error,
 ) {
-	receivers := ToCardanoMetadata(ip.receiversParsed)
+	receivers := toCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
@@ -381,6 +344,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
 				MinUtxoValue:             common.MinUtxoAmountDefault,
 				PotentialFee:             potentialFee,
+				Tokens: map[uint16]sendtx.ApexToken{
+					0: {FullName: cardanowallet.AdaTokenName},
+				},
 			},
 			ip.chainIDDst: {
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
@@ -389,6 +355,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				PotentialFee:             potentialFee,
 			},
 		},
+		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefault),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -430,9 +397,6 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		if err != nil {
 			return nil, err
 		}
-
-		_, _ = outputter.Write([]byte("Transaction has been bridged"))
-		outputter.WriteOutput()
 	} else if ip.nexusURL != "" {
 		txHelper, err := getTxHelper(ip.nexusURL)
 		if err != nil {
@@ -453,6 +417,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		}
 	}
 
+	_, _ = outputter.Write([]byte("Transaction has been bridged"))
+	outputter.WriteOutput()
+
 	return CmdResult{
 		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
@@ -466,7 +433,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
-	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
+	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
@@ -479,7 +446,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		return nil, err
 	}
 
-	contract, err := contractbinding.NewGateway(contractAddress, txHelper.GetClient())
+	contract, err := reactorgatewaycontractbinding.NewGateway(contractAddress, txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +454,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	_, _ = outputter.Write([]byte("Estimating gas..."))
 	outputter.WriteOutput()
 
-	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	abi, err := reactorgatewaycontractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -603,4 +570,35 @@ func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+}
+
+func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
+	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
+	for idx, rec := range receivers {
+		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
+			Addr:   rec.ReceiverAddr,
+			Amount: rec.Amount.Uint64(),
+			Token:  0,
+		}
+	}
+
+	return metadataReceivers
+}
+
+func toGatewayStruct(receivers []*receiverAmount) (
+	[]reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
+) {
+	total := big.NewInt(0)
+
+	gatewayOutputs := make([]reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	for idx, rec := range receivers {
+		gatewayOutputs[idx] = reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw{
+			Receiver: rec.ReceiverAddr,
+			Amount:   rec.Amount,
+		}
+
+		total.Add(total, rec.Amount)
+	}
+
+	return gatewayOutputs, total
 }

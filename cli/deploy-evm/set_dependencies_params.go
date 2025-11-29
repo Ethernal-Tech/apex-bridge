@@ -208,6 +208,7 @@ func (ip *setDependenciesParams) Execute(
 	if len(ip.dependenciesAddresses) == 0 {
 		_, _ = outputter.Write([]byte("No dependencies provided; nothing to set."))
 		outputter.WriteOutput()
+
 		return &cmdResult{}, nil
 	}
 
@@ -222,7 +223,9 @@ func (ip *setDependenciesParams) Execute(
 		return nil, fmt.Errorf("setDependecies for %s has been failed: %w", ip.contractName, err)
 	}
 
-	_, _ = outputter.Write(fmt.Appendf(nil, "%s setDependencies transaction has been sent. Waiting for the receipt...", ip.contractName))
+	_, _ = outputter.Write(fmt.Appendf(
+		nil, "%s setDependencies transaction has been sent. Waiting for the receipt...", ip.contractName))
+
 	outputter.WriteOutput()
 
 	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txInfo.Hash().String())

@@ -2,28 +2,45 @@ package clisendtx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
+	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 )
 
 const (
-	operationFeeFlag     = "operation-fee"
-	fullSrcTokenNameFlag = "src-token-name" //nolint:gosec
-	fullDstTokenNameFlag = "dst-token-name" //nolint:gosec
+	operationFeeFlag         = "operation-fee"
+	fullSrcTokenNameFlag     = "src-token-name"          //nolint:gosec
+	fullDstTokenNameFlag     = "dst-token-name"          //nolint:gosec
+	tokenIDSrcFlag           = "src-token-id"            //nolint:gosec
+	tokenContractAddrSrcFlag = "src-token-contract-addr" //nolint:gosec
+	tokenContractAddrDstFlag = "dst-token-contract-addr" //nolint:gosec
 
-	operationFeeFlagDesc     = "operation fee"
-	fullSrcTokenNameFlagDesc = "denom of the token to transfer from source chain"    //nolint:gosec
-	fullDstTokenNameFlagDesc = "denom of the token to transfer to destination chain" //nolint:gosec
+	operationFeeFlagDesc         = "operation fee"
+	fullSrcTokenNameFlagDesc     = "denom of the token to transfer from source chain"    //nolint:gosec
+	fullDstTokenNameFlagDesc     = "denom of the token to transfer to destination chain" //nolint:gosec
+	tokenIDSrcFlagDesc           = "token id from source chain"
+	tokenContractAddrSrcFlagDesc = "contract address of the token on src"
+	tokenContractAddrDstFlagDesc = "contract address of the token on destination"
 )
 
 type sendSkylineTxParams struct {
+	txType string // cardano or evm
+
 	privateKeyRaw      string
 	stakePrivateKeyRaw string
 	receivers          []string
@@ -31,6 +48,7 @@ type sendSkylineTxParams struct {
 	chainIDDst         string
 	feeString          string
 	operationFeeString string
+	tokenIDSrc         uint16
 	tokenFullNameSrc   string
 	tokenFullNameDst   string
 
@@ -40,6 +58,12 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
+	// nexus
+	gatewayAddress       string
+	nexusURL             string
+	tokenContractAddrSrc string
+	tokenContractAddrDst string
+
 	feeAmount          *big.Int
 	operationFeeAmount *big.Int
 	receiversParsed    []*receiverAmount
@@ -47,6 +71,10 @@ type sendSkylineTxParams struct {
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
+	if p.txType != "" && p.txType != common.ChainTypeEVMStr && p.txType != common.ChainTypeCardanoStr {
+		return fmt.Errorf("invalid --%s type not supported", txTypeFlag)
+	}
+
 	if p.privateKeyRaw == "" {
 		return fmt.Errorf("flag --%s not specified", privateKeyFlag)
 	}
@@ -63,32 +91,38 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
-	switch {
-	case p.tokenFullNameSrc != "":
-		if p.tokenFullNameDst != "" {
-			return fmt.Errorf("only one flag between --%s and --%s should be specified",
-				fullSrcTokenNameFlag, fullDstTokenNameFlag)
-		}
+	if p.tokenFullNameSrc == "" {
+		return fmt.Errorf("--%s flag not specified", fullSrcTokenNameFlag)
+	}
 
+	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
 		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameSrc)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
 		}
 
 		p.tokenFullNameSrc = token.String()
-		p.tokenFullNameDst = cardanowallet.AdaTokenName
+	}
 
-	case p.tokenFullNameDst != "":
+	if p.tokenFullNameDst == "" {
+		return fmt.Errorf("--%s flag not specified", fullDstTokenNameFlag)
+	}
+
+	if p.tokenFullNameDst != cardanowallet.AdaTokenName {
 		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameDst)
 		if err != nil {
 			return fmt.Errorf("--%s invalid token name: %s", fullDstTokenNameFlag, p.tokenFullNameDst)
 		}
 
-		p.tokenFullNameSrc = cardanowallet.AdaTokenName
 		p.tokenFullNameDst = token.String()
+	}
 
-	default:
-		return fmt.Errorf("specify at least one of: --%s, --%s", fullSrcTokenNameFlag, fullDstTokenNameFlag)
+	if p.tokenContractAddrSrc != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrSrc) {
+		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
+	}
+
+	if p.tokenContractAddrDst != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrDst) {
+		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
 	feeAmount, ok := new(big.Int).SetString(p.feeString, 0)
@@ -98,53 +132,71 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
-	srcChainConfig := common.GetChainConfig(p.chainIDSrc)
-	minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
-
-	if p.feeAmount.Uint64() < minFeeForBridging {
-		return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
-	}
-
-	operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
-	if !ok {
-		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
-	}
-
-	p.operationFeeAmount = operationFeeAmount
-
-	if p.operationFeeAmount.Uint64() < minOperationFee {
-		return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
-	}
-
-	bytes, err := cardanotx.GetCardanoPrivateKeyBytes(p.privateKeyRaw)
-	if err != nil {
-		return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
-	}
-
-	var stakeBytes []byte
-	if len(p.stakePrivateKeyRaw) > 0 {
-		stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
-		if err != nil {
-			return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, p.stakePrivateKeyRaw)
+	if p.txType == common.ChainTypeEVMStr {
+		if p.feeAmount.Cmp(minNexusBridgingFee) < 0 {
+			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 		}
-	}
 
-	p.wallet = cardanowallet.NewWallet(bytes, stakeBytes)
+		if p.gatewayAddress == "" {
+			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
+		}
 
-	if !common.IsValidHTTPURL(p.ogmiosURLSrc) {
-		return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, p.ogmiosURLSrc)
-	}
+		if !common.IsValidHTTPURL(p.nexusURL) {
+			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+		}
+	} else {
+		srcChainConfig := common.GetChainConfig(p.chainIDSrc)
+		minFeeForBridging, minOperationFee := srcChainConfig.MinFeeForBridging, srcChainConfig.MinOperationFee
 
-	if p.multisigAddrSrc == "" {
-		return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
-	}
+		if p.feeAmount.Uint64() < minFeeForBridging {
+			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
+		}
 
-	if p.ogmiosURLDst == "" {
-		return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
-	}
+		operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
+		if !ok {
+			return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
+		}
 
-	if p.ogmiosURLDst != "" && !common.IsValidHTTPURL(p.ogmiosURLDst) {
-		return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, p.ogmiosURLDst)
+		p.operationFeeAmount = operationFeeAmount
+
+		if p.operationFeeAmount.Uint64() < minOperationFee {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
+		}
+
+		bytes, err := cardanotx.GetCardanoPrivateKeyBytes(p.privateKeyRaw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s value %s", privateKeyFlag, p.privateKeyRaw)
+		}
+
+		var stakeBytes []byte
+		if len(p.stakePrivateKeyRaw) > 0 {
+			stakeBytes, err = cardanotx.GetCardanoPrivateKeyBytes(p.stakePrivateKeyRaw)
+			if err != nil {
+				return fmt.Errorf("invalid --%s value %s", stakePrivateKeyFlag, p.stakePrivateKeyRaw)
+			}
+		}
+
+		p.wallet = cardanowallet.NewWallet(bytes, stakeBytes)
+
+		if !common.IsValidHTTPURL(p.ogmiosURLSrc) {
+			return fmt.Errorf("invalid --%s: %s", ogmiosURLSrcFlag, p.ogmiosURLSrc)
+		}
+
+		if p.multisigAddrSrc == "" {
+			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
+		}
+
+		if p.nexusURL == "" && p.ogmiosURLDst == "" {
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+		}
+
+		if p.ogmiosURLDst != "" && !common.IsValidHTTPURL(p.ogmiosURLDst) {
+			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, p.ogmiosURLDst)
+		}
+
+		if p.nexusURL != "" && !common.IsValidHTTPURL(p.nexusURL) {
+			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, p.nexusURL)
+		}
 	}
 
 	receivers := make([]*receiverAmount, 0, len(p.receivers))
@@ -176,6 +228,13 @@ func (p *sendSkylineTxParams) validateFlags() error {
 }
 
 func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(
+		&p.txType,
+		txTypeFlag,
+		"",
+		txTypeFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.privateKeyRaw,
 		privateKeyFlag,
@@ -225,17 +284,24 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		operationFeeFlagDesc,
 	)
 
+	cmd.Flags().Uint16Var(
+		&p.tokenIDSrc,
+		tokenIDSrcFlag,
+		0,
+		tokenIDSrcFlagDesc,
+	)
+
 	cmd.Flags().StringVar(
 		&p.tokenFullNameSrc,
 		fullSrcTokenNameFlag,
-		"",
+		cardanowallet.AdaTokenName,
 		fullSrcTokenNameFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&p.tokenFullNameDst,
 		fullDstTokenNameFlag,
-		"",
+		cardanowallet.AdaTokenName,
 		fullDstTokenNameFlagDesc,
 	)
 
@@ -273,13 +339,56 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		"",
 		ogmiosURLDstFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&p.gatewayAddress,
+		gatewayAddressFlag,
+		"",
+		gatewayAddressFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.nexusURL,
+		nexusURLFlag,
+		"",
+		nexusURLFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.tokenContractAddrDst,
+		tokenContractAddrDstFlag,
+		"",
+		tokenContractAddrDstFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&p.tokenContractAddrSrc,
+		tokenContractAddrSrcFlag,
+		"",
+		tokenContractAddrSrcFlagDesc,
+	)
+
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
+	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
 }
 
 func (p *sendSkylineTxParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
-	receivers := toCardanoMetadataForSkyline(p.receiversParsed, p.tokenFullNameSrc)
+
+	switch p.txType {
+	case common.ChainTypeEVMStr:
+		return p.executeEvm(ctx, outputter)
+	case common.ChainTypeCardanoStr, "":
+		return p.executeCardano(ctx, outputter)
+	default:
+		return nil, fmt.Errorf("txType not supported")
+	}
+}
+
+func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter common.OutputFormatter) (
+	common.ICommandResult, error,
+) {
+	receivers := toSkylineCardanoMetadata(p.receiversParsed, p.tokenIDSrc)
 	networkID := cardanowallet.CardanoNetworkType(p.networkIDSrc)
 
 	srcConfig := common.GetChainConfig(p.chainIDSrc)
@@ -288,14 +397,21 @@ func (p *sendSkylineTxParams) Execute(
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
-				CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(networkID),
-				TxProvider:               cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
-				TestNetMagic:             p.testnetMagicSrc,
-				TTLSlotNumberInc:         ttlSlotNumberInc,
-				DefaultMinFeeForBridging: srcConfig.MinFeeForBridging,
-				MinFeeForBridgingTokens:  srcConfig.MinFeeForBridging,
-				MinOperationFeeAmount:    srcConfig.MinOperationFee,
-				MinUtxoValue:             srcConfig.MinUtxoAmount,
+				CardanoCliBinary:           cardanowallet.ResolveCardanoCliBinary(networkID),
+				TxProvider:                 cardanowallet.NewTxProviderOgmios(p.ogmiosURLSrc),
+				TestNetMagic:               p.testnetMagicSrc,
+				TTLSlotNumberInc:           ttlSlotNumberInc,
+				DefaultMinFeeForBridging:   srcConfig.MinFeeForBridging,
+				MinFeeForBridgingTokens:    srcConfig.MinFeeForBridging,
+				MinOperationFeeAmount:      srcConfig.MinOperationFee,
+				MinUtxoValue:               srcConfig.MinUtxoAmount,
+				MinColCoinsAllowedToBridge: srcConfig.MinColCoinsAllowedToBridge,
+				Tokens: map[uint16]sendtx.ApexToken{
+					p.tokenIDSrc: {
+						FullName:          p.tokenFullNameSrc,
+						IsWrappedCurrency: p.tokenFullNameDst == cardanowallet.AdaTokenName,
+					},
+				},
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,
@@ -304,9 +420,7 @@ func (p *sendSkylineTxParams) Execute(
 				MinOperationFeeAmount:    dstConfig.MinOperationFee,
 			},
 		},
-		func(txSnd *sendtx.TxSender) {
-			txSnd.MinAmountToBridge = srcConfig.MinUtxoAmount
-		},
+		sendtx.WithMinAmountToBridge(srcConfig.MinUtxoAmount),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, p.wallet)
@@ -341,10 +455,30 @@ func (p *sendSkylineTxParams) Execute(
 	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", txInfo.TxHash)))
 	outputter.WriteOutput()
 
-	err = waitForSkylineTx(
-		ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst), p.tokenFullNameDst, p.receiversParsed)
-	if err != nil {
-		return nil, err
+	if p.ogmiosURLDst != "" {
+		err = waitForCardanoSkylineTx(
+			ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst), p.tokenFullNameDst, p.receiversParsed)
+		if err != nil {
+			return nil, err
+		}
+	} else if p.nexusURL != "" {
+		txHelper, err := getTxHelper(p.nexusURL)
+		if err != nil {
+			return nil, err
+		}
+
+		receivers := make([]*receiverAmount, len(p.receiversParsed))
+		for i, rec := range p.receiversParsed {
+			receivers[i] = &receiverAmount{
+				ReceiverAddr: rec.ReceiverAddr,
+				Amount:       common.DfmToWei(rec.Amount),
+			}
+		}
+
+		err = waitForEvmSkylineTx(ctx, txHelper.GetClient(), p.tokenContractAddrDst, receivers)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	_, _ = outputter.Write([]byte("Transaction has been bridged"))
@@ -358,7 +492,156 @@ func (p *sendSkylineTxParams) Execute(
 	}, nil
 }
 
-func waitForSkylineTx(
+func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.OutputFormatter) (
+	common.ICommandResult, error,
+) {
+	contractAddress := common.HexToAddress(p.gatewayAddress)
+	chainID := common.ToNumChainID(p.chainIDDst)
+	receivers, totalTokenAmount := toSkylineGatewayStruct(p.receiversParsed, p.tokenIDSrc)
+
+	totalAmount := big.NewInt(0)
+	totalAmount.Add(totalAmount, p.feeAmount)
+	totalAmount.Add(totalAmount, p.operationFeeAmount)
+
+	wallet, err := ethtxhelper.NewEthTxWallet(p.privateKeyRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	txHelper, err := getTxHelper(p.nexusURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.tokenContractAddrSrc != "" {
+		_, _ = outputter.Write([]byte("submitting approve tx..."))
+		outputter.WriteOutput()
+
+		parsed, err := abi.JSON(strings.NewReader(approveERC20ABI))
+		if err != nil {
+			return nil, err
+		}
+
+		client := txHelper.GetClient()
+
+		erc20Contract := bind.NewBoundContract(
+			common.HexToAddress(p.tokenContractAddrSrc),
+			parsed,
+			client,
+			client,
+			client,
+		)
+
+		tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
+			return txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
+				func(opts *bind.TransactOpts) (*types.Transaction, error) {
+					return erc20Contract.Transact(opts, "approve", p.gatewayAddress, totalTokenAmount)
+				})
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		_, _ = outputter.Write([]byte(fmt.Sprintf("approve transaction has been submitted: %s", tx.Hash())))
+		outputter.WriteOutput()
+
+		receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
+		if err != nil {
+			return nil, err
+		} else if receipt.Status != types.ReceiptStatusSuccessful {
+			return nil, errors.New("approve transaction receipt status is unsuccessful")
+		}
+	}
+
+	contract, err := skylinegatewaycontractbinding.NewGateway(contractAddress, txHelper.GetClient())
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte("Estimating gas..."))
+	outputter.WriteOutput()
+
+	abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	estimatedGas, _, err := txHelper.EstimateGas(
+		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
+		abi, "withdraw", chainID, receivers, p.feeAmount, p.operationFeeAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte("Submiting bridging transaction..."))
+	outputter.WriteOutput()
+
+	tx, err := txHelper.SendTx(ctx, wallet,
+		bind.TransactOpts{
+			GasLimit: estimatedGas,
+			Value:    totalAmount,
+		},
+		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
+			return contract.Withdraw(
+				txOpts, chainID, receivers, p.feeAmount, // operationFeeAmount,
+			)
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = outputter.Write([]byte(fmt.Sprintf("transaction has been submitted: %s", tx.Hash())))
+	outputter.WriteOutput()
+
+	receipt, err := txHelper.WaitForReceipt(ctx, tx.Hash().String())
+	if err != nil {
+		return nil, err
+	} else if receipt.Status != types.ReceiptStatusSuccessful {
+		return nil, errors.New("transaction receipt status is unsuccessful")
+	}
+
+	if p.ogmiosURLDst != "" {
+		receivers := make([]*receiverAmount, len(p.receiversParsed))
+		for i, rec := range p.receiversParsed {
+			receivers[i] = &receiverAmount{
+				ReceiverAddr: rec.ReceiverAddr,
+				Amount:       common.WeiToDfm(rec.Amount),
+			}
+		}
+
+		err = waitForCardanoSkylineTx(
+			ctx, cardanowallet.NewTxProviderOgmios(p.ogmiosURLDst),
+			p.tokenFullNameDst, receivers)
+		if err != nil {
+			return nil, err
+		}
+
+		_, _ = outputter.Write([]byte("Transaction has been bridged"))
+		outputter.WriteOutput()
+	}
+
+	return CmdResult{
+		SenderAddr: wallet.GetAddress().String(),
+		ChainID:    p.chainIDDst,
+		Receipts:   p.receiversParsed,
+		TxHash:     receipt.TxHash.String(),
+	}, nil
+}
+
+func waitForEvmSkylineTx(
+	ctx context.Context, client *ethclient.Client, tokenContractAddr string, receivers []*receiverAmount) error {
+	if tokenContractAddr == "" {
+		return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
+			return client.BalanceAt(ctx, common.HexToAddress(addr), nil)
+		})
+	}
+
+	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
+		return getERC20Balance(client, common.HexToAddress(tokenContractAddr), common.HexToAddress(addr))
+	})
+}
+
+func waitForCardanoSkylineTx(
 	ctx context.Context, txUtxoRetriever cardanowallet.IUTxORetriever,
 	tokenName string, receivers []*receiverAmount) error {
 	return waitForTx(ctx, receivers, func(ctx context.Context, addr string) (*big.Int, error) {
@@ -371,19 +654,74 @@ func waitForSkylineTx(
 	})
 }
 
-func toCardanoMetadataForSkyline(receivers []*receiverAmount, sourceTokenName string) []sendtx.BridgingTxReceiver {
+const approveERC20ABI = `
+[
+    {"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],
+    "name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"}
+]`
+
+const balanceOfERC20ABI = `
+[
+    {"constant":true,"inputs":[{"name":"_owner","type":"address"}],
+    "name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},
+    {"constant":true,"inputs":[],"name":"decimals",
+    "outputs":[{"name":"","type":"uint8"}],"type":"function"}
+]`
+
+func getERC20Balance(
+	client *ethclient.Client, tokenContractAddr ethcommon.Address, addr ethcommon.Address,
+) (*big.Int, error) {
+	parsedABI, err := abi.JSON(strings.NewReader(balanceOfERC20ABI))
+	if err != nil {
+		return nil, err
+	}
+
+	contract := bind.NewBoundContract(tokenContractAddr, parsedABI, client, client, client)
+
+	outputs := make([]interface{}, 1)
+	outputs[0] = new(big.Int)
+	err = contract.Call(&bind.CallOpts{}, &outputs, "balanceOf", addr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	balance, ok := outputs[0].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert erc20 balanceOf result to big.Int")
+	}
+
+	return balance, nil
+}
+
+func toSkylineCardanoMetadata(receivers []*receiverAmount, tokenID uint16) []sendtx.BridgingTxReceiver {
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
 		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
 			Addr:   rec.ReceiverAddr,
 			Amount: rec.Amount.Uint64(),
-		}
-		if sourceTokenName == cardanowallet.AdaTokenName {
-			metadataReceivers[idx].Token = rec.TokenID
-		} else {
-			metadataReceivers[idx].Token = rec.TokenID
+			Token:  tokenID,
 		}
 	}
 
 	return metadataReceivers
+}
+
+func toSkylineGatewayStruct(receivers []*receiverAmount, tokenID uint16) (
+	[]skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
+) {
+	total := big.NewInt(0)
+
+	gatewayOutputs := make([]skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	for idx, rec := range receivers {
+		gatewayOutputs[idx] = skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw{
+			Receiver: rec.ReceiverAddr,
+			Amount:   rec.Amount,
+			TokenId:  tokenID,
+		}
+
+		total.Add(total, rec.Amount)
+	}
+
+	return gatewayOutputs, total
 }

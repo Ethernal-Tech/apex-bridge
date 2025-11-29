@@ -31,11 +31,11 @@ var cardanoChains = map[string]*oracleCore.CardanoChainConfig{
 					{SourceTokenID: 2, DestinationTokenID: 3},
 				},
 			},
-			//NativeTokens: []sendtx.TokenExchangeConfig{
+			// NativeTokens: []sendtx.TokenExchangeConfig{
 			//	{
 			//		TokenName: tokenName,
 			//	},
-			//},
+			// },
 		},
 	},
 }

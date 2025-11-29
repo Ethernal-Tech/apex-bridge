@@ -38,9 +38,10 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 			continue
 		}
 
-		token, err := GetTokenFromName(tokenConfig.ChainSpecific)
+		token, err := wallet.NewTokenWithFullNameTry(tokenConfig.ChainSpecific)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve native token with name %s from config: %w", tokenConfig.ChainSpecific, err)
+			return nil, fmt.Errorf(
+				"failed to retrieve native token with name %s from config: %w", tokenConfig.ChainSpecific, err)
 		}
 
 		knownTokens = append(knownTokens, token)
@@ -57,9 +58,10 @@ func GetWrappedTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error)
 			continue
 		}
 
-		token, err := GetTokenFromName(tokenConfig.ChainSpecific)
+		token, err := wallet.NewTokenWithFullNameTry(tokenConfig.ChainSpecific)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve wrapped token with name %s from config: %w", tokenConfig.ChainSpecific, err)
+			return nil, fmt.Errorf(
+				"failed to retrieve wrapped token with name %s from config: %w", tokenConfig.ChainSpecific, err)
 		}
 
 		wrappedTokens = append(wrappedTokens, token)

@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
+	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
 )
 
 type chainTokenQuantity struct {
@@ -67,7 +67,7 @@ func (d deployCardanoScriptResult) GetOutput() string {
 }
 
 type registerGatewayTokenResult struct {
-	tokenRegisteredEvent *contractbinding.GatewayTokenRegistered
+	tokenRegisteredEvent *skylinegatewaycontractbinding.GatewayTokenRegistered
 }
 
 func (r registerGatewayTokenResult) GetOutput() string {
