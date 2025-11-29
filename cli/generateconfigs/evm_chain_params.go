@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -53,6 +55,7 @@ type evmChainGenerateConfigsParams struct {
 	emptyBlocksThreshold       uint
 
 	allowedDirections []string
+	coloredCoins      []string
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -74,6 +77,52 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 
 	if p.relayerDataDir == "" && p.relayerConfigPath == "" {
 		return fmt.Errorf("specify at least one of: %s, %s", relayerDataDirFlag, relayerConfigPathFlag)
+	}
+
+	// Validate allowed directions format
+	for _, dirStr := range p.allowedDirections {
+		if err := validateAllowedDirectionFormat(dirStr); err != nil {
+			return fmt.Errorf("invalid %s format: %w", allowedDirectionsFlag, err)
+		}
+	}
+
+	// Validate colored coins format
+	for _, coinStr := range p.coloredCoins {
+		if err := validateEthColoredCoinFormat(coinStr, p.chainIDString); err != nil {
+			return fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+		}
+	}
+
+	return nil
+}
+
+func validateEthColoredCoinFormat(coinStr string, chainID string) error {
+	parts := strings.Split(coinStr, ":")
+	if len(parts) != 3 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	if coloredCoinID == 0 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	tokenName := strings.TrimSpace(parts[1])
+	if tokenName == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	contractAddress := strings.TrimSpace(parts[2])
+	if contractAddress == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	if !common.IsValidAddress(chainID, contractAddress) {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
 	return nil
@@ -131,11 +180,18 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
-	cmd.Flags().StringSliceVar(
+	cmd.Flags().StringArrayVar(
 		&p.allowedDirections,
 		allowedDirectionsFlag,
 		nil,
 		allowedDirectionsFlagDesc,
+	)
+
+	cmd.Flags().StringArrayVar(
+		&p.coloredCoins,
+		coloredCoinsFlag,
+		nil,
+		coloredCoinsFlagDesc,
 	)
 
 	// Output params
@@ -220,10 +276,36 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
 
 	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
+		vcConfig.BridgingSettings.AllowedDirections = make(oCore.AllowedDirections)
 	}
 
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
+	// Parse allowed directions
+	allowedDirs, err := parseAllowedDirections(p.allowedDirections)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse allowed directions: %w", err)
+	}
+
+	if vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] == nil {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = make(map[string]oCore.AllowedDirection)
+	}
+
+	for destChainID, direction := range allowedDirs {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString][destChainID] = direction
+	}
+
+	// Parse colored coins
+	coloredCoins, err := parseEthColoredCoins(p.coloredCoins)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse colored coins: %w", err)
+	}
+
+	if vcConfig.EthChains[p.chainIDString].ColoredCoins == nil {
+		vcConfig.EthChains[p.chainIDString].ColoredCoins = make(oCore.ColoredCoins)
+	}
+
+	for coloredCoinID, tokenName := range coloredCoins {
+		vcConfig.EthChains[p.chainIDString].ColoredCoins[coloredCoinID] = tokenName
+	}
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
@@ -264,5 +346,38 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	return &CmdResult{
 		validatorComponentsConfigPath: vcConfigPath,
 		relayerConfigPath:             rConfigPath,
+	}, nil
+}
+
+func parseEthColoredCoins(s []string) (oCore.ColoredCoins, error) {
+	result := make(oCore.ColoredCoins)
+
+	for _, coinStr := range s {
+		coloredCoinID, coloredCoin, err := parseEthColoredCoin(coinStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
+		}
+
+		result[coloredCoinID] = coloredCoin
+	}
+
+	return result, nil
+}
+
+func parseEthColoredCoin(coinStr string) (uint16, oCore.ColoredCoinEvm, error) {
+	parts := strings.Split(coinStr, ":")
+
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
+		return 0, oCore.ColoredCoinEvm{}, fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	tokenName := strings.TrimSpace(parts[1])
+
+	contractAddress := strings.TrimSpace(parts[2])
+
+	return uint16(coloredCoinID), oCore.ColoredCoinEvm{
+		TokenName:       tokenName,
+		ContractAddress: contractAddress,
 	}, nil
 }

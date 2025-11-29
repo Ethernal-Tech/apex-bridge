@@ -73,14 +73,19 @@ func (sc *SkylineTxControllerImpl) createBridgingTx(w http.ResponseWriter, r *ht
 		return
 	}
 
-	currencyOutput, tokenOutput := bridgingRequestMetadata.GetOutputAmounts()
+	outputAmounts := bridgingRequestMetadata.GetOutputAmounts()
 	// web does not need bridging fee and operation fee included in currency output
-	currencyOutput -= bridgingRequestMetadata.BridgingFee + bridgingRequestMetadata.OperationFee
+	outputAmounts.CurrencyLovelace -= bridgingRequestMetadata.BridgingFee + bridgingRequestMetadata.OperationFee
 
 	apiUtils.WriteResponse(
 		w, r, http.StatusOK,
 		response.NewBridgingTxResponse(
-			txInfo.TxRaw, txInfo.TxHash, bridgingRequestMetadata.BridgingFee, currencyOutput, tokenOutput), sc.logger,
+			txInfo.TxRaw,
+			txInfo.TxHash,
+			bridgingRequestMetadata.BridgingFee,
+			outputAmounts.CurrencyLovelace,
+			outputAmounts.WrappedTokens,
+		), sc.logger,
 	)
 }
 
@@ -217,8 +222,10 @@ func (sc *SkylineTxControllerImpl) createTx(ctx context.Context, requestBody req
 			Addr:   tx.Addr,
 			Amount: tx.Amount,
 		}
+
+		// TODO: colored coins
 		if tx.IsNativeToken {
-			receivers[i].BridgingType = sendtx.BridgingTypeNativeTokenOnSource
+			receivers[i].BridgingType = sendtx.BridgingTypeWrappedTokenOnSource
 		} else {
 			receivers[i].BridgingType = sendtx.BridgingTypeCurrencyOnSource
 		}

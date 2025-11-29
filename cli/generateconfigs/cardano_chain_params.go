@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -35,6 +36,7 @@ const (
 	minOperationFeeFlag         = "min-operation-fee"
 	blockConfirmationCountFlag  = "block-confirmation-count"
 	allowedDirectionsFlag       = "allowed-directions"
+	coloredCoinsFlag            = "colored-coins"
 
 	nativeTokenDestinationChainIDFlag = "native-token-destination-chain-id"
 	nativeTokenNameFlag               = "native-token-name"
@@ -62,7 +64,9 @@ const (
 	minFeeForBridgingTokensFlagDesc = "minimal bridging fee for bridging tokens for the chain" //nolint:gosec
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
-	allowedDirectionsFlagDesc       = "allowed bridging directions for the chain"
+	allowedDirectionsFlagDesc       = "allowed bridging direction in format: destChainID:currencyAllowed:wrappedAllowed:coloredCoins (e.g., 'chain1:true:true:1,2,3' or 'chain2:true:false:'). Can be specified multiple times" //nolint:lll
+	coloredCoinsFlagDesc            = "colored coins for the chain in format: coloredCoinID:tokenName (e.g., '1:token1,2:token2). Can be specified multiple times"                                                              //nolint:lll
+	coloredCoinsConfigFlagDesc      = "colored coins for the chain in format: id:name:ecosystemOriginChainID (e.g., '1:token1:chain1,2:token2:chain2). Can be specified multiple times"                                         //nolint:lll
 
 	nativeTokenDestinationChainIDFlagDesc = "destination chain ID for native token transfers"
 	nativeTokenNameFlagDesc               = "wrapped token name for the chain"
@@ -100,6 +104,7 @@ type cardanoChainGenerateConfigsParams struct {
 	minOperationFee         uint64
 	blockConfirmationCount  uint
 	allowedDirections       []string
+	coloredCoins            []string
 
 	nativeTokenName               string
 	nativeTokenDestinationChainID string
@@ -191,6 +196,43 @@ func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 		if _, err := wallet.NewTokenWithFullNameTry(nftFullName); err != nil {
 			return fmt.Errorf("invalid NFT name %s", nftFullName)
 		}
+	}
+
+	// Validate allowed directions format
+	for _, dirStr := range p.allowedDirections {
+		if err := validateAllowedDirectionFormat(dirStr); err != nil {
+			return fmt.Errorf("invalid %s format: %w", allowedDirectionsFlag, err)
+		}
+	}
+
+	// Validate colored coins format
+	for _, coinStr := range p.coloredCoins {
+		if err := validateColoredCoinFormat(coinStr); err != nil {
+			return fmt.Errorf("invalid %s format: %w", coloredCoinsFlag, err)
+		}
+	}
+
+	return nil
+}
+
+func validateColoredCoinFormat(coinStr string) error {
+	parts := strings.Split(coinStr, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	tokenName := strings.TrimSpace(parts[1])
+	if tokenName == "" {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	if coloredCoinID == 0 {
+		return fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
 	}
 
 	return nil
@@ -299,11 +341,18 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultEmptyBlocksThreshold,
 		emptyBlocksThresholdFlagDesc,
 	)
-	cmd.Flags().StringSliceVar(
+	cmd.Flags().StringArrayVar(
 		&p.allowedDirections,
 		allowedDirectionsFlag,
 		nil,
 		allowedDirectionsFlagDesc,
+	)
+
+	cmd.Flags().StringArrayVar(
+		&p.coloredCoins,
+		coloredCoinsFlag,
+		nil,
+		coloredCoinsFlagDesc,
 	)
 
 	// Native token params
@@ -472,7 +521,7 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			MaxFeeUtxoCount:          defaultMaxFeeUtxoCount,
 			MaxUtxoCount:             defaultMaxUtxoCount,
 			TakeAtLeastUtxoCount:     defaultTakeAtLeastUtxoCount,
-			NativeTokens:             nativeTokens,
+			WrappedCurrencyTokens:    nativeTokens,
 			DefaultMinFeeForBridging: p.minFeeForBridging,
 			MinFeeForBridgingTokens:  p.minFeeForBridgingTokens,
 			MintingScriptTxInput:     mintingScriptTxInput,
@@ -495,10 +544,36 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
 
 	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
+		vcConfig.BridgingSettings.AllowedDirections = make(oCore.AllowedDirections)
 	}
 
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
+	// Parse allowed directions
+	allowedDirs, err := parseAllowedDirections(p.allowedDirections)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse allowed directions: %w", err)
+	}
+
+	if vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] == nil {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = make(map[string]oCore.AllowedDirection)
+	}
+
+	for destChainID, direction := range allowedDirs {
+		vcConfig.BridgingSettings.AllowedDirections[p.chainIDString][destChainID] = direction
+	}
+
+	// Parse colored coins
+	coloredCoins, err := parseColoredCoins(p.coloredCoins)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse colored coins: %w", err)
+	}
+
+	if vcConfig.CardanoChains[p.chainIDString].ColoredCoins == nil {
+		vcConfig.CardanoChains[p.chainIDString].ColoredCoins = make(cardanotx.ColoredCoins)
+	}
+
+	for coloredCoinID, tokenName := range coloredCoins {
+		vcConfig.CardanoChains[p.chainIDString].ColoredCoins[coloredCoinID] = tokenName
+	}
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)
@@ -536,4 +611,32 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 		validatorComponentsConfigPath: vcConfigPath,
 		relayerConfigPath:             rConfigPath,
 	}, nil
+}
+
+func parseColoredCoins(s []string) (cardanotx.ColoredCoins, error) {
+	result := make(cardanotx.ColoredCoins)
+
+	for _, coinStr := range s {
+		coloredCoinID, tokenName, err := parseColoredCoin(coinStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse colored coin: %w", err)
+		}
+
+		result[coloredCoinID] = tokenName
+	}
+
+	return result, nil
+}
+
+func parseColoredCoin(coinStr string) (uint16, string, error) {
+	parts := strings.Split(coinStr, ":")
+
+	coloredCoinID, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil {
+		return 0, "", fmt.Errorf("invalid %s format: %s", coloredCoinsFlag, coinStr)
+	}
+
+	tokenName := strings.TrimSpace(parts[1])
+
+	return uint16(coloredCoinID), tokenName, nil
 }

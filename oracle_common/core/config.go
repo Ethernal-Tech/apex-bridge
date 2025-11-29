@@ -36,6 +36,12 @@ type CardanoChainConfigUtxo struct {
 	Slot uint64 `json:"slot"`
 } // @name CardanoChainConfigUtxo
 
+type ColoredCoins = map[uint16]ColoredCoinEvm
+type ColoredCoinEvm struct {
+	TokenName       string `json:"tokenName"`
+	ContractAddress string `json:"contractAddress"`
+}
+
 type EthChainConfig struct {
 	ChainID                 string               `json:"-"`
 	BridgingAddresses       EthBridgingAddresses `json:"-"`
@@ -52,6 +58,7 @@ type EthChainConfig struct {
 	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
 	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
 	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
+	ColoredCoins            ColoredCoins         `json:"coloredCoins"`
 }
 
 type CardanoChainConfig struct {
@@ -87,11 +94,20 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MaxAmountAllowedToBridge       *big.Int            `json:"maxAmountAllowedToBridge"`
-	MaxTokenAmountAllowedToBridge  *big.Int            `json:"maxTokenAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
-	MaxBridgingClaimsToGroup       int                 `json:"maxBridgingClaimsToGroup"`
-	AllowedDirections              map[string][]string `json:"allowedDirections"`
+	MaxAmountAllowedToBridge       *big.Int          `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  *big.Int          `json:"maxTokenAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int               `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int               `json:"maxBridgingClaimsToGroup"`
+	MinColCoinsAllowedToBridge     uint64            `json:"minColCoinsAllowedToBridge"`
+	AllowedDirections              AllowedDirections `json:"allowedDirections"`
+}
+
+type AllowedDirections = map[string]map[string]AllowedDirection
+
+type AllowedDirection struct {
+	CurrencyBirdgingAllowed bool     `json:"currencyBirdgingAllowed"`
+	WrappedBridgingAllowed  bool     `json:"wrappedBridgingAllowed"`
+	ColoredCoins            []uint16 `json:"coloredCoins"`
 }
 
 type RetryUnprocessedSettings struct {
@@ -190,7 +206,7 @@ func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, 
 		TestNetMagic:             uint(config.NetworkMagic),
 		TTLSlotNumberInc:         config.TTLSlotNumberInc,
 		MinUtxoValue:             config.UtxoMinAmount,
-		NativeTokens:             config.NativeTokens,
+		NativeTokens:             config.WrappedCurrencyTokens,
 		DefaultMinFeeForBridging: config.DefaultMinFeeForBridging,
 		MinFeeForBridgingTokens:  config.MinFeeForBridgingTokens,
 		MinOperationFeeAmount:    config.MinOperationFee,

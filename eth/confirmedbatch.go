@@ -13,7 +13,7 @@ import (
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
-type BridgeReceiver = contractbinding.IBridgeStructsReceiver
+type BridgeReceiverWithColor = contractbinding.IBridgeStructsReceiverWithColor
 
 type ConfirmedBatch struct {
 	ID              uint64
@@ -133,7 +133,7 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 		sb.WriteString(fmt.Sprintf("OutputIndexes= %s, ", hex.EncodeToString(tx.OutputIndexes)))
 		sb.WriteString("Receivers = [")
 
-		for j, recv := range tx.Receivers {
+		for j, recv := range tx.ReceiversWithColor {
 			if j > 0 {
 				sb.WriteString(", ")
 			}
@@ -142,9 +142,15 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 			sb.WriteString(recv.DestinationAddress)
 
 			if recv.AmountWrapped.Uint64() != 0 {
-				sb.WriteString(fmt.Sprintf(", %d + amountWrapped: %d)", recv.Amount, recv.AmountWrapped))
+				sb.WriteString(fmt.Sprintf(", %d + amountWrapped: %d", recv.Amount, recv.AmountWrapped))
 			} else {
-				sb.WriteString(fmt.Sprintf(", %d)", recv.Amount))
+				sb.WriteString(fmt.Sprintf(", %d", recv.Amount))
+			}
+
+			if recv.ColoredCoinId != 0 {
+				sb.WriteString(fmt.Sprintf(", colored coin ID: %d)", recv.ColoredCoinId))
+			} else {
+				sb.WriteString(")")
 			}
 		}
 

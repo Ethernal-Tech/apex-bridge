@@ -110,7 +110,7 @@ func TestBatcherExecuteOnlyBridging(t *testing.T) {
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "0x333",
 					Amount:             big.NewInt(10),
@@ -355,7 +355,7 @@ func TestBatcherExecuteMix(t *testing.T) {
 			BlockHeight:             big.NewInt(10),
 			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
-			Receivers: []eth.BridgeReceiver{
+			ReceiversWithColor: []eth.BridgeReceiverWithColor{
 				{
 					DestinationAddress: "0x333",
 					Amount:             big.NewInt(10),
