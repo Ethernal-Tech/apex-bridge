@@ -57,7 +57,7 @@ func TestEVMChainOperations(t *testing.T) {
 
 	t.Run("SendTx", func(t *testing.T) {
 		ctx := context.Background()
-		scMock := &eth.EVMGatewaySmartContractMock{}
+		scMock := &eth.SkylineEVMGatewaySmartContractMock{}
 		batch := &eth.ConfirmedBatch{
 			RawTransaction: []byte{1, 2, 3},
 			Bitmap:         new(big.Int).SetBytes([]byte{1, 7, 4}),

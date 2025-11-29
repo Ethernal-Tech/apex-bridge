@@ -238,6 +238,7 @@ $ apex-bridge generate-configs evm-chain \
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -253,6 +254,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the vector to the prime
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key VECTOR_WALLET_PRIVATE_KEY \
         --testnet-src 1127 \
         --addr-multisig-src addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg \
@@ -269,6 +271,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the prime to the nexus
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -289,9 +292,9 @@ $ apex-bridge sendtx \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
         --chain-src nexus \
+        --fee 1000010000000000000 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
-        --fee 1000010000000000000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
 - there is an optional `--stake-key` flag
@@ -299,20 +302,59 @@ $ apex-bridge sendtx \
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
 $ apex-bridge sendtx skyline \
+        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
-        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
+        --src-token-id 1 \
+        --fee 1_100_000 \
+        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
-        --fee 1_100_000 \
         --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
-
 ```
 - optional `--src-token-name` which can be used instead of `--dst-token-name`
+- there is an optional `--stake-key` flag
+
+# Example of sending a skyline transaction from the cardano to the nexus
+```shell
+$ apex-bridge sendtx skyline \
+        --tx-type cardano \
+        --key CARDANO_WALLET_PRIVATE_KEY \
+        --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
+        --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --testnet-src 3311 \
+        --network-id-src 1 \
+        --chain-src cardano \
+        --src-token-id 1 \
+        --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
+        --fee 1_100_000 \
+        --chain-dst nexus \
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --receiver 0x1111:1_234_567 \
+        --dst-token-contract-addr 0x22222
+```
+- there is an optional `--stake-key` flag
+
+# Example of sending a skyline transaction from the nexus to the cardano
+```shell
+$ apex-bridge sendtx skyline \
+        --tx-type evm \
+        --key EVM_WALLET_PRIVATE_KEY \
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --gateway-addr 0x3333 \
+        --chain-src nexus \
+        --src-token-id 1 \
+        --src-token-contract-addr 0x22222 \
+        --fee 1_100_000 \
+        --chain-dst cardano \
+        --ogmios-dst http://ogmios.cardano.testnet.apexfusion.org:1337 \
+        --receiver addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv:1_234_567 \
+        --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
+```
 - there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts

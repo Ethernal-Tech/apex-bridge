@@ -53,7 +53,7 @@ func NewEthOracle(
 	db.Init(boltDB, appConfig, typeRegister)
 
 	bridgeDataFetcher := bridge.NewEthBridgeDataFetcher(
-		ctx, oracleBridgeSC, logger.Named("eth_bridge_data_fetcher"))
+		ctx, appConfig.RunMode, oracleBridgeSC, logger.Named("eth_bridge_data_fetcher"))
 
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("eth_expected_txs_fetcher"))

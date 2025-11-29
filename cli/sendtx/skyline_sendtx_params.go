@@ -656,16 +656,53 @@ func waitForCardanoSkylineTx(
 
 const approveERC20ABI = `
 [
-    {"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],
-    "name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"}
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
 ]`
 
 const balanceOfERC20ABI = `
 [
-    {"constant":true,"inputs":[{"name":"_owner","type":"address"}],
-    "name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},
-    {"constant":true,"inputs":[],"name":"decimals",
-    "outputs":[{"name":"","type":"uint8"}],"type":"function"}
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "balanceOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
 ]`
 
 func getERC20Balance(

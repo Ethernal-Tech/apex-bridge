@@ -9,7 +9,6 @@ import (
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -161,67 +160,6 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	}
 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
-}
-
-func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig, error) {
-	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
-
-	for chainID, cardanoConfig := range appConfig.CardanoChains {
-		cfg, err := cardanoConfig.ToSendTxChainConfig(appConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		result[chainID] = cfg
-	}
-
-	for chainID, config := range appConfig.EthChains {
-		result[chainID] = config.ToSendTxChainConfig()
-	}
-
-	return result, nil
-}
-
-func (config CardanoChainConfig) ToSendTxChainConfig(appConfig AppConfig) (res sendtx.ChainConfig, err error) {
-	txProvider, err := config.CreateTxProvider()
-	if err != nil {
-		return res, err
-	}
-
-	tokens := make(map[uint16]sendtx.ApexToken, len(config.Tokens))
-	for i, tok := range config.Tokens {
-		tokens[i] = sendtx.ApexToken{
-			FullName:          tok.ChainSpecific,
-			IsWrappedCurrency: tok.IsWrappedCurrency,
-		}
-	}
-
-	return sendtx.ChainConfig{
-		CardanoCliBinary:           cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:                 txProvider,
-		TestNetMagic:               uint(config.NetworkMagic),
-		TTLSlotNumberInc:           config.TTLSlotNumberInc,
-		MinUtxoValue:               config.UtxoMinAmount,
-		DefaultMinFeeForBridging:   config.DefaultMinFeeForBridging,
-		MinFeeForBridgingTokens:    config.MinFeeForBridgingTokens,
-		MinOperationFeeAmount:      config.MinOperationFee,
-		PotentialFee:               config.PotentialFee,
-		MinColCoinsAllowedToBridge: appConfig.BridgingSettings.MinColCoinsAllowedToBridge,
-		Tokens:                     tokens,
-		ProtocolParameters:         nil,
-	}, nil
-}
-
-func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
-	feeValue := new(big.Int).SetUint64(config.MinFeeForBridging)
-
-	if len(feeValue.String()) == common.WeiDecimals {
-		feeValue = common.WeiToDfm(feeValue)
-	}
-
-	return sendtx.ChainConfig{
-		DefaultMinFeeForBridging: feeValue.Uint64(),
-	}
 }
 
 func (config EthChainConfig) GetCurrencyID() (uint16, error) {

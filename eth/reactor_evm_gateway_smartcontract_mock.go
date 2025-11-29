@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type EVMGatewaySmartContractMock struct {
+type ReactorEVMGatewaySmartContractMock struct {
 	mock.Mock
 }
 
-var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractMock)(nil)
+var _ IEVMGatewaySmartContract = (*ReactorEVMGatewaySmartContractMock)(nil)
 
-func (m *EVMGatewaySmartContractMock) Deposit(
+func (m *ReactorEVMGatewaySmartContractMock) Deposit(
 	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
 	args := m.Called(ctx, signature, bitmap, data)

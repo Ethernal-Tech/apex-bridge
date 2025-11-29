@@ -215,7 +215,7 @@ func (r *EthTxsReceiverImpl) processReactorLog(log *ethgo.Log, parsedLog types.L
 			return nil, ethgo.Hash{}, nil, err
 		}
 
-		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
+		evmTx, err := eth.NewReactorEVMSmartContractTransaction(deposit.Data)
 		if err != nil {
 			r.logger.Error("failed to create new evm smart contract tx", "err", err)
 
@@ -326,7 +326,7 @@ func (r *EthTxsReceiverImpl) processSkylineLog(log *ethgo.Log, parsedLog types.L
 			return nil, ethgo.Hash{}, nil, err
 		}
 
-		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
+		evmTx, err := eth.NewSkylineEVMSmartContractTransaction(deposit.Data)
 		if err != nil {
 			r.logger.Error("failed to create new evm smart contract tx", "err", err)
 
