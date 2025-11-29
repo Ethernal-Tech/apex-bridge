@@ -73,7 +73,12 @@ func (*BridgingRequestedProcessorSkylineImpl) PreValidate(tx *core.CardanoTx, ap
 func (p *BridgingRequestedProcessorSkylineImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	metadata, err := unmarshalBridgingRequestMetadata(chainConfig, tx.Metadata)
 	if err != nil {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")

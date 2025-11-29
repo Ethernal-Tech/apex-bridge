@@ -11,6 +11,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
@@ -43,7 +44,12 @@ func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
+	if chainConfig == nil {
+		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
+	}
+
+	metadata, err := unmarshalBridgingRequestMetadata(chainConfig, tx.Metadata)
 	if err != nil {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")
@@ -252,4 +258,103 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	return nil
+}
+
+func unmarshalBridgingRequestMetadata(
+	chainConfig *cCore.CardanoChainConfig, txMetadata []byte,
+) (*common.BridgingRequestMetadata, error) {
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
+		common.MetadataEncodingTypeCbor, txMetadata)
+	if err == nil {
+		return metadata, nil
+	}
+
+	// try obsolete metadata version
+	metadataV2, err := common.UnmarshalMetadata[common.BridgingRequestMetadataV2](
+		common.MetadataEncodingTypeCbor, txMetadata)
+	if err == nil {
+		metadata, err = mapV2MetadataToCurrent(chainConfig, metadataV2)
+		if err == nil {
+			return metadata, nil
+		}
+	}
+
+	// try obsolete metadata version
+	metadataV1, err := common.UnmarshalMetadata[common.BridgingRequestMetadataV1](
+		common.MetadataEncodingTypeCbor, txMetadata)
+	if err == nil {
+		metadata, err = mapV1MetadataToCurrent(chainConfig, metadataV1)
+		if err == nil {
+			return metadata, nil
+		}
+	}
+
+	return nil, err
+}
+
+// obsolete metadata version
+func mapV2MetadataToCurrent(
+	chainConfig *cCore.CardanoChainConfig, metadataV2 *common.BridgingRequestMetadataV2,
+) (*common.BridgingRequestMetadata, error) {
+	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataV2.Transactions))
+	for i, tx := range metadataV2.Transactions {
+		var (
+			err     error
+			ok      bool
+			tokenID uint16
+		)
+
+		if tx.IsNativeTokenOnSrc == 0 {
+			tokenID, err = chainConfig.GetCurrencyID()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			tokenID, ok = chainConfig.GetWrappedTokenID()
+			if !ok {
+				return nil, err
+			}
+		}
+
+		txs[i] = sendtx.BridgingRequestMetadataTransaction{
+			Address: tx.Address,
+			Amount:  tx.Amount,
+			Token:   tokenID,
+		}
+	}
+
+	return &common.BridgingRequestMetadata{
+		BridgingTxType:     sendtx.BridgingRequestType(metadataV2.BridgingTxType),
+		DestinationChainID: metadataV2.DestinationChainID,
+		SenderAddr:         metadataV2.SenderAddr,
+		Transactions:       txs,
+		BridgingFee:        metadataV2.BridgingFee,
+	}, nil
+}
+
+// obsolete metadata version
+func mapV1MetadataToCurrent(
+	chainConfig *cCore.CardanoChainConfig, metadataV1 *common.BridgingRequestMetadataV1,
+) (*common.BridgingRequestMetadata, error) {
+	currencyID, err := chainConfig.GetCurrencyID()
+	if err != nil {
+		return nil, err
+	}
+
+	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataV1.Transactions))
+	for i, tx := range metadataV1.Transactions {
+		txs[i] = sendtx.BridgingRequestMetadataTransaction{
+			Address: tx.Address,
+			Amount:  tx.Amount,
+			Token:   currencyID,
+		}
+	}
+
+	return &common.BridgingRequestMetadata{
+		BridgingTxType:     sendtx.BridgingRequestType(metadataV1.BridgingTxType),
+		DestinationChainID: metadataV1.DestinationChainID,
+		SenderAddr:         metadataV1.SenderAddr,
+		Transactions:       txs,
+		BridgingFee:        metadataV1.BridgingFee,
+	}, nil
 }
