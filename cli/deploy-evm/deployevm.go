@@ -5,12 +5,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const skylineEVMCommandUse = "skyline"
 const upgradeEVMCommandUse = "upgrade"
 const deployContractCommandUse = "deploy-contract"
 const setValidatorsChainDataEVMCommandUse = "set-validators-chain-data"
 const setDependenciesCommandUse = "set-dependencies"
 
 var deployEVMParamsData = &deployEVMParams{}
+var skylineDeployEVMParamsData = &skylineDeployEVMParams{}
 var upgradeEVMParamsData = &upgradeEVMParams{}
 var deployContractParamsData = &deployContractParams{}
 var setValidatorsChainDataEVMParamsData = &setValidatorsChainDataEVMParams{}
@@ -19,9 +21,15 @@ var setDependenciesParamsData = &setDependenciesParams{}
 func GetDeployEVMCommand() *cobra.Command {
 	cmdDeployEVM := &cobra.Command{
 		Use:     "deploy-evm",
-		Short:   "deploys evm gateway smart contract to evm chain (by default nexus)",
+		Short:   "deploys reactor evm gateway smart contract to evm chain (by default nexus)",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(deployEVMParamsData),
+	}
+	cmdSkylineDeployEVM := &cobra.Command{
+		Use:     skylineEVMCommandUse,
+		Short:   "deploys skyline evm gateway smart contract to evm chain (by default nexus)",
+		PreRunE: runPreRun,
+		Run:     common.GetCliRunCommand(skylineDeployEVMParamsData),
 	}
 	cmdSetDependencies := &cobra.Command{
 		Use:     setDependenciesCommandUse,
@@ -49,12 +57,14 @@ func GetDeployEVMCommand() *cobra.Command {
 	}
 
 	deployEVMParamsData.setFlags(cmdDeployEVM)
+	skylineDeployEVMParamsData.setFlags(cmdSkylineDeployEVM)
 	upgradeEVMParamsData.setFlags(cmdUpgradeEVM)
 	deployContractParamsData.setFlags(cmdDeployContract)
 	setValidatorsChainDataEVMParamsData.setFlags(cmdSetVCDEVM)
 	setDependenciesParamsData.setFlags(cmdSetDependencies)
 
 	cmdDeployEVM.AddCommand(cmdUpgradeEVM)
+	cmdDeployEVM.AddCommand(cmdSkylineDeployEVM)
 	cmdDeployEVM.AddCommand(cmdDeployContract)
 	cmdDeployEVM.AddCommand(cmdSetVCDEVM)
 	cmdDeployEVM.AddCommand(cmdSetDependencies)
@@ -63,6 +73,10 @@ func GetDeployEVMCommand() *cobra.Command {
 }
 
 func runPreRun(cb *cobra.Command, _ []string) error {
+	if cb.Use == skylineEVMCommandUse {
+		return skylineDeployEVMParamsData.validateFlags()
+	}
+
 	if cb.Use == upgradeEVMCommandUse {
 		return upgradeEVMParamsData.validateFlags()
 	}

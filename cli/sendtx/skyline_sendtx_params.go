@@ -23,19 +23,21 @@ import (
 )
 
 const (
-	operationFeeFlag         = "operation-fee"
-	fullSrcTokenNameFlag     = "src-token-name"          //nolint:gosec
-	fullDstTokenNameFlag     = "dst-token-name"          //nolint:gosec
-	tokenIDSrcFlag           = "src-token-id"            //nolint:gosec
-	tokenContractAddrSrcFlag = "src-token-contract-addr" //nolint:gosec
-	tokenContractAddrDstFlag = "dst-token-contract-addr" //nolint:gosec
+	operationFeeFlag                  = "operation-fee"
+	fullSrcTokenNameFlag              = "src-token-name"          //nolint:gosec
+	fullDstTokenNameFlag              = "dst-token-name"          //nolint:gosec
+	tokenIDSrcFlag                    = "src-token-id"            //nolint:gosec
+	tokenContractAddrSrcFlag          = "src-token-contract-addr" //nolint:gosec
+	tokenContractAddrDstFlag          = "dst-token-contract-addr" //nolint:gosec
+	nativeTokenWalletContractAddrFlag = "native-token-wallet-contract-addr"
 
-	operationFeeFlagDesc         = "operation fee"
-	fullSrcTokenNameFlagDesc     = "denom of the token to transfer from source chain"    //nolint:gosec
-	fullDstTokenNameFlagDesc     = "denom of the token to transfer to destination chain" //nolint:gosec
-	tokenIDSrcFlagDesc           = "token id from source chain"
-	tokenContractAddrSrcFlagDesc = "contract address of the token on src"
-	tokenContractAddrDstFlagDesc = "contract address of the token on destination"
+	operationFeeFlagDesc                  = "operation fee"
+	fullSrcTokenNameFlagDesc              = "denom of the token to transfer from source chain"    //nolint:gosec
+	fullDstTokenNameFlagDesc              = "denom of the token to transfer to destination chain" //nolint:gosec
+	tokenIDSrcFlagDesc                    = "token id from source chain"
+	tokenContractAddrSrcFlagDesc          = "contract address of the token on src"
+	tokenContractAddrDstFlagDesc          = "contract address of the token on destination"
+	nativeTokenWalletContractAddrFlagDesc = "address of native token wallet contract"
 )
 
 type sendSkylineTxParams struct {
@@ -59,10 +61,11 @@ type sendSkylineTxParams struct {
 	ogmiosURLDst    string
 
 	// nexus
-	gatewayAddress       string
-	nexusURL             string
-	tokenContractAddrSrc string
-	tokenContractAddrDst string
+	gatewayAddress                   string
+	nativeTokenWalletContractAddress string
+	nexusURL                         string
+	tokenContractAddrSrc             string
+	tokenContractAddrDst             string
 
 	feeAmount          *big.Int
 	operationFeeAmount *big.Int
@@ -117,12 +120,22 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		p.tokenFullNameDst = token.String()
 	}
 
+	if p.gatewayAddress != "" &&
+		!common.IsValidAddress(common.ChainIDStrNexus, p.gatewayAddress) {
+		return fmt.Errorf("invalid address for flag --%s", gatewayAddressFlag)
+	}
+
 	if p.tokenContractAddrSrc != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrSrc) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
 	if p.tokenContractAddrDst != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrDst) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
+	}
+
+	if p.nativeTokenWalletContractAddress != "" &&
+		!common.IsValidAddress(common.ChainIDStrNexus, p.nativeTokenWalletContractAddress) {
+		return fmt.Errorf("invalid address for flag --%s", nativeTokenWalletContractAddrFlag)
 	}
 
 	feeAmount, ok := new(big.Int).SetString(p.feeString, 0)
@@ -347,6 +360,12 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		gatewayAddressFlagDesc,
 	)
 	cmd.Flags().StringVar(
+		&p.nativeTokenWalletContractAddress,
+		nativeTokenWalletContractAddrFlag,
+		"",
+		nativeTokenWalletContractAddrFlagDesc,
+	)
+	cmd.Flags().StringVar(
 		&p.nexusURL,
 		nexusURLFlag,
 		"",
@@ -535,7 +554,8 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 		tx, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
 			return txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
 				func(opts *bind.TransactOpts) (*types.Transaction, error) {
-					return erc20Contract.Transact(opts, "approve", p.gatewayAddress, totalTokenAmount)
+					return erc20Contract.Transact(
+						opts, "approve", p.nativeTokenWalletContractAddress, totalTokenAmount)
 				})
 		})
 		if err != nil {

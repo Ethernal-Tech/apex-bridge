@@ -346,6 +346,7 @@ $ apex-bridge sendtx skyline \
         --key EVM_WALLET_PRIVATE_KEY \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr 0x3333 \
+        --native-token-wallet-contract-addr 0x4444 \
         --chain-src nexus \
         --src-token-id 1 \
         --src-token-contract-addr 0x22222 \
@@ -358,7 +359,7 @@ $ apex-bridge sendtx skyline \
 - there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts
-Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
+Default Reactor example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
 ```shell
 $ apex-bridge deploy-evm \
         --url http://127.0.0.1:12001 \
@@ -390,6 +391,23 @@ $ apex-bridge deploy-evm \
 - optional `--min-bridging-amount` - for the Gateway contract, new min-bridging-amount can be defined
 - optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+Default Skyline example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
+```shell
+$ apex-bridge deploy-evm skyline \
+        --url http://127.0.0.1:12001 \
+        --key NEXUS_OR_EVM_PRIVATE_KEY \
+        --dir /tmp \
+        --clone \
+        --bridge-url http://127.0.0.1:12013 \
+        --bridge-addr 0xABEF000000000000000000000000000000000000 \
+        --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
+```
+- instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
+- `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
+- optional `gas-limit` flag if 5_242_880 of gas is not enough for transaction
+
 
 # How to upgrade bridge/gateway contracts
 ```shell

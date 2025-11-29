@@ -21,64 +21,14 @@ import (
 )
 
 const (
-	defaultGasFeeMultiplier   = 200 // 170%
-	defaultGasLimitValue      = uint64(5_242_880)
-	defaultGasLimitMultiplier = float64(1.1)
+	MyToken      = "MyToken"
+	TokenFactory = "TokenFactory"
 
-	ercProxyContractName = "ERC1967Proxy"
-
-	evmNodeURLFlag      = "url"
-	evmSCDirFlag        = "dir"
-	evmPrivateKeyFlag   = "key"
-	evmBlsKeyFlag       = "bls-key"
-	evmChainIDFlag      = "chain"
-	evmDynamicTxFlag    = "dynamic-tx"
-	evmCloneEvmRepoFlag = "clone"
-	evmBranchNameFlag   = "branch"
-	gasLimitFlag        = "gas-limit"
-
-	bridgeNodeURLFlag    = "bridge-url"
-	bridgeSCAddrFlag     = "bridge-addr"
-	bridgePrivateKeyFlag = "bridge-key"
-
-	minFeeAmountFlag      = "min-fee"
-	minBridgingAmountFlag = "min-bridging-amount"
-
-	evmNodeURLFlagDesc      = "evm node url"
-	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
-	evmPrivateKeyFlagDesc   = "private key for smart contract admin"
-	evmBlsKeyFlagDesc       = "bls key of the bridge validator. it can be used multiple times, but the order must be the same as on the bridge" //nolint:lll
-	evmChainIDFlagDesc      = "evm chain ID (prime, vector, etc)"
-	evmDynamicTxFlagDesc    = "dynamic tx"
-	evmCloneEvmRepoFlagDesc = "clone evm gateway repository and build smart contracts"
-	evmBranchNameFlagDesc   = "branch to use if the evm gateway repository is cloned"
-	gasLimitFlagDesc        = "gas limit for transaction"
-
-	bridgeNodeURLFlagDesc    = "bridge node url"
-	bridgeSCAddrFlagDesc     = "bridge smart contract address"
-	bridgePrivateKeyFlagDesc = "bridge admin private key"
-
-	privateKeyConfigFlag     = "key-config"
-	privateKeyConfigFlagDesc = "path to secrets manager config file"
-
-	minFeeAmountFlagDesc      = "minimal fee amount"
-	minBridgingAmountFlagDesc = "minimal amount to bridge"
-
-	defaultEVMChainID = common.ChainIDStrNexus
-
-	evmGatewayRepositoryName  = "apex-evm-gateway"
-	evmGatewayRepositoryURL   = "https://github.com/Ethernal-Tech/" + evmGatewayRepositoryName
-	evmRepositoryArtifactsDir = "artifacts"
+	MyTokenTestName   = "Test Token"
+	MyTokenTestSymbol = "TTK"
 )
 
-const (
-	Gateway              = "Gateway"
-	NativeTokenPredicate = "NativeTokenPredicate"
-	NativeTokenWallet    = "NativeTokenWallet"
-	Validators           = "Validators"
-)
-
-type deployEVMParams struct {
+type skylineDeployEVMParams struct {
 	evmNodeURL    string
 	evmPrivateKey string
 	evmDir        string
@@ -101,12 +51,13 @@ type deployEVMParams struct {
 	gasLimit                uint64
 }
 
-func (ip *deployEVMParams) validateFlags() error {
+//nolint:dupl
+func (ip *skylineDeployEVMParams) validateFlags() error {
 	if !common.IsValidHTTPURL(ip.evmNodeURL) {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.evmChainID) {
+	if !common.IsExistingSkylineChainID(ip.evmChainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
 	}
 
@@ -150,7 +101,7 @@ func (ip *deployEVMParams) validateFlags() error {
 	return nil
 }
 
-func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
+func (ip *skylineDeployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSliceVar(
 		&ip.evmBlsKeys,
 		evmBlsKeyFlag,
@@ -196,7 +147,7 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.evmBranchName,
 		evmBranchNameFlag,
-		"main",
+		"feat/skyline",
 		evmBranchNameFlagDesc,
 	)
 
@@ -262,17 +213,17 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, evmBlsKeyFlag)
 }
 
-func (ip *deployEVMParams) Execute(
+func (ip *skylineDeployEVMParams) Execute(
 	outputter common.OutputFormatter,
 ) (common.ICommandResult, error) {
 	dir := filepath.Clean(ip.evmDir)
 	ctx := context.Background()
 
 	contractNames := []string{
-		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
+		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators, MyToken, TokenFactory,
 	}
 	setDependenciesData := map[string][]string{
-		Gateway:              {NativeTokenPredicate, Validators},
+		Gateway:              {NativeTokenPredicate, TokenFactory, Validators},
 		NativeTokenPredicate: {Gateway, NativeTokenWallet},
 		NativeTokenWallet:    {NativeTokenPredicate},
 		Validators:           {Gateway},
@@ -332,10 +283,16 @@ func (ip *deployEVMParams) Execute(
 	contracts := make([]contractInfo, len(contractNames)*2)
 	txHashes := make([]string, len(contractNames)*2)
 	addresses := make(map[string]ethcommon.Address, len(contractNames))
+	implAddresses := make(map[string]ethcommon.Address, len(contractNames))
 
 	for i, contractName := range contractNames {
+		initParams, err := ip.getInitParams(contractName, addresses, implAddresses)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get init parameters for contract %s: %w", contractName, err)
+		}
+
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName], ip.getInitParams(contractName)...)
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], initParams...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -355,6 +312,7 @@ func (ip *deployEVMParams) Execute(
 			Addr: tx.Address,
 		}
 		addresses[contractName] = proxyTx.Address
+		implAddresses[contractName] = tx.Address
 	}
 
 	_, _ = outputter.Write([]byte("Waiting for receipts..."))
@@ -411,7 +369,7 @@ func (ip *deployEVMParams) Execute(
 	}, nil
 }
 
-func (ip *deployEVMParams) setChainAdditionalData(
+func (ip *skylineDeployEVMParams) setChainAdditionalData(
 	ctx context.Context, gatewayProxyAddr ethcommon.Address,
 	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) error {
@@ -431,7 +389,8 @@ func (ip *deployEVMParams) setChainAdditionalData(
 	return err
 }
 
-func (ip *deployEVMParams) getValidatorsChainData(
+//nolint:dupl
+func (ip *skylineDeployEVMParams) getValidatorsChainData(
 	ctx context.Context, txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
 ) ([]eth.ValidatorChainData, error) {
 	if ip.bridgeNodeURL != "" {
@@ -472,7 +431,7 @@ func (ip *deployEVMParams) getValidatorsChainData(
 	return result, nil
 }
 
-func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
+func (ip *skylineDeployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 	if ip.bridgeNodeURL == "" {
 		return nil, nil
 	}
@@ -497,14 +456,50 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithDynamicTx(false)), nil
 }
 
-func (ip *deployEVMParams) getInitParams(contractName string) []any {
+func (ip *skylineDeployEVMParams) getInitParams(
+	contractName string,
+	addresses map[string]ethcommon.Address,
+	implAddresses map[string]ethcommon.Address,
+) ([]any, error) {
 	switch strings.ToLower(contractName) {
 	case strings.ToLower(Gateway):
 		return []any{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
+		}, nil
+	case strings.ToLower(TokenFactory):
+		gatewayProxy, ok := addresses[Gateway]
+		if !ok {
+			return nil, fmt.Errorf("missing Gateway address for TokenFactory")
 		}
+
+		myTokenImpl, ok := implAddresses[MyToken]
+		if !ok {
+			return nil, fmt.Errorf("missing MyToken implementation address for TokenFactory")
+		}
+
+		nativeWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for TokenFactory")
+		}
+
+		return []any{
+			gatewayProxy,
+			myTokenImpl,
+			nativeWallet,
+		}, nil
+	case strings.ToLower(MyToken):
+		nativeTokenWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for MyToken")
+		}
+
+		return []any{
+			MyTokenTestName,
+			MyTokenTestSymbol,
+			nativeTokenWallet,
+		}, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unknown contract: %s", contractName)
 	}
 }
