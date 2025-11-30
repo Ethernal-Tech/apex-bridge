@@ -93,31 +93,24 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	tokenAmount := big.NewInt(0)
 	unknownTokenOutputIndexes := make([]common.TxOutputIndex, 0, unknownNativeTokensUtxoCntMax)
 
-	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		common.ToNumChainID(tx.OriginChainID), 0)
-	if !ok {
-		return fmt.Errorf("failed to get zero address from bridging address manager")
-	}
-
-	wrappedToken, wrappedTokenErr := chainConfig.GetWrappedToken()
-	wrappedTokenExists := wrappedTokenErr == nil
-
 	for idx, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
 			continue
 		}
 
-		for _, token := range out.Tokens {
-			if zeroAddress != out.Address || !wrappedTokenExists || wrappedToken.String() != token.TokenName() {
-				unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
+		// since this is a reactor only processor, we decline all tokens
+		if len(out.Tokens) > 0 {
+			unknownTokenOutputIndexes = append(unknownTokenOutputIndexes, common.TxOutputIndex(idx)) //nolint:gosec
 
-				break
-			}
-
-			tokenAmount.Add(tokenAmount, new(big.Int).SetUint64(token.Amount))
+			continue
 		}
 
 		amount.Add(amount, new(big.Int).SetUint64(out.Amount))
+	}
+
+	// tx contains unknown tokens
+	if len(unknownTokenOutputIndexes) > 0 {
+		amount = big.NewInt(0)
 	}
 
 	claim := cCore.RefundRequestClaim{
@@ -158,19 +151,10 @@ func (p *RefundRequestProcessorImpl) validate(
 		return err
 	}
 
-	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		common.ToNumChainID(tx.OriginChainID), 0)
-	if !ok {
-		return fmt.Errorf("failed to get zero address from bridging address manager")
-	}
-
 	amountSum := big.NewInt(0)
 	unknownNativeTokensUtxoCnt := uint(0)
 
 	var hasTokens bool
-
-	wrappedToken, wrappedTokenErr := chainConfig.GetWrappedToken()
-	wrappedTokenExists := wrappedTokenErr == nil
 
 	for _, out := range tx.Outputs {
 		if !utils.IsBridgingAddrForChain(appConfig, chainConfig.ChainID, out.Address) {
@@ -179,20 +163,10 @@ func (p *RefundRequestProcessorImpl) validate(
 
 		amountSum.Add(amountSum, new(big.Int).SetUint64(out.Amount))
 
+		// since this is a reactor only processor, we decline all tokens
 		if len(out.Tokens) > 0 {
 			hasTokens = true
-
-			if zeroAddress != out.Address {
-				unknownNativeTokensUtxoCnt++
-			} else {
-				for _, token := range out.Tokens {
-					if !wrappedTokenExists || wrappedToken.String() != token.TokenName() {
-						unknownNativeTokensUtxoCnt++
-
-						break
-					}
-				}
-			}
+			unknownNativeTokensUtxoCnt++
 		}
 	}
 

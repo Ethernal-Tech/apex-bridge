@@ -64,15 +64,27 @@ func NewEthOracle(
 	)
 
 	if appConfig.RefundEnabled {
-		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		if appConfig.RunMode == common.ReactorMode {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		} else {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger)
+		}
+
 		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
 
 	successProcessors = append(successProcessors,
 		successtxprocessors.NewEthBatchExecutedProcessor(logger),
-		successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger),
 		successtxprocessors.NewHotWalletIncrementProcessor(logger),
 	)
+
+	if appConfig.RunMode == common.ReactorMode {
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger))
+	} else {
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewEthBridgingRequestedProcessorSkyline(refundRequestProcessor, logger))
+	}
 
 	txProcessors := ethtxsprocessor.NewTxProcessorsCollection(
 		successProcessors,

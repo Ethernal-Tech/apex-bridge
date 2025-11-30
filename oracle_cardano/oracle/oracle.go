@@ -72,7 +72,12 @@ func NewCardanoOracle(
 	)
 
 	if appConfig.RefundEnabled {
-		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
+		if appConfig.RunMode == common.ReactorMode {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
+		} else {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger, chainInfos)
+		}
+
 		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
 

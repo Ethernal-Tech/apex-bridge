@@ -18,6 +18,8 @@ type SettingsResponse struct {
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
 	// For each chain, the direction config
 	DirectionConfig map[string]common.DirectionConfig `json:"directionConfig"`
+	// All defined tokens across the whole ecosystem
+	EcosystemTokens []common.EcosystemToken `json:"ecosystemTokens"`
 	// Minimum value allowed to be bridged
 	MinValueToBridge uint64 `json:"minValueToBridge"`
 	// Maximum amount of currency allowed to be bridged
@@ -59,6 +61,7 @@ func NewSettingsResponse(
 		MinOperationFee:                minOperationFeeMap,
 		MinUtxoChainValue:              minUtxoMap,
 		DirectionConfig:                appConfig.DirectionConfig,
+		EcosystemTokens:                appConfig.EcosystemTokens,
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),

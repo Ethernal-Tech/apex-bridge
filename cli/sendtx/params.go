@@ -41,7 +41,7 @@ const (
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
 	ogmiosURLSrcFlagDesc    = "source chain ogmios url"
-	receiverFlagDesc        = "receiver addr:amount:token-id"
+	receiverFlagDesc        = "receiver addr:amount"
 	testnetMagicFlagDesc    = "source testnet magic number. leave 0 for mainnet"
 	networkIDSrcFlagDesc    = "source network id"
 	srcChainIDFlagDesc      = "source chain ID (prime, vector, etc)"
@@ -53,7 +53,6 @@ const (
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	nexusURLFlagDesc        = "nexus chain URL"
 
-	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
 	gasLimitMultiplier = 1.6
