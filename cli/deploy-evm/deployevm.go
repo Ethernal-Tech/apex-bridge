@@ -19,7 +19,7 @@ var setDependenciesParamsData = &setDependenciesParams{}
 func GetDeployEVMCommand() *cobra.Command {
 	cmdDeployEVM := &cobra.Command{
 		Use:     "deploy-evm",
-		Short:   "deploys reactor evm gateway smart contract to evm chain (by default nexus)",
+		Short:   "deploys evm gateway smart contract to evm chain (by default nexus)",
 		PreRunE: runPreRun,
 		Run:     common.GetCliRunCommand(deployEVMParamsData),
 	}
