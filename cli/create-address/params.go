@@ -230,6 +230,7 @@ func (ip *createAddressParams) getTxHelperBridge() (*eth.EthHelperWrapper, error
 	return eth.NewEthHelperWrapperWithWallet(
 		wallet, hclog.NewNullLogger(),
 		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
+		ethtxhelper.WithTxPoolCheck(true),
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 		ethtxhelper.WithDynamicTx(false)), nil
 }

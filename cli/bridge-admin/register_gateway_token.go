@@ -97,7 +97,6 @@ func (g *registerGatewayTokenParams) Execute(outputter common.OutputFormatter) (
 	txHelper := eth.NewEthHelperWrapperWithWallet(wallet, logger,
 		ethtxhelper.WithNodeURL(g.nodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
-		ethtxhelper.WithTxPoolCheck(false),
 		ethtxhelper.WithDefaultGasLimit(g.gasLimit),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 	)

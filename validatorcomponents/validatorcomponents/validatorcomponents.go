@@ -98,6 +98,7 @@ func NewValidatorComponents(
 		wallet, logger.Named("tx_helper_wrapper"),
 		ethtxhelper.WithNodeURL(appConfig.Bridge.NodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
+		ethtxhelper.WithTxPoolCheck(true),
 		ethtxhelper.WithDynamicTx(appConfig.Bridge.DynamicTx),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")),
 	)

@@ -16,8 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// wTODO: we should be able to defund at least one colored coin per command execution:
-// add for filling one entry in `TokenAmount[] calldata _tokenAmounts`(struct from SC)
 const (
 	nativeTokenAmountFlag = "native-token-amount"
 
@@ -30,6 +28,7 @@ type defundParams struct {
 	chainID              string
 	currencyAmountStr    string
 	nativeTokenAmountStr string
+	tokenID              uint16
 	bridgeNodeURL        string
 	bridgePrivateKey     string
 	privateKeyConfig     string
@@ -82,8 +81,27 @@ func (g *defundParams) ValidateFlags() error {
 func (g *defundParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 	chainIDInt := common.ToNumChainID(g.chainID)
-	amount, _ := new(big.Int).SetString(g.currencyAmountStr, 0)
-	tokenAmount, _ := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
+
+	var (
+		amount             = big.NewInt(0)
+		wrappedTokenAmount = big.NewInt(0)
+		tokenAmounts       = make([]contractbinding.IBridgeStructsTokenAmount, 0, 1)
+	)
+
+	// colored coin
+	if g.tokenID > 0 {
+		ccCurrencyAmount, _ := new(big.Int).SetString(g.currencyAmountStr, 0)
+		ccTokenAmount, _ := new(big.Int).SetString(g.nativeTokenAmountStr, 0)
+
+		tokenAmounts = append(tokenAmounts, contractbinding.IBridgeStructsTokenAmount{
+			AmountCurrency: ccCurrencyAmount,
+			AmountTokens:   ccTokenAmount,
+			TokenId:        g.tokenID,
+		})
+	} else {
+		amount, _ = new(big.Int).SetString(g.currencyAmountStr, 0)
+		wrappedTokenAmount, _ = new(big.Int).SetString(g.nativeTokenAmountStr, 0)
+	}
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -112,7 +130,7 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), apexBridgeAdminScAddress, nil, gasLimitMultiplier, abi,
-		"defund", chainIDInt, amount, tokenAmount, g.address)
+		"defund", chainIDInt, amount, wrappedTokenAmount, tokenAmounts, g.address)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +139,8 @@ func (g *defundParams) Execute(outputter common.OutputFormatter) (common.IComman
 		ctx, wallet, bind.TransactOpts{}, func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			opts.GasLimit = estimatedGas
 
-			return contract.Defund(opts, chainIDInt, amount, tokenAmount, g.address)
+			return contract.Defund(
+				opts, chainIDInt, amount, wrappedTokenAmount, tokenAmounts, g.address)
 		})
 	if err != nil {
 		return nil, err
@@ -176,6 +195,12 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		nativeTokenAmountFlag,
 		"0",
 		defundTokenAmountFlagDesc,
+	)
+	cmd.Flags().Uint16Var(
+		&g.tokenID,
+		tokIDFlag,
+		0,
+		tokIDFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&g.address,
