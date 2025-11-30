@@ -127,28 +127,16 @@ func getOutputs(
 					shouldMint bool
 				)
 
-				switch transaction.TransactionType {
-				case uint8(common.DefundConfirmedTxType):
-					// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
-					if receiver.TokenId == 0 {
-						token, err = cardanoConfig.GetWrappedToken()
-						if err != nil {
-							return nil, err
-						}
-					} else {
-						token, err = cardanoConfig.GetTokenByID(receiver.TokenId)
-						if err != nil {
-							return nil, err
-						}
-					}
-				case uint8(common.RefundConfirmedTxType):
-					token, shouldMint, err = cardanoConfig.GetTokenData(receiver.TokenId)
+				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
+				// also for backward compatibility during the process of syncing -
+				// rebuilding confirmedTx.receiversWithTokens from confirmedTx.receivers
+				if receiver.TokenId == 0 {
+					token, err = cardanoConfig.GetWrappedToken()
 					if err != nil {
 						return nil, err
 					}
-				default:
-					token, shouldMint, err = cardanoConfig.GetTokenData(
-						receiver.TokenId)
+				} else {
+					token, shouldMint, err = cardanoConfig.GetTokenData(receiver.TokenId)
 					if err != nil {
 						return nil, err
 					}
