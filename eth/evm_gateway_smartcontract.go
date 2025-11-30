@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -13,17 +13,18 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+const depositGasLimitMultiplier = 1.7
 const registerTokenGasLimitMultiplier = 1.7
 
-type ISkylineEVMGatewaySmartContract interface {
-	IEVMGatewaySmartContract
+type IEVMGatewaySmartContract interface {
+	Deposit(ctx context.Context, signature []byte, bitmap *big.Int, data []byte) error
 	RegisterToken(
 		ctx context.Context, lockUnlockSCAddress ethcommon.Address,
 		tokenID uint16, name string, symbol string,
-	) (*skylinegatewaycontractbinding.GatewayTokenRegistered, error)
+	) (*contractbinding.GatewayTokenRegistered, error)
 }
 
-type SkylineEVMGatewaySmartContractImpl struct {
+type EVMGatewaySmartContractImpl struct {
 	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
 	depositGasLimit      uint64
@@ -32,13 +33,13 @@ type SkylineEVMGatewaySmartContractImpl struct {
 	gasTipCap            *big.Int
 }
 
-var _ ISkylineEVMGatewaySmartContract = (*SkylineEVMGatewaySmartContractImpl)(nil)
+var _ IEVMGatewaySmartContract = (*EVMGatewaySmartContractImpl)(nil)
 
-func NewSkylineEVMGatewaySmartContract(
+func NewEVMGatewaySmartContract(
 	smartContractAddress string, ethHelper *EthHelperWrapper, depositGasLimit uint64,
 	gasPrice, gasFeeCap, gasTipCap *big.Int, logger hclog.Logger,
-) (*SkylineEVMGatewaySmartContractImpl, error) {
-	return &SkylineEVMGatewaySmartContractImpl{
+) (*EVMGatewaySmartContractImpl, error) {
+	return &EVMGatewaySmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 		depositGasLimit:      depositGasLimit,
@@ -48,20 +49,19 @@ func NewSkylineEVMGatewaySmartContract(
 	}, nil
 }
 
-func NewSimpleSkylineEVMGatewaySmartContract(
+func NewSimpleEVMGatewaySmartContract(
 	smartContractAddress string, ethHelper *EthHelperWrapper, logger hclog.Logger,
-) (*SkylineEVMGatewaySmartContractImpl, error) {
-	return &SkylineEVMGatewaySmartContractImpl{
+) (*EVMGatewaySmartContractImpl, error) {
+	return &EVMGatewaySmartContractImpl{
 		smartContractAddress: ethcommon.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
 	}, nil
 }
 
-//nolint:dupl
-func (bsc *SkylineEVMGatewaySmartContractImpl) Deposit(
+func (bsc *EVMGatewaySmartContractImpl) Deposit(
 	ctx context.Context, signature []byte, bitmap *big.Int, data []byte,
 ) error {
-	parsedABI, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+	parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return fmt.Errorf("error while GatewayMetaData.GetAbi(): %w", err)
 	}
@@ -71,7 +71,7 @@ func (bsc *SkylineEVMGatewaySmartContractImpl) Deposit(
 		return fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
-	contract, err := skylinegatewaycontractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
+	contract, err := contractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
 	if err != nil {
 		return fmt.Errorf("error while NewGateway: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -111,10 +111,10 @@ func (bsc *SkylineEVMGatewaySmartContractImpl) Deposit(
 	return nil
 }
 
-func (bsc *SkylineEVMGatewaySmartContractImpl) RegisterToken(
+func (bsc *EVMGatewaySmartContractImpl) RegisterToken(
 	ctx context.Context, lockUnlockSCAddress ethcommon.Address, tokenID uint16, name string, symbol string,
-) (*skylinegatewaycontractbinding.GatewayTokenRegistered, error) {
-	parsedABI, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+) (*contractbinding.GatewayTokenRegistered, error) {
+	parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, fmt.Errorf("error while GatewayMetaData.GetAbi(): %w", err)
 	}
@@ -124,7 +124,7 @@ func (bsc *SkylineEVMGatewaySmartContractImpl) RegisterToken(
 		return nil, fmt.Errorf("error while GetEthHelper: %w", err)
 	}
 
-	contract, err := skylinegatewaycontractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
+	contract, err := contractbinding.NewGateway(bsc.smartContractAddress, ethTxHelper.GetClient())
 	if err != nil {
 		return nil, fmt.Errorf("error while NewGateway: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -160,8 +160,8 @@ func (bsc *SkylineEVMGatewaySmartContractImpl) RegisterToken(
 	return event, nil
 }
 
-func extractTokenRegisteredEvent(contract *skylinegatewaycontractbinding.Gateway, receipt *types.Receipt) (
-	*skylinegatewaycontractbinding.GatewayTokenRegistered, error,
+func extractTokenRegisteredEvent(contract *contractbinding.Gateway, receipt *types.Receipt) (
+	*contractbinding.GatewayTokenRegistered, error,
 ) {
 	eventSigs, err := GetGatewayRegisterTokenEventSignatures()
 	if err != nil {
@@ -170,7 +170,7 @@ func extractTokenRegisteredEvent(contract *skylinegatewaycontractbinding.Gateway
 
 	var (
 		tokenRegisteredEventSig = eventSigs[0]
-		tokenRegisteredEvent    *skylinegatewaycontractbinding.GatewayTokenRegistered
+		tokenRegisteredEvent    *contractbinding.GatewayTokenRegistered
 	)
 
 	for _, log := range receipt.Logs {

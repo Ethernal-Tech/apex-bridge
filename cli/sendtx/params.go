@@ -11,7 +11,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	reactorgatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/reactor"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -446,7 +446,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		return nil, err
 	}
 
-	contract, err := reactorgatewaycontractbinding.NewGateway(contractAddress, txHelper.GetClient())
+	contract, err := contractbinding.NewGateway(contractAddress, txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +454,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	_, _ = outputter.Write([]byte("Estimating gas..."))
 	outputter.WriteOutput()
 
-	abi, err := reactorgatewaycontractbinding.GatewayMetaData.GetAbi()
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -586,15 +586,16 @@ func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver 
 }
 
 func toGatewayStruct(receivers []*receiverAmount) (
-	[]reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
+	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
 ) {
 	total := big.NewInt(0)
 
-	gatewayOutputs := make([]reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
 	for idx, rec := range receivers {
-		gatewayOutputs[idx] = reactorgatewaycontractbinding.IGatewayStructsReceiverWithdraw{
+		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
+			TokenId:  0,
 		}
 
 		total.Add(total, rec.Amount)

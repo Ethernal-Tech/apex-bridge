@@ -9,7 +9,7 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -573,7 +573,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 		}
 	}
 
-	contract, err := skylinegatewaycontractbinding.NewGateway(contractAddress, txHelper.GetClient())
+	contract, err := contractbinding.NewGateway(contractAddress, txHelper.GetClient())
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +581,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	_, _ = outputter.Write([]byte("Estimating gas..."))
 	outputter.WriteOutput()
 
-	abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -765,13 +765,13 @@ func toSkylineCardanoMetadata(receivers []*receiverAmount, tokenID uint16) []sen
 }
 
 func toSkylineGatewayStruct(receivers []*receiverAmount, tokenID uint16) (
-	[]skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
+	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
 ) {
 	total := big.NewInt(0)
 
-	gatewayOutputs := make([]skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
 	for idx, rec := range receivers {
-		gatewayOutputs[idx] = skylinegatewaycontractbinding.IGatewayStructsReceiverWithdraw{
+		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
 			TokenId:  tokenID,

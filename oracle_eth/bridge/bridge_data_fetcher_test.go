@@ -19,7 +19,7 @@ import (
 func TestEthBridgeDataFetcher(t *testing.T) {
 	t.Run("NewBridgeDataFetcher", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 	})
@@ -29,7 +29,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 		bridgeSC.On("GetBatchStatusAndTransactions", mock.Anything, mock.Anything, mock.Anything).
 			Return(uint8(0), nil, fmt.Errorf("test err"))
 
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeDataFetcher)
 
 		_, err := bridgeDataFetcher.GetBatchTransactions(common.ChainIDStrPrime, 1)
@@ -42,7 +42,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 		bridgeSC.On("GetBatchStatusAndTransactions", mock.Anything, mock.Anything, mock.Anything).
 			Return(uint8(0), []eth.TxDataInfo{{}}, nil)
 
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, bridgeDataFetcher)
 
 		batchTxs, err := bridgeDataFetcher.GetBatchTransactions(common.ChainIDStrPrime, 1)
@@ -53,7 +53,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx nil", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, nil)
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -65,7 +65,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx err", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(nil, fmt.Errorf("test err"))
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -78,7 +78,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx parse tx fail", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return([]byte{12, 33}, nil)
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.SkylineMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 
@@ -90,11 +90,11 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 	t.Run("FetchExpectedTx success", func(t *testing.T) {
 		bridgeSC := &eth.OracleBridgeSmartContractMock{}
 
-		ethTx := eth.ReactorEVMSmartContractTransaction{
+		ethTx := eth.EVMSmartContractTransaction{
 			BatchNonceID: 1,
 			TTL:          2,
 			FeeAmount:    big.NewInt(1),
-			Receivers: []eth.ReactorEVMSmartContractTransactionReceiver{
+			Receivers: []eth.EVMSmartContractTransactionReceiver{
 				{
 					Address: goEthCommon.Address([20]byte{1, 2}),
 					Amount:  big.NewInt(1),
@@ -109,7 +109,7 @@ func TestEthBridgeDataFetcher(t *testing.T) {
 		require.NoError(t, err)
 
 		bridgeSC.On("GetRawTransactionFromLastBatch").Return(ethTxBytes, nil)
-		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), common.ReactorMode, bridgeSC, hclog.NewNullLogger())
+		bridgeDataFetcher := NewEthBridgeDataFetcher(context.Background(), bridgeSC, hclog.NewNullLogger())
 
 		require.NotNil(t, bridgeDataFetcher)
 

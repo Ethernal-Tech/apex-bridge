@@ -102,7 +102,7 @@ func (g *registerGatewayTokenParams) Execute(outputter common.OutputFormatter) (
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 	)
 
-	evmSmartContract, err := eth.NewSimpleSkylineEVMGatewaySmartContract(
+	evmSmartContract, err := eth.NewSimpleEVMGatewaySmartContract(
 		g.gatewayAddress, txHelper, logger)
 	if err != nil {
 		return nil, err

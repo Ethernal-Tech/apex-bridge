@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -16,7 +15,6 @@ import (
 )
 
 type EthChainObserverImpl struct {
-	runMode     common.VCRunMode
 	config      *oCore.EthChainConfig
 	indexerDB   eventTrackerStore.EventTrackerStore
 	txsReceiver ethOracleCore.EthTxsReceiver
@@ -28,7 +26,6 @@ type EthChainObserverImpl struct {
 var _ ethOracleCore.EthChainObserver = (*EthChainObserverImpl)(nil)
 
 func NewEthChainObserver(
-	runMode common.VCRunMode,
 	config *oCore.EthChainConfig,
 	txsReceiver ethOracleCore.EthTxsReceiver,
 	oracleDB ethOracleCore.EthTxsProcessorDB,
@@ -41,7 +38,6 @@ func NewEthChainObserver(
 	}
 
 	return &EthChainObserverImpl{
-		runMode:     runMode,
 		config:      config,
 		indexerDB:   indexerDB,
 		txsReceiver: txsReceiver,
@@ -53,7 +49,7 @@ func NewEthChainObserver(
 func (co *EthChainObserverImpl) Start() error {
 	co.logger.Debug("Starting eth chain observer", "endpoint", co.config.NodeURL)
 
-	trackerConfig := loadTrackerConfigs(co.runMode, co.config, co.txsReceiver, co.logger)
+	trackerConfig := loadTrackerConfigs(co.config, co.txsReceiver, co.logger)
 
 	tracker, notifyClosedCh, err := newEventTrackerWrapper(trackerConfig, co.indexerDB)
 	if err != nil {
@@ -123,25 +119,13 @@ func (co *EthChainObserverImpl) updateIsTrackerAlive() bool {
 }
 
 func loadTrackerConfigs(
-	runMode common.VCRunMode, config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
+	config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	bridgingAddress := config.BridgingAddresses.BridgingAddress
 	scAddress := ethgo.HexToAddress(bridgingAddress)
 
-	var (
-		eventSigs []ethgo.Hash
-		err       error
-	)
-
-	switch runMode {
-	case common.ReactorMode:
-		eventSigs, err = eth.GetReactorGatewayEventSignatures()
-	case common.SkylineMode:
-		eventSigs, err = eth.GetSkylineGatewayEventSignatures()
-	default:
-		err = fmt.Errorf("unsupported run mode")
-	}
+	eventSigs, err := eth.GetGatewayEventSignatures()
 
 	if err != nil {
 		logger.Error("failed to get nexus event signatures", "err", err)

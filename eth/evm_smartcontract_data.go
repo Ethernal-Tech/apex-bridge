@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	reactorTxAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+	txAbi, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
 			Name: "batchId",
 			Type: "uint64",
@@ -36,39 +36,44 @@ var (
 					Name: "amount",
 					Type: "uint256",
 				},
+				{
+					Name: "tokenId",
+					Type: "uint16",
+				},
 			},
 		},
 	})
 )
 
-type ReactorEVMSmartContractTransactionReceiver struct {
+type EVMSmartContractTransactionReceiver struct {
 	Address common.Address `json:"addr" abi:"receiver"`
 	Amount  *big.Int       `json:"amount" abi:"amount"`
+	TokenID uint16         `json:"tokenId" abi:"tokenId"`
 }
 
-type ReactorEVMSmartContractTransaction struct {
-	BatchNonceID uint64                                       `json:"batchNonceId" abi:"batchId"`
-	TTL          uint64                                       `json:"ttl" abi:"ttlExpired"`
-	FeeAmount    *big.Int                                     `json:"feeAmount" abi:"feeAmount"`
-	Receivers    []ReactorEVMSmartContractTransactionReceiver `json:"receivers" abi:"receivers"`
+type EVMSmartContractTransaction struct {
+	BatchNonceID uint64                                `json:"batchNonceId" abi:"batchId"`
+	TTL          uint64                                `json:"ttl" abi:"ttlExpired"`
+	FeeAmount    *big.Int                              `json:"feeAmount" abi:"feeAmount"`
+	Receivers    []EVMSmartContractTransactionReceiver `json:"receivers" abi:"receivers"`
 }
 
-func NewReactorEVMSmartContractTransaction(bytes []byte) (*ReactorEVMSmartContractTransaction, error) {
-	dt, err := abi.Arguments{{Type: reactorTxAbi}}.Unpack(bytes)
+func NewEVMSmartContractTransaction(bytes []byte) (*EVMSmartContractTransaction, error) {
+	dt, err := abi.Arguments{{Type: txAbi}}.Unpack(bytes)
 	if err != nil {
 		return nil, err
 	}
 
-	tx, _ := abi.ConvertType(dt[0], new(ReactorEVMSmartContractTransaction)).(*ReactorEVMSmartContractTransaction)
+	tx, _ := abi.ConvertType(dt[0], new(EVMSmartContractTransaction)).(*EVMSmartContractTransaction)
 
 	return tx, nil
 }
 
-func (evmsctx *ReactorEVMSmartContractTransaction) Pack() ([]byte, error) {
-	return abi.Arguments{{Type: reactorTxAbi}}.Pack(evmsctx)
+func (evmsctx *EVMSmartContractTransaction) Pack() ([]byte, error) {
+	return abi.Arguments{{Type: txAbi}}.Pack(evmsctx)
 }
 
-func (evmsctx ReactorEVMSmartContractTransaction) String() string {
+func (evmsctx EVMSmartContractTransaction) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("id = ")
@@ -88,6 +93,8 @@ func (evmsctx ReactorEVMSmartContractTransaction) String() string {
 		sb.WriteString(v.Address.String())
 		sb.WriteRune(',')
 		sb.WriteString(v.Amount.String())
+		sb.WriteRune(',')
+		sb.WriteString(fmt.Sprintf("%v", v.TokenID))
 		sb.WriteRune(')')
 	}
 

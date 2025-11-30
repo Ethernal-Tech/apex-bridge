@@ -166,11 +166,11 @@ func newEVMSmartContractTransaction(
 	ttl uint64,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
-) eth.ReactorEVMSmartContractTransaction {
-	sourceAddrTxMap := map[string]eth.ReactorEVMSmartContractTransactionReceiver{}
+) eth.EVMSmartContractTransaction {
+	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
 	feeAmount := big.NewInt(0)
 
-	updateAmount := func(mp map[string]eth.ReactorEVMSmartContractTransactionReceiver, addr string, amount *big.Int) {
+	updateAmount := func(mp map[string]eth.EVMSmartContractTransactionReceiver, addr string, amount *big.Int) {
 		val, exists := mp[addr]
 		if !exists {
 			val.Amount = amount
@@ -205,7 +205,7 @@ func newEVMSmartContractTransaction(
 		}
 	}
 
-	receivers := make([]eth.ReactorEVMSmartContractTransactionReceiver, 0, len(sourceAddrTxMap))
+	receivers := make([]eth.EVMSmartContractTransactionReceiver, 0, len(sourceAddrTxMap))
 
 	for _, v := range sourceAddrTxMap {
 		receivers = append(receivers, v)
@@ -216,7 +216,7 @@ func newEVMSmartContractTransaction(
 		return receivers[i].Address.Cmp(receivers[j].Address) < 0
 	})
 
-	return eth.ReactorEVMSmartContractTransaction{
+	return eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
 		FeeAmount:    feeAmount,

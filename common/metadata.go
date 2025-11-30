@@ -29,34 +29,20 @@ type BaseMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
-// obsolete
-type BridgingRequestMetadataTransactionV1 struct {
-	Address []string `cbor:"a" json:"a"`
-	Amount  uint64   `cbor:"m" json:"m"`
+// backward compatibility
+type BridgingRequestMetadataTransactionBC struct {
+	Address                     []string `cbor:"a" json:"a"`
+	IsNativeTokenOnSrc_Obsolete byte     `cbor:"nt" json:"nt"` //nolint:stylecheck
+	Amount                      uint64   `cbor:"m" json:"m"`
+	Token                       uint16   `cbor:"t" json:"t"`
 }
 
-// obsolete
-type BridgingRequestMetadataV1 struct {
+// backward compatibility
+type BridgingRequestMetadataBC struct {
 	BridgingTxType     BridgingTxType                         `cbor:"t" json:"t"`
 	DestinationChainID string                                 `cbor:"d" json:"d"`
 	SenderAddr         []string                               `cbor:"s" json:"s"`
-	Transactions       []BridgingRequestMetadataTransactionV1 `cbor:"tx" json:"tx"`
-	BridgingFee        uint64                                 `cbor:"fa" json:"fa"`
-}
-
-// obsolete
-type BridgingRequestMetadataTransactionV2 struct {
-	Address            []string `cbor:"a" json:"a"`
-	IsNativeTokenOnSrc byte     `cbor:"nt" json:"nt"` // bool is not supported by Cardano!
-	Amount             uint64   `cbor:"m" json:"m"`
-}
-
-// obsolete
-type BridgingRequestMetadataV2 struct {
-	BridgingTxType     BridgingTxType                         `cbor:"t" json:"t"`
-	DestinationChainID string                                 `cbor:"d" json:"d"`
-	SenderAddr         []string                               `cbor:"s" json:"s"`
-	Transactions       []BridgingRequestMetadataTransactionV2 `cbor:"tx" json:"tx"`
+	Transactions       []BridgingRequestMetadataTransactionBC `cbor:"tx" json:"tx"`
 	BridgingFee        uint64                                 `cbor:"fa" json:"fa"`
 }
 
@@ -96,7 +82,7 @@ func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) 
 }
 
 func MarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
@@ -120,7 +106,7 @@ func MarshalMetadata[
 
 func UnmarshalMetadata[
 	T BaseMetadata |
-		BridgingRequestMetadata | BridgingRequestMetadataV1 | BridgingRequestMetadataV2 |
+		BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, data []byte,
@@ -156,7 +142,7 @@ func UnmarshalMetadata[
 }
 
 func MarshalMetadataMap[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,

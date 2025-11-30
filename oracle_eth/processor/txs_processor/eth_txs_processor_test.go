@@ -10,7 +10,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
-	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
@@ -258,7 +257,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -316,7 +315,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -383,7 +382,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -450,7 +449,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -524,7 +523,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -602,7 +601,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -833,7 +832,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -936,7 +935,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -1039,7 +1038,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -1096,11 +1095,11 @@ func TestEthTxsProcessor(t *testing.T) {
 	})
 
 	t.Run("verify abi pack for withdraw", func(t *testing.T) {
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
-		abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
 
 		require.NoError(t, err)
 		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
@@ -1120,7 +1119,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethereum_common.Hash{ethereum_common.Hash(withdrawEventSig)},
 		}
 
-		contract, err := skylinegatewaycontractbinding.NewGateway(ethereum_common.Address{}, nil)
+		contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
 		require.NoError(t, err)
 
 		event, err := contract.ParseWithdraw(gethLog)
@@ -1164,11 +1163,11 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
-		abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
 
 		require.NoError(t, err)
 		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
@@ -1273,11 +1272,11 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, event)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
-		abi, err := skylinegatewaycontractbinding.GatewayMetaData.GetAbi()
+		abi, err := contractbinding.GatewayMetaData.GetAbi()
 
 		require.NoError(t, err)
 		eventAbi, err := abi.EventByID(ethereum_common.Hash(withdrawEventSig))
@@ -1508,7 +1507,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetSkylineGatewayEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]

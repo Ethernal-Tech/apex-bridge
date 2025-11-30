@@ -263,56 +263,39 @@ func (p *BridgingRequestedProcessorImpl) validate(
 func unmarshalBridgingRequestMetadata(
 	chainConfig *cCore.CardanoChainConfig, txMetadata []byte,
 ) (*common.BridgingRequestMetadata, error) {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
+	metadataBC, err := common.UnmarshalMetadata[common.BridgingRequestMetadataBC](
 		common.MetadataEncodingTypeCbor, txMetadata)
-	if err == nil {
-		return metadata, nil
+	if err != nil {
+		return nil, err
 	}
 
-	// try obsolete metadata version
-	metadataV2, err := common.UnmarshalMetadata[common.BridgingRequestMetadataV2](
-		common.MetadataEncodingTypeCbor, txMetadata)
-	if err == nil {
-		metadata, err = mapV2MetadataToCurrent(chainConfig, metadataV2)
-		if err == nil {
-			return metadata, nil
-		}
-	}
-
-	// try obsolete metadata version
-	metadataV1, err := common.UnmarshalMetadata[common.BridgingRequestMetadataV1](
-		common.MetadataEncodingTypeCbor, txMetadata)
-	if err == nil {
-		metadata, err = mapV1MetadataToCurrent(chainConfig, metadataV1)
-		if err == nil {
-			return metadata, nil
-		}
-	}
-
-	return nil, err
+	return mapBCMetadataToCurrent(chainConfig, metadataBC)
 }
 
-// obsolete metadata version
-func mapV2MetadataToCurrent(
-	chainConfig *cCore.CardanoChainConfig, metadataV2 *common.BridgingRequestMetadataV2,
+// backward compatible metadata version
+func mapBCMetadataToCurrent(
+	chainConfig *cCore.CardanoChainConfig, metadataBC *common.BridgingRequestMetadataBC,
 ) (*common.BridgingRequestMetadata, error) {
-	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataV2.Transactions))
-	for i, tx := range metadataV2.Transactions {
+	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataBC.Transactions))
+
+	for i, tx := range metadataBC.Transactions {
 		var (
 			err     error
 			ok      bool
 			tokenID uint16
 		)
 
-		if tx.IsNativeTokenOnSrc == 0 {
-			tokenID, err = chainConfig.GetCurrencyID()
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			tokenID, ok = chainConfig.GetWrappedTokenID()
-			if !ok {
-				return nil, err
+		if tx.Token == 0 {
+			if tx.IsNativeTokenOnSrc_Obsolete == 0 {
+				tokenID, err = chainConfig.GetCurrencyID()
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				tokenID, ok = chainConfig.GetWrappedTokenID()
+				if !ok {
+					return nil, fmt.Errorf("wrapped currency not found in chain config")
+				}
 			}
 		}
 
@@ -324,37 +307,10 @@ func mapV2MetadataToCurrent(
 	}
 
 	return &common.BridgingRequestMetadata{
-		BridgingTxType:     sendtx.BridgingRequestType(metadataV2.BridgingTxType),
-		DestinationChainID: metadataV2.DestinationChainID,
-		SenderAddr:         metadataV2.SenderAddr,
+		BridgingTxType:     sendtx.BridgingRequestType(metadataBC.BridgingTxType),
+		DestinationChainID: metadataBC.DestinationChainID,
+		SenderAddr:         metadataBC.SenderAddr,
 		Transactions:       txs,
-		BridgingFee:        metadataV2.BridgingFee,
-	}, nil
-}
-
-// obsolete metadata version
-func mapV1MetadataToCurrent(
-	chainConfig *cCore.CardanoChainConfig, metadataV1 *common.BridgingRequestMetadataV1,
-) (*common.BridgingRequestMetadata, error) {
-	currencyID, err := chainConfig.GetCurrencyID()
-	if err != nil {
-		return nil, err
-	}
-
-	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataV1.Transactions))
-	for i, tx := range metadataV1.Transactions {
-		txs[i] = sendtx.BridgingRequestMetadataTransaction{
-			Address: tx.Address,
-			Amount:  tx.Amount,
-			Token:   currencyID,
-		}
-	}
-
-	return &common.BridgingRequestMetadata{
-		BridgingTxType:     sendtx.BridgingRequestType(metadataV1.BridgingTxType),
-		DestinationChainID: metadataV1.DestinationChainID,
-		SenderAddr:         metadataV1.SenderAddr,
-		Transactions:       txs,
-		BridgingFee:        metadataV1.BridgingFee,
+		BridgingFee:        metadataBC.BridgingFee,
 	}, nil
 }

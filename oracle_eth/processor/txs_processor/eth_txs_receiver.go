@@ -5,8 +5,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	reactorgatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/reactor"
-	skylinegatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/skyline"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
@@ -142,24 +141,9 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		Topics:      topics,
 	}
 
-	var (
-		metadata          []byte
-		innerActionTxHash ethgo.Hash
-		txValue           *big.Int
-		err               error
-	)
-
 	logEventType := log.Topics[0]
 
-	switch r.appConfig.RunMode {
-	case common.ReactorMode:
-		metadata, innerActionTxHash, txValue, err = r.processReactorLog(log, parsedLog, logEventType)
-	case common.SkylineMode:
-		metadata, innerActionTxHash, txValue, err = r.processSkylineLog(log, parsedLog, logEventType)
-	default:
-		err = fmt.Errorf("unsupported run mode")
-	}
-
+	metadata, innerActionTxHash, txValue, err := r.processLog(log, parsedLog, logEventType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process log. err: %w", err)
 	}
@@ -181,7 +165,7 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 	}, nil
 }
 
-func (r *EthTxsReceiverImpl) processReactorLog(log *ethgo.Log, parsedLog types.Log, logEventType ethgo.Hash) (
+func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, logEventType ethgo.Hash) (
 	[]byte, ethgo.Hash, *big.Int, error,
 ) {
 	var (
@@ -190,7 +174,7 @@ func (r *EthTxsReceiverImpl) processReactorLog(log *ethgo.Log, parsedLog types.L
 		txValue           *big.Int
 	)
 
-	events, err := eth.GetReactorGatewayEventSignatures()
+	events, err := eth.GetGatewayEventSignatures()
 	if err != nil {
 		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get gateway event signatures. err: %w", err)
 	}
@@ -199,23 +183,23 @@ func (r *EthTxsReceiverImpl) processReactorLog(log *ethgo.Log, parsedLog types.L
 	withdrawEventSig := events[1]
 	fundedEventSig := events[2]
 
-	reactorGatewayContract, err := reactorgatewaycontractbinding.NewGateway(ethereum_common.Address{}, nil)
+	gatewayContract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
 	if err != nil {
-		r.logger.Error("failed to get reactorgatewaycontractbinding gateway", "err", err)
+		r.logger.Error("failed to get contractbinding gateway", "err", err)
 
-		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get reactorgatewaycontractbinding gateway. err: %w", err)
+		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get contractbinding gateway. err: %w", err)
 	}
 
 	switch logEventType {
 	case depositEventSig:
-		deposit, err := reactorGatewayContract.GatewayFilterer.ParseDeposit(parsedLog)
+		deposit, err := gatewayContract.GatewayFilterer.ParseDeposit(parsedLog)
 		if err != nil {
 			r.logger.Error("failed to parse deposit event", "err", err)
 
 			return nil, ethgo.Hash{}, nil, err
 		}
 
-		evmTx, err := eth.NewReactorEVMSmartContractTransaction(deposit.Data)
+		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
 		if err != nil {
 			r.logger.Error("failed to create new evm smart contract tx", "err", err)
 
@@ -242,118 +226,7 @@ func (r *EthTxsReceiverImpl) processReactorLog(log *ethgo.Log, parsedLog types.L
 
 		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
 	case withdrawEventSig:
-		withdraw, err := reactorGatewayContract.GatewayFilterer.ParseWithdraw(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse withdraw event", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
-		for idx, tx := range withdraw.Receivers {
-			txs[idx] = core.BridgingRequestEthMetadataTransaction{
-				Amount:  tx.Amount,
-				Address: tx.Receiver,
-			}
-		}
-
-		bridgingRequestMetadata := core.BridgingRequestEthMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
-			SenderAddr:         withdraw.Sender.String(),
-			Transactions:       txs,
-			BridgingFee:        withdraw.FeeAmount,
-		}
-
-		metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
-		if err != nil {
-			r.logger.Error("failed to marshal metadata", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		txValue = withdraw.Value
-	case fundedEventSig:
-		funded, err := reactorGatewayContract.GatewayFilterer.ParseFundsDeposited(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse funds deposited event", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		txValue = funded.Value
-
-	default:
-		r.logger.Error("unknown event type in log", "log", log)
-
-		return nil, ethgo.Hash{}, nil, fmt.Errorf("unknown event type in unprocessed log")
-	}
-
-	return metadata, innerActionTxHash, txValue, nil
-}
-
-func (r *EthTxsReceiverImpl) processSkylineLog(log *ethgo.Log, parsedLog types.Log, logEventType ethgo.Hash) (
-	[]byte, ethgo.Hash, *big.Int, error,
-) {
-	var (
-		metadata          []byte
-		innerActionTxHash ethgo.Hash
-		txValue           *big.Int
-	)
-
-	events, err := eth.GetSkylineGatewayEventSignatures()
-	if err != nil {
-		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get gateway event signatures. err: %w", err)
-	}
-
-	depositEventSig := events[0]
-	withdrawEventSig := events[1]
-	fundedEventSig := events[2]
-
-	skylineGatewayContract, err := skylinegatewaycontractbinding.NewGateway(ethereum_common.Address{}, nil)
-	if err != nil {
-		r.logger.Error("failed to get skylinegatewaycontractbinding gateway", "err", err)
-
-		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get skylinegatewaycontractbinding gateway. err: %w", err)
-	}
-
-	switch logEventType {
-	case depositEventSig: //nolint:dupl
-		deposit, err := skylineGatewayContract.GatewayFilterer.ParseDeposit(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse deposit event", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		evmTx, err := eth.NewSkylineEVMSmartContractTransaction(deposit.Data)
-		if err != nil {
-			r.logger.Error("failed to create new evm smart contract tx", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		batchExecutedMetadata := core.BatchExecutedEthMetadata{
-			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceID:   evmTx.BatchNonceID,
-		}
-
-		metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
-		if err != nil {
-			r.logger.Error("failed to marshal metadata", "err", err)
-
-			return nil, ethgo.Hash{}, nil, err
-		}
-
-		evmTxHash, err := common.Keccak256(deposit.Data)
-		if err != nil {
-
-			return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to create txHash. err: %w", err)
-		}
-
-		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
-	case withdrawEventSig:
-		withdraw, err := skylineGatewayContract.GatewayFilterer.ParseWithdraw(parsedLog)
+		withdraw, err := gatewayContract.GatewayFilterer.ParseWithdraw(parsedLog)
 		if err != nil {
 			r.logger.Error("failed to parse withdraw event", "err", err)
 
@@ -386,7 +259,7 @@ func (r *EthTxsReceiverImpl) processSkylineLog(log *ethgo.Log, parsedLog types.L
 
 		txValue = withdraw.Value
 	case fundedEventSig:
-		funded, err := skylineGatewayContract.GatewayFilterer.ParseFundsDeposited(parsedLog)
+		funded, err := gatewayContract.GatewayFilterer.ParseFundsDeposited(parsedLog)
 		if err != nil {
 			r.logger.Error("failed to parse funds deposited event", "err", err)
 

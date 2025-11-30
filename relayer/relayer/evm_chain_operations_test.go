@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/secrets"
@@ -48,7 +47,7 @@ func TestEVMChainOperations(t *testing.T) {
 			"nodeUrl": "%s"
 		}`, secretsDir, nodeURL)))
 
-		ops, err := NewEVMChainOperations(configRaw, chainID, "0x0ff", common.SkylineMode, hclog.NewNullLogger())
+		ops, err := NewEVMChainOperations(configRaw, chainID, "0x0ff", hclog.NewNullLogger())
 		require.NoError(t, err)
 
 		require.Equal(t, chainID, ops.chainID)
@@ -57,7 +56,7 @@ func TestEVMChainOperations(t *testing.T) {
 
 	t.Run("SendTx", func(t *testing.T) {
 		ctx := context.Background()
-		scMock := &eth.SkylineEVMGatewaySmartContractMock{}
+		scMock := &eth.EVMGatewaySmartContractMock{}
 		batch := &eth.ConfirmedBatch{
 			RawTransaction: []byte{1, 2, 3},
 			Bitmap:         new(big.Int).SetBytes([]byte{1, 7, 4}),

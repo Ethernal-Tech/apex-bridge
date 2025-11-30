@@ -87,7 +87,7 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 
 		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
 
-		require.Equal(t, []eth.ReactorEVMSmartContractTransactionReceiver{
+		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xaa"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(1000)),
@@ -190,11 +190,11 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 	}
 
 	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, big.NewInt(0))
-	require.Equal(t, eth.ReactorEVMSmartContractTransaction{
+	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
 		FeeAmount:    common.DfmToWei(feeAmount),
-		Receivers: []eth.ReactorEVMSmartContractTransactionReceiver{
+		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xf0"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(30)),
@@ -274,11 +274,11 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 	}
 
 	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, minFeeForBridging)
-	require.Equal(t, eth.ReactorEVMSmartContractTransaction{
+	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
 		FeeAmount:    big.NewInt(0).Add(common.DfmToWei(feeAmount), big.NewInt(40)),
-		Receivers: []eth.ReactorEVMSmartContractTransactionReceiver{
+		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xf0"),
 				// 30 - 1 * minFeeForBridging due to refund tx

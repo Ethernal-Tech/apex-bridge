@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	reactorgatewaycontractbinding "github.com/Ethernal-Tech/apex-bridge/contractbinding/gateway/reactor"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
@@ -149,14 +149,14 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 	contractAddress := common.HexToAddress(ip.contractAddress)
 
 	transaction, err := infracommon.ExecuteWithRetry(ctx, func(ctx context.Context) (*types.Transaction, error) {
-		contract, err := reactorgatewaycontractbinding.NewGateway(
+		contract, err := contractbinding.NewGateway(
 			contractAddress,
 			txHelper.GetClient())
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to gateway smart contract: %w", err)
 		}
 
-		parsedABI, err := reactorgatewaycontractbinding.GatewayMetaData.GetAbi()
+		parsedABI, err := contractbinding.GatewayMetaData.GetAbi()
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse gateway smart contract abi: %w", err)
 		}

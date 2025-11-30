@@ -73,7 +73,7 @@ func GetChainSpecificOperations(
 	case common.ChainTypeCardanoStr:
 		return NewCardanoChainOperations(config, vcRunMode, logger)
 	case common.ChainTypeEVMStr:
-		return NewEVMChainOperations(config.ChainSpecific, config.ChainID, chain.AddressMultisig, vcRunMode, logger)
+		return NewEVMChainOperations(config.ChainSpecific, config.ChainID, chain.AddressMultisig, logger)
 	default:
 		return nil, fmt.Errorf("unknown chain type: %s", config.ChainType)
 	}

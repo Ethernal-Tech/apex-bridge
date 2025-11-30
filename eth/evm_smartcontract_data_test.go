@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSkylineEVMSmartContractTransaction(t *testing.T) {
-	obj := &SkylineEVMSmartContractTransaction{
+func TestEVMSmartContractTransaction(t *testing.T) {
+	obj := &EVMSmartContractTransaction{
 		BatchNonceID: 100,
 		TTL:          uint64(8398923),
 		FeeAmount:    big.NewInt(1),
-		Receivers: []SkylineEVMSmartContractTransactionReceiver{
+		Receivers: []EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xFF00FF"),
 				Amount:  new(big.Int).SetUint64(100),
@@ -35,7 +35,7 @@ func TestSkylineEVMSmartContractTransaction(t *testing.T) {
 	bytes, err := obj.Pack()
 	require.NoError(t, err)
 
-	newObj, err := NewSkylineEVMSmartContractTransaction(bytes)
+	newObj, err := NewEVMSmartContractTransaction(bytes)
 	require.NoError(t, err)
 	require.Equal(t, obj, newObj)
 }
