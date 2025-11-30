@@ -14,6 +14,7 @@ import (
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/tx_processors/failed"
 	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/tx_processors/success"
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/txs_processor"
+	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
@@ -29,7 +30,6 @@ type OracleImpl struct {
 	db                       core.Database
 	expectedTxsFetcher       cCore.ExpectedTxsFetcher
 	confirmedBlockSubmitters []cCore.ConfirmedBlocksSubmitter
-	chainInfos               map[string]*chain.CardanoChainInfo
 	logger                   hclog.Logger
 }
 
@@ -40,6 +40,7 @@ func NewCardanoOracle(
 	boltDB *bbolt.DB,
 	typeRegister common.TypeRegister,
 	appConfig *cCore.AppConfig,
+	cardanoChainInfos map[string]*cChain.CardanoChainInfo,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter cCore.BridgeSubmitter,
 	indexerDbs map[string]indexer.Database,
@@ -54,18 +55,6 @@ func NewCardanoOracle(
 	expectedTxsFetcher := bridge.NewExpectedTxsFetcher(
 		ctx, bridgeDataFetcher, appConfig, db, logger.Named("expected_txs_fetcher"))
 
-	chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
-
-	for _, cc := range appConfig.CardanoChains {
-		info := chain.NewCardanoChainInfo(cc)
-
-		if err := info.Populate(ctx); err != nil {
-			return nil, err
-		}
-
-		chainInfos[cc.ChainID] = info
-	}
-
 	var (
 		refundRequestProcessor core.CardanoTxSuccessRefundProcessor = successtxprocessors.NewRefundDisabledProcessor()
 		successProcessors                                           = []core.CardanoTxSuccessProcessor{}
@@ -73,9 +62,9 @@ func NewCardanoOracle(
 
 	if appConfig.RefundEnabled {
 		if appConfig.RunMode == common.ReactorMode {
-			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, chainInfos)
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger, cardanoChainInfos)
 		} else {
-			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger, chainInfos)
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger, cardanoChainInfos)
 		}
 
 		successProcessors = append(successProcessors, refundRequestProcessor)
@@ -91,7 +80,7 @@ func NewCardanoOracle(
 			successtxprocessors.NewBridgingRequestedProcessor(refundRequestProcessor, logger))
 	} else {
 		successProcessors = append(successProcessors,
-			successtxprocessors.NewSkylineBridgingRequestedProcessor(refundRequestProcessor, logger, chainInfos))
+			successtxprocessors.NewSkylineBridgingRequestedProcessor(refundRequestProcessor, logger, cardanoChainInfos))
 	}
 
 	txProcessors := cardanotxsprocessor.NewTxProcessorsCollection(
@@ -147,7 +136,6 @@ func NewCardanoOracle(
 		cardanoChainObservers:    cardanoChainObservers,
 		expectedTxsFetcher:       expectedTxsFetcher,
 		confirmedBlockSubmitters: confirmedBlockSubmitters,
-		chainInfos:               chainInfos,
 		db:                       db,
 		logger:                   logger,
 	}, nil

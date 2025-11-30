@@ -8,9 +8,9 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
+	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
@@ -24,11 +24,11 @@ var _ core.CardanoTxSuccessRefundProcessor = (*RefundRequestProcessorImpl)(nil)
 
 type RefundRequestProcessorImpl struct {
 	logger     hclog.Logger
-	chainInfos map[string]*chain.CardanoChainInfo
+	chainInfos map[string]*cChain.CardanoChainInfo
 }
 
 func NewRefundRequestProcessor(
-	logger hclog.Logger, chainInfos map[string]*chain.CardanoChainInfo,
+	logger hclog.Logger, chainInfos map[string]*cChain.CardanoChainInfo,
 ) *RefundRequestProcessorImpl {
 	return &RefundRequestProcessorImpl{
 		logger:     logger.Named("refund_request_processor"),
@@ -200,7 +200,7 @@ func (p *RefundRequestProcessorImpl) validate(
 func calculateMinUtxoForRefund(
 	config *cCore.CardanoChainConfig, tx *core.CardanoTx,
 	receiverAddr string, bridgingAddresses []string,
-	chainInfos map[string]*chain.CardanoChainInfo,
+	chainInfos map[string]*cChain.CardanoChainInfo,
 ) (uint64, error) {
 	builder, err := cardanowallet.NewTxBuilder(cardanowallet.ResolveCardanoCliBinary(config.NetworkID))
 	if err != nil {

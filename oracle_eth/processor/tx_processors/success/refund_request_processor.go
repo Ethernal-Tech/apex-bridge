@@ -86,6 +86,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
+		TokenAmounts:             []cCore.RefundTokenAmount{},
 	}
 
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)

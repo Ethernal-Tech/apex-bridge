@@ -24,7 +24,7 @@ type BridgingRequestEthMetadata struct {
 	SenderAddr         string                                  `json:"s"`
 	Transactions       []BridgingRequestEthMetadataTransaction `json:"tx"`
 	BridgingFee        *big.Int                                `json:"fa"`
-	OperationFee       *big.Int                                `cbor:"of" json:"of"`
+	OperationFee       *big.Int                                `json:"of"`
 }
 
 type RefundBridgingRequestEthMetadata struct {

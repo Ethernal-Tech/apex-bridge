@@ -11,7 +11,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
@@ -44,12 +43,8 @@ func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
-	if chainConfig == nil {
-		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
-	}
-
-	metadata, err := unmarshalBridgingRequestMetadata(chainConfig, tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
+		common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")
@@ -258,59 +253,4 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	return nil
-}
-
-func unmarshalBridgingRequestMetadata(
-	chainConfig *cCore.CardanoChainConfig, txMetadata []byte,
-) (*common.BridgingRequestMetadata, error) {
-	metadataBC, err := common.UnmarshalMetadata[common.BridgingRequestMetadataBC](
-		common.MetadataEncodingTypeCbor, txMetadata)
-	if err != nil {
-		return nil, err
-	}
-
-	return mapBCMetadataToCurrent(chainConfig, metadataBC)
-}
-
-// backward compatible metadata version
-func mapBCMetadataToCurrent(
-	chainConfig *cCore.CardanoChainConfig, metadataBC *common.BridgingRequestMetadataBC,
-) (*common.BridgingRequestMetadata, error) {
-	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(metadataBC.Transactions))
-
-	for i, tx := range metadataBC.Transactions {
-		var (
-			err     error
-			ok      bool
-			tokenID uint16
-		)
-
-		if tx.Token == 0 {
-			if tx.IsNativeTokenOnSrc_Obsolete == 0 {
-				tokenID, err = chainConfig.GetCurrencyID()
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				tokenID, ok = chainConfig.GetWrappedTokenID()
-				if !ok {
-					return nil, fmt.Errorf("wrapped currency not found in chain config")
-				}
-			}
-		}
-
-		txs[i] = sendtx.BridgingRequestMetadataTransaction{
-			Address: tx.Address,
-			Amount:  tx.Amount,
-			Token:   tokenID,
-		}
-	}
-
-	return &common.BridgingRequestMetadata{
-		BridgingTxType:     sendtx.BridgingRequestType(metadataBC.BridgingTxType),
-		DestinationChainID: metadataBC.DestinationChainID,
-		SenderAddr:         metadataBC.SenderAddr,
-		Transactions:       txs,
-		BridgingFee:        metadataBC.BridgingFee,
-	}, nil
 }

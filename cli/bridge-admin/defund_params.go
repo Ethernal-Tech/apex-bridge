@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// wTODO: we should be able to defund at least one colored coin per command execution:
+// add for filling one entry in `TokenAmount[] calldata _tokenAmounts`(struct from SC)
 const (
 	nativeTokenAmountFlag = "native-token-amount"
 

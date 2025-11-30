@@ -68,8 +68,8 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }
 
-func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
-	if isNativeToken {
+func (config CardanoChainConfig) GetMinBridgingFee(hasNativeTokens bool) uint64 {
+	if hasNativeTokens {
 		return config.MinFeeForBridgingTokens
 	}
 

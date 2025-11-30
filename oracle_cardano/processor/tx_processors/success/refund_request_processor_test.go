@@ -9,8 +9,8 @@ import (
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -78,12 +78,12 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		return appConfig
 	}
 
-	getChainInfos := func() map[string]*chain.CardanoChainInfo {
+	getChainInfos := func() map[string]*cChain.CardanoChainInfo {
 		appConfig := getAppConfig(true)
-		chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
+		chainInfos := make(map[string]*cChain.CardanoChainInfo, len(appConfig.CardanoChains))
 
 		for _, cc := range appConfig.CardanoChains {
-			info := chain.NewCardanoChainInfo(cc)
+			info := cChain.NewCardanoChainInfo(cc)
 
 			info.ProtocolParams = protocolParameters
 
@@ -557,12 +557,12 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		return appConfig
 	}
 
-	getChainInfos := func() map[string]*chain.CardanoChainInfo {
+	getChainInfos := func() map[string]*cChain.CardanoChainInfo {
 		appConfig := getAppConfig(true)
-		chainInfos := make(map[string]*chain.CardanoChainInfo, len(appConfig.CardanoChains))
+		chainInfos := make(map[string]*cChain.CardanoChainInfo, len(appConfig.CardanoChains))
 
 		for _, cc := range appConfig.CardanoChains {
-			info := chain.NewCardanoChainInfo(cc)
+			info := cChain.NewCardanoChainInfo(cc)
 
 			info.ProtocolParams = protocolParameters
 

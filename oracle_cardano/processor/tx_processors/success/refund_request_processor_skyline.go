@@ -7,9 +7,9 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
+	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/hashicorp/go-hclog"
@@ -19,11 +19,11 @@ var _ core.CardanoTxSuccessRefundProcessor = (*RefundRequestProcessorSkylineImpl
 
 type RefundRequestProcessorSkylineImpl struct {
 	logger     hclog.Logger
-	chainInfos map[string]*chain.CardanoChainInfo
+	chainInfos map[string]*cChain.CardanoChainInfo
 }
 
 func NewRefundRequestProcessorSkyline(
-	logger hclog.Logger, chainInfos map[string]*chain.CardanoChainInfo,
+	logger hclog.Logger, chainInfos map[string]*cChain.CardanoChainInfo,
 ) *RefundRequestProcessorSkylineImpl {
 	return &RefundRequestProcessorSkylineImpl{
 		logger:     logger.Named("refund_request_processor"),

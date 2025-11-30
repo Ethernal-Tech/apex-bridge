@@ -21,6 +21,7 @@ import (
 	cardanoOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cardanoOracle "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/oracle"
 	oracleCommonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
+	oracleCommonChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	oracleCommonCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oracleCommonDA "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	ethOracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -165,8 +166,20 @@ func NewValidatorComponents(
 
 	oracleConfig.BridgingAddressesManager = bridgingAddressesManager
 
+	cardanoChainInfos := make(map[string]*oracleCommonChain.CardanoChainInfo, len(appConfig.CardanoChains))
+
+	for _, cc := range appConfig.CardanoChains {
+		info := oracleCommonChain.NewCardanoChainInfo(cc)
+
+		if err := info.Populate(ctx); err != nil {
+			return nil, err
+		}
+
+		cardanoChainInfos[cc.ChainID] = info
+	}
+
 	cardanoOracleObj, err := cardanoOracle.NewCardanoOracle(
-		ctx, oracleDB, typeRegister, oracleConfig,
+		ctx, oracleDB, typeRegister, oracleConfig, cardanoChainInfos,
 		oracleBridgeSmartContract, cardanoBridgeSubmitter, cardanoIndexerDbs,
 		bridgingRequestStateManager, logger.Named("oracle_cardano"))
 	if err != nil {
@@ -180,7 +193,8 @@ func NewValidatorComponents(
 			ctx, oracleBridgeSmartContract, logger.Named("bridge_submitter_eth"))
 
 		ethOracleObj, err = ethOracle.NewEthOracle(
-			ctx, oracleDB, typeRegister, oracleConfig, oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
+			ctx, oracleDB, typeRegister, oracleConfig, cardanoChainInfos,
+			oracleBridgeSmartContract, ethBridgeSubmitter, ethIndexerDbs,
 			bridgingRequestStateManager, logger.Named("oracle_eth"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create oracle_eth. err %w", err)

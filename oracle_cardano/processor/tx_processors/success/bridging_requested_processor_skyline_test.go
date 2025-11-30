@@ -11,8 +11,8 @@ import (
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/chain"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
+	cChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -164,7 +164,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		return appConfig
 	}
 
-	chainInfos := map[string]*chain.CardanoChainInfo{
+	chainInfos := map[string]*cChain.CardanoChainInfo{
 		common.ChainIDStrPrime:   {ProtocolParams: protocolParameters},
 		common.ChainIDStrCardano: {ProtocolParams: protocolParameters},
 	}

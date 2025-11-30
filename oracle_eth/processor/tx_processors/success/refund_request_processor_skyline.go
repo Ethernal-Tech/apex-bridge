@@ -170,6 +170,16 @@ func buildRefundTokenAmounts(
 				totalCurrency.Add(totalCurrency, receiver.Amount)
 			}
 
+			if !currencyAdded {
+				tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
+					TokenId:        receiver.TokenID,
+					AmountCurrency: common.WeiToDfm(txValue),
+					AmountTokens:   big.NewInt(0),
+				})
+
+				currencyAdded = true
+			}
+
 			continue
 		}
 
