@@ -1,6 +1,8 @@
 package response
 
 import (
+	"fmt"
+
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 )
@@ -26,6 +28,8 @@ type SettingsResponse struct {
 	MaxAmountAllowedToBridge string `json:"maxAmountAllowedToBridge"`
 	// Maximum amount of native tokens allowed to be bridged
 	MaxTokenAmountAllowedToBridge string `json:"maxTokenAmountAllowedToBridge"`
+	// Minimum amount of colored tokens allowed to be bridged
+	MinColCoinsAllowedToBridge string `json:"minColCoinsAllowedToBridge"`
 	// Maximum number of receivers allowed in a bridging request
 	MaxReceiversPerBridgingRequest int `json:"maxReceiversPerBridgingRequest"`
 } // @name SettingsResponse
@@ -65,6 +69,7 @@ func NewSettingsResponse(
 		MinValueToBridge:               maxUtxoValue,
 		MaxAmountAllowedToBridge:       appConfig.BridgingSettings.MaxAmountAllowedToBridge.String(),
 		MaxTokenAmountAllowedToBridge:  appConfig.BridgingSettings.MaxTokenAmountAllowedToBridge.String(),
+		MinColCoinsAllowedToBridge:     fmt.Sprintf("%v", appConfig.BridgingSettings.MinColCoinsAllowedToBridge),
 		MaxReceiversPerBridgingRequest: appConfig.BridgingSettings.MaxReceiversPerBridgingRequest,
 	}
 }
