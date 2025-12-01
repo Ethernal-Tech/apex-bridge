@@ -99,7 +99,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		return fmt.Errorf("failed to get full token names and IDs from config. err: %w", err)
 	}
 
-	wrappedTokenAmount := big.NewInt(0)
+	currencyAmountToTrack := big.NewInt(0)
+	wrappedTokenAmountToTrack := big.NewInt(0)
 
 	currencyID, err := chainConfig.GetCurrencyID()
 	if err != nil {
@@ -131,7 +132,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 						chainConfig.DestinationChains, chainConfig.ChainID, metadata.DestinationChainID, tokenID)
 
 					if err == nil && tokenPair.TrackSourceToken {
-						wrappedTokenAmount.Add(wrappedTokenAmount, new(big.Int).SetUint64(token.Amount))
+						wrappedTokenAmountToTrack.Add(wrappedTokenAmountToTrack, new(big.Int).SetUint64(token.Amount))
 					}
 				}
 
@@ -143,17 +144,19 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 			}
 		}
 
+		currencyAmountSum.Add(currencyAmountSum, new(big.Int).SetUint64(out.Amount))
+
 		if trackCurrency {
-			currencyAmountSum.Add(currencyAmountSum, new(big.Int).SetUint64(out.Amount))
+			currencyAmountToTrack.Add(currencyAmountToTrack, new(big.Int).SetUint64(out.Amount))
 		}
 	}
 
-	refundTokensAmounts := buildRefundTokenAmounts(tokenAmounts, currencyAmountSum)
+	refundTokensAmounts := buildRefundTokenAmounts(tokenAmounts, currencyID, currencyAmountSum)
 
 	// tx contains unknown tokens
 	if len(unknownTokenOutputIndexes) > 0 {
-		currencyAmountSum = big.NewInt(0)
-		wrappedTokenAmount = big.NewInt(0)
+		currencyAmountToTrack = big.NewInt(0)
+		wrappedTokenAmountToTrack = big.NewInt(0)
 	}
 
 	claim := cCore.RefundRequestClaim{
@@ -161,8 +164,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
-		OriginAmount:             currencyAmountSum,
-		OriginWrappedAmount:      wrappedTokenAmount,
+		OriginAmount:             currencyAmountToTrack,
+		OriginWrappedAmount:      wrappedTokenAmountToTrack,
 		OutputIndexes:            common.PackNumbersToBytes(unknownTokenOutputIndexes),
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
@@ -276,9 +279,10 @@ func (p *RefundRequestProcessorSkylineImpl) getSenderAddr(
 
 func buildRefundTokenAmounts(
 	tokenAmounts map[uint16]*big.Int,
+	currencyID uint16,
 	currencyAmountSum *big.Int,
 ) []cCore.RefundTokenAmount {
-	refundTokenAmounts := make([]cCore.RefundTokenAmount, 0, len(tokenAmounts))
+	refundTokenAmounts := make([]cCore.RefundTokenAmount, 0, len(tokenAmounts)+1)
 	currencyAdded := false
 
 	for tokenID, amount := range tokenAmounts {
@@ -294,6 +298,14 @@ func buildRefundTokenAmounts(
 			TokenId:        tokenID,
 			AmountCurrency: amountCurrency,
 			AmountTokens:   amount,
+		})
+	}
+
+	if !currencyAdded {
+		refundTokenAmounts = append(refundTokenAmounts, cCore.RefundTokenAmount{
+			TokenId:        currencyID,
+			AmountCurrency: currencyAmountSum,
+			AmountTokens:   big.NewInt(0),
 		})
 	}
 
