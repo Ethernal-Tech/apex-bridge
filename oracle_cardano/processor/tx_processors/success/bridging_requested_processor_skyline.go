@@ -747,7 +747,7 @@ func mapBCMetadataToCurrent(
 		var (
 			err     error
 			ok      bool
-			tokenID uint16
+			tokenID uint16 = tx.Token
 		)
 
 		// Token should never be 0
