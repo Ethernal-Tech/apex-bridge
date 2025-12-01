@@ -384,23 +384,30 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 				"found an utxo value below minimum value in metadata receivers. metadata: %v, receiver: %v",
 				ctx.metadata, receiver)
 		}
-	} else if tokenPair.SourceTokenID == ctx.currencySrcID {
+	}
+
+	if tokenPair.SourceTokenID == ctx.currencySrcID {
 		// check min utxo when currency on source
 		if receiver.Amount < ctx.cardanoSrcConfig.UtxoMinAmount {
 			return fmt.Errorf(
 				"found an utxo value below minimum value in metadata receivers. metadata: %v, receiver: %v",
 				ctx.metadata, receiver)
 		}
-	} else if receiver.Amount < ctx.bridgingSettings.MinColCoinsAllowedToBridge {
+	}
+
+	if tokenPair.SourceTokenID != ctx.currencySrcID &&
+		tokenPair.DestinationTokenID != ctx.currencyDestID {
 		// source token is not currency and is not wrapped token - it's colored coin on source
-		return fmt.Errorf(
-			"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v, receiver: %v",
-			receiver.Token,
-			receiver.Amount,
-			ctx.bridgingSettings.MinColCoinsAllowedToBridge,
-			ctx.metadata,
-			receiver,
-		)
+		if receiver.Amount < ctx.bridgingSettings.MinColCoinsAllowedToBridge {
+			return fmt.Errorf(
+				"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v, receiver: %v",
+				receiver.Token,
+				receiver.Amount,
+				ctx.bridgingSettings.MinColCoinsAllowedToBridge,
+				ctx.metadata,
+				receiver,
+			)
+		}
 	}
 
 	if nativeTokensSum, ok := ctx.amountsSums[tokenPair.SourceTokenID]; ok {
