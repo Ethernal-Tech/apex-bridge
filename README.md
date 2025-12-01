@@ -493,6 +493,8 @@ $ apex-bridge bridge-admin defund \
         --addr 0xeefcd00000000000000000000000000000000000
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- there is an optional `--native-token-amount` flag, which refers to wrapped currency when `--token-id` flag is not passed
+- there is an optional `--token-id` flag used for colored coins in combination with `--native-token-amount` flag
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
