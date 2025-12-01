@@ -44,7 +44,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	directionsConfig, err := common.LoadConfig[common.DirectionConfigFile](vcParams.config, "directions")
+	directionsConfig, err := common.LoadConfig[common.DirectionConfigFile](vcParams.dirConfig, "")
 	if err != nil {
 		outputter.SetError(err)
 

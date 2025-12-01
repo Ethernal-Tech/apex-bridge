@@ -43,15 +43,19 @@ func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.Directi
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
 
-			appConfig.EthChains[chainID].DestinationChain = directionConfig.DestinationChain
-			appConfig.EthChains[chainID].Tokens = directionConfig.Tokens
+			data := appConfig.EthChains[chainID]
+			data.DestinationChain = directionConfig.DestinationChain
+			data.Tokens = directionConfig.Tokens
+			appConfig.EthChains[chainID] = data
 		} else {
 			if _, ok := appConfig.CardanoChains[chainID]; !ok {
 				return fmt.Errorf("invalid cardano chain while setting up direction config. %s", chainID)
 			}
 
-			appConfig.CardanoChains[chainID].CardanoChainConfig.DestinationChains = directionConfig.DestinationChain
-			appConfig.CardanoChains[chainID].CardanoChainConfig.Tokens = directionConfig.Tokens
+			data := appConfig.CardanoChains[chainID]
+			data.CardanoChainConfig.DestinationChains = directionConfig.DestinationChain
+			data.CardanoChainConfig.Tokens = directionConfig.Tokens
+			appConfig.CardanoChains[chainID] = data
 		}
 	}
 
