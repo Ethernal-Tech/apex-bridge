@@ -51,7 +51,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	config.SetupDirectionConfig(*directionsConfig)
+	err = config.SetupDirectionConfig(directionsConfig)
+	if err != nil {
+		outputter.SetError(err)
+
+		return
+	}
 
 	logger, err := loggerInfra.NewLogger(config.Settings.Logger)
 	if err != nil {

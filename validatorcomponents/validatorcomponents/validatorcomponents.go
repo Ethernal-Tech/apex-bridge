@@ -114,6 +114,10 @@ func NewValidatorComponents(
 		return nil, fmt.Errorf("failed to populate utxos and addresses. err: %w", err)
 	}
 
+	if err := appConfig.ValidateDirectionConfig(); err != nil {
+		return nil, fmt.Errorf("directionConfig validation failed. err: %w", err)
+	}
+
 	oracleConfig, batcherConfig := appConfig.SeparateConfigs()
 
 	cardanoIndexerDbs := make(map[string]indexer.Database, len(oracleConfig.CardanoChains))

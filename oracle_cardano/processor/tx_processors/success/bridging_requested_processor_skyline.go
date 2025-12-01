@@ -378,7 +378,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 	}
 
 	// check min utxo when on destination
-	if tokenPair.DestinationTokenID == ctx.currencyDestID { //nolint:gocritic
+	if tokenPair.DestinationTokenID == ctx.currencyDestID {
 		if receiver.Amount < ctx.cardanoDestConfig.UtxoMinAmount {
 			return fmt.Errorf(
 				"found an utxo value below minimum value in metadata receivers. metadata: %v, receiver: %v",
@@ -754,7 +754,7 @@ func mapBCMetadataToCurrent(
 		var (
 			err     error
 			ok      bool
-			tokenID uint16 = tx.Token
+			tokenID = tx.Token
 		)
 
 		// Token should never be 0
