@@ -38,7 +38,7 @@ type IGatewayStructsReceiverWithdraw struct {
 
 // GatewayMetaData contains all meta data concerning the Gateway contract.
 var GatewayMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BatchAlreadyExecuted\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"minFeeAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeAmount\",\"type\":\"uint256\"}],\"name\":\"InsufficientFeeAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"minBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bridgingAmount\",\"type\":\"uint256\"}],\"name\":\"InvalidBridgingAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotGateway\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotPredicate\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"TokenAddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"name\":\"TokenIdAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"name\":\"TokenNotRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WrongValidatorsSetValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"received\",\"type\":\"uint256\"}],\"name\":\"WrongValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroTokenId\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"DepositedToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"FundsDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minAmount\",\"type\":\"uint256\"}],\"name\":\"MinAmountsUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TTLExpired\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"symbol\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isLockUnlockToken\",\"type\":\"bool\"}],\"name\":\"TokenRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"ValidatorSetUpdatedGW\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"ValidatorsSetUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"destinationChainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"indexed\":false,\"internalType\":\"structIGatewayStructs.ReceiverWithdraw[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithdrawToken\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"_bitmap\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_tokenId\",\"type\":\"uint16\"}],\"name\":\"getTokenAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_minFeeAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minBridgingAmount\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minBridgingAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minFeeAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nativeTokenPredicate\",\"outputs\":[{\"internalType\":\"contractNativeTokenPredicate\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_lockUnlockSCAddress\",\"type\":\"address\"},{\"internalType\":\"uint16\",\"name\":\"_tokenId\",\"type\":\"uint16\"},{\"internalType\":\"string\",\"name\":\"_name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_symbol\",\"type\":\"string\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_nativeTokenPredicateAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_validatorsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_minFeeAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minBridgingAmount\",\"type\":\"uint256\"}],\"name\":\"setMinAmounts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenFactory\",\"outputs\":[{\"internalType\":\"contractTokenFactory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"_bitmap\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"updateValidatorsChainData\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validators\",\"outputs\":[{\"internalType\":\"contractValidators\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_destinationChainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"internalType\":\"structIGatewayStructs.ReceiverWithdraw[]\",\"name\":\"_receivers\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256\",\"name\":\"_feeAmount\",\"type\":\"uint256\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BatchAlreadyExecuted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"CurrencyTokenId\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"minFeeAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeAmount\",\"type\":\"uint256\"}],\"name\":\"InsufficientFee\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"minBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bridgingAmount\",\"type\":\"uint256\"}],\"name\":\"InvalidBridgingAmount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"NotContractAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotGateway\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotPredicate\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"TokenAddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"name\":\"TokenIdAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"name\":\"TokenNotRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"WrongValidatorsSetValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"received\",\"type\":\"uint256\"}],\"name\":\"WrongValue\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"DepositedToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"FundsDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minTokenAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"minOperationFee\",\"type\":\"uint256\"}],\"name\":\"MinAmountsUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"TTLExpired\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"symbol\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isLockUnlockToken\",\"type\":\"bool\"}],\"name\":\"TokenRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"ValidatorSetUpdatedGW\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"ValidatorsSetUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"destinationChainId\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"indexed\":false,\"internalType\":\"structIGatewayStructs.ReceiverWithdraw[]\",\"name\":\"receivers\",\"type\":\"tuple[]\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"fee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"operationFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithdrawToken\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currencyTokenId\",\"outputs\":[{\"internalType\":\"uint16\",\"name\":\"\",\"type\":\"uint16\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"_bitmap\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"_tokenId\",\"type\":\"uint16\"}],\"name\":\"getTokenAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_minFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minTokenBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minOperationFee\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"_currencyTokenId\",\"type\":\"uint16\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minBridgingAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minOperationFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"minTokenBridgingAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nativeTokenPredicate\",\"outputs\":[{\"internalType\":\"contractNativeTokenPredicate\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_lockUnlockSCAddress\",\"type\":\"address\"},{\"internalType\":\"uint16\",\"name\":\"_tokenId\",\"type\":\"uint16\"},{\"internalType\":\"string\",\"name\":\"_name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_symbol\",\"type\":\"string\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_nativeTokenPredicateAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenFactoryAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_validatorsAddress\",\"type\":\"address\"}],\"name\":\"setDependencies\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_minFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minTokenBridgingAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minOperationFee\",\"type\":\"uint256\"}],\"name\":\"setMinAmounts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenFactory\",\"outputs\":[{\"internalType\":\"contractTokenFactory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_signature\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"_bitmap\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"updateValidatorsChainData\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validators\",\"outputs\":[{\"internalType\":\"contractValidators\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_destinationChainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"string\",\"name\":\"receiver\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"tokenId\",\"type\":\"uint16\"}],\"internalType\":\"structIGatewayStructs.ReceiverWithdraw[]\",\"name\":\"_receivers\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256\",\"name\":\"_fee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_operationFee\",\"type\":\"uint256\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
 }
 
 // GatewayABI is the input ABI used to generate the binding from.
@@ -218,6 +218,37 @@ func (_Gateway *GatewayCallerSession) UPGRADEINTERFACEVERSION() (string, error) 
 	return _Gateway.Contract.UPGRADEINTERFACEVERSION(&_Gateway.CallOpts)
 }
 
+// CurrencyTokenId is a free data retrieval call binding the contract method 0x4ad45416.
+//
+// Solidity: function currencyTokenId() view returns(uint16)
+func (_Gateway *GatewayCaller) CurrencyTokenId(opts *bind.CallOpts) (uint16, error) {
+	var out []interface{}
+	err := _Gateway.contract.Call(opts, &out, "currencyTokenId")
+
+	if err != nil {
+		return *new(uint16), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint16)).(*uint16)
+
+	return out0, err
+
+}
+
+// CurrencyTokenId is a free data retrieval call binding the contract method 0x4ad45416.
+//
+// Solidity: function currencyTokenId() view returns(uint16)
+func (_Gateway *GatewaySession) CurrencyTokenId() (uint16, error) {
+	return _Gateway.Contract.CurrencyTokenId(&_Gateway.CallOpts)
+}
+
+// CurrencyTokenId is a free data retrieval call binding the contract method 0x4ad45416.
+//
+// Solidity: function currencyTokenId() view returns(uint16)
+func (_Gateway *GatewayCallerSession) CurrencyTokenId() (uint16, error) {
+	return _Gateway.Contract.CurrencyTokenId(&_Gateway.CallOpts)
+}
+
 // GetTokenAddress is a free data retrieval call binding the contract method 0xef365218.
 //
 // Solidity: function getTokenAddress(uint16 _tokenId) view returns(address)
@@ -280,12 +311,12 @@ func (_Gateway *GatewayCallerSession) MinBridgingAmount() (*big.Int, error) {
 	return _Gateway.Contract.MinBridgingAmount(&_Gateway.CallOpts)
 }
 
-// MinFeeAmount is a free data retrieval call binding the contract method 0xf5d36475.
+// MinFee is a free data retrieval call binding the contract method 0x24ec7590.
 //
-// Solidity: function minFeeAmount() view returns(uint256)
-func (_Gateway *GatewayCaller) MinFeeAmount(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function minFee() view returns(uint256)
+func (_Gateway *GatewayCaller) MinFee(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _Gateway.contract.Call(opts, &out, "minFeeAmount")
+	err := _Gateway.contract.Call(opts, &out, "minFee")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -297,18 +328,80 @@ func (_Gateway *GatewayCaller) MinFeeAmount(opts *bind.CallOpts) (*big.Int, erro
 
 }
 
-// MinFeeAmount is a free data retrieval call binding the contract method 0xf5d36475.
+// MinFee is a free data retrieval call binding the contract method 0x24ec7590.
 //
-// Solidity: function minFeeAmount() view returns(uint256)
-func (_Gateway *GatewaySession) MinFeeAmount() (*big.Int, error) {
-	return _Gateway.Contract.MinFeeAmount(&_Gateway.CallOpts)
+// Solidity: function minFee() view returns(uint256)
+func (_Gateway *GatewaySession) MinFee() (*big.Int, error) {
+	return _Gateway.Contract.MinFee(&_Gateway.CallOpts)
 }
 
-// MinFeeAmount is a free data retrieval call binding the contract method 0xf5d36475.
+// MinFee is a free data retrieval call binding the contract method 0x24ec7590.
 //
-// Solidity: function minFeeAmount() view returns(uint256)
-func (_Gateway *GatewayCallerSession) MinFeeAmount() (*big.Int, error) {
-	return _Gateway.Contract.MinFeeAmount(&_Gateway.CallOpts)
+// Solidity: function minFee() view returns(uint256)
+func (_Gateway *GatewayCallerSession) MinFee() (*big.Int, error) {
+	return _Gateway.Contract.MinFee(&_Gateway.CallOpts)
+}
+
+// MinOperationFee is a free data retrieval call binding the contract method 0x3ad25471.
+//
+// Solidity: function minOperationFee() view returns(uint256)
+func (_Gateway *GatewayCaller) MinOperationFee(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Gateway.contract.Call(opts, &out, "minOperationFee")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MinOperationFee is a free data retrieval call binding the contract method 0x3ad25471.
+//
+// Solidity: function minOperationFee() view returns(uint256)
+func (_Gateway *GatewaySession) MinOperationFee() (*big.Int, error) {
+	return _Gateway.Contract.MinOperationFee(&_Gateway.CallOpts)
+}
+
+// MinOperationFee is a free data retrieval call binding the contract method 0x3ad25471.
+//
+// Solidity: function minOperationFee() view returns(uint256)
+func (_Gateway *GatewayCallerSession) MinOperationFee() (*big.Int, error) {
+	return _Gateway.Contract.MinOperationFee(&_Gateway.CallOpts)
+}
+
+// MinTokenBridgingAmount is a free data retrieval call binding the contract method 0xa0fbfc66.
+//
+// Solidity: function minTokenBridgingAmount() view returns(uint256)
+func (_Gateway *GatewayCaller) MinTokenBridgingAmount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Gateway.contract.Call(opts, &out, "minTokenBridgingAmount")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MinTokenBridgingAmount is a free data retrieval call binding the contract method 0xa0fbfc66.
+//
+// Solidity: function minTokenBridgingAmount() view returns(uint256)
+func (_Gateway *GatewaySession) MinTokenBridgingAmount() (*big.Int, error) {
+	return _Gateway.Contract.MinTokenBridgingAmount(&_Gateway.CallOpts)
+}
+
+// MinTokenBridgingAmount is a free data retrieval call binding the contract method 0xa0fbfc66.
+//
+// Solidity: function minTokenBridgingAmount() view returns(uint256)
+func (_Gateway *GatewayCallerSession) MinTokenBridgingAmount() (*big.Int, error) {
+	return _Gateway.Contract.MinTokenBridgingAmount(&_Gateway.CallOpts)
 }
 
 // NativeTokenPredicate is a free data retrieval call binding the contract method 0xd4945a2c.
@@ -518,25 +611,25 @@ func (_Gateway *GatewayTransactorSession) Deposit(_signature []byte, _bitmap *bi
 	return _Gateway.Contract.Deposit(&_Gateway.TransactOpts, _signature, _bitmap, _data)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+// Initialize is a paid mutator transaction binding the contract method 0xb9102f7f.
 //
-// Solidity: function initialize(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewayTransactor) Initialize(opts *bind.TransactOpts, _minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "initialize", _minFeeAmount, _minBridgingAmount)
+// Solidity: function initialize(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee, uint16 _currencyTokenId) returns()
+func (_Gateway *GatewayTransactor) Initialize(opts *bind.TransactOpts, _minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int, _currencyTokenId uint16) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "initialize", _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee, _currencyTokenId)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+// Initialize is a paid mutator transaction binding the contract method 0xb9102f7f.
 //
-// Solidity: function initialize(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewaySession) Initialize(_minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, _minFeeAmount, _minBridgingAmount)
+// Solidity: function initialize(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee, uint16 _currencyTokenId) returns()
+func (_Gateway *GatewaySession) Initialize(_minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int, _currencyTokenId uint16) (*types.Transaction, error) {
+	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee, _currencyTokenId)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+// Initialize is a paid mutator transaction binding the contract method 0xb9102f7f.
 //
-// Solidity: function initialize(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewayTransactorSession) Initialize(_minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, _minFeeAmount, _minBridgingAmount)
+// Solidity: function initialize(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee, uint16 _currencyTokenId) returns()
+func (_Gateway *GatewayTransactorSession) Initialize(_minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int, _currencyTokenId uint16) (*types.Transaction, error) {
+	return _Gateway.Contract.Initialize(&_Gateway.TransactOpts, _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee, _currencyTokenId)
 }
 
 // RegisterToken is a paid mutator transaction binding the contract method 0xc1bd443e.
@@ -602,25 +695,25 @@ func (_Gateway *GatewayTransactorSession) SetDependencies(_nativeTokenPredicateA
 	return _Gateway.Contract.SetDependencies(&_Gateway.TransactOpts, _nativeTokenPredicateAddress, _tokenFactoryAddress, _validatorsAddress)
 }
 
-// SetMinAmounts is a paid mutator transaction binding the contract method 0x3d43ef57.
+// SetMinAmounts is a paid mutator transaction binding the contract method 0xa2045745.
 //
-// Solidity: function setMinAmounts(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewayTransactor) SetMinAmounts(opts *bind.TransactOpts, _minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "setMinAmounts", _minFeeAmount, _minBridgingAmount)
+// Solidity: function setMinAmounts(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee) returns()
+func (_Gateway *GatewayTransactor) SetMinAmounts(opts *bind.TransactOpts, _minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "setMinAmounts", _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee)
 }
 
-// SetMinAmounts is a paid mutator transaction binding the contract method 0x3d43ef57.
+// SetMinAmounts is a paid mutator transaction binding the contract method 0xa2045745.
 //
-// Solidity: function setMinAmounts(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewaySession) SetMinAmounts(_minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.SetMinAmounts(&_Gateway.TransactOpts, _minFeeAmount, _minBridgingAmount)
+// Solidity: function setMinAmounts(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee) returns()
+func (_Gateway *GatewaySession) SetMinAmounts(_minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.SetMinAmounts(&_Gateway.TransactOpts, _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee)
 }
 
-// SetMinAmounts is a paid mutator transaction binding the contract method 0x3d43ef57.
+// SetMinAmounts is a paid mutator transaction binding the contract method 0xa2045745.
 //
-// Solidity: function setMinAmounts(uint256 _minFeeAmount, uint256 _minBridgingAmount) returns()
-func (_Gateway *GatewayTransactorSession) SetMinAmounts(_minFeeAmount *big.Int, _minBridgingAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.SetMinAmounts(&_Gateway.TransactOpts, _minFeeAmount, _minBridgingAmount)
+// Solidity: function setMinAmounts(uint256 _minFee, uint256 _minBridgingAmount, uint256 _minTokenBridgingAmount, uint256 _minOperationFee) returns()
+func (_Gateway *GatewayTransactorSession) SetMinAmounts(_minFee *big.Int, _minBridgingAmount *big.Int, _minTokenBridgingAmount *big.Int, _minOperationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.SetMinAmounts(&_Gateway.TransactOpts, _minFee, _minBridgingAmount, _minTokenBridgingAmount, _minOperationFee)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
@@ -686,25 +779,25 @@ func (_Gateway *GatewayTransactorSession) UpgradeToAndCall(newImplementation com
 	return _Gateway.Contract.UpgradeToAndCall(&_Gateway.TransactOpts, newImplementation, data)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x74e7e7de.
+// Withdraw is a paid mutator transaction binding the contract method 0x086af24c.
 //
-// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _feeAmount) payable returns()
-func (_Gateway *GatewayTransactor) Withdraw(opts *bind.TransactOpts, _destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _feeAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.contract.Transact(opts, "withdraw", _destinationChainId, _receivers, _feeAmount)
+// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _fee, uint256 _operationFee) payable returns()
+func (_Gateway *GatewayTransactor) Withdraw(opts *bind.TransactOpts, _destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _fee *big.Int, _operationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.contract.Transact(opts, "withdraw", _destinationChainId, _receivers, _fee, _operationFee)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x74e7e7de.
+// Withdraw is a paid mutator transaction binding the contract method 0x086af24c.
 //
-// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _feeAmount) payable returns()
-func (_Gateway *GatewaySession) Withdraw(_destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _feeAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.Withdraw(&_Gateway.TransactOpts, _destinationChainId, _receivers, _feeAmount)
+// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _fee, uint256 _operationFee) payable returns()
+func (_Gateway *GatewaySession) Withdraw(_destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _fee *big.Int, _operationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.Withdraw(&_Gateway.TransactOpts, _destinationChainId, _receivers, _fee, _operationFee)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x74e7e7de.
+// Withdraw is a paid mutator transaction binding the contract method 0x086af24c.
 //
-// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _feeAmount) payable returns()
-func (_Gateway *GatewayTransactorSession) Withdraw(_destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _feeAmount *big.Int) (*types.Transaction, error) {
-	return _Gateway.Contract.Withdraw(&_Gateway.TransactOpts, _destinationChainId, _receivers, _feeAmount)
+// Solidity: function withdraw(uint8 _destinationChainId, (string,uint256,uint16)[] _receivers, uint256 _fee, uint256 _operationFee) payable returns()
+func (_Gateway *GatewayTransactorSession) Withdraw(_destinationChainId uint8, _receivers []IGatewayStructsReceiverWithdraw, _fee *big.Int, _operationFee *big.Int) (*types.Transaction, error) {
+	return _Gateway.Contract.Withdraw(&_Gateway.TransactOpts, _destinationChainId, _receivers, _fee, _operationFee)
 }
 
 // Receive is a paid mutator transaction binding the contract receive function.
@@ -1344,14 +1437,16 @@ func (it *GatewayMinAmountsUpdatedIterator) Close() error {
 
 // GatewayMinAmountsUpdated represents a MinAmountsUpdated event raised by the Gateway contract.
 type GatewayMinAmountsUpdated struct {
-	MinFee    *big.Int
-	MinAmount *big.Int
-	Raw       types.Log // Blockchain specific contextual infos
+	MinFee          *big.Int
+	MinAmount       *big.Int
+	MinTokenAmount  *big.Int
+	MinOperationFee *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterMinAmountsUpdated is a free log retrieval operation binding the contract event 0x0516c186cf8751443f5237c121870265c38584bd3565be12ff51c24325b7e960.
+// FilterMinAmountsUpdated is a free log retrieval operation binding the contract event 0x618870fd286934102806f0b698965599ebc0d3e3af247d88f2f09513b30a5f28.
 //
-// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount)
+// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount, uint256 minTokenAmount, uint256 minOperationFee)
 func (_Gateway *GatewayFilterer) FilterMinAmountsUpdated(opts *bind.FilterOpts) (*GatewayMinAmountsUpdatedIterator, error) {
 
 	logs, sub, err := _Gateway.contract.FilterLogs(opts, "MinAmountsUpdated")
@@ -1361,9 +1456,9 @@ func (_Gateway *GatewayFilterer) FilterMinAmountsUpdated(opts *bind.FilterOpts) 
 	return &GatewayMinAmountsUpdatedIterator{contract: _Gateway.contract, event: "MinAmountsUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchMinAmountsUpdated is a free log subscription operation binding the contract event 0x0516c186cf8751443f5237c121870265c38584bd3565be12ff51c24325b7e960.
+// WatchMinAmountsUpdated is a free log subscription operation binding the contract event 0x618870fd286934102806f0b698965599ebc0d3e3af247d88f2f09513b30a5f28.
 //
-// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount)
+// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount, uint256 minTokenAmount, uint256 minOperationFee)
 func (_Gateway *GatewayFilterer) WatchMinAmountsUpdated(opts *bind.WatchOpts, sink chan<- *GatewayMinAmountsUpdated) (event.Subscription, error) {
 
 	logs, sub, err := _Gateway.contract.WatchLogs(opts, "MinAmountsUpdated")
@@ -1398,9 +1493,9 @@ func (_Gateway *GatewayFilterer) WatchMinAmountsUpdated(opts *bind.WatchOpts, si
 	}), nil
 }
 
-// ParseMinAmountsUpdated is a log parse operation binding the contract event 0x0516c186cf8751443f5237c121870265c38584bd3565be12ff51c24325b7e960.
+// ParseMinAmountsUpdated is a log parse operation binding the contract event 0x618870fd286934102806f0b698965599ebc0d3e3af247d88f2f09513b30a5f28.
 //
-// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount)
+// Solidity: event MinAmountsUpdated(uint256 minFee, uint256 minAmount, uint256 minTokenAmount, uint256 minOperationFee)
 func (_Gateway *GatewayFilterer) ParseMinAmountsUpdated(log types.Log) (*GatewayMinAmountsUpdated, error) {
 	event := new(GatewayMinAmountsUpdated)
 	if err := _Gateway.contract.UnpackLog(event, "MinAmountsUpdated", log); err != nil {
@@ -2319,14 +2414,15 @@ type GatewayWithdraw struct {
 	DestinationChainId uint8
 	Sender             common.Address
 	Receivers          []IGatewayStructsReceiverWithdraw
-	FeeAmount          *big.Int
+	Fee                *big.Int
+	OperationFee       *big.Int
 	Value              *big.Int
 	Raw                types.Log // Blockchain specific contextual infos
 }
 
-// FilterWithdraw is a free log retrieval operation binding the contract event 0xf9215456d6824a4219f7099094acf5f49e79ff31019f72991ac56ad11febc7ed.
+// FilterWithdraw is a free log retrieval operation binding the contract event 0x5346f1615d0f5d79989c2d9c7deb07d6a9e52196a209ec7abfbebabb8d346a69.
 //
-// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 feeAmount, uint256 value)
+// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 fee, uint256 operationFee, uint256 value)
 func (_Gateway *GatewayFilterer) FilterWithdraw(opts *bind.FilterOpts) (*GatewayWithdrawIterator, error) {
 
 	logs, sub, err := _Gateway.contract.FilterLogs(opts, "Withdraw")
@@ -2336,9 +2432,9 @@ func (_Gateway *GatewayFilterer) FilterWithdraw(opts *bind.FilterOpts) (*Gateway
 	return &GatewayWithdrawIterator{contract: _Gateway.contract, event: "Withdraw", logs: logs, sub: sub}, nil
 }
 
-// WatchWithdraw is a free log subscription operation binding the contract event 0xf9215456d6824a4219f7099094acf5f49e79ff31019f72991ac56ad11febc7ed.
+// WatchWithdraw is a free log subscription operation binding the contract event 0x5346f1615d0f5d79989c2d9c7deb07d6a9e52196a209ec7abfbebabb8d346a69.
 //
-// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 feeAmount, uint256 value)
+// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 fee, uint256 operationFee, uint256 value)
 func (_Gateway *GatewayFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<- *GatewayWithdraw) (event.Subscription, error) {
 
 	logs, sub, err := _Gateway.contract.WatchLogs(opts, "Withdraw")
@@ -2373,9 +2469,9 @@ func (_Gateway *GatewayFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<-
 	}), nil
 }
 
-// ParseWithdraw is a log parse operation binding the contract event 0xf9215456d6824a4219f7099094acf5f49e79ff31019f72991ac56ad11febc7ed.
+// ParseWithdraw is a log parse operation binding the contract event 0x5346f1615d0f5d79989c2d9c7deb07d6a9e52196a209ec7abfbebabb8d346a69.
 //
-// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 feeAmount, uint256 value)
+// Solidity: event Withdraw(uint8 destinationChainId, address sender, (string,uint256,uint16)[] receivers, uint256 fee, uint256 operationFee, uint256 value)
 func (_Gateway *GatewayFilterer) ParseWithdraw(log types.Log) (*GatewayWithdraw, error) {
 	event := new(GatewayWithdraw)
 	if err := _Gateway.contract.UnpackLog(event, "Withdraw", log); err != nil {

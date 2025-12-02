@@ -64,6 +64,8 @@ const (
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
 
+const nexusCurrencyTokenID = 1
+
 type receiverAmount struct {
 	ReceiverAddr string
 	Amount       *big.Int
@@ -434,6 +436,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	chainID := common.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
+	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
@@ -460,7 +463,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, minOperationFee)
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +478,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount,
+				txOpts, chainID, receivers, ip.feeAmount, minOperationFee,
 			)
 		})
 	if err != nil {
@@ -594,7 +597,7 @@ func toGatewayStruct(receivers []*receiverAmount) (
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
-			TokenId:  0,
+			TokenId:  nexusCurrencyTokenID,
 		}
 
 		total.Add(total, rec.Amount)

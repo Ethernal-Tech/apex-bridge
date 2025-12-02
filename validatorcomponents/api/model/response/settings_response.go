@@ -57,6 +57,7 @@ func NewSettingsResponse(
 
 	for chainID, ethConfig := range appConfig.EthChains {
 		minFeeForBridgingMap[chainID] = ethConfig.MinFeeForBridging
+		minOperationFeeMap[chainID] = ethConfig.MinOperationFee
 	}
 
 	return &SettingsResponse{

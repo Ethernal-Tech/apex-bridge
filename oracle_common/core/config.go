@@ -50,6 +50,7 @@ type EthChainConfig struct {
 	DynamicTx               bool                         `json:"dynamicTx"`
 	TestMode                uint8                        `json:"testMode"`
 	MinFeeForBridging       uint64                       `json:"minFeeForBridging"`
+	MinOperationFee         uint64                       `json:"minOperationFee"`
 	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
 	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
 	DestinationChain        map[string]common.TokenPairs `json:"destChain"`

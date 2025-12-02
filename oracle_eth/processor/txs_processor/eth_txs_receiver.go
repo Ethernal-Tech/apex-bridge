@@ -247,8 +247,8 @@ func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, log
 			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
 			SenderAddr:         withdraw.Sender.String(),
 			Transactions:       txs,
-			BridgingFee:        withdraw.FeeAmount,
-			// wTODO: OperationFee:       withdraw.OperationFee,
+			BridgingFee:        withdraw.Fee,
+			OperationFee:       withdraw.OperationFee,
 		}
 
 		metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)

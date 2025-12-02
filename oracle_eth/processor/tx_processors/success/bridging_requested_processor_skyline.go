@@ -285,6 +285,11 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		}
 	}
 
+	operationFeeAmountDfm := common.WeiToDfm(metadata.OperationFee)
+	if operationFeeAmountDfm.Uint64() < ethSrcConfig.MinOperationFee {
+		return fmt.Errorf("operation fee in metadata is less than minimum: %v", metadata)
+	}
+
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee.Add(metadata.BridgingFee, feeSum)
 	receiverCurrencySum.Add(receiverCurrencySum, metadata.BridgingFee)

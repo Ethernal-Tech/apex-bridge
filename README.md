@@ -207,6 +207,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-block-rounding-threshold <block rounding threshold> \
         --evm-starting-block <block number> \
         --evm-min-fee-for-bridging <minimal bridging fee> \
+        --min-operation-fee <minimal operation fee> \
         --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
         --chain-id <evm chain id> \
         --allowed-directions <allowed bridging directions> \
@@ -228,6 +229,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-block-rounding-threshold 5 \
         --evm-starting-block 3 \
         --evm-min-fee-for-bridging 10000000 \
+        --min-operation-fee 0 \
         --evm-relayer-gas-fee-multiplier 4 \
         --chain-id "nexus" \
         --allowed-directions "prime" \
@@ -366,10 +368,17 @@ $ apex-bridge deploy-evm \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
         --clone \
+        --min-fee 100\
+        --min-bridging-amount 200\
+        --min-token-bridging-amount 300\
+        --min-operation-fee 400\
+        --currency-token-id 1\
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
+- all amounts should be entered in wei decimals
+- `--currency-token-id` flag is the ecosystem token id of the currency of the chain the SCs are being deployed to
 - instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 - `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
@@ -478,8 +487,11 @@ $ apex-bridge bridge-admin set-min-amounts \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --contract-addr 0xeefcd00000000000000000000000000000000013 \
         --min-fee 200 \
-        --min-bridging-amount 100 
+        --min-bridging-amount 100 \
+        --min-token-bridging-amount 200 \
+        --min-operation-fee 100 
 ```
+- all amounts should be entered in wei decimals
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 

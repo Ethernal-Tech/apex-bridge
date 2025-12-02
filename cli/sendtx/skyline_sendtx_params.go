@@ -603,7 +603,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, p.feeAmount, // operationFeeAmount,
+				txOpts, chainID, receivers, p.feeAmount, p.operationFeeAmount,
 			)
 		})
 	if err != nil {

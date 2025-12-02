@@ -38,6 +38,7 @@ type MinConfig struct {
 }
 
 const (
+	MinOperationFeeDefault            = uint64(0)
 	MinFeeForBridgingDefault          = uint64(1_000_010)
 	MinUtxoAmountDefault              = uint64(1_000_000)
 	MinColCoinsAllowedToBridgeDefault = uint64(1)
@@ -64,7 +65,7 @@ var (
 			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		"default": {
-			MinOperationFee:            uint64(0),
+			MinOperationFee:            MinOperationFeeDefault,
 			MinFeeForBridging:          MinFeeForBridgingDefault,
 			MinUtxoAmount:              MinUtxoAmountDefault,
 			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDefault,
