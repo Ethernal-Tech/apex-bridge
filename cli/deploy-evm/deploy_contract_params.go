@@ -314,7 +314,10 @@ func buildRepo(contractDir string, outputter common.OutputFormatter) error {
 	}
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, contractDir); err != nil {
-		return fmt.Errorf("failed to compile smart contracts: %w", err)
+		if !(strings.Contains(err.Error(), ethcontracts.HardhatNodeVersionErr1) &&
+			strings.Contains(err.Error(), ethcontracts.HardhatNodeVersionErr2)) {
+			return fmt.Errorf("failed to compile smart contracts: %w", err)
+		}
 	}
 
 	return nil

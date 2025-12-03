@@ -42,7 +42,7 @@ const (
 
 	minFeeAmountFlag           = "min-fee"
 	minBridgingAmountFlag      = "min-bridging-amount"
-	minTokenBridgingAmountFlag = "min-token-bridging-amount"
+	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
 	minOperationFeeFlag        = "min-operation-fee"
 	currencyTokIDFlag          = "currency-token-id"
 

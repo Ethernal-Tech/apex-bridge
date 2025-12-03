@@ -436,6 +436,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	chainID := common.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
+
 	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)

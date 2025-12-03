@@ -24,7 +24,7 @@ const (
 	contractAddressFlag        = "contract-addr"
 	minFeeAmountFlag           = "min-fee"
 	minBridgingAmountFlag      = "min-bridging-amount"
-	minTokenBridgingAmountFlag = "min-token-bridging-amount"
+	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
 	minOperationFeeFlag        = "min-operation-fee"
 
 	nodeFlagDesc                   = "evm node url"

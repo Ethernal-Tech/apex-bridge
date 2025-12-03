@@ -495,6 +495,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 			metadata.BridgingFee, minBridgingFee, metadata)
 	}
 
+	nativeTokensNamesInMetadata := make(map[string]struct{}, len(receiverCtx.amountsSums))
+
 	for tokenID, tokenAmount := range receiverCtx.amountsSums {
 		tokenName := cardanoSrcConfig.Tokens[tokenID].ChainSpecific
 
@@ -503,11 +505,22 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 			return err
 		}
 
+		nativeTokensNamesInMetadata[nativeToken.String()] = struct{}{}
+
 		multisigTokenAmount := new(big.Int).SetUint64(cardanotx.GetTokenAmount(multisigUtxo, nativeToken.String()))
 
 		if tokenAmount.Cmp(multisigTokenAmount) != 0 {
 			return fmt.Errorf("multisig native token with ID: %d amount mismatch: expected %v but got %v",
 				tokenID, tokenAmount, multisigTokenAmount)
+		}
+	}
+
+	for _, tokenAmount := range multisigUtxo.Tokens {
+		if _, ok := nativeTokensNamesInMetadata[tokenAmount.TokenName()]; !ok {
+			tokFullAmnt := cardanotx.GetTokenAmount(multisigUtxo, tokenAmount.TokenName())
+
+			return fmt.Errorf("multisig native token: %s amount mismatch: expected 0 but got %v",
+				tokenAmount.TokenName(), tokFullAmnt)
 		}
 	}
 
