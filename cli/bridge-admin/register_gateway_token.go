@@ -98,6 +98,7 @@ func (g *registerGatewayTokenParams) Execute(outputter common.OutputFormatter) (
 		ethtxhelper.WithNodeURL(g.nodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
 		ethtxhelper.WithDefaultGasLimit(g.gasLimit),
+		ethtxhelper.WithZeroGasPrice(false),
 		ethtxhelper.WithGasFeeMultiplier(defaultGasFeeMultiplier),
 	)
 
@@ -150,7 +151,7 @@ func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&g.tokenSCAddressStr,
 		tokenSCAddressFlag,
-		"",
+		common.EthZeroAddr,
 		tokenSCAddressFlagDesc,
 	)
 	cmd.Flags().Uint16Var(
