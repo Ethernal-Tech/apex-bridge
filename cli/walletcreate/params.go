@@ -17,6 +17,7 @@ const (
 	validatorConfigFlag  = "validator-config"
 	chainIDFlag          = "chain"
 	walletTypeFlag       = "type"
+	networkIDFlag        = "network-id"
 	forceRegenerateFlag  = "force"
 	showPrivateKeyFlag   = "show-pk"
 
@@ -24,6 +25,7 @@ const (
 	validatorConfigFlagDesc  = "(mandatory validator-data not specified) path to bridge chain secrets manager config file"                       //nolint:lll
 	chainIDFlagDesc          = "chain ID (prime, vector, etc)"
 	walletTypeFlagDesc       = "type of wallet (cardano, evm, relayer evm, etc)"
+	networkIDFlagDesc        = "network id"
 	forceRegenerateFlagDesc  = "force regenerating keys even if they exist in specified directory"
 	showPrivateKeyFlagDesc   = "show private key in output"
 )
@@ -33,6 +35,7 @@ type walletCreateParams struct {
 	validatorConfig  string
 	chainID          string
 	walletType       string
+	networkID        uint32
 	forceRegenerate  bool
 	showPrivateKey   bool
 }
@@ -91,6 +94,12 @@ func (ip *walletCreateParams) setFlags(cmd *cobra.Command) {
 		"",
 		walletTypeFlagDesc,
 	)
+	cmd.Flags().Uint32Var(
+		&ip.networkID,
+		networkIDFlag,
+		uint32(cardanowallet.TestNetNetwork),
+		networkIDFlagDesc,
+	)
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
@@ -144,8 +153,8 @@ func (ip *walletCreateParams) Execute(outputter common.OutputFormatter) (common.
 			return nil, err
 		}
 
-		addr, err := cardanowallet.NewBaseAddress(
-			cardanowallet.TestNetNetwork, wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
+		addr, err := cardanowallet.NewBaseAddress(cardanowallet.CardanoNetworkType(ip.networkID),
+			wallet.MultiSig.VerificationKey, wallet.MultiSig.StakeVerificationKey)
 		if err != nil {
 			return nil, err
 		}

@@ -73,6 +73,11 @@ $ go run ./main.go wallet-create --chain nexus --validator-data-dir /home/bbs/ca
 - instead of using `--validator-data-dir`, it is possible to set the blade configuration file with 
 `--validator-config path_to_config/config.json`
 
+# How to generate key cardano relayer
+```shell
+$ go run ./main.go wallet-create --chain prime --validator-data-dir /home/bbs/cardano --type relayer-cardano --network-id 1
+```
+
 # How to generate key for blade admin
 ```shell
 $ go run ./main.go wallet-create blade --type admin --key KEY --config CONFIG_PATTH

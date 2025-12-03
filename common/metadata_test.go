@@ -3,6 +3,7 @@ package common
 import (
 	"testing"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,5 +163,23 @@ func TestMetadata(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 		require.Equal(t, feeAmount, metadata.BridgingFee)
+	})
+
+	t.Run("Cbor Unmarshal Well structured, but invalid", func(t *testing.T) {
+		metadataRaw := map[int]interface{}{
+			0: map[int]interface{}{
+				0: map[string]interface{}{
+					"user_id": "2", "source": "asfsadad",
+				},
+			},
+		}
+
+		result, err := cbor.Marshal(metadataRaw)
+		require.NoError(t, err)
+
+		metadata, err := UnmarshalMetadata[BaseMetadata](MetadataEncodingTypeCbor, result)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "invalid metadata")
+		require.Nil(t, metadata)
 	})
 }

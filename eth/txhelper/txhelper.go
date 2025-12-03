@@ -207,7 +207,7 @@ func (t *EthTxHelperImpl) WaitForReceipt(
 		if t.receiptIsRetryErr(err) {
 			tryCounter++
 			if tryCounter >= t.receiptRetriesCnt {
-				return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed", txHashStr)
+				return nil, fmt.Errorf("timeout while waiting for transaction %s to be processed, err: %w", txHashStr, err)
 			}
 		}
 

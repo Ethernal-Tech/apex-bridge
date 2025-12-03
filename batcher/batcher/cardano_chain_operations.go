@@ -855,14 +855,6 @@ func (cco *CardanoChainOperations) getUTXOsForNormalBatch(
 		return nil, fmt.Errorf("failed to get known tokens: %w", err)
 	}
 
-	feeUtxos = cardano.FilterOutUtxosWithUnknownTokens(feeUtxos)
-
-	if len(feeUtxos) == 0 {
-		return nil, fmt.Errorf("fee multisig does not have any utxo: %s", multisigFeeAddress)
-	}
-
-	feeUtxos = feeUtxos[:min(cco.config.MaxFeeUtxoCount, uint(len(feeUtxos)))] // do not take more than MaxFeeUtxoCount
-
 	chosenMultisigUtxos := make(map[uint8][]*indexer.TxInputOutput)
 	chosenMultisigUtxosSoFar := 0
 
