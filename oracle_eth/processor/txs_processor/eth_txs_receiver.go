@@ -46,8 +46,7 @@ func NewEthTxsReceiverImpl(
 func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
 	r.logger.Info("NewUnprocessedLog", "log", log)
 
-	_, exists := r.appConfig.EthChains[originChainID]
-	if !exists {
+	if _, exists := r.appConfig.EthChains[originChainID]; !exists {
 		r.logger.Error("originChainID not registered", "originChainID", originChainID)
 
 		return fmt.Errorf("originChainID not registered. originChainID: %s", originChainID)
