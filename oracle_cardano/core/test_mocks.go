@@ -313,7 +313,7 @@ func (m *CardanoTxSuccessRefundProcessorMock) HandleBridgingProcessorError(
 	err error, errContext string,
 ) error {
 	if appConfig.RefundEnabled {
-		args := m.Called(claims, tx, appConfig)
+		args := m.Called(claims, tx, appConfig, err, errContext)
 
 		return args.Error(0)
 	}

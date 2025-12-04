@@ -1179,7 +1179,7 @@ func TestEthTxsProcessor(t *testing.T) {
 				Receiver: "123",
 				Amount:   big.NewInt(1),
 			}},
-			big.NewInt(1), big.NewInt(1),
+			big.NewInt(1), big.NewInt(1), big.NewInt(1),
 		)
 		require.NoError(t, err)
 
@@ -1288,7 +1288,7 @@ func TestEthTxsProcessor(t *testing.T) {
 				Receiver: "123",
 				Amount:   big.NewInt(1),
 			}},
-			big.NewInt(1), big.NewInt(1),
+			big.NewInt(1), big.NewInt(1), big.NewInt(1),
 		)
 		require.NoError(t, err)
 

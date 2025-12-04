@@ -44,6 +44,7 @@ type BridgingRequestMetadataBC struct {
 	SenderAddr         []string                               `cbor:"s" json:"s"`
 	Transactions       []BridgingRequestMetadataTransactionBC `cbor:"tx" json:"tx"`
 	BridgingFee        uint64                                 `cbor:"fa" json:"fa"`
+	OperationFee       uint64                                 `cbor:"of" json:"of"`
 }
 
 type RefundBridgingRequestMetadata struct {

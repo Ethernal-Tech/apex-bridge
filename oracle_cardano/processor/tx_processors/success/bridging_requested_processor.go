@@ -185,12 +185,17 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
-	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	isCardanoDest := cardanoDestConfig != nil
+
+	cardanoDestChainFeeAddress := ""
+	if isCardanoDest {
+		cardanoDestChainFeeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	}
 
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if cardanoDestConfig != nil {
+		if isCardanoDest {
 			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
 
