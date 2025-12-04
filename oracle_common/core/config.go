@@ -170,5 +170,5 @@ func (config EthChainConfig) GetCurrencyID() (uint16, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("currency not found in chain config")
+	return 0, fmt.Errorf("currency id not found for chain %s", config.ChainID)
 }
