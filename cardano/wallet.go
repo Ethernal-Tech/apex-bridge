@@ -1,6 +1,7 @@
 package cardanotx
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -81,4 +82,18 @@ func GetAddress(
 	}
 
 	return cardanowallet.NewEnterpriseAddress(networkID, cardanoWallet.VerificationKey)
+}
+
+func GetCardanoPrivateKeyBytes(str string) ([]byte, error) {
+	bytes, err := cardanowallet.GetKeyBytes(str)
+	if err != nil {
+		bytes, err = hex.DecodeString(str)
+		if err != nil {
+			return nil, err
+		}
+
+		bytes = cardanowallet.PadKeyToSize(bytes)
+	}
+
+	return bytes, nil
 }
