@@ -133,7 +133,7 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 		sb.WriteString(fmt.Sprintf("OutputIndexes= %s, ", hex.EncodeToString(tx.OutputIndexes)))
 		sb.WriteString("Receivers = [")
 
-		for j, recv := range tx.ReceiversWithToken {
+		for j, recv := range tx.Receivers {
 			if j > 0 {
 				sb.WriteString(", ")
 			}

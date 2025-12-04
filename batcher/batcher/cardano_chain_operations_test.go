@@ -133,7 +133,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		ReceiversWithToken: []eth.BridgeReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			TokenId:            1,
@@ -403,7 +403,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 	confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		ReceiversWithToken: []eth.BridgeReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			AmountWrapped:      big.NewInt(1000000),
@@ -676,7 +676,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 	confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
 		Nonce:       2,
 		BlockHeight: big.NewInt(1),
-		ReceiversWithToken: []eth.BridgeReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			AmountWrapped:      big.NewInt(1000000),
@@ -752,7 +752,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 	confirmedTransactions = append(confirmedTransactions, eth.ConfirmedTransaction{
 		Nonce:       2,
 		BlockHeight: big.NewInt(1),
-		ReceiversWithToken: []eth.BridgeReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			AmountWrapped:      big.NewInt(1000000),
@@ -1425,7 +1425,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	confirmedTransactions[0] = eth.ConfirmedTransaction{
 		Nonce:       1,
 		BlockHeight: big.NewInt(1),
-		ReceiversWithToken: []eth.BridgeReceiver{{
+		Receivers: []eth.BridgeReceiver{{
 			DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 			Amount:             minUtxoAmount,
 			TokenId:            1,
@@ -2053,7 +2053,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
 			Nonce:       1,
 			BlockHeight: big.NewInt(1),
-			ReceiversWithToken: []eth.BridgeReceiver{{
+			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             new(big.Int).SetUint64(3_000_000),
 				TokenId:            1,
@@ -2302,7 +2302,7 @@ func TestSkylineConsolidation(t *testing.T) {
 			Nonce:         1,
 			BlockHeight:   big.NewInt(1),
 			SourceChainId: common.ChainIDIntCardano,
-			ReceiversWithToken: []eth.BridgeReceiver{{
+			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             big.NewInt(2_000_000),
 				AmountWrapped:      big.NewInt(1_500_000),
@@ -2699,7 +2699,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 		confirmedTransactions[0] = eth.ConfirmedTransaction{
 			Nonce:       1,
 			BlockHeight: big.NewInt(1),
-			ReceiversWithToken: []eth.BridgeReceiver{{
+			Receivers: []eth.BridgeReceiver{{
 				DestinationAddress: "addr_test1vqeux7xwusdju9dvsj8h7mca9aup2k439kfmwy773xxc2hcu7zy99",
 				Amount:             new(big.Int).SetUint64(3_000_000),
 				TokenId:            1,
@@ -2788,7 +2788,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 	cco.config.MaxUtxoCount = 50
 	txs := []eth.ConfirmedTransaction{
 		{
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(100),
@@ -2807,7 +2807,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		},
 		{
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(50),
@@ -2826,7 +2826,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		},
 		{
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 					Amount:             big.NewInt(3000),
@@ -2841,7 +2841,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 			},
 		},
 		{
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(2000),
@@ -2889,7 +2889,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2}),
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					TokenId:            1,
@@ -2951,7 +2951,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 		txs := append(slices.Clone(txs), eth.ConfirmedTransaction{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			OutputIndexes:   common.PackNumbersToBytes([]common.TxOutputIndex{2, 3, 5}),
-			ReceiversWithToken: []eth.BridgeReceiver{
+			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					TokenId:            1,

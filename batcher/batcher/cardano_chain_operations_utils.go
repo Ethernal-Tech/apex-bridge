@@ -103,7 +103,7 @@ func getOutputs(
 			continue
 		}
 
-		for i, receiver := range transaction.ReceiversWithToken {
+		for i, receiver := range transaction.Receivers {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
@@ -129,7 +129,7 @@ func getOutputs(
 
 				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
 				// also for backward compatibility during the process of syncing -
-				// rebuilding confirmedTx.receiversWithTokens from confirmedTx.receivers
+				// rebuilding confirmedTx.Receiverss from confirmedTx.receivers
 				if receiver.TokenId == 0 {
 					token, err = cardanoConfig.GetWrappedToken()
 					if err != nil {
