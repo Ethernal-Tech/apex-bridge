@@ -180,7 +180,7 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount", minOperationFeeFlag)
 	}
 
-	if operationFeeAmount.Cmp(big.NewInt(0)) <= 0 {
+	if operationFeeAmount.Cmp(big.NewInt(0)) < 0 {
 		return fmt.Errorf("--%s invalid amount: %d", minOperationFeeFlag, operationFeeAmount)
 	}
 
