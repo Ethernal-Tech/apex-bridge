@@ -80,7 +80,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	retTokens, err := GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retTokens))
-	require.Equal(t, token1, retTokens[0])
+	require.ElementsMatch(t, []wallet.Token{token1}, retTokens)
 
 	config.Tokens = map[uint16]common.Token{
 		0: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
@@ -91,8 +91,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	retTokens, err = GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(retTokens))
-	require.Equal(t, token1, retTokens[0])
-	require.Equal(t, token2, retTokens[1])
+	require.ElementsMatch(t, []wallet.Token{token1, token2}, retTokens)
 
 	config.Tokens = map[uint16]common.Token{
 		3: {ChainSpecific: token2.String(), LockUnlock: true},
@@ -101,7 +100,7 @@ func Test_GetKnownTokens(t *testing.T) {
 	retTokens, err = GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retTokens))
-	require.Equal(t, token2, retTokens[0])
+	require.ElementsMatch(t, []wallet.Token{token2}, retTokens)
 }
 
 func Test_subtractTxOutputsFromSumMap(t *testing.T) {
