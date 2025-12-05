@@ -34,19 +34,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validTestAddress           = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 
 		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
+
+		primeCurrencyID       = uint16(1)
+		cardanoCurrencyID     = uint16(2)
+		nexusCurrencyID       = uint16(3)
+		primeWrappedTokenID   = uint16(4)
+		cardanoWrappedTokenID = uint16(5)
+		usdtTokenID           = uint16(6)
+		ccTokenID             = uint16(7)
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 	maxTokenAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
 	testChainID := "test"
-
-	primeCurrencyID := uint16(1)
-	cardanoCurrencyID := uint16(2)
-	nexusCurrencyID := uint16(3)
-	primeWrappedTokenID := uint16(4)
-	cardanoWrappedTokenID := uint16(5)
-	usdtTokenID := uint16(6)
-	ccTokenID := uint16(7)
 
 	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
 		fmt.Sprintf("%s.%s",

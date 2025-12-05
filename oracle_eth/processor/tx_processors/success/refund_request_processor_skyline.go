@@ -129,7 +129,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	for _, receiver := range metadata.Transactions {
 		if _, exists := chainConfig.Tokens[receiver.TokenID]; !exists {
 			return fmt.Errorf(
-				"receiver token with ID %d is not registered in chain %s",
+				"token with ID %d is not registered in chain %s",
 				receiver.TokenID,
 				chainConfig.ChainID,
 			)

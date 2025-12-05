@@ -1024,7 +1024,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+		// first hash corresponds to simulateDepositRealData
+		txHash := ethgo.HexToHash("0xec6a5ce4612fac51f1429086a4370b546d2279c83410fc6dd9f3b661ac85b11b")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1078,14 +1079,17 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc.TickTime = 1
 		proc.Start()
 
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+		processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+		require.NoError(t, err)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
+		expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+		require.NoError(t, err)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
