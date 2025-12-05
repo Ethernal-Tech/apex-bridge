@@ -156,11 +156,13 @@ var (
 )
 
 type BatcherEVMChainConfig struct {
-	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
-	TestMode               uint8   `json:"testMode,omitempty"` // only functional in test mode (`-tags testenv`)
-	MinFeeForBridging      uint64  `json:"minFeeForBridging"`
+	TTLBlockNumberInc      uint64                       `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold uint64                       `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent   float64                      `json:"noBatchPeriodPercent"`
+	TestMode               uint8                        `json:"testMode,omitempty"` // only test mode (`-tags testenv`)
+	MinFeeForBridging      uint64                       `json:"minFeeForBridging"`
+	DestinationChains      map[string]common.TokenPairs `json:"destChains"`
+	Tokens                 map[uint16]common.Token      `json:"tokens"`
 }
 
 func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {
@@ -179,6 +181,26 @@ func (*BatcherEVMChainConfig) GetChainType() string {
 
 func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
 	return json.Marshal(config)
+}
+
+func (config BatcherEVMChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency id not found")
+}
+
+func (config BatcherEVMChainConfig) GetWrappedTokenID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.IsWrappedCurrency {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("wrapped token id not found")
 }
 
 type RelayerEVMChainConfig struct {

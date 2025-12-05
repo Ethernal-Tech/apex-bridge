@@ -90,6 +90,8 @@ func (appConfig *AppConfig) SeparateConfigs() (
 			NoBatchPeriodPercent:   ecConfig.NoBatchPeriodPercent,
 			MinFeeForBridging:      ecConfig.MinFeeForBridging,
 			TestMode:               ecConfig.TestMode,
+			DestinationChains:      ecConfig.DestinationChain,
+			Tokens:                 ecConfig.Tokens,
 		}).Serialize()
 
 		batcherChains = append(batcherChains, batcherCore.ChainConfig{

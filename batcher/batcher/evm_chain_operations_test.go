@@ -44,11 +44,29 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 	_, err = eth.CreateAndSaveBatcherEVMPrivateKey(secretsMngr, chainID, true)
 	require.NoError(t, err)
 
-	chainSpecificJSONRaw, err := (cardanotx.BatcherEVMChainConfig{
+	currencyID := uint16(1)
+	wrappedCurrencyID := uint16(2)
+	tokenID := uint16(3)
+
+	batcherConfig := cardanotx.BatcherEVMChainConfig{
 		TTLBlockNumberInc:      ttlBlockNumberInc,
 		BlockRoundingThreshold: 6,
 		NoBatchPeriodPercent:   0.1,
-	}).Serialize()
+		Tokens: map[uint16]common.Token{
+			currencyID: {
+				ChainSpecific: "lovelace",
+			},
+			wrappedCurrencyID: {
+				ChainSpecific:     "cc",
+				IsWrappedCurrency: true,
+			},
+			tokenID: {
+				ChainSpecific: "dd",
+			},
+		},
+	}
+
+	chainSpecificJSONRaw, err := batcherConfig.Serialize()
 	require.NoError(t, err)
 
 	dbMock := eventTrackerStore.NewTestTrackerStore(t)
@@ -62,18 +80,39 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 				Receivers: []eth.BridgeReceiver{
 					{
 						Amount:             new(big.Int).SetUint64(100),
+						AmountWrapped:      big.NewInt(0),
 						DestinationAddress: "0xff",
-						TokenId:            1,
+						TokenId:            0,
 					},
 					{
 						Amount:             new(big.Int).SetUint64(1000),
+						AmountWrapped:      big.NewInt(0),
 						DestinationAddress: "0xaa",
-						TokenId:            1,
+						TokenId:            0,
+					},
+					{
+						Amount:             big.NewInt(0),
+						AmountWrapped:      new(big.Int).SetUint64(1000),
+						DestinationAddress: "0xaa",
+						TokenId:            0,
+					},
+					{
+						Amount:             big.NewInt(0),
+						AmountWrapped:      new(big.Int).SetUint64(1000),
+						DestinationAddress: "0xaa",
+						TokenId:            wrappedCurrencyID,
+					},
+					{
+						Amount:             big.NewInt(1000),
+						AmountWrapped:      new(big.Int).SetUint64(1000),
+						DestinationAddress: "0xaa",
+						TokenId:            tokenID,
 					},
 					{
 						Amount:             new(big.Int).SetUint64(10),
+						AmountWrapped:      big.NewInt(0),
 						DestinationAddress: "cc",
-						TokenId:            1,
+						TokenId:            0,
 					},
 				},
 			},
@@ -85,20 +124,34 @@ func TestEthChain_GenerateBatchTransaction(t *testing.T) {
 		dt, err := ops.GenerateBatchTransaction(ctx, chainID, confirmedTxs, batchNonceID)
 		require.NoError(t, err)
 
-		txs := newEVMSmartContractTransaction(batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
+		txs, err := newEVMSmartContractTransaction(&batcherConfig, batchNonceID, uint64(6)+ttlBlockNumberInc, confirmedTxs, big.NewInt(0))
+		require.NoError(t, err)
 
 		require.Equal(t, []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xaa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(2000)),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xaa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(2000)),
+				TokenID: wrappedCurrencyID,
+			},
+			{
+				Address: common.HexToAddress("0xaa"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(1000)),
+				TokenID: tokenID,
 			},
 			{
 				Address: common.HexToAddress("0xcc"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(10)),
+				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(100)),
+				TokenID: currencyID,
 			},
 		}, txs.Receivers)
 
@@ -135,18 +188,42 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 	ttl := uint64(39203902)
 	feeAmount := new(big.Int).SetUint64(11)
 
+	currencyID := uint16(1)
+	wrappedCurrencyID := uint16(2)
+	tokenID := uint16(3)
+
+	batcherConfig := cardanotx.BatcherEVMChainConfig{
+		TTLBlockNumberInc:      5,
+		BlockRoundingThreshold: 6,
+		NoBatchPeriodPercent:   0.1,
+		Tokens: map[uint16]common.Token{
+			currencyID: {
+				ChainSpecific: "lovelace",
+			},
+			wrappedCurrencyID: {
+				ChainSpecific:     "cc",
+				IsWrappedCurrency: true,
+			},
+			tokenID: {
+				ChainSpecific: "dd",
+			},
+		},
+	}
+
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(100),
+					AmountWrapped:      new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            wrappedCurrencyID,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(200),
+					AmountWrapped:      new(big.Int).SetUint64(200),
 					DestinationAddress: "0xfa",
-					TokenId:            1,
+					TokenId:            tokenID,
 				},
 			},
 		},
@@ -154,8 +231,9 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(10),
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            0,
 				},
 			},
 		},
@@ -163,13 +241,15 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: "0xf0",
-					TokenId:            1,
+					TokenId:            0,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(11),
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            0,
 				},
 			},
 		},
@@ -177,19 +257,23 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: "0xf0",
-					TokenId:            1,
+					TokenId:            0,
 				},
 				{
 					Amount:             feeAmount,
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: common.EthZeroAddr,
-					TokenId:            1,
+					TokenId:            0,
 				},
 			},
 		},
 	}
 
-	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, big.NewInt(0))
+	result, err := newEVMSmartContractTransaction(&batcherConfig, batchNonceID, ttl, confirmedTxs, big.NewInt(0))
+	require.NoError(t, err)
+
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
@@ -198,17 +282,30 @@ func TestEthChain_newEVMSmartContractTransaction(t *testing.T) {
 			{
 				Address: common.HexToAddress("0xf0"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(30)),
+				TokenID: currencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(200)),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xfa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(200)),
+				TokenID: tokenID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
 				Amount:  common.DfmToWei(new(big.Int).SetUint64(121)),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xff"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(100)),
+				TokenID: wrappedCurrencyID,
 			},
 		},
-	}, result)
+	}, *result)
 }
 
 func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
@@ -217,19 +314,43 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 	feeAmount := new(big.Int).SetUint64(11)
 	minFeeForBridging := new(big.Int).SetUint64(10)
 
+	currencyID := uint16(1)
+	wrappedCurrencyID := uint16(2)
+	tokenID := uint16(3)
+
+	batcherConfig := cardanotx.BatcherEVMChainConfig{
+		TTLBlockNumberInc:      5,
+		BlockRoundingThreshold: 6,
+		NoBatchPeriodPercent:   0.1,
+		Tokens: map[uint16]common.Token{
+			currencyID: {
+				ChainSpecific: "lovelace",
+			},
+			wrappedCurrencyID: {
+				ChainSpecific:     "cc",
+				IsWrappedCurrency: true,
+			},
+			tokenID: {
+				ChainSpecific: "dd",
+			},
+		},
+	}
+
 	confirmedTxs := []eth.ConfirmedTransaction{
 		{
 			TransactionType: uint8(common.RefundConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(100),
+					AmountWrapped:      new(big.Int).SetUint64(100),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            0,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(200),
+					AmountWrapped:      new(big.Int).SetUint64(2),
 					DestinationAddress: "0xfa",
-					TokenId:            1,
+					TokenId:            wrappedCurrencyID,
 				},
 			},
 		},
@@ -237,8 +358,9 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(10),
+					AmountWrapped:      new(big.Int).SetUint64(50),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            tokenID,
 				},
 			},
 		},
@@ -247,13 +369,15 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
+					AmountWrapped:      new(big.Int).SetUint64(15),
 					DestinationAddress: "0xf0",
-					TokenId:            1,
+					TokenId:            0,
 				},
 				{
 					Amount:             new(big.Int).SetUint64(11),
+					AmountWrapped:      new(big.Int).SetUint64(11),
 					DestinationAddress: "0xff",
-					TokenId:            1,
+					TokenId:            wrappedCurrencyID,
 				},
 			},
 		},
@@ -261,11 +385,13 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					Amount:             new(big.Int).SetUint64(15),
+					AmountWrapped:      new(big.Int).SetUint64(2),
 					DestinationAddress: "0xf0",
-					TokenId:            1,
+					TokenId:            0,
 				},
 				{
 					Amount:             feeAmount,
+					AmountWrapped:      new(big.Int).SetUint64(0),
 					DestinationAddress: common.EthZeroAddr,
 					TokenId:            1,
 				},
@@ -273,7 +399,9 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 		},
 	}
 
-	result := newEVMSmartContractTransaction(batchNonceID, ttl, confirmedTxs, minFeeForBridging)
+	result, err := newEVMSmartContractTransaction(&batcherConfig, batchNonceID, ttl, confirmedTxs, minFeeForBridging)
+	require.NoError(t, err)
+
 	require.Equal(t, eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
@@ -281,21 +409,45 @@ func TestEthChain_newEVMSmartContractTransactionRefund(t *testing.T) {
 		Receivers: []eth.EVMSmartContractTransactionReceiver{
 			{
 				Address: common.HexToAddress("0xf0"),
-				// 30 - 1 * minFeeForBridging due to refund tx
-				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(30)), minFeeForBridging),
+				// 30 - 2 * minFeeForBridging due to refund tx
+				Amount: big.NewInt(0).Sub(
+					common.DfmToWei(new(big.Int).SetUint64(30)), minFeeForBridging),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xf0"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(17)),
+				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xfa"),
 				// 200 - 1 * minFeeForBridging due to refund tx
-				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(200)), minFeeForBridging),
+				Amount:  big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(200)), minFeeForBridging),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xfa"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(2)),
+				TokenID: wrappedCurrencyID,
 			},
 			{
 				Address: common.HexToAddress("0xff"),
 				// 121 - 2 * minFeeForBridging due to refund txs
-				Amount: big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(121)), big.NewInt(0).Mul(minFeeForBridging, big.NewInt(2))),
+				Amount:  big.NewInt(0).Sub(common.DfmToWei(new(big.Int).SetUint64(121)), big.NewInt(0).Mul(minFeeForBridging, big.NewInt(2))),
+				TokenID: currencyID,
+			},
+			{
+				Address: common.HexToAddress("0xff"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(111)),
+				TokenID: wrappedCurrencyID,
+			},
+			{
+				Address: common.HexToAddress("0xff"),
+				Amount:  common.DfmToWei(new(big.Int).SetUint64(50)),
+				TokenID: tokenID,
 			},
 		},
-	}, result)
+	}, *result)
 }
 
 func TestEthChain_IsSynchronized(t *testing.T) {

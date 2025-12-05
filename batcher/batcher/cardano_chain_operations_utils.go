@@ -129,7 +129,7 @@ func getOutputs(
 
 				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
 				// also for backward compatibility during the process of syncing -
-				// rebuilding confirmedTx.Receiverss from confirmedTx.receivers
+				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
 				if receiver.TokenId == 0 {
 					token, err = cardanoConfig.GetWrappedToken()
 					if err != nil {

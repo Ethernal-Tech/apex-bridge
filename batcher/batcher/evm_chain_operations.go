@@ -76,11 +76,15 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txs := newEVMSmartContractTransaction(
+	txs, err := newEVMSmartContractTransaction(
+		cco.config,
 		batchNonceID,
 		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
 		confirmedTransactions,
 		common.DfmToWei(new(big.Int).SetUint64(cco.config.MinFeeForBridging)))
+	if err != nil {
+		return nil, err
+	}
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -162,13 +166,19 @@ func (cco *EVMChainOperations) Submit(
 }
 
 func newEVMSmartContractTransaction(
+	config *cardano.BatcherEVMChainConfig,
 	batchNonceID uint64,
 	ttl uint64,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
-) eth.EVMSmartContractTransaction {
+) (*eth.EVMSmartContractTransaction, error) {
 	sourceAddrTxMap := map[string][]eth.EVMSmartContractTransactionReceiver{}
 	feeAmount := big.NewInt(0)
+
+	currencyID, err := config.GetCurrencyID()
+	if err != nil {
+		return nil, err
+	}
 
 	updateAmount := func(
 		mp map[string][]eth.EVMSmartContractTransactionReceiver,
@@ -214,15 +224,7 @@ func newEVMSmartContractTransaction(
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
 			amount := common.DfmToWei(recv.Amount)
-			// In case a transaction is of type refund, batcher should transfer minFeeForBridging
-			// to fee payer address, and the rest is transferred to the user.
-			// if else would be nicer but linter does not think the same way
-			if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
-				feeAmount.Add(feeAmount, minFeeForBridging)
-				updateAmount(sourceAddrTxMap, recv.DestinationAddress, recv.TokenId, amount.Sub(amount, minFeeForBridging))
-
-				continue
-			}
+			tokenAmount := common.DfmToWei(recv.AmountWrapped)
 
 			if recv.DestinationAddress == common.EthZeroAddr {
 				feeAmount.Add(feeAmount, amount)
@@ -230,7 +232,34 @@ func newEVMSmartContractTransaction(
 				continue
 			}
 
-			updateAmount(sourceAddrTxMap, recv.DestinationAddress, recv.TokenId, amount)
+			if amount.Cmp(big.NewInt(0)) == 1 {
+				// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+				// to fee payer address, and the rest is transferred to the user.
+				if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
+					feeAmount.Add(feeAmount, minFeeForBridging)
+					updateAmount(sourceAddrTxMap, recv.DestinationAddress, currencyID, amount.Sub(amount, minFeeForBridging))
+				} else {
+					updateAmount(sourceAddrTxMap, recv.DestinationAddress, currencyID, amount)
+				}
+			}
+
+			if tokenAmount.Cmp(big.NewInt(0)) == 1 {
+				var realTokenID = recv.TokenId
+
+				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
+				// also for backward compatibility during the process of syncing -
+				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
+				if recv.TokenId == 0 {
+					wrappedTokenID, err := config.GetWrappedTokenID()
+					if err != nil {
+						return nil, err
+					}
+
+					realTokenID = wrappedTokenID
+				}
+
+				updateAmount(sourceAddrTxMap, recv.DestinationAddress, realTokenID, tokenAmount)
+			}
 		}
 	}
 
@@ -242,13 +271,17 @@ func newEVMSmartContractTransaction(
 
 	// every batcher should have same order
 	sort.SliceStable(receivers, func(i, j int) bool {
-		return receivers[i].Address.Cmp(receivers[j].Address) < 0
+		if receivers[i].Address.Cmp(receivers[j].Address) != 0 {
+			return receivers[i].Address.Cmp(receivers[j].Address) < 0
+		}
+
+		return receivers[i].TokenID < receivers[j].TokenID
 	})
 
-	return eth.EVMSmartContractTransaction{
+	return &eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
 		FeeAmount:    feeAmount,
 		Receivers:    receivers,
-	}
+	}, nil
 }
