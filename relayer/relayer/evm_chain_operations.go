@@ -65,7 +65,6 @@ func NewEVMChainOperations(
 		ethtxhelper.WithNodeURL(config.NodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(context.Background()),
 		ethtxhelper.WithDynamicTx(config.DynamicTx),
-		ethtxhelper.WithTxPoolCheck(false),
 		ethtxhelper.WithGasFeeMultiplier(config.GasFeeMultiplier),
 		ethtxhelper.WithLogger(logger.Named("tx_helper")))
 

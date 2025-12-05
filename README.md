@@ -25,9 +25,10 @@ cd apex-evm-gateway && npm i && npx hardhat compile && cd ..
 - Generate bridge bindings with the command:
 ```shell
 BASEPATH=/home/igor/development/ethernal/apex-bridge/apex-bridge-smartcontracts/
-solcjs --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" -p \
-       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild --optimize
-abigen --abi ./contractbinding/contractbuild/contracts_Bridge_sol_Bridge.abi --pkg main \
+solc --base-path "${BASEPATH}" --include-path "${BASEPATH}node_modules" \
+       --abi ${BASEPATH}contracts/Bridge.sol -o ./contractbinding/contractbuild \
+       --optimize --via-ir --overwrite
+abigen --abi ./contractbinding/contractbuild/Bridge.abi --pkg main \
        --type BridgeContract --out ./contractbinding/BridgeContract.go --pkg contractbinding
 ```
 - Generate nexus bindings with the command:
@@ -211,6 +212,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-block-rounding-threshold <block rounding threshold> \
         --evm-starting-block <block number> \
         --evm-min-fee-for-bridging <minimal bridging fee> \
+        --min-operation-fee <minimal operation fee> \
         --evm-relayer-gas-fee-multiplier <gas fee multiplier for evm relayer> \
         --chain-id <evm chain id> \
         --allowed-directions <allowed bridging directions> \
@@ -232,6 +234,7 @@ $ apex-bridge generate-configs evm-chain \
         --evm-block-rounding-threshold 5 \
         --evm-starting-block 3 \
         --evm-min-fee-for-bridging 10000000 \
+        --min-operation-fee 0 \
         --evm-relayer-gas-fee-multiplier 4 \
         --chain-id "nexus" \
         --allowed-directions "prime" \
@@ -242,6 +245,7 @@ $ apex-bridge generate-configs evm-chain \
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -257,6 +261,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the vector to the prime
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key VECTOR_WALLET_PRIVATE_KEY \
         --testnet-src 1127 \
         --addr-multisig-src addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg \
@@ -273,6 +278,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the prime to the nexus
 ```shell
 $ apex-bridge sendtx \
+        --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
@@ -293,9 +299,9 @@ $ apex-bridge sendtx \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
         --chain-src nexus \
+        --fee 1000010000000000000 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
-        --fee 1000010000000000000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337
 ```
 - there is an optional `--stake-key` flag
@@ -303,20 +309,60 @@ $ apex-bridge sendtx \
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
 $ apex-bridge sendtx skyline \
+        --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
-        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
+        --src-token-id 1 \
+        --fee 1_100_000 \
+        --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
-        --fee 1_100_000 \
         --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
-
 ```
 - optional `--src-token-name` which can be used instead of `--dst-token-name`
+- there is an optional `--stake-key` flag
+
+# Example of sending a skyline transaction from the cardano to the nexus
+```shell
+$ apex-bridge sendtx skyline \
+        --tx-type cardano \
+        --key CARDANO_WALLET_PRIVATE_KEY \
+        --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
+        --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --testnet-src 3311 \
+        --network-id-src 1 \
+        --chain-src cardano \
+        --src-token-id 1 \
+        --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
+        --fee 1_100_000 \
+        --chain-dst nexus \
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --receiver 0x1111:1_234_567 \
+        --dst-token-contract-addr 0x22222
+```
+- there is an optional `--stake-key` flag
+
+# Example of sending a skyline transaction from the nexus to the cardano
+```shell
+$ apex-bridge sendtx skyline \
+        --tx-type evm \
+        --key EVM_WALLET_PRIVATE_KEY \
+        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --gateway-addr 0x3333 \
+        --native-token-wallet-contract-addr 0x4444 \
+        --chain-src nexus \
+        --src-token-id 1 \
+        --src-token-contract-addr 0x22222 \
+        --fee 1_100_000 \
+        --chain-dst cardano \
+        --ogmios-dst http://ogmios.cardano.testnet.apexfusion.org:1337 \
+        --receiver addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv:1_234_567 \
+        --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
+```
 - there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts
@@ -327,10 +373,17 @@ $ apex-bridge deploy-evm \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
         --clone \
+        --min-fee 100\
+        --min-bridging-amount 200\
+        --min-token-bridging-amount 300\
+        --min-operation-fee 400\
+        --currency-token-id 1\
         --bridge-url http://127.0.0.1:12013 \
         --bridge-addr 0xABEF000000000000000000000000000000000000 \
         --bridge-key BRIDGE_ADMIN_WALLET_PRIVATE_KEY \
 ```
+- all amounts should be entered in wei decimals
+- `--currency-token-id` flag is the ecosystem token id of the currency of the chain the SCs are being deployed to
 - instead of `--key` and `--bridge-key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 - `--key` for bridge SC is the key of `ProxyContractsAdmin`, and for nexus is the key of owner/initial deployer
 - `BRIDGE_ADMIN_WALLET_PRIVATE_KEY` is the wallet used with `--blade-admin` when starting blade
@@ -439,8 +492,11 @@ $ apex-bridge bridge-admin set-min-amounts \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --contract-addr 0xeefcd00000000000000000000000000000000013 \
         --min-fee 200 \
-        --min-bridging-amount 100 
+        --min-bridging-amount 100 \
+        --min-token-bridging-amount 200 \
+        --min-operation-fee 100 
 ```
+- all amounts should be entered in wei decimals
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 
@@ -454,6 +510,8 @@ $ apex-bridge bridge-admin defund \
         --addr 0xeefcd00000000000000000000000000000000000
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- there is an optional `--native-token-amount` flag, which refers to wrapped currency when `--token-id` flag is not passed
+- there is an optional `--token-id` flag used for colored coins in combination with `--native-token-amount` flag
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
@@ -563,6 +621,20 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
         --stake-pool pool1hvsmu7l9c23ltrncj6lkgmr6ncth7s8tx67zyj2fxl8054xyjz6
 ```
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin register-gateway-token \
+        --node-url http://localhost:12001 \
+        --gateway-address 0x020202 \
+        --gas-limit 10_000_000 \
+        --token-sc-address 0x03030300 \
+        --token-id 2 \
+        --token-name USDT \
+        --token-symbol USDT \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+- `--token-sc-address` is only passed if the token contract is not owned by the bridge
 
 ```shell
 $ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \

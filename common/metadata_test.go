@@ -135,9 +135,9 @@ func TestMetadata(t *testing.T) {
 		require.Equal(t, BridgingTxType("test"), metadata.BridgingTxType)
 	})
 
-	t.Run("Cbor Unmarshal V1 obsolete bridging request", func(t *testing.T) {
+	t.Run("Cbor Unmarshal BC bridging request", func(t *testing.T) {
 		feeAmount := uint64(1)
-		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadataV1{
+		result, err := SimulateRealMetadata(MetadataEncodingTypeCbor, BridgingRequestMetadataBC{
 			BridgingTxType: "test",
 			BridgingFee:    feeAmount,
 		})
@@ -150,9 +150,9 @@ func TestMetadata(t *testing.T) {
 		require.Equal(t, feeAmount, metadata.BridgingFee)
 	})
 
-	t.Run("Json Unmarshal V1 obsolete bridging request", func(t *testing.T) {
+	t.Run("Json Unmarshal BC bridging request", func(t *testing.T) {
 		feeAmount := uint64(1)
-		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadataV1{
+		result, err := SimulateRealMetadata(MetadataEncodingTypeJSON, BridgingRequestMetadataBC{
 			BridgingTxType: "test",
 			BridgingFee:    feeAmount,
 		})

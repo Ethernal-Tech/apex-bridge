@@ -95,7 +95,7 @@ func NewEThTxHelper(opts ...TxRelayerOption) (*EthTxHelperImpl, error) {
 		txPoolWaitTime:     defaultTxPoolWaitTime,
 		gasFeeMultiplier:   defaultGasFeeMultiplier,
 		zeroGasPrice:       true,
-		txPoolCheckEnabled: true,
+		txPoolCheckEnabled: false,
 		defaultGasLimit:    defaultGasLimit,
 		nonceStrategy:      NonceStrategyFactory(NonceNodePendingStrategy),
 		initFn: func(t *EthTxHelperImpl) error {

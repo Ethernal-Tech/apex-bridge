@@ -281,6 +281,8 @@ func parseFnArguments(input string) []any {
 			args[i] = int8(n)
 		} else if n, ok := new(big.Int).SetString(arg, 10); ok {
 			args[i] = n
+		} else if b, err := strconv.ParseBool(arg); err == nil {
+			args[i] = b
 		} else {
 			args[i] = arg
 		}

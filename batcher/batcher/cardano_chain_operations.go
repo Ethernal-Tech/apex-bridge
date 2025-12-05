@@ -425,7 +425,7 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 
 	relayerAddr := cco.config.RelayerAddress
 
-	relayerUtxos, err := cco.txProvider.GetUtxos(ctx, relayerAddr) // cco.db.GetAllTxOutputs(relayerAddr, true)
+	relayerUtxos, err := cco.txProvider.GetUtxos(ctx, relayerAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get utxos from address %s", relayerAddr)
 	}

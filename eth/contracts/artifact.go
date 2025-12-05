@@ -13,6 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
+const HardhatNodeVersionErr1 = "You are currently using Node"
+const HardhatNodeVersionErr2 = "which is not supported by Hardhat"
+
 // DecodeArtifact unmarshals provided raw json content into an Artifact instance
 func DecodeArtifact(data []byte) (*Artifact, error) {
 	var hexRes HexArtifact
@@ -122,7 +125,10 @@ func CloneAndBuildContracts(
 	_, _ = common.ExecuteCLICommand("npm", []string{"install"}, dir)
 
 	if _, err := common.ExecuteCLICommand("npx", []string{"hardhat", "compile"}, dir); err != nil {
-		return "", err
+		if !(strings.Contains(err.Error(), HardhatNodeVersionErr1) &&
+			strings.Contains(err.Error(), HardhatNodeVersionErr2)) {
+			return "", err
+		}
 	}
 
 	return filepath.Join(dir, artifactsDirName), nil

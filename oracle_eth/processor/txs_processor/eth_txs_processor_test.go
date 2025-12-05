@@ -257,7 +257,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -266,7 +266,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -315,7 +315,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -323,7 +323,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -382,7 +382,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -390,7 +390,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -449,7 +449,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -457,7 +457,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -523,7 +523,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -531,7 +531,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -601,7 +601,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -609,7 +609,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -832,7 +832,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -841,7 +841,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			BlockNumber:     blockSlot,
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -935,7 +935,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -944,7 +944,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			BlockNumber:     uint64(5),
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -1024,7 +1024,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		bridgeSubmitter.On("Dispose").Return(nil)
 		bridgeSubmitter.On("SubmitClaims", mock.Anything, mock.Anything).Return()
 
-		txHash := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910995")
+		// first hash corresponds to simulateDepositRealData
+		txHash := ethgo.HexToHash("0xec6a5ce4612fac51f1429086a4370b546d2279c83410fc6dd9f3b661ac85b11b")
 		txHash2 := ethgo.HexToHash("0xf62590f36f8b18f71bb343ad6e861ad62ac23bece85414772c7f06f1b1910996")
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1038,7 +1039,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -1047,7 +1048,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			BlockNumber:     blockSlot - 1,
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHash,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -1078,14 +1079,17 @@ func TestEthTxsProcessor(t *testing.T) {
 		proc.TickTime = 1
 		proc.Start()
 
-		unprocessedTxs, _ := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(chainID, 0)
+		require.NoError(t, err)
 		require.Nil(t, unprocessedTxs)
 
-		processedTx, _ := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+		processedTx, err := oracleDB.GetProcessedTx(oCore.DBTxID{ChainID: chainID, DBKey: txHash[:]})
+		require.NoError(t, err)
 		require.NotNil(t, processedTx)
 		require.False(t, processedTx.IsInvalid)
 
-		expectedTxs, _ := oracleDB.GetAllExpectedTxs(chainID, 0)
+		expectedTxs, err := oracleDB.GetAllExpectedTxs(chainID, 0)
+		require.NoError(t, err)
 		require.Nil(t, expectedTxs)
 
 		require.NotNil(t, submittedClaims)
@@ -1095,7 +1099,7 @@ func TestEthTxsProcessor(t *testing.T) {
 	})
 
 	t.Run("verify abi pack for withdraw", func(t *testing.T) {
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
@@ -1109,8 +1113,9 @@ func TestEthTxsProcessor(t *testing.T) {
 			common.ChainIDIntPrime, ethereum_common.Address{}, []ReceiverWithdraw{{
 				Receiver: "123",
 				Amount:   big.NewInt(1),
+				TokenID:  1,
 			}},
-			big.NewInt(1), big.NewInt(1),
+			big.NewInt(1), big.NewInt(1), big.NewInt(1),
 		)
 		require.NoError(t, err)
 
@@ -1163,7 +1168,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
@@ -1178,7 +1183,7 @@ func TestEthTxsProcessor(t *testing.T) {
 				Receiver: "123",
 				Amount:   big.NewInt(1),
 			}},
-			big.NewInt(1), big.NewInt(1),
+			big.NewInt(1), big.NewInt(1), big.NewInt(1),
 		)
 		require.NoError(t, err)
 
@@ -1272,7 +1277,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, event)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		withdrawEventSig := events[1]
@@ -1287,7 +1292,7 @@ func TestEthTxsProcessor(t *testing.T) {
 				Receiver: "123",
 				Amount:   big.NewInt(1),
 			}},
-			big.NewInt(1), big.NewInt(1),
+			big.NewInt(1), big.NewInt(1), big.NewInt(1),
 		)
 		require.NoError(t, err)
 
@@ -1507,7 +1512,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		require.NotNil(t, proc)
 
-		events, err := eth.GetNexusEventSignatures()
+		events, err := eth.GetGatewayEventSignatures()
 		require.NoError(t, err)
 
 		depositEventSig := events[0]
@@ -1515,7 +1520,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log1 := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHashBatch1,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -1524,7 +1529,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		log2 := &ethgo.Log{
 			BlockHash:       ethgo.Hash{1},
 			TransactionHash: txHashBatch2,
-			Data:            simulateRealData(),
+			Data:            simulateDepositRealData(t),
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
@@ -1563,63 +1568,43 @@ func TestEthTxsProcessor(t *testing.T) {
 	})
 }
 
-func simulateRealData() []byte {
-	return []byte{
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 32,
+func simulateDepositRealData(t *testing.T) []byte {
+	t.Helper()
 
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 0,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 32,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 1,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 90,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		15, 67, 252, 44, 4, 238, 0, 0,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 128,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 1,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 138, 7, 81, 200,
-		52, 138, 167, 172, 216, 91, 182, 90,
-		131, 25, 93, 99, 228, 141, 90, 141,
-
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		13, 224, 182, 179, 167, 100, 0, 0,
+	data := eth.EVMSmartContractTransaction{
+		BatchNonceID: uint64(100),
+		TTL:          uint64(100),
+		FeeAmount:    big.NewInt(1_000_000),
+		Receivers: []eth.EVMSmartContractTransactionReceiver{
+			{
+				Address: ethereum_common.HexToAddress("0x0ff"),
+				Amount:  big.NewInt(2_000_000),
+				TokenID: 2,
+			},
+			{
+				Address: ethereum_common.HexToAddress("0x0aa"),
+				Amount:  big.NewInt(5_000_000),
+				TokenID: 1,
+			},
+		},
 	}
+
+	bytes, err := data.Pack()
+	require.NoError(t, err)
+
+	bytesType, err := abi.NewType("bytes", "", nil)
+	require.NoError(t, err)
+
+	finalBytes, err := (abi.Arguments{{Type: bytesType}}).Pack(bytes)
+	require.NoError(t, err)
+
+	return finalBytes
 }
 
 type ReceiverWithdraw struct {
 	Receiver string   `json:"receiver" abi:"receiver"`
 	Amount   *big.Int `json:"amount" abi:"amount"`
+	TokenID  uint16   `json:"tokenId" abi:"tokenId"`
 }
 
 var (

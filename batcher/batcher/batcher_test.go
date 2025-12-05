@@ -114,6 +114,7 @@ func TestBatcherExecuteOnlyBridging(t *testing.T) {
 				{
 					DestinationAddress: "0x333",
 					Amount:             big.NewInt(10),
+					TokenId:            1,
 				},
 			},
 		},
@@ -359,6 +360,7 @@ func TestBatcherExecuteMix(t *testing.T) {
 				{
 					DestinationAddress: "0x333",
 					Amount:             big.NewInt(10),
+					TokenId:            1,
 				},
 			},
 		},

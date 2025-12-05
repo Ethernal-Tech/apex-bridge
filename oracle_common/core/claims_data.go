@@ -21,7 +21,8 @@ type BridgingRequestClaim = contractbinding.IBridgeStructsBridgingRequestClaim
 type BatchExecutedClaim = contractbinding.IBridgeStructsBatchExecutedClaim
 type BatchExecutionFailedClaim = contractbinding.IBridgeStructsBatchExecutionFailedClaim
 type RefundRequestClaim = contractbinding.IBridgeStructsRefundRequestClaim
-type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiver
+type RefundTokenAmount = contractbinding.IBridgeStructsTokenAmount
+type BridgingRequestReceiver = contractbinding.IBridgeStructsReceiverWithToken
 type HotWalletIncrementClaim = contractbinding.IBridgeStructsHotWalletIncrementClaim
 
 type BridgeClaims struct {
@@ -45,7 +46,10 @@ func (bc *BridgeClaims) CanAddMore(maxAmount int) bool {
 }
 
 func RefundRequestClaimString(c RefundRequestClaim) string {
-	var sb strings.Builder
+	var (
+		sb             strings.Builder
+		sbTokenAmounts strings.Builder
+	)
 
 	sb.WriteString("OriginTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.OriginTransactionHash[:]))
@@ -65,6 +69,8 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString(fmt.Sprint(c.RetryCounter))
 	sb.WriteString("\nShouldDecrementHotWallet = ")
 	sb.WriteString(fmt.Sprint(c.ShouldDecrementHotWallet))
+	sb.WriteString("\nBridgeAddrIndex = ")
+	sb.WriteString(fmt.Sprintf("%v", c.BridgeAddrIndex))
 
 	if len(c.OutputIndexes) > 0 {
 		sb.WriteString("\nOutputIndexes = ")
@@ -76,6 +82,19 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 			sb.WriteString(common.NumbersToString(indexes))
 		}
 	}
+
+	for _, r := range c.TokenAmounts {
+		if sbTokenAmounts.Len() > 0 {
+			sbTokenAmounts.WriteString(", ")
+		}
+
+		sbTokenAmounts.WriteString(fmt.Sprintf("{ AmountCurrency = %s, AmountTokens = %s, TokenId = %v }",
+			r.AmountCurrency, r.AmountTokens, r.TokenId))
+	}
+
+	sb.WriteString("\nTokenAmounts = [")
+	sb.WriteString(sbTokenAmounts.String())
+	sb.WriteString("]")
 
 	return sb.String()
 }
@@ -117,8 +136,8 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 			sbReceivers.WriteString(", ")
 		}
 
-		sbReceivers.WriteString(fmt.Sprintf("{ DestinationAddress = %s, Amount = %s, AmountWrapped = %s }",
-			r.DestinationAddress, r.Amount, r.AmountWrapped))
+		sbReceivers.WriteString(fmt.Sprintf("{ DestinationAddress = %s, Amount = %s, AmountWrapped = %s, TokenId = %v }",
+			r.DestinationAddress, r.Amount, r.AmountWrapped, r.TokenId))
 	}
 
 	sb.WriteString("ObservedTransactionHash = ")
@@ -131,6 +150,8 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 		sb.WriteString(c.RetryCounter.String())
 	}
 
+	sb.WriteString("\nBridgeAddrIndex = ")
+	sb.WriteString(fmt.Sprintf("%v", c.BridgeAddrIndex))
 	sb.WriteString("\nReceivers = [")
 	sb.WriteString(sbReceivers.String())
 	sb.WriteString("]")
@@ -151,7 +172,8 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 }
 
 func HotWalletIncrementClaimsString(c HotWalletIncrementClaim) string {
-	return fmt.Sprintf("(%s, %s)", common.ToStrChainID(c.ChainId), c.Amount)
+	return fmt.Sprintf("(chainID: %s, amount: %s, amountWrapped: %s)",
+		common.ToStrChainID(c.ChainId), c.Amount, c.AmountWrapped)
 }
 
 func (bc BridgeClaims) String() string {

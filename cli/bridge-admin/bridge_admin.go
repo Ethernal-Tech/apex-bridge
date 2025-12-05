@@ -22,6 +22,7 @@ var (
 	redistributeBrAddrsTokensParamsData  = &redistributeBridgingAddrsTokensParams{}
 	stakeDeregistrationParamsData        = &stakeDeregParams{}
 	deployCardanoScriptParamsData        = &deployCardanoScriptParams{}
+	registerGatewayTokenParamsData       = &registerGatewayTokenParams{}
 )
 
 func GetBridgeAdminCommand() *cobra.Command {
@@ -137,6 +138,14 @@ func GetBridgeAdminCommand() *cobra.Command {
 		},
 		Run: common.GetCliRunCommand(deployCardanoScriptParamsData),
 	}
+	registerGatewayTokenCmd := &cobra.Command{
+		Use:   "register-gateway-token",
+		Short: "register gateway token",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return registerGatewayTokenParamsData.ValidateFlags()
+		},
+		Run: common.GetCliRunCommand(registerGatewayTokenParamsData),
+	}
 
 	getChainTokenQuantityParamsData.RegisterFlags(getChainTokenQuantityCmd)
 	updateChainTokenQuantityParamsData.RegisterFlags(updateChainTokenQuantityCmd)
@@ -152,6 +161,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	redistributeBrAddrsTokensParamsData.RegisterFlags(redistributeTokensCmd)
 	stakeDeregistrationParamsData.RegisterFlags(deregisterStakeCmd)
 	deployCardanoScriptParamsData.RegisterFlags(deployCardanoScriptCmd)
+	registerGatewayTokenParamsData.RegisterFlags(registerGatewayTokenCmd)
 
 	bridgingAddressesBalancesCmd.AddCommand(bridgingAddressesBalancesSkylineCmd)
 
@@ -174,6 +184,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 		redistributeTokensCmd,
 		deregisterStakeCmd,
 		deployCardanoScriptCmd,
+		registerGatewayTokenCmd,
 	)
 
 	return cmd

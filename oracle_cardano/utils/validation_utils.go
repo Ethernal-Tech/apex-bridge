@@ -31,18 +31,23 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return fmt.Errorf("fee address not found in tx inputs")
 }
 
-func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig, isHotWallet bool) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
-	knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
 
-	for i, tokenConfig := range chainConfig.NativeTokens {
-		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
-		if err != nil {
-			return err
-		}
+	var (
+		knownTokens []wallet.Token
+		err         error
+	)
 
-		knownTokens[i] = token
+	if isHotWallet {
+		knownTokens, err = cardanotx.GetWrappedTokens(&chainConfig.CardanoChainConfig)
+	} else {
+		knownTokens, err = cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to get known tokens from chain config: %w", err)
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(

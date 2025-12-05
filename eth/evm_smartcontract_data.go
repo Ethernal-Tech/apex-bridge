@@ -36,6 +36,10 @@ var (
 					Name: "amount",
 					Type: "uint256",
 				},
+				{
+					Name: "tokenId",
+					Type: "uint16",
+				},
 			},
 		},
 	})
@@ -44,6 +48,7 @@ var (
 type EVMSmartContractTransactionReceiver struct {
 	Address common.Address `json:"addr" abi:"receiver"`
 	Amount  *big.Int       `json:"amount" abi:"amount"`
+	TokenID uint16         `json:"tokenId" abi:"tokenId"`
 }
 
 type EVMSmartContractTransaction struct {
@@ -88,6 +93,8 @@ func (evmsctx EVMSmartContractTransaction) String() string {
 		sb.WriteString(v.Address.String())
 		sb.WriteRune(',')
 		sb.WriteString(v.Amount.String())
+		sb.WriteRune(',')
+		sb.WriteString(fmt.Sprintf("%v", v.TokenID))
 		sb.WriteRune(')')
 	}
 

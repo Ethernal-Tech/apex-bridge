@@ -15,6 +15,7 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,6 +29,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		vectorBridgingAddr    = "addr_test1w2h482rf4gf44ek0rekamxksulazkr64yf2fhmm7f5gxjpsdm4zsg"
 		vectorBridgingFeeAddr = "addr_test1vzv206r2s6c5y3rr9eexxnlppz8lm048empp8zvtwjkn9cqleec9x"
 		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
+		validNexusAddr        = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
 		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
 	)
 
@@ -62,6 +64,14 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
 			},
+			EthChains: map[string]*cCore.EthChainConfig{
+				common.ChainIDStrNexus: {
+					BridgingAddresses: cCore.EthBridgingAddresses{
+						BridgingAddress: nexusBridgingAddr,
+					},
+					FeeAddrBridgingAmount: feeAddrBridgingAmount,
+				},
+			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
@@ -87,7 +97,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig, mock.Anything, mock.Anything).Return(nil)
 
 		proc := NewBridgingRequestedProcessor(
 			refundRequestProcessorMock, hclog.NewNullLogger())
@@ -104,7 +114,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig, mock.Anything, mock.Anything).Return(nil)
 
 		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -118,7 +128,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(true)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig).Return(
+			"HandleBridgingProcessorError", claims, &core.CardanoTx{}, appConfig, mock.Anything, mock.Anything).Return(
 			fmt.Errorf("test err"))
 
 		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
@@ -169,7 +179,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		appConfig := getAppConfig(true)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 
 		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
 
@@ -233,7 +243,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -274,7 +284,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -324,7 +334,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -366,7 +376,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -408,7 +418,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -450,7 +460,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -492,7 +502,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -534,7 +544,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -581,7 +591,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -627,7 +637,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -671,7 +681,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -713,7 +723,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -756,7 +766,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -802,7 +812,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -848,7 +858,51 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "found an invalid receiver addr in metadata")
+	})
+
+	t.Run("ValidateAndAddClaim invalid eth receiver addr in metadata", func(t *testing.T) {
+		invalidAddrInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrNexus,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr), Amount: utxoMinValue},
+				{Address: sendtx.AddrToMetaDataAddr("0x1234"), Amount: utxoMinValue},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, invalidAddrInReceiversMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: utxoMinValue},
+		}
+
+		tx := indexer.Tx{
+			Metadata: invalidAddrInReceiversMetadata,
+			Outputs:  txOutputs,
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx:            tx,
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -892,7 +946,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -936,7 +990,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -979,7 +1033,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -1029,7 +1083,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
 		refundRequestProcessorMock.On(
-			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig, mock.Anything, mock.Anything).Return(nil)
 		refundRequestProcessorMock.On(
 			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
 
@@ -1048,6 +1102,62 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{Address: sendtx.AddrToMetaDataAddr(vectorBridgingFeeAddr), Amount: minFeeForBridging},
 			{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: utxoMinValue},
+		}
+
+		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: destinationChainID,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       receivers,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, validMetadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: minFeeForBridging + utxoMinValue},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Hash:     txHash,
+				Metadata: validMetadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewBridgingRequestedProcessor(refundRequestProcessorMock, hclog.NewNullLogger())
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.NoError(t, err)
+		require.True(t, claims.Count() == 1)
+		require.Len(t, claims.BridgingRequestClaims, 1)
+		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
+		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
+		require.Equal(t, strings.Join(receivers[1].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)
+		require.Equal(t, receivers[1].Amount, claims.BridgingRequestClaims[0].Receivers[0].Amount.Uint64())
+		require.Equal(t, strings.Join(receivers[0].Address, ""),
+			claims.BridgingRequestClaims[0].Receivers[1].DestinationAddress)
+		require.Equal(t, feeAddrBridgingAmount, claims.BridgingRequestClaims[0].Receivers[1].Amount.Uint64())
+	})
+
+	t.Run("ValidateAndAddClaim valid - eth destination", func(t *testing.T) {
+		const destinationChainID = common.ChainIDStrNexus
+
+		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
+		receivers := []sendtx.BridgingRequestMetadataTransaction{
+			{Address: []string{common.EthZeroAddr}, Amount: minFeeForBridging},
+			{Address: sendtx.AddrToMetaDataAddr(validNexusAddr), Amount: utxoMinValue},
 		}
 
 		validMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{

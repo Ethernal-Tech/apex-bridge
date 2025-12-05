@@ -103,13 +103,14 @@ func getOutputs(
 			continue
 		}
 
-		for _, receiver := range transaction.Receivers {
+		for i, receiver := range transaction.Receivers {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
-			} else {
+			} else if i == 0 {
+				// for refund tx, deduct min bridging fee from the first receiver from claim
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee
@@ -120,46 +121,54 @@ func getOutputs(
 			}
 
 			if hasTokens {
+				var (
+					err        error
+					token      cardanowallet.Token
+					shouldMint bool
+				)
+
+				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
+				// also for backward compatibility during the process of syncing -
+				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
+				if receiver.TokenId == 0 {
+					token, err = cardanoConfig.GetWrappedToken()
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					token, shouldMint, err = cardanoConfig.GetTokenData(receiver.TokenId)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				if shouldMint {
+					mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
+						Token:  token,
+						Amount: receiver.AmountWrapped.Uint64(),
+					})
+				}
+
 				if len(data.Tokens) == 0 {
-					var (
-						err        error
-						token      cardanowallet.Token
-						shouldMint bool
-					)
-
-					switch transaction.TransactionType {
-					case uint8(common.DefundConfirmedTxType):
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
-						if err != nil {
-							return nil, err
-						}
-					case uint8(common.RefundConfirmedTxType):
-						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
-
-						token, err = cardanoConfig.GetNativeToken(origDstChainID)
-						if err != nil {
-							return nil, err
-						}
-					default:
-						token, shouldMint, err = cardanoConfig.GetNativeTokenData(
-							common.ToStrChainID(transaction.SourceChainId))
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					if shouldMint {
-						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
-							Token:  token,
-							Amount: receiver.AmountWrapped.Uint64(),
-						})
-					}
-
 					data.Tokens = []cardanowallet.TokenAmount{
 						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
 					}
 				} else {
-					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+					found := false
+
+					// check if the token is already in the tokens
+					for i, t := range data.Tokens {
+						if t.TokenName() == token.String() {
+							data.Tokens[i].Amount += receiver.AmountWrapped.Uint64()
+							found = true
+
+							break
+						}
+					}
+
+					if !found {
+						data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
+					}
 				}
 			}
 

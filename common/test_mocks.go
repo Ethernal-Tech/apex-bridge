@@ -7,7 +7,7 @@ import (
 )
 
 func SimulateRealMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,

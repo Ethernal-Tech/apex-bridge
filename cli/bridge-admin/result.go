@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 )
 
 type chainTokenQuantity struct {
@@ -60,6 +61,25 @@ func (d deployCardanoScriptResult) GetOutput() string {
 			fmt.Sprintf("Policy Id|%s", d.PolicyID),
 			fmt.Sprintf("Reference Script Utxo Hash|%s", d.TxHash),
 			fmt.Sprintf("Reference Script Utxo Index|%d", d.RefScriptUtxoIdx),
+		}))
+
+	return buffer.String()
+}
+
+type registerGatewayTokenResult struct {
+	tokenRegisteredEvent *contractbinding.GatewayTokenRegistered
+}
+
+func (r registerGatewayTokenResult) GetOutput() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(common.FormatKV(
+		[]string{
+			fmt.Sprintf("contractAddr|%s", r.tokenRegisteredEvent.ContractAddress.Hex()),
+			fmt.Sprintf("tokenID|%v", r.tokenRegisteredEvent.TokenId),
+			fmt.Sprintf("tokenName|%s", r.tokenRegisteredEvent.Name),
+			fmt.Sprintf("tokenSymbol|%s", r.tokenRegisteredEvent.Symbol),
+			fmt.Sprintf("externallyOwned|%v", r.tokenRegisteredEvent.IsLockUnlockToken),
 		}))
 
 	return buffer.String()
