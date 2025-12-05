@@ -145,9 +145,25 @@ func (p *sendSkylineTxParams) validateFlags() error {
 
 	p.feeAmount = feeAmount
 
+	operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
+	}
+
+	p.operationFeeAmount = operationFeeAmount
+
 	if p.txType == common.ChainTypeEVMStr {
-		if p.feeAmount.Cmp(minNexusBridgingFee) < 0 {
+		srcChainConfig := common.GetChainConfig(p.chainIDSrc)
+		minFeeForBridging, minOperationFee :=
+			common.DfmToWei(new(big.Int).SetUint64(srcChainConfig.MinFeeForBridging)),
+			common.DfmToWei(new(big.Int).SetUint64(srcChainConfig.MinOperationFee))
+
+		if p.feeAmount.Cmp(minFeeForBridging) == -1 {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
+		}
+
+		if p.operationFeeAmount.Cmp(minOperationFee) == -1 {
+			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
 		}
 
 		if p.gatewayAddress == "" {
@@ -164,13 +180,6 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		if p.feeAmount.Uint64() < minFeeForBridging {
 			return fmt.Errorf("--%s invalid amount: %d", feeAmountFlag, p.feeAmount)
 		}
-
-		operationFeeAmount, ok := new(big.Int).SetString(p.operationFeeString, 0)
-		if !ok {
-			return fmt.Errorf("--%s invalid amount: %s", operationFeeFlag, p.operationFeeString)
-		}
-
-		p.operationFeeAmount = operationFeeAmount
 
 		if p.operationFeeAmount.Uint64() < minOperationFee {
 			return fmt.Errorf("--%s invalid amount: %d", operationFeeFlag, p.operationFeeAmount)
@@ -555,7 +564,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 			return txHelper.SendTx(ctx, wallet, bind.TransactOpts{},
 				func(opts *bind.TransactOpts) (*types.Transaction, error) {
 					return erc20Contract.Transact(
-						opts, "approve", p.nativeTokenWalletContractAddress, totalTokenAmount)
+						opts, "approve", ethcommon.HexToAddress(p.nativeTokenWalletContractAddress), totalTokenAmount)
 				})
 		})
 		if err != nil {
