@@ -167,16 +167,45 @@ func newEVMSmartContractTransaction(
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
 ) eth.EVMSmartContractTransaction {
-	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
+	sourceAddrTxMap := map[string][]eth.EVMSmartContractTransactionReceiver{}
 	feeAmount := big.NewInt(0)
 
-	updateAmount := func(mp map[string]eth.EVMSmartContractTransactionReceiver, addr string, amount *big.Int) {
+	updateAmount := func(
+		mp map[string][]eth.EVMSmartContractTransactionReceiver,
+		addr string,
+		tokenID uint16,
+		amount *big.Int,
+	) {
+		var newEntry eth.EVMSmartContractTransactionReceiver
 		val, exists := mp[addr]
-		if !exists {
-			val.Amount = amount
-			val.Address = common.HexToAddress(addr)
+
+		if !exists || len(val) == 0 {
+			newEntry.Amount = amount
+			newEntry.Address = common.HexToAddress(addr)
+			newEntry.TokenID = tokenID
+
+			val = append(val, newEntry)
 		} else {
-			val.Amount.Add(val.Amount, amount)
+			// check if there is a same token id first
+			found := false
+
+			for i, entry := range val {
+				if entry.TokenID == tokenID {
+					val[i].Amount.Add(val[i].Amount, amount)
+
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				newEntry.Amount = amount
+				newEntry.Address = common.HexToAddress(addr)
+				newEntry.TokenID = tokenID
+
+				val = append(val, newEntry)
+			}
 		}
 
 		mp[addr] = val
@@ -190,7 +219,7 @@ func newEVMSmartContractTransaction(
 			// if else would be nicer but linter does not think the same way
 			if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
 				feeAmount.Add(feeAmount, minFeeForBridging)
-				updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount.Sub(amount, minFeeForBridging))
+				updateAmount(sourceAddrTxMap, recv.DestinationAddress, recv.TokenId, amount.Sub(amount, minFeeForBridging))
 
 				continue
 			}
@@ -201,14 +230,14 @@ func newEVMSmartContractTransaction(
 				continue
 			}
 
-			updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount)
+			updateAmount(sourceAddrTxMap, recv.DestinationAddress, recv.TokenId, amount)
 		}
 	}
 
 	receivers := make([]eth.EVMSmartContractTransactionReceiver, 0, len(sourceAddrTxMap))
 
 	for _, v := range sourceAddrTxMap {
-		receivers = append(receivers, v)
+		receivers = append(receivers, v...)
 	}
 
 	// every batcher should have same order
