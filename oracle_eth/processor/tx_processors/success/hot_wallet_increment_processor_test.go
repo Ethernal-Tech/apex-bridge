@@ -34,6 +34,19 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("ValidateAndAddClaim empty tx value", func(t *testing.T) {
+		claims := &oCore.BridgeClaims{}
+
+		tx := &core.EthTx{
+			Address:       ethgo.HexToAddress("0xA4d1233A67776575425Ab185f6a9251aa00fEA25"),
+			Metadata:      []byte{},
+			OriginChainID: common.ChainIDStrNexus,
+		}
+
+		err := proc.ValidateAndAddClaim(claims, tx, appConfig)
+		require.ErrorContains(t, err, "tx value is zero or not set")
+	})
+
 	t.Run("ValidateAndAddClaim random metadata", func(t *testing.T) {
 		err := proc.PreValidate(&core.EthTx{
 			Address:       ethgo.HexToAddress("0xA4d1233A67776575425Ab185f6a9251aa00fEA25"),

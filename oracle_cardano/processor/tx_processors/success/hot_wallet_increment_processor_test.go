@@ -1,13 +1,17 @@
 package successtxprocessors
 
 import (
+	"encoding/hex"
+	"fmt"
 	"testing"
 
 	brAddrManager "github.com/Ethernal-Tech/apex-bridge/bridging_addresses_manager"
+	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +23,19 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		vectorBridgingAddr    = "addr_test1vr076kzqu8ejq22y4e3j0rpck54nlvryd8sjkewjxzsrjgq2lszpw"
 		vectorBridgingFeeAddr = "addr_test1vpg5t5gv784rmlze9ye0r9nud706d2v5v94d5h7kpvllamgq6yfx4"
 		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+
+		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
+
+		primeCurrencyID     = uint16(1)
+		primeWrappedTokenID = uint16(3)
 	)
+
+	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
+		fmt.Sprintf("%s.%s",
+			policyID,
+			hex.EncodeToString([]byte("wrappedAda"))), true,
+	)
+	require.NoError(t, err)
 
 	proc := NewHotWalletIncrementProcessor(hclog.NewNullLogger())
 
@@ -34,17 +50,14 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains: map[string]*cCore.CardanoChainConfig{
 			common.ChainIDStrPrime: {
-				/* BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: primeBridgingAddr,
-					FeeAddress:      primeBridgingFeeAddr,
-				}, */
+				CardanoChainConfig: cardanotx.CardanoChainConfig{
+					Tokens: map[uint16]common.Token{
+						primeCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						primeWrappedTokenID: {ChainSpecific: wrappedTokenPrime.String(), LockUnlock: true, IsWrappedCurrency: true},
+					},
+				},
 			},
-			common.ChainIDStrVector: {
-				/* BridgingAddresses: cCore.BridgingAddresses{
-					BridgingAddress: vectorBridgingAddr,
-					FeeAddress:      vectorBridgingFeeAddr,
-				}, */
-			},
+			common.ChainIDStrVector: {},
 		},
 	}
 	appConfig.FillOut()
@@ -95,6 +108,20 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "validation failed for tx")
+	})
+
+	t.Run("ValidateAndAddClaim metadata should be empty", func(t *testing.T) {
+		err := proc.PreValidate(&core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: []byte{1, 2, 3},
+				Outputs: []*indexer.TxOutput{
+					{Address: primeBridgingAddr, Amount: 1},
+				},
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "metadata should be empty")
 	})
 
 	t.Run("ValidateAndAddClaim unknown tokens", func(t *testing.T) {

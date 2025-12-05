@@ -798,5 +798,6 @@ func mapBCMetadataToCurrent(
 		SenderAddr:         metadataBC.SenderAddr,
 		Transactions:       txs,
 		BridgingFee:        metadataBC.BridgingFee,
+		OperationFee:       metadataBC.OperationFee,
 	}, nil
 }

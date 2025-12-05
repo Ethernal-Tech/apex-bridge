@@ -26,9 +26,10 @@ type BridgingRequestedProcessorSkylineImpl struct {
 func NewEthBridgingRequestedProcessorSkyline(
 	refundRequestProcessor core.EthTxSuccessRefundProcessor, logger hclog.Logger,
 	cardanoChainInfos map[string]*oChain.CardanoChainInfo,
-) *BridgingRequestedProcessorImpl {
-	return &BridgingRequestedProcessorImpl{
+) *BridgingRequestedProcessorSkylineImpl {
+	return &BridgingRequestedProcessorSkylineImpl{
 		refundRequestProcessor: refundRequestProcessor,
+		cardanoChainInfos:      cardanoChainInfos,
 		logger:                 logger.Named("eth_bridging_requested_processor"),
 	}
 }
@@ -257,7 +258,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			}
 		} else {
 			if common.WeiToDfm(receiver.Amount).Uint64() < appConfig.BridgingSettings.MinColCoinsAllowedToBridge {
-				return fmt.Errorf("found a colored coin amount below minimum allowed in metadata receivers: %v", metadata)
+				return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", metadata)
 			}
 
 			tokensSum, exists := receiverTokensSum[receiver.TokenID]
