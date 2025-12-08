@@ -339,7 +339,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiver(
 			return err
 		}
 
-		if currencyID != receiver.Token {
+		if currencyID != receiver.TokenID {
 			return fmt.Errorf("fee receiver metadata invalid. metadata: %v, receiver: %v", ctx.metadata, receiver)
 		}
 
@@ -352,7 +352,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiver(
 		ctx.cardanoSrcConfig.DestinationChains,
 		ctx.cardanoSrcConfig.ChainID,
 		ctx.metadata.DestinationChainID,
-		receiver.Token,
+		receiver.TokenID,
 	)
 	if err != nil {
 		return fmt.Errorf("invalid receiver. metadata: %v, receiver: %v, err: %w", ctx.metadata, receiver, err)
@@ -401,7 +401,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverCardano(
 		if receiver.Amount < ctx.bridgingSettings.MinColCoinsAllowedToBridge {
 			return fmt.Errorf(
 				"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v, receiver: %v",
-				receiver.Token,
+				receiver.TokenID,
 				receiver.Amount,
 				ctx.bridgingSettings.MinColCoinsAllowedToBridge,
 				ctx.metadata,
@@ -443,7 +443,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateReceiverEth(
 		// check colored coin min amount
 		return fmt.Errorf(
 			"receiver amount of token with ID %d too low: got %d, minimum allowed %d; metadata: %v, receiver: %v",
-			receiver.Token,
+			receiver.TokenID,
 			receiver.Amount,
 			ctx.bridgingSettings.MinColCoinsAllowedToBridge,
 			ctx.metadata,
@@ -621,7 +621,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverCardano(
 
 	tokenPair, err := cUtils.GetTokenPair(
 		cardanoSrcConfig.DestinationChains, cardanoSrcConfig.ChainID,
-		cardanoDestConfig.ChainID, receiver.Token)
+		cardanoDestConfig.ChainID, receiver.TokenID)
 	if err != nil {
 		return nil, err
 	}
@@ -689,7 +689,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 
 	tokenPair, err := cUtils.GetTokenPair(
 		cardanoSrcConfig.DestinationChains, cardanoSrcConfig.ChainID,
-		destinationChainID, receiver.Token)
+		destinationChainID, receiver.TokenID)
 	if err != nil {
 		return nil, err
 	}
@@ -767,11 +767,11 @@ func mapBCMetadataToCurrent(
 		var (
 			err     error
 			ok      bool
-			tokenID = tx.Token
+			tokenID = tx.TokenID
 		)
 
 		// Token should never be 0
-		if tx.Token == 0 {
+		if tx.TokenID == 0 {
 			if tx.IsNativeTokenOnSrc_Obsolete == 0 {
 				tokenID, err = chainConfig.GetCurrencyID()
 				if err != nil {
@@ -788,7 +788,7 @@ func mapBCMetadataToCurrent(
 		txs[i] = sendtx.BridgingRequestMetadataTransaction{
 			Address: tx.Address,
 			Amount:  tx.Amount,
-			Token:   tokenID,
+			TokenID: tokenID,
 		}
 	}
 

@@ -34,7 +34,7 @@ type BridgingRequestMetadataTransactionBC struct {
 	Address                     []string `cbor:"a" json:"a"`
 	IsNativeTokenOnSrc_Obsolete byte     `cbor:"nt" json:"nt"` //nolint:stylecheck
 	Amount                      uint64   `cbor:"m" json:"m"`
-	Token                       uint16   `cbor:"t" json:"t"`
+	TokenID                     uint16   `cbor:"t" json:"t"`
 }
 
 // backward compatibility

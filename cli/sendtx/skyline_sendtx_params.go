@@ -764,9 +764,9 @@ func toSkylineCardanoMetadata(receivers []*receiverAmount, tokenID uint16) []sen
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
 		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:   rec.ReceiverAddr,
-			Amount: rec.Amount.Uint64(),
-			Token:  tokenID,
+			Addr:    rec.ReceiverAddr,
+			Amount:  rec.Amount.Uint64(),
+			TokenID: tokenID,
 		}
 	}
 

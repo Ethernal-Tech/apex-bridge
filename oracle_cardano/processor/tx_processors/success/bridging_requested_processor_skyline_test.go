@@ -485,7 +485,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: common.SplitString(primeBridgingFeeAddr, 40),
 					Amount:  minFeeForBridgingTokens * 2,
-					Token:   cardanoCurrencyID,
+					TokenID: cardanoCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -881,7 +881,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			BridgingFee:  defaultMinFeeForBridging - 2,
@@ -938,7 +938,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 					Amount:  utxoMinValue,
-					Token:   primeWrappedTokenID,
+					TokenID: primeWrappedTokenID,
 				},
 			},
 			BridgingFee:  minFeeForBridgingTokens - 2,
@@ -994,12 +994,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 					Amount:  defaultMinFeeForBridging * 2,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			BridgingFee:  200,
@@ -1053,7 +1053,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				DestinationChainID: common.ChainIDStrCardano,
 				SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 				Transactions: []sendtx.BridgingRequestMetadataTransaction{
-					{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: 2, Token: tokenOnSrc},
+					{Address: sendtx.AddrToMetaDataAddr(validTestAddress), Amount: 2, TokenID: tokenOnSrc},
 				},
 				OperationFee: minOperationFee,
 			})
@@ -1103,7 +1103,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			DestinationChainID: common.ChainIDStrNexus,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
-				{Address: sendtx.AddrToMetaDataAddr(validNexusAddr), Amount: 2, Token: cardanoCurrencyID},
+				{Address: sendtx.AddrToMetaDataAddr(validNexusAddr), Amount: 2, TokenID: cardanoCurrencyID},
 			},
 			OperationFee: minOperationFee,
 		})
@@ -1155,12 +1155,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr("addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj661"),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1213,12 +1213,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr("stake_test1urrzuuwrq6lfq82y9u642qzcwvkljshn0743hs0rpd5wz8s2pe23d"),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1271,12 +1271,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr("0x1234"),
 					Amount:  utxoMinValue,
-					Token:   primeWrappedTokenID,
+					TokenID: primeWrappedTokenID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1329,12 +1329,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
 					Amount:  utxoMinValue,
-					Token:   primeWrappedTokenID,
+					TokenID: primeWrappedTokenID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr("0x1234"),
 					Amount:  utxoMinValue,
-					Token:   primeWrappedTokenID,
+					TokenID: primeWrappedTokenID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1385,12 +1385,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  minColCoinsAllowedToBridge - 1,
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -1454,12 +1454,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(common.EthZeroAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
 				Amount:  minColCoinsAllowedToBridge - 1,
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -1523,12 +1523,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  minColCoinsAllowedToBridge,
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -1592,12 +1592,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  maxTokenAmountAllowedToBridge.Uint64() + 1,
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -1662,12 +1662,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:  defaultMinFeeForBridging * 2,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1719,12 +1719,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:  defaultMinFeeForBridging * 2,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 				{
 					Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 					Amount:  utxoMinValue,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1776,7 +1776,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{
 					Address: sendtx.AddrToMetaDataAddr(cardanoBridgingFeeAddr),
 					Amount:  defaultMinFeeForBridging - 1,
-					Token:   primeCurrencyID,
+					TokenID: primeCurrencyID,
 				},
 			},
 			OperationFee: minOperationFee,
@@ -1866,7 +1866,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					{
 						Address: common.SplitString(validTestAddress, 40),
 						Amount:  1_000_000,
-						Token:   tokenID,
+						TokenID: tokenID,
 					},
 				},
 				OperationFee: minOperationFee,
@@ -1902,11 +1902,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  defaultMinFeeForBridging * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 				Amount:  maxAmountAllowedToBridge.Uint64() + 1,
 			},
 		}
@@ -1969,11 +1969,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 				Amount:  maxTokenAmountAllowedToBridge.Uint64() * 2,
 			},
 		}
@@ -2037,7 +2037,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 				Amount:  utxoMinValue,
 			},
 		}
@@ -2103,17 +2103,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -2192,17 +2192,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 		}
 
@@ -2270,17 +2270,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: []string{common.EthZeroAddr},
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
 				Amount:  utxoMinValue,
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
 				Amount:  maxTokenAmountAllowedToBridge.Uint64(),
-				Token:   usdtTokenID,
+				TokenID: usdtTokenID,
 			},
 		}
 
@@ -2359,12 +2359,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: []string{common.EthZeroAddr},
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   cardanoCurrencyID,
+				TokenID: cardanoCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validNexusAddr),
 				Amount:  utxoMinValue,
-				Token:   cardanoCurrencyID,
+				TokenID: cardanoCurrencyID,
 			},
 		}
 
@@ -2434,7 +2434,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 				Amount:  utxoMinValue,
 			},
 		}
@@ -2501,11 +2501,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 				Amount:  utxoMinValue,
 			},
 		}
@@ -2581,12 +2581,12 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: common.SplitString(cardanoBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
-				Token:   primeCurrencyID,
+				TokenID: primeCurrencyID,
 			},
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 			},
 		}
 
@@ -2660,7 +2660,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 			},
 		}
 
@@ -2736,7 +2736,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			{
 				Address: sendtx.AddrToMetaDataAddr(validTestAddress),
 				Amount:  utxoMinValue,
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 			},
 		}
 
@@ -2791,7 +2791,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address: sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				Token:   primeWrappedTokenID,
+				TokenID: primeWrappedTokenID,
 				Amount:  utxoMinValue,
 			},
 		}
@@ -2848,7 +2848,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
 				Address: sendtx.AddrToMetaDataAddr(validPrimeTestAddress),
-				Token:   cardanoWrappedTokenID,
+				TokenID: cardanoWrappedTokenID,
 				Amount:  utxoMinValue,
 			},
 		}

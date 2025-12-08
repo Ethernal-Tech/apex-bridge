@@ -579,9 +579,9 @@ func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver 
 	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
 	for idx, rec := range receivers {
 		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:   rec.ReceiverAddr,
-			Amount: rec.Amount.Uint64(),
-			Token:  0,
+			Addr:    rec.ReceiverAddr,
+			Amount:  rec.Amount.Uint64(),
+			TokenID: 0,
 		}
 	}
 
