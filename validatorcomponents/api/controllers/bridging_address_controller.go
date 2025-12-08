@@ -61,7 +61,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 	if !exists || len(containsNativeTokensArr) == 0 {
 		apiUtils.WriteErrorResponse(
 			w, r, http.StatusBadRequest,
-			errors.New("chainId missing from query"), c.logger)
+			errors.New("containsNativeTokens missing from query"), c.logger)
 
 		return
 	}
