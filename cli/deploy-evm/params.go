@@ -87,8 +87,7 @@ const (
 	MyTokenTestName   = "Test Token"
 	MyTokenTestSymbol = "TTK"
 
-	// wTODO: change this to "feat/skyline"
-	defaultEvmBranch       = "feat/Colored_coins"
+	defaultEvmBranch       = "feat/skyline"
 	defaultCurrencyTokenID = 1
 )
 
