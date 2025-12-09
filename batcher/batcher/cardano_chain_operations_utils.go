@@ -143,10 +143,23 @@ func getOutputs(
 				}
 
 				if shouldMint {
-					mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
-						Token:  token,
-						Amount: receiver.AmountWrapped.Uint64(),
-					})
+					found := false
+
+					for i, mt := range mintTokens {
+						if mt.Token.String() == token.String() {
+							mintTokens[i].Amount += receiver.AmountWrapped.Uint64()
+							found = true
+
+							break
+						}
+					}
+
+					if !found {
+						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
+							Token:  token,
+							Amount: receiver.AmountWrapped.Uint64(),
+						})
+					}
 				}
 
 				if len(data.Tokens) == 0 {
