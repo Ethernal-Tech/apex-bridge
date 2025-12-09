@@ -136,7 +136,7 @@ func CreateTx(
 		builder.AddInputsWithScript(multisig.PolicyScript, multisig.Inputs...)
 	}
 
-	if txPlutusMintData != nil {
+	if txPlutusMintData != nil && len(txPlutusMintData.Tokens) > 0 {
 		builder.AddPlutusTokenMints(txPlutusMintData.Tokens, txPlutusMintData.TxInReference, txPlutusMintData.TokensPolicyID)
 		builder.AddCollateralInputs(txPlutusMintData.Collateral.Inputs)
 		builder.AddCollateralOutput(cardanowallet.NewTxOutput(txPlutusMintData.CollateralAddress, 0))
@@ -183,6 +183,10 @@ func handlePlutusTx(
 	initialFee uint64,
 ) (uint64, error) {
 	if txPlutusMintData == nil {
+		return initialFee, nil
+	}
+
+	if len(txPlutusMintData.Tokens) == 0 {
 		return initialFee, nil
 	}
 

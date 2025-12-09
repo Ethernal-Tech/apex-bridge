@@ -414,10 +414,10 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 	for _, mintToken := range mintTokens {
 		tokensPolicyID = mintToken.PolicyID
 
-		if mintToken.Amount >= availableLockedTokens[mintToken.String()] {
+		if mintToken.Amount > availableLockedTokens[mintToken.String()] {
 			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
 				mintToken.Token, mintToken.Amount-availableLockedTokens[mintToken.String()], false))
-		} else {
+		} else if mintToken.Amount < availableLockedTokens[mintToken.String()] {
 			tokens = append(tokens, cardanowallet.NewMintTokenAmount(
 				mintToken.Token, availableLockedTokens[mintToken.String()]-mintToken.Amount, true))
 		}
