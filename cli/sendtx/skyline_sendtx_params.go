@@ -38,6 +38,9 @@ const (
 	tokenContractAddrSrcFlagDesc          = "contract address of the token on src"
 	tokenContractAddrDstFlagDesc          = "contract address of the token on destination"
 	nativeTokenWalletContractAddrFlagDesc = "address of native token wallet contract"
+
+	apexTokenID = uint16(1)
+	adaTokenID  = uint16(2)
 )
 
 type sendSkylineTxParams struct {
@@ -422,6 +425,25 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 	srcConfig := common.GetChainConfig(p.chainIDSrc)
 	dstConfig := common.GetChainConfig(p.chainIDDst)
 
+	srcTokens := map[uint16]sendtx.ApexToken{
+		p.tokenIDSrc: {
+			FullName:          p.tokenFullNameSrc,
+			IsWrappedCurrency: p.tokenFullNameDst == cardanowallet.AdaTokenName,
+		},
+	}
+
+	currencyTokenID := apexTokenID
+	if p.chainIDSrc == common.ChainIDStrCardano {
+		currencyTokenID = adaTokenID
+	}
+
+	if p.tokenIDSrc != currencyTokenID {
+		srcTokens[currencyTokenID] = sendtx.ApexToken{
+			FullName:          cardanowallet.AdaTokenName,
+			IsWrappedCurrency: false,
+		}
+	}
+
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
 			p.chainIDSrc: {
@@ -434,12 +456,7 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 				MinOperationFeeAmount:      srcConfig.MinOperationFee,
 				MinUtxoValue:               srcConfig.MinUtxoAmount,
 				MinColCoinsAllowedToBridge: srcConfig.MinColCoinsAllowedToBridge,
-				Tokens: map[uint16]sendtx.ApexToken{
-					p.tokenIDSrc: {
-						FullName:          p.tokenFullNameSrc,
-						IsWrappedCurrency: p.tokenFullNameDst == cardanowallet.AdaTokenName,
-					},
-				},
+				Tokens:                     srcTokens,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,
@@ -739,20 +756,19 @@ func getERC20Balance(
 ) (*big.Int, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(balanceOfERC20ABI))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse abi. err: %w", err)
 	}
 
 	contract := bind.NewBoundContract(tokenContractAddr, parsedABI, client, client, client)
 
-	outputs := make([]interface{}, 1)
-	outputs[0] = new(big.Int)
-	err = contract.Call(&bind.CallOpts{}, &outputs, "balanceOf", addr)
+	var out []interface{}
 
+	err = contract.Call(&bind.CallOpts{}, &out, "balanceOf", addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to call contract. err: %w", err)
 	}
 
-	balance, ok := outputs[0].(*big.Int)
+	balance, ok := out[0].(*big.Int)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert erc20 balanceOf result to big.Int")
 	}
