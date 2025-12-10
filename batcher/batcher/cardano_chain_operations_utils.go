@@ -110,7 +110,9 @@ func getOutputs(
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
 			} else if i == 0 {
-				// for refund tx, deduct min bridging fee from the first receiver from claim
+				// when refunding, we take the bridgingFee, and refund the rest to the user
+				// currency will always be contained within the first receiver (oracle implementation detail)
+				// @see RefundRequestProcessorSkylineImpl// for refund tx, deduct min bridging fee from the first receiver from claim
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee
@@ -121,25 +123,12 @@ func getOutputs(
 			}
 
 			if hasTokens {
-				var (
-					err        error
-					token      cardanowallet.Token
-					shouldMint bool
-				)
-
 				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
 				// also for backward compatibility during the process of syncing -
 				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
-				if receiver.TokenId == 0 {
-					token, err = cardanoConfig.GetWrappedToken()
-					if err != nil {
-						return nil, err
-					}
-				} else {
-					token, shouldMint, err = cardanoConfig.GetTokenData(receiver.TokenId)
-					if err != nil {
-						return nil, err
-					}
+				token, shouldMint, err := cardanoConfig.GetTokenDataForTokenID(receiver.TokenId)
+				if err != nil {
+					return nil, err
 				}
 
 				if shouldMint {
