@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -131,46 +132,30 @@ func getOutputs(
 					return nil, err
 				}
 
+				tokenName := token.String()
+
 				if shouldMint {
-					found := false
-
-					for i, mt := range mintTokens {
-						if mt.Token.String() == token.String() {
-							mintTokens[i].Amount += receiver.AmountWrapped.Uint64()
-							found = true
-
-							break
-						}
-					}
-
-					if !found {
+					indx := slices.IndexFunc(mintTokens, func(x cardanowallet.MintTokenAmount) bool {
+						return x.Token.String() == tokenName
+					})
+					if indx == -1 {
 						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
 							Token:  token,
 							Amount: receiver.AmountWrapped.Uint64(),
 						})
+					} else {
+						mintTokens[indx].Amount += receiver.AmountWrapped.Uint64()
 					}
 				}
 
-				if len(data.Tokens) == 0 {
-					data.Tokens = []cardanowallet.TokenAmount{
-						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
-					}
+				// check if the token is already in the tokens
+				indx := slices.IndexFunc(data.Tokens, func(x cardanowallet.TokenAmount) bool {
+					return x.Token.String() == tokenName
+				})
+				if indx == -1 {
+					data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
 				} else {
-					found := false
-
-					// check if the token is already in the tokens
-					for i, t := range data.Tokens {
-						if t.TokenName() == token.String() {
-							data.Tokens[i].Amount += receiver.AmountWrapped.Uint64()
-							found = true
-
-							break
-						}
-					}
-
-					if !found {
-						data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
-					}
+					data.Tokens[indx].Amount += receiver.AmountWrapped.Uint64()
 				}
 			}
 
