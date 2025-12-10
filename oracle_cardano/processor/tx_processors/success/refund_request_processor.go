@@ -90,7 +90,6 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	senderAddr, _ := p.getSenderAddr(chainConfig, metadata)
 	amount := big.NewInt(0)
-	tokenAmount := big.NewInt(0)
 	unknownTokenOutputIndexes := make([]common.TxOutputIndex, 0, unknownNativeTokensUtxoCntMax)
 
 	for idx, out := range tx.Outputs {
@@ -119,10 +118,13 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             amount,
-		OriginWrappedAmount:      tokenAmount,
+		OriginWrappedAmount:      big.NewInt(0),
 		OutputIndexes:            common.PackNumbersToBytes(unknownTokenOutputIndexes),
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
+		TokenAmounts: []cCore.RefundTokenAmount{
+			{TokenId: 0, AmountCurrency: amount, AmountTokens: big.NewInt(0)},
+		},
 	}
 
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)

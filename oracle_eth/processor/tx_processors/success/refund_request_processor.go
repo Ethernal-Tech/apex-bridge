@@ -76,17 +76,21 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
 	metadata *core.RefundBridgingRequestEthMetadata,
 ) {
+	amount := common.WeiToDfm(tx.Value)
+
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
-		OriginAmount:             common.WeiToDfm(tx.Value),
+		OriginAmount:             amount,
 		OriginWrappedAmount:      big.NewInt(0),
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
-		TokenAmounts:             []cCore.RefundTokenAmount{},
+		TokenAmounts: []cCore.RefundTokenAmount{
+			{TokenId: 0, AmountCurrency: amount, AmountTokens: big.NewInt(0)},
+		},
 	}
 
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
