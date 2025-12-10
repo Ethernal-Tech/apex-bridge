@@ -185,7 +185,7 @@ func (ip *setDependenciesParams) Execute(
 		return nil, err
 	}
 
-	wallet, err := eth.GetEthWalletForBladeAdmin(true, ip.evmPrivateKey, ip.privateKeyConfig)
+	wallet, err := eth.GetEthWalletForBladeAdmin(false, ip.evmPrivateKey, ip.privateKeyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create smart contracts admin wallet: %w", err)
 	}
@@ -228,9 +228,16 @@ func (ip *setDependenciesParams) Execute(
 
 	outputter.WriteOutput()
 
-	_, err = ethtxhelper.WaitForTransactions(ctx, txHelper, txInfo.Hash().String())
+	receipts, err := ethtxhelper.WaitForTransactions(ctx, txHelper, txInfo.Hash().String())
 	if err != nil {
 		return nil, err
+	}
+
+	for _, receipt := range receipts {
+		_, _ = outputter.Write(fmt.Appendf(
+			nil, "%s setDependencies transaction has been sent. txHash: %s", ip.contractName, receipt.TxHash.String()))
+
+		outputter.WriteOutput()
 	}
 
 	return &cmdResult{}, nil
