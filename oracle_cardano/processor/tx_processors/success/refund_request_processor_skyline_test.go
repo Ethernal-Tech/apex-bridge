@@ -106,10 +106,6 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
-				},
 			},
 			TryCountLimits: cCore.TryCountLimits{
 				MaxRefundTryCount: 3,

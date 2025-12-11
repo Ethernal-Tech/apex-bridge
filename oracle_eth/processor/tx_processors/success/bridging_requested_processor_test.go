@@ -22,8 +22,13 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		feeAddrBridgingAmount = uint64(1000005)
 		primeBridgingAddr     = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		primeBridgingFeeAddr  = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttt"
+		vectorBridgingFeeAddr = "addr_test1vqqj5apwf5npsmudw0ranypkj9jw98t25wk4h83jy5mwypswekttk"
 		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validTestAddress      = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
+
+		primeCurrencyID  = uint16(1)
+		vectorCurrencyID = uint16(2)
+		nexusCurrencyID  = uint16(3)
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
@@ -32,6 +37,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	brAddrManagerMock := &brAddrManager.BridgingAddressesManagerMock{}
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntPrime).Return([]string{primeBridgingAddr}, nil)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
+	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
 
 	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
 		config := &oCore.AppConfig{
@@ -46,11 +52,30 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					},
 					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
+				common.ChainIDStrVector: {
+					CardanoChainConfig: cardanotx.CardanoChainConfig{
+						NetworkID:                wallet.TestNetNetwork,
+						UtxoMinAmount:            utxoMinValue,
+						DefaultMinFeeForBridging: minFeeForBridging,
+						Tokens: map[uint16]common.Token{
+							vectorCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						},
+					},
+					FeeAddrBridgingAmount: feeAddrBridgingAmount,
+				},
 			},
 			EthChains: map[string]*oCore.EthChainConfig{
 				common.ChainIDStrNexus: {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
+					},
+					DestinationChain: map[string]common.TokenPairs{
+						common.ChainIDStrPrime: []common.TokenPair{
+							{SourceTokenID: nexusCurrencyID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+						},
+					},
+					Tokens: map[uint16]common.Token{
+						nexusCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 					},
 					MinFeeForBridging: minFeeForBridging,
 				},
@@ -58,12 +83,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingSettings: oCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
-					common.ChainIDStrNexus:  {common.ChainIDStrPrime, testChainID},
-					testChainID:             {common.ChainIDStrPrime},
-				},
 			},
 			RefundEnabled: refundEnabled,
 		}
@@ -202,7 +221,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		ethTx := &core.EthTx{
 			Metadata:      metadata,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: common.ChainIDStrNexus,
 		}
 
 		appConfig := getAppConfig(false)
@@ -216,7 +235,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim destination chain not registered", func(t *testing.T) {
@@ -288,8 +307,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
 			DestinationChainID: common.ChainIDStrVector,
 			SenderAddr:         "addr1",
-			Transactions:       []core.BridgingRequestEthMetadataTransaction{},
-			BridgingFee:        big.NewInt(0),
+			Transactions: []core.BridgingRequestEthMetadataTransaction{
+				{Address: nexusBridgingAddr, Amount: common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))},
+			},
+			BridgingFee: big.NewInt(0),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -312,7 +333,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, ethTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.ErrorContains(t, err, "no bridging path from source chain")
 	})
 
 	t.Run("ValidateAndAddClaim more than max receivers in metadata", func(t *testing.T) {

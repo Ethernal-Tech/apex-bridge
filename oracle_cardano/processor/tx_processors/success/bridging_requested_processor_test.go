@@ -31,6 +31,10 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		nexusBridgingAddr     = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validNexusAddr        = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
 		validTestAddress      = "addr_test1vz68kkm248u5yze6cphql743lv3y34z65njw3x4j8vfcqwg0shpwd"
+
+		primeCurrencyID  = uint16(1)
+		vectorCurrencyID = uint16(2)
+		nexusCurrencyID  = uint16(3)
 	)
 
 	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
@@ -41,6 +45,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntPrime, uint8(0)).Return(primeBridgingAddr, true)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntPrime).Return(primeBridgingFeeAddr)
 	brAddrManagerMock.On("GetAllPaymentAddresses", common.ChainIDIntVector).Return([]string{vectorBridgingAddr}, nil)
+	brAddrManagerMock.On("GetPaymentAddressFromIndex", common.ChainIDIntVector, uint8(0)).Return(vectorBridgingAddr, true)
 	brAddrManagerMock.On("GetFeeMultisigAddress", common.ChainIDIntVector).Return(vectorBridgingFeeAddr)
 
 	getAppConfig := func(refundEnabled bool) *cCore.AppConfig {
@@ -52,6 +57,17 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 						NetworkID:                wallet.TestNetNetwork,
 						UtxoMinAmount:            utxoMinValue,
 						DefaultMinFeeForBridging: minFeeForBridging,
+						DestinationChains: map[string]common.TokenPairs{
+							common.ChainIDStrVector: []common.TokenPair{
+								{SourceTokenID: primeCurrencyID, DestinationTokenID: vectorCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+							},
+							common.ChainIDStrNexus: []common.TokenPair{
+								{SourceTokenID: primeCurrencyID, DestinationTokenID: vectorCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
+							},
+						},
+						Tokens: map[uint16]common.Token{
+							primeCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						},
 					},
 					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
@@ -60,6 +76,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 						NetworkID:                wallet.TestNetNetwork,
 						UtxoMinAmount:            utxoMinValue,
 						DefaultMinFeeForBridging: minFeeForBridging,
+						Tokens: map[uint16]common.Token{
+							vectorCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+						},
 					},
 					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
@@ -69,18 +88,15 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddresses: cCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
+					Tokens: map[uint16]common.Token{
+						nexusCurrencyID: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+					},
 					FeeAddrBridgingAmount: feeAddrBridgingAmount,
 				},
 			},
 			BridgingSettings: cCore.BridgingSettings{
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
-					common.ChainIDStrNexus:  {common.ChainIDStrPrime},
-					testChainID:             {common.ChainIDStrPrime},
-				},
 			},
 
 			RefundEnabled: refundEnabled,
@@ -253,7 +269,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("ValidateAndAddClaim - transaction direction not allowed", func(t *testing.T) {
+	t.Run("ValidateAndAddClaim - destination chain invalid", func(t *testing.T) {
 		transactionDirectionNotSupportedMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: "invalid",
@@ -298,7 +314,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.ErrorContains(t, err, "destination chain not registered")
 	})
 
 	t.Run("ValidateAndAddClaim - destination chain not registered", func(t *testing.T) {
@@ -434,7 +450,9 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			DestinationChainID: common.ChainIDStrNexus,
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
-			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+			Transactions: []sendtx.BridgingRequestMetadataTransaction{
+				{Address: sendtx.AddrToMetaDataAddr(nexusBridgingAddr), Amount: 2},
+			},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -444,7 +462,6 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 			{Address: "addr1", Amount: 1},
 			{Address: "addr2", Amount: 2},
 			{Address: vectorBridgingAddr, Amount: 3},
-			{Address: vectorBridgingAddr, Amount: 4},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -468,7 +485,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "transaction direction not allowed")
+		require.ErrorContains(t, err, "no bridging path from source chain")
 	})
 
 	t.Run("ValidateAndAddClaim bridging addr not in utxos", func(t *testing.T) {

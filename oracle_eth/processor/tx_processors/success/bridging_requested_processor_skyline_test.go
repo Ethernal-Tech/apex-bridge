@@ -117,12 +117,6 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 				MaxTokenAmountAllowedToBridge:  maxTokenAmountAllowedToBridge,
 				MinColCoinsAllowedToBridge:     minColCoinsAllowedToBridge,
-				AllowedDirections: map[string][]string{
-					common.ChainIDStrPrime:  {common.ChainIDStrVector, common.ChainIDStrNexus, testChainID},
-					common.ChainIDStrVector: {common.ChainIDStrPrime},
-					common.ChainIDStrNexus:  {common.ChainIDStrPrime, testChainID},
-					testChainID:             {common.ChainIDStrPrime},
-				},
 			},
 			RefundEnabled: refundEnabled,
 		}

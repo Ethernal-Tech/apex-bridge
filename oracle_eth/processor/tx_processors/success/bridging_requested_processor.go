@@ -6,7 +6,6 @@ import (
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/utils"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
@@ -128,10 +127,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return err
 	}
 
-	if err := utils.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
-		return err
-	}
-
 	_, ethSrcConfig := oUtils.GetChainConfig(appConfig, tx.OriginChainID)
 	if ethSrcConfig == nil {
 		return fmt.Errorf("origin chain not registered: %v", tx.OriginChainID)
@@ -153,6 +148,21 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	feeSum := big.NewInt(0)
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
+
+	currencySrcID, err := ethSrcConfig.GetCurrencyID()
+	if err != nil {
+		return err
+	}
+
+	_, err = oUtils.GetTokenPair(
+		ethSrcConfig.DestinationChain,
+		ethSrcConfig.ChainID,
+		metadata.DestinationChainID,
+		currencySrcID,
+	)
+	if err != nil {
+		return fmt.Errorf("transaction direction not allowed. metadata: %v, err: %w", metadata, err)
+	}
 
 	for _, receiver := range metadata.Transactions {
 		receiverAmountDfm := common.WeiToDfm(receiver.Amount)

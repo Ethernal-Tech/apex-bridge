@@ -113,8 +113,7 @@ func getOutputs(
 			} else if i == 0 {
 				// when refunding, we take the bridgingFee, and refund the rest to the user
 				// currency will always be contained within the first receiver (oracle implementation detail)
-				// @see RefundRequestProcessorSkylineImpl// for refund tx, deduct min bridging fee
-				// from the first receiver from claim
+				// @see RefundRequestProcessorSkylineImpl
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee

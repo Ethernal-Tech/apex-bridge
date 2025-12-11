@@ -33,7 +33,6 @@ const (
 	minFeeForBridgingTokensFlag = "min-fee-for-bridging-tokens" //nolint:gosec
 	minOperationFeeFlag         = "min-operation-fee"
 	blockConfirmationCountFlag  = "block-confirmation-count"
-	allowedDirectionsFlag       = "allowed-directions"
 
 	mintingScriptTxInputHashFlag  = "minting-script-tx-input-hash"
 	mintingScriptTxInputIndexFlag = "minting-script-tx-input-index"
@@ -58,7 +57,6 @@ const (
 	minFeeForBridgingTokensFlagDesc = "minimal bridging fee for bridging tokens for the chain" //nolint:gosec
 	minOperationFeeFlagDesc         = "minimal operation fee for the chain"
 	blockConfirmationCountFlagDesc  = "block confirmation count for the chain"
-	allowedDirectionsFlagDesc       = "allowed bridging directions for the chain"
 
 	mintingScriptTxInputHashFlagDesc  = "tx input hash used for referencing minting script"
 	mintingScriptTxInputIndexFlagDesc = "tx input index used for referencing minting script"
@@ -92,7 +90,6 @@ type cardanoChainGenerateConfigsParams struct {
 	minFeeForBridgingTokens uint64
 	minOperationFee         uint64
 	blockConfirmationCount  uint
-	allowedDirections       []string
 
 	mintingScriptTxInputHash  string
 	mintingScriptTxInputIndex int64
@@ -277,12 +274,6 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		defaultEmptyBlocksThreshold,
 		emptyBlocksThresholdFlagDesc,
 	)
-	cmd.Flags().StringSliceVar(
-		&p.allowedDirections,
-		allowedDirectionsFlag,
-		nil,
-		allowedDirectionsFlagDesc,
-	)
 
 	// Minting script params
 	cmd.Flags().StringVar(
@@ -445,12 +436,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	}
 
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
-
-	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
-	}
-
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)

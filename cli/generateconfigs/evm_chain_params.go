@@ -53,8 +53,6 @@ type evmChainGenerateConfigsParams struct {
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
 
-	allowedDirections []string
-
 	outputDir                         string
 	outputValidatorComponentsFileName string
 	outputRelayerFileName             string
@@ -138,13 +136,6 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlagDesc,
 	)
 
-	cmd.Flags().StringSliceVar(
-		&p.allowedDirections,
-		allowedDirectionsFlag,
-		nil,
-		allowedDirectionsFlagDesc,
-	)
-
 	// Output params
 	cmd.Flags().StringVar(
 		&p.outputDir,
@@ -226,12 +217,6 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
-
-	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
-	}
-
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)

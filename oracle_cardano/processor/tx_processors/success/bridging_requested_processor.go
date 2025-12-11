@@ -152,10 +152,6 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := utils.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
-		return err
-	}
-
 	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig, false); err != nil {
 		return err
 	}
@@ -190,6 +186,21 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	cardanoDestChainFeeAddress := ""
 	if isCardanoDest {
 		cardanoDestChainFeeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	}
+
+	currencySrcID, err := cardanoSrcConfig.GetCurrencyID()
+	if err != nil {
+		return err
+	}
+
+	_, err = cUtils.GetTokenPair(
+		cardanoSrcConfig.DestinationChains,
+		cardanoSrcConfig.ChainID,
+		metadata.DestinationChainID,
+		currencySrcID,
+	)
+	if err != nil {
+		return fmt.Errorf("transaction direction not allowed. metadata: %v, err: %w", metadata, err)
 	}
 
 	for _, receiver := range metadata.Transactions {
