@@ -17,7 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// wTODO: will need to adjust this command once we have operationFee on gateway
 const (
 	nodeFlag                   = "url"
 	evmPrivateKeyFlag          = "key"

@@ -96,56 +96,55 @@ func TestEthChainObserver(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// wTODO: uncomment when new smart contracts are deployed on the testnet
-	// t.Run("check newConfirmedTxs called", func(t *testing.T) {
-	// 	oracleDB := &core.EthTxsProcessorDBMock{}
+	t.Run("check newConfirmedTxs called", func(t *testing.T) {
+		oracleDB := &core.EthTxsProcessorDBMock{}
 
-	// 	txsReceiverMock := &core.EthTxsReceiverMock{}
-	// 	doneCh := make(chan bool, 1)
-	// 	closed := false
+		txsReceiverMock := &core.EthTxsReceiverMock{}
+		doneCh := make(chan bool, 1)
+		closed := false
 
-	// 	txsReceiverMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
-	// 		t.Helper()
+		txsReceiverMock.NewUnprocessedLogFn = func(originChainId string, log *ethgo.Log) error {
+			t.Helper()
 
-	// 		if !closed {
-	// 			close(doneCh)
+			if !closed {
+				close(doneCh)
 
-	// 			closed = true
-	// 		}
+				closed = true
+			}
 
-	// 		return nil
-	// 	}
+			return nil
+		}
 
-	// 	testConfig := &oCore.EthChainConfig{
-	// 		ChainID:                 "nexus",
-	// 		NodeURL:                 ethNodeURL,
-	// 		PoolIntervalMiliseconds: 1000,
-	// 		SyncBatchSize:           10,
-	// 		NumBlockConfirmations:   1,
-	// 		StartBlockNumber:        uint64(5462655),
-	// 		RestartTrackerPullCheck: time.Second * 30,
-	// 		BridgingAddresses: oCore.EthBridgingAddresses{
-	// 			BridgingAddress: "0xc68221AD72397d85084f2D5C7089e4e9487c118c",
-	// 		},
-	// 	}
+		testConfig := &oCore.EthChainConfig{
+			ChainID:                 "nexus",
+			NodeURL:                 ethNodeURL,
+			PoolIntervalMiliseconds: 1000,
+			SyncBatchSize:           10,
+			NumBlockConfirmations:   1,
+			StartBlockNumber:        uint64(12444887),
+			RestartTrackerPullCheck: time.Second * 30,
+			BridgingAddresses: oCore.EthBridgingAddresses{
+				BridgingAddress: "0x53F9124643E3D15f8d753733C5d908CD6aA65178",
+			},
+		}
 
-	// 	oracleDB.On("ClearAllTxs", mock.Anything).Return(error(nil))
+		oracleDB.On("ClearAllTxs", mock.Anything).Return(error(nil))
 
-	// 	indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
-	// 	require.NoError(t, err)
+		indexerDB, err := eventTrackerStore.NewBoltDBEventTrackerStore(filepath.Join(testDir, "nexus.db"))
+		require.NoError(t, err)
 
-	// 	chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
-	// 	require.NoError(t, err)
-	// 	require.NotNil(t, chainObserver)
+		chainObserver, err := NewEthChainObserver(testConfig, txsReceiverMock, oracleDB, indexerDB, logger)
+		require.NoError(t, err)
+		require.NotNil(t, chainObserver)
 
-	// 	require.NoError(t, chainObserver.Start())
+		require.NoError(t, chainObserver.Start())
 
-	// 	select {
-	// 	case <-time.After(100 * time.Second):
-	// 		t.Fatal("timeout")
-	// 	case <-doneCh:
-	// 	}
-	// })
+		select {
+		case <-time.After(100 * time.Second):
+			t.Fatal("timeout")
+		case <-doneCh:
+		}
+	})
 }
 
 func TestInitOracleState(t *testing.T) {
@@ -322,10 +321,10 @@ func TestEthChainObserver_Dispose(t *testing.T) {
 		PoolIntervalMiliseconds: 1000,
 		SyncBatchSize:           10,
 		NumBlockConfirmations:   1,
-		StartBlockNumber:        uint64(5462655),
+		StartBlockNumber:        uint64(12444887),
 		RestartTrackerPullCheck: time.Second * 30,
 		BridgingAddresses: oCore.EthBridgingAddresses{
-			BridgingAddress: "0xc68221AD72397d85084f2D5C7089e4e9487c118c",
+			BridgingAddress: "0x53F9124643E3D15f8d753733C5d908CD6aA65178",
 		},
 	}
 
