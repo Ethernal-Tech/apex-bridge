@@ -1097,8 +1097,8 @@ func Test_getOutputs(t *testing.T) {
 				Addr:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 				Amount: 2100 + refundTxAmount - minFeeForBridging,
 				Tokens: []cardanowallet.TokenAmount{
-					cardanowallet.NewTokenAmount("1", "1", 15),
-					cardanowallet.NewTokenAmount("1", "3", 15),
+					cardanowallet.NewTokenAmount(cardanowallet.NewToken("1", "1"), 15),
+					cardanowallet.NewTokenAmount(cardanowallet.NewToken("1", "3"), 15),
 				},
 			},
 			{

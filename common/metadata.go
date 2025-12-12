@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/fxamacker/cbor/v2"
 )
 
 type BridgingTxType string
 type MetadataEncodingType string
+type BridgingRequestMetadata sendtx.BridgingRequestMetadata
 
 const (
 	BridgingTxTypeBridgingRequest BridgingTxType = "bridge"
@@ -25,19 +27,6 @@ const (
 
 type BaseMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
-}
-
-type BridgingRequestMetadataTransaction struct {
-	Address []string `cbor:"a" json:"a"`
-	Amount  uint64   `cbor:"m" json:"m"`
-}
-
-type BridgingRequestMetadata struct {
-	BridgingTxType     BridgingTxType                       `cbor:"t" json:"t"`
-	DestinationChainID string                               `cbor:"d" json:"d"`
-	SenderAddr         []string                             `cbor:"s" json:"s"`
-	Transactions       []BridgingRequestMetadataTransaction `cbor:"tx" json:"tx"`
-	BridgingFee        uint64                               `cbor:"fa" json:"fa"`
 }
 
 type RefundBridgingRequestMetadata struct {

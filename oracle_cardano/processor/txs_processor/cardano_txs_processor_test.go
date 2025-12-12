@@ -19,6 +19,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	indexerDb "github.com/Ethernal-Tech/cardano-infrastructure/indexer/db"
+	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -1516,7 +1517,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+				BridgingTxType: sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			})
 		require.NoError(t, err)
 
@@ -1605,7 +1606,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		metadata, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+				BridgingTxType: sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			})
 		require.NoError(t, err)
 
@@ -1733,7 +1734,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		metadata1, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+				BridgingTxType: sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			},
 		)
 		require.NoError(t, err)
@@ -1743,7 +1744,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		metadata2, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-				BridgingTxType: common.BridgingTxTypeBridgingRequest,
+				BridgingTxType: sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
 			},
 		)
 		require.NoError(t, err)
@@ -1767,7 +1768,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 
 		metadataBatch, err := common.SimulateRealMetadata(
 			common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
-				BridgingTxType: common.BridgingTxTypeBatchExecution,
+				BridgingTxType: sendtx.BridgingRequestType(common.BridgingTxTypeBatchExecution),
 			},
 		)
 		require.NoError(t, err)

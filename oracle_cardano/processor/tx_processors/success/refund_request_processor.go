@@ -203,21 +203,25 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 	tokens := make([]cardanowallet.TokenAmount, 0, len(tokenNameToAmount))
 
 	for name, amount := range tokenNameToAmount {
-		tok, err := cardanowallet.NewTokenAmountWithFullName(name, amount, true)
+		tok, err := cardanowallet.NewTokenWithFullNameTry(name)
 		if err != nil {
 			return 0, fmt.Errorf("failed to create TokenAmount. err: %w", err)
 		}
 
-		tokens = append(tokens, tok)
+		tokens = append(tokens,
+			cardanowallet.NewTokenAmount(tok, amount),
+		)
 	}
 
-	potentialTokenCost, err := cardanowallet.GetTokenCostSum(
-		builder, receiverAddr, []cardanowallet.Utxo{
-			{
-				Amount: 0,
-				Tokens: tokens,
-			},
+	userTokenSum := cardanowallet.GetUtxosSum([]cardanowallet.Utxo{
+		{
+			Amount: 0,
+			Tokens: tokens,
 		},
+	})
+
+	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
+		builder, receiverAddr, userTokenSum,
 	)
 	if err != nil {
 		return 0, err
