@@ -220,7 +220,7 @@ func (p *RefundRequestProcessorImpl) calculateMinUtxoForRefund(
 		},
 	})
 
-	potentialTokenCost, err := cardanowallet.GetTokenCostSum(
+	potentialTokenCost, err := cardanowallet.GetMinUtxoForSumMap(
 		builder, receiverAddr, userTokenSum,
 	)
 	if err != nil {

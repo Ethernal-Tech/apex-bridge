@@ -311,7 +311,7 @@ func createMintTx(
 		return nil, "", err
 	}
 
-	potentialMinUtxo, err := cardanowallet.GetTokenCostSum(
+	potentialMinUtxo, err := cardanowallet.GetMinUtxoForSumMap(
 		builder,
 		senderAddr,
 		cardanowallet.AddSumMaps(
