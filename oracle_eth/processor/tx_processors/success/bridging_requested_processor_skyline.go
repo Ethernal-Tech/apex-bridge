@@ -249,6 +249,14 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			if receiver.Address == cardanoDestChainFeeAddress {
 				return fmt.Errorf("fee receiver metadata invalid: %v", metadata)
 			}
+
+			tokensSum, exists := receiverTokensSum[receiver.TokenID]
+			if !exists {
+				tokensSum = big.NewInt(0)
+				receiverTokensSum[receiver.TokenID] = tokensSum
+			}
+
+			tokensSum.Add(tokensSum, receiver.Amount)
 		}
 
 		// currency on destination
@@ -260,14 +268,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 			if common.WeiToDfm(receiver.Amount).Uint64() < appConfig.BridgingSettings.MinColCoinsAllowedToBridge {
 				return fmt.Errorf("token amount below minimum allowed in metadata receivers: %v", metadata)
 			}
-
-			tokensSum, exists := receiverTokensSum[receiver.TokenID]
-			if !exists {
-				tokensSum = big.NewInt(0)
-				receiverTokensSum[receiver.TokenID] = tokensSum
-			}
-
-			tokensSum.Add(tokensSum, receiver.Amount)
 		}
 	}
 
