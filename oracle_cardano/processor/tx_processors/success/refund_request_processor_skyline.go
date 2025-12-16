@@ -154,6 +154,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	refundTokensAmounts := buildRefundTokenAmounts(tokenAmounts, currencyID, currencyAmountSum)
 
 	// tx contains unknown tokens
+	// amounts are not used on batcher when unknown tokens are present
 	if len(unknownTokenOutputIndexes) > 0 {
 		currencyAmountToTrack = big.NewInt(0)
 		wrappedTokenAmountToTrack = big.NewInt(0)
@@ -161,7 +162,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
+		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             currencyAmountToTrack,
@@ -255,11 +256,6 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 		return fmt.Errorf(
 			"sum of amounts to the bridging address: %v is less than the minimum required for refund: %v",
 			amountSum, minBridgingFee+calculatedMinUtxo)
-	}
-
-	if appConfig.EthChains[metadata.DestinationChainID] == nil &&
-		appConfig.CardanoChains[metadata.DestinationChainID] == nil {
-		return fmt.Errorf("unsupported destination chain id found in metadata: %s", metadata.DestinationChainID)
 	}
 
 	return nil

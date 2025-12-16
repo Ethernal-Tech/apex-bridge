@@ -410,7 +410,17 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Tx:            tx,
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
-		require.ErrorContains(t, err, "unsupported destination chain id found in metadata")
+		require.NoError(t, err)
+
+		require.Len(t, claims.RefundRequestClaims, 1)
+		require.Equal(t, common.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
+		require.Equal(t, common.PackNumbersToBytes([]uint16{2}), claims.RefundRequestClaims[0].OutputIndexes)
 	})
 
 	t.Run("ValidateAndAddClaim try count exceeded", func(t *testing.T) {
@@ -491,5 +501,15 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrPrime,
 		}, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.RefundRequestClaims, 1)
+		require.Equal(t, common.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, common.ChainIDIntVector, claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
+		require.Equal(t, common.PackNumbersToBytes([]uint16{2}), claims.RefundRequestClaims[0].OutputIndexes)
 	})
 }

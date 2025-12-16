@@ -86,7 +86,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID),
+		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             common.WeiToDfm(totalCurrency),
@@ -134,11 +134,6 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 				chainConfig.ChainID,
 			)
 		}
-	}
-
-	if appConfig.EthChains[metadata.DestinationChainID] == nil &&
-		appConfig.CardanoChains[metadata.DestinationChainID] == nil {
-		return fmt.Errorf("unsupported destination chain id found in metadata: %s", metadata.DestinationChainID)
 	}
 
 	return nil

@@ -216,7 +216,16 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
 		}, appConfig)
-		require.ErrorContains(t, err, "unsupported destination chain id found in metadata")
+		require.NoError(t, err)
+
+		require.Len(t, claims.RefundRequestClaims, 1)
+		require.Equal(t, common.ToNumChainID(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
+		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
+		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})
 
 	//nolint:dupl
@@ -271,5 +280,15 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			Value:         common.DfmToWei(new(big.Int).SetUint64(utxoMinValue + minFeeForBridging + 100)),
 		}, appConfig)
 		require.NoError(t, err)
+
+		require.Len(t, claims.RefundRequestClaims, 1)
+		require.Equal(t, common.ToNumChainID(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, common.ChainIDIntPrime, claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
+		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
+		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})
 }
