@@ -28,12 +28,13 @@ const (
 var _ oracleCore.SpecificChainTxsProcessorState = (*EthStateProcessor)(nil)
 
 type EthStateProcessor struct {
-	ctx          context.Context
-	appConfig    *oracleCore.AppConfig
-	db           core.EthTxsProcessorDB
-	txProcessors *txProcessorsCollection
-	indexerDbs   map[string]eventTrackerStore.EventTrackerStore
-	logger       hclog.Logger
+	ctx                      context.Context
+	appConfig                *oracleCore.AppConfig
+	db                       core.EthTxsProcessorDB
+	txProcessors             *txProcessorsCollection
+	indexerDbs               map[string]eventTrackerStore.EventTrackerStore
+	logger                   hclog.Logger
+	lastBlockObservedTracker oracleCore.LastBlockObsvervedTracker
 
 	state *perTickState
 }
@@ -45,14 +46,16 @@ func NewEthStateProcessor(
 	txProcessors *txProcessorsCollection,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	logger hclog.Logger,
+	lastBlockObservedTracker oracleCore.LastBlockObsvervedTracker,
 ) *EthStateProcessor {
 	return &EthStateProcessor{
-		ctx:          ctx,
-		appConfig:    appConfig,
-		db:           db,
-		txProcessors: txProcessors,
-		indexerDbs:   indexerDbs,
-		logger:       logger,
+		ctx:                      ctx,
+		appConfig:                appConfig,
+		db:                       db,
+		txProcessors:             txProcessors,
+		indexerDbs:               indexerDbs,
+		logger:                   logger,
+		lastBlockObservedTracker: lastBlockObservedTracker,
 	}
 }
 
@@ -237,27 +240,45 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
+	resultPending := make([]oracleCore.BaseTx, 0)
 
 	for _, hash := range event.TxHashes {
 		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
 			continue
 		}
 
-		tx, err := sp.db.GetPendingTx(
+		// Try pending first
+		pendingTx, errPending := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-		if err != nil {
-			return nil, err
+
+		if errPending == nil {
+			// Pending exists — append and continue
+			resultPending = append(resultPending, pendingTx)
+			continue
 		}
 
-		result = append(result, tx)
+		// Pending returned error — check if it's present in processed
+		_, errProcessed := sp.db.GetProcessedTx(
+			oracleCore.DBTxID{
+				ChainID: common.ToStrChainID(hash.SourceChainID),
+				DBKey:   hash.ObservedTransactionHash[:],
+			},
+		)
+
+		if errProcessed != nil {
+			// Not in processed either — return original pending error
+			return nil, errPending
+		}
+
+		// It exists in processed — silently skip (do not add to resultPending)
+		// and continue with next tx hash
 	}
 
-	return result, nil
+	return resultPending, nil
 }
 
 func (sp *EthStateProcessor) processNotEnoughFundsEvents(
@@ -456,13 +477,33 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+		lastObservedBlockNumber, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
 		if err != nil {
-			sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+			continue
+		}
 
-			onInvalidTx(unprocessedTx)
+		if unprocessedTx.BlockNumber > lastObservedBlockNumber.Uint64() {
+			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+			if err != nil {
+				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+
+				onInvalidTx(unprocessedTx)
+
+				continue
+			}
+		} else {
+			key := string(unprocessedTx.ToExpectedEthTxKey())
+
+			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+
+				delete(sp.state.expectedTxsMap, key)
+			}
+
+			processedValidTxs = append(processedValidTxs, unprocessedTx)
 
 			continue
+
 		}
 
 		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||

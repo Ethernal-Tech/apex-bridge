@@ -21,13 +21,13 @@ import (
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	commonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_eth/database_access"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 func newEthTxsProcessor(
@@ -48,9 +48,16 @@ func newEthTxsProcessor(
 
 	ethTxsReceiver := NewEthTxsReceiverImpl(appConfig, db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
 
+	bridgeSmartContractMock := &eth.OracleBridgeSmartContractMock{}
+
+	bridgeSmartContractMock.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{BlockSlot: big.NewInt(0)}, nil)
+
+	lastObservedTracker := commonBridge.NewLastObserved(ctx, bridgeSmartContractMock, hclog.NewNullLogger())
+
 	ethStateProcessor := NewEthStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, hclog.NewNullLogger(),
+		lastObservedTracker,
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
@@ -240,7 +247,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		require.NotNil(t, proc)
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, &ethgo.Log{
-			BlockHash: ethgo.Hash{1},
+			BlockHash:   ethgo.Hash{1},
+			BlockNumber: 1,
 		}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(common.ChainIDStrNexus, 0)
@@ -284,6 +292,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
@@ -343,6 +352,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
@@ -412,6 +422,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
@@ -481,6 +492,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
@@ -557,6 +569,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
@@ -637,6 +650,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(originChainID, log))
@@ -1410,6 +1424,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			TransactionHash: txHash,
 			Data:            receiptData,
 			Topics:          []ethgo.Hash{withdrawEventSig},
+			BlockNumber:     1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(common.ChainIDStrNexus, log))
@@ -1519,6 +1534,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			TransactionHash: txHash,
 			Data:            withdrawReceiptData,
 			Topics:          []ethgo.Hash{withdrawEventSig},
+			BlockNumber:     1,
 		}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
@@ -1646,7 +1662,8 @@ func TestEthTxsProcessor(t *testing.T) {
 		txHash1 := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f61")
 		ethTx1 := &ethcore.EthTx{
 			Hash: txHash1, OriginChainID: originChainID, Address: ethgo.Address{},
-			Metadata: metadata,
+			Metadata:    metadata,
+			BlockNumber: 1,
 		}
 
 		txHash2 := ethgo.HexToHash("0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62")
@@ -1748,6 +1765,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		log2 := &ethgo.Log{
@@ -1757,6 +1775,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			Topics: []ethgo.Hash{
 				depositEventSig,
 			},
+			BlockNumber: 1,
 		}
 
 		require.NoError(t, rec.NewUnprocessedLog(originChainID, log1))

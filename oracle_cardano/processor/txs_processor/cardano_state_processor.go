@@ -28,12 +28,13 @@ const (
 var _ cCore.SpecificChainTxsProcessorState = (*CardanoStateProcessor)(nil)
 
 type CardanoStateProcessor struct {
-	ctx          context.Context
-	appConfig    *cCore.AppConfig
-	db           core.CardanoTxsProcessorDB
-	txProcessors *txProcessorsCollection
-	indexerDbs   map[string]indexer.Database
-	logger       hclog.Logger
+	ctx                      context.Context
+	appConfig                *cCore.AppConfig
+	db                       core.CardanoTxsProcessorDB
+	txProcessors             *txProcessorsCollection
+	indexerDbs               map[string]indexer.Database
+	logger                   hclog.Logger
+	lastBlockObservedTracker cCore.LastBlockObsvervedTracker
 
 	state *perTickState
 }
@@ -45,14 +46,16 @@ func NewCardanoStateProcessor(
 	txProcessors *txProcessorsCollection,
 	indexerDbs map[string]indexer.Database,
 	logger hclog.Logger,
+	lastBlockObservedTracker cCore.LastBlockObsvervedTracker,
 ) *CardanoStateProcessor {
 	return &CardanoStateProcessor{
-		ctx:          ctx,
-		appConfig:    appConfig,
-		db:           db,
-		txProcessors: txProcessors,
-		indexerDbs:   indexerDbs,
-		logger:       logger,
+		ctx:                      ctx,
+		appConfig:                appConfig,
+		db:                       db,
+		txProcessors:             txProcessors,
+		indexerDbs:               indexerDbs,
+		logger:                   logger,
+		lastBlockObservedTracker: lastBlockObservedTracker,
 	}
 }
 
@@ -234,27 +237,45 @@ func (sp *CardanoStateProcessor) processBatchExecutionInfoEvents(
 func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 	event *cCore.DBBatchInfoEvent,
 ) ([]cCore.BaseTx, error) {
-	result := make([]cCore.BaseTx, 0, len(event.TxHashes))
+	resultPending := make([]cCore.BaseTx, 0)
 
 	for _, hash := range event.TxHashes {
 		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
 			continue
 		}
 
-		tx, err := sp.db.GetPendingTx(
+		// Try pending first
+		pendingTx, errPending := sp.db.GetPendingTx(
 			cCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-		if err != nil {
-			return nil, err
+
+		if errPending == nil {
+			// Pending exists — append and continue
+			resultPending = append(resultPending, pendingTx)
+			continue
 		}
 
-		result = append(result, tx)
+		// Pending returned error — check if it's present in processed
+		_, errProcessed := sp.db.GetProcessedTx(
+			cCore.DBTxID{
+				ChainID: common.ToStrChainID(hash.SourceChainID),
+				DBKey:   hash.ObservedTransactionHash[:],
+			},
+		)
+
+		if errProcessed != nil {
+			// Not in processed either — return original pending error
+			return nil, errPending
+		}
+
+		// It exists in processed — silently skip (do not add to resultPending)
+		// and continue with next tx hash
 	}
 
-	return result, nil
+	return resultPending, nil
 }
 
 func (sp *CardanoStateProcessor) processNotEnoughFundsEvents(
@@ -457,18 +478,35 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+		lastObservedBlockSlot, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
 		if err != nil {
-			sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
-
-			onInvalidTx(unprocessedTx)
-
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
-			txProcessor.GetType() == common.TxTypeRefundRequest {
-			pendingTxs = append(pendingTxs, unprocessedTx)
+		if unprocessedTx.BlockSlot > lastObservedBlockSlot.Uint64() {
+			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+			if err != nil {
+				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
+
+				onInvalidTx(unprocessedTx)
+
+				continue
+			}
+
+			if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
+				txProcessor.GetType() == common.TxTypeRefundRequest {
+				pendingTxs = append(pendingTxs, unprocessedTx)
+			} else {
+				key := string(unprocessedTx.ToCardanoTxKey())
+
+				if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+
+					delete(sp.state.expectedTxsMap, key)
+				}
+
+				processedValidTxs = append(processedValidTxs, unprocessedTx)
+			}
 		} else {
 			key := string(unprocessedTx.ToCardanoTxKey())
 

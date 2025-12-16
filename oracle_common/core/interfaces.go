@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -89,4 +90,8 @@ type ConfirmedBlocksSubmitter interface {
 type BlockSubmitterDB interface {
 	GetBlocksSubmitterInfo(chainID string) (BlocksSubmitterInfo, error)
 	SetBlocksSubmitterInfo(chainID string, info BlocksSubmitterInfo) error
+}
+
+type LastBlockObsvervedTracker interface {
+	GetLastObservedBlock(sourceChain string) (*big.Int, error)
 }
