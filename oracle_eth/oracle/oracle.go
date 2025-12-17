@@ -90,7 +90,7 @@ func NewEthOracle(
 	ethTxsReceiver := ethtxsprocessor.NewEthTxsReceiverImpl(
 		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
 
-	lastObservedTracker := commonBridge.NewLastObserved(ctx, oracleBridgeSC, logger)
+	lastObservedTracker := commonBridge.NewLastObserved(oracleBridgeSC, logger)
 
 	ethStateProcessor := ethtxsprocessor.NewEthStateProcessor(
 		ctx, appConfig, db, txProcessors,

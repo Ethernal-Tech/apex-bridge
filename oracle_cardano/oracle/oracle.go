@@ -100,7 +100,7 @@ func NewCardanoOracle(
 		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger,
 	)
 
-	lastObservedBlockTracker := commonBridge.NewLastObserved(ctx, oracleBridgeSC, logger)
+	lastObservedBlockTracker := commonBridge.NewLastObserved(oracleBridgeSC, logger)
 
 	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
