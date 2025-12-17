@@ -23,9 +23,9 @@ func TestLastObserved(t *testing.T) {
 
 		bridgeSC.On("GetLastObservedBlock").Return(mockBlockReturn, nil)
 
-		lastObserved := NewLastObserved(context.Background(), bridgeSC, hclog.NewNullLogger())
+		lastObserved := NewLastObserved(bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, lastObserved)
-		resultSlot, err := lastObserved.GetLastObservedBlock(common.ChainIDStrPrime)
+		resultSlot, err := lastObserved.GetLastObservedBlock(context.Background(), common.ChainIDStrPrime)
 
 		require.NoError(t, err)
 		require.NotNil(t, resultSlot)
@@ -40,9 +40,9 @@ func TestLastObserved(t *testing.T) {
 
 		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{}, expectedError)
 
-		lastObserved := NewLastObserved(context.Background(), &bridgeSC, hclog.NewNullLogger())
+		lastObserved := NewLastObserved(&bridgeSC, hclog.NewNullLogger())
 
-		resultSlot, err := lastObserved.GetLastObservedBlock(common.ChainIDStrPrime)
+		resultSlot, err := lastObserved.GetLastObservedBlock(context.Background(), common.ChainIDStrPrime)
 
 		require.Error(t, err)
 		require.Nil(t, resultSlot)

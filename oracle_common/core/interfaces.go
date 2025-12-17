@@ -93,5 +93,5 @@ type BlockSubmitterDB interface {
 }
 
 type LastBlockObsvervedTracker interface {
-	GetLastObservedBlock(sourceChain string) (*big.Int, error)
+	GetLastObservedBlock(ctx context.Context, sourceChain string) (*big.Int, error)
 }

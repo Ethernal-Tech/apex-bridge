@@ -478,7 +478,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlock, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
+		lastObservedBlock, err := sp.lastBlockObservedTracker.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
 		if err != nil {
 			continue
 		}

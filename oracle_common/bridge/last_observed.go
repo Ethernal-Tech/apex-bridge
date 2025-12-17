@@ -10,7 +10,6 @@ import (
 )
 
 type LastObservedImpl struct {
-	ctx      context.Context
 	bridgeSC eth.IOracleBridgeSmartContract
 	logger   hclog.Logger
 }
@@ -18,26 +17,23 @@ type LastObservedImpl struct {
 var _ oCore.LastBlockObsvervedTracker = (*LastObservedImpl)(nil)
 
 func NewLastObserved(
-	ctx context.Context,
 	bridgeSC eth.IOracleBridgeSmartContract,
 	logger hclog.Logger,
 ) *LastObservedImpl {
 	return &LastObservedImpl{
-		ctx:      ctx,
 		bridgeSC: bridgeSC,
 		logger:   logger,
 	}
 }
 
-func (lo *LastObservedImpl) GetLastObservedBlock(sourceChain string) (*big.Int, error) {
-	lastObservedBlock, err := lo.bridgeSC.GetLastObservedBlock(lo.ctx, sourceChain)
+func (lo *LastObservedImpl) GetLastObservedBlock(ctx context.Context, sourceChain string) (*big.Int, error) {
+	lastObservedBlock, err := lo.bridgeSC.GetLastObservedBlock(ctx, sourceChain)
 	if err != nil {
 		lo.logger.Error("Failed to get last observed block", "chain", sourceChain, "err", err)
-
 		return nil, err
 	}
 
-	lo.logger.Info("Claims submitted successfully", "claims")
+	lo.logger.Debug("Retrieved last observed block", "chain", sourceChain, "slot", lastObservedBlock.BlockSlot)
 
 	return lastObservedBlock.BlockSlot, nil
 }

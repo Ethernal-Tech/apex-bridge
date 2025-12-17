@@ -51,7 +51,7 @@ func newCardanoTxsProcessor(
 
 	bridgeSmartContractMock.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{BlockSlot: big.NewInt(0)}, nil)
 
-	lastObservedTracker := commonBridge.NewLastObserved(ctx, bridgeSmartContractMock, hclog.NewNullLogger())
+	lastObservedTracker := commonBridge.NewLastObserved(bridgeSmartContractMock, hclog.NewNullLogger())
 
 	cardanoStateProcessor := NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
