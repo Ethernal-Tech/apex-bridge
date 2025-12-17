@@ -9,7 +9,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/hashicorp/go-hclog"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +21,7 @@ func TestLastObserved(t *testing.T) {
 			BlockSlot: expectedSlot,
 		}
 
-		bridgeSC.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(mockBlockReturn, nil)
+		bridgeSC.On("GetLastObservedBlock").Return(mockBlockReturn, nil)
 
 		lastObserved := NewLastObserved(context.Background(), bridgeSC, hclog.NewNullLogger())
 		require.NotNil(t, lastObserved)
@@ -39,7 +38,7 @@ func TestLastObserved(t *testing.T) {
 		bridgeSC := eth.OracleBridgeSmartContractMock{}
 		expectedError := errors.New("failed to fetch block")
 
-		bridgeSC.On("GetLastObservedBlock", mock.Anything, common.ChainIDStrPrime).Return(eth.CardanoBlock{}, expectedError)
+		bridgeSC.On("GetLastObservedBlock").Return(eth.CardanoBlock{}, expectedError)
 
 		lastObserved := NewLastObserved(context.Background(), &bridgeSC, hclog.NewNullLogger())
 

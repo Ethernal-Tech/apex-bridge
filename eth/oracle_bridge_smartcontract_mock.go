@@ -27,7 +27,7 @@ func (m *OracleBridgeSmartContractMock) GetBatchStatusAndTransactions(
 func (m *OracleBridgeSmartContractMock) GetLastObservedBlock(
 	ctx context.Context, sourceChain string,
 ) (CardanoBlock, error) {
-	args := m.Called(ctx, sourceChain)
+	args := m.Called()
 	if args.Get(0) != nil {
 		arg0, _ := args.Get(0).(CardanoBlock)
 
