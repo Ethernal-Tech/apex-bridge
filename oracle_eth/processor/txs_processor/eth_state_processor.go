@@ -258,6 +258,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 		if errPending == nil {
 			// Pending exists — append and continue
 			resultPending = append(resultPending, pendingTx)
+
 			continue
 		}
 
@@ -477,12 +478,12 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlockNumber, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
+		lastObservedBlock, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
 		if err != nil {
 			continue
 		}
 
-		if unprocessedTx.BlockNumber > lastObservedBlockNumber.Uint64() {
+		if unprocessedTx.BlockNumber > lastObservedBlock.Uint64() {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
 				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
@@ -492,6 +493,10 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				continue
 			}
 		} else {
+			sp.logger.Debug("Skipping validation of tx",
+				"BlockNumber", unprocessedTx.BlockNumber,
+				"LastObservedBlock", lastObservedBlock)
+
 			key := string(unprocessedTx.ToExpectedEthTxKey())
 
 			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {

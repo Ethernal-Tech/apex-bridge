@@ -255,6 +255,7 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 		if errPending == nil {
 			// Pending exists — append and continue
 			resultPending = append(resultPending, pendingTx)
+
 			continue
 		}
 
@@ -478,12 +479,12 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlockSlot, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
+		lastObservedBlock, err := sp.lastBlockObservedTracker.GetLastObservedBlock(unprocessedTx.OriginChainID)
 		if err != nil {
 			continue
 		}
 
-		if unprocessedTx.BlockSlot > lastObservedBlockSlot.Uint64() {
+		if unprocessedTx.BlockSlot > lastObservedBlock.Uint64() {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
 				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
@@ -508,6 +509,10 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
 			}
 		} else {
+			sp.logger.Debug("Skipping validation of tx",
+				"BlockSlot", unprocessedTx.BlockSlot,
+				"LastObservedBlock", lastObservedBlock)
+
 			key := string(unprocessedTx.ToCardanoTxKey())
 
 			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
