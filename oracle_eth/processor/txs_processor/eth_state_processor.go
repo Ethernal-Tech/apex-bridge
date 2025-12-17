@@ -247,7 +247,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 			continue
 		}
 
-		// Try pending first
+		// try pending first
 		pendingTx, errPending := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -256,13 +256,13 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 		)
 
 		if errPending == nil {
-			// Pending exists — append and continue
+			// pending exists — append and continue
 			resultPending = append(resultPending, pendingTx)
 
 			continue
 		}
 
-		// Pending returned error — check if it's present in processed
+		// pending returned error — check if it's present in processed
 		_, errProcessed := sp.db.GetProcessedTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
@@ -271,11 +271,11 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 		)
 
 		if errProcessed != nil {
-			// Not in processed either — return original pending error
+			// not in processed either — return original pending error
 			return nil, errPending
 		}
 
-		// It exists in processed — silently skip (do not add to resultPending)
+		// it exists in processed — silently skip (do not add to resultPending)
 		// and continue with next tx hash
 	}
 
@@ -508,7 +508,6 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
 
 			continue
-
 		}
 
 		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||

@@ -30,6 +30,7 @@ func (lo *LastObservedImpl) GetLastObservedBlock(ctx context.Context, sourceChai
 	lastObservedBlock, err := lo.bridgeSC.GetLastObservedBlock(ctx, sourceChain)
 	if err != nil {
 		lo.logger.Error("Failed to get last observed block", "chain", sourceChain, "err", err)
+
 		return nil, err
 	}
 
