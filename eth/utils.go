@@ -103,13 +103,22 @@ func GetEventSignatures(abi *abi.ABI, events []string) ([]ethgo.Hash, error) {
 	return hashes, nil
 }
 
-func GetNexusEventSignatures() ([]ethgo.Hash, error) {
+func GetGatewayEventSignatures() ([]ethgo.Hash, error) {
 	abi, err := contractbinding.GatewayMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
 
 	return GetEventSignatures(abi, []string{"Deposit", "Withdraw", "FundsDeposited"})
+}
+
+func GetGatewayRegisterTokenEventSignatures() ([]ethgo.Hash, error) {
+	abi, err := contractbinding.GatewayMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetEventSignatures(abi, []string{"TokenRegistered"})
 }
 
 func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {

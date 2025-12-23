@@ -17,14 +17,17 @@ func TestEVMSmartContractTransaction(t *testing.T) {
 			{
 				Address: common.HexToAddress("0xFF00FF"),
 				Amount:  new(big.Int).SetUint64(100),
+				TokenID: 1,
 			},
 			{
 				Address: common.HexToAddress("0xFF0011"),
 				Amount:  new(big.Int).SetUint64(3),
+				TokenID: 2,
 			},
 			{
 				Address: common.HexToAddress("0xFF0022"),
 				Amount:  new(big.Int).SetUint64(531),
+				TokenID: 3,
 			},
 		},
 	}

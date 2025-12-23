@@ -6,32 +6,33 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
+	oUtils "github.com/Ethernal-Tech/apex-bridge/oracle_common/utils"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	goEthCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 )
 
-var _ core.EthTxSuccessRefundProcessor = (*RefundRequestProcessorImpl)(nil)
+var _ core.EthTxSuccessRefundProcessor = (*RefundRequestProcessorSkylineImpl)(nil)
 
-type RefundRequestProcessorImpl struct {
+type RefundRequestProcessorSkylineImpl struct {
 	logger hclog.Logger
 }
 
-func NewRefundRequestProcessor(logger hclog.Logger) *RefundRequestProcessorImpl {
-	return &RefundRequestProcessorImpl{
+func NewRefundRequestProcessorSkyline(logger hclog.Logger) *RefundRequestProcessorSkylineImpl {
+	return &RefundRequestProcessorSkylineImpl{
 		logger: logger.Named("refund_request_processor"),
 	}
 }
 
-func (*RefundRequestProcessorImpl) GetType() common.BridgingTxType {
+func (*RefundRequestProcessorSkylineImpl) GetType() common.BridgingTxType {
 	return common.TxTypeRefundRequest
 }
 
-func (*RefundRequestProcessorImpl) PreValidate(tx *core.EthTx, appConfig *cCore.AppConfig) error {
+func (*RefundRequestProcessorSkylineImpl) PreValidate(tx *core.EthTx, appConfig *cCore.AppConfig) error {
 	return nil
 }
 
-func (*RefundRequestProcessorImpl) HandleBridgingProcessorPreValidate(
+func (*RefundRequestProcessorSkylineImpl) HandleBridgingProcessorPreValidate(
 	tx *core.EthTx, appConfig *cCore.AppConfig) error {
 	if tx.BatchTryCount > appConfig.TryCountLimits.MaxBatchTryCount ||
 		tx.SubmitTryCount > appConfig.TryCountLimits.MaxSubmitTryCount {
@@ -44,7 +45,7 @@ func (*RefundRequestProcessorImpl) HandleBridgingProcessorPreValidate(
 	return nil
 }
 
-func (p *RefundRequestProcessorImpl) HandleBridgingProcessorError(
+func (p *RefundRequestProcessorSkylineImpl) HandleBridgingProcessorError(
 	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
 	err error, errContext string,
 ) error {
@@ -54,7 +55,7 @@ func (p *RefundRequestProcessorImpl) HandleBridgingProcessorError(
 	return p.ValidateAndAddClaim(claims, tx, appConfig)
 }
 
-func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
+func (p *RefundRequestProcessorSkylineImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx, appConfig *cCore.AppConfig,
 ) error {
 	metadata, err := core.UnmarshalEthMetadata[core.RefundBridgingRequestEthMetadata](
@@ -67,30 +68,33 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, metadata)
+	p.addRefundRequestClaim(claims, tx, metadata, appConfig)
 
 	return nil
 }
 
-func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
+func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
 	metadata *core.RefundBridgingRequestEthMetadata,
+	appConfig *cCore.AppConfig,
 ) {
-	amount := common.WeiToDfm(tx.Value)
+	chainConfig := appConfig.EthChains[tx.OriginChainID]
+	currencyID, _ := chainConfig.GetCurrencyID()
+
+	tokenAmounts, totalCurrency, totalWrapped :=
+		buildRefundTokenAmounts(chainConfig, tx.Value, metadata, currencyID)
 
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
 		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
-		OriginAmount:             amount,
-		OriginWrappedAmount:      big.NewInt(0),
+		OriginAmount:             common.WeiToDfm(totalCurrency),
+		OriginWrappedAmount:      common.WeiToDfm(totalWrapped),
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
-		TokenAmounts: []cCore.RefundTokenAmount{
-			{TokenId: 0, AmountCurrency: amount, AmountTokens: big.NewInt(0)},
-		},
+		TokenAmounts:             tokenAmounts,
 	}
 
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
@@ -99,7 +103,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
 }
 
-func (p *RefundRequestProcessorImpl) validate(
+func (p *RefundRequestProcessorSkylineImpl) validate(
 	tx *core.EthTx, metadata *core.RefundBridgingRequestEthMetadata, appConfig *cCore.AppConfig,
 ) error {
 	if tx.RefundTryCount > appConfig.TryCountLimits.MaxRefundTryCount {
@@ -122,5 +126,78 @@ func (p *RefundRequestProcessorImpl) validate(
 			tx.Value, chainConfig.MinFeeForBridging+1)
 	}
 
+	for _, receiver := range metadata.Transactions {
+		if _, exists := chainConfig.Tokens[receiver.TokenID]; !exists {
+			return fmt.Errorf(
+				"token with ID %d is not registered in chain %s",
+				receiver.TokenID,
+				chainConfig.ChainID,
+			)
+		}
+	}
+
 	return nil
+}
+
+func buildRefundTokenAmounts(
+	chainConfig *cCore.EthChainConfig,
+	txValue *big.Int,
+	metadata *core.RefundBridgingRequestEthMetadata,
+	currencyID uint16,
+) (tokenAmounts []cCore.RefundTokenAmount, totalCurrency, totalWrapped *big.Int) {
+	tokenAmounts = make([]cCore.RefundTokenAmount, 0)
+	totalCurrency = big.NewInt(0)
+	totalWrapped = big.NewInt(0)
+
+	currencyAdded := false
+
+	for _, receiver := range metadata.Transactions {
+		tokenPair, _ := oUtils.GetTokenPair(
+			chainConfig.DestinationChain,
+			chainConfig.ChainID,
+			metadata.DestinationChainID,
+			receiver.TokenID,
+		)
+
+		// handle currency
+		if receiver.TokenID == currencyID {
+			if tokenPair != nil && tokenPair.TrackSourceToken {
+				totalCurrency.Add(totalCurrency, receiver.Amount)
+			}
+
+			if !currencyAdded {
+				tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
+					TokenId:        receiver.TokenID,
+					AmountCurrency: common.WeiToDfm(txValue),
+					AmountTokens:   big.NewInt(0),
+				})
+
+				currencyAdded = true
+			}
+
+			continue
+		}
+
+		// handle wrapped token
+		if chainConfig.Tokens[receiver.TokenID].IsWrappedCurrency {
+			if tokenPair != nil && tokenPair.TrackSourceToken {
+				totalWrapped.Add(totalWrapped, receiver.Amount)
+			}
+		}
+
+		// build RefundTokenAmount entry
+		currencyAmount := big.NewInt(0)
+		if !currencyAdded {
+			currencyAmount = common.WeiToDfm(txValue)
+			currencyAdded = true
+		}
+
+		tokenAmounts = append(tokenAmounts, cCore.RefundTokenAmount{
+			TokenId:        receiver.TokenID,
+			AmountCurrency: currencyAmount,
+			AmountTokens:   common.WeiToDfm(receiver.Amount),
+		})
+	}
+
+	return
 }

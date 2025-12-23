@@ -76,11 +76,15 @@ func (cco *EVMChainOperations) GenerateBatchTransaction(
 		return nil, err
 	}
 
-	txs := newEVMSmartContractTransaction(
+	txs, err := newEVMSmartContractTransaction(
+		cco.config,
 		batchNonceID,
 		cco.ttlFormatter(blockRounded+cco.config.TTLBlockNumberInc, batchNonceID),
 		confirmedTransactions,
 		common.DfmToWei(new(big.Int).SetUint64(cco.config.MinFeeForBridging)))
+	if err != nil {
+		return nil, err
+	}
 
 	txsBytes, err := txs.Pack()
 	if err != nil {
@@ -162,21 +166,56 @@ func (cco *EVMChainOperations) Submit(
 }
 
 func newEVMSmartContractTransaction(
+	config *cardano.BatcherEVMChainConfig,
 	batchNonceID uint64,
 	ttl uint64,
 	confirmedTransactions []eth.ConfirmedTransaction,
 	minFeeForBridging *big.Int,
-) eth.EVMSmartContractTransaction {
-	sourceAddrTxMap := map[string]eth.EVMSmartContractTransactionReceiver{}
+) (*eth.EVMSmartContractTransaction, error) {
+	sourceAddrTxMap := map[string][]eth.EVMSmartContractTransactionReceiver{}
 	feeAmount := big.NewInt(0)
 
-	updateAmount := func(mp map[string]eth.EVMSmartContractTransactionReceiver, addr string, amount *big.Int) {
+	currencyID, err := config.GetCurrencyID()
+	if err != nil {
+		return nil, err
+	}
+
+	updateAmount := func(
+		mp map[string][]eth.EVMSmartContractTransactionReceiver,
+		addr string,
+		tokenID uint16,
+		amount *big.Int,
+	) {
+		var newEntry eth.EVMSmartContractTransactionReceiver
 		val, exists := mp[addr]
-		if !exists {
-			val.Amount = amount
-			val.Address = common.HexToAddress(addr)
+
+		if !exists || len(val) == 0 {
+			newEntry.Amount = amount
+			newEntry.Address = common.HexToAddress(addr)
+			newEntry.TokenID = tokenID
+
+			val = append(val, newEntry)
 		} else {
-			val.Amount.Add(val.Amount, amount)
+			// check if there is a same token id first
+			found := false
+
+			for i, entry := range val {
+				if entry.TokenID == tokenID {
+					val[i].Amount.Add(val[i].Amount, amount)
+
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				newEntry.Amount = amount
+				newEntry.Address = common.HexToAddress(addr)
+				newEntry.TokenID = tokenID
+
+				val = append(val, newEntry)
+			}
 		}
 
 		mp[addr] = val
@@ -185,15 +224,7 @@ func newEVMSmartContractTransaction(
 	for _, tx := range confirmedTransactions {
 		for _, recv := range tx.Receivers {
 			amount := common.DfmToWei(recv.Amount)
-			// In case a transaction is of type refund, batcher should transfer minFeeForBridging
-			// to fee payer address, and the rest is transferred to the user.
-			// if else would be nicer but linter does not think the same way
-			if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
-				feeAmount.Add(feeAmount, minFeeForBridging)
-				updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount.Sub(amount, minFeeForBridging))
-
-				continue
-			}
+			tokenAmount := common.DfmToWei(recv.AmountWrapped)
 
 			if recv.DestinationAddress == common.EthZeroAddr {
 				feeAmount.Add(feeAmount, amount)
@@ -201,25 +232,56 @@ func newEVMSmartContractTransaction(
 				continue
 			}
 
-			updateAmount(sourceAddrTxMap, recv.DestinationAddress, amount)
+			if amount.Cmp(big.NewInt(0)) == 1 {
+				// In case a transaction is of type refund, batcher should transfer minFeeForBridging
+				// to fee payer address, and the rest is transferred to the user.
+				if tx.TransactionType == uint8(common.RefundConfirmedTxType) {
+					feeAmount.Add(feeAmount, minFeeForBridging)
+					updateAmount(sourceAddrTxMap, recv.DestinationAddress, currencyID, amount.Sub(amount, minFeeForBridging))
+				} else {
+					updateAmount(sourceAddrTxMap, recv.DestinationAddress, currencyID, amount)
+				}
+			}
+
+			if tokenAmount.Cmp(big.NewInt(0)) == 1 {
+				var realTokenID = recv.TokenId
+
+				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
+				// also for backward compatibility during the process of syncing -
+				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
+				if recv.TokenId == 0 {
+					wrappedTokenID, err := config.GetWrappedTokenID()
+					if err != nil {
+						return nil, err
+					}
+
+					realTokenID = wrappedTokenID
+				}
+
+				updateAmount(sourceAddrTxMap, recv.DestinationAddress, realTokenID, tokenAmount)
+			}
 		}
 	}
 
 	receivers := make([]eth.EVMSmartContractTransactionReceiver, 0, len(sourceAddrTxMap))
 
 	for _, v := range sourceAddrTxMap {
-		receivers = append(receivers, v)
+		receivers = append(receivers, v...)
 	}
 
 	// every batcher should have same order
 	sort.SliceStable(receivers, func(i, j int) bool {
-		return receivers[i].Address.Cmp(receivers[j].Address) < 0
+		if receivers[i].Address.Cmp(receivers[j].Address) != 0 {
+			return receivers[i].Address.Cmp(receivers[j].Address) < 0
+		}
+
+		return receivers[i].TokenID < receivers[j].TokenID
 	})
 
-	return eth.EVMSmartContractTransaction{
+	return &eth.EVMSmartContractTransaction{
 		BatchNonceID: batchNonceID,
 		TTL:          ttl,
 		FeeAmount:    feeAmount,
 		Receivers:    receivers,
-	}
+	}, nil
 }

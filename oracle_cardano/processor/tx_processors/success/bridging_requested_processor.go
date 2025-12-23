@@ -43,7 +43,8 @@ func (*BridgingRequestedProcessorImpl) PreValidate(tx *core.CardanoTx, appConfig
 func (p *BridgingRequestedProcessorImpl) ValidateAndAddClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx, appConfig *cCore.AppConfig,
 ) error {
-	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](common.MetadataEncodingTypeCbor, tx.Metadata)
+	metadata, err := common.UnmarshalMetadata[common.BridgingRequestMetadata](
+		common.MetadataEncodingTypeCbor, tx.Metadata)
 	if err != nil {
 		return p.refundRequestProcessor.HandleBridgingProcessorError(
 			claims, tx, appConfig, err, "failed to unmarshal metadata")
@@ -151,11 +152,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := utils.IsTxDirectionAllowed(appConfig, tx.OriginChainID, metadata.DestinationChainID); err != nil {
-		return err
-	}
-
-	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig, false); err != nil {
 		return err
 	}
 
@@ -184,12 +181,32 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	foundAUtxoValueBelowMinimumValue := false
 	foundAnInvalidReceiverAddr := false
 
-	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	isCardanoDest := cardanoDestConfig != nil
+
+	cardanoDestChainFeeAddress := ""
+	if isCardanoDest {
+		cardanoDestChainFeeAddress = appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	}
+
+	currencySrcID, err := cardanoSrcConfig.GetCurrencyID()
+	if err != nil {
+		return err
+	}
+
+	_, err = cUtils.GetTokenPair(
+		cardanoSrcConfig.DestinationChains,
+		cardanoSrcConfig.ChainID,
+		metadata.DestinationChainID,
+		currencySrcID,
+	)
+	if err != nil {
+		return fmt.Errorf("transaction direction not allowed. metadata: %v, err: %w", metadata, err)
+	}
 
 	for _, receiver := range metadata.Transactions {
 		receiverAddr := strings.Join(receiver.Address, "")
 
-		if cardanoDestConfig != nil {
+		if isCardanoDest {
 			if receiver.Amount < cardanoDestConfig.UtxoMinAmount {
 				foundAUtxoValueBelowMinimumValue = true
 

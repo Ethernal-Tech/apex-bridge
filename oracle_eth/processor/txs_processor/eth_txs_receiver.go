@@ -46,8 +46,7 @@ func NewEthTxsReceiverImpl(
 func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.Log) error {
 	r.logger.Info("NewUnprocessedLog", "log", log)
 
-	_, exists := r.appConfig.EthChains[originChainID]
-	if !exists {
+	if _, exists := r.appConfig.EthChains[originChainID]; !exists {
 		r.logger.Error("originChainID not registered", "originChainID", originChainID)
 
 		return fmt.Errorf("originChainID not registered. originChainID: %s", originChainID)
@@ -124,24 +123,6 @@ func (r *EthTxsReceiverImpl) NewUnprocessedLog(originChainID string, log *ethgo.
 }
 
 func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*core.EthTx, error) {
-	events, err := eth.GetNexusEventSignatures()
-	if err != nil {
-		r.logger.Error("failed to get nexus event signatures", "err", err)
-
-		return nil, err
-	}
-
-	depositEventSig := events[0]
-	withdrawEventSig := events[1]
-	fundedEventSig := events[2]
-
-	contract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
-	if err != nil {
-		r.logger.Error("failed to get contractbinding gateway", "err", err)
-
-		return nil, err
-	}
-
 	topics := make([]ethereum_common.Hash, len(log.Topics))
 	for idx, topic := range log.Topics {
 		topics[idx] = ethereum_common.Hash(topic)
@@ -159,93 +140,11 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		Topics:      topics,
 	}
 
-	var (
-		metadata          []byte
-		innerActionTxHash ethgo.Hash
-		txValue           *big.Int
-	)
-
 	logEventType := log.Topics[0]
-	switch logEventType {
-	case depositEventSig:
-		deposit, err := contract.GatewayFilterer.ParseDeposit(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse deposit event", "err", err)
 
-			return nil, err
-		}
-
-		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
-		if err != nil {
-			r.logger.Error("failed to create new evm smart contract tx", "err", err)
-
-			return nil, err
-		}
-
-		batchExecutedMetadata := core.BatchExecutedEthMetadata{
-			BridgingTxType: common.BridgingTxTypeBatchExecution,
-			BatchNonceID:   evmTx.BatchNonceID,
-		}
-
-		metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
-		if err != nil {
-			r.logger.Error("failed to marshal metadata", "err", err)
-
-			return nil, err
-		}
-
-		evmTxHash, err := common.Keccak256(deposit.Data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create txHash. err: %w", err)
-		}
-
-		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
-	case withdrawEventSig:
-		withdraw, err := contract.GatewayFilterer.ParseWithdraw(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse withdraw event", "err", err)
-
-			return nil, err
-		}
-
-		txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
-		for idx, tx := range withdraw.Receivers {
-			txs[idx] = core.BridgingRequestEthMetadataTransaction{
-				Amount:  tx.Amount,
-				Address: tx.Receiver,
-			}
-		}
-
-		bridgingRequestMetadata := core.BridgingRequestEthMetadata{
-			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
-			SenderAddr:         withdraw.Sender.String(),
-			Transactions:       txs,
-			BridgingFee:        withdraw.FeeAmount,
-		}
-
-		metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
-		if err != nil {
-			r.logger.Error("failed to marshal metadata", "err", err)
-
-			return nil, err
-		}
-
-		txValue = withdraw.Value
-	case fundedEventSig:
-		funded, err := contract.GatewayFilterer.ParseFundsDeposited(parsedLog)
-		if err != nil {
-			r.logger.Error("failed to parse funds deposited event", "err", err)
-
-			return nil, err
-		}
-
-		txValue = funded.Value
-
-	default:
-		r.logger.Error("unknown event type in log", "log", log)
-
-		return nil, fmt.Errorf("unknown event type in unprocessed log")
+	metadata, innerActionTxHash, txValue, err := r.processLog(log, parsedLog, logEventType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process log. err: %w", err)
 	}
 
 	return &core.EthTx{
@@ -263,4 +162,117 @@ func (r *EthTxsReceiverImpl) logToTx(originChainID string, log *ethgo.Log) (*cor
 		Value:           txValue,
 		InnerActionHash: innerActionTxHash,
 	}, nil
+}
+
+func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, logEventType ethgo.Hash) (
+	[]byte, ethgo.Hash, *big.Int, error,
+) {
+	var (
+		metadata          []byte
+		innerActionTxHash ethgo.Hash
+		txValue           *big.Int
+	)
+
+	events, err := eth.GetGatewayEventSignatures()
+	if err != nil {
+		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get gateway event signatures. err: %w", err)
+	}
+
+	depositEventSig := events[0]
+	withdrawEventSig := events[1]
+	fundedEventSig := events[2]
+
+	gatewayContract, err := contractbinding.NewGateway(ethereum_common.Address{}, nil)
+	if err != nil {
+		r.logger.Error("failed to get contractbinding gateway", "err", err)
+
+		return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to get contractbinding gateway. err: %w", err)
+	}
+
+	switch logEventType {
+	case depositEventSig:
+		deposit, err := gatewayContract.GatewayFilterer.ParseDeposit(parsedLog)
+		if err != nil {
+			r.logger.Error("failed to parse deposit event", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		evmTx, err := eth.NewEVMSmartContractTransaction(deposit.Data)
+		if err != nil {
+			r.logger.Error("failed to create new evm smart contract tx", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		batchExecutedMetadata := core.BatchExecutedEthMetadata{
+			BridgingTxType: common.BridgingTxTypeBatchExecution,
+			BatchNonceID:   evmTx.BatchNonceID,
+		}
+
+		metadata, err = core.MarshalEthMetadata(batchExecutedMetadata)
+		if err != nil {
+			r.logger.Error("failed to marshal metadata", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		evmTxHash, err := common.Keccak256(deposit.Data)
+		if err != nil {
+
+			return nil, ethgo.Hash{}, nil, fmt.Errorf("failed to create txHash. err: %w", err)
+		}
+
+		innerActionTxHash = ethgo.BytesToHash(evmTxHash)
+	case withdrawEventSig:
+		withdraw, err := gatewayContract.GatewayFilterer.ParseWithdraw(parsedLog)
+		if err != nil {
+			r.logger.Error("failed to parse withdraw event", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		txs := make([]core.BridgingRequestEthMetadataTransaction, len(withdraw.Receivers))
+		for idx, tx := range withdraw.Receivers {
+			txs[idx] = core.BridgingRequestEthMetadataTransaction{
+				Amount:  tx.Amount,
+				Address: tx.Receiver,
+				TokenID: tx.TokenId,
+			}
+		}
+
+		bridgingRequestMetadata := core.BridgingRequestEthMetadata{
+			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
+			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
+			SenderAddr:         withdraw.Sender.String(),
+			Transactions:       txs,
+			BridgingFee:        withdraw.Fee,
+			OperationFee:       withdraw.OperationFee,
+		}
+
+		metadata, err = core.MarshalEthMetadata(bridgingRequestMetadata)
+		if err != nil {
+			r.logger.Error("failed to marshal metadata", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		txValue = withdraw.Value
+	case fundedEventSig:
+		funded, err := gatewayContract.GatewayFilterer.ParseFundsDeposited(parsedLog)
+		if err != nil {
+			r.logger.Error("failed to parse funds deposited event", "err", err)
+
+			return nil, ethgo.Hash{}, nil, err
+		}
+
+		txValue = funded.Value
+
+	default:
+		r.logger.Error("unknown event type in log", "log", log)
+
+		return nil, ethgo.Hash{}, nil, fmt.Errorf("unknown event type in unprocessed log")
+	}
+
+	return metadata, innerActionTxHash, txValue, nil
 }

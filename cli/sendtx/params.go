@@ -53,7 +53,6 @@ const (
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	nexusURLFlagDesc        = "nexus chain URL"
 
-	defaultFeeAmount = 1_100_000
 	ttlSlotNumberInc = 500
 
 	gasLimitMultiplier = 1.6
@@ -65,38 +64,11 @@ const (
 
 var minNexusBridgingFee = new(big.Int).SetUint64(1000010000000000000)
 
+const nexusCurrencyTokenID = 1
+
 type receiverAmount struct {
 	ReceiverAddr string
 	Amount       *big.Int
-}
-
-func ToCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
-	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
-	for idx, rec := range receivers {
-		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
-			Addr:         rec.ReceiverAddr,
-			Amount:       rec.Amount.Uint64(),
-			BridgingType: sendtx.BridgingTypeNormal,
-		}
-	}
-
-	return metadataReceivers
-}
-
-func ToGatewayStruct(receivers []*receiverAmount) ([]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int) {
-	total := big.NewInt(0)
-
-	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
-	for idx, rec := range receivers {
-		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
-			Receiver: rec.ReceiverAddr,
-			Amount:   rec.Amount,
-		}
-
-		total.Add(total, rec.Amount)
-	}
-
-	return gatewayOutputs, total
 }
 
 type sendTxParams struct {
@@ -360,7 +332,7 @@ func (ip *sendTxParams) Execute(outputter common.OutputFormatter) (common.IComma
 func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.OutputFormatter) (
 	common.ICommandResult, error,
 ) {
-	receivers := ToCardanoMetadata(ip.receiversParsed)
+	receivers := toCardanoMetadata(ip.receiversParsed)
 	networkID := cardanowallet.CardanoNetworkType(ip.networkIDSrc)
 	txSender := sendtx.NewTxSender(
 		map[string]sendtx.ChainConfig{
@@ -373,6 +345,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				MinFeeForBridgingTokens:  common.MinFeeForBridgingDefault,
 				MinUtxoValue:             common.MinUtxoAmountDefault,
 				PotentialFee:             potentialFee,
+				Tokens: map[uint16]sendtx.ApexToken{
+					0: {FullName: cardanowallet.AdaTokenName},
+				},
 			},
 			ip.chainIDDst: {
 				TxProvider:               cardanowallet.NewTxProviderOgmios(ip.ogmiosURLDst),
@@ -381,6 +356,7 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 				PotentialFee:             potentialFee,
 			},
 		},
+		sendtx.WithMinAmountToBridge(common.MinUtxoAmountDefault),
 	)
 
 	senderAddr, err := cardanotx.GetAddress(networkID, ip.wallet)
@@ -422,9 +398,6 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		if err != nil {
 			return nil, err
 		}
-
-		_, _ = outputter.Write([]byte("Transaction has been bridged"))
-		outputter.WriteOutput()
 	} else if ip.nexusURL != "" {
 		txHelper, err := getTxHelper(ip.nexusURL)
 		if err != nil {
@@ -445,6 +418,9 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		}
 	}
 
+	_, _ = outputter.Write([]byte("Transaction has been bridged"))
+	outputter.WriteOutput()
+
 	return CmdResult{
 		SenderAddr: senderAddr.String(),
 		ChainID:    ip.chainIDDst,
@@ -458,8 +434,10 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
-	receivers, totalAmount := ToGatewayStruct(ip.receiversParsed)
+	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
+
+	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
 
 	wallet, err := ethtxhelper.NewEthTxWallet(ip.privateKeyRaw)
 	if err != nil {
@@ -486,7 +464,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 
 	estimatedGas, _, err := txHelper.EstimateGas(
 		ctx, wallet.GetAddress(), contractAddress, totalAmount, gasLimitMultiplier,
-		abi, "withdraw", chainID, receivers, ip.feeAmount)
+		abi, "withdraw", chainID, receivers, ip.feeAmount, minOperationFee)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +479,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		},
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return contract.Withdraw(
-				txOpts, chainID, receivers, ip.feeAmount,
+				txOpts, chainID, receivers, ip.feeAmount, minOperationFee,
 			)
 		})
 	if err != nil {
@@ -595,4 +573,36 @@ func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
 		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
+}
+
+func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver {
+	metadataReceivers := make([]sendtx.BridgingTxReceiver, len(receivers))
+	for idx, rec := range receivers {
+		metadataReceivers[idx] = sendtx.BridgingTxReceiver{
+			Addr:    rec.ReceiverAddr,
+			Amount:  rec.Amount.Uint64(),
+			TokenID: 0,
+		}
+	}
+
+	return metadataReceivers
+}
+
+func toGatewayStruct(receivers []*receiverAmount) (
+	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
+) {
+	total := big.NewInt(0)
+
+	gatewayOutputs := make([]contractbinding.IGatewayStructsReceiverWithdraw, len(receivers))
+	for idx, rec := range receivers {
+		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
+			Receiver: rec.ReceiverAddr,
+			Amount:   rec.Amount,
+			TokenId:  nexusCurrencyTokenID,
+		}
+
+		total.Add(total, rec.Amount)
+	}
+
+	return gatewayOutputs, total
 }

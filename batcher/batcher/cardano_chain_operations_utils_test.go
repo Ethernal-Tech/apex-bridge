@@ -11,7 +11,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -294,14 +293,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(100),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
 					Amount:             big.NewInt(200),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(400),
+					TokenId:            1,
 				},
 			},
 		},
@@ -310,14 +312,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(50),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(900),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
 					Amount:             big.NewInt(0),
+					TokenId:            1,
 				},
 			},
 		},
@@ -326,11 +331,13 @@ func Test_reactorGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
 					Amount:             big.NewInt(3000),
+					TokenId:            1,
 				},
 				{
 					// this one will be skipped
 					DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
 					Amount:             big.NewInt(3000),
+					TokenId:            1,
 				},
 			},
 		},
@@ -339,14 +346,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
 					Amount:             big.NewInt(2000),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
 					Amount:             big.NewInt(170),
+					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
 					Amount:             big.NewInt(10),
+					TokenId:            1,
 				},
 			},
 		},
@@ -397,20 +407,15 @@ func Test_skylineGetOutputs(t *testing.T) {
 	primeTokenName, _ := hex.DecodeString("526f75746533")
 	primeToken := cardanowallet.NewToken(primePolicyID, string(primeTokenName))
 
-	cardanoPolicyID := "472ccefa58a8a7b6b12087752119907b6c5c2ae0d37b8e66c30a2c85"
-	cardanoTokenName, _ := hex.DecodeString("8a3b65736583")
-	cardanoToken := cardanowallet.NewToken(cardanoPolicyID, string(cardanoTokenName))
-
 	config := &cardano.CardanoChainConfig{
 		NetworkID: cardanowallet.MainNetNetwork,
-		NativeTokens: []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: common.ChainIDStrPrime,
-				TokenName:  primeToken.String(),
-			},
-			{
-				DstChainID: common.ChainIDStrCardano,
-				TokenName:  cardanoToken.String(),
+		Tokens: map[uint16]common.Token{
+			2: {ChainSpecific: cardanowallet.AdaTokenName, LockUnlock: true},
+			3: {ChainSpecific: primeToken.String(), LockUnlock: true},
+		},
+		DestinationChains: map[string]common.TokenPairs{
+			common.ChainIDStrPrime: {
+				{SourceTokenID: 2, DestinationTokenID: 3},
 			},
 		},
 		DefaultMinFeeForBridging: 200,
@@ -430,11 +435,13 @@ func Test_skylineGetOutputs(t *testing.T) {
 					DestinationAddress: addr1,
 					Amount:             big.NewInt(100),
 					AmountWrapped:      big.NewInt(200),
+					TokenId:            3,
 				},
 				{
 					DestinationAddress: addr2,
 					Amount:             big.NewInt(51),
 					AmountWrapped:      big.NewInt(102),
+					TokenId:            3,
 				},
 			},
 		},
@@ -445,11 +452,13 @@ func Test_skylineGetOutputs(t *testing.T) {
 				{
 					DestinationAddress: addr3,
 					Amount:             big.NewInt(8),
+					TokenId:            2,
 				},
 				{
 					DestinationAddress: addr1,
 					Amount:             big.NewInt(2),
 					AmountWrapped:      big.NewInt(5),
+					TokenId:            3,
 				},
 			},
 		},

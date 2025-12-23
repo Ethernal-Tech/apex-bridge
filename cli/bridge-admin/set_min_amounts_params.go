@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
@@ -19,17 +18,21 @@ import (
 )
 
 const (
-	nodeFlag              = "url"
-	evmPrivateKeyFlag     = "key"
-	contractAddressFlag   = "contract-addr"
-	minFeeAmountFlag      = "min-fee"
-	minBridgingAmountFlag = "min-bridging-amount"
+	nodeFlag                   = "url"
+	evmPrivateKeyFlag          = "key"
+	contractAddressFlag        = "contract-addr"
+	minFeeAmountFlag           = "min-fee"
+	minBridgingAmountFlag      = "min-bridging-amount"
+	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
+	minOperationFeeFlag        = "min-operation-fee"
 
-	nodeFlagDesc              = "evm node url"
-	evmPrivateKeyFlagDesc     = "private key for evm chain"
-	contractAddressFlagDesc   = "address of the Gateway contract"
-	minFeeAmountFlagDesc      = "minimal fee amount"
-	minBridgingAmountFlagDesc = "minimal amount to bridge"
+	nodeFlagDesc                   = "evm node url"
+	evmPrivateKeyFlagDesc          = "private key for evm chain"
+	contractAddressFlagDesc        = "address of the Gateway contract"
+	minFeeAmountFlagDesc           = "minimal fee amount"
+	minBridgingAmountFlagDesc      = "minimal amount to bridge"
+	minTokenBridgingAmountFlagDesc = "minimal amount to bridge tokens"
+	minOperationFeeFlagDesc        = "minimal operation fee"
 )
 
 type setMinAmountsParams struct {
@@ -38,11 +41,15 @@ type setMinAmountsParams struct {
 	privateKeyConfig string
 	contractAddress  string
 
-	minFeeString            string
-	minBridgingAmountString string
+	minFeeString                 string
+	minBridgingAmountString      string
+	minTokenBridgingAmountString string
+	minOperationFeeString        string
 
-	minFeeAmount      *big.Int
-	minBridgingAmount *big.Int
+	minFeeAmount           *big.Int
+	minBridgingAmount      *big.Int
+	minTokenBridgingAmount *big.Int
+	minOperationFee        *big.Int
 }
 
 func (ip *setMinAmountsParams) ValidateFlags() error {
@@ -76,8 +83,28 @@ func (ip *setMinAmountsParams) ValidateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
 	}
 
+	tokenBridgingAmount, ok := new(big.Int).SetString(ip.minTokenBridgingAmountString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minTokenBridgingAmountFlag)
+	}
+
+	if tokenBridgingAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, tokenBridgingAmount)
+	}
+
+	operationFeeAmount, ok := new(big.Int).SetString(ip.minOperationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minOperationFeeFlag)
+	}
+
+	if operationFeeAmount.Cmp(big.NewInt(0)) < 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minOperationFeeFlag, operationFeeAmount)
+	}
+
 	ip.minFeeAmount = feeAmount
 	ip.minBridgingAmount = bridgingAmount
+	ip.minTokenBridgingAmount = tokenBridgingAmount
+	ip.minOperationFee = operationFeeAmount
 
 	return nil
 }
@@ -114,15 +141,29 @@ func (ip *setMinAmountsParams) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
+		common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault)).String(),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
+		common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault)).String(),
 		minBridgingAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minTokenBridgingAmountString,
+		minTokenBridgingAmountFlag,
+		common.DfmToWei(new(big.Int).SetUint64(common.MinColCoinsAllowedToBridgeDefault)).String(),
+		minTokenBridgingAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minOperationFeeString,
+		minOperationFeeFlag,
+		common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault)).String(),
+		minOperationFeeFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, evmPrivateKeyFlag)
@@ -164,7 +205,9 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 		estimatedGas, _, err := txHelper.EstimateGas(
 			ctx, wallet.GetAddress(),
 			contractAddress, nil, 1.2,
-			parsedABI, "setMinAmounts", ip.minFeeAmount, ip.minBridgingAmount)
+			parsedABI, "setMinAmounts",
+			ip.minFeeAmount, ip.minBridgingAmount,
+			ip.minTokenBridgingAmount, ip.minOperationFee)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas for gateway smart contract: %w", err)
 		}
@@ -180,6 +223,8 @@ func (ip *setMinAmountsParams) Execute(outputter common.OutputFormatter) (common
 					txOpts,
 					ip.minFeeAmount,
 					ip.minBridgingAmount,
+					ip.minTokenBridgingAmount,
+					ip.minOperationFee,
 				)
 			},
 		)

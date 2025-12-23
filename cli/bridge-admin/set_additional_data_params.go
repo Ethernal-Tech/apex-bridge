@@ -131,6 +131,7 @@ func (ip *setAdditionalDataParams) Execute(
 		wallet, hclog.NewNullLogger(),
 		ethtxhelper.WithNodeURL(ip.bridgeNodeURL),
 		ethtxhelper.WithInitClientAndChainIDFn(ctx),
+		ethtxhelper.WithTxPoolCheck(true),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithDynamicTx(false))
 	smartContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperWrapper)

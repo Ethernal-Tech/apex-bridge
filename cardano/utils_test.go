@@ -5,7 +5,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,51 +71,49 @@ func Test_GetKnownTokens(t *testing.T) {
 	token2, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
 
 	config := &CardanoChainConfig{
-		NativeTokens: []sendtx.TokenExchangeConfig{
-			{
-				DstChainID: common.ChainIDStrVector,
-				TokenName:  token1.String(),
-			},
+		Tokens: map[uint16]common.Token{
+			0: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+			2: {ChainSpecific: token1.String(), LockUnlock: true},
 		},
 	}
 
 	retTokens, err := GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retTokens))
-	require.Equal(t, token1, retTokens[0])
+	require.ElementsMatch(t, []wallet.Token{token1}, retTokens)
 
-	config.NativeTokens = append(config.NativeTokens,
-		sendtx.TokenExchangeConfig{
-			DstChainID: common.ChainIDStrVector,
-			TokenName:  token2.String(),
-		},
-	)
+	config.Tokens = map[uint16]common.Token{
+		0: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+		2: {ChainSpecific: token1.String(), LockUnlock: true},
+		3: {ChainSpecific: token2.String(), LockUnlock: true},
+	}
 
 	retTokens, err = GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(retTokens))
-	require.Equal(t, token1, retTokens[0])
-	require.Equal(t, token2, retTokens[1])
+	require.ElementsMatch(t, []wallet.Token{token1, token2}, retTokens)
 
-	config.NativeTokens = config.NativeTokens[1:]
+	config.Tokens = map[uint16]common.Token{
+		3: {ChainSpecific: token2.String(), LockUnlock: true},
+	}
 
 	retTokens, err = GetKnownTokens(config)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retTokens))
-	require.Equal(t, token2, retTokens[0])
+	require.ElementsMatch(t, []wallet.Token{token2}, retTokens)
 }
 
 func Test_subtractTxOutputsFromSumMap(t *testing.T) {
-	tok1, err := GetNativeTokenFromName("3.31")
+	tok1, err := wallet.NewTokenWithFullNameTry("3.31")
 	require.NoError(t, err)
 
-	tok2, err := GetNativeTokenFromName("3.32")
+	tok2, err := wallet.NewTokenWithFullNameTry("3.32")
 	require.NoError(t, err)
 
-	tok3, err := GetNativeTokenFromName("3.33")
+	tok3, err := wallet.NewTokenWithFullNameTry("3.33")
 	require.NoError(t, err)
 
-	tok4, err := GetNativeTokenFromName("3.34")
+	tok4, err := wallet.NewTokenWithFullNameTry("3.34")
 	require.NoError(t, err)
 
 	vals := subtractTxOutputsFromSumMap(map[string]uint64{
@@ -209,7 +206,7 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 
 	t.Run("filter out all the tokens except the one with specified token name", func(t *testing.T) {
-		tok, err := GetNativeTokenFromName("1.31")
+		tok, err := wallet.NewTokenWithFullNameTry("1.31")
 		require.NoError(t, err)
 
 		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok)
@@ -222,7 +219,7 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 
 	t.Run("filter out InputOutput with invalid token even if it contains valid token as well", func(t *testing.T) {
-		tok, err := GetNativeTokenFromName("3.31")
+		tok, err := wallet.NewTokenWithFullNameTry("3.31")
 		require.NoError(t, err)
 
 		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok)
@@ -235,10 +232,10 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 	})
 
 	t.Run("filter out all the tokens except those with specified token names", func(t *testing.T) {
-		tok1, err := GetNativeTokenFromName("3.31")
+		tok1, err := wallet.NewTokenWithFullNameTry("3.31")
 		require.NoError(t, err)
 
-		tok2, err := GetNativeTokenFromName("1.31")
+		tok2, err := wallet.NewTokenWithFullNameTry("1.31")
 		require.NoError(t, err)
 
 		resTxInputOutput := FilterOutUtxosWithUnknownTokens(multisigUtxos, tok1, tok2)

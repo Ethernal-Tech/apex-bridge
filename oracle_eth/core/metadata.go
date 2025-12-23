@@ -11,6 +11,7 @@ import (
 type BridgingRequestEthMetadataTransaction struct {
 	Address string   `json:"a"`
 	Amount  *big.Int `json:"m"`
+	TokenID uint16   `json:"t"`
 }
 
 type BaseEthMetadata struct {
@@ -23,12 +24,14 @@ type BridgingRequestEthMetadata struct {
 	SenderAddr         string                                  `json:"s"`
 	Transactions       []BridgingRequestEthMetadataTransaction `json:"tx"`
 	BridgingFee        *big.Int                                `json:"fa"`
+	OperationFee       *big.Int                                `json:"of"`
 }
 
 type RefundBridgingRequestEthMetadata struct {
-	BridgingTxType     common.BridgingTxType `json:"t"`
-	SenderAddr         string                `json:"s"`
-	DestinationChainID string                `json:"d"`
+	BridgingTxType     common.BridgingTxType                   `json:"t"`
+	SenderAddr         string                                  `json:"s"`
+	DestinationChainID string                                  `json:"d"`
+	Transactions       []BridgingRequestEthMetadataTransaction `json:"tx"`
 }
 
 type BatchExecutedEthMetadata struct {

@@ -13,7 +13,7 @@ import (
 type SignedBatch = contractbinding.IBridgeStructsSignedBatch
 type ConfirmedTransaction = contractbinding.IBridgeStructsConfirmedTransaction
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
-type BridgeReceiver = contractbinding.IBridgeStructsReceiver
+type BridgeReceiver = contractbinding.IBridgeStructsReceiverWithToken
 
 type ConfirmedBatch struct {
 	ID              uint64
@@ -142,9 +142,9 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 			sb.WriteString(recv.DestinationAddress)
 
 			if recv.AmountWrapped.Uint64() != 0 {
-				sb.WriteString(fmt.Sprintf(", %d + amountWrapped: %d)", recv.Amount, recv.AmountWrapped))
+				sb.WriteString(fmt.Sprintf(", %d + amountWrapped: %d, tokenId: %d)", recv.Amount, recv.AmountWrapped, recv.TokenId))
 			} else {
-				sb.WriteString(fmt.Sprintf(", %d)", recv.Amount))
+				sb.WriteString(fmt.Sprintf(", %d, tokenId: %d)", recv.Amount, recv.TokenId))
 			}
 		}
 

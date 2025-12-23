@@ -121,10 +121,10 @@ func TestEthChainObserver(t *testing.T) {
 			PoolIntervalMiliseconds: 1000,
 			SyncBatchSize:           10,
 			NumBlockConfirmations:   1,
-			StartBlockNumber:        uint64(5462655),
+			StartBlockNumber:        uint64(12444887),
 			RestartTrackerPullCheck: time.Second * 30,
 			BridgingAddresses: oCore.EthBridgingAddresses{
-				BridgingAddress: "0xc68221AD72397d85084f2D5C7089e4e9487c118c",
+				BridgingAddress: "0x53F9124643E3D15f8d753733C5d908CD6aA65178",
 			},
 		}
 
@@ -246,7 +246,7 @@ func Test_LoadTrackerConfig(t *testing.T) {
 
 	scAddress := ethgo.HexToAddress("0x00")
 
-	eventSigs, err := eth.GetNexusEventSignatures()
+	eventSigs, err := eth.GetGatewayEventSignatures()
 	require.NoError(t, err)
 
 	logFilter := map[ethgo.Address][]ethgo.Hash{
@@ -321,10 +321,10 @@ func TestEthChainObserver_Dispose(t *testing.T) {
 		PoolIntervalMiliseconds: 1000,
 		SyncBatchSize:           10,
 		NumBlockConfirmations:   1,
-		StartBlockNumber:        uint64(5462655),
+		StartBlockNumber:        uint64(12444887),
 		RestartTrackerPullCheck: time.Second * 30,
 		BridgingAddresses: oCore.EthBridgingAddresses{
-			BridgingAddress: "0xc68221AD72397d85084f2D5C7089e4e9487c118c",
+			BridgingAddress: "0x53F9124643E3D15f8d753733C5d908CD6aA65178",
 		},
 	}
 

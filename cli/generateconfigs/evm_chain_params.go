@@ -48,11 +48,10 @@ type evmChainGenerateConfigsParams struct {
 	evmChainBlockRoundingThreshold uint64
 	evmChainStartingBlock          uint64
 	evmChainMinFeeForBridging      uint64
+	minOperationFee                uint64
 
 	evmRelayerGasFeeMultiplier uint64
 	emptyBlocksThreshold       uint
-
-	allowedDirections []string
 
 	outputDir                         string
 	outputValidatorComponentsFileName string
@@ -116,6 +115,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		common.MinFeeForBridgingDefault,
 		evmChainMinFeeForBridgingFlagDesc,
 	)
+	cmd.Flags().Uint64Var(
+		&p.minOperationFee,
+		minOperationFeeFlag,
+		common.MinOperationFeeDefault,
+		minOperationFeeFlagDesc,
+	)
 
 	cmd.Flags().Uint64Var(
 		&p.evmRelayerGasFeeMultiplier,
@@ -129,13 +134,6 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		emptyBlocksThresholdFlag,
 		defaultEmptyBlocksThreshold,
 		emptyBlocksThresholdFlagDesc,
-	)
-
-	cmd.Flags().StringSliceVar(
-		&p.allowedDirections,
-		allowedDirectionsFlag,
-		nil,
-		allowedDirectionsFlagDesc,
 	)
 
 	// Output params
@@ -209,6 +207,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 		NoBatchPeriodPercent:    defaultEvmNoBatchPeriodPercent,
 		DynamicTx:               true,
 		MinFeeForBridging:       p.evmChainMinFeeForBridging,
+		MinOperationFee:         p.minOperationFee,
 		RestartTrackerPullCheck: time.Second * 150,
 		FeeAddrBridgingAmount:   defaultEvmFeeAddrBridgingAmount,
 	}
@@ -218,12 +217,6 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	vcConfig.Bridge.SubmitConfig.EmptyBlocksThreshold[p.chainIDString] = p.emptyBlocksThreshold
-
-	if vcConfig.BridgingSettings.AllowedDirections == nil {
-		vcConfig.BridgingSettings.AllowedDirections = make(map[string][]string)
-	}
-
-	vcConfig.BridgingSettings.AllowedDirections[p.chainIDString] = p.allowedDirections
 
 	if err := common.SaveJSON(vcConfigPath, vcConfig, true); err != nil {
 		return nil, fmt.Errorf("failed to update validator components config json: %w", err)

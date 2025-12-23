@@ -59,14 +59,14 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		if utils.IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			totalAmount.Add(totalAmount, new(big.Int).SetUint64(output.Amount))
 
-			if len(chainConfig.NativeTokens) > 0 {
-				wrappedToken, err := cardanotx.GetNativeTokenFromConfig(chainConfig.NativeTokens[0])
-				if err != nil {
-					return err
-				}
+			wrappedTokens, err := cardanotx.GetWrappedTokens(&chainConfig.CardanoChainConfig)
+			if err != nil {
+				return fmt.Errorf("failed to get wrapped tokens from chain config: %w", err)
+			}
 
+			if len(wrappedTokens) > 0 {
 				totalAmountWrapped.Add(
-					totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedToken.String())))
+					totalAmountWrapped, new(big.Int).SetUint64(cardanotx.GetTokenAmount(output, wrappedTokens[0].String())))
 			}
 		}
 	}
@@ -75,6 +75,7 @@ func (p *HotWalletIncrementProcessor) ValidateAndAddClaim(
 		ChainId:       common.ToNumChainID(tx.OriginChainID),
 		Amount:        totalAmount,
 		AmountWrapped: totalAmountWrapped,
+		TxHash:        tx.Hash,
 	})
 
 	p.logger.Info("Added HotWalletIncrementClaim",
@@ -91,7 +92,7 @@ func (p *HotWalletIncrementProcessor) validate(
 		return fmt.Errorf("unsupported chain id found in tx. chain id: %v", tx.OriginChainID)
 	}
 
-	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig); err != nil {
+	if err := utils.ValidateOutputsHaveUnknownTokens(tx, appConfig, true); err != nil {
 		return err
 	}
 

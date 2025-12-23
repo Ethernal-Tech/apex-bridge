@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/Ethernal-Tech/apex-bridge/batcher/core"
@@ -103,13 +104,16 @@ func getOutputs(
 			continue
 		}
 
-		for _, receiver := range transaction.Receivers {
+		for i, receiver := range transaction.Receivers {
 			hasTokens := receiver.AmountWrapped != nil && receiver.AmountWrapped.Sign() > 0
 
 			data := receiversMap[receiver.DestinationAddress]
 			if transaction.TransactionType != uint8(common.RefundConfirmedTxType) {
 				data.Amount += receiver.Amount.Uint64()
-			} else {
+			} else if i == 0 {
+				// when refunding, we take the bridgingFee, and refund the rest to the user
+				// currency will always be contained within the first receiver (oracle implementation detail)
+				// @see RefundRequestProcessorSkylineImpl
 				minBridgingFee := cardanoConfig.GetMinBridgingFee(hasTokens)
 
 				data.Amount += receiver.Amount.Uint64() - minBridgingFee
@@ -120,46 +124,38 @@ func getOutputs(
 			}
 
 			if hasTokens {
-				if len(data.Tokens) == 0 {
-					var (
-						err        error
-						token      cardanowallet.Token
-						shouldMint bool
-					)
+				// when defunding, sc doesn't know the correct tokenId of the wrapped token on this chain
+				// also for backward compatibility during the process of syncing -
+				// rebuilding confirmedTx.Receivers from confirmedTx.receivers
+				token, shouldMint, err := cardanoConfig.GetTokenDataForTokenID(receiver.TokenId)
+				if err != nil {
+					return nil, err
+				}
 
-					switch transaction.TransactionType {
-					case uint8(common.DefundConfirmedTxType):
-						token, err = cardano.GetNativeTokenFromConfig(cardanoConfig.NativeTokens[0])
-						if err != nil {
-							return nil, err
-						}
-					case uint8(common.RefundConfirmedTxType):
-						origDstChainID := common.ToStrChainID(transaction.DestinationChainId)
+				tokenName := token.String()
 
-						token, err = cardanoConfig.GetNativeToken(origDstChainID)
-						if err != nil {
-							return nil, err
-						}
-					default:
-						token, shouldMint, err = cardanoConfig.GetNativeTokenData(
-							common.ToStrChainID(transaction.SourceChainId))
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					if shouldMint {
+				if shouldMint {
+					indx := slices.IndexFunc(mintTokens, func(x cardanowallet.MintTokenAmount) bool {
+						return x.Token.String() == tokenName
+					})
+					if indx == -1 {
 						mintTokens = append(mintTokens, cardanowallet.MintTokenAmount{
 							Token:  token,
 							Amount: receiver.AmountWrapped.Uint64(),
 						})
+					} else {
+						mintTokens[indx].Amount += receiver.AmountWrapped.Uint64()
 					}
+				}
 
-					data.Tokens = []cardanowallet.TokenAmount{
-						cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()),
-					}
+				// check if the token is already in the tokens
+				indx := slices.IndexFunc(data.Tokens, func(x cardanowallet.TokenAmount) bool {
+					return x.Token.String() == tokenName
+				})
+				if indx == -1 {
+					data.Tokens = append(data.Tokens, cardanowallet.NewTokenAmount(token, receiver.AmountWrapped.Uint64()))
 				} else {
-					data.Tokens[0].Amount += receiver.AmountWrapped.Uint64()
+					data.Tokens[indx].Amount += receiver.AmountWrapped.Uint64()
 				}
 			}
 

@@ -2,13 +2,13 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/logger"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -37,21 +37,24 @@ type CardanoChainConfigUtxo struct {
 } // @name CardanoChainConfigUtxo
 
 type EthChainConfig struct {
-	ChainID                 string               `json:"-"`
-	BridgingAddresses       EthBridgingAddresses `json:"-"`
-	NodeURL                 string               `json:"nodeUrl"`
-	SyncBatchSize           uint64               `json:"syncBatchSize"`
-	NumBlockConfirmations   uint64               `json:"numBlockConfirmations"`
-	StartBlockNumber        uint64               `json:"startBlockNumber"`
-	PoolIntervalMiliseconds time.Duration        `json:"poolIntervalMs"`
-	TTLBlockNumberInc       uint64               `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold  uint64               `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent    float64              `json:"noBatchPeriodPercent"`
-	DynamicTx               bool                 `json:"dynamicTx"`
-	TestMode                uint8                `json:"testMode"`
-	MinFeeForBridging       uint64               `json:"minFeeForBridging"`
-	RestartTrackerPullCheck time.Duration        `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount   uint64               `json:"feeAddressBridgingAmount"`
+	ChainID                 string                       `json:"-"`
+	BridgingAddresses       EthBridgingAddresses         `json:"-"`
+	NodeURL                 string                       `json:"nodeUrl"`
+	SyncBatchSize           uint64                       `json:"syncBatchSize"`
+	NumBlockConfirmations   uint64                       `json:"numBlockConfirmations"`
+	StartBlockNumber        uint64                       `json:"startBlockNumber"`
+	PoolIntervalMiliseconds time.Duration                `json:"poolIntervalMs"`
+	TTLBlockNumberInc       uint64                       `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold  uint64                       `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent    float64                      `json:"noBatchPeriodPercent"`
+	DynamicTx               bool                         `json:"dynamicTx"`
+	TestMode                uint8                        `json:"testMode"`
+	MinFeeForBridging       uint64                       `json:"minFeeForBridging"`
+	MinOperationFee         uint64                       `json:"minOperationFee"`
+	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
+	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
+	DestinationChain        map[string]common.TokenPairs `json:"destChain"`
+	Tokens                  map[uint16]common.Token      `json:"tokens"`
 }
 
 type CardanoChainConfig struct {
@@ -87,11 +90,11 @@ type AppSettings struct {
 }
 
 type BridgingSettings struct {
-	MaxAmountAllowedToBridge       *big.Int            `json:"maxAmountAllowedToBridge"`
-	MaxTokenAmountAllowedToBridge  *big.Int            `json:"maxTokenAmountAllowedToBridge"`
-	MaxReceiversPerBridgingRequest int                 `json:"maxReceiversPerBridgingRequest"`
-	MaxBridgingClaimsToGroup       int                 `json:"maxBridgingClaimsToGroup"`
-	AllowedDirections              map[string][]string `json:"allowedDirections"`
+	MaxAmountAllowedToBridge       *big.Int `json:"maxAmountAllowedToBridge"`
+	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
+	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
+	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
+	MinColCoinsAllowedToBridge     uint64   `json:"minColCoinsAllowedToBridge"`
 }
 
 type RetryUnprocessedSettings struct {
@@ -159,54 +162,12 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }
 
-func (appConfig AppConfig) ToSendTxChainConfigs() (map[string]sendtx.ChainConfig, error) {
-	result := make(map[string]sendtx.ChainConfig, len(appConfig.CardanoChains)+len(appConfig.EthChains))
-
-	for chainID, cardanoConfig := range appConfig.CardanoChains {
-		cfg, err := cardanoConfig.ToSendTxChainConfig()
-		if err != nil {
-			return nil, err
+func (config EthChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
 		}
-
-		result[chainID] = cfg
 	}
 
-	for chainID, config := range appConfig.EthChains {
-		result[chainID] = config.ToSendTxChainConfig()
-	}
-
-	return result, nil
-}
-
-func (config CardanoChainConfig) ToSendTxChainConfig() (res sendtx.ChainConfig, err error) {
-	txProvider, err := config.CreateTxProvider()
-	if err != nil {
-		return res, err
-	}
-
-	return sendtx.ChainConfig{
-		CardanoCliBinary:         cardanowallet.ResolveCardanoCliBinary(config.NetworkID),
-		TxProvider:               txProvider,
-		TestNetMagic:             uint(config.NetworkMagic),
-		TTLSlotNumberInc:         config.TTLSlotNumberInc,
-		MinUtxoValue:             config.UtxoMinAmount,
-		NativeTokens:             config.NativeTokens,
-		DefaultMinFeeForBridging: config.DefaultMinFeeForBridging,
-		MinFeeForBridgingTokens:  config.MinFeeForBridgingTokens,
-		MinOperationFeeAmount:    config.MinOperationFee,
-		PotentialFee:             config.PotentialFee,
-		ProtocolParameters:       nil,
-	}, nil
-}
-
-func (config EthChainConfig) ToSendTxChainConfig() sendtx.ChainConfig {
-	feeValue := new(big.Int).SetUint64(config.MinFeeForBridging)
-
-	if len(feeValue.String()) == common.WeiDecimals {
-		feeValue = common.WeiToDfm(feeValue)
-	}
-
-	return sendtx.ChainConfig{
-		DefaultMinFeeForBridging: feeValue.Uint64(),
-	}
+	return 0, fmt.Errorf("currency id not found for chain %s", config.ChainID)
 }

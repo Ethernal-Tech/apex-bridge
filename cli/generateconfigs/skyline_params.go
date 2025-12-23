@@ -195,9 +195,9 @@ func (p *skylineGenerateConfigsParams) Execute(
 		BridgingSettings: oCore.BridgingSettings{
 			MaxAmountAllowedToBridge:       defaultMaxAmountAllowedToBridge,
 			MaxTokenAmountAllowedToBridge:  defaultMaxTokenAmountAllowedToBridge,
+			MinColCoinsAllowedToBridge:     common.MinColCoinsAllowedToBridgeDefault,
 			MaxReceiversPerBridgingRequest: 4, // 4 + 1 for fee
 			MaxBridgingClaimsToGroup:       5,
-			AllowedDirections:              map[string][]string{},
 		},
 		RetryUnprocessedSettings: oCore.RetryUnprocessedSettings{
 			BaseTimeout: time.Second * 60,

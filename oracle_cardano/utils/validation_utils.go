@@ -31,18 +31,23 @@ func ValidateTxInputs(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
 	return fmt.Errorf("fee address not found in tx inputs")
 }
 
-func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig) error {
+func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppConfig, isHotWallet bool) error {
 	chainConfig := appConfig.CardanoChains[tx.OriginChainID]
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(tx.OriginChainID)
-	knownTokens := make([]wallet.Token, len(chainConfig.NativeTokens))
 
-	for i, tokenConfig := range chainConfig.NativeTokens {
-		token, err := cardanotx.GetNativeTokenFromConfig(tokenConfig)
-		if err != nil {
-			return err
-		}
+	var (
+		knownTokens []wallet.Token
+		err         error
+	)
 
-		knownTokens[i] = token
+	if isHotWallet {
+		knownTokens, err = cardanotx.GetWrappedTokens(&chainConfig.CardanoChainConfig)
+	} else {
+		knownTokens, err = cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to get known tokens from chain config: %w", err)
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
@@ -92,16 +97,6 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 	}
 
 	return multisigUtxoOutput, nil
-}
-
-func IsTxDirectionAllowed(appConfing *cCore.AppConfig, srcChainID, destChainID string) error {
-	for _, chain := range appConfing.BridgingSettings.AllowedDirections[srcChainID] {
-		if chain == destChainID {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("transaction direction not allowed: %s -> %s", srcChainID, destChainID)
 }
 
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {

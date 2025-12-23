@@ -118,13 +118,15 @@ func (co *EthChainObserverImpl) updateIsTrackerAlive() bool {
 	return false
 }
 
-func loadTrackerConfigs(config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
+func loadTrackerConfigs(
+	config *oCore.EthChainConfig, txsReceiver ethOracleCore.EthTxsReceiver,
 	logger hclog.Logger,
 ) *eventTracker.EventTrackerConfig {
 	bridgingAddress := config.BridgingAddresses.BridgingAddress
 	scAddress := ethgo.HexToAddress(bridgingAddress)
 
-	eventSigs, err := eth.GetNexusEventSignatures()
+	eventSigs, err := eth.GetGatewayEventSignatures()
+
 	if err != nil {
 		logger.Error("failed to get nexus event signatures", "err", err)
 

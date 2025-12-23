@@ -7,6 +7,7 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
+	oChain "github.com/Ethernal-Tech/apex-bridge/oracle_common/chain"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
@@ -43,6 +44,7 @@ func NewEthOracle(
 	boltDB *bbolt.DB,
 	typeRegister common.TypeRegister,
 	appConfig *oCore.AppConfig,
+	cardanoChainInfos map[string]*oChain.CardanoChainInfo,
 	oracleBridgeSC eth.IOracleBridgeSmartContract,
 	bridgeSubmitter oCore.BridgeSubmitter,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
@@ -64,15 +66,27 @@ func NewEthOracle(
 	)
 
 	if appConfig.RefundEnabled {
-		refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		if appConfig.RunMode == common.ReactorMode {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessor(logger)
+		} else {
+			refundRequestProcessor = successtxprocessors.NewRefundRequestProcessorSkyline(logger)
+		}
+
 		successProcessors = append(successProcessors, refundRequestProcessor)
 	}
 
 	successProcessors = append(successProcessors,
 		successtxprocessors.NewEthBatchExecutedProcessor(logger),
-		successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger),
 		successtxprocessors.NewHotWalletIncrementProcessor(logger),
 	)
+
+	if appConfig.RunMode == common.ReactorMode {
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewEthBridgingRequestedProcessor(refundRequestProcessor, logger))
+	} else {
+		successProcessors = append(successProcessors,
+			successtxprocessors.NewEthBridgingRequestedProcessorSkyline(refundRequestProcessor, logger, cardanoChainInfos))
+	}
 
 	txProcessors := ethtxsprocessor.NewTxProcessorsCollection(
 		successProcessors,

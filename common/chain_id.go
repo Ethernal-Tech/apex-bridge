@@ -46,6 +46,7 @@ var (
 		ChainIDStrPrime,
 		ChainIDStrCardano,
 		ChainIDStrVector,
+		ChainIDStrNexus,
 	}
 )
 

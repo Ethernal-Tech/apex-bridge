@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
-	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
@@ -27,7 +26,8 @@ type CardanoChainConfig struct {
 	DefaultMinFeeForBridging uint64                           `json:"defaultMinFeeForBridging"`
 	MinFeeForBridgingTokens  uint64                           `json:"minFeeForBridgingTokens"`
 	TakeAtLeastUtxoCount     uint                             `json:"takeAtLeastUtxoCount"`
-	NativeTokens             []sendtx.TokenExchangeConfig     `json:"nativeTokens"`
+	DestinationChains        map[string]common.TokenPairs     `json:"destChains"`
+	Tokens                   map[uint16]common.Token          `json:"tokens"`
 	MintingScriptTxInput     *cardanowallet.TxInput           `json:"mintingScriptTxInput,omitempty"`
 	CustodialNft             *cardanowallet.Token             `json:"custodialNft,omitempty"`
 	RelayerAddress           string                           `json:"relayerAddress,omitempty"`
@@ -68,78 +68,92 @@ func (config CardanoChainConfig) CreateTxProvider() (cardanowallet.ITxProvider, 
 	return nil, errors.New("neither a blockfrost nor a ogmios nor a socket path is specified")
 }
 
-func (config CardanoChainConfig) GetMinBridgingFee(isNativeToken bool) uint64 {
-	if isNativeToken {
+func (config CardanoChainConfig) GetMinBridgingFee(hasNativeTokens bool) uint64 {
+	if hasNativeTokens {
 		return config.MinFeeForBridgingTokens
 	}
 
 	return config.DefaultMinFeeForBridging
 }
 
-func (config CardanoChainConfig) GetNativeTokenName(dstChainID string) string {
-	for _, dst := range config.NativeTokens {
-		if dst.DstChainID != dstChainID {
+func (config CardanoChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency not found in chain config")
+}
+
+func (config CardanoChainConfig) GetWrappedTokenID() (uint16, bool) {
+	for tokenID, token := range config.Tokens {
+		if token.IsWrappedCurrency {
+			return tokenID, true
+		}
+	}
+
+	return 0, false
+}
+
+func (config CardanoChainConfig) GetTokenByID(tokenID uint16) (token cardanowallet.Token, err error) {
+	tokenConfig, ok := config.Tokens[tokenID]
+	if !ok {
+		return token, fmt.Errorf("token not found in chain config")
+	}
+
+	return cardanowallet.NewTokenWithFullNameTry(tokenConfig.ChainSpecific)
+}
+
+func (config CardanoChainConfig) GetWrappedToken() (token cardanowallet.Token, err error) {
+	for _, tokenConfig := range config.Tokens {
+		if tokenConfig.IsWrappedCurrency {
+			return cardanowallet.NewTokenWithFullNameTry(tokenConfig.ChainSpecific)
+		}
+	}
+
+	return token, fmt.Errorf("wrapped token not found in chain config")
+}
+
+func (config CardanoChainConfig) GetTokenDataForTokenID(
+	tokenID uint16,
+) (token cardanowallet.Token, shouldMint bool, err error) {
+	if tokenID == 0 {
+		token, err = config.GetWrappedToken()
+
+		return token, false, err
+	}
+
+	tokenConfig, ok := config.Tokens[tokenID]
+	if !ok {
+		return token, false, fmt.Errorf("token not found in chain config: %d", tokenID)
+	}
+
+	token, err = cardanowallet.NewTokenWithFullNameTry(tokenConfig.ChainSpecific)
+	if err != nil {
+		return token, false, fmt.Errorf("failed to get token from name: %w", err)
+	}
+
+	return token, !tokenConfig.LockUnlock, nil
+}
+
+func (config CardanoChainConfig) GetFullTokenNamesAndIds() (map[string]uint16, error) {
+	tokens := make(map[string]uint16, len(config.Tokens))
+
+	for tokenID, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
 			continue
 		}
 
-		return dst.TokenName
-	}
-
-	return ""
-}
-
-func (config CardanoChainConfig) GetNativeToken(dstChainID string) (token cardanowallet.Token, err error) {
-	tokenName := config.GetNativeTokenName(dstChainID)
-	if tokenName == "" {
-		return token, fmt.Errorf("no native token specified for destination: %s", dstChainID)
-	}
-
-	token, err = GetNativeTokenFromName(tokenName)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
-}
-
-func (config CardanoChainConfig) GetNativeTokenData(
-	dstChainID string,
-) (token cardanowallet.Token, shouldMint bool, err error) {
-	tokenName := ""
-	shouldMint = false
-
-	for _, dst := range config.NativeTokens {
-		if dst.DstChainID == dstChainID {
-			tokenName = dst.TokenName
-			shouldMint = dst.Mint
-
-			break
+		confToken, err := cardanowallet.NewTokenWithFullNameTry(token.ChainSpecific)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token with ID %d from config. err: %w", tokenID, err)
 		}
+
+		tokens[confToken.String()] = tokenID
 	}
 
-	if tokenName == "" {
-		return token, shouldMint, fmt.Errorf("no native token specified for destination: %s", dstChainID)
-	}
-
-	token, err = GetNativeTokenFromName(tokenName)
-	if err == nil {
-		return token, shouldMint, nil
-	}
-
-	return token, shouldMint, fmt.Errorf("chainID: %s, err: %w", dstChainID, err)
-}
-
-func GetNativeTokenFromConfig(tokenConfig sendtx.TokenExchangeConfig) (token cardanowallet.Token, err error) {
-	token, err = GetNativeTokenFromName(tokenConfig.TokenName)
-	if err == nil {
-		return token, nil
-	}
-
-	return token, fmt.Errorf("chainID: %s, err: %w", tokenConfig.DstChainID, err)
-}
-
-func GetNativeTokenFromName(tokenName string) (token cardanowallet.Token, err error) {
-	return cardanowallet.NewTokenWithFullNameTry(tokenName)
+	return tokens, nil
 }
 
 var (
@@ -148,11 +162,13 @@ var (
 )
 
 type BatcherEVMChainConfig struct {
-	TTLBlockNumberInc      uint64  `json:"ttlBlockNumberInc"`
-	BlockRoundingThreshold uint64  `json:"blockRoundingThreshold"`
-	NoBatchPeriodPercent   float64 `json:"noBatchPeriodPercent"`
-	TestMode               uint8   `json:"testMode,omitempty"` // only functional in test mode (`-tags testenv`)
-	MinFeeForBridging      uint64  `json:"minFeeForBridging"`
+	TTLBlockNumberInc      uint64                       `json:"ttlBlockNumberInc"`
+	BlockRoundingThreshold uint64                       `json:"blockRoundingThreshold"`
+	NoBatchPeriodPercent   float64                      `json:"noBatchPeriodPercent"`
+	TestMode               uint8                        `json:"testMode,omitempty"` // only test mode (`-tags testenv`)
+	MinFeeForBridging      uint64                       `json:"minFeeForBridging"`
+	DestinationChains      map[string]common.TokenPairs `json:"destChains"`
+	Tokens                 map[uint16]common.Token      `json:"tokens"`
 }
 
 func NewBatcherEVMChainConfig(rawMessage json.RawMessage) (*BatcherEVMChainConfig, error) {
@@ -171,6 +187,26 @@ func (*BatcherEVMChainConfig) GetChainType() string {
 
 func (config BatcherEVMChainConfig) Serialize() ([]byte, error) {
 	return json.Marshal(config)
+}
+
+func (config BatcherEVMChainConfig) GetCurrencyID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.ChainSpecific == cardanowallet.AdaTokenName {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("currency id not found")
+}
+
+func (config BatcherEVMChainConfig) GetWrappedTokenID() (uint16, error) {
+	for id, token := range config.Tokens {
+		if token.IsWrappedCurrency {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("wrapped token id not found")
 }
 
 type RelayerEVMChainConfig struct {

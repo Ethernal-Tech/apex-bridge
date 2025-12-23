@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
@@ -30,19 +29,22 @@ type BaseMetadata struct {
 	BridgingTxType BridgingTxType `cbor:"t" json:"t"`
 }
 
-// obsolete
-type BridgingRequestMetadataTransactionV1 struct {
-	Address []string `cbor:"a" json:"a"`
-	Amount  uint64   `cbor:"m" json:"m"`
+// backward compatibility
+type BridgingRequestMetadataTransactionBC struct {
+	Address                     []string `cbor:"a" json:"a"`
+	IsNativeTokenOnSrc_Obsolete byte     `cbor:"nt" json:"nt"` //nolint:stylecheck
+	Amount                      uint64   `cbor:"m" json:"m"`
+	TokenID                     uint16   `cbor:"t" json:"t"`
 }
 
-// obsolete
-type BridgingRequestMetadataV1 struct {
+// backward compatibility
+type BridgingRequestMetadataBC struct {
 	BridgingTxType     BridgingTxType                         `cbor:"t" json:"t"`
 	DestinationChainID string                                 `cbor:"d" json:"d"`
 	SenderAddr         []string                               `cbor:"s" json:"s"`
-	Transactions       []BridgingRequestMetadataTransactionV1 `cbor:"tx" json:"tx"`
+	Transactions       []BridgingRequestMetadataTransactionBC `cbor:"tx" json:"tx"`
 	BridgingFee        uint64                                 `cbor:"fa" json:"fa"`
+	OperationFee       uint64                                 `cbor:"of" json:"of"`
 }
 
 type RefundBridgingRequestMetadata struct {
@@ -81,7 +83,7 @@ func getUnmarshalFunc(encodingType MetadataEncodingType) (unmarshalFunc, error) 
 }
 
 func MarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,
@@ -103,42 +105,9 @@ func MarshalMetadata[
 	return result, nil
 }
 
-func mapV1ToCurrentBridgingRequest(metadataMap map[int]map[int]*BridgingRequestMetadataV1) (
-	*BridgingRequestMetadata, error,
-) {
-	var v1m *BridgingRequestMetadataV1
-
-	for _, mapVal := range metadataMap {
-		if metadata, exists := mapVal[MetadataMapKey]; exists {
-			v1m = metadata
-
-			break
-		}
-	}
-
-	if v1m == nil {
-		return nil, errors.New("couldn't find v1 bridging request metadata")
-	}
-
-	txs := make([]sendtx.BridgingRequestMetadataTransaction, len(v1m.Transactions))
-	for i, tx := range v1m.Transactions {
-		txs[i] = sendtx.BridgingRequestMetadataTransaction{
-			Address: tx.Address,
-			Amount:  tx.Amount,
-		}
-	}
-
-	return &BridgingRequestMetadata{
-		BridgingTxType:     sendtx.BridgingRequestType(v1m.BridgingTxType),
-		DestinationChainID: v1m.DestinationChainID,
-		SenderAddr:         v1m.SenderAddr,
-		Transactions:       txs,
-		BridgingFee:        v1m.BridgingFee,
-	}, nil
-}
-
 func UnmarshalMetadata[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata |
+		BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, data []byte,
@@ -154,15 +123,6 @@ func UnmarshalMetadata[
 
 	err = unmarshalFunc(data, &metadataMap)
 	if err != nil {
-		var v1mmap map[int]map[int]*BridgingRequestMetadataV1
-		if v1UnmarshalErr := unmarshalFunc(data, &v1mmap); v1UnmarshalErr == nil {
-			if m, v1MapErr := mapV1ToCurrentBridgingRequest(v1mmap); v1MapErr == nil {
-				if metadata, ok := any(m).(*T); ok {
-					return metadata, nil
-				}
-			}
-		}
-
 		var metadata interface{}
 
 		errInner := unmarshalFunc(data, &metadata)
@@ -183,7 +143,7 @@ func UnmarshalMetadata[
 }
 
 func MarshalMetadataMap[
-	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataV1 |
+	T BaseMetadata | BridgingRequestMetadata | BridgingRequestMetadataBC |
 		RefundBridgingRequestMetadata | BatchExecutedMetadata,
 ](
 	encodingType MetadataEncodingType, metadata T,

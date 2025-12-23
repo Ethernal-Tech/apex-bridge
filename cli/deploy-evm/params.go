@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -41,8 +40,11 @@ const (
 	bridgeSCAddrFlag     = "bridge-addr"
 	bridgePrivateKeyFlag = "bridge-key"
 
-	minFeeAmountFlag      = "min-fee"
-	minBridgingAmountFlag = "min-bridging-amount"
+	minFeeAmountFlag           = "min-fee"
+	minBridgingAmountFlag      = "min-bridging-amount"
+	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
+	minOperationFeeFlag        = "min-operation-fee"
+	currencyTokIDFlag          = "currency-token-id"
 
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
@@ -61,8 +63,11 @@ const (
 	privateKeyConfigFlag     = "key-config"
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 
-	minFeeAmountFlagDesc      = "minimal fee amount"
-	minBridgingAmountFlagDesc = "minimal amount to bridge"
+	minFeeAmountFlagDesc           = "minimal fee amount"
+	minBridgingAmountFlagDesc      = "minimal amount to bridge"
+	minTokenBridgingAmountFlagDesc = "minimal amount to bridge tokens"
+	minOperationFeeFlagDesc        = "minimal operation fee"
+	currencyTokIDFlagDesc          = "token ID of the currency of the chain"
 
 	defaultEVMChainID = common.ChainIDStrNexus
 
@@ -76,6 +81,14 @@ const (
 	NativeTokenPredicate = "NativeTokenPredicate"
 	NativeTokenWallet    = "NativeTokenWallet"
 	Validators           = "Validators"
+	MyToken              = "MyToken"
+	TokenFactory         = "TokenFactory"
+
+	MyTokenTestName   = "Test Token"
+	MyTokenTestSymbol = "TTK"
+
+	defaultEvmBranch       = "feat/skyline"
+	defaultCurrencyTokenID = 1
 )
 
 type deployEVMParams struct {
@@ -94,11 +107,19 @@ type deployEVMParams struct {
 
 	privateKeyConfig string
 
-	minFeeString            string
-	minBridgingAmountString string
-	minFeeAmount            *big.Int
-	minBridgingAmount       *big.Int
-	gasLimit                uint64
+	minFeeString                 string
+	minBridgingAmountString      string
+	minTokenBridgingAmountString string
+	minOperationFeeString        string
+
+	minFeeAmount           *big.Int
+	minBridgingAmount      *big.Int
+	minTokenBridgingAmount *big.Int
+	minOperationFee        *big.Int
+
+	currencyTokenID uint16
+
+	gasLimit uint64
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -106,7 +127,7 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.evmChainID) {
+	if !common.IsExistingSkylineChainID(ip.evmChainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
 	}
 
@@ -144,8 +165,32 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, bridgingAmount)
 	}
 
+	tokenBridgingAmount, ok := new(big.Int).SetString(ip.minTokenBridgingAmountString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minTokenBridgingAmountFlag)
+	}
+
+	if tokenBridgingAmount.Cmp(big.NewInt(0)) <= 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minBridgingAmountFlag, tokenBridgingAmount)
+	}
+
+	operationFeeAmount, ok := new(big.Int).SetString(ip.minOperationFeeString, 0)
+	if !ok {
+		return fmt.Errorf("--%s invalid amount", minOperationFeeFlag)
+	}
+
+	if operationFeeAmount.Cmp(big.NewInt(0)) < 0 {
+		return fmt.Errorf("--%s invalid amount: %d", minOperationFeeFlag, operationFeeAmount)
+	}
+
+	if ip.currencyTokenID == 0 {
+		return fmt.Errorf("--%s invalid value: %d", currencyTokIDFlag, ip.currencyTokenID)
+	}
+
 	ip.minFeeAmount = feeAmount
 	ip.minBridgingAmount = bridgingAmount
+	ip.minTokenBridgingAmount = tokenBridgingAmount
+	ip.minOperationFee = operationFeeAmount
 
 	return nil
 }
@@ -196,7 +241,7 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.evmBranchName,
 		evmBranchNameFlag,
-		"main",
+		defaultEvmBranch,
 		evmBranchNameFlagDesc,
 	)
 
@@ -217,15 +262,36 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&ip.minFeeString,
 		minFeeAmountFlag,
-		strconv.FormatUint(common.MinFeeForBridgingDefault, 10),
+		common.DfmToWei(new(big.Int).SetUint64(common.MinFeeForBridgingDefault)).String(),
 		minFeeAmountFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&ip.minBridgingAmountString,
 		minBridgingAmountFlag,
-		strconv.FormatUint(common.MinUtxoAmountDefault, 10),
+		common.DfmToWei(new(big.Int).SetUint64(common.MinUtxoAmountDefault)).String(),
 		minBridgingAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minTokenBridgingAmountString,
+		minTokenBridgingAmountFlag,
+		common.DfmToWei(new(big.Int).SetUint64(common.MinColCoinsAllowedToBridgeDefault)).String(),
+		minTokenBridgingAmountFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.minOperationFeeString,
+		minOperationFeeFlag,
+		common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault)).String(),
+		minOperationFeeFlagDesc,
+	)
+
+	cmd.Flags().Uint16Var(
+		&ip.currencyTokenID,
+		currencyTokIDFlag,
+		defaultCurrencyTokenID,
+		currencyTokIDFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -269,10 +335,10 @@ func (ip *deployEVMParams) Execute(
 	ctx := context.Background()
 
 	contractNames := []string{
-		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators,
+		Gateway, NativeTokenPredicate, NativeTokenWallet, Validators, MyToken, TokenFactory,
 	}
 	setDependenciesData := map[string][]string{
-		Gateway:              {NativeTokenPredicate, Validators},
+		Gateway:              {NativeTokenPredicate, TokenFactory, Validators},
 		NativeTokenPredicate: {Gateway, NativeTokenWallet},
 		NativeTokenWallet:    {NativeTokenPredicate},
 		Validators:           {Gateway},
@@ -332,10 +398,16 @@ func (ip *deployEVMParams) Execute(
 	contracts := make([]contractInfo, len(contractNames)*2)
 	txHashes := make([]string, len(contractNames)*2)
 	addresses := make(map[string]ethcommon.Address, len(contractNames))
+	implAddresses := make(map[string]ethcommon.Address, len(contractNames))
 
 	for i, contractName := range contractNames {
+		initParams, err := ip.getInitParams(contractName, addresses, implAddresses)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get init parameters for contract %s: %w", contractName, err)
+		}
+
 		proxyTx, tx, err := ethContractUtils.DeployWithProxy(
-			ctx, artifacts[contractName], artifacts[ercProxyContractName], ip.getInitParams(contractName)...)
+			ctx, artifacts[contractName], artifacts[ercProxyContractName], initParams...)
 		if err != nil {
 			return nil, fmt.Errorf("deploy %s has been failed: %w", contractName, err)
 		}
@@ -355,6 +427,7 @@ func (ip *deployEVMParams) Execute(
 			Addr: tx.Address,
 		}
 		addresses[contractName] = proxyTx.Address
+		implAddresses[contractName] = tx.Address
 	}
 
 	_, _ = outputter.Write([]byte("Waiting for receipts..."))
@@ -497,14 +570,58 @@ func (ip *deployEVMParams) getTxHelperBridge() (*eth.EthHelperWrapper, error) {
 		ethtxhelper.WithDynamicTx(false)), nil
 }
 
-func (ip *deployEVMParams) getInitParams(contractName string) []any {
+func (ip *deployEVMParams) getInitParams(
+	contractName string,
+	addresses map[string]ethcommon.Address,
+	implAddresses map[string]ethcommon.Address,
+) ([]any, error) {
 	switch strings.ToLower(contractName) {
 	case strings.ToLower(Gateway):
 		return []any{
 			ip.minFeeAmount,
 			ip.minBridgingAmount,
+			ip.minTokenBridgingAmount,
+			ip.minOperationFee,
+			ip.currencyTokenID,
+		}, nil
+	case strings.ToLower(TokenFactory):
+		gatewayProxy, ok := addresses[Gateway]
+		if !ok {
+			return nil, fmt.Errorf("missing Gateway address for TokenFactory")
 		}
+
+		myTokenImpl, ok := implAddresses[MyToken]
+		if !ok {
+			return nil, fmt.Errorf("missing MyToken implementation address for TokenFactory")
+		}
+
+		nativeWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for TokenFactory")
+		}
+
+		return []any{
+			gatewayProxy,
+			myTokenImpl,
+			nativeWallet,
+		}, nil
+	case strings.ToLower(MyToken):
+		nativeTokenWallet, ok := addresses[NativeTokenWallet]
+		if !ok {
+			return nil, fmt.Errorf("missing NativeTokenWallet address for MyToken")
+		}
+
+		return []any{
+			MyTokenTestName,
+			MyTokenTestSymbol,
+			nativeTokenWallet,
+		}, nil
+	case
+		strings.ToLower(NativeTokenPredicate),
+		strings.ToLower(NativeTokenWallet),
+		strings.ToLower(Validators):
+		return nil, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unknown contract: %s", contractName)
 	}
 }
