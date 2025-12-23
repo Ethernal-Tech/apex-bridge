@@ -267,6 +267,7 @@ func (sp *CardanoStateProcessor) getTxsFromBatchEvent(
 			},
 		)
 		if processedTx == nil || errProcessed != nil {
+			sp.logger.Error("Failed to get proccessed tx", "err", errProcessed)
 			// not in processed either — return original pending error
 			return nil, errPending
 		}
