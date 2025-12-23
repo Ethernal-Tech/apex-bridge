@@ -270,6 +270,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 			},
 		)
 		if processedTx == nil || errProcessed != nil {
+			sp.logger.Error("Failed to get proccessed tx", "err", errProcessed)
 			// not in processed either — return original pending error
 			return nil, errPending
 		}
@@ -460,6 +461,22 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 		invalidTxsCounter++
 	}
 
+	directlyProcessTx := func(tx *core.EthTx, txProcessor core.EthTxSuccessProcessor) {
+		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+			key := string(tx.ToExpectedEthTxKey())
+
+			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+
+				delete(sp.state.expectedTxsMap, key)
+			}
+
+			sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+				tx.OriginChainID, tx.InnerActionHash,
+			))] = common.Hash(tx.Hash)
+		}
+	}
+
 	// check unprocessed txs from indexers
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		sp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
@@ -498,19 +515,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				txProcessor.GetType() == common.TxTypeRefundRequest {
 				pendingTxs = append(pendingTxs, unprocessedTx)
 			} else {
-				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-					key := string(unprocessedTx.ToExpectedEthTxKey())
-
-					if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-						processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-
-						delete(sp.state.expectedTxsMap, key)
-					}
-
-					sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
-						unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
-					))] = common.Hash(unprocessedTx.Hash)
-				}
+				directlyProcessTx(unprocessedTx, txProcessor)
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
 			}
@@ -519,19 +524,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				"BlockNumber", unprocessedTx.BlockNumber,
 				"LastObservedBlock", cardanoBlock.BlockSlot)
 
-			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-				key := string(unprocessedTx.ToExpectedEthTxKey())
-
-				if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
-
-					delete(sp.state.expectedTxsMap, key)
-				}
-
-				sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
-					unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
-				))] = common.Hash(unprocessedTx.Hash)
-			}
+			directlyProcessTx(unprocessedTx, txProcessor)
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
 		}
