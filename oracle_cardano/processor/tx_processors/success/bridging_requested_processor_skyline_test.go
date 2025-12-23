@@ -38,6 +38,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		validPrimeTestAddress      = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
 		nexusBridgingAddr          = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validNexusAddr             = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
+		nexusBridgingFeeAddr       = common.EthZeroAddr
 
 		policyID    = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 		testChainID = "test"
@@ -45,9 +46,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 	primeCurrencyID := uint16(1)
 	cardanoCurrencyID := uint16(2)
-	primeWrappedTokenID := uint16(3)
-	cardanoWrappedTokenID := uint16(4)
-	usdtTokenID := uint16(5)
+	nexusCurrencyID := uint16(3)
+	primeWrappedTokenID := uint16(4)
+	cardanoWrappedTokenID := uint16(5)
+	usdtTokenID := uint16(6)
 
 	wrappedTokenPrime, err := wallet.NewTokenWithFullName(
 		fmt.Sprintf("%s.%s",
@@ -142,6 +144,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 					MinFeeForBridging: minFeeForBridgingTokens,
 					Tokens: map[uint16]common.Token{
+						nexusCurrencyID:     {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
 						usdtTokenID:         {ChainSpecific: "0x11", LockUnlock: false, IsWrappedCurrency: false},
 						primeWrappedTokenID: {ChainSpecific: "0x22", LockUnlock: false, IsWrappedCurrency: false},
 					},
@@ -1264,7 +1267,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Address: sendtx.AddrToMetaDataAddr(nexusBridgingFeeAddr),
 					Amount:  utxoMinValue,
 					TokenID: primeCurrencyID,
 				},
@@ -1322,7 +1325,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
 			Transactions: []sendtx.BridgingRequestMetadataTransaction{
 				{
-					Address: sendtx.AddrToMetaDataAddr(common.EthZeroAddr),
+					Address: sendtx.AddrToMetaDataAddr(nexusBridgingFeeAddr),
 					Amount:  utxoMinValue,
 					TokenID: primeWrappedTokenID,
 				},
@@ -1447,7 +1450,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: common.SplitString(common.EthZeroAddr, 40),
+				Address: common.SplitString(nexusBridgingFeeAddr, 40),
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: primeCurrencyID,
 			},
@@ -2263,7 +2266,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: []string{common.EthZeroAddr},
+				Address: []string{nexusBridgingFeeAddr},
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: primeCurrencyID,
 			},
@@ -2352,7 +2355,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		txHash := [32]byte(common.NewHashFromHexString("0x2244FF"))
 		receivers := []sendtx.BridgingRequestMetadataTransaction{
 			{
-				Address: []string{common.EthZeroAddr},
+				Address: []string{nexusBridgingFeeAddr},
 				Amount:  minFeeForBridgingTokens * 2,
 				TokenID: cardanoCurrencyID,
 			},

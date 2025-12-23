@@ -64,7 +64,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 						BridgingAddress: nexusBridgingAddr,
 					},
 					MinFeeForBridging: minFeeForBridging,
-					DestinationChain: map[string]common.TokenPairs{
+					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrPrime: []common.TokenPair{
 							{SourceTokenID: nexusCurrencyID, DestinationTokenID: primeWrappedTokenID, TrackSourceToken: true, TrackDestinationToken: true},
 							{SourceTokenID: nexusWrappedTokenID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
