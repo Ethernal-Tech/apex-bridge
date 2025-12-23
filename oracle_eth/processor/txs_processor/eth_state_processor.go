@@ -519,17 +519,19 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				"BlockNumber", unprocessedTx.BlockNumber,
 				"LastObservedBlock", cardanoBlock.BlockSlot)
 
-			key := string(unprocessedTx.ToExpectedEthTxKey())
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				key := string(unprocessedTx.ToExpectedEthTxKey())
 
-			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+				if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-				delete(sp.state.expectedTxsMap, key)
+					delete(sp.state.expectedTxsMap, key)
+				}
+
+				sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+					unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
+				))] = common.Hash(unprocessedTx.Hash)
 			}
-
-			sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
-				unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
-			))] = common.Hash(unprocessedTx.Hash)
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
 		}
