@@ -69,7 +69,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					DestinationChain: map[string]common.TokenPairs{
+					DestinationChains: map[string]common.TokenPairs{
 						common.ChainIDStrPrime: []common.TokenPair{
 							{SourceTokenID: nexusCurrencyID, DestinationTokenID: primeCurrencyID, TrackSourceToken: true, TrackDestinationToken: true},
 						},
