@@ -66,6 +66,8 @@ func (sp *CardanoStateProcessor) GetChainType() string {
 
 func (sp *CardanoStateProcessor) Reset() {
 	sp.state = &perTickState{updateData: &core.CardanoUpdateTxsData{}}
+
+	sp.state.lastObservedPerChain = make(map[string]uint64)
 }
 
 func (sp *CardanoStateProcessor) ProcessSavedEvents() {
@@ -437,8 +439,6 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 ) {
 	var relevantUnprocessedTxs []*core.CardanoTx
 
-	lastObservedPerChain := make(map[string]uint64)
-
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
 		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && cCore.IsTxReady(
 			unprocessedTx.SubmitTryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
@@ -493,7 +493,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedSlot, ok := lastObservedPerChain[unprocessedTx.OriginChainID]
+		lastObservedSlot, ok := sp.state.lastObservedPerChain[unprocessedTx.OriginChainID]
 		if !ok {
 			cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
 			if err != nil {
@@ -507,7 +507,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			}
 
 			lastObservedSlot = cardanoBlock.BlockSlot.Uint64()
-			lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedSlot
+			sp.state.lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedSlot
 		}
 
 		if unprocessedTx.BlockSlot > lastObservedSlot {

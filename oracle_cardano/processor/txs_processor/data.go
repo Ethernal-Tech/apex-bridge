@@ -17,6 +17,8 @@ type perTickState struct {
 	expectedTxsMap map[string]*core.BridgeExpectedCardanoTx
 	unprocessedTxs []*core.CardanoTx
 	blockInfo      *core.BridgeClaimsBlockInfo
+
+	lastObservedPerChain map[string]uint64
 }
 
 type txProcessorsCollection struct {

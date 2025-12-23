@@ -69,6 +69,8 @@ func (sp *EthStateProcessor) Reset() {
 		updateData:                    &core.EthUpdateTxsData{},
 		innerActionHashToActualTxHash: make(map[string]common.Hash),
 	}
+
+	sp.state.lastObservedPerChain = make(map[string]uint64)
 }
 
 func (sp *EthStateProcessor) ProcessSavedEvents() {
@@ -436,8 +438,6 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 ) {
 	var relevantUnprocessedTxs []*core.EthTx
 
-	lastObservedPerChain := make(map[string]uint64)
-
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
 		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && oracleCore.IsTxReady(
 			unprocessedTx.SubmitTryCount, unprocessedTx.LastTimeTried, sp.appConfig.RetryUnprocessedSettings) {
@@ -496,7 +496,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlock, ok := lastObservedPerChain[unprocessedTx.OriginChainID]
+		lastObservedBlock, ok := sp.state.lastObservedPerChain[unprocessedTx.OriginChainID]
 		if !ok {
 			cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
 			if err != nil {
@@ -510,7 +510,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			}
 
 			lastObservedBlock = cardanoBlock.BlockSlot.Uint64()
-			lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedBlock
+			sp.state.lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedBlock
 		}
 
 		if unprocessedTx.BlockNumber > lastObservedBlock {
