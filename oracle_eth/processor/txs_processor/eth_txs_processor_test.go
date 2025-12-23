@@ -21,7 +21,6 @@ import (
 	ethereum_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	commonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_eth/database_access"
 	eventTrackerStore "github.com/Ethernal-Tech/blockchain-event-tracker/store"
@@ -52,12 +51,10 @@ func newEthTxsProcessor(
 
 	bridgeSmartContractMock.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{BlockSlot: big.NewInt(0)}, nil)
 
-	lastObservedTracker := commonBridge.NewLastObserved(bridgeSmartContractMock, hclog.NewNullLogger())
-
 	ethStateProcessor := NewEthStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, hclog.NewNullLogger(),
-		lastObservedTracker,
+		bridgeSmartContractMock,
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(

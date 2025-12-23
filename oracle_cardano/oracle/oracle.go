@@ -14,7 +14,6 @@ import (
 	failedtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/tx_processors/failed"
 	successtxprocessors "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/tx_processors/success"
 	cardanotxsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/processor/txs_processor"
-	commonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/validatorobserver"
@@ -100,12 +99,10 @@ func NewCardanoOracle(
 		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger,
 	)
 
-	lastObservedBlockTracker := commonBridge.NewLastObserved(oracleBridgeSC, logger)
-
 	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, txsProcessorLogger,
-		lastObservedBlockTracker,
+		oracleBridgeSC,
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(

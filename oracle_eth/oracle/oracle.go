@@ -7,7 +7,6 @@ import (
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
-	commonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	oCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/bridge"
@@ -90,12 +89,10 @@ func NewEthOracle(
 	ethTxsReceiver := ethtxsprocessor.NewEthTxsReceiverImpl(
 		appConfig, db, txProcessors, bridgingRequestStateUpdater, txsProcessorLogger)
 
-	lastObservedTracker := commonBridge.NewLastObserved(oracleBridgeSC, logger)
-
 	ethStateProcessor := ethtxsprocessor.NewEthStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, txsProcessorLogger,
-		lastObservedTracker,
+		oracleBridgeSC,
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -28,13 +29,13 @@ const (
 var _ cCore.SpecificChainTxsProcessorState = (*CardanoStateProcessor)(nil)
 
 type CardanoStateProcessor struct {
-	ctx                      context.Context
-	appConfig                *cCore.AppConfig
-	db                       core.CardanoTxsProcessorDB
-	txProcessors             *txProcessorsCollection
-	indexerDbs               map[string]indexer.Database
-	logger                   hclog.Logger
-	lastBlockObservedTracker cCore.LastBlockObsvervedTracker
+	ctx            context.Context
+	appConfig      *cCore.AppConfig
+	db             core.CardanoTxsProcessorDB
+	txProcessors   *txProcessorsCollection
+	indexerDbs     map[string]indexer.Database
+	logger         hclog.Logger
+	oracleBridgeSC eth.IOracleBridgeSmartContract
 
 	state *perTickState
 }
@@ -46,16 +47,16 @@ func NewCardanoStateProcessor(
 	txProcessors *txProcessorsCollection,
 	indexerDbs map[string]indexer.Database,
 	logger hclog.Logger,
-	lastBlockObservedTracker cCore.LastBlockObsvervedTracker,
+	oracleBridgeSC eth.IOracleBridgeSmartContract,
 ) *CardanoStateProcessor {
 	return &CardanoStateProcessor{
-		ctx:                      ctx,
-		appConfig:                appConfig,
-		db:                       db,
-		txProcessors:             txProcessors,
-		indexerDbs:               indexerDbs,
-		logger:                   logger,
-		lastBlockObservedTracker: lastBlockObservedTracker,
+		ctx:            ctx,
+		appConfig:      appConfig,
+		db:             db,
+		txProcessors:   txProcessors,
+		indexerDbs:     indexerDbs,
+		logger:         logger,
+		oracleBridgeSC: oracleBridgeSC,
 	}
 }
 
@@ -477,12 +478,14 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlock, err := sp.lastBlockObservedTracker.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
+		cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
 		if err != nil {
+			sp.logger.Error("Failed to get LastObservedBlock", "err", err)
+
 			continue
 		}
 
-		if unprocessedTx.BlockSlot > lastObservedBlock.Uint64() {
+		if unprocessedTx.BlockSlot > cardanoBlock.BlockSlot.Uint64() {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
 				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
@@ -509,7 +512,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 		} else {
 			sp.logger.Debug("Skipping validation of tx",
 				"BlockSlot", unprocessedTx.BlockSlot,
-				"LastObservedBlock", lastObservedBlock)
+				"LastObservedBlock", cardanoBlock.BlockSlot)
 
 			key := string(unprocessedTx.ToCardanoTxKey())
 

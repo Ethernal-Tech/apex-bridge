@@ -13,7 +13,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_cardano/core"
 	databaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_cardano/database_access"
-	commonBridge "github.com/Ethernal-Tech/apex-bridge/oracle_common/bridge"
 	cCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	cDatabaseaccess "github.com/Ethernal-Tech/apex-bridge/oracle_common/database_access"
 	txsprocessor "github.com/Ethernal-Tech/apex-bridge/oracle_common/processor/txs_processor"
@@ -51,12 +50,10 @@ func newCardanoTxsProcessor(
 
 	bridgeSmartContractMock.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{BlockSlot: big.NewInt(0)}, nil)
 
-	lastObservedTracker := commonBridge.NewLastObserved(bridgeSmartContractMock, hclog.NewNullLogger())
-
 	cardanoStateProcessor := NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, hclog.NewNullLogger(),
-		lastObservedTracker,
+		bridgeSmartContractMock,
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
