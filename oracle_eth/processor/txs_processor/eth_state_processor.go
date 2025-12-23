@@ -435,6 +435,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.EthTx
+
 	lastObservedPerChain := make(map[string]uint64)
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
@@ -504,6 +505,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 					"chainID", unprocessedTx.OriginChainID,
 					"err", err,
 				)
+
 				continue
 			}
 

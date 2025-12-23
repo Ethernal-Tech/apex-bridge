@@ -436,6 +436,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.CardanoTx
+
 	lastObservedPerChain := make(map[string]uint64)
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
@@ -501,6 +502,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 					"chainID", unprocessedTx.OriginChainID,
 					"err", err,
 				)
+
 				continue
 			}
 
