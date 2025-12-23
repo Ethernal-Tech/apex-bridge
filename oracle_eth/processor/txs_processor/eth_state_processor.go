@@ -255,7 +255,6 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-
 		if errPending == nil {
 			// pending exists — append and continue
 			resultPending = append(resultPending, pendingTx)
@@ -270,7 +269,6 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-
 		if errProcessed != nil {
 			// not in processed either — return original pending error
 			return nil, errPending
@@ -516,7 +514,6 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
 			}
-
 		} else {
 			sp.logger.Debug("Skipping validation of tx",
 				"BlockNumber", unprocessedTx.BlockNumber,
