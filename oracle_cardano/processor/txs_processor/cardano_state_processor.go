@@ -436,6 +436,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	isValidatorSetPending bool,
 ) {
 	var relevantUnprocessedTxs []*core.CardanoTx
+	lastObservedPerChain := make(map[string]uint64)
 
 	for _, unprocessedTx := range sp.state.unprocessedTxs {
 		if sp.state.blockInfo.EqualWithUnprocessed(unprocessedTx) && cCore.IsTxReady(
@@ -491,14 +492,23 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
-		if err != nil {
-			sp.logger.Error("Failed to get LastObservedBlock", "err", err)
+		lastObservedSlot, ok := lastObservedPerChain[unprocessedTx.OriginChainID]
+		if !ok {
+			cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
+			if err != nil {
+				sp.logger.Error(
+					"Failed to get LastObservedBlock",
+					"chainID", unprocessedTx.OriginChainID,
+					"err", err,
+				)
+				continue
+			}
 
-			continue
+			lastObservedSlot = cardanoBlock.BlockSlot.Uint64()
+			lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedSlot
 		}
 
-		if unprocessedTx.BlockSlot > cardanoBlock.BlockSlot.Uint64() {
+		if unprocessedTx.BlockSlot > lastObservedSlot {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
 				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
@@ -519,7 +529,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 		} else {
 			sp.logger.Debug("Skipping validation of tx",
 				"BlockSlot", unprocessedTx.BlockSlot,
-				"LastObservedBlock", cardanoBlock.BlockSlot)
+				"LastObservedBlock", lastObservedSlot)
 
 			directlyProcessTx(unprocessedTx, txProcessor)
 
