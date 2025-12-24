@@ -426,3 +426,11 @@ $ apex-bridge bridge-admin set-validator-change \
         --validator-change (true/false) \
         --contract-addr <admin contract address>
 ```
+
+# Validator set change synchronization guide
+
+Following a validator set update, you must follow a specific startup sequence:
+
+1. **Start Blade Node:** Initialize the `blade-node` first.
+2. **Wait for Sync:** Allow the `blade-node` to fully complete its synchronization process.
+3. **Start Validator Components:** Only after the node is fully synced should you start the `validator-components`.
