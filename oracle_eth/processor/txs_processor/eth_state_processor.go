@@ -463,7 +463,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 		invalidTxsCounter++
 	}
 
-	directlyProcessTx := func(tx *core.EthTx, txProcessor core.EthTxSuccessProcessor) {
+	directlyProcessTx := func(tx *core.EthTx) {
 		key := string(tx.ToExpectedEthTxKey())
 
 		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
@@ -523,7 +523,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				pendingTxs = append(pendingTxs, unprocessedTx)
 			} else {
 				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-					directlyProcessTx(unprocessedTx, txProcessor)
+					directlyProcessTx(unprocessedTx)
 				}
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
@@ -534,7 +534,7 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				"LastObservedBlock", lastObservedBlock)
 
 			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-				directlyProcessTx(unprocessedTx, txProcessor)
+				directlyProcessTx(unprocessedTx)
 			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)

@@ -464,7 +464,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 		invalidTxsCounter++
 	}
 
-	directlyProcessTx := func(tx *core.CardanoTx, txProcessor core.CardanoTxSuccessProcessor) {
+	directlyProcessTx := func(tx *core.CardanoTx) {
 		key := string(tx.ToCardanoTxKey())
 
 		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
@@ -519,9 +519,8 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 				txProcessor.GetType() == common.TxTypeRefundRequest {
 				pendingTxs = append(pendingTxs, unprocessedTx)
 			} else {
-
 				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-					directlyProcessTx(unprocessedTx, txProcessor)
+					directlyProcessTx(unprocessedTx)
 				}
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
@@ -532,7 +531,7 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 				"LastObservedBlock", lastObservedSlot)
 
 			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-				directlyProcessTx(unprocessedTx, txProcessor)
+				directlyProcessTx(unprocessedTx)
 			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
