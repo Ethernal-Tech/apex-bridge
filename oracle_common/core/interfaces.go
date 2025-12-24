@@ -41,7 +41,6 @@ type BaseExpectedTx interface {
 	DBKey() []byte
 	GetPriority() uint8
 	GetIsInvalid() bool
-	GetIsProcessed() bool
 	SetProcessed()
 	SetInvalid()
 }

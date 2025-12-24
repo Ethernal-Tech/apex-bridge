@@ -152,11 +152,6 @@ func (tx BridgeExpectedCardanoTx) GetIsInvalid() bool {
 	return tx.IsInvalid
 }
 
-// GetIsProcessed implements core.BaseExpectedTx.
-func (tx BridgeExpectedCardanoTx) GetIsProcessed() bool {
-	return tx.IsProcessed
-}
-
 // SetProcessed implements core.BaseExpectedTx.
 func (tx *BridgeExpectedCardanoTx) SetProcessed() {
 	tx.IsProcessed = true
