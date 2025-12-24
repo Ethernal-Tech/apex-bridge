@@ -464,19 +464,17 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 	}
 
 	directlyProcessTx := func(tx *core.EthTx, txProcessor core.EthTxSuccessProcessor) {
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-			key := string(tx.ToExpectedEthTxKey())
+		key := string(tx.ToExpectedEthTxKey())
 
-			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-				delete(sp.state.expectedTxsMap, key)
-			}
-
-			sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
-				tx.OriginChainID, tx.InnerActionHash,
-			))] = common.Hash(tx.Hash)
+			delete(sp.state.expectedTxsMap, key)
 		}
+
+		sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+			tx.OriginChainID, tx.InnerActionHash,
+		))] = common.Hash(tx.Hash)
 	}
 
 	// check unprocessed txs from indexers
@@ -496,23 +494,20 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedBlock, ok := sp.state.lastObservedPerChain[unprocessedTx.OriginChainID]
-		if !ok {
-			cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
-			if err != nil {
-				sp.logger.Error(
-					"Failed to get LastObservedBlock",
-					"chainID", unprocessedTx.OriginChainID,
-					"err", err,
-				)
+		lastObservedBlock, err := sp.getLastObservedBlock(unprocessedTx.OriginChainID)
+		if err != nil {
+			sp.logger.Error(
+				"Failed to get LastObservedBlock",
+				"chainID", unprocessedTx.OriginChainID,
+				"err", err,
+			)
 
-				continue
-			}
-
-			lastObservedBlock = cardanoBlock.BlockSlot.Uint64()
-			sp.state.lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedBlock
+			continue
 		}
 
+		// new validators cannot sync from genesis since historical bridge data
+		// would fail validation with the updated multisig, so finalized txs are skipped
+		// and automatically added to processedValidTxs
 		if unprocessedTx.BlockNumber > lastObservedBlock {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
@@ -527,7 +522,9 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				txProcessor.GetType() == common.TxTypeRefundRequest {
 				pendingTxs = append(pendingTxs, unprocessedTx)
 			} else {
-				directlyProcessTx(unprocessedTx, txProcessor)
+				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+					directlyProcessTx(unprocessedTx, txProcessor)
+				}
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
 			}
@@ -536,7 +533,9 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 				"BlockNumber", unprocessedTx.BlockNumber,
 				"LastObservedBlock", lastObservedBlock)
 
-			directlyProcessTx(unprocessedTx, txProcessor)
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				directlyProcessTx(unprocessedTx, txProcessor)
+			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
 		}
@@ -740,4 +739,19 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 			}
 		}
 	}
+}
+
+func (sp *EthStateProcessor) getLastObservedBlock(chainID string) (uint64, error) {
+	lastObservedBlock, ok := sp.state.lastObservedPerChain[chainID]
+	if !ok {
+		cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, chainID)
+		if err != nil {
+			return 0, err
+		}
+
+		lastObservedBlock = cardanoBlock.BlockSlot.Uint64()
+		sp.state.lastObservedPerChain[chainID] = lastObservedBlock
+	}
+
+	return lastObservedBlock, nil
 }

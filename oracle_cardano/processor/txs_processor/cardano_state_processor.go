@@ -465,14 +465,12 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 	}
 
 	directlyProcessTx := func(tx *core.CardanoTx, txProcessor core.CardanoTxSuccessProcessor) {
-		if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-			key := string(tx.ToCardanoTxKey())
+		key := string(tx.ToCardanoTxKey())
 
-			if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-				processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
 
-				delete(sp.state.expectedTxsMap, key)
-			}
+			delete(sp.state.expectedTxsMap, key)
 		}
 	}
 
@@ -493,23 +491,20 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		lastObservedSlot, ok := sp.state.lastObservedPerChain[unprocessedTx.OriginChainID]
-		if !ok {
-			cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, unprocessedTx.OriginChainID)
-			if err != nil {
-				sp.logger.Error(
-					"Failed to get LastObservedBlock",
-					"chainID", unprocessedTx.OriginChainID,
-					"err", err,
-				)
+		lastObservedSlot, err := sp.getLastObservedBlock(unprocessedTx.OriginChainID)
+		if err != nil {
+			sp.logger.Error(
+				"Failed to get LastObservedBlock",
+				"chainID", unprocessedTx.OriginChainID,
+				"err", err,
+			)
 
-				continue
-			}
-
-			lastObservedSlot = cardanoBlock.BlockSlot.Uint64()
-			sp.state.lastObservedPerChain[unprocessedTx.OriginChainID] = lastObservedSlot
+			continue
 		}
 
+		// new validators cannot sync from genesis since historical bridge data
+		// would fail validation with the updated multisig, so finalized txs are skipped
+		// and automatically added to processedValidTxs
 		if unprocessedTx.BlockSlot > lastObservedSlot {
 			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
 			if err != nil {
@@ -524,7 +519,10 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 				txProcessor.GetType() == common.TxTypeRefundRequest {
 				pendingTxs = append(pendingTxs, unprocessedTx)
 			} else {
-				directlyProcessTx(unprocessedTx, txProcessor)
+
+				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+					directlyProcessTx(unprocessedTx, txProcessor)
+				}
 
 				processedValidTxs = append(processedValidTxs, unprocessedTx)
 			}
@@ -533,7 +531,9 @@ func (sp *CardanoStateProcessor) checkUnprocessedTxs(
 				"BlockSlot", unprocessedTx.BlockSlot,
 				"LastObservedBlock", lastObservedSlot)
 
-			directlyProcessTx(unprocessedTx, txProcessor)
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				directlyProcessTx(unprocessedTx, txProcessor)
+			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
 		}
@@ -740,4 +740,19 @@ func (sp *CardanoStateProcessor) UpdateBridgingRequestStates(
 			}
 		}
 	}
+}
+
+func (sp *CardanoStateProcessor) getLastObservedBlock(chainID string) (uint64, error) {
+	lastObservedBlock, ok := sp.state.lastObservedPerChain[chainID]
+	if !ok {
+		cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, chainID)
+		if err != nil {
+			return 0, err
+		}
+
+		lastObservedBlock = cardanoBlock.BlockSlot.Uint64()
+		sp.state.lastObservedPerChain[chainID] = lastObservedBlock
+	}
+
+	return lastObservedBlock, nil
 }
