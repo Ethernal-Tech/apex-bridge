@@ -37,6 +37,7 @@ const (
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
 	nexusURLFlag        = "nexus-url"
+	currencyTokenIDFlag = "currency-token-id"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -52,6 +53,7 @@ const (
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	nexusURLFlagDesc        = "nexus chain URL"
+	currencyTokenIDFlagDesc = "currency token ID on evm chain"
 
 	ttlSlotNumberInc = 500
 
@@ -90,8 +92,9 @@ type sendTxParams struct {
 	ogmiosURLDst    string
 
 	// nexus
-	gatewayAddress string
-	nexusURL       string
+	gatewayAddress  string
+	nexusURL        string
+	currencyTokenID uint16
 
 	feeAmount       *big.Int
 	receiversParsed []*receiverAmount
@@ -111,11 +114,11 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
+	if !common.IsExistingChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDDst) {
+	if !common.IsExistingChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -311,6 +314,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		nexusURLFlagDesc,
 	)
 
+	cmd.Flags().Uint16Var(
+		&ip.currencyTokenID,
+		currencyTokenIDFlag,
+		nexusCurrencyTokenID,
+		currencyTokenIDFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
@@ -434,7 +444,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
-	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
+	receivers, totalAmount := toGatewayStruct(ip.receiversParsed, ip.currencyTokenID)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 
 	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
@@ -588,7 +598,7 @@ func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver 
 	return metadataReceivers
 }
 
-func toGatewayStruct(receivers []*receiverAmount) (
+func toGatewayStruct(receivers []*receiverAmount, currencyTokenID uint16) (
 	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
 ) {
 	total := big.NewInt(0)
@@ -598,7 +608,7 @@ func toGatewayStruct(receivers []*receiverAmount) (
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
-			TokenId:  nexusCurrencyTokenID,
+			TokenId:  currencyTokenID,
 		}
 
 		total.Add(total, rec.Amount)

@@ -76,7 +76,7 @@ func IsExistingSkylineChainID(chainIDStr string) bool {
 }
 
 func IsEVMChainID(chainIDStr string) bool {
-	return chainIDStr == ChainIDStrNexus
+	return chainIDStr == ChainIDStrNexus || chainIDStr == ChainIDStrPolygon
 }
 
 func IsEqual(a, b, errorMargin float64) bool {

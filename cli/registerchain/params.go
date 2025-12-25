@@ -67,7 +67,7 @@ func (ip *registerChainParams) validateFlags() error {
 	switch ip.chainID {
 	case common.ChainIDStrPrime, common.ChainIDStrVector:
 		ip.chainType = common.ChainTypeCardano
-	case common.ChainIDStrNexus:
+	case common.ChainIDStrNexus, common.ChainIDStrPolygon:
 		ip.chainType = common.ChainTypeEVM
 	}
 
