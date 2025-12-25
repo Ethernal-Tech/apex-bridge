@@ -61,6 +61,7 @@ type sendSkylineTxParams struct {
 	networkIDSrc    uint
 	testnetMagicSrc uint
 	multisigAddrSrc string
+	treasuryAddrSrc string
 	ogmiosURLDst    string
 
 	// nexus
@@ -211,6 +212,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
+		if p.treasuryAddrSrc == "" {
+			return fmt.Errorf("--%s not specified", treasuryAddrSrcFlag)
+		}
+
 		if p.nexusURL == "" && p.ogmiosURLDst == "" {
 			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
 		}
@@ -359,6 +364,13 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&p.treasuryAddrSrc,
+		treasuryAddrSrcFlag,
+		"",
+		treasuryAddrSrcFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
 		&p.ogmiosURLDst,
 		ogmiosURLDstFlag,
 		"",
@@ -457,6 +469,7 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 				MinUtxoValue:               srcConfig.MinUtxoAmount,
 				MinColCoinsAllowedToBridge: srcConfig.MinColCoinsAllowedToBridge,
 				Tokens:                     srcTokens,
+				TreasuryAddress:            p.treasuryAddrSrc,
 			},
 			p.chainIDDst: {
 				MinUtxoValue:             dstConfig.MinUtxoAmount,

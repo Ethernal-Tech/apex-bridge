@@ -79,21 +79,35 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 
 // Validate if there is one and only one tx output that belongs to the multisig address
 // Returns found multisig output utxo
-func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool) (*indexer.TxOutput, error) {
-	var multisigUtxoOutput *indexer.TxOutput = nil
+func ValidateTxOutputs(
+	tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMultiple bool, validateTreasury bool) (*indexer.TxOutput, error) {
+	var (
+		multisigUtxoOutput  *indexer.TxOutput = nil
+		foundMultisigOutput                   = false
+		foundTreasuryOutput                   = false
+	)
 
 	for _, output := range tx.Tx.Outputs {
 		if IsBridgingAddrForChain(appConfig, tx.OriginChainID, output.Address) {
 			if multisigUtxoOutput == nil {
+				foundMultisigOutput = true
 				multisigUtxoOutput = output
 			} else if !allowMultiple {
 				return nil, fmt.Errorf("found multiple tx outputs to the bridging addresses on %s", tx.OriginChainID)
 			}
+		} else if IsTreasuryAddrForChain(appConfig, tx.OriginChainID, output.Address) {
+			foundTreasuryOutput = true
 		}
 	}
 
-	if multisigUtxoOutput == nil {
+	if !foundMultisigOutput {
 		return nil, fmt.Errorf("none of bridging addresses on %s found in tx outputs", tx.OriginChainID)
+	}
+
+	if validateTreasury && !foundTreasuryOutput {
+		return nil, fmt.Errorf("treasury addresses on %s is not found in tx outputs", tx.OriginChainID)
+	} else if !validateTreasury && foundTreasuryOutput {
+		return nil, fmt.Errorf("treasury addresses on %s is found in tx outputs, but it shouldn't be there", tx.OriginChainID)
 	}
 
 	return multisigUtxoOutput, nil
@@ -101,4 +115,8 @@ func ValidateTxOutputs(tx *core.CardanoTx, appConfig *cCore.AppConfig, allowMult
 
 func IsBridgingAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
 	return slices.Contains(appConfig.GetBridgingMultisigAddresses(chainID), addr)
+}
+
+func IsTreasuryAddrForChain(appConfig *cCore.AppConfig, chainID string, addr string) bool {
+	return appConfig.GetTreasuryAddress(chainID) == addr
 }
