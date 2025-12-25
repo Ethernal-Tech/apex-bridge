@@ -299,6 +299,7 @@ $ apex-bridge sendtx \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
         --chain-src nexus \
+        --currency-token-id 1 \
         --fee 1000010000000000000 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
