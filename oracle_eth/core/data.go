@@ -180,6 +180,11 @@ func (tx BridgeExpectedEthTx) GetIsInvalid() bool {
 	return tx.IsInvalid
 }
 
+// GetIsProcessed implements core.BaseExpectedTx.
+func (tx BridgeExpectedEthTx) GetIsProcessed() bool {
+	return tx.IsProcessed
+}
+
 // SetProcessed implements core.BaseExpectedTx.
 func (tx *BridgeExpectedEthTx) SetProcessed() {
 	tx.IsProcessed = true

@@ -237,6 +237,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 		}
 
 		cursor = tx.Bucket(ChainBucket(ExpectedTxsBucket, chainID)).Cursor()
+		processedBucket := tx.Bucket(ChainBucket(ProcessedExpectedTxsBucket, chainID))
 
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			var expectedTx TExpectedTx
@@ -245,7 +246,13 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) ClearAllTxs(chainID strin
 				return err
 			}
 
-			if !expectedTx.GetIsInvalid() {
+			if expectedTx.GetIsProcessed() {
+				if err := processedBucket.Put(expectedTx.DBKey(), v); err != nil {
+					return fmt.Errorf("processed expected tx write error: %w", err)
+				}
+			}
+
+			if !expectedTx.GetIsInvalid() || expectedTx.GetIsProcessed() {
 				if err := cursor.Bucket().Delete(expectedTx.DBKey()); err != nil {
 					return err
 				}
@@ -302,7 +309,8 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetExpectedTxs(
 				return err
 			}
 
-			if expectedTx.GetPriority() == priority && !expectedTx.GetIsInvalid() {
+			if expectedTx.GetPriority() == priority &&
+				!expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
 				result = append(result, expectedTx)
 				if threshold > 0 && len(result) == threshold {
 					break
@@ -338,7 +346,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetAllExpectedTxs(
 				return err
 			}
 
-			if !expectedTx.GetIsInvalid() {
+			if !expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
 				result = append(result, expectedTx)
 				if threshold > 0 && len(result) == threshold {
 					break
@@ -547,7 +555,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) markAndMoveProcessedExpec
 			}
 
 			if err := processedBucket.Put(key, bytes); err != nil {
-				return fmt.Errorf("db expected tx write error: %w", err)
+				return fmt.Errorf("db processed expected tx write error: %w", err)
 			}
 
 			if err := bucket.Delete(key); err != nil {
