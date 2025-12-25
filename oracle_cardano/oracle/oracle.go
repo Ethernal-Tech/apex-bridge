@@ -102,6 +102,7 @@ func NewCardanoOracle(
 	cardanoStateProcessor := cardanotxsprocessor.NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, txsProcessorLogger,
+		oracleBridgeSC,
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(

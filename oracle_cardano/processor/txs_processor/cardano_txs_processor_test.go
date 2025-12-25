@@ -46,9 +46,14 @@ func newCardanoTxsProcessor(
 
 	cardanoTxsReceiver := NewCardanoTxsReceiverImpl(appConfig, db, txProcessors, bridgingRequestStateUpdater, hclog.NewNullLogger())
 
+	bridgeSmartContractMock := &eth.OracleBridgeSmartContractMock{}
+
+	bridgeSmartContractMock.On("GetLastObservedBlock", mock.Anything, mock.Anything).Return(eth.CardanoBlock{BlockSlot: big.NewInt(0)}, nil)
+
 	cardanoStateProcessor := NewCardanoStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, hclog.NewNullLogger(),
+		bridgeSmartContractMock,
 	)
 
 	cardanoTxsProcessor := txsprocessor.NewTxsProcessorImpl(
@@ -283,7 +288,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash, Metadata: metadata},
+			{Hash: txHash, Metadata: metadata, BlockSlot: 1},
 		}))
 
 		unprocessedTxs, err := oracleDB.GetAllUnprocessedTxs(originChainID, 0)
@@ -333,7 +338,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash, Metadata: metadata},
+			{Hash: txHash, Metadata: metadata, BlockSlot: 1},
 		}))
 
 		// go proc.Start()
@@ -395,7 +400,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash, Metadata: metadata},
+			{Hash: txHash, Metadata: metadata, BlockSlot: 1},
 		}))
 
 		// go proc.Start()
@@ -457,7 +462,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{
-			{Hash: txHash, Metadata: metadata},
+			{Hash: txHash, Metadata: metadata, BlockSlot: 1},
 		}))
 
 		// go proc.Start()
@@ -1521,7 +1526,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			})
 		require.NoError(t, err)
 
-		indexerTx := &indexer.Tx{Hash: txHash, Metadata: metadata}
+		indexerTx := &indexer.Tx{Hash: txHash, Metadata: metadata, BlockSlot: 1}
 
 		require.NoError(t, rec.NewUnprocessedTxs(originChainID, []*indexer.Tx{indexerTx}))
 
@@ -1610,7 +1615,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			})
 		require.NoError(t, err)
 
-		indexerTx := &indexer.Tx{Hash: txHash, Metadata: metadata}
+		indexerTx := &indexer.Tx{Hash: txHash, Metadata: metadata, BlockSlot: 1}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -1739,7 +1744,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tx1 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223341")), Metadata: metadata1}
+		tx1 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223341")), Metadata: metadata1, BlockSlot: 1}
 		cardanoTx1 := core.CardanoTx{OriginChainID: originChainID, Tx: *tx1}
 
 		metadata2, err := common.SimulateRealMetadata(
@@ -1749,7 +1754,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tx2 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223342")), Metadata: metadata2}
+		tx2 := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223342")), Metadata: metadata2, BlockSlot: 1}
 		cardanoTx2 := core.CardanoTx{OriginChainID: originChainID, Tx: *tx2}
 
 		err = oracleDB.AddTxs([]*core.ProcessedCardanoTx{}, []*core.CardanoTx{&cardanoTx1, &cardanoTx2})
@@ -1773,8 +1778,8 @@ func TestCardanoTxsProcessor(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch}
-		txBatchFailed := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFFBBAA")), Metadata: metadataBatch}
+		txBatch := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFF11223343")), Metadata: metadataBatch, BlockSlot: 1}
+		txBatchFailed := &indexer.Tx{Hash: indexer.Hash(common.NewHashFromHexString("0xFFBBAA")), Metadata: metadataBatch, BlockSlot: 1}
 
 		brcProc := &core.CardanoTxSuccessProcessorMock{
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
+	"github.com/Ethernal-Tech/apex-bridge/eth"
 	oracleCore "github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_eth/core"
 	"github.com/Ethernal-Tech/apex-bridge/telemetry"
@@ -28,12 +29,13 @@ const (
 var _ oracleCore.SpecificChainTxsProcessorState = (*EthStateProcessor)(nil)
 
 type EthStateProcessor struct {
-	ctx          context.Context
-	appConfig    *oracleCore.AppConfig
-	db           core.EthTxsProcessorDB
-	txProcessors *txProcessorsCollection
-	indexerDbs   map[string]eventTrackerStore.EventTrackerStore
-	logger       hclog.Logger
+	ctx            context.Context
+	appConfig      *oracleCore.AppConfig
+	db             core.EthTxsProcessorDB
+	txProcessors   *txProcessorsCollection
+	indexerDbs     map[string]eventTrackerStore.EventTrackerStore
+	logger         hclog.Logger
+	oracleBridgeSC eth.IOracleBridgeSmartContract
 
 	state *perTickState
 }
@@ -45,14 +47,16 @@ func NewEthStateProcessor(
 	txProcessors *txProcessorsCollection,
 	indexerDbs map[string]eventTrackerStore.EventTrackerStore,
 	logger hclog.Logger,
+	oracleBridgeSC eth.IOracleBridgeSmartContract,
 ) *EthStateProcessor {
 	return &EthStateProcessor{
-		ctx:          ctx,
-		appConfig:    appConfig,
-		db:           db,
-		txProcessors: txProcessors,
-		indexerDbs:   indexerDbs,
-		logger:       logger,
+		ctx:            ctx,
+		appConfig:      appConfig,
+		db:             db,
+		txProcessors:   txProcessors,
+		indexerDbs:     indexerDbs,
+		logger:         logger,
+		oracleBridgeSC: oracleBridgeSC,
 	}
 }
 
@@ -65,6 +69,8 @@ func (sp *EthStateProcessor) Reset() {
 		updateData:                    &core.EthUpdateTxsData{},
 		innerActionHashToActualTxHash: make(map[string]common.Hash),
 	}
+
+	sp.state.lastObservedPerChain = make(map[string]uint64)
 }
 
 func (sp *EthStateProcessor) ProcessSavedEvents() {
@@ -237,27 +243,45 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	event *oracleCore.DBBatchInfoEvent,
 ) ([]oracleCore.BaseTx, error) {
-	result := make([]oracleCore.BaseTx, 0, len(event.TxHashes))
+	resultPending := make([]oracleCore.BaseTx, 0)
 
 	for _, hash := range event.TxHashes {
 		if hash.TransactionType == uint8(common.DefundConfirmedTxType) {
 			continue
 		}
 
-		tx, err := sp.db.GetPendingTx(
+		// try pending first
+		pendingTx, errPending := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
 				ChainID: common.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
-		if err != nil {
-			return nil, err
+		if errPending == nil {
+			// pending exists — append and continue
+			resultPending = append(resultPending, pendingTx)
+
+			continue
 		}
 
-		result = append(result, tx)
+		// pending returned error — check if it's present in processed
+		processedTx, errProcessed := sp.db.GetProcessedTx(
+			oracleCore.DBTxID{
+				ChainID: common.ToStrChainID(hash.SourceChainID),
+				DBKey:   hash.ObservedTransactionHash[:],
+			},
+		)
+		if processedTx == nil || errProcessed != nil {
+			sp.logger.Error("Failed to get proccessed tx", "err", errProcessed)
+			// not in processed either — return original pending error
+			return nil, errPending
+		}
+
+		// it exists in processed — silently skip (do not add to resultPending)
+		// and continue with next tx hash
 	}
 
-	return result, nil
+	return resultPending, nil
 }
 
 func (sp *EthStateProcessor) processNotEnoughFundsEvents(
@@ -439,6 +463,20 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 		invalidTxsCounter++
 	}
 
+	directlyProcessTx := func(tx *core.EthTx) {
+		key := string(tx.ToExpectedEthTxKey())
+
+		if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
+			processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+
+			delete(sp.state.expectedTxsMap, key)
+		}
+
+		sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
+			tx.OriginChainID, tx.InnerActionHash,
+		))] = common.Hash(tx.Hash)
+	}
+
 	// check unprocessed txs from indexers
 	for _, unprocessedTx := range relevantUnprocessedTxs {
 		sp.logger.Debug("Checking if tx is relevant", "tx", unprocessedTx)
@@ -456,31 +494,47 @@ func (sp *EthStateProcessor) checkUnprocessedTxs(
 			continue
 		}
 
-		err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+		lastObservedBlock, err := sp.getLastObservedBlock(unprocessedTx.OriginChainID)
 		if err != nil {
-			sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
-
-			onInvalidTx(unprocessedTx)
+			sp.logger.Error(
+				"Failed to get LastObservedBlock",
+				"chainID", unprocessedTx.OriginChainID,
+				"err", err,
+			)
 
 			continue
 		}
 
-		if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
-			txProcessor.GetType() == common.TxTypeRefundRequest {
-			pendingTxs = append(pendingTxs, unprocessedTx)
-		} else {
-			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
-				key := string(unprocessedTx.ToExpectedEthTxKey())
+		// new validators cannot sync from genesis since historical bridge data
+		// would fail validation with the updated multisig, so finalized txs are skipped
+		// and automatically added to processedValidTxs
+		if unprocessedTx.BlockNumber > lastObservedBlock {
+			err = txProcessor.ValidateAndAddClaim(bridgeClaims, unprocessedTx, sp.appConfig)
+			if err != nil {
+				sp.logger.Error("Failed to ValidateAndAddClaim", "tx", unprocessedTx, "err", err)
 
-				if expectedTx, exists := sp.state.expectedTxsMap[key]; exists {
-					processedExpectedTxs = append(processedExpectedTxs, expectedTx)
+				onInvalidTx(unprocessedTx)
 
-					delete(sp.state.expectedTxsMap, key)
+				continue
+			}
+
+			if txProcessor.GetType() == common.BridgingTxTypeBridgingRequest ||
+				txProcessor.GetType() == common.TxTypeRefundRequest {
+				pendingTxs = append(pendingTxs, unprocessedTx)
+			} else {
+				if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+					directlyProcessTx(unprocessedTx)
 				}
 
-				sp.state.innerActionHashToActualTxHash[string(core.ToEthTxKey(
-					unprocessedTx.OriginChainID, unprocessedTx.InnerActionHash,
-				))] = common.Hash(unprocessedTx.Hash)
+				processedValidTxs = append(processedValidTxs, unprocessedTx)
+			}
+		} else {
+			sp.logger.Debug("Skipping validation of tx",
+				"BlockNumber", unprocessedTx.BlockNumber,
+				"LastObservedBlock", lastObservedBlock)
+
+			if txProcessor.GetType() == common.BridgingTxTypeBatchExecution {
+				directlyProcessTx(unprocessedTx)
 			}
 
 			processedValidTxs = append(processedValidTxs, unprocessedTx)
@@ -685,4 +739,19 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 			}
 		}
 	}
+}
+
+func (sp *EthStateProcessor) getLastObservedBlock(chainID string) (uint64, error) {
+	lastObservedBlock, ok := sp.state.lastObservedPerChain[chainID]
+	if !ok {
+		cardanoBlock, err := sp.oracleBridgeSC.GetLastObservedBlock(sp.ctx, chainID)
+		if err != nil {
+			return 0, err
+		}
+
+		lastObservedBlock = cardanoBlock.BlockSlot.Uint64()
+		sp.state.lastObservedPerChain[chainID] = lastObservedBlock
+	}
+
+	return lastObservedBlock, nil
 }

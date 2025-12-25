@@ -92,6 +92,7 @@ func NewEthOracle(
 	ethStateProcessor := ethtxsprocessor.NewEthStateProcessor(
 		ctx, appConfig, db, txProcessors,
 		indexerDbs, txsProcessorLogger,
+		oracleBridgeSC,
 	)
 
 	ethTxsProcessor := txsprocessor.NewTxsProcessorImpl(
