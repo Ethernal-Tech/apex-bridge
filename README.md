@@ -313,11 +313,13 @@ $ apex-bridge sendtx skyline \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
         --src-token-id 1 \
         --fee 1_100_000 \
+        --operation-fee 1_100_000 \
         --ogmios-dst http://ogmios.prime.testnet.apexfusion.org:1337 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1_234_567 \
@@ -333,12 +335,14 @@ $ apex-bridge sendtx skyline \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
         --addr-multisig-src addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv \
+        --addr-treasury-src addr_test1wffkxzsjpdnkn4vzk7v8wgygcqvztn8ndmte8294rp2l2uqgnp993 \
         --testnet-src 3311 \
         --network-id-src 1 \
         --chain-src cardano \
         --src-token-id 1 \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
         --fee 1_100_000 \
+        --operation-fee 1_100_000 \
         --chain-dst nexus \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --receiver 0x1111:1_234_567 \
