@@ -2,6 +2,7 @@ package cardanotx
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/indexer"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -53,7 +54,17 @@ func GetKnownTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 func GetWrappedTokens(cardanoConfig *CardanoChainConfig) ([]wallet.Token, error) {
 	wrappedTokens := make([]wallet.Token, 0)
 
-	for _, tokenConfig := range cardanoConfig.Tokens {
+	// Sort keys to have deterministic order
+	keys := make([]uint16, 0, len(cardanoConfig.Tokens))
+	for k := range cardanoConfig.Tokens {
+		keys = append(keys, k)
+	}
+
+	slices.Sort(keys)
+
+	for _, k := range keys {
+		tokenConfig := cardanoConfig.Tokens[k]
+
 		if !tokenConfig.IsWrappedCurrency {
 			continue
 		}
