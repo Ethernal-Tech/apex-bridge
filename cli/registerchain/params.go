@@ -36,7 +36,6 @@ const (
 	validatorConfigFlagDesc           = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
 	chainIDFlagDesc                   = "chain ID (prime, vector, etc)"
 	chainTypeFlagDesc                 = "chain type (0 is Cardano, 1 is EVM, etc)"
-	socketPathFlagDesc                = "socket path for cardano node"
 	bridgeURLFlagDesc                 = "bridge node url"
 	bridgeSCAddrFlagDesc              = "bridge smart contract address"
 	initialTokenSupplyFlagDesc        = "initial token supply for the chain"

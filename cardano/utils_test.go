@@ -252,3 +252,23 @@ func Test_filterOutTokenUtxos(t *testing.T) {
 		)
 	})
 }
+
+func Test_GetWrappedTokens(t *testing.T) {
+	token1, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e", true)
+	token2, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.526f75746533", true)
+	token3, _ := wallet.NewTokenWithFullName("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.546f6b656e34", true)
+
+	config := &CardanoChainConfig{
+		Tokens: map[uint16]common.Token{
+			5: {ChainSpecific: token3.String(), LockUnlock: true, IsWrappedCurrency: true},
+			0: {ChainSpecific: wallet.AdaTokenName, LockUnlock: true},
+			2: {ChainSpecific: token1.String(), LockUnlock: true, IsWrappedCurrency: true},
+			4: {ChainSpecific: token2.String(), LockUnlock: true, IsWrappedCurrency: true},
+		},
+	}
+
+	retTokens, err := GetWrappedTokens(config)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(retTokens))
+	require.Equal(t, []wallet.Token{token1, token2, token3}, retTokens)
+}
