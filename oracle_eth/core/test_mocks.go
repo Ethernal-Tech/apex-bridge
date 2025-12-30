@@ -208,6 +208,10 @@ func (m *EthTxsProcessorDBMock) UpdateTxs(data *EthUpdateTxsData) error {
 	return args.Error(0)
 }
 
+func (m *EthTxsProcessorDBMock) MoveProcessedExpectedTxs(chainID string) error {
+	return nil
+}
+
 var _ EthTxsProcessorDB = (*EthTxsProcessorDBMock)(nil)
 
 type EthTxSuccessProcessorMock struct {
