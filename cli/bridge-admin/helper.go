@@ -106,7 +106,9 @@ func loadConfig(configPath string) (*vcCore.AppConfig, error) {
 		return nil, err
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return nil, fmt.Errorf("failed to setup chain ids: %w", err)
+	}
 
 	return config, nil
 }

@@ -110,7 +110,10 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return fmt.Errorf("failed to setup chain ids: %w", err)
+	}
+
 	p.chainIDConverter = config.ChainIDConverter
 
 	if !p.chainIDConverter.IsExistingChainID(p.chainIDSrc) {

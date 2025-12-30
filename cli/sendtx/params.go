@@ -137,7 +137,10 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return fmt.Errorf("failed to setup chain ids: %w", err)
+	}
+
 	ip.chainIDConverter = config.ChainIDConverter
 
 	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDSrc) {

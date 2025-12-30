@@ -220,7 +220,9 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		return nil, err
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return nil, fmt.Errorf("failed to setup chain ids: %w", err)
+	}
 
 	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, config.ChainIDConverter, outputter)
 	if err != nil {

@@ -171,7 +171,9 @@ func (ip *upgradeEVMParams) Execute(
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return nil, fmt.Errorf("failed to setup chain ids: %w", err)
+	}
 
 	for i, x := range ip.contracts {
 		ss := strings.Split(x, ":")
