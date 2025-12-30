@@ -100,15 +100,13 @@ func finalizeAndSignTx(
 	return txSigned, txHash, nil
 }
 
-func loadConfig(configPath string) (*vcCore.AppConfig, error) {
+func loadConfig(configPath string, chainIDsConfig *common.ChainIDsConfig) (*vcCore.AppConfig, error) {
 	config, err := common.LoadConfig[vcCore.AppConfig](configPath, "")
 	if err != nil {
 		return nil, err
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return nil, fmt.Errorf("failed to setup chain ids: %w", err)
-	}
+	config.SetupChainIDs(chainIDsConfig)
 
 	return config, nil
 }

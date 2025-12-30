@@ -17,11 +17,13 @@ import (
 )
 
 const (
+	chainIDsConfigFlag      = "chain-ids-config"
 	primeWalletAddressFlag  = "prime-wallet-addr"
 	vectorWalletAddressFlag = "vector-wallet-addr"
 	nexusWalletAddressFlag  = "nexus-wallet-addr"
 	indexerDbsPathFlag      = "indexer-dbs-path"
 
+	chainIDsConfigFlagDesc      = "path to the chain IDs config file"
 	primeWalletAddressFlagDesc  = "prime hot wallet/bridging/multisig address"
 	vectorWalletAddressFlagDesc = "vector hot wallet/bridging/multisig address"
 	nexusWalletAddressFlagDesc  = "nexus NativeTokenWallet Proxy sc address"
@@ -30,6 +32,7 @@ const (
 
 type bridgingAddressesBalancesParams struct {
 	config              string
+	chainIDsConfig      string
 	primeWalletAddress  string
 	vectorWalletAddress string
 	nexusWalletAddress  string
@@ -48,7 +51,16 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 		return err
 	}
 
-	appConfig, err := loadConfig(b.config)
+	if err := validateConfigFilePath(b.chainIDsConfig); err != nil {
+		return err
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](b.chainIDsConfig, "")
+	if err != nil {
+		return err
+	}
+
+	appConfig, err := loadConfig(b.config, chainIDsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to load config file: %w", err)
 	}
@@ -86,6 +98,12 @@ func (b *bridgingAddressesBalancesParams) RegisterFlags(cmd *cobra.Command) {
 		configFlag,
 		"",
 		configFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&b.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&b.primeWalletAddress,

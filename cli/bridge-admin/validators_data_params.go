@@ -24,9 +24,10 @@ const (
 type ValidatorChainData = contractbinding.IBridgeStructsValidatorChainData
 
 type validatorsDataParams struct {
-	bridgeNodeURL string
-	bridgeSCAddr  string
-	config        string
+	bridgeNodeURL  string
+	bridgeSCAddr   string
+	config         string
+	chainIDsConfig string
 }
 
 func (v *validatorsDataParams) ValidateFlags() error {
@@ -39,6 +40,10 @@ func (v *validatorsDataParams) ValidateFlags() error {
 	}
 
 	if err := validateConfigFilePath(v.config); err != nil {
+		return err
+	}
+
+	if err := validateConfigFilePath(v.chainIDsConfig); err != nil {
 		return err
 	}
 
@@ -66,6 +71,13 @@ func (v *validatorsDataParams) RegisterFlags(cmd *cobra.Command) {
 		"",
 		configFlagDesc,
 	)
+
+	cmd.Flags().StringVar(
+		&v.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
 }
 
 func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
@@ -79,7 +91,12 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	config, err := loadConfig(v.config)
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](v.chainIDsConfig, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	config, err := loadConfig(v.config, chainIDsConfig)
 	if err != nil {
 		return nil, err
 	}

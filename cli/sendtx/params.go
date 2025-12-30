@@ -14,7 +14,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -40,7 +39,7 @@ const (
 	gatewayAddressFlag  = "gateway-addr"
 	nexusURLFlag        = "nexus-url"
 	currencyTokenIDFlag = "currency-token-id"
-	configFlag          = "config"
+	chainIDsConfigFlag  = "chain-ids-config"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -57,7 +56,7 @@ const (
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	nexusURLFlagDesc        = "nexus chain URL"
 	currencyTokenIDFlagDesc = "currency token ID on evm chain"
-	configFlagDesc          = "path to config json file"
+	chainIDsConfigFlagDesc  = "path to the chain IDs config file"
 
 	ttlSlotNumberInc = 500
 
@@ -87,7 +86,7 @@ type sendTxParams struct {
 	chainIDSrc         string
 	chainIDDst         string
 	feeString          string
-	config             string
+	chainIDsConfig     string
 
 	// apex
 	ogmiosURLSrc    string
@@ -120,28 +119,24 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if ip.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
 	}
 
-	if _, err := os.Stat(ip.config); err != nil {
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", ip.config)
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
 		}
 
-		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return fmt.Errorf("failed to setup chain ids: %w", err)
-	}
-
-	ip.chainIDConverter = config.ChainIDConverter
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
@@ -351,10 +346,10 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.config,
-		configFlag,
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)

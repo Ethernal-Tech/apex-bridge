@@ -12,7 +12,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -58,7 +57,7 @@ type sendSkylineTxParams struct {
 	tokenIDSrc         uint16
 	tokenFullNameSrc   string
 	tokenFullNameDst   string
-	config             string
+	chainIDsConfig     string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -93,28 +92,24 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if p.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	if p.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
 	}
 
-	if _, err := os.Stat(p.config); err != nil {
+	if _, err := os.Stat(p.chainIDsConfig); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", p.config)
+			return fmt.Errorf("config file does not exist: %s", p.chainIDsConfig)
 		}
 
-		return fmt.Errorf("failed to check config file: %s. err: %w", p.config, err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", p.chainIDsConfig, err)
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](p.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](p.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return fmt.Errorf("failed to setup chain ids: %w", err)
-	}
-
-	p.chainIDConverter = config.ChainIDConverter
+	p.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !p.chainIDConverter.IsExistingChainID(p.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
@@ -429,10 +424,10 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		tokenContractAddrSrcFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.config,
-		configFlag,
+		&p.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)

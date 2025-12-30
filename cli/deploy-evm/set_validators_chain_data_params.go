@@ -10,7 +10,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -51,16 +50,16 @@ func (ip *setValidatorsChainDataEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", validatorsProxyAddrFlag)
 	}
 
-	if ip.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
 	}
 
-	if _, err := os.Stat(ip.config); err != nil {
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", ip.config)
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
 		}
 
-		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
 	return nil
@@ -152,10 +151,10 @@ func (ip *setValidatorsChainDataEVMParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.config,
-		configFlag,
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
@@ -215,16 +214,12 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		return nil, err
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return nil, fmt.Errorf("failed to setup chain ids: %w", err)
-	}
-
-	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, config.ChainIDConverter, outputter)
+	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, chainIDsConfig.ToChainIDConverter(), outputter)
 	if err != nil {
 		return nil, err
 	}

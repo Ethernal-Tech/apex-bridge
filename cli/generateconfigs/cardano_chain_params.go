@@ -18,7 +18,6 @@ import (
 
 const (
 	chainIDStringFlag           = "chain-id"
-	chainIDNumFlag              = "chain-id-num"
 	networkAddressFlag          = "network-address"
 	networkMagicFlag            = "network-magic"
 	networkIDFlag               = "network-id"
@@ -43,7 +42,6 @@ const (
 	relayerAddressFlag = "relayer-address"
 
 	chainIDStringFlagDesc           = "(mandatory) chain id string for the chain config"
-	chainIDNumFlagDesc              = "chain id number for the chain config"
 	networkAddressFlagDesc          = "(mandatory) address of network"
 	networkMagicFlagDesc            = "network magic (default 0)"
 	networkIDFlagDesc               = "network id"
@@ -74,15 +72,8 @@ const (
 	defaultNoBatchPeriodPercent = 0.0625
 )
 
-var knownCardanoChains = map[string]common.ChainIDNum{
-	common.ChainIDStrPrime:   common.ChainIDIntPrime,
-	common.ChainIDStrVector:  common.ChainIDIntVector,
-	common.ChainIDStrCardano: common.ChainIDIntCardano,
-}
-
 type cardanoChainGenerateConfigsParams struct {
 	chainIDString string
-	chainIDNum    common.ChainIDNum
 
 	networkAddress          string
 	networkMagic            uint32
@@ -121,19 +112,6 @@ type cardanoChainGenerateConfigsParams struct {
 func (p *cardanoChainGenerateConfigsParams) validateFlags() error {
 	if p.chainIDString == "" {
 		return fmt.Errorf("missing %s", chainIDStringFlag)
-	}
-
-	knownChainIDNum, ok := knownCardanoChains[p.chainIDString]
-	if ok {
-		if p.chainIDNum != 0 && p.chainIDNum != knownChainIDNum {
-			return fmt.Errorf("invalid %s: %d for known chain id string: %s, expected: %d",
-				chainIDNumFlag, p.chainIDNum, p.chainIDString, knownChainIDNum)
-		}
-
-		p.chainIDNum = knownChainIDNum
-	} else if p.chainIDNum == 0 {
-		return fmt.Errorf("missing %s for unknown chain id string: %s",
-			chainIDNumFlag, p.chainIDString)
 	}
 
 	if !common.IsValidNetworkAddress(p.networkAddress) {
@@ -199,12 +177,6 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		chainIDStringFlag,
 		"",
 		chainIDStringFlagDesc,
-	)
-	cmd.Flags().Uint8Var(
-		&p.chainIDNum,
-		chainIDNumFlag,
-		0,
-		chainIDNumFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.networkAddress,
@@ -450,7 +422,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 			CustodialNft:             custodialNFT,
 			RelayerAddress:           p.relayerAddress,
 		},
-		ChainIDNum:               p.chainIDNum,
 		NetworkAddress:           p.networkAddress,
 		StartBlockHash:           startingHash,
 		StartSlot:                startingSlot,
@@ -487,7 +458,6 @@ func (p *cardanoChainGenerateConfigsParams) Execute(outputter common.OutputForma
 	}
 
 	rConfig.Chains[p.chainIDString] = rCore.ChainConfig{
-		ChainIDNum:        p.chainIDNum,
 		ChainType:         common.ChainTypeCardanoStr,
 		DbsPath:           filepath.Join(p.dbsPath, "relayer"),
 		ChainSpecific:     chainSpecificJSONRaw,
