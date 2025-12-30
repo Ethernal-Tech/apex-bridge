@@ -205,6 +205,10 @@ func initOracleState(
 		return nil
 	}
 
+	if err := oracleDB.MoveProcessedExpectedTxs(chainID); err != nil {
+		return err
+	}
+
 	latestBlockPoint, err := db.GetLatestBlockPoint()
 	if err != nil {
 		return fmt.Errorf("could not retrieve latest block point while initializing utxos: %w", err)
