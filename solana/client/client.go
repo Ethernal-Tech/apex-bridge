@@ -24,25 +24,105 @@ type SolanaClient struct {
 	commitment rpc.CommitmentType
 }
 
-// NewSolanaClient creates a new SolanaClient instance with the provided RPC and WebSocket clients.
-// The client is initialized with CommitmentFinalized as the default commitment level.
-func NewSolanaClient(cli *rpc.Client, wsCli *ws.Client) *SolanaClient {
-	return &SolanaClient{
-		cli:        cli,
-		wsCli:      wsCli,
-		commitment: rpc.CommitmentFinalized,
+type solanaClientOption func(*SolanaClient) error
+
+func WithCommitment(commitment rpc.CommitmentType) solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.commitment = commitment
+		return nil
 	}
 }
 
-// Close closes the underlying RPC and WebSocket clients.
-// It safely handles nil clients and should be called when the SolanaClient is no longer needed
-// to properly release network resources.
+func WithWSClient(wsCli *ws.Client) solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.wsCli = wsCli
+		return nil
+	}
+}
+
+func WithRPCClient(cli *rpc.Client) solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.cli = cli
+		return nil
+	}
+}
+
+func WithDevnet() solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.cli = rpc.New(rpc.DevNet_RPC)
+		wsCli, err := ws.Connect(context.Background(), rpc.DevNet_WS)
+		if err != nil {
+			return fmt.Errorf("failed to connect to devnet: %w", err)
+		}
+
+		s.wsCli = wsCli
+		return nil
+	}
+}
+
+func WithLocalnet() solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.cli = rpc.New(rpc.LocalNet_RPC)
+		wsCli, err := ws.Connect(context.Background(), rpc.LocalNet_WS)
+		if err != nil {
+			return fmt.Errorf("failed to connect to localnet: %w", err)
+		}
+
+		s.wsCli = wsCli
+		return nil
+	}
+}
+
+func WithMainnet() solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.cli = rpc.New(rpc.MainNetBetaSerum_RPC)
+		wsCli, err := ws.Connect(context.Background(), rpc.MainNetBetaSerum_WS)
+		if err != nil {
+			return fmt.Errorf("failed to connect to mainnet: %w", err)
+		}
+
+		s.wsCli = wsCli
+		return nil
+	}
+}
+
+func WithCustomRPC(rpcUrl string) solanaClientOption {
+	return func(s *SolanaClient) error {
+		s.cli = rpc.New(rpcUrl)
+		return nil
+	}
+}
+
+// NewSolanaClient creates a new SolanaClient instance with the provided RPC and WebSocket clients.
+// The client is initialized with CommitmentFinalized as the default commitment level.
+func NewSolanaClient(opts ...solanaClientOption) (*SolanaClient, error) {
+	s := &SolanaClient{}
+
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
+}
+
+func (s *SolanaClient) GetRpcClient() *rpc.Client {
+	return s.cli
+}
+
+func (s *SolanaClient) GetWsClient() *ws.Client {
+	return s.wsCli
+}
+
 func (s *SolanaClient) Close() {
 	if s.wsCli != nil {
 		s.wsCli.Close()
 	}
 	if s.cli != nil {
-		s.cli.Close()
+		if err := s.cli.Close(); err != nil {
+			fmt.Println("Error while closing RPC", err)
+		}
 	}
 }
 
@@ -88,15 +168,8 @@ func (s *SolanaClient) ExecuteInstruction(
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
 
-	sub, err := s.wsCli.SignatureSubscribe(sig, s.commitment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to subscribe to signature: %w", err)
-	}
-	defer sub.Unsubscribe()
-
-	result := <-sub.Response()
-	if result.Value.Err != nil {
-		return nil, fmt.Errorf("send tx failed: %v", result.Value.Err)
+	if err = s.waitForSignature(sig, rpc.CommitmentFinalized); err != nil {
+		return nil, err
 	}
 
 	return &sig, nil
@@ -154,15 +227,8 @@ func (s *SolanaClient) ExecuteInstructionWithAccounts(
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
 
-	sub, err := s.wsCli.SignatureSubscribe(sig, s.commitment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to subscribe to signature: %w", err)
-	}
-	defer sub.Unsubscribe()
-
-	result := <-sub.Response()
-	if result.Value.Err != nil {
-		return nil, fmt.Errorf("send tx failed: %v", result.Value.Err)
+	if err = s.waitForSignature(sig, rpc.CommitmentFinalized); err != nil {
+		return nil, err
 	}
 
 	return &sig, nil
@@ -238,15 +304,8 @@ func (s *SolanaClient) ExecuteMultipleInstructions(
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
 
-	sub, err := s.wsCli.SignatureSubscribe(sig, s.commitment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to subscribe to signature: %w", err)
-	}
-	defer sub.Unsubscribe()
-
-	result := <-sub.Response()
-	if result.Value.Err != nil {
-		return nil, fmt.Errorf("send tx failed: %v", result.Value.Err)
+	if err = s.waitForSignature(sig, rpc.CommitmentFinalized); err != nil {
+		return nil, err
 	}
 
 	return &sig, nil
@@ -261,9 +320,13 @@ func (s *SolanaClient) ExecuteMultipleInstructions(
 //
 // Returns an error if the airdrop request fails.
 func (s *SolanaClient) Airdrop(addr solana.PublicKey, amount uint64) error {
-	_, err := s.cli.RequestAirdrop(context.TODO(), addr, amount, rpc.CommitmentFinalized)
+	sig, err := s.cli.RequestAirdrop(context.TODO(), addr, amount, rpc.CommitmentFinalized)
 	if err != nil {
 		return fmt.Errorf("failed to request airdrop: %w", err)
+	}
+
+	if err = s.waitForSignature(sig, rpc.CommitmentFinalized); err != nil {
+		return err
 	}
 
 	return nil
@@ -361,15 +424,8 @@ func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority so
 		return nil, err
 	}
 
-	subMint, err := s.wsCli.SignatureSubscribe(sigMint, rpc.CommitmentFinalized)
+	err = s.waitForSignature(sigMint, rpc.CommitmentFinalized)
 	if err != nil {
-		fmt.Println("Subscription error:", err)
-		return nil, err
-	}
-
-	rd := <-subMint.Response()
-	if rd.Value.Err != nil {
-		fmt.Println("Transaction failed:", rd.Value.Err)
 		return nil, err
 	}
 
@@ -387,7 +443,7 @@ func (s *SolanaClient) CreateTokenAccount(pk solana.PrivateKey, mintAuthority so
 //   - mint: The public key of the token mint
 //
 // Returns the public key of the receiver's associated token account and an error if any step fails.
-func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.PublicKey, mint solana.PublicKey) (ata solana.PublicKey, err error) {
+func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.PublicKey, mint solana.PublicKey, amount uint64) (ata solana.PublicKey, err error) {
 	ata, _, err = solana.FindAssociatedTokenAddress(receiver, mint)
 	if err != nil {
 		return
@@ -405,7 +461,7 @@ func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.Publi
 		instructions = append(instructions, ataIx)
 	}
 
-	mintToIx := token.NewMintToInstruction(1_000_000_000, mint, ata, pk.PublicKey(), []solana.PublicKey{}).Build()
+	mintToIx := token.NewMintToInstruction(amount, mint, ata, pk.PublicKey(), []solana.PublicKey{}).Build()
 	instructions = append(instructions, mintToIx)
 
 	blockhash, err := s.cli.GetLatestBlockhash(context.TODO(), rpc.CommitmentFinalized)
@@ -438,16 +494,22 @@ func (s *SolanaClient) MintToAccount(pk solana.PrivateKey, receiver solana.Publi
 		return
 	}
 
-	sub, err := s.wsCli.SignatureSubscribe(sig, rpc.CommitmentFinalized)
-	if err != nil {
-		return
-	}
-
-	result := <-sub.Response()
-	if result.Value.Err != nil {
-		err = fmt.Errorf("mint to account transaction failed: %v", result.Value.Err)
-		return
-	}
-
+	err = s.waitForSignature(sig, rpc.CommitmentFinalized)
 	return
+}
+
+func (s *SolanaClient) waitForSignature(sig solana.Signature, commitment rpc.CommitmentType) error {
+
+	sub, err := s.wsCli.SignatureSubscribe(sig, commitment)
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+
+	rd := <-sub.Response()
+	if rd.Value.Err != nil {
+		return fmt.Errorf("transaction failed: %v", rd.Value.Err)
+	}
+
+	return nil
 }

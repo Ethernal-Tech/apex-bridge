@@ -14,13 +14,12 @@ import (
 // It provides methods to start, wait for readiness, and stop the test validator.
 type TestValidator struct {
 	cmd *exec.Cmd
-	cli *rpc.Client
 }
 
 // NewTestValidator creates a new TestValidator instance with the provided RPC client.
 // The validator process is not started until StartTestNode is called.
-func NewTestValidator(cli *rpc.Client) *TestValidator {
-	return &TestValidator{cmd: nil, cli: cli}
+func NewTestValidator() *TestValidator {
+	return &TestValidator{cmd: nil}
 }
 
 // StartTestNode starts a local Solana test validator process in the background.
@@ -48,9 +47,9 @@ func (t *TestValidator) StartTestNode() error {
 //
 // Returns an error if the wait operation fails, though it will typically
 // continue retrying until the node is ready.
-func (t *TestValidator) WaitForNode() error {
+func (t *TestValidator) WaitForNode(cli *rpc.Client) error {
 	for {
-		finalizedSlot, err := t.cli.GetSlot(
+		finalizedSlot, err := cli.GetSlot(
 			context.TODO(),
 			rpc.CommitmentFinalized,
 		)
