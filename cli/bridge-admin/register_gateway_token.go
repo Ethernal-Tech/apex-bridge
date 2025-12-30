@@ -68,7 +68,9 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("failed to load config file: %w", err)
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return fmt.Errorf("failed to setup chain ids: %w", err)
+	}
 
 	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, config.ChainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)

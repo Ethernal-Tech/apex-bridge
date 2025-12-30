@@ -82,7 +82,9 @@ func (ip *createAddressParams) validateFlags() error {
 		return fmt.Errorf("failed to load config file: %w", err)
 	}
 
-	config.SetupChainIDs()
+	if err := config.SetupChainIDs(); err != nil {
+		return fmt.Errorf("failed to setup chain ids: %w", err)
+	}
 
 	ip.chainIDConverter = config.ChainIDConverter
 

@@ -91,8 +91,8 @@ $ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PA
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
-        --config ./config.json \
         --chain prime \
+        --chain-num 1 \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
         --token-supply 20000000 \
@@ -157,6 +157,7 @@ $ apex-bridge generate-configs skyline \
 Cardano chain all options
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
+        --chain-id-num <chain id number for the chain config> \
         --network-address <address of the chain network> \
         --network-magic <network magic of the chain network> \
         --network-id <network id of the chain network> \
@@ -191,6 +192,7 @@ $ apex-bridge generate-configs cardano-chain \
 Add cardano chain config minimal example
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
+        --chain-id-num 1 \
         --network-address localhost:13001 \
         --network-magic 142 \
         --network-id 3 \
@@ -209,6 +211,7 @@ $ apex-bridge generate-configs cardano-chain \
 Evm chain config all options
 ``` shell
 $ apex-bridge generate-configs evm-chain \
+        --chain-id-num <chain id number for the chain config> \
         --evm-node-url <node URL> \
         --evm-ttl-block-inc <ttl block increment> \
         --evm-block-rounding-threshold <block rounding threshold> \
@@ -231,6 +234,7 @@ $ apex-bridge generate-configs evm-chain \
 Add evm chain config minimal example
 ``` shell
 $ apex-bridge generate-configs evm-chain \
+        --chain-id-num 3 \
         --evm-node-url localhost:5500 \
         --evm-ttl-block-inc 10 \
         --evm-block-rounding-threshold 5 \

@@ -40,8 +40,13 @@ const (
 	defaultEvmFeeAddrBridgingAmount = 1_000_000
 )
 
+var knownEvmChains = map[string]common.ChainIDNum{
+	common.ChainIDStrNexus: common.ChainIDIntNexus,
+}
+
 type evmChainGenerateConfigsParams struct {
 	chainIDString string
+	chainIDNum    common.ChainIDNum
 
 	evmChainNodeURL                string
 	evmChainTTLBlockNumberInc      uint64
@@ -67,6 +72,19 @@ func (p *evmChainGenerateConfigsParams) validateFlags() error {
 		return fmt.Errorf("missing %s", chainIDStringFlag)
 	}
 
+	knownChainIDNum, ok := knownEvmChains[p.chainIDString]
+	if ok {
+		if p.chainIDNum != 0 && p.chainIDNum != knownChainIDNum {
+			return fmt.Errorf("invalid %s: %d for known chain id string: %s, expected: %d",
+				chainIDNumFlag, p.chainIDNum, p.chainIDString, knownChainIDNum)
+		}
+
+		p.chainIDNum = knownChainIDNum
+	} else if p.chainIDNum == 0 {
+		return fmt.Errorf("missing %s for unknown chain id string: %s",
+			chainIDNumFlag, p.chainIDString)
+	}
+
 	if !common.IsValidHTTPURL(p.evmChainNodeURL) {
 		return fmt.Errorf("invalid %s: %s", evmChainNodeURLFlag, p.evmChainNodeURL)
 	}
@@ -84,6 +102,12 @@ func (p *evmChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 		chainIDStringFlag,
 		"",
 		chainIDStringFlagDesc,
+	)
+	cmd.Flags().Uint8Var(
+		&p.chainIDNum,
+		chainIDNumFlag,
+		0,
+		chainIDNumFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.evmChainNodeURL,
@@ -197,6 +221,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	vcConfig.EthChains[p.chainIDString] = &oCore.EthChainConfig{
+		ChainIDNum:              p.chainIDNum,
 		NodeURL:                 p.evmChainNodeURL,
 		SyncBatchSize:           defaultEvmSyncBatchSize,
 		NumBlockConfirmations:   defaultEvmBlockConfirmationCount,
@@ -245,6 +270,7 @@ func (p *evmChainGenerateConfigsParams) Execute(outputter common.OutputFormatter
 	}
 
 	rConfig.Chains[p.chainIDString] = rCore.ChainConfig{
+		ChainIDNum:    p.chainIDNum,
 		ChainType:     common.ChainTypeEVMStr,
 		DbsPath:       filepath.Join(p.dbsPath, "relayer"),
 		ChainSpecific: chainSpecificJSONRaw,

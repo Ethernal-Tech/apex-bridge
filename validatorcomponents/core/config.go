@@ -34,7 +34,7 @@ type AppConfig struct {
 	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
-func (appConfig *AppConfig) SetupChainIDs() {
+func (appConfig *AppConfig) SetupChainIDs() error {
 	chainNum := len(appConfig.CardanoChains) + len(appConfig.EthChains)
 
 	chainIDConverter := common.ChainIDConverter{
@@ -43,18 +43,41 @@ func (appConfig *AppConfig) SetupChainIDs() {
 		EvmChains: make([]string, 0, len(appConfig.EthChains)),
 	}
 
-	for chainIDStr, chain := range appConfig.CardanoChains {
-		chainIDConverter.StrToInt[chainIDStr] = chain.ChainIDNum
-		chainIDConverter.IntToStr[chain.ChainIDNum] = chainIDStr
+	// helper to add mapping safely
+	addMapping := func(str string, num common.ChainIDNum) error {
+		if _, exists := chainIDConverter.StrToInt[str]; exists {
+			return fmt.Errorf("duplicate chain string %s", str)
+		}
+
+		if _, exists := chainIDConverter.IntToStr[num]; exists {
+			return fmt.Errorf("duplicate chain number %d", num)
+		}
+
+		chainIDConverter.StrToInt[str] = num
+		chainIDConverter.IntToStr[num] = str
+
+		return nil
 	}
 
+	// add Cardano chains
+	for chainIDStr, chain := range appConfig.CardanoChains {
+		if err := addMapping(chainIDStr, chain.ChainIDNum); err != nil {
+			return err
+		}
+	}
+
+	// add EVM chains
 	for chainIDStr, chain := range appConfig.EthChains {
-		chainIDConverter.StrToInt[chainIDStr] = chain.ChainIDNum
-		chainIDConverter.IntToStr[chain.ChainIDNum] = chainIDStr
+		if err := addMapping(chainIDStr, chain.ChainIDNum); err != nil {
+			return err
+		}
+
 		chainIDConverter.EvmChains = append(chainIDConverter.EvmChains, chainIDStr)
 	}
 
 	appConfig.ChainIDConverter = &chainIDConverter
+
+	return nil
 }
 
 func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.DirectionConfigFile) error {
