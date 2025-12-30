@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -12,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,6 +33,7 @@ const (
 	chainTypeFlag                 = "type"
 	initialTokenSupplyFlag        = "token-supply"
 	initialWrappedTokenSupplyFlag = "wrapped-token-supply"
+	configFlag                    = "config"
 
 	validatorDataDirFlagDesc          = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc           = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
@@ -40,6 +43,7 @@ const (
 	bridgeSCAddrFlagDesc              = "bridge smart contract address"
 	initialTokenSupplyFlagDesc        = "initial token supply for the chain"
 	initialWrappedTokenSupplyFlagDesc = "initial wrapped token supply for the chain"
+	configFlagDesc                    = "path to config json file"
 )
 
 type registerChainParams struct {
@@ -51,6 +55,7 @@ type registerChainParams struct {
 	chainType                 uint8
 	initialTokenSupply        string
 	initialWrappedTokenSupply string
+	config                    string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
 }
@@ -81,6 +86,18 @@ func (ip *registerChainParams) validateFlags() error {
 	addrDecoded, err := common.DecodeHex(ip.bridgeSCAddr)
 	if err != nil || len(addrDecoded) == 0 || len(addrDecoded) > 20 {
 		return fmt.Errorf("invalid bridge smart contract address: %s", ip.bridgeSCAddr)
+	}
+
+	if ip.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(ip.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
 	}
 
 	ethTxHelper, err := ethtxhelper.NewEThTxHelper(ethtxhelper.WithNodeURL(ip.bridgeURL))
@@ -158,6 +175,13 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 		chainTypeFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
 }
 
@@ -183,6 +207,13 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message hash: %w", err)
 	}
+
+	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	if err != nil {
+		return nil, err
+	}
+
+	config.SetupChainIDs()
 
 	switch ip.chainType {
 	case common.ChainTypeCardano:
@@ -252,7 +283,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 			func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 				return contract.RegisterChainGovernance(
 					txOpts,
-					common.ToNumChainID(ip.chainID),
+					config.ChainIDConverter.ToNumChainID(ip.chainID),
 					ip.chainType,
 					initialTokenSupply,
 					initialWrappedTokenSupply,

@@ -35,6 +35,7 @@ var _ common.BridgingAddressesManager = (*BridgingAddressesManagerImpl)(nil)
 func NewBridgingAdressesManager(
 	ctx context.Context,
 	cardanoChains map[string]*oracleCore.CardanoChainConfig,
+	chainIDConverter *common.ChainIDConverter,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	logger hclog.Logger,
 ) (common.BridgingAddressesManager, error) {
@@ -60,9 +61,9 @@ func NewBridgingAdressesManager(
 
 	for _, registeredChain := range registeredChains {
 		registeredChainID := registeredChain.Id
-		chainIDStr := common.ToStrChainID(registeredChainID)
+		chainIDStr := chainIDConverter.ToStrChainID(registeredChainID)
 
-		if !common.IsExistingChainID(chainIDStr) || registeredChain.ChainType != 0 {
+		if !chainIDConverter.IsExistingChainID(chainIDStr) || registeredChain.ChainType != 0 {
 			continue
 		}
 

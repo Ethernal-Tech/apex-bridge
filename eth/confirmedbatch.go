@@ -110,7 +110,8 @@ func (b ConfirmedBatch) String() string {
 }
 
 type ConfirmedTransactionsWrapper struct {
-	Txs []ConfirmedTransaction
+	Txs              []ConfirmedTransaction
+	ChainIDConverter *common.ChainIDConverter
 }
 
 func (ct ConfirmedTransactionsWrapper) String() string {
@@ -121,8 +122,8 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 			sb.WriteString("\n")
 		}
 
-		sb.WriteString(fmt.Sprintf("Src ChainID = %s, ", common.ToStrChainID(tx.SourceChainId)))
-		sb.WriteString(fmt.Sprintf("Dst ChainID = %s, ", common.ToStrChainID(tx.DestinationChainId)))
+		sb.WriteString(fmt.Sprintf("Src ChainID = %s, ", ct.ChainIDConverter.ToStrChainID(tx.SourceChainId)))
+		sb.WriteString(fmt.Sprintf("Dst ChainID = %s, ", ct.ChainIDConverter.ToStrChainID(tx.DestinationChainId)))
 		sb.WriteString(fmt.Sprintf("Tx Hash = %s, ", hex.EncodeToString(tx.ObservedTransactionHash[:])))
 		sb.WriteString(fmt.Sprintf("Block = %s, ", tx.BlockHeight))
 		sb.WriteString(fmt.Sprintf("Nonce = %d, ", tx.Nonce))
@@ -156,6 +157,7 @@ func (ct ConfirmedTransactionsWrapper) String() string {
 
 type SignedBatchWrapper struct {
 	*SignedBatch
+	ChainIDConverter *common.ChainIDConverter
 }
 
 func (sbw SignedBatchWrapper) String() string {
@@ -166,7 +168,7 @@ func (sbw SignedBatchWrapper) String() string {
 	sb.WriteString("\nbatch type = ")
 	sb.WriteString(fmt.Sprint(sbw.BatchType))
 	sb.WriteString("\ndestination chain id = ")
-	sb.WriteString(common.ToStrChainID(sbw.DestinationChainId))
+	sb.WriteString(sbw.ChainIDConverter.ToStrChainID(sbw.DestinationChainId))
 	sb.WriteString("\nraw tx = ")
 	sb.WriteString(hex.EncodeToString(sbw.RawTransaction))
 

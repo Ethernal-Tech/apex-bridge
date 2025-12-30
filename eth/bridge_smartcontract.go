@@ -37,16 +37,18 @@ type IBridgeSmartContract interface {
 type BridgeSmartContractImpl struct {
 	smartContractAddress ethcommon.Address
 	ethHelper            *EthHelperWrapper
+	chainIDConverter     *common.ChainIDConverter
 }
 
 var _ IBridgeSmartContract = (*BridgeSmartContractImpl)(nil)
 
 func NewBridgeSmartContract(
-	smartContractAddress string, ethHelper *EthHelperWrapper,
+	smartContractAddress string, ethHelper *EthHelperWrapper, chainIDConverter *common.ChainIDConverter,
 ) *BridgeSmartContractImpl {
 	return &BridgeSmartContractImpl{
 		smartContractAddress: common.HexToAddress(smartContractAddress),
 		ethHelper:            ethHelper,
+		chainIDConverter:     chainIDConverter,
 	}
 }
 
@@ -67,7 +69,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedBatch(
 
 	result, err := contract.GetConfirmedBatch(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 	if err != nil {
 		return nil, fmt.Errorf("error while GetConfirmedBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -144,7 +146,7 @@ func (bsc *BridgeSmartContractImpl) ShouldCreateBatch(ctx context.Context, desti
 
 	return contract.ShouldCreateBatch(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
@@ -164,7 +166,7 @@ func (bsc *BridgeSmartContractImpl) GetConfirmedTransactions(
 
 	return contract.GetConfirmedTransactions(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 }
 
 // GetLastObservedBlock implements IBridgeSmartContract.
@@ -185,7 +187,7 @@ func (bsc *BridgeSmartContractImpl) GetLastObservedBlock(
 
 	cardanoBlock, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 	if err != nil {
 		return CardanoBlock{}, fmt.Errorf("error while GetLastObservedBlock: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -210,7 +212,7 @@ func (bsc *BridgeSmartContractImpl) GetValidatorsChainData(
 
 	return contract.GetValidatorsChainData(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinationChain string) (uint64, error) {
@@ -228,7 +230,7 @@ func (bsc *BridgeSmartContractImpl) GetNextBatchID(ctx context.Context, destinat
 
 	return contract.GetNextBatchId(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(destinationChain))
+	}, bsc.chainIDConverter.ToNumChainID(destinationChain))
 }
 
 func (bsc *BridgeSmartContractImpl) GetAllRegisteredChains(ctx context.Context) ([]Chain, error) {
@@ -283,7 +285,7 @@ func (bsc *BridgeSmartContractImpl) SetChainAdditionalData(
 		return fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
 	}
 
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := bsc.chainIDConverter.ToNumChainID(chainID)
 
 	estimatedGas, _, err := ethTxHelper.EstimateGas(
 		ctx, bsc.ethHelper.wallet.GetAddress(),
@@ -322,7 +324,7 @@ func (bsc *BridgeSmartContractImpl) GetBatchStatusAndTransactions(
 
 	result, err := contract.GetBatchStatusAndTransactions(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(chainID), batchID)
+	}, bsc.chainIDConverter.ToNumChainID(chainID), batchID)
 	if err != nil {
 		return 0, nil, fmt.Errorf("error while GetBatchStatusAndTransactions: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -347,7 +349,7 @@ func (bsc *BridgeSmartContractImpl) GetBridgingAddressesCount(
 
 	result, err := contract.GetBridgingAddressesCount(&bind.CallOpts{
 		Context: ctx,
-	}, common.ToNumChainID(chainID))
+	}, bsc.chainIDConverter.ToNumChainID(chainID))
 	if err != nil {
 		return 0, fmt.Errorf("error while GetBridgingAddressesCount: %w", bsc.ethHelper.ProcessError(err))
 	}

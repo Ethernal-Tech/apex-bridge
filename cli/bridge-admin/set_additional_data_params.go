@@ -32,10 +32,24 @@ type setAdditionalDataParams struct {
 	privateKeyConfig string
 	bridgingAddr     string
 	feeAddr          string
+	config           string
+
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *setAdditionalDataParams) ValidateFlags() error {
-	if !common.IsExistingChainID(ip.chainID) {
+	if err := validateConfigFilePath(ip.config); err != nil {
+		return err
+	}
+
+	config, err := loadConfig(ip.config)
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %w", err)
+	}
+
+	ip.chainIDConverter = config.ChainIDConverter
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainID) {
 		return fmt.Errorf("invalid --%s flag", chainIDFlag)
 	}
 
@@ -47,13 +61,13 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if ip.bridgingAddr == "" || !common.IsValidAddress(ip.chainID, ip.bridgingAddr) {
+	if ip.bridgingAddr == "" || !common.IsValidAddress(ip.chainID, ip.bridgingAddr, ip.chainIDConverter) {
 		return fmt.Errorf("invalid --%s flag", bridgingAddrFlag)
 	}
 
-	if common.IsEVMChainID(ip.chainID) {
+	if ip.chainIDConverter.IsEVMChainID(ip.chainID) {
 		ip.feeAddr = ""
-	} else if ip.feeAddr == "" || !common.IsValidAddress(ip.chainID, ip.feeAddr) {
+	} else if ip.feeAddr == "" || !common.IsValidAddress(ip.chainID, ip.feeAddr, ip.chainIDConverter) {
 		return fmt.Errorf("invalid --%s flag", feeAddrFlag)
 	}
 
@@ -114,6 +128,13 @@ func (ip *setAdditionalDataParams) RegisterFlags(cmd *cobra.Command) {
 		feeAddrFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
@@ -134,7 +155,7 @@ func (ip *setAdditionalDataParams) Execute(
 		ethtxhelper.WithTxPoolCheck(true),
 		ethtxhelper.WithNonceStrategyType(ethtxhelper.NonceInMemoryStrategy),
 		ethtxhelper.WithDynamicTx(false))
-	smartContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperWrapper)
+	smartContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperWrapper, ip.chainIDConverter)
 
 	_, _ = outputter.Write([]byte("Sending transactions..."))
 	outputter.WriteOutput()

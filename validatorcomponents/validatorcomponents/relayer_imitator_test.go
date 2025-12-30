@@ -9,11 +9,16 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	relayerDb "github.com/Ethernal-Tech/apex-bridge/relayer/database_access"
+	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRelayerImitator(t *testing.T) {
+	appConfig := &core.AppConfig{
+		ChainIDConverter: common.NewChainIDConverterForTest(),
+	}
+
 	t.Run("NewRelayerImitator", func(t *testing.T) {
 		brsUpdater := &common.BridgingRequestStateUpdaterMock{}
 		bsc := &eth.BridgeSmartContractMock{}
@@ -113,7 +118,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
-		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(appConfig, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
@@ -139,7 +144,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(fmt.Errorf("test err"))
 
-		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(appConfig, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.ErrorContains(t, err, "failed to insert last submitted batch id into db")
@@ -165,7 +170,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(nil, nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
-		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(appConfig, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.NoError(t, err)
@@ -193,7 +198,7 @@ func TestRelayerImitator(t *testing.T) {
 		db.On("GetLastSubmittedBatchID", chainID).Return(big.NewInt(1), nil)
 		db.On("AddLastSubmittedBatchID", chainID, big.NewInt(2)).Return(nil)
 
-		ri, _ := NewRelayerImitator(nil, brsUpdater, bsc, db, hclog.NewNullLogger())
+		ri, _ := NewRelayerImitator(appConfig, brsUpdater, bsc, db, hclog.NewNullLogger())
 
 		err := ri.execute(ctx, chainID)
 		require.NoError(t, err)

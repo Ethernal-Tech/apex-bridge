@@ -25,8 +25,8 @@ func TestBridgeSubmitter(t *testing.T) {
 				BridgingRequestClaims: []cCore.BridgingRequestClaim{
 					{
 						ObservedTransactionHash: common.NewHashFromHexString("0x11"),
-						SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
-						DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
+						SourceChainId:           common.ChainIDIntVector,
+						DestinationChainId:      common.ChainIDIntPrime,
 						Receivers:               []cCore.BridgingRequestReceiver{},
 					},
 				},

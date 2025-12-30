@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -19,11 +21,9 @@ import (
 const (
 	apexBridgeSmartContracts = "apex-bridge-smartcontracts"
 
-	nodeFlag          = "url"
 	contractFlag      = "contract"
 	repositoryURLFlag = "repo"
 
-	nodeFlagDessc         = "node url"
 	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName:args] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 	repositoryURLFlagDesc = "smart contracts github repository url"
 )
@@ -40,6 +40,7 @@ type upgradeEVMParams struct {
 	dynamicTx     bool
 	contracts     []string
 	gasLimit      uint64
+	config        string
 }
 
 func (ip *upgradeEVMParams) validateFlags() error {
@@ -57,6 +58,18 @@ func (ip *upgradeEVMParams) validateFlags() error {
 
 	if ip.clone && !common.IsValidHTTPURL(ip.repositoryURL) {
 		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
+	}
+
+	if ip.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(ip.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
 	}
 
 	return nil
@@ -133,6 +146,13 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		gasLimitFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
@@ -146,6 +166,13 @@ func (ip *upgradeEVMParams) Execute(
 	updateFuncs := make([]string, len(ip.contracts))
 	updateFuncsArgs := make([]string, len(ip.contracts))
 
+	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	config.SetupChainIDs()
+
 	for i, x := range ip.contracts {
 		ss := strings.Split(x, ":")
 		if n := len(ss); n < 2 || n > 4 {
@@ -156,7 +183,7 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("invalid contract name for --%s number %d", contractFlag, i)
 		}
 
-		if !common.IsValidAddress(common.ChainIDStrNexus, ss[1]) {
+		if !common.IsValidAddress(common.ChainIDStrNexus, ss[1], config.ChainIDConverter) {
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
 		}
 

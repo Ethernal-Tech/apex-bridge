@@ -3,11 +3,13 @@ package clicreateaddress
 import (
 	"context"
 	"fmt"
+	"os"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
@@ -24,6 +26,7 @@ const (
 	privateKeyConfigFlag = "key-config"
 	showPolicyScrFlag    = "show-policy-script"
 	custodialAddrFlag    = "generate-custodial-address"
+	configFlag           = "config"
 
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
@@ -34,6 +37,7 @@ const (
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 	showPolicyScrFlagDesc    = "show policy script"
 	custodialAddrFlagDesc    = "generate custodial address"
+	configFlagDesc           = "path to config json file"
 )
 
 type createAddressParams struct {
@@ -47,6 +51,9 @@ type createAddressParams struct {
 	privateKeyConfig string
 	showPolicyScript bool
 	custodialAddress bool
+	config           string
+
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *createAddressParams) validateFlags() error {
@@ -58,7 +65,28 @@ func (ip *createAddressParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainID) {
+	if params.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(params.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", params.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", params.config, err)
+	}
+
+	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %w", err)
+	}
+
+	config.SetupChainIDs()
+
+	ip.chainIDConverter = config.ChainIDConverter
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.chainID)
 	}
 
@@ -129,6 +157,13 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 		custodialAddrFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&params.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)
 }
 
@@ -140,7 +175,7 @@ func (ip *createAddressParams) Execute(
 		return nil, err
 	}
 
-	bridgeContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperBridge)
+	bridgeContract := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelperBridge, ip.chainIDConverter)
 	cliBinary := wallet.ResolveCardanoCliBinary(wallet.CardanoNetworkType(ip.networkID))
 
 	validatorsData, err := bridgeContract.GetValidatorsChainData(ctx, ip.chainID)
@@ -149,7 +184,7 @@ func (ip *createAddressParams) Execute(
 	}
 
 	_, _ = outputter.Write([]byte("Validators chain data retrieved:\n"))
-	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(ip.chainID, validatorsData)))
+	_, _ = outputter.Write([]byte(eth.GetChainValidatorsDataInfoString(ip.chainID, validatorsData, ip.chainIDConverter)))
 	_, _ = outputter.Write([]byte("\n"))
 	outputter.WriteOutput()
 

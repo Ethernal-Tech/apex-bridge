@@ -67,7 +67,7 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("refund validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addRefundRequestClaim(claims, tx, metadata)
+	p.addRefundRequestClaim(claims, tx, metadata, appConfig.ChainIDConverter)
 
 	return nil
 }
@@ -75,12 +75,13 @@ func (p *RefundRequestProcessorImpl) ValidateAndAddClaim(
 func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.EthTx,
 	metadata *core.RefundBridgingRequestEthMetadata,
+	chainIDConverter *common.ChainIDConverter,
 ) {
 	amount := common.WeiToDfm(tx.Value)
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       common.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             amount,
@@ -96,7 +97,7 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	claims.RefundRequestClaims = append(claims.RefundRequestClaims, claim)
 
 	p.logger.Info("Added RefundRequestClaim",
-		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim))
+		"txHash", tx.Hash, "claim", cCore.RefundRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *RefundRequestProcessorImpl) validate(

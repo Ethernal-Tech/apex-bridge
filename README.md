@@ -91,6 +91,7 @@ $ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PA
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
+        --config ./config.json \
         --chain prime \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
@@ -103,7 +104,8 @@ $ go run ./main.go register-chain \
 
 # How to create multisig address
 ```shell
-$ go run ./main.go create-address \
+$ go run ./main.go create-addresses \
+        --config ./config.json \
         --network-id network_ID \
         --testnet-magic 3311 \
         --bridge-url http://127.0.0.1:12013 \
@@ -245,6 +247,7 @@ $ apex-bridge generate-configs evm-chain \
 # Example of sending a transaction from the prime to the vector
 ```shell
 $ apex-bridge sendtx \
+        --config ./config.json \
         --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --testnet-src 3311 \
@@ -261,6 +264,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the vector to the prime
 ```shell
 $ apex-bridge sendtx \
+        --config ./config.json \
         --tx-type cardano \
         --key VECTOR_WALLET_PRIVATE_KEY \
         --testnet-src 1127 \
@@ -278,6 +282,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the prime to the nexus
 ```shell
 $ apex-bridge sendtx \
+        --config ./config.json \
         --tx-type cardano \
         --key PRIME_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.prime.testnet.apexfusion.org:1337 \
@@ -294,6 +299,7 @@ $ apex-bridge sendtx \
 # Example of sending a transaction from the nexus to the prime
 ```shell
 $ apex-bridge sendtx \
+        --config ./config.json \
         --tx-type evm \
         --key NEXUS_WALLET_PRIVATE_KEY \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
@@ -310,6 +316,7 @@ $ apex-bridge sendtx \
 # Example of sending a skyline transaction from the cardano to the prime
 ```shell
 $ apex-bridge sendtx skyline \
+        --config ./config.json \
         --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
@@ -330,6 +337,7 @@ $ apex-bridge sendtx skyline \
 # Example of sending a skyline transaction from the cardano to the nexus
 ```shell
 $ apex-bridge sendtx skyline \
+        --config ./config.json \
         --tx-type cardano \
         --key CARDANO_WALLET_PRIVATE_KEY \
         --ogmios-src http://ogmios.cardano.testnet.apexfusion.org:1337 \
@@ -350,6 +358,7 @@ $ apex-bridge sendtx skyline \
 # Example of sending a skyline transaction from the nexus to the cardano
 ```shell
 $ apex-bridge sendtx skyline \
+        --config ./config.json \
         --tx-type evm \
         --key EVM_WALLET_PRIVATE_KEY \
         --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
@@ -371,6 +380,7 @@ $ apex-bridge sendtx skyline \
 Default example (bls keys are retrieved from bridge and gateway address is updated on the bridge):
 ```shell
 $ apex-bridge deploy-evm \
+        --config ./config.json \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -411,6 +421,7 @@ $ apex-bridge deploy-evm \
 # How to upgrade bridge/gateway contracts
 ```shell
 $ apex-bridge deploy-evm upgrade \
+        --config ./config.json \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -445,6 +456,7 @@ $ apex-bridge deploy-evm deploy-contract \
 Default example (bls keys are retrieved from bridge):
 ```shell
 $ apex-bridge deploy-evm set-validators-chain-data \
+        --config ./config.json \
         --url http://127.0.0.1:12001 \
         --key NEXUS_OR_EVM_PRIVATE_KEY \
         --dir /tmp \
@@ -475,12 +487,14 @@ $ apex-bridge deploy-evm set-validators-chain-data \
 # Bridge admin commands
 ```shell
 $ apex-bridge bridge-admin get-chain-token-quantity \
+        --config ./config.json \
         --bridge-url http://localhost:12013 \
         --chain prime --chain nexus --chain vector
 ```
 
 ```shell
 $ apex-bridge bridge-admin update-chain-token-quantity \
+        --config ./config.json \
         --bridge-url http://localhost:12013 \
         --chain nexus --amount 300 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d
@@ -504,6 +518,7 @@ $ apex-bridge bridge-admin set-min-amounts \
 
 ```shell
 $ apex-bridge bridge-admin defund \
+        --config ./config.json \
         --bridge-url http://localhost:12013 \
         --chain nexus \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
@@ -517,6 +532,7 @@ $ apex-bridge bridge-admin defund \
 
 ```shell
 $ apex-bridge bridge-admin set-additional-data \
+        --config ./config.json \
         --bridge-url http://localhost:12013 \
         --bridge-key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --chain nexus \
@@ -528,6 +544,7 @@ $ apex-bridge bridge-admin set-additional-data \
 To register stake address and delegate it to the stake pool use: 
 ```shell
 $ apex-bridge bridge-admin delegate-address-to-stake-pool \
+        --config ./config.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -551,6 +568,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 For deregistration of stake address use:
 ```shell
 $ apex-bridge bridge-admin deregister-stake-address \
+        --config ./config.json \
         --bridge-address-index 0 \
         --bridge-url http://localhost:12001 \
         --chain prime \
@@ -560,6 +578,7 @@ $ apex-bridge bridge-admin deregister-stake-address \
 
 ```shell
 $ apex-bridge bridge-admin update-bridging-addrs-count \
+        --config ./config.json \
         --bridge-url http://localhost:12001 \
         --bridging-addresses-count 5 \
         --chain prime \
@@ -626,6 +645,7 @@ $ apex-bridge bridge-admin delegate-address-to-stake-pool \
 
 ```shell
 $ apex-bridge bridge-admin register-gateway-token \
+        --config ./config.json \
         --node-url http://localhost:12001 \
         --gateway-address 0x020202 \
         --gas-limit 10_000_000 \
@@ -640,6 +660,7 @@ $ apex-bridge bridge-admin register-gateway-token \
 
 ```shell
 $ apex-bridge bridge-admin redistribute-bridging-addresses-tokens \
+        --config ./config.json \
         --bridge-url http://localhost:12001 \
         --chain prime \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d

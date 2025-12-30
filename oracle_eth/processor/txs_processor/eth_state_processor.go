@@ -190,7 +190,7 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 				tx.SetLastTimeTried(time.Time{})
 
 				for _, batchTx := range event.TxHashes {
-					if common.ToStrChainID(batchTx.SourceChainID) == tx.GetChainID() &&
+					if sp.appConfig.ChainIDConverter.ToStrChainID(batchTx.SourceChainID) == tx.GetChainID() &&
 						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
@@ -242,7 +242,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	for idx, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
-				ChainID: common.ToStrChainID(hash.SourceChainID),
+				ChainID: sp.appConfig.ChainIDConverter.ToStrChainID(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
@@ -297,6 +297,8 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 	event *oracleCore.NotEnoughFundsEvent, claims *oracleCore.BridgeClaims,
 	allPendingMap map[string]*core.EthTx,
 ) (*core.EthTx, error) {
+	chainIDConverter := sp.appConfig.ChainIDConverter
+
 	if strings.HasPrefix(event.ClaimeType, oracleCore.BRCClaimType) {
 		brcIndex := event.Index.Uint64()
 		if brcIndex >= uint64(len(claims.BridgingRequestClaims)) {
@@ -307,7 +309,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		brc := claims.BridgingRequestClaims[brcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(common.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -324,7 +326,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		rrc := claims.RefundRequestClaims[rrcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(common.ToStrChainID(rrc.OriginChainId), rrc.OriginTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToStrChainID(rrc.OriginChainId), rrc.OriginTransactionHash))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -341,7 +343,7 @@ func (sp *EthStateProcessor) PersistNew() {
 	if sp.state.updateData.Count() > 0 {
 		sp.logger.Info("Updating txs", "data", sp.state.updateData)
 
-		if err := sp.db.UpdateTxs(sp.state.updateData); err != nil {
+		if err := sp.db.UpdateTxs(sp.state.updateData, sp.appConfig.ChainIDConverter); err != nil {
 			sp.logger.Error("Failed to update txs", "err", err)
 		}
 	}
@@ -615,6 +617,8 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 	bridgeClaims *oracleCore.BridgeClaims,
 	bridgingRequestStateUpdater common.BridgingRequestStateUpdater,
 ) {
+	chainIDConverter := sp.appConfig.ChainIDConverter
+
 	if len(bridgeClaims.BridgingRequestClaims) > 0 || len(bridgeClaims.RefundRequestClaims) > 0 {
 		notRejectedMap := make(map[string]bool, len(sp.state.updateData.MoveUnprocessedToPending))
 		for _, tx := range sp.state.updateData.MoveUnprocessedToPending {
@@ -624,7 +628,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 		updateToSubmittedToBridge := func(
 			sourceChainId uint8, observedTransactionHash [32]byte, destinationChainId uint8, isRefund bool,
 		) {
-			srcChainID := common.ToStrChainID(sourceChainId)
+			srcChainID := chainIDConverter.ToStrChainID(sourceChainId)
 			key := core.ToEthTxKey(srcChainID, observedTransactionHash)
 
 			if !notRejectedMap[string(key)] {
@@ -633,7 +637,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
 				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
-				common.ToStrChainID(destinationChainId))
+				chainIDConverter.ToStrChainID(destinationChainId))
 
 			if err != nil {
 				sp.logger.Error(

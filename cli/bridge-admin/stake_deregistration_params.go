@@ -20,6 +20,7 @@ type stakeDeregParams struct {
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
+	config           string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -40,13 +41,23 @@ func (params *stakeDeregParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
+	if err := validateConfigFilePath(params.config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Execute implements common.CliCommandExecutor.
 func (params *stakeDeregParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(params.chainID)
+
+	config, err := loadConfig(params.config)
+	if err != nil {
+		return nil, err
+	}
+
+	chainIDInt := config.ChainIDConverter.ToNumChainID(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
@@ -144,6 +155,13 @@ func (params *stakeDeregParams) RegisterFlags(cmd *cobra.Command) {
 		privateKeyConfigFlag,
 		"",
 		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&params.config,
+		configFlag,
+		"",
+		configFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

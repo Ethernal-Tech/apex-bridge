@@ -46,6 +46,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	config.SetupChainIDs()
+
 	logger, err := logger.NewLogger(config.Logger)
 	if err != nil {
 		outputter.SetError(err)

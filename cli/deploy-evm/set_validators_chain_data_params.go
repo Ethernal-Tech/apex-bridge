@@ -3,12 +3,14 @@ package clideployevm
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +49,18 @@ func (ip *setValidatorsChainDataEVMParams) validateFlags() error {
 
 	if ip.validatorsProxyAddr == "" || !ethcommon.IsHexAddress(ip.validatorsProxyAddr) {
 		return fmt.Errorf("invalid --%s flag", validatorsProxyAddrFlag)
+	}
+
+	if ip.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(ip.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
 	}
 
 	return nil
@@ -137,6 +151,13 @@ func (ip *setValidatorsChainDataEVMParams) setFlags(cmd *cobra.Command) {
 		validatorsProxyAddrFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgeNodeURLFlag, evmBlsKeyFlag)
@@ -194,7 +215,14 @@ func (ip *setValidatorsChainDataEVMParams) Execute(
 		return nil, err
 	}
 
-	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, outputter)
+	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	if err != nil {
+		return nil, err
+	}
+
+	config.SetupChainIDs()
+
+	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, config.ChainIDConverter, outputter)
 	if err != nil {
 		return nil, err
 	}
