@@ -26,6 +26,7 @@ type updateBridgingAddrsCountParams struct {
 	bridgeNodeURL      string
 	bridgePrivateKey   string
 	privateKeyConfig   string
+	config             string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -46,13 +47,23 @@ func (params *updateBridgingAddrsCountParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
+	if err := validateConfigFilePath(params.config); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Execute implements common.CliCommandExecutor.
 func (params *updateBridgingAddrsCountParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(params.chainID)
+
+	config, err := loadConfig(params.config)
+	if err != nil {
+		return nil, err
+	}
+
+	chainIDInt := config.ChainIDConverter.ToNumChainID(params.chainID)
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()
@@ -143,6 +154,13 @@ func (params *updateBridgingAddrsCountParams) RegisterFlags(cmd *cobra.Command) 
 		privateKeyConfigFlag,
 		"",
 		privateKeyConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&params.config,
+		configFlag,
+		"",
+		configFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

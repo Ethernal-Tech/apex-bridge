@@ -44,6 +44,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	config.SetupChainIDs()
+
 	directionsConfig, err := common.LoadConfig[common.DirectionConfigFile](vcParams.dirConfig, "")
 	if err != nil {
 		outputter.SetError(err)

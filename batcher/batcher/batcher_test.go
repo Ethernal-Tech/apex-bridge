@@ -108,7 +108,7 @@ func TestBatcherExecuteOnlyBridging(t *testing.T) {
 			Nonce:                   5,
 			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
-			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
@@ -228,11 +228,11 @@ func TestBatcherExecuteOnlyStaking(t *testing.T) {
 			Nonce:                   5,
 			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
-			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.StakeConfirmedTxType),
 			TransactionSubType:      uint8(common.StakeRegDelConfirmedTxSubType),
 			StakePoolId:             "pool...",
-			DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
+			DestinationChainId:      common.ChainIDIntPrime,
 		},
 	}
 
@@ -271,7 +271,8 @@ func TestBatcherExecuteMix(t *testing.T) {
 				"potentialFee": 300000,
 				}`)),
 		},
-		PullTimeMilis: 2500,
+		ChainIDConverter: common.NewChainIDConverterForTest(),
+		PullTimeMilis:    2500,
 	}
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), time.Second*60)
@@ -344,17 +345,17 @@ func TestBatcherExecuteMix(t *testing.T) {
 			Nonce:                   5,
 			ObservedTransactionHash: common.NewHashFromHexString("0x6674"),
 			BlockHeight:             big.NewInt(10),
-			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.StakeConfirmedTxType),
 			TransactionSubType:      uint8(common.StakeRegDelConfirmedTxSubType),
 			StakePoolId:             "pool...",
-			DestinationChainId:      common.ToNumChainID(common.ChainIDStrPrime),
+			DestinationChainId:      common.ChainIDIntPrime,
 		},
 		{
 			Nonce:                   6,
 			ObservedTransactionHash: common.NewHashFromHexString("0x6675"),
 			BlockHeight:             big.NewInt(10),
-			SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+			SourceChainId:           common.ChainIDIntPrime,
 			TransactionType:         uint8(common.BridgingConfirmedTxType),
 			Receivers: []eth.BridgeReceiver{
 				{
@@ -528,6 +529,20 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 	_, err = cardanotx.GenerateWallet(secretsMngr, "prime", false, true)
 	require.NoError(t, err)
 
+	config := &core.BatcherConfiguration{
+		Chain: core.ChainConfig{
+			ChainID:   common.ChainIDStrPrime,
+			ChainType: "Cardano",
+			ChainSpecific: json.RawMessage([]byte(`{
+				"socketPath": "./socket",
+				"testnetMagic": 2,
+				"potentialFee": 300000,
+				}`)),
+		},
+		ChainIDConverter: common.NewChainIDConverterForTest(),
+		PullTimeMilis:    2500,
+	}
+
 	t.Run("getFirstAndLastTxNonceID one item", func(t *testing.T) {
 		f, l := getFirstAndLastTxNonceID([]eth.ConfirmedTransaction{
 			{Nonce: 5},
@@ -552,35 +567,47 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 			{4},
 			{5},
 		}
-		res := getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
+
+		bridgeSmartContractMock := &eth.BridgeSmartContractMock{}
+		operationsMock := &cardanoChainOperationsMock{}
+		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
+		bridgingAddressesCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
+
+		b := NewBatcher(config, operationsMock,
+			bridgeSmartContractMock, &common.BridgingRequestStateUpdaterMock{ReturnNil: true},
+			bridgingAddressesManagerMock,
+			bridgingAddressesCoordinatorMock,
+			hclog.NewNullLogger())
+
+		res := b.getBridgingRequestStateKeys([]eth.ConfirmedTransaction{
 			{
 				ObservedTransactionHash: included[0],
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   4,
 			},
 			{
 				ObservedTransactionHash: [32]byte{2},
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   2,
 			},
 			{
 				ObservedTransactionHash: [32]byte{3},
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   6,
 			},
 			{
 				ObservedTransactionHash: included[1],
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   3,
 			},
 			{
 				ObservedTransactionHash: included[2],
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrPrime),
+				SourceChainId:           common.ChainIDIntPrime,
 				Nonce:                   5,
 			},
 			{
 				ObservedTransactionHash: [32]byte{6},
-				SourceChainId:           common.ToNumChainID(common.ChainIDStrVector),
+				SourceChainId:           common.ChainIDIntVector,
 				Nonce:                   2,
 			},
 		}, 3, 5)

@@ -49,24 +49,25 @@ func (p *BatchExecutionFailedProcessorImpl) ValidateAndAddClaim(
 		return fmt.Errorf("validation failed for tx: %v, err: %w", tx, err)
 	}
 
-	p.addBatchExecutionFailedClaim(claims, tx, metadata)
+	p.addBatchExecutionFailedClaim(claims, tx, metadata, appConfig.ChainIDConverter)
 
 	return nil
 }
 
 func (p *BatchExecutionFailedProcessorImpl) addBatchExecutionFailedClaim(
-	claims *cCore.BridgeClaims, tx *core.BridgeExpectedCardanoTx, metadata *common.BatchExecutedMetadata,
+	claims *cCore.BridgeClaims, tx *core.BridgeExpectedCardanoTx,
+	metadata *common.BatchExecutedMetadata, chainIDConverter *common.ChainIDConverter,
 ) {
 	claim := cCore.BatchExecutionFailedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainId:                 common.ToNumChainID(tx.ChainID),
+		ChainId:                 chainIDConverter.ToNumChainID(tx.ChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 	}
 
 	claims.BatchExecutionFailedClaims = append(claims.BatchExecutionFailedClaims, claim)
 
 	p.logger.Info("Added BatchExecutionFailedClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BatchExecutionFailedClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BatchExecutionFailedClaimString(claim, chainIDConverter))
 }
 
 func (*BatchExecutionFailedProcessorImpl) validate(

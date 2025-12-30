@@ -130,8 +130,9 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 	config := &core.RelayerManagerConfiguration{
 		Chains: map[string]core.ChainConfig{
 			common.ChainIDStrPrime: {
-				ChainType: common.ChainTypeCardanoStr,
-				DbsPath:   testDir,
+				ChainType:  common.ChainTypeCardanoStr,
+				ChainIDNum: common.ChainIDIntPrime,
+				DbsPath:    testDir,
 				ChainSpecific: json.RawMessage([]byte(`{
 					"blockFrostUrl": "http://hello.com"
 				}`)),
@@ -139,18 +140,22 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 			},
 			common.ChainIDStrVector: {
 				ChainType:     common.ChainTypeCardanoStr,
+				ChainIDNum:    common.ChainIDIntVector,
 				DbsPath:       testDir,
 				ChainSpecific: json.RawMessage("{}"),
 			},
 			common.ChainIDStrNexus: {
-				ChainType: common.ChainTypeEVMStr,
-				DbsPath:   testDir,
+				ChainType:  common.ChainTypeEVMStr,
+				ChainIDNum: common.ChainIDIntNexus,
+				DbsPath:    testDir,
 				ChainSpecific: json.RawMessage([]byte(fmt.Sprintf(`{
 					"dataDir": "%s"
 				}`, testDir))),
 			},
 		},
 	}
+
+	config.SetupChainIDs()
 
 	relayers, chainsConfigs, err := getRelayersAndConfigurations(
 		&eth.BridgeSmartContractMock{}, allRegisteredChains, config, hclog.NewNullLogger())

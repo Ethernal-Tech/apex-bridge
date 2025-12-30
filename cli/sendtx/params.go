@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -38,6 +40,7 @@ const (
 	gatewayAddressFlag  = "gateway-addr"
 	nexusURLFlag        = "nexus-url"
 	currencyTokenIDFlag = "currency-token-id"
+	configFlag          = "config"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -54,6 +57,7 @@ const (
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	nexusURLFlagDesc        = "nexus chain URL"
 	currencyTokenIDFlagDesc = "currency token ID on evm chain"
+	configFlagDesc          = "path to config json file"
 
 	ttlSlotNumberInc = 500
 
@@ -83,6 +87,7 @@ type sendTxParams struct {
 	chainIDSrc         string
 	chainIDDst         string
 	feeString          string
+	config             string
 
 	// apex
 	ogmiosURLSrc    string
@@ -96,9 +101,10 @@ type sendTxParams struct {
 	nexusURL        string
 	currencyTokenID uint16
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount        *big.Int
+	receiversParsed  []*receiverAmount
+	wallet           *cardanowallet.Wallet
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -114,11 +120,31 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDSrc) {
+	if ip.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(ip.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
+	}
+
+	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	config.SetupChainIDs()
+	ip.chainIDConverter = config.ChainIDConverter
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDDst) {
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -195,7 +221,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
+		if !common.IsValidAddress(ip.chainIDDst, vals[0], ip.chainIDConverter) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
@@ -321,6 +347,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		currencyTokenIDFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, ogmiosURLSrcFlag)
@@ -443,7 +476,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
-	chainID := common.ToNumChainID(ip.chainIDDst)
+	chainID := ip.chainIDConverter.ToNumChainID(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed, ip.currencyTokenID)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 

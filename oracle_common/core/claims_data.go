@@ -27,6 +27,7 @@ type HotWalletIncrementClaim = contractbinding.IBridgeStructsHotWalletIncrementC
 
 type BridgeClaims struct {
 	ContractClaims
+	ChainIDConverter *common.ChainIDConverter
 }
 
 func (bc *BridgeClaims) Count() int {
@@ -45,7 +46,7 @@ func (bc *BridgeClaims) CanAddMore(maxAmount int) bool {
 	return bc.Count() < maxAmount
 }
 
-func RefundRequestClaimString(c RefundRequestClaim) string {
+func RefundRequestClaimString(c RefundRequestClaim, chainIDConverter *common.ChainIDConverter) string {
 	var (
 		sb             strings.Builder
 		sbTokenAmounts strings.Builder
@@ -56,9 +57,9 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	sb.WriteString("\nRefundTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.RefundTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(common.ToStrChainID(c.OriginChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.OriginChainId))
 	sb.WriteString("\nDstChainID = ")
-	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.DestinationChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.OriginSenderAddress)
 	sb.WriteString("\nAmount = ")
@@ -99,33 +100,33 @@ func RefundRequestClaimString(c RefundRequestClaim) string {
 	return sb.String()
 }
 
-func BatchExecutionFailedClaimString(c BatchExecutionFailedClaim) string {
+func BatchExecutionFailedClaimString(c BatchExecutionFailedClaim, chainIDConverter *common.ChainIDConverter) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(common.ToStrChainID(c.ChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
 	return sb.String()
 }
 
-func BatchExecutedClaimString(c BatchExecutedClaim) string {
+func BatchExecutedClaimString(c BatchExecutedClaim, chainIDConverter *common.ChainIDConverter) string {
 	var sb strings.Builder
 
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(common.ToStrChainID(c.ChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
 	return sb.String()
 }
 
-func BridgingRequestClaimString(c BridgingRequestClaim) string {
+func BridgingRequestClaimString(c BridgingRequestClaim, chainIDConverter *common.ChainIDConverter) string {
 	var (
 		sb          strings.Builder
 		sbReceivers strings.Builder
@@ -164,16 +165,16 @@ func BridgingRequestClaimString(c BridgingRequestClaim) string {
 	sb.WriteString("\nWrappedTokenAmountDestination = ")
 	sb.WriteString(c.WrappedTokenAmountDestination.String())
 	sb.WriteString("\nSourceChainID = ")
-	sb.WriteString(common.ToStrChainID(c.SourceChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.SourceChainId))
 	sb.WriteString("\nDestinationChainID = ")
-	sb.WriteString(common.ToStrChainID(c.DestinationChainId))
+	sb.WriteString(chainIDConverter.ToStrChainID(c.DestinationChainId))
 
 	return sb.String()
 }
 
-func HotWalletIncrementClaimsString(c HotWalletIncrementClaim) string {
+func HotWalletIncrementClaimsString(c HotWalletIncrementClaim, chainIDConverter *common.ChainIDConverter) string {
 	return fmt.Sprintf("(chainID: %s, amount: %s, amountWrapped: %s)",
-		common.ToStrChainID(c.ChainId), c.Amount, c.AmountWrapped)
+		chainIDConverter.ToStrChainID(c.ChainId), c.Amount, c.AmountWrapped)
 }
 
 func (bc BridgeClaims) String() string {
@@ -192,7 +193,7 @@ func (bc BridgeClaims) String() string {
 		}
 
 		sbBRC.WriteString("{ ")
-		sbBRC.WriteString(BridgingRequestClaimString(brc))
+		sbBRC.WriteString(BridgingRequestClaimString(brc, bc.ChainIDConverter))
 		sbBRC.WriteString(" }")
 	}
 
@@ -202,7 +203,7 @@ func (bc BridgeClaims) String() string {
 		}
 
 		sbBEC.WriteString("{ ")
-		sbBEC.WriteString(BatchExecutedClaimString(bec))
+		sbBEC.WriteString(BatchExecutedClaimString(bec, bc.ChainIDConverter))
 		sbBEC.WriteString(" }")
 	}
 
@@ -212,7 +213,7 @@ func (bc BridgeClaims) String() string {
 		}
 
 		sbBEFC.WriteString("{ ")
-		sbBEFC.WriteString(BatchExecutionFailedClaimString(befc))
+		sbBEFC.WriteString(BatchExecutionFailedClaimString(befc, bc.ChainIDConverter))
 		sbBEFC.WriteString(" }")
 	}
 
@@ -222,7 +223,7 @@ func (bc BridgeClaims) String() string {
 		}
 
 		sbRRC.WriteString("{ ")
-		sbRRC.WriteString(RefundRequestClaimString(rrc))
+		sbRRC.WriteString(RefundRequestClaimString(rrc, bc.ChainIDConverter))
 		sbRRC.WriteString(" }")
 	}
 
@@ -231,7 +232,7 @@ func (bc BridgeClaims) String() string {
 			sbHWIC.WriteString(", ")
 		}
 
-		sbHWIC.WriteString(HotWalletIncrementClaimsString(rec))
+		sbHWIC.WriteString(HotWalletIncrementClaimsString(rec, bc.ChainIDConverter))
 	}
 
 	sb.WriteString("BridgingRequestClaims = \n[")

@@ -97,6 +97,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60,
 		},
+		ChainIDConverter: common.NewChainIDConverterForTest(),
 	}
 
 	appConfig.FillOut()
@@ -1240,7 +1241,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash,
-					SourceChainId:           common.ToNumChainID(originChainID),
+					SourceChainId:           appConfig.ChainIDConverter.ToNumChainID(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
@@ -1379,7 +1380,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		err = oracleDB.UpdateTxs(&ethcore.EthUpdateTxsData{
 			UpdateUnprocessed: []*ethcore.EthTx{newTx},
-		})
+		}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		// reset ctx to run again, and confirm by SubmitTryCount that this tx was tried again because we simulated time passing
@@ -1415,6 +1416,7 @@ func TestEthTxsProcessor(t *testing.T) {
 		t.Cleanup(dbCleanup)
 
 		originChainID := common.ChainIDStrPrime
+		chainIDConverter := appConfig.ChainIDConverter
 
 		metadata, err := ethcore.MarshalEthMetadata(ethcore.BridgingRequestEthMetadata{
 			BridgingTxType: common.BridgingTxTypeBridgingRequest,
@@ -1443,7 +1445,7 @@ func TestEthTxsProcessor(t *testing.T) {
 
 		err = oracleDB.UpdateTxs(&oCore.UpdateTxsData[*ethcore.EthTx, *ethcore.ProcessedEthTx, *ethcore.BridgeExpectedEthTx]{
 			MoveUnprocessedToPending: []*ethcore.EthTx{ethTx1, ethTx2},
-		})
+		}, chainIDConverter)
 		require.NoError(t, err)
 
 		pendingTx1, _ := oracleDB.GetPendingTx(oCore.DBTxID{ChainID: ethTx1.GetChainID(), DBKey: ethTx1.GetTxHash()})
@@ -1456,7 +1458,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash1,
-					SourceChainId:           common.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToNumChainID(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,

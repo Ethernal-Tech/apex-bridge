@@ -20,6 +20,7 @@ func TestBoltDatabase(t *testing.T) {
 			common.ChainIDStrPrime:  {},
 			common.ChainIDStrVector: {},
 		},
+		ChainIDConverter: common.NewChainIDConverterForTest(),
 	}
 
 	appConfig.FillOut()
@@ -235,7 +236,7 @@ func TestBoltDatabase(t *testing.T) {
 			tx.SubmitTryCount++
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{UpdateUnprocessed: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{UpdateUnprocessed: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
@@ -272,7 +273,7 @@ func TestBoltDatabase(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "couldn't get pending tx for entityID")
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
@@ -316,10 +317,10 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: []*core.ProcessedCardanoTx{}})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: []*core.ProcessedCardanoTx{}}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllUnprocessedTxs(common.ChainIDStrPrime, 0)
@@ -357,7 +358,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: expectedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		iExpectedTxs := make([]cCore.BaseTx, len(expectedTxs))
@@ -365,7 +366,7 @@ func TestBoltDatabase(t *testing.T) {
 			iExpectedTxs[i] = tx
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToUnprocessed: iExpectedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToUnprocessed: iExpectedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
@@ -397,7 +398,7 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddTxs(nil, expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: expectedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToPending: expectedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		processedTxs := make([]*core.ProcessedCardanoTx, len(expectedTxs))
@@ -410,7 +411,7 @@ func TestBoltDatabase(t *testing.T) {
 			iProcessedTxs[i] = tx
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToProcessed: iProcessedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MovePendingToProcessed: iProcessedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetPendingTx(cCore.DBTxID{ChainID: expectedTxs[0].OriginChainID, DBKey: expectedTxs[0].Hash[:]})
@@ -456,7 +457,7 @@ func TestBoltDatabase(t *testing.T) {
 			expectedProcessedTxs = append(expectedProcessedTxs, tx.ToProcessedCardanoTx(false))
 		}
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{MoveUnprocessedToProcessed: expectedProcessedTxs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		_, err = db.GetProcessedTx(cCore.DBTxID{ChainID: "", DBKey: []byte{}})
@@ -575,21 +576,21 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: []*core.BridgeExpectedCardanoTx{}})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: []*core.BridgeExpectedCardanoTx{}}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrVector, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedProcessed: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(common.ChainIDStrPrime, 0)
@@ -620,21 +621,21 @@ func TestBoltDatabase(t *testing.T) {
 		err = db.AddExpectedTxs(expectedTxs)
 		require.NoError(t, err)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: []*core.BridgeExpectedCardanoTx{}})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: []*core.BridgeExpectedCardanoTx{}}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err := db.GetAllExpectedTxs(primeChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(vectorChainID, 0)
 		require.NoError(t, err)
 		require.NotNil(t, txs)
 
-		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: txs})
+		err = db.UpdateTxs(&core.CardanoUpdateTxsData{ExpectedInvalid: txs}, appConfig.ChainIDConverter)
 		require.NoError(t, err)
 
 		txs, err = db.GetAllExpectedTxs(primeChainID, 0)

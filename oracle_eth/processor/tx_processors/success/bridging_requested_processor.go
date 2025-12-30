@@ -72,6 +72,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	cardanoDestConfig, _ := oUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 	cardanoDestChainFeeAddress := appConfig.GetFeeMultisigAddress(metadata.DestinationChainID)
+	chainIDConverter := appConfig.ChainIDConverter
 
 	receivers := make([]oCore.BridgingRequestReceiver, 0, len(metadata.Transactions))
 
@@ -104,8 +105,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	claim := oCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash,
-		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		SourceChainId:                   chainIDConverter.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:              chainIDConverter.ToNumChainID(metadata.DestinationChainID),
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
 		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
@@ -117,7 +118,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", oCore.BridgingRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *BridgingRequestedProcessorImpl) validate(

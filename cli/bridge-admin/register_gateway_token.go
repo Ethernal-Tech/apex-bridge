@@ -7,6 +7,7 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -45,6 +46,7 @@ type registerGatewayTokenParams struct {
 	tokenSymbol       string
 
 	tokenSCAddress ethcommon.Address
+	config         string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -57,11 +59,22 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress) {
+	if err := validateConfigFilePath(g.config); err != nil {
+		return err
+	}
+
+	config, err := common.LoadConfig[vcCore.AppConfig](g.config, "")
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %w", err)
+	}
+
+	config.SetupChainIDs()
+
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, config.ChainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr) {
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr, config.ChainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", tokenSCAddressFlag)
 	}
 
@@ -171,6 +184,12 @@ func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 		tokSymbolFlag,
 		"",
 		tokSymbolFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.config,
+		configFlag,
+		"",
+		configFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

@@ -3,8 +3,11 @@ package clibridgeadmin
 import (
 	"context"
 	"fmt"
+	"os"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
+	"github.com/Ethernal-Tech/apex-bridge/common"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
@@ -95,4 +98,31 @@ func finalizeAndSignTx(
 	}
 
 	return txSigned, txHash, nil
+}
+
+func loadConfig(configPath string) (*vcCore.AppConfig, error) {
+	config, err := common.LoadConfig[vcCore.AppConfig](configPath, "")
+	if err != nil {
+		return nil, err
+	}
+
+	config.SetupChainIDs()
+
+	return config, nil
+}
+
+func validateConfigFilePath(configPath string) error {
+	if configPath == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(configPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", configPath)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", configPath, err)
+	}
+
+	return nil
 }

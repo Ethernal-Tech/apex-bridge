@@ -34,6 +34,8 @@ type bridgingAddressesBalancesParams struct {
 	vectorWalletAddress string
 	nexusWalletAddress  string
 	indexerDbsPath      string
+
+	appConfig *vcCore.AppConfig
 }
 
 func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
@@ -42,29 +44,16 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 			primeWalletAddressFlag, vectorWalletAddressFlag, nexusWalletAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress) {
-		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
+	if err := validateConfigFilePath(b.config); err != nil {
+		return err
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrVector, b.vectorWalletAddress) {
-		return fmt.Errorf("invalid address: --%s", vectorWalletAddressFlag)
+	appConfig, err := loadConfig(b.config)
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %w", err)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, b.nexusWalletAddress) {
-		return fmt.Errorf("invalid address: --%s", nexusWalletAddressFlag)
-	}
-
-	if b.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
-	}
-
-	if _, err := os.Stat(b.config); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", b.config)
-		}
-
-		return fmt.Errorf("failed to check config file: %s. err: %w", b.config, err)
-	}
+	b.appConfig = appConfig
 
 	if b.indexerDbsPath != "" {
 		if _, err := os.Stat(b.indexerDbsPath); err != nil {
@@ -74,6 +63,18 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 
 			return fmt.Errorf("failed to check indexer database path: %s. err: %w", b.indexerDbsPath, err)
 		}
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress, b.appConfig.ChainIDConverter) {
+		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrVector, b.vectorWalletAddress, b.appConfig.ChainIDConverter) {
+		return fmt.Errorf("invalid address: --%s", vectorWalletAddressFlag)
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrNexus, b.nexusWalletAddress, b.appConfig.ChainIDConverter) {
+		return fmt.Errorf("invalid address: --%s", nexusWalletAddressFlag)
 	}
 
 	return nil
@@ -113,13 +114,8 @@ func (b *bridgingAddressesBalancesParams) RegisterFlags(cmd *cobra.Command) {
 }
 
 func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
-	appConfig, err := common.LoadConfig[vcCore.AppConfig](b.config, "")
-	if err != nil {
-		return nil, err
-	}
-
-	if appConfig.RunMode != common.ReactorMode {
-		return nil, fmt.Errorf("running command for the wrong run mode: %s", appConfig.RunMode)
+	if b.appConfig.RunMode != common.ReactorMode {
+		return nil, fmt.Errorf("running command for the wrong run mode: %s", b.appConfig.RunMode)
 	}
 
 	chainWalletAddr := map[string]string{
@@ -128,7 +124,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 		common.ChainIDStrNexus:  b.nexusWalletAddress,
 	}
 
-	multisigUtxos, err := getAllUtxos(appConfig, chainWalletAddr, b.indexerDbsPath)
+	multisigUtxos, err := getAllUtxos(b.appConfig, chainWalletAddr, b.indexerDbsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +151,7 @@ func (b *bridgingAddressesBalancesParams) Execute(outputter common.OutputFormatt
 	}
 
 	// Retrieve balances for Ethereum chains
-	for chainID, ethChainConfig := range appConfig.EthChains {
+	for chainID, ethChainConfig := range b.appConfig.EthChains {
 		ethHelper, err := ethtxhelper.NewEThTxHelper(
 			ethtxhelper.WithNodeURL(ethChainConfig.NodeURL))
 		if err != nil {

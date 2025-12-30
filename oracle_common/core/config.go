@@ -38,6 +38,7 @@ type CardanoChainConfigUtxo struct {
 
 type EthChainConfig struct {
 	ChainID                 string                       `json:"-"`
+	ChainIDNum              common.ChainIDNum            `json:"chainIdNum"`
 	BridgingAddresses       EthBridgingAddresses         `json:"-"`
 	NodeURL                 string                       `json:"nodeUrl"`
 	SyncBatchSize           uint64                       `json:"syncBatchSize"`
@@ -60,6 +61,7 @@ type EthChainConfig struct {
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
 	ChainID                  string                   `json:"-"`
+	ChainIDNum               common.ChainIDNum        `json:"chainIdNum"`
 	NetworkAddress           string                   `json:"networkAddress"`
 	StartBlockHash           string                   `json:"startBlockHash"`
 	StartSlot                uint64                   `json:"startSlot"`
@@ -114,6 +116,7 @@ type AppConfig struct {
 	RefundEnabled            bool                            `json:"refundEnabled"`
 	ValidatorDataDir         string                          `json:"validatorDataDir"`
 	ValidatorConfigPath      string                          `json:"validatorConfigPath"`
+	ChainIDConverter         *common.ChainIDConverter        `json:"chainIdConverter"`
 	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
 	Bridge                   BridgeConfig                    `json:"bridge"`
@@ -124,13 +127,13 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToNumChainID(chainID)
 
 	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
 }
 
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToNumChainID(chainID)
 
 	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
 }

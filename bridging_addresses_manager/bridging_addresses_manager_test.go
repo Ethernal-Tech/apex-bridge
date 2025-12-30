@@ -44,9 +44,12 @@ func TestBridgingAddressesManager(t *testing.T) {
 
 	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, "prime").Return(uint8(1), nil)
 
+	chainIDConverter := common.NewChainIDConverterForTest()
+
 	bridgingAddressesManager, err := NewBridgingAdressesManager(
 		context.Background(),
 		cardanoChains,
+		chainIDConverter,
 		bridgeSmartContractMock,
 		hclog.NewNullLogger(),
 	)

@@ -73,9 +73,10 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) {
 	var (
-		totalAmount    = big.NewInt(0)
-		feeCurrencyDst *big.Int
-		feeAddress     string
+		totalAmount      = big.NewInt(0)
+		feeCurrencyDst   *big.Int
+		feeAddress       string
+		chainIDConverter = appConfig.ChainIDConverter
 	)
 
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
@@ -124,8 +125,8 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 
 	claim := cCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash,
-		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		SourceChainId:                   chainIDConverter.ToNumChainID(tx.OriginChainID),
+		DestinationChainId:              chainIDConverter.ToNumChainID(metadata.DestinationChainID),
 		Receivers:                       receivers,
 		NativeCurrencyAmountSource:      totalAmountCurrencySrc,
 		NativeCurrencyAmountDestination: totalAmountCurrencyDst,
@@ -137,7 +138,7 @@ func (p *BridgingRequestedProcessorImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim, chainIDConverter))
 }
 
 func (p *BridgingRequestedProcessorImpl) validate(

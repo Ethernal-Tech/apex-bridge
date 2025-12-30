@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
+	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/sendtx"
 	cardanowallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -56,6 +58,7 @@ type sendSkylineTxParams struct {
 	tokenIDSrc         uint16
 	tokenFullNameSrc   string
 	tokenFullNameDst   string
+	config             string
 
 	ogmiosURLSrc    string
 	networkIDSrc    uint
@@ -74,6 +77,7 @@ type sendSkylineTxParams struct {
 	operationFeeAmount *big.Int
 	receiversParsed    []*receiverAmount
 	wallet             *cardanowallet.Wallet
+	chainIDConverter   *common.ChainIDConverter
 }
 
 func (p *sendSkylineTxParams) validateFlags() error {
@@ -89,11 +93,31 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingSkylineChainID(p.chainIDSrc) {
+	if p.config == "" {
+		return fmt.Errorf("--%s flag not specified", configFlag)
+	}
+
+	if _, err := os.Stat(p.config); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", p.config)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", p.config, err)
+	}
+
+	config, err := common.LoadConfig[vcCore.AppConfig](p.config, "")
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	config.SetupChainIDs()
+	p.chainIDConverter = config.ChainIDConverter
+
+	if !p.chainIDConverter.IsExistingChainID(p.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingSkylineChainID(p.chainIDDst) {
+	if !p.chainIDConverter.IsExistingChainID(p.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -124,20 +148,22 @@ func (p *sendSkylineTxParams) validateFlags() error {
 	}
 
 	if p.gatewayAddress != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.gatewayAddress) {
+		!common.IsValidAddress(common.ChainIDStrNexus, p.gatewayAddress, p.chainIDConverter) {
 		return fmt.Errorf("invalid address for flag --%s", gatewayAddressFlag)
 	}
 
-	if p.tokenContractAddrSrc != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrSrc) {
+	if p.tokenContractAddrSrc != "" &&
+		!common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrSrc, p.chainIDConverter) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
-	if p.tokenContractAddrDst != "" && !common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrDst) {
+	if p.tokenContractAddrDst != "" &&
+		!common.IsValidAddress(common.ChainIDStrNexus, p.tokenContractAddrDst, p.chainIDConverter) {
 		return fmt.Errorf("invalid address for flag --%s", tokenContractAddrDstFlag)
 	}
 
 	if p.nativeTokenWalletContractAddress != "" &&
-		!common.IsValidAddress(common.ChainIDStrNexus, p.nativeTokenWalletContractAddress) {
+		!common.IsValidAddress(common.ChainIDStrNexus, p.nativeTokenWalletContractAddress, p.chainIDConverter) {
 		return fmt.Errorf("invalid address for flag --%s", nativeTokenWalletContractAddrFlag)
 	}
 
@@ -237,7 +263,7 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(p.chainIDDst, vals[0]) {
+		if !common.IsValidAddress(p.chainIDDst, vals[0], p.chainIDConverter) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
@@ -395,6 +421,12 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		"",
 		tokenContractAddrSrcFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&p.config,
+		configFlag,
+		"",
+		configFlagDesc,
+	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, networkIDSrcFlag)
@@ -541,7 +573,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(p.gatewayAddress)
-	chainID := common.ToNumChainID(p.chainIDDst)
+	chainID := p.chainIDConverter.ToNumChainID(p.chainIDDst)
 	receivers, totalTokenAmount := toSkylineGatewayStruct(p.receiversParsed, p.tokenIDSrc)
 
 	totalAmount := big.NewInt(0)

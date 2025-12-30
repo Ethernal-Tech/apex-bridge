@@ -3,13 +3,11 @@ package clibridgeadmin
 import (
 	"encoding/hex"
 	"fmt"
-	"os"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/contractbinding"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/bn256"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -40,16 +38,8 @@ func (v *validatorsDataParams) ValidateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if v.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
-	}
-
-	if _, err := os.Stat(v.config); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", v.config)
-		}
-
-		return fmt.Errorf("failed to check config file: %s. err: %w", v.config, err)
+	if err := validateConfigFilePath(v.config); err != nil {
+		return err
 	}
 
 	return nil
@@ -89,10 +79,12 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](v.config, "")
+	config, err := loadConfig(v.config)
 	if err != nil {
 		return nil, err
 	}
+
+	chainIDConverter := config.ChainIDConverter
 
 	allRegisteredChains, err := contract.GetAllRegisteredChains(&bind.CallOpts{})
 	if err != nil {
@@ -100,7 +92,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 	}
 
 	for _, regChain := range allRegisteredChains {
-		chainID := common.ToStrChainID(regChain.Id)
+		chainID := chainIDConverter.ToStrChainID(regChain.Id)
 
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
@@ -109,14 +101,14 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, common.ToNumChainID(chainID))
+			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
 			if err != nil {
 				return nil, err
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Validators data on %s chain: \n", chainID)))
 
-			err = printChainValidatorsDataInfo(chainID, validatorsData, outputter)
+			err = printChainValidatorsDataInfo(chainID, validatorsData, chainIDConverter, outputter)
 			if err != nil {
 				return nil, err
 			}
@@ -126,7 +118,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			addrCount, err := contract.GetBridgingAddressesCount(&bind.CallOpts{}, common.ToNumChainID(chainID))
+			addrCount, err := contract.GetBridgingAddressesCount(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
 			if err != nil {
 				return nil, err
 			}
@@ -156,14 +148,14 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 
 			outputter.WriteOutput()
 		case common.ChainTypeEVM:
-			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, common.ToNumChainID(chainID))
+			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
 			if err != nil {
 				return nil, err
 			}
 
 			_, _ = outputter.Write([]byte(fmt.Sprintf("Validators data on %s chain: \n", chainID)))
 
-			err = printChainValidatorsDataInfo(chainID, validatorsData, outputter)
+			err = printChainValidatorsDataInfo(chainID, validatorsData, chainIDConverter, outputter)
 			if err != nil {
 				return nil, err
 			}
@@ -180,12 +172,13 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 }
 
 func printChainValidatorsDataInfo(
-	chainID string, data []ValidatorChainData, outputter common.OutputFormatter,
+	chainID string, data []ValidatorChainData,
+	chainIDConverter *common.ChainIDConverter, outputter common.OutputFormatter,
 ) error {
 	for _, x := range data {
 		var formattedData string
 
-		if common.IsEVMChainID(chainID) {
+		if chainIDConverter.IsEVMChainID(chainID) {
 			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
 			if err != nil {
 				return err
