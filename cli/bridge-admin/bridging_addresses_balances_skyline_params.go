@@ -18,6 +18,7 @@ const (
 
 type bridgingAddressesBalancesSkylineParams struct {
 	config               string
+	chainIDsConfig       string
 	primeWalletAddress   string
 	cardanoWalletAddress string
 	indexerDbsPath       string
@@ -35,7 +36,16 @@ func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
 		return err
 	}
 
-	appConfig, err := loadConfig(b.config)
+	if err := validateConfigFilePath(b.chainIDsConfig); err != nil {
+		return err
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](b.chainIDsConfig, "")
+	if err != nil {
+		return err
+	}
+
+	appConfig, err := loadConfig(b.config, chainIDsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to load config file: %w", err)
 	}
@@ -69,6 +79,12 @@ func (b *bridgingAddressesBalancesSkylineParams) RegisterFlags(cmd *cobra.Comman
 		configFlag,
 		"",
 		configFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&b.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&b.primeWalletAddress,

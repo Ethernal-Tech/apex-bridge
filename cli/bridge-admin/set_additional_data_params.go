@@ -32,22 +32,22 @@ type setAdditionalDataParams struct {
 	privateKeyConfig string
 	bridgingAddr     string
 	feeAddr          string
-	config           string
+	chainIDsConfig   string
 
 	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *setAdditionalDataParams) ValidateFlags() error {
-	if err := validateConfigFilePath(ip.config); err != nil {
+	if err := validateConfigFilePath(ip.chainIDsConfig); err != nil {
 		return err
 	}
 
-	config, err := loadConfig(ip.config)
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	ip.chainIDConverter = config.ChainIDConverter
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !ip.chainIDConverter.IsExistingChainID(ip.chainID) {
 		return fmt.Errorf("invalid --%s flag", chainIDFlag)
@@ -129,10 +129,10 @@ func (ip *setAdditionalDataParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.config,
-		configFlag,
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)

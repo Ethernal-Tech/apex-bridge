@@ -7,7 +7,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -46,7 +45,7 @@ type registerGatewayTokenParams struct {
 	tokenSymbol       string
 
 	tokenSCAddress ethcommon.Address
-	config         string
+	chainIDsConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -59,24 +58,22 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if err := validateConfigFilePath(g.config); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
 		return err
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](g.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return fmt.Errorf("failed to setup chain ids: %w", err)
-	}
+	chainIDConverter := chainIDsConfig.ToChainIDConverter()
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, config.ChainIDConverter) {
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr, config.ChainIDConverter) {
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr, chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", tokenSCAddressFlag)
 	}
 
@@ -188,10 +185,10 @@ func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 		tokSymbolFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.config,
-		configFlag,
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

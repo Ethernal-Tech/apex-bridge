@@ -9,7 +9,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-hclog"
@@ -17,6 +16,7 @@ import (
 )
 
 const (
+	chainIDsConfigFlag   = "chain-ids-config"
 	networkIDFlag        = "network-id"
 	testnetMagicFlag     = "testnet-magic"
 	chainIDFlag          = "chain"
@@ -26,8 +26,8 @@ const (
 	privateKeyConfigFlag = "key-config"
 	showPolicyScrFlag    = "show-policy-script"
 	custodialAddrFlag    = "generate-custodial-address"
-	configFlag           = "config"
 
+	chainIDsConfigFlagDesc   = "path to the chain IDs config file"
 	networkIDFlagDesc        = "network ID"
 	testnetMagicFlagDesc     = "testnet magic number. leave 0 for mainnet"
 	bridgeNodeURLFlagDesc    = "bridge node url"
@@ -37,7 +37,6 @@ const (
 	privateKeyConfigFlagDesc = "path to secrets manager config file"
 	showPolicyScrFlagDesc    = "show policy script"
 	custodialAddrFlagDesc    = "generate custodial address"
-	configFlagDesc           = "path to config json file"
 )
 
 type createAddressParams struct {
@@ -51,7 +50,7 @@ type createAddressParams struct {
 	privateKeyConfig string
 	showPolicyScript bool
 	custodialAddress bool
-	config           string
+	chainIDsConfig   string
 
 	chainIDConverter *common.ChainIDConverter
 }
@@ -65,28 +64,24 @@ func (ip *createAddressParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", bridgeSCAddrFlag)
 	}
 
-	if params.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	if params.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
 	}
 
-	if _, err := os.Stat(params.config); err != nil {
+	if _, err := os.Stat(params.chainIDsConfig); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", params.config)
+			return fmt.Errorf("config file does not exist: %s", params.chainIDsConfig)
 		}
 
-		return fmt.Errorf("failed to check config file: %s. err: %w", params.config, err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", params.chainIDsConfig, err)
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](params.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return fmt.Errorf("failed to setup chain ids: %w", err)
-	}
-
-	ip.chainIDConverter = config.ChainIDConverter
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !ip.chainIDConverter.IsExistingChainID(ip.chainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.chainID)
@@ -160,10 +155,10 @@ func (ip *createAddressParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&params.config,
-		configFlag,
+		&params.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, bridgePrivateKeyFlag)

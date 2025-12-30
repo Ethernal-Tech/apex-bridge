@@ -33,7 +33,7 @@ type stakeDelParams struct {
 	bridgeNodeURL    string
 	bridgePrivateKey string
 	privateKeyConfig string
-	config           string
+	chainIDsConfig   string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -60,7 +60,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if err := validateConfigFilePath(params.config); err != nil {
+	if err := validateConfigFilePath(params.chainIDsConfig); err != nil {
 		return err
 	}
 
@@ -71,12 +71,12 @@ func (params *stakeDelParams) ValidateFlags() error {
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	config, err := loadConfig(params.config)
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](params.chainIDsConfig, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	chainIDInt := config.ChainIDConverter.ToNumChainID(params.chainID)
+	chainIDInt := chainIDsConfig.ToChainIDConverter().ToNumChainID(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
@@ -190,10 +190,10 @@ func (params *stakeDelParams) RegisterFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&params.config,
-		configFlag,
+		&params.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

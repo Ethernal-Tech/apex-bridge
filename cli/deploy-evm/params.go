@@ -13,7 +13,6 @@ import (
 	"github.com/Ethernal-Tech/apex-bridge/eth"
 	ethcontracts "github.com/Ethernal-Tech/apex-bridge/eth/contracts"
 	ethtxhelper "github.com/Ethernal-Tech/apex-bridge/eth/txhelper"
-	vcCore "github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
 	"github.com/Ethernal-Tech/bn256"
 	infracommon "github.com/Ethernal-Tech/cardano-infrastructure/common"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -47,7 +46,7 @@ const (
 	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
 	minOperationFeeFlag        = "min-operation-fee"
 	currencyTokIDFlag          = "currency-token-id"
-	configFlag                 = "config"
+	chainIDsConfigFlag         = "chain-ids-config"
 
 	evmNodeURLFlagDesc      = "evm node url"
 	evmSCDirFlagDesc        = "the directory where the repository will be cloned, or the directory where the compiled evm smart contracts (JSON files) are located." //nolint:lll
@@ -71,7 +70,7 @@ const (
 	minTokenBridgingAmountFlagDesc = "minimal amount to bridge tokens"
 	minOperationFeeFlagDesc        = "minimal operation fee"
 	currencyTokIDFlagDesc          = "token ID of the currency of the chain"
-	configFlagDesc                 = "path to config json file"
+	chainIDsConfigFlagDesc         = "path to the chain IDs config file"
 
 	defaultEVMChainID = common.ChainIDStrNexus
 
@@ -123,8 +122,8 @@ type deployEVMParams struct {
 
 	currencyTokenID uint16
 
-	gasLimit uint64
-	config   string
+	gasLimit       uint64
+	chainIDsConfig string
 
 	chainIDConverter *common.ChainIDConverter
 }
@@ -134,28 +133,24 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if ip.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
 	}
 
-	if _, err := os.Stat(ip.config); err != nil {
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", ip.config)
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
 		}
 
-		return fmt.Errorf("failed to check config file: %s. err: %w", ip.config, err)
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
-	config, err := common.LoadConfig[vcCore.AppConfig](ip.config, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	if err := config.SetupChainIDs(); err != nil {
-		return fmt.Errorf("failed to setup chain ids: %w", err)
-	}
-
-	ip.chainIDConverter = config.ChainIDConverter
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !ip.chainIDConverter.IsExistingChainID(ip.evmChainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
@@ -351,10 +346,10 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.config,
-		configFlag,
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, privateKeyConfigFlag)

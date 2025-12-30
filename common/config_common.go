@@ -15,6 +15,20 @@ type DirectionConfig struct {
 	Tokens            map[uint16]Token      `json:"tokens"`
 }
 
+type ChainIDsConfig struct {
+	StrToInt  map[string]ChainIDNum `json:"strToInt"`
+	IntToStr  map[ChainIDNum]string `json:"intToStr"`
+	EvmChains []string              `json:"evmChains"`
+}
+
+func (c *ChainIDsConfig) ToChainIDConverter() *ChainIDConverter {
+	return &ChainIDConverter{
+		StrToInt:  c.StrToInt,
+		IntToStr:  c.IntToStr,
+		EvmChains: c.EvmChains,
+	}
+}
+
 type TokenPairs = []TokenPair
 
 type TokenPair struct {

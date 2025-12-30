@@ -33,7 +33,7 @@ type defundParams struct {
 	bridgePrivateKey     string
 	privateKeyConfig     string
 	address              string
-	config               string
+	chainIDsConfig       string
 
 	chainIDConverter *common.ChainIDConverter
 }
@@ -69,16 +69,16 @@ func (g *defundParams) ValidateFlags() error {
 			amountFlag, common.MinUtxoAmountDefault)
 	}
 
-	if err := validateConfigFilePath(g.config); err != nil {
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
 		return err
 	}
 
-	config, err := loadConfig(g.config)
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
 	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
+		return err
 	}
 
-	g.chainIDConverter = config.ChainIDConverter
+	g.chainIDConverter = chainIDsConfig.ToChainIDConverter()
 
 	if !common.IsValidAddress(g.chainID, g.address, g.chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", addressFlag)
@@ -224,10 +224,10 @@ func (g *defundParams) RegisterFlags(cmd *cobra.Command) {
 		defundAddressFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&g.config,
-		configFlag,
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
 		"",
-		configFlagDesc,
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)
