@@ -503,6 +503,22 @@ $ apex-bridge bridge-admin set-min-amounts \
 - all amounts should be entered in wei decimals
 - instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
+```shell
+$ apex-bridge bridge-admin treasury-addr set \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --gateway-addr 0xeefcd00000000000000000000000000000000013 \
+        --treasury-addr 0x2ac7dEB534901E63FBd5CEC49929B8830F3FaFF4
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
+
+```shell
+$ apex-bridge bridge-admin treasury-addr get \
+        --url http://127.0.0.1:12001 \
+        --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
+        --gateway-addr 0xeefcd00000000000000000000000000000000013
+```
+- instead of `--key` it is possible to set key secret manager configuration file with `--key-config /path/config.json`.
 
 ```shell
 $ apex-bridge bridge-admin defund \
