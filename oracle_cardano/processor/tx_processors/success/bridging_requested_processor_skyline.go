@@ -181,7 +181,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	// wTODO: think about whether we should always track all currency amounts,
 	// regardless of .TrackSource and .TrackDestination
 	totalTokensAmount.totalAmountCurrencyDst += feeCurrencyDst
-	totalTokensAmount.totalAmountCurrencySrc += metadata.BridgingFee + metadata.OperationFee
+	totalTokensAmount.totalAmountCurrencySrc += metadata.BridgingFee
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: destChainFeeAddress,
@@ -229,7 +229,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, true)
 	if err != nil {
 		return err
 	}
@@ -484,7 +484,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee += receiverCtx.feeSum
 	nativeCurrencySum.Add(nativeCurrencySum, new(big.Int).SetUint64(metadata.BridgingFee))
-	nativeCurrencySum.Add(nativeCurrencySum, new(big.Int).SetUint64(metadata.OperationFee))
 
 	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(
 		len(receiverCtx.amountsSums) > 0 || len(multisigUtxo.Tokens) > 0,
