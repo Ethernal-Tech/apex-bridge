@@ -39,14 +39,14 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	config, err := common.LoadConfig[vcCore.AppConfig](vcParams.config, "")
 	if err != nil {
-		outputter.SetError(err)
+		outputter.SetError(fmt.Errorf("failed to load vcCore: %w", err))
 
 		return
 	}
 
 	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](vcParams.chainIDsConfig, "")
 	if err != nil {
-		outputter.SetError(err)
+		outputter.SetError(fmt.Errorf("failed to load chain IDs config: %w", err))
 
 		return
 	}
@@ -55,7 +55,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	directionsConfig, err := common.LoadConfig[common.DirectionConfigFile](vcParams.dirConfig, "")
 	if err != nil {
-		outputter.SetError(err)
+		outputter.SetError(fmt.Errorf("failed to load direction config: %w", err))
 
 		return
 	}

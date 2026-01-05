@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -32,14 +31,13 @@ type upgradeEVMParams struct {
 	privateKey       string
 	privateKeyConfig string
 
-	dir            string
-	repositoryURL  string
-	clone          bool
-	branchName     string
-	dynamicTx      bool
-	contracts      []string
-	gasLimit       uint64
-	chainIDsConfig string
+	dir           string
+	repositoryURL string
+	clone         bool
+	branchName    string
+	dynamicTx     bool
+	contracts     []string
+	gasLimit      uint64
 }
 
 func (ip *upgradeEVMParams) validateFlags() error {
@@ -57,18 +55,6 @@ func (ip *upgradeEVMParams) validateFlags() error {
 
 	if ip.clone && !common.IsValidHTTPURL(ip.repositoryURL) {
 		return fmt.Errorf("invalid --%s flag", repositoryURLFlag)
-	}
-
-	if ip.chainIDsConfig == "" {
-		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
-	}
-
-	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
-		}
-
-		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
 	return nil
@@ -145,13 +131,6 @@ func (ip *upgradeEVMParams) setFlags(cmd *cobra.Command) {
 		gasLimitFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&ip.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
-	)
-
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 }
 
@@ -165,13 +144,6 @@ func (ip *upgradeEVMParams) Execute(
 	updateFuncs := make([]string, len(ip.contracts))
 	updateFuncsArgs := make([]string, len(ip.contracts))
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
-	}
-
-	chainIDConverter := chainIDsConfig.ToChainIDConverter()
-
 	for i, x := range ip.contracts {
 		ss := strings.Split(x, ":")
 		if n := len(ss); n < 2 || n > 4 {
@@ -182,7 +154,7 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("invalid contract name for --%s number %d", contractFlag, i)
 		}
 
-		if !common.IsValidAddress(common.ChainIDStrNexus, ss[1], chainIDConverter) {
+		if !ethcommon.IsHexAddress(ss[1]) {
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
 		}
 
