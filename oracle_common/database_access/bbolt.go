@@ -302,8 +302,7 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetExpectedTxs(
 				return err
 			}
 
-			if expectedTx.GetPriority() == priority &&
-				!expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
+			if expectedTx.GetPriority() == priority {
 				result = append(result, expectedTx)
 				if threshold > 0 && len(result) == threshold {
 					break
@@ -339,11 +338,9 @@ func (bd *BBoltDBBase[TTx, TProcessedTx, TExpectedTx]) GetAllExpectedTxs(
 				return err
 			}
 
-			if !expectedTx.GetIsProcessed() && !expectedTx.GetIsInvalid() {
-				result = append(result, expectedTx)
-				if threshold > 0 && len(result) == threshold {
-					break
-				}
+			result = append(result, expectedTx)
+			if threshold > 0 && len(result) == threshold {
+				break
 			}
 		}
 

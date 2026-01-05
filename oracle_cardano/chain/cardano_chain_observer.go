@@ -198,15 +198,15 @@ func initOracleState(
 	blockHashStr string, blockSlot uint64, utxos []cCore.CardanoChainConfigUtxo,
 	chainID string, logger hclog.Logger,
 ) error {
+	if err := oracleDB.MoveProcessedExpectedTxs(chainID); err != nil {
+		return err
+	}
+
 	blockHash := indexer.NewHashFromHexString(blockHashStr)
 	if blockHash == (indexer.Hash{}) {
 		logger.Info("Configuration block hash is zero hash", "slot", blockSlot)
 
 		return nil
-	}
-
-	if err := oracleDB.MoveProcessedExpectedTxs(chainID); err != nil {
-		return err
 	}
 
 	latestBlockPoint, err := db.GetLatestBlockPoint()
