@@ -55,7 +55,7 @@ func (b *bridgingAddressesBalancesParams) ValidateFlags() error {
 		return err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](b.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](b.chainIDsConfig, "")
 	if err != nil {
 		return err
 	}

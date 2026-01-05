@@ -76,7 +76,7 @@ func (ip *createAddressParams) validateFlags() error {
 		return fmt.Errorf("failed to check config file: %s. err: %w", params.chainIDsConfig, err)
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](params.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
 	if err != nil {
 		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

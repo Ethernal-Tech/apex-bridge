@@ -91,7 +91,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 		return nil, err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](v.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](v.chainIDsConfig, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

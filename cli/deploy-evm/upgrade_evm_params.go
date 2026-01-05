@@ -165,7 +165,7 @@ func (ip *upgradeEVMParams) Execute(
 	updateFuncs := make([]string, len(ip.contracts))
 	updateFuncsArgs := make([]string, len(ip.contracts))
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

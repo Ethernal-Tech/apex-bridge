@@ -34,7 +34,7 @@ type AppConfig struct {
 	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
-func (appConfig *AppConfig) SetupChainIDs(chainIDsConfig *common.ChainIDsConfig) {
+func (appConfig *AppConfig) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {
 	appConfig.ChainIDConverter = chainIDsConfig.ToChainIDConverter()
 }
 

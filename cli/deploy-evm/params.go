@@ -145,7 +145,7 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
 	if err != nil {
 		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

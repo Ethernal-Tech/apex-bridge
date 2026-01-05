@@ -71,7 +71,7 @@ func (params *stakeDelParams) ValidateFlags() error {
 func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](params.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
