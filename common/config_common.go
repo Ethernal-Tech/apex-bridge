@@ -15,17 +15,34 @@ type DirectionConfig struct {
 	Tokens            map[uint16]Token      `json:"tokens"`
 }
 
-type ChainIDsConfig struct {
-	StrToInt  map[string]ChainIDNum `json:"strToInt"`
-	IntToStr  map[ChainIDNum]string `json:"intToStr"`
-	EvmChains []string              `json:"evmChains"`
+type ChainIDsConfigFile struct {
+	ChainIDConfig []ChainIDConfig `json:"chainIDs"`
 }
 
-func (c *ChainIDsConfig) ToChainIDConverter() *ChainIDConverter {
+type ChainIDConfig struct {
+	ChainID    string     `json:"chainID"`
+	ChainIDNum ChainIDNum `json:"chainIDNum"`
+	ChainType  string     `json:"chainType,omitempty"`
+}
+
+func (c *ChainIDsConfigFile) ToChainIDConverter() *ChainIDConverter {
+	intToStr := make(map[ChainIDNum]string, len(c.ChainIDConfig))
+	strToInt := make(map[string]ChainIDNum, len(c.ChainIDConfig))
+	evmChains := make([]string, 0)
+
+	for _, chainIDConfig := range c.ChainIDConfig {
+		intToStr[chainIDConfig.ChainIDNum] = chainIDConfig.ChainID
+		strToInt[chainIDConfig.ChainID] = chainIDConfig.ChainIDNum
+
+		if chainIDConfig.ChainType == ChainTypeEVMStr {
+			evmChains = append(evmChains, chainIDConfig.ChainID)
+		}
+	}
+
 	return &ChainIDConverter{
-		StrToInt:  c.StrToInt,
-		IntToStr:  c.IntToStr,
-		EvmChains: c.EvmChains,
+		StrToInt:  strToInt,
+		IntToStr:  intToStr,
+		EvmChains: evmChains,
 	}
 }
 

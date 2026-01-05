@@ -46,7 +46,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](initParamsData.chainIDsConfig, "relayer")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](initParamsData.chainIDsConfig, "relayer")
 	if err != nil {
 		outputter.SetError(err)
 

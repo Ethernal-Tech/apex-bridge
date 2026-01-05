@@ -40,10 +40,6 @@ const (
 	defaultEvmFeeAddrBridgingAmount = 1_000_000
 )
 
-var knownEvmChains = map[string]common.ChainIDNum{
-	common.ChainIDStrNexus: common.ChainIDIntNexus,
-}
-
 type evmChainGenerateConfigsParams struct {
 	chainIDString string
 

@@ -100,7 +100,7 @@ func finalizeAndSignTx(
 	return txSigned, txHash, nil
 }
 
-func loadConfig(configPath string, chainIDsConfig *common.ChainIDsConfig) (*vcCore.AppConfig, error) {
+func loadConfig(configPath string, chainIDsConfig *common.ChainIDsConfigFile) (*vcCore.AppConfig, error) {
 	config, err := common.LoadConfig[vcCore.AppConfig](configPath, "")
 	if err != nil {
 		return nil, err

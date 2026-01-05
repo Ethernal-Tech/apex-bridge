@@ -44,7 +44,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](vcParams.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](vcParams.chainIDsConfig, "")
 	if err != nil {
 		outputter.SetError(err)
 

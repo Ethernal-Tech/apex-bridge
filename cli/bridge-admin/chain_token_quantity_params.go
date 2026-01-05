@@ -61,7 +61,7 @@ func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.
 		return nil, err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
 	if err != nil {
 		return nil, err
 	}

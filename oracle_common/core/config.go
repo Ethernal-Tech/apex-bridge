@@ -38,7 +38,6 @@ type CardanoChainConfigUtxo struct {
 
 type EthChainConfig struct {
 	ChainID                 string                       `json:"-"`
-	ChainIDNum              common.ChainIDNum            `json:"chainIdNum"`
 	BridgingAddresses       EthBridgingAddresses         `json:"-"`
 	NodeURL                 string                       `json:"nodeUrl"`
 	SyncBatchSize           uint64                       `json:"syncBatchSize"`
@@ -61,7 +60,6 @@ type EthChainConfig struct {
 type CardanoChainConfig struct {
 	cardanotx.CardanoChainConfig
 	ChainID                  string                   `json:"-"`
-	ChainIDNum               common.ChainIDNum        `json:"chainIdNum"`
 	NetworkAddress           string                   `json:"networkAddress"`
 	StartBlockHash           string                   `json:"startBlockHash"`
 	StartSlot                uint64                   `json:"startSlot"`

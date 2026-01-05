@@ -62,7 +62,7 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
 	if err != nil {
 		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

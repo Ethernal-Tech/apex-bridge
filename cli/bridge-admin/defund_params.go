@@ -73,7 +73,7 @@ func (g *defundParams) ValidateFlags() error {
 		return err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](g.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
 	if err != nil {
 		return err
 	}

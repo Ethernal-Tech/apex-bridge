@@ -38,6 +38,6 @@ type RelayerManagerConfiguration struct {
 	Logger           logger.LoggerConfig      `json:"logger"`
 }
 
-func (rmConfig *RelayerManagerConfiguration) SetupChainIDs(chainIDsConfig *common.ChainIDsConfig) {
+func (rmConfig *RelayerManagerConfiguration) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {
 	rmConfig.ChainIDConverter = chainIDsConfig.ToChainIDConverter()
 }

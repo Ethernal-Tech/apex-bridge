@@ -42,7 +42,7 @@ func (ip *setAdditionalDataParams) ValidateFlags() error {
 		return err
 	}
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](ip.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
 	if err != nil {
 		return fmt.Errorf("failed to load chain IDs config: %w", err)
 	}

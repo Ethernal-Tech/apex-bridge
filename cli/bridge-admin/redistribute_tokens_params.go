@@ -49,7 +49,7 @@ func (params *redistributeBridgingAddrsTokensParams) Execute(
 ) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfig](params.chainIDsConfig, "")
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](params.chainIDsConfig, "")
 	if err != nil {
 		return nil, err
 	}
