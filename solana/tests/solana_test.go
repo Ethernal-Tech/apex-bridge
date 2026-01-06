@@ -44,34 +44,26 @@ func Test_SolanaTransactions(t *testing.T) {
 	require.NoError(t, err)
 	defer storage.Close()
 
-	track, err := tracker.NewEventTracker(
-		rpc.New(rpc.LocalNet_RPC),
-		storage,
-		map[solana.PublicKey]tracker.ProgramEventSpecs{
-			skyline_program.ProgramID: spec,
-		},
-		rpc.CommitmentFinalized,
-		tracker.WithNotifications(255, 255, 255),
-	)
-	require.NoError(t, err)
-	require.NoError(t, track.Start())
-	defer track.Terminate()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case event := <-track.ChEvent():
-				t.Logf("event: %+v", event.EventName)
-			case slot := <-track.ChSlot():
-				t.Logf("slot: %d", slot.SlotNumber)
-			}
-		}
+		track, err := tracker.NewEventTracker(
+			rpc.New(rpc.LocalNet_RPC),
+			storage,
+			map[solana.PublicKey]tracker.ProgramEventSpecs{
+				skyline_program.ProgramID: spec,
+			},
+			rpc.CommitmentFinalized,
+			tracker.WithNotifications(255, 255, 255),
+		)
+		require.NoError(t, err)
+		require.NoError(t, track.Start())
+		defer track.Terminate()
+
+		<-ctx.Done()
 	}()
+
 	programPath, err := filepath.Abs("program_build/skyline_program-keypair.json")
 	require.NoError(t, err)
 

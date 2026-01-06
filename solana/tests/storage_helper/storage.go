@@ -189,14 +189,23 @@ func (b *BoltStorageHandler) GetAllEvents() ([]Event, error) {
 			return fmt.Errorf("cannot find events bucket")
 		}
 
-		eventsBucket.ForEach(func(k, v []byte) error {
-			events = append(events, Event{
-				Slot:      decodeSlotValue(k),
-				ProgramID: solana.PublicKeyFromBytes(v),
-				EventName: string(v),
-				EventData: v,
+		eventsBucket.ForEach(func(slot, value []byte) error {
+			slotValue := decodeSlotValue(slot)
+			slotBucket := eventsBucket.Bucket(slot)
+			slotBucket.ForEach(func(programID, value []byte) error {
+				programBucket := slotBucket.Bucket(programID)
+				programBucket.ForEach(func(eventName, value []byte) error {
+					eventData := value
+					events = append(events, Event{
+						Slot:      slotValue,
+						ProgramID: solana.PublicKeyFromBytes(programID),
+						EventName: string(eventName),
+						EventData: eventData,
+					})
+					return nil
+				})
+				return nil
 			})
-
 			return nil
 		})
 
