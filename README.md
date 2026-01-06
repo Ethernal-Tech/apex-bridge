@@ -364,6 +364,7 @@ $ apex-bridge sendtx skyline \
         --receiver addr_test1wrz24vv4tvfqsywkxn36rv5zagys2d7euafcgt50gmpgqpq4ju9uv:1_234_567 \
         --dst-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e
 ```
+- `--src-token-name` flag should be set to `lovelace` only when sending the native currency and omitted in all other cases.
 - there is an optional `--stake-key` flag
 
 # How to Deploy Nexus Smart Contracts

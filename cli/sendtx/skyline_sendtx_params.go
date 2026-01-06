@@ -97,17 +97,21 @@ func (p *sendSkylineTxParams) validateFlags() error {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
-	if p.tokenFullNameSrc == "" {
-		return fmt.Errorf("--%s flag not specified", fullSrcTokenNameFlag)
-	}
-
-	if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
-		token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameSrc)
-		if err != nil {
-			return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
+	if p.txType == common.ChainTypeCardanoStr {
+		// tokenFullNameSrc on Cardano defaults to ADA if empty
+		// tokenFullNameSrc on EVM can be empty (used only to identify currency token)
+		if p.tokenFullNameSrc == "" {
+			p.tokenFullNameSrc = cardanowallet.AdaTokenName
 		}
 
-		p.tokenFullNameSrc = token.String()
+		if p.tokenFullNameSrc != cardanowallet.AdaTokenName {
+			token, err := cardanowallet.NewTokenWithFullNameTry(p.tokenFullNameSrc)
+			if err != nil {
+				return fmt.Errorf("--%s invalid token name: %s", fullSrcTokenNameFlag, p.tokenFullNameSrc)
+			}
+
+			p.tokenFullNameSrc = token.String()
+		}
 	}
 
 	if p.tokenFullNameDst == "" {
@@ -319,7 +323,7 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&p.tokenFullNameSrc,
 		fullSrcTokenNameFlag,
-		cardanowallet.AdaTokenName,
+		"",
 		fullSrcTokenNameFlagDesc,
 	)
 
@@ -547,6 +551,11 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	totalAmount := big.NewInt(0)
 	totalAmount.Add(totalAmount, p.feeAmount)
 	totalAmount.Add(totalAmount, p.operationFeeAmount)
+
+	// If transferring native currency, add total token amount to total amount
+	if p.tokenFullNameSrc == cardanowallet.AdaTokenName {
+		totalAmount.Add(totalAmount, totalTokenAmount)
+	}
 
 	wallet, err := ethtxhelper.NewEthTxWallet(p.privateKeyRaw)
 	if err != nil {

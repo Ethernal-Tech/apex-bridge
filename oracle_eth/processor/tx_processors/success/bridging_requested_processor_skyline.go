@@ -347,9 +347,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
-		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v",
-			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
+	if err := p.validateOperationAndReceiverLimits(metadata, ethSrcConfig, appConfig); err != nil {
+		return err
 	}
 
 	srcCurrencyID, err := ethSrcConfig.GetCurrencyID()
@@ -383,6 +382,24 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		tx.Value, receiverCtx,
 	); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (p *BridgingRequestedProcessorSkylineImpl) validateOperationAndReceiverLimits(
+	metadata *core.BridgingRequestEthMetadata,
+	ethSrcConfig *oCore.EthChainConfig,
+	appConfig *oCore.AppConfig,
+) error {
+	operationFeeAmountDfm := common.WeiToDfm(metadata.OperationFee)
+	if operationFeeAmountDfm.Uint64() < ethSrcConfig.MinOperationFee {
+		return fmt.Errorf("operation fee in metadata is less than minimum: %v", metadata)
+	}
+
+	if len(metadata.Transactions) > appConfig.BridgingSettings.MaxReceiversPerBridgingRequest {
+		return fmt.Errorf("number of receivers in metadata greater than maximum allowed - no: %v, max: %v, metadata: %v",
+			len(metadata.Transactions), appConfig.BridgingSettings.MaxReceiversPerBridgingRequest, metadata)
 	}
 
 	return nil
@@ -500,11 +517,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 				"amount of tokens for receivers too high for token with ID %d: %v greater than maximum allowed: %v",
 				tokenID, tokenSum, maxTokenAmtWei)
 		}
-	}
-
-	operationFeeAmountDfm := common.WeiToDfm(metadata.OperationFee)
-	if operationFeeAmountDfm.Uint64() < receiverCtx.ethSrcConfig.MinOperationFee {
-		return fmt.Errorf("operation fee in metadata is less than minimum: %v", metadata)
 	}
 
 	// update fee amount if needed with sum of fee address receivers

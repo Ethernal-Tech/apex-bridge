@@ -389,7 +389,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
 				{Address: primeBridgingAddr, Amount: big.NewInt(2), TokenID: primeCurrencyID},
 			},
-			BridgingFee: big.NewInt(0),
+			BridgingFee:  big.NewInt(0),
+			OperationFee: common.DfmToWei(new(big.Int).SetUint64(minOperationFee)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -425,7 +426,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			Transactions: []core.BridgingRequestEthMetadataTransaction{
 				{Address: validEvmAddress, Amount: big.NewInt(2), TokenID: ccTokenID},
 			},
-			BridgingFee: big.NewInt(0),
+			BridgingFee:  big.NewInt(0),
+			OperationFee: common.DfmToWei(new(big.Int).SetUint64(minOperationFee)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, transactionDirectionNotSupportedMetadata)
@@ -463,7 +465,8 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				{Address: primeBridgingFeeAddr, Amount: big.NewInt(2)},
 				{Address: primeBridgingFeeAddr, Amount: big.NewInt(2)},
 			},
-			BridgingFee: big.NewInt(0),
+			BridgingFee:  big.NewInt(0),
+			OperationFee: common.DfmToWei(new(big.Int).SetUint64(minOperationFee)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, moreThanMaxReceiversReceiversMetadata)
@@ -1185,6 +1188,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			SenderAddr:         "addr1",
 			Transactions:       receivers,
 			BridgingFee:        big.NewInt(0),
+			OperationFee:       common.DfmToWei(new(big.Int).SetUint64(minOperationFee)),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
