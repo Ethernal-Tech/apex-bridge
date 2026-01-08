@@ -63,10 +63,10 @@ type sendSkylineTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	// nexus
+	// evm
 	gatewayAddress                   string
 	nativeTokenWalletContractAddress string
-	nexusURL                         string
+	rpcURL                           string
 	tokenContractAddrSrc             string
 	tokenContractAddrDst             string
 
@@ -177,8 +177,8 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
 
-		if !common.IsValidHTTPURL(p.nexusURL) {
-			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+		if !common.IsValidHTTPURL(p.rpcURL) {
+			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
 		srcChainConfig := common.GetChainConfig(p.chainIDSrc)
@@ -215,16 +215,16 @@ func (p *sendSkylineTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if p.nexusURL == "" && p.ogmiosURLDst == "" {
-			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+		if p.rpcURL == "" && p.ogmiosURLDst == "" {
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
 		if p.ogmiosURLDst != "" && !common.IsValidHTTPURL(p.ogmiosURLDst) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, p.ogmiosURLDst)
 		}
 
-		if p.nexusURL != "" && !common.IsValidHTTPURL(p.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, p.nexusURL)
+		if p.rpcURL != "" && !common.IsValidHTTPURL(p.rpcURL) {
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, p.rpcURL)
 		}
 	}
 
@@ -382,10 +382,10 @@ func (p *sendSkylineTxParams) setFlags(cmd *cobra.Command) {
 		nativeTokenWalletContractAddrFlagDesc,
 	)
 	cmd.Flags().StringVar(
-		&p.nexusURL,
-		nexusURLFlag,
+		&p.rpcURL,
+		rpcURLFlag,
 		"",
-		nexusURLFlagDesc,
+		rpcURLFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&p.tokenContractAddrDst,
@@ -510,8 +510,8 @@ func (p *sendSkylineTxParams) executeCardano(ctx context.Context, outputter comm
 		if err != nil {
 			return nil, err
 		}
-	} else if p.nexusURL != "" {
-		txHelper, err := getTxHelper(p.nexusURL)
+	} else if p.rpcURL != "" {
+		txHelper, err := getTxHelper(p.rpcURL)
 		if err != nil {
 			return nil, err
 		}
@@ -562,7 +562,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 		return nil, err
 	}
 
-	txHelper, err := getTxHelper(p.nexusURL)
+	txHelper, err := getTxHelper(p.rpcURL)
 	if err != nil {
 		return nil, err
 	}

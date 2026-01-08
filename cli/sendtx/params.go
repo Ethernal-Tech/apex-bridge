@@ -36,8 +36,7 @@ const (
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
-	nexusURLFlag        = "nexus-url"
-	currencyTokenIDFlag = "currency-token-id"
+	rpcURLFlag          = "rpc-url"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -52,8 +51,7 @@ const (
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
-	nexusURLFlagDesc        = "nexus chain URL"
-	currencyTokenIDFlagDesc = "currency token ID on evm chain"
+	rpcURLFlagDesc          = "evm chain rpc url"
 
 	ttlSlotNumberInc = 500
 
@@ -91,10 +89,9 @@ type sendTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	// nexus
-	gatewayAddress  string
-	nexusURL        string
-	currencyTokenID uint16
+	// evm
+	gatewayAddress string
+	rpcURL         string
 
 	feeAmount       *big.Int
 	receiversParsed []*receiverAmount
@@ -114,11 +111,11 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDSrc) {
+	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingChainID(ip.chainIDDst) {
+	if !common.IsExistingReactorChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -138,8 +135,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
 
-		if !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+		if !common.IsValidHTTPURL(ip.rpcURL) {
+			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
 		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
@@ -169,16 +166,16 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
-			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+		if ip.rpcURL == "" && ip.ogmiosURLDst == "" {
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
 		if ip.ogmiosURLDst != "" && !common.IsValidHTTPURL(ip.ogmiosURLDst) {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
 		}
 
-		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, ip.nexusURL)
+		if ip.rpcURL != "" && !common.IsValidHTTPURL(ip.rpcURL) {
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.rpcURL)
 		}
 	}
 
@@ -308,17 +305,10 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.nexusURL,
-		nexusURLFlag,
+		&ip.rpcURL,
+		rpcURLFlag,
 		"",
-		nexusURLFlagDesc,
-	)
-
-	cmd.Flags().Uint16Var(
-		&ip.currencyTokenID,
-		currencyTokenIDFlag,
-		nexusCurrencyTokenID,
-		currencyTokenIDFlagDesc,
+		rpcURLFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
@@ -408,8 +398,8 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		if err != nil {
 			return nil, err
 		}
-	} else if ip.nexusURL != "" {
-		txHelper, err := getTxHelper(ip.nexusURL)
+	} else if ip.rpcURL != "" {
+		txHelper, err := getTxHelper(ip.rpcURL)
 		if err != nil {
 			return nil, err
 		}
@@ -444,7 +434,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := common.ToNumChainID(ip.chainIDDst)
-	receivers, totalAmount := toGatewayStruct(ip.receiversParsed, ip.currencyTokenID)
+	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 
 	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
@@ -454,7 +444,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		return nil, err
 	}
 
-	txHelper, err := getTxHelper(ip.nexusURL)
+	txHelper, err := getTxHelper(ip.rpcURL)
 	if err != nil {
 		return nil, err
 	}
@@ -579,9 +569,9 @@ func waitForTx(ctx context.Context, receivers []*receiverAmount,
 	return errors.Join(errs...)
 }
 
-func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
+func getTxHelper(rpcURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithNodeURL(rpcURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 }
 
@@ -598,7 +588,7 @@ func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver 
 	return metadataReceivers
 }
 
-func toGatewayStruct(receivers []*receiverAmount, currencyTokenID uint16) (
+func toGatewayStruct(receivers []*receiverAmount) (
 	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
 ) {
 	total := big.NewInt(0)
@@ -608,7 +598,7 @@ func toGatewayStruct(receivers []*receiverAmount, currencyTokenID uint16) (
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
-			TokenId:  currencyTokenID,
+			TokenId:  nexusCurrencyTokenID,
 		}
 
 		total.Add(total, rec.Amount)
