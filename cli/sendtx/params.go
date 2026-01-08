@@ -89,9 +89,9 @@ type sendTxParams struct {
 	multisigAddrSrc string
 	ogmiosURLDst    string
 
-	// evm
+	// nexus
 	gatewayAddress string
-	rpcURL         string
+	nexusURL       string
 
 	feeAmount       *big.Int
 	receiversParsed []*receiverAmount
@@ -135,7 +135,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", gatewayAddressFlag)
 		}
 
-		if !common.IsValidHTTPURL(ip.rpcURL) {
+		if !common.IsValidHTTPURL(ip.nexusURL) {
 			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
@@ -166,7 +166,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s not specified", multisigAddrSrcFlag)
 		}
 
-		if ip.rpcURL == "" && ip.ogmiosURLDst == "" {
+		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
 			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
@@ -174,8 +174,8 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("invalid --%s: %s", ogmiosURLDstFlag, ip.ogmiosURLDst)
 		}
 
-		if ip.rpcURL != "" && !common.IsValidHTTPURL(ip.rpcURL) {
-			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.rpcURL)
+		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.nexusURL)
 		}
 	}
 
@@ -305,7 +305,7 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&ip.rpcURL,
+		&ip.nexusURL,
 		rpcURLFlag,
 		"",
 		rpcURLFlagDesc,
@@ -398,8 +398,8 @@ func (ip *sendTxParams) executeCardano(ctx context.Context, outputter common.Out
 		if err != nil {
 			return nil, err
 		}
-	} else if ip.rpcURL != "" {
-		txHelper, err := getTxHelper(ip.rpcURL)
+	} else if ip.nexusURL != "" {
+		txHelper, err := getTxHelper(ip.nexusURL)
 		if err != nil {
 			return nil, err
 		}
@@ -444,7 +444,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 		return nil, err
 	}
 
-	txHelper, err := getTxHelper(ip.rpcURL)
+	txHelper, err := getTxHelper(ip.nexusURL)
 	if err != nil {
 		return nil, err
 	}
