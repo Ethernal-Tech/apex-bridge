@@ -271,7 +271,7 @@ func TestBatcherExecuteMix(t *testing.T) {
 				"potentialFee": 300000,
 				}`)),
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 		PullTimeMilis:    2500,
 	}
 
@@ -539,7 +539,7 @@ func TestBatcherGetChainSpecificOperations(t *testing.T) {
 				"potentialFee": 300000,
 				}`)),
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 		PullTimeMilis:    2500,
 	}
 

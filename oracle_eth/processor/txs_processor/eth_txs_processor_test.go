@@ -97,7 +97,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			BaseTimeout: time.Second * 60,
 			MaxTimeout:  time.Second * 60,
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
 	appConfig.FillOut()

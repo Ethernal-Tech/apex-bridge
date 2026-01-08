@@ -15,7 +15,7 @@ import (
 )
 
 func TestBoltDatabase(t *testing.T) {
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	appConfig := &cCore.AppConfig{
 		EthChains: map[string]*cCore.EthChainConfig{

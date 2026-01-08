@@ -85,7 +85,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 			},
 			RefundEnabled:    refundEnabled,
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		config.FillOut()
 

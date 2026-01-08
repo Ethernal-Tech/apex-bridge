@@ -85,7 +85,7 @@ func newValidProcessor(
 }
 
 func TestCardanoTxsProcessor(t *testing.T) {
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	appConfig := &cCore.AppConfig{
 		CardanoChains: map[string]*cCore.CardanoChainConfig{

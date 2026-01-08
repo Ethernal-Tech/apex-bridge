@@ -117,7 +117,7 @@ func TestGenerateBatchTransaction(t *testing.T) {
 		ReturnDefaultParameters: true,
 	}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
@@ -377,7 +377,7 @@ func TestGenerateBatchTransaction_ColoredCoins(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -1179,7 +1179,7 @@ func TestGenerateBatchTransactionOnlyDereg(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr,
 		"prime", bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -1421,7 +1421,7 @@ func TestGenerateBatchTransactionWithStaking(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	cco, err := NewCardanoChainOperations(configRaw, common.NewChainIDConverterForTest(), dbMock, secretsMngr, "prime",
+	cco, err := NewCardanoChainOperations(configRaw, common.NewTestChainIDConverter(), dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
 	require.NoError(t, err)
 
@@ -1659,7 +1659,7 @@ func Test_createBatchInitialData(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -1726,7 +1726,7 @@ func TestGenerateConsolidationTransaction(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -2217,7 +2217,7 @@ func TestSkylineConsolidation(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, common.ChainIDStrPrime,
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -2386,7 +2386,7 @@ func TestGenerateConsolidationTransactionWithMultipleAddresses(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())
@@ -2800,7 +2800,7 @@ func Test_getUtxosFromRefundTransactions(t *testing.T) {
 	bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
 	bridgingAddressCoordinatorMock := &bac.BridgingAddressesCoordinatorMock{}
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	cco, err := NewCardanoChainOperations(configRaw, chainIDConverter, dbMock, secretsMngr, "prime",
 		bridgingAddressesManagerMock, bridgingAddressCoordinatorMock, hclog.NewNullLogger())

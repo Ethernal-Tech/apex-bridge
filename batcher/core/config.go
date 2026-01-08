@@ -8,7 +8,7 @@ import (
 
 type BatcherConfiguration struct {
 	Chain            ChainConfig              `json:"chain"`
-	ChainIDConverter *common.ChainIDConverter `json:"chainIdConverter"`
+	ChainIDConverter *common.ChainIDConverter `json:"-"`
 	PullTimeMilis    uint64                   `json:"pullTime"`
 }
 
@@ -20,6 +20,6 @@ type ChainConfig struct {
 
 type BatcherManagerConfiguration struct {
 	Chains           []ChainConfig            `json:"chains"`
-	ChainIDConverter *common.ChainIDConverter `json:"chainIdConverter"`
+	ChainIDConverter *common.ChainIDConverter `json:"-"`
 	PullTimeMilis    uint64                   `json:"pullTime"`
 }

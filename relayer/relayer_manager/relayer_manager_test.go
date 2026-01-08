@@ -150,7 +150,7 @@ func Test_getRelayersAndConfigurations(t *testing.T) {
 				}`, testDir))),
 			},
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
 	relayers, chainsConfigs, err := getRelayersAndConfigurations(

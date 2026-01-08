@@ -44,7 +44,7 @@ func TestBridgingAddressesManager(t *testing.T) {
 
 	bridgeSmartContractMock.On("GetBridgingAddressesCount", mock.Anything, "prime").Return(uint8(1), nil)
 
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	bridgingAddressesManager, err := NewBridgingAdressesManager(
 		context.Background(),

@@ -28,21 +28,26 @@ type ChainIDConfig struct {
 func (c *ChainIDsConfigFile) ToChainIDConverter() *ChainIDConverter {
 	intToStr := make(map[ChainIDNum]string, len(c.ChainIDConfig))
 	strToInt := make(map[string]ChainIDNum, len(c.ChainIDConfig))
+	cardanoChains := make([]string, 0)
 	evmChains := make([]string, 0)
 
 	for _, chainIDConfig := range c.ChainIDConfig {
 		intToStr[chainIDConfig.ChainIDNum] = chainIDConfig.ChainID
 		strToInt[chainIDConfig.ChainID] = chainIDConfig.ChainIDNum
 
-		if chainIDConfig.ChainType == ChainTypeEVMStr {
+		switch chainIDConfig.ChainType {
+		case ChainTypeCardanoStr:
+			cardanoChains = append(cardanoChains, chainIDConfig.ChainID)
+		case ChainTypeEVMStr:
 			evmChains = append(evmChains, chainIDConfig.ChainID)
 		}
 	}
 
 	return &ChainIDConverter{
-		StrToInt:  strToInt,
-		IntToStr:  intToStr,
-		EvmChains: evmChains,
+		StrToInt:      strToInt,
+		IntToStr:      intToStr,
+		CardanoChains: cardanoChains,
+		EvmChains:     evmChains,
 	}
 }
 

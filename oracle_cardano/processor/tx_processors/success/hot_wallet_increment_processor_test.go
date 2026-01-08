@@ -59,7 +59,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 			},
 			common.ChainIDStrVector: {},
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 

@@ -26,7 +26,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 				},
 			},
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 

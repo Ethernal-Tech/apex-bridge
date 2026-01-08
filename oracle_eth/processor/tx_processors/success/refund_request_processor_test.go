@@ -54,7 +54,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			TryCountLimits: oCore.TryCountLimits{
 				MaxRefundTryCount: 3,
 			},
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 
 		appConfig.FillOut()

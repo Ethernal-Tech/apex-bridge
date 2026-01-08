@@ -148,7 +148,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				MinColCoinsAllowedToBridge:     minColCoinsAllowedToBridge,
 			},
 			RefundEnabled:    refundEnabled,
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		config.FillOut()
 

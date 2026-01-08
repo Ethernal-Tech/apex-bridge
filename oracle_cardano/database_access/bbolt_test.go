@@ -20,7 +20,7 @@ func TestBoltDatabase(t *testing.T) {
 			common.ChainIDStrPrime:  {},
 			common.ChainIDStrVector: {},
 		},
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
 	appConfig.FillOut()

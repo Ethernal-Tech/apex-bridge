@@ -16,7 +16,7 @@ import (
 
 func TestRelayerImitator(t *testing.T) {
 	appConfig := &core.AppConfig{
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
 	t.Run("NewRelayerImitator", func(t *testing.T) {

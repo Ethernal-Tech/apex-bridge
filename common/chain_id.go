@@ -27,9 +27,10 @@ const (
 )
 
 type ChainIDConverter struct {
-	StrToInt  map[string]ChainIDNum
-	IntToStr  map[ChainIDNum]string
-	EvmChains []string
+	StrToInt      map[string]ChainIDNum
+	IntToStr      map[ChainIDNum]string
+	CardanoChains []string
+	EvmChains     []string
 }
 
 func (c *ChainIDConverter) ToNumChainID(chainIDStr string) ChainIDNum {
@@ -46,29 +47,10 @@ func (c *ChainIDConverter) IsExistingChainID(chainIDStr string) bool {
 	return ok
 }
 
-func (c *ChainIDConverter) IsEVMChainID(chainIDStr string) bool {
-	return slices.Contains(c.EvmChains, chainIDStr)
+func (c *ChainIDConverter) IsCardanoChainID(chainIDStr string) bool {
+	return slices.Contains(c.CardanoChains, chainIDStr)
 }
 
-func NewChainIDConverterForTest() *ChainIDConverter {
-	return &ChainIDConverter{
-		StrToInt: map[string]ChainIDNum{
-			ChainIDStrPrime:   ChainIDIntPrime,
-			ChainIDStrVector:  ChainIDIntVector,
-			ChainIDStrNexus:   ChainIDIntNexus,
-			ChainIDStrCardano: ChainIDIntCardano,
-			ChainIDStrPolygon: ChainIDIntPolygon,
-		},
-		IntToStr: map[ChainIDNum]string{
-			ChainIDIntPrime:   ChainIDStrPrime,
-			ChainIDIntVector:  ChainIDStrVector,
-			ChainIDIntNexus:   ChainIDStrNexus,
-			ChainIDIntCardano: ChainIDStrCardano,
-			ChainIDIntPolygon: ChainIDStrPolygon,
-		},
-		EvmChains: []string{
-			ChainIDStrNexus,
-			ChainIDStrPolygon,
-		},
-	}
+func (c *ChainIDConverter) IsEVMChainID(chainIDStr string) bool {
+	return slices.Contains(c.EvmChains, chainIDStr)
 }

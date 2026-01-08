@@ -111,7 +111,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 				MaxRefundTryCount: 3,
 			},
 			RefundEnabled:    refundEnabled,
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		appConfig.FillOut()
 

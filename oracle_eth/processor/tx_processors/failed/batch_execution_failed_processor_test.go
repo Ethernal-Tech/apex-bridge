@@ -13,7 +13,7 @@ import (
 func TestBatchExecutionFailedProcessor(t *testing.T) {
 	proc := NewEthBatchExecutionFailedProcessor(hclog.NewNullLogger())
 	appConfig := &oCore.AppConfig{
-		ChainIDConverter: common.NewChainIDConverterForTest(),
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {

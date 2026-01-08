@@ -37,7 +37,7 @@ var cardanoChains = map[string]*oracleCore.CardanoChainConfig{
 
 func TestBridgingAddressesCoordinator(t *testing.T) {
 	chainID := common.ChainIDIntPrime
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	t.Run("GetAddressesAndAmountsForBatchForBatch 1 address currency", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}
@@ -582,7 +582,7 @@ func TestBridgingAddressesCoordinator(t *testing.T) {
 
 func TestRedistributeTokens(t *testing.T) {
 	chainID := common.ChainIDIntPrime
-	chainIDConverter := common.NewChainIDConverterForTest()
+	chainIDConverter := common.NewTestChainIDConverter()
 
 	t.Run("GetAddressesAndAmountsForBatch 1 address", func(t *testing.T) {
 		bridgingAddressesManagerMock := &bam.BridgingAddressesManagerMock{}

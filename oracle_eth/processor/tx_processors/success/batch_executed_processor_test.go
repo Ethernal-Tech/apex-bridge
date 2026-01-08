@@ -47,7 +47,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 			Metadata:      relevantButNotFullMetadata,
 		}, &oCore.AppConfig{
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		})
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
@@ -72,7 +72,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			OriginChainID: common.ChainIDStrNexus,
 			Metadata:      relevantFullMetadata,
 		}, &oCore.AppConfig{
-			ChainIDConverter: common.NewChainIDConverterForTest(),
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		})
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
