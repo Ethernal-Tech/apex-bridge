@@ -287,7 +287,7 @@ $ apex-bridge sendtx \
         --chain-dst nexus \
         --receiver 0x4BC4892F8B01B9aFc99BCB827c39646EE78bCF06:1_000_000 \
         --fee 1_100_000 \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c
 ```
 - there is an optional `--stake-key` flag
 
@@ -296,10 +296,9 @@ $ apex-bridge sendtx \
 $ apex-bridge sendtx \
         --tx-type evm \
         --key NEXUS_WALLET_PRIVATE_KEY \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr GATEWAY_PROXY_ADDRESS \
         --chain-src nexus \
-        --currency-token-id 1 \
         --fee 1000010000000000000 \
         --chain-dst prime \
         --receiver addr_test1vrlt3wnp3hxermfyhfp2x9lu5u32275lf0yh3nvxkpjv7qgxl9f8y:1000000000000000000 \
@@ -341,7 +340,7 @@ $ apex-bridge sendtx skyline \
         --src-token-name 72f3d1e6c885e4d0bdcf5250513778dbaa851c0b4bfe3ed4e1bcceb0.4b6173685f546f6b656e \
         --fee 1_100_000 \
         --chain-dst nexus \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --receiver 0x1111:1_234_567 \
         --dst-token-contract-addr 0x22222
 ```
@@ -352,7 +351,7 @@ $ apex-bridge sendtx skyline \
 $ apex-bridge sendtx skyline \
         --tx-type evm \
         --key EVM_WALLET_PRIVATE_KEY \
-        --nexus-url https://testnet.af.route3.dev/json-rpc/p2-c \
+        --rpc-url https://testnet.af.route3.dev/json-rpc/p2-c \
         --gateway-addr 0x3333 \
         --native-token-wallet-contract-addr 0x4444 \
         --chain-src nexus \
