@@ -122,7 +122,7 @@ func getRelayersAndConfigurations(
 	newChainsConfigs := make(map[string]core.ChainConfig, len(allRegisteredChains))
 
 	for _, chainData := range allRegisteredChains {
-		chainID := config.ChainIDConverter.ToStrChainID(chainData.Id)
+		chainID := config.ChainIDConverter.ToChainIDStr(chainData.Id)
 
 		chainConfig, exists := config.Chains[chainID]
 		if !exists {

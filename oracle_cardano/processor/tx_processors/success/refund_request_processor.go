@@ -115,8 +115,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	}
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            chainIDConverter.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       chainIDConverter.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             amount,
@@ -180,7 +180,7 @@ func (p *RefundRequestProcessorImpl) validate(
 
 	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
 		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(
-			appConfig.ChainIDConverter.ToNumChainID(chainConfig.ChainID),
+			appConfig.ChainIDConverter.ToChainIDNum(chainConfig.ChainID),
 		), p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)

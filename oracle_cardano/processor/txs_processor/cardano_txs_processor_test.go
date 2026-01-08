@@ -1369,7 +1369,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash,
-					SourceChainId:           chainIDConverter.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
@@ -1578,7 +1578,7 @@ func TestCardanoTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *cCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, cCore.BridgingRequestClaim{
 					ObservedTransactionHash: tx1.Hash,
-					SourceChainId:           chainIDConverter.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,

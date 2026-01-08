@@ -158,7 +158,7 @@ func (ti *TelemetryWorker) updateFeeHotWalletState(db indexer.Database, chainID 
 func (ti *TelemetryWorker) getHotWalletState(
 	contract *contractbinding.AdminContract, chainID string,
 ) (value *big.Int) {
-	val, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, ti.config.ChainIDConverter.ToNumChainID(chainID))
+	val, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, ti.config.ChainIDConverter.ToChainIDNum(chainID))
 	if err != nil {
 		ti.logger.Warn("failed to retrieve hot wallet state", "chain", chainID, "err", err)
 	} else if cache := ti.latestHotWalletState[chainID]; cache == nil || cache.Cmp(val) != 0 {
@@ -173,7 +173,7 @@ func (ti *TelemetryWorker) getHotWalletState(
 func (ti *TelemetryWorker) getHotWalletStateForNativeToken(
 	contract *contractbinding.AdminContract, chainID string,
 ) (value *big.Int) {
-	val, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, ti.config.ChainIDConverter.ToNumChainID(chainID))
+	val, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, ti.config.ChainIDConverter.ToChainIDNum(chainID))
 	if err != nil {
 		ti.logger.Warn("failed to retrieve hot wallet state for native token", "chain", chainID, "err", err)
 	} else if cache := ti.latestHotWalletStateForNativeToken[chainID]; cache == nil || cache.Cmp(val) != 0 {

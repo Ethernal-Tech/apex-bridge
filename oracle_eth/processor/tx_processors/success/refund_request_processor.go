@@ -80,8 +80,8 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	amount := common.WeiToDfm(tx.Value)
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            chainIDConverter.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       chainIDConverter.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             amount,

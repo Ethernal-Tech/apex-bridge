@@ -190,7 +190,7 @@ func (sp *EthStateProcessor) processBatchExecutionInfoEvents(
 				tx.SetLastTimeTried(time.Time{})
 
 				for _, batchTx := range event.TxHashes {
-					if sp.appConfig.ChainIDConverter.ToStrChainID(batchTx.SourceChainID) == tx.GetChainID() &&
+					if sp.appConfig.ChainIDConverter.ToChainIDStr(batchTx.SourceChainID) == tx.GetChainID() &&
 						batchTx.ObservedTransactionHash == common.Hash(tx.GetTxHash()) &&
 						batchTx.TransactionType == uint8(common.RefundConfirmedTxType) {
 						tx.IncrementRefundTryCount()
@@ -242,7 +242,7 @@ func (sp *EthStateProcessor) getTxsFromBatchEvent(
 	for idx, hash := range event.TxHashes {
 		tx, err := sp.db.GetPendingTx(
 			oracleCore.DBTxID{
-				ChainID: sp.appConfig.ChainIDConverter.ToStrChainID(hash.SourceChainID),
+				ChainID: sp.appConfig.ChainIDConverter.ToChainIDStr(hash.SourceChainID),
 				DBKey:   hash.ObservedTransactionHash[:],
 			},
 		)
@@ -309,7 +309,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		brc := claims.BridgingRequestClaims[brcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToStrChainID(brc.SourceChainId), brc.ObservedTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(brc.SourceChainId), brc.ObservedTransactionHash))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"BRC not found in MoveUnprocessedToPending for index: %d", brcIndex)
@@ -326,7 +326,7 @@ func (sp *EthStateProcessor) findRejectedTxInPending(
 		rrc := claims.RefundRequestClaims[rrcIndex]
 
 		tx, exists := allPendingMap[string(
-			core.ToEthTxKey(chainIDConverter.ToStrChainID(rrc.OriginChainId), rrc.OriginTransactionHash))]
+			core.ToEthTxKey(chainIDConverter.ToChainIDStr(rrc.OriginChainId), rrc.OriginTransactionHash))]
 		if !exists {
 			return nil, fmt.Errorf(
 				"RRC not found in MoveUnprocessedToPending for index: %d", rrcIndex)
@@ -628,7 +628,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 		updateToSubmittedToBridge := func(
 			sourceChainId uint8, observedTransactionHash [32]byte, destinationChainId uint8, isRefund bool,
 		) {
-			srcChainID := chainIDConverter.ToStrChainID(sourceChainId)
+			srcChainID := chainIDConverter.ToChainIDStr(sourceChainId)
 			key := core.ToEthTxKey(srcChainID, observedTransactionHash)
 
 			if !notRejectedMap[string(key)] {
@@ -637,7 +637,7 @@ func (sp *EthStateProcessor) UpdateBridgingRequestStates(
 
 			err := bridgingRequestStateUpdater.SubmittedToBridge(
 				common.NewBridgingRequestStateKey(srcChainID, observedTransactionHash, isRefund),
-				chainIDConverter.ToStrChainID(destinationChainId))
+				chainIDConverter.ToChainIDStr(destinationChainId))
 
 			if err != nil {
 				sp.logger.Error(

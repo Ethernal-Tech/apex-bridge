@@ -464,7 +464,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
-	chainID := ip.chainIDConverter.ToNumChainID(ip.chainIDDst)
+	chainID := ip.chainIDConverter.ToChainIDNum(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 

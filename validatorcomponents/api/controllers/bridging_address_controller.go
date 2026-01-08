@@ -79,7 +79,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 	}
 
 	chainIDStr := chainIDArr[0]
-	chainID := c.chainIDConverter.ToNumChainID(chainIDStr)
+	chainID := c.chainIDConverter.ToChainIDNum(chainIDStr)
 
 	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID, containsNativeTokens)
 	if err != nil {
@@ -108,7 +108,7 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	}
 
 	chainIDStr := chainIDArr[0]
-	chainID := c.chainIDConverter.ToNumChainID(chainIDStr)
+	chainID := c.chainIDConverter.ToChainIDNum(chainIDStr)
 
 	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
 

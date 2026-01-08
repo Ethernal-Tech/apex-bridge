@@ -50,7 +50,7 @@ func ValidateOutputsHaveUnknownTokens(tx *core.CardanoTx, appConfig *cCore.AppCo
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		appConfig.ChainIDConverter.ToNumChainID(tx.OriginChainID), 0)
+		appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}

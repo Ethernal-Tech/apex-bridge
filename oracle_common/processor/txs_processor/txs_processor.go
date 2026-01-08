@@ -151,7 +151,7 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 	claims *core.BridgeClaims,
 ) (result []*core.DBBatchInfoEvent, err error) {
 	addInfo := func(batchID uint64, chainIDInt uint8, txHash [32]byte, isFailedClaim bool) error {
-		chainID := p.appConfig.ChainIDConverter.ToStrChainID(chainIDInt)
+		chainID := p.appConfig.ChainIDConverter.ToChainIDStr(chainIDInt)
 
 		txs, err := p.bridgeDataFetcher.GetBatchTransactions(chainID, batchID)
 		if err != nil {
@@ -164,7 +164,7 @@ func (p *TxsProcessorImpl) retrieveTxsForEachBatchFromClaims(
 		for _, tx := range txs {
 			if common.IsDirectlyConfirmedTransaction(tx.TransactionType) {
 				p.logger.Info("Skipping defund and stake delegation tx",
-					"chainID", p.appConfig.ChainIDConverter.ToStrChainID(chainIDInt),
+					"chainID", p.appConfig.ChainIDConverter.ToChainIDStr(chainIDInt),
 					"batchID", batchID, "isFailedClaim", isFailedClaim,
 				)
 
@@ -289,11 +289,11 @@ func (p *TxsProcessorImpl) updateBridgingStateForBatch(
 		stateKeys := make([]common.BridgingRequestStateKey, len(event.TxHashes))
 		for i, x := range event.TxHashes {
 			stateKeys[i] = common.NewBridgingRequestStateKey(
-				p.appConfig.ChainIDConverter.ToStrChainID(x.SourceChainID), x.ObservedTransactionHash,
+				p.appConfig.ChainIDConverter.ToChainIDStr(x.SourceChainID), x.ObservedTransactionHash,
 				x.TransactionType == uint8(common.RefundConfirmedTxType))
 		}
 
-		dstChainID := p.appConfig.ChainIDConverter.ToStrChainID(event.DstChainID)
+		dstChainID := p.appConfig.ChainIDConverter.ToChainIDStr(event.DstChainID)
 
 		if event.IsFailedClaim {
 			err = bridgingRequestStateUpdater.FailedToExecuteOnDestination(stateKeys, dstChainID)

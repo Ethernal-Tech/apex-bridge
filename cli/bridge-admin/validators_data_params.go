@@ -109,7 +109,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 	}
 
 	for _, regChain := range allRegisteredChains {
-		chainID := chainIDConverter.ToStrChainID(regChain.Id)
+		chainID := chainIDConverter.ToChainIDStr(regChain.Id)
 
 		switch regChain.ChainType {
 		case common.ChainTypeCardano:
@@ -118,7 +118,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
+			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 			if err != nil {
 				return nil, err
 			}
@@ -135,7 +135,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 				return nil, err
 			}
 
-			addrCount, err := contract.GetBridgingAddressesCount(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
+			addrCount, err := contract.GetBridgingAddressesCount(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 			if err != nil {
 				return nil, err
 			}
@@ -165,7 +165,7 @@ func (v *validatorsDataParams) Execute(outputter common.OutputFormatter) (common
 
 			outputter.WriteOutput()
 		case common.ChainTypeEVM:
-			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
+			validatorsData, err := contract.GetValidatorsChainData(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 			if err != nil {
 				return nil, err
 			}

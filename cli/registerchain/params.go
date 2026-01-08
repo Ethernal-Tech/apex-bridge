@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	cardanotx "github.com/Ethernal-Tech/apex-bridge/cardano"
@@ -25,18 +26,18 @@ const (
 
 	validatorDataDirFlag          = "validator-data-dir"
 	validatorConfigFlag           = "validator-config"
+	chainIDsConfigFlag            = "chain-ids-config"
 	bridgeURLFlag                 = "bridge-url"
 	bridgeSCAddrFlag              = "bridge-addr"
 	chainIDFlag                   = "chain"
-	chainIDNumFlag                = "chain-num"
 	chainTypeFlag                 = "type"
 	initialTokenSupplyFlag        = "token-supply"
 	initialWrappedTokenSupplyFlag = "wrapped-token-supply"
 
 	validatorDataDirFlagDesc          = "(mandatory validator-config not specified) Path to bridge chain data directory when using local secrets manager" //nolint:lll
 	validatorConfigFlagDesc           = "(mandatory validator-data not specified) Path to to bridge chain secrets manager config file"                    //nolint:lll
+	chainIDsConfigFlagDesc            = "path to the chain IDs config file"
 	chainIDFlagDesc                   = "chain ID (prime, vector, etc)"
-	chainIDNumFlagDesc                = "chain ID number (1, 2, 3, etc)"
 	chainTypeFlagDesc                 = "chain type (0 is Cardano, 1 is EVM, etc)"
 	bridgeURLFlagDesc                 = "bridge node url"
 	bridgeSCAddrFlagDesc              = "bridge smart contract address"
@@ -44,23 +45,16 @@ const (
 	initialWrappedTokenSupplyFlagDesc = "initial wrapped token supply for the chain"
 )
 
-var knownChainIDs = map[string]common.ChainIDNum{
-	common.ChainIDStrPrime:   common.ChainIDIntPrime,
-	common.ChainIDStrVector:  common.ChainIDIntVector,
-	common.ChainIDStrNexus:   common.ChainIDIntNexus,
-	common.ChainIDStrCardano: common.ChainIDIntCardano,
-}
-
 type registerChainParams struct {
 	validatorDataDir          string
 	validatorConfig           string
 	bridgeURL                 string
 	bridgeSCAddr              string
 	chainID                   string
-	chainIDNum                common.ChainIDNum
 	chainType                 uint8
 	initialTokenSupply        string
 	initialWrappedTokenSupply string
+	chainIDsConfig            string
 
 	ethTxHelper ethtxhelper.IEthTxHelper
 }
@@ -72,17 +66,16 @@ func (ip *registerChainParams) validateFlags() error {
 
 	ip.chainID = strings.ToLower(ip.chainID)
 
-	knownChainID, ok := knownChainIDs[ip.chainID]
-	if ok {
-		if ip.chainIDNum != 0 && ip.chainIDNum != knownChainID {
-			return fmt.Errorf("invalid %s: %d for known chain id string: %s, expected: %d",
-				chainIDNumFlag, ip.chainIDNum, ip.chainID, knownChainID)
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
+	}
+
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
 		}
 
-		ip.chainIDNum = knownChainID
-	} else if ip.chainIDNum == 0 {
-		return fmt.Errorf("unknown chain id string: %s, specify %s flag as well",
-			ip.chainID, chainIDNumFlag)
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
 	}
 
 	// for known chain IDs, chainType is already known
@@ -175,17 +168,17 @@ func (ip *registerChainParams) setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().Uint8Var(
-		&ip.chainIDNum,
-		chainIDNumFlag,
-		0,
-		chainIDNumFlagDesc,
-	)
-
-	cmd.Flags().Uint8Var(
 		&ip.chainType,
 		chainTypeFlag,
 		0,
 		chainTypeFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(validatorDataDirFlag, validatorConfigFlag)
@@ -213,6 +206,13 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message hash: %w", err)
 	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	chainIDConverter := chainIDsConfig.ToChainIDConverter()
 
 	switch ip.chainType {
 	case common.ChainTypeCardano:
@@ -282,7 +282,7 @@ func (ip *registerChainParams) Execute(outputter common.OutputFormatter) (common
 			func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 				return contract.RegisterChainGovernance(
 					txOpts,
-					ip.chainIDNum,
+					chainIDConverter.ToChainIDNum(ip.chainID),
 					ip.chainType,
 					initialTokenSupply,
 					initialWrappedTokenSupply,

@@ -61,7 +61,7 @@ func NewBridgingAdressesManager(
 
 	for _, registeredChain := range registeredChains {
 		registeredChainID := registeredChain.Id
-		chainIDStr := chainIDConverter.ToStrChainID(registeredChainID)
+		chainIDStr := chainIDConverter.ToChainIDStr(registeredChainID)
 
 		if !chainIDConverter.IsExistingChainID(chainIDStr) || registeredChain.ChainType != 0 {
 			continue

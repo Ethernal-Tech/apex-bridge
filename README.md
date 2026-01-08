@@ -91,8 +91,8 @@ $ go run ./main.go wallet-create blade --type proxy --key KEY --config CONFIG_PA
 # How to register chain for validator
 ```shell
 $ go run ./main.go register-chain \
+        --chain-ids-config ./chainIDsConfig.json \
         --chain prime \
-        --chain-num 1 \
         --type 0 \
         --validator-data-dir /home/bbs/blade \
         --token-supply 20000000 \

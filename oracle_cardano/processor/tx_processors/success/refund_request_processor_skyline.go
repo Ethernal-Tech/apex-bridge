@@ -90,7 +90,7 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	unknownTokenOutputIndexes := make([]common.TxOutputIndex, 0, unknownNativeTokensUtxoCntMax)
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		chainIDConverter.ToNumChainID(tx.OriginChainID), 0)
+		chainIDConverter.ToChainIDNum(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}
@@ -162,8 +162,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 	}
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            chainIDConverter.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       chainIDConverter.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      senderAddr,
 		OriginAmount:             currencyAmountToTrack,
@@ -203,7 +203,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	zeroAddress, ok := appConfig.BridgingAddressesManager.GetPaymentAddressFromIndex(
-		chainIDConverter.ToNumChainID(tx.OriginChainID), 0)
+		chainIDConverter.ToChainIDNum(tx.OriginChainID), 0)
 	if !ok {
 		return fmt.Errorf("failed to get zero address from bridging address manager")
 	}
@@ -247,7 +247,7 @@ func (p *RefundRequestProcessorSkylineImpl) validate(
 	}
 
 	calculatedMinUtxo, err := calculateMinUtxoForRefund(chainConfig, tx, senderAddr,
-		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDConverter.ToNumChainID(chainConfig.ChainID)),
+		appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDConverter.ToChainIDNum(chainConfig.ChainID)),
 		p.chainInfos)
 	if err != nil {
 		return fmt.Errorf("failed to calculate min utxo. err: %w", err)

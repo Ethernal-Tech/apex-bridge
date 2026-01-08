@@ -33,11 +33,11 @@ type ChainIDConverter struct {
 	EvmChains     []string
 }
 
-func (c *ChainIDConverter) ToNumChainID(chainIDStr string) ChainIDNum {
+func (c *ChainIDConverter) ToChainIDNum(chainIDStr string) ChainIDNum {
 	return c.StrToInt[chainIDStr]
 }
 
-func (c *ChainIDConverter) ToStrChainID(chainIDNum ChainIDNum) string {
+func (c *ChainIDConverter) ToChainIDStr(chainIDNum ChainIDNum) string {
 	return c.IntToStr[chainIDNum]
 }
 

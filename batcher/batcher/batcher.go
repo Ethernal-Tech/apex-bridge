@@ -195,7 +195,7 @@ func (b *BatcherImpl) createSignedBatch(
 
 	return &eth.SignedBatch{
 		Id:                 batchID,
-		DestinationChainId: b.config.ChainIDConverter.ToNumChainID(b.config.Chain.ChainID),
+		DestinationChainId: b.config.ChainIDConverter.ToChainIDNum(b.config.Chain.ChainID),
 		RawTransaction:     generatedBatchData.TxRaw,
 		Signature:          signatures.Multisig,
 		StakeSignature:     signatures.MultsigStake,
@@ -247,7 +247,7 @@ func (b *BatcherImpl) getBridgingRequestStateKeys(
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
 			!common.IsDirectlyConfirmedTransaction(confirmedTx.TransactionType) {
 			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
-				b.config.ChainIDConverter.ToStrChainID(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
+				b.config.ChainIDConverter.ToChainIDStr(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
 				confirmedTx.TransactionType == uint8(common.RefundConfirmedTxType)))
 		}
 	}

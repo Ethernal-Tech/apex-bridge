@@ -95,7 +95,7 @@ func (g *defundParams) ValidateFlags() error {
 func (g *defundParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
 
-	chainIDInt := g.chainIDConverter.ToNumChainID(g.chainID)
+	chainIDInt := g.chainIDConverter.ToChainIDNum(g.chainID)
 
 	var (
 		amount             = big.NewInt(0)

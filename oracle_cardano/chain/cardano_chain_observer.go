@@ -160,7 +160,7 @@ func loadSyncerConfigs(
 		strings.TrimPrefix(config.NetworkAddress, "http://"),
 		"https://")
 
-	chainID := chainIDConverter.ToNumChainID(config.ChainID)
+	chainID := chainIDConverter.ToChainIDNum(config.ChainID)
 
 	addressesOfInterest := append(
 		append(bridgingAddressesManager.GetAllPaymentAddresses(chainID),

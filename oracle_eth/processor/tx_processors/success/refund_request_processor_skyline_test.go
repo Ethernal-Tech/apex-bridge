@@ -260,7 +260,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, appConfig.ChainIDConverter.ToNumChainID(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginAmount.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Equal(t, nexusBridgingAddr, claims.RefundRequestClaims[0].OriginSenderAddress)
@@ -362,7 +362,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToStrChainID(claims.RefundRequestClaims[0].DestinationChainId))
+		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToChainIDStr(claims.RefundRequestClaims[0].DestinationChainId))
 		require.Equal(t, nexusBridgingAddr, claims.RefundRequestClaims[0].OriginSenderAddress)
 		require.Equal(t, big.NewInt(minFeeForBridging+utxoMinValue), claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, big.NewInt(0), claims.RefundRequestClaims[0].OriginWrappedAmount)
@@ -412,7 +412,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToStrChainID(claims.RefundRequestClaims[0].DestinationChainId))
+		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToChainIDStr(claims.RefundRequestClaims[0].DestinationChainId))
 		require.Equal(t, nexusBridgingAddr, claims.RefundRequestClaims[0].OriginSenderAddress)
 		require.Equal(t, big.NewInt(minFeeForBridging), claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, big.NewInt(utxoMinValue), claims.RefundRequestClaims[0].OriginWrappedAmount)
@@ -462,7 +462,7 @@ func TestRefundRequestedProcessorSkyline(t *testing.T) {
 
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToStrChainID(claims.RefundRequestClaims[0].DestinationChainId))
+		require.Equal(t, common.ChainIDStrPrime, appConfig.ChainIDConverter.ToChainIDStr(claims.RefundRequestClaims[0].DestinationChainId))
 		require.Equal(t, nexusBridgingAddr, claims.RefundRequestClaims[0].OriginSenderAddress)
 		require.Equal(t, big.NewInt(minFeeForBridging), claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, big.NewInt(0), claims.RefundRequestClaims[0].OriginWrappedAmount)

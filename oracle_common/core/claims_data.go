@@ -57,9 +57,9 @@ func RefundRequestClaimString(c RefundRequestClaim, chainIDConverter *common.Cha
 	sb.WriteString("\nRefundTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.RefundTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.OriginChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.OriginChainId))
 	sb.WriteString("\nDstChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.DestinationChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.DestinationChainId))
 	sb.WriteString("\nReceiver = ")
 	sb.WriteString(c.OriginSenderAddress)
 	sb.WriteString("\nAmount = ")
@@ -106,7 +106,7 @@ func BatchExecutionFailedClaimString(c BatchExecutionFailedClaim, chainIDConvert
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.ChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
@@ -119,7 +119,7 @@ func BatchExecutedClaimString(c BatchExecutedClaim, chainIDConverter *common.Cha
 	sb.WriteString("ObservedTransactionHash = ")
 	sb.WriteString(hex.EncodeToString(c.ObservedTransactionHash[:]))
 	sb.WriteString("\nChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.ChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.ChainId))
 	sb.WriteString("\nBatchNonceID = ")
 	sb.WriteString(fmt.Sprint(c.BatchNonceId))
 
@@ -165,16 +165,16 @@ func BridgingRequestClaimString(c BridgingRequestClaim, chainIDConverter *common
 	sb.WriteString("\nWrappedTokenAmountDestination = ")
 	sb.WriteString(c.WrappedTokenAmountDestination.String())
 	sb.WriteString("\nSourceChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.SourceChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.SourceChainId))
 	sb.WriteString("\nDestinationChainID = ")
-	sb.WriteString(chainIDConverter.ToStrChainID(c.DestinationChainId))
+	sb.WriteString(chainIDConverter.ToChainIDStr(c.DestinationChainId))
 
 	return sb.String()
 }
 
 func HotWalletIncrementClaimsString(c HotWalletIncrementClaim, chainIDConverter *common.ChainIDConverter) string {
 	return fmt.Sprintf("(chainID: %s, amount: %s, amountWrapped: %s)",
-		chainIDConverter.ToStrChainID(c.ChainId), c.Amount, c.AmountWrapped)
+		chainIDConverter.ToChainIDStr(c.ChainId), c.Amount, c.AmountWrapped)
 }
 
 func (bc BridgeClaims) String() string {

@@ -125,13 +125,13 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
-	chainIDNum := appConfig.ChainIDConverter.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
 }
 
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
-	chainIDNum := appConfig.ChainIDConverter.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
 }

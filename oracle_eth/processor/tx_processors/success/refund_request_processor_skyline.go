@@ -86,8 +86,8 @@ func (p *RefundRequestProcessorSkylineImpl) addRefundRequestClaim(
 		buildRefundTokenAmounts(chainConfig, tx.Value, metadata, currencyID)
 
 	claim := cCore.RefundRequestClaim{
-		OriginChainId:            chainIDConverter.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:       chainIDConverter.ToNumChainID(metadata.DestinationChainID), // unused for RefundRequestClaim
+		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
 		OriginAmount:             common.WeiToDfm(totalCurrency),

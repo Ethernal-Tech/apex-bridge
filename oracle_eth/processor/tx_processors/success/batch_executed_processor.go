@@ -50,7 +50,7 @@ func (p *BatchExecutedProcessorImpl) ValidateAndAddClaim(
 
 	claims.BatchExecutedClaims = append(claims.BatchExecutedClaims, oCore.BatchExecutedClaim{
 		ObservedTransactionHash: tx.Hash,
-		ChainId:                 appConfig.ChainIDConverter.ToNumChainID(tx.OriginChainID),
+		ChainId:                 appConfig.ChainIDConverter.ToChainIDNum(tx.OriginChainID),
 		BatchNonceId:            metadata.BatchNonceID,
 	})
 

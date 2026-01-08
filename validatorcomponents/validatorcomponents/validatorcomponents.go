@@ -393,7 +393,7 @@ func fixChainsInConfig(
 
 	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
-		chainID := config.ChainIDConverter.ToStrChainID(regChain.Id)
+		chainID := config.ChainIDConverter.ToChainIDStr(regChain.Id)
 
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)

@@ -64,7 +64,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetLastObservedBlock(
 
 	result, err := contract.GetLastObservedBlock(&bind.CallOpts{
 		Context: ctx,
-	}, bsc.chainIDConverter.ToNumChainID(sourceChain))
+	}, bsc.chainIDConverter.ToChainIDNum(sourceChain))
 	if err != nil {
 		return CardanoBlock{}, fmt.Errorf("error while GetLastObservedBlock: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -89,7 +89,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetRawTransactionFromLastBatch(
 
 	result, err := contract.GetRawTransactionFromLastBatch(&bind.CallOpts{
 		Context: ctx,
-	}, bsc.chainIDConverter.ToNumChainID(chainID))
+	}, bsc.chainIDConverter.ToChainIDNum(chainID))
 	if err != nil {
 		return nil, fmt.Errorf("error while GetRawTransactionFromLastBatch: %w", bsc.ethHelper.ProcessError(err))
 	}
@@ -143,7 +143,7 @@ func (bsc *OracleBridgeSmartContractImpl) SubmitLastObservedBlocks(
 	}
 
 	_, err = bsc.ethHelper.SendTx(ctx, func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		return contract.SubmitLastObservedBlocks(opts, bsc.chainIDConverter.ToNumChainID(chainID), blocks)
+		return contract.SubmitLastObservedBlocks(opts, bsc.chainIDConverter.ToChainIDNum(chainID), blocks)
 	})
 	if err != nil {
 		return fmt.Errorf("error while SendTx SubmitLastObservedBlocks: %w", bsc.ethHelper.ProcessError(err))
@@ -169,7 +169,7 @@ func (bsc *OracleBridgeSmartContractImpl) GetBatchStatusAndTransactions(
 
 	result, err := contract.GetBatchStatusAndTransactions(&bind.CallOpts{
 		Context: ctx,
-	}, bsc.chainIDConverter.ToNumChainID(chainID), batchID)
+	}, bsc.chainIDConverter.ToChainIDNum(chainID), batchID)
 	if err != nil {
 		return 0, nil, fmt.Errorf("error while GetBatchStatusAndTransactions: %w", bsc.ethHelper.ProcessError(err))
 	}

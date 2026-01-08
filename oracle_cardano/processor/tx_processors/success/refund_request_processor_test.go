@@ -414,7 +414,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, appConfig.ChainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
@@ -504,7 +504,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, appConfig.ChainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, common.ChainIDIntVector, claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())

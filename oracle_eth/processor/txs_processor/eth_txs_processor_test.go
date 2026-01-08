@@ -1241,7 +1241,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash,
-					SourceChainId:           appConfig.ChainIDConverter.ToNumChainID(originChainID),
+					SourceChainId:           appConfig.ChainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,
@@ -1458,7 +1458,7 @@ func TestEthTxsProcessor(t *testing.T) {
 			AddClaimCallback: func(claims *oCore.BridgeClaims) {
 				claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, oCore.BridgingRequestClaim{
 					ObservedTransactionHash: txHash1,
-					SourceChainId:           chainIDConverter.ToNumChainID(originChainID),
+					SourceChainId:           chainIDConverter.ToChainIDNum(originChainID),
 				})
 			},
 			Type: common.BridgingTxTypeBridgingRequest,

@@ -71,12 +71,12 @@ func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.
 	results := make([]chainTokenQuantity, len(g.chainIDs))
 
 	for i, chainID := range g.chainIDs {
-		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
+		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 		if err != nil {
 			return nil, err
 		}
 
-		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToNumChainID(chainID))
+		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +163,7 @@ func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatte
 
 	chainIDConverter := chainIDsConfig.ToChainIDConverter()
 
-	chainIDInt := chainIDConverter.ToNumChainID(g.chainID)
+	chainIDInt := chainIDConverter.ToChainIDNum(g.chainID)
 	amount, _ := new(big.Int).SetString(g.amountStr, 0)
 	increment := amount.Sign() > 0
 	amount = amount.Abs(amount)

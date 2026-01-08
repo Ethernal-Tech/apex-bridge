@@ -54,7 +54,7 @@ func (params *redistributeBridgingAddrsTokensParams) Execute(
 		return nil, err
 	}
 
-	chainIDInt := chainIDsConfig.ToChainIDConverter().ToNumChainID(params.chainID)
+	chainIDInt := chainIDsConfig.ToChainIDConverter().ToChainIDNum(params.chainID)
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))
 	outputter.WriteOutput()

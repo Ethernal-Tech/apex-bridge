@@ -225,7 +225,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, appConfig.ChainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(10_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(2_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
@@ -598,8 +598,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(1+1_000_000+1_000_000+1_000_000+3_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(1_000_000+2_000_000+3_000_000+2_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, wrappedTokenPrimeID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
@@ -652,8 +652,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(minFeeForBridgingTokens+1_500_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, wrappedTokenAmountPrime.Amount, claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, wrappedTokenPrimeID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
@@ -699,8 +699,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
-		require.Equal(t, chainIDConverter.ToNumChainID(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(minFeeForBridgingTokens+2_500_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, primeCurrencyID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)

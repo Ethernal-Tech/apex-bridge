@@ -575,7 +575,7 @@ func (p *sendSkylineTxParams) executeEvm(ctx context.Context, outputter common.O
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(p.gatewayAddress)
-	chainID := p.chainIDConverter.ToNumChainID(p.chainIDDst)
+	chainID := p.chainIDConverter.ToChainIDNum(p.chainIDDst)
 	receivers, totalTokenAmount := toSkylineGatewayStruct(p.receiversParsed, p.tokenIDSrc)
 
 	totalAmount := big.NewInt(0)

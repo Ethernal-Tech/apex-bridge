@@ -76,7 +76,7 @@ func (params *stakeDelParams) Execute(outputter common.OutputFormatter) (common.
 		return nil, fmt.Errorf("failed to load chain IDs config: %w", err)
 	}
 
-	chainIDInt := chainIDsConfig.ToChainIDConverter().ToNumChainID(params.chainID)
+	chainIDInt := chainIDsConfig.ToChainIDConverter().ToChainIDNum(params.chainID)
 	bridgeAddrIndex := uint8(params.bridgeAddrIdx) //nolint:gosec
 
 	_, _ = outputter.Write([]byte("creating and sending transaction..."))

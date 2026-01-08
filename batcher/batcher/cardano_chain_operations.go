@@ -233,7 +233,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 
 	cco.logger.Debug("Mint tokens data", txPlutusMintData)
 
-	cco.logger.Debug("Getting addresses and amounts", "chain", cco.chainIDConverter.ToStrChainID(data.ChainID),
+	cco.logger.Debug("Getting addresses and amounts", "chain", cco.chainIDConverter.ToChainIDStr(data.ChainID),
 		"outputs", getOutputsData.TxOutputs.Outputs, "redistribution", getOutputsData.IsRedistribution)
 
 	var mintTokens []cardanowallet.MintTokenAmount
@@ -254,7 +254,7 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	cco.logger.Debug("Chosen multisig addresses to pay from",
-		"chain", cco.chainIDConverter.ToStrChainID(data.ChainID), "addresses", multisigAddresses)
+		"chain", cco.chainIDConverter.ToChainIDStr(data.ChainID), "addresses", multisigAddresses)
 
 	alreadyUsed := map[string]struct{}{}
 	refundUtxos := make([]refundUtxoWithReceiverAddr, 0, len(refundUtxosPerConfirmedTx))
@@ -350,11 +350,11 @@ func (cco *CardanoChainOperations) generateBatchTransaction(
 	}
 
 	cco.logger.Debug("TX INPUTS", "batchID", data.BatchNonceID,
-		"chain", cco.chainIDConverter.ToStrChainID(data.ChainID), "txInputs", txInputs)
+		"chain", cco.chainIDConverter.ToChainIDStr(data.ChainID), "txInputs", txInputs)
 	cco.logger.Debug("REFUND TX INPUTS", "batchID", data.BatchNonceID,
-		"chain", cco.chainIDConverter.ToStrChainID(data.ChainID), "refundTxInputs", refundTxInputs.MultiSig)
+		"chain", cco.chainIDConverter.ToChainIDStr(data.ChainID), "refundTxInputs", refundTxInputs.MultiSig)
 	cco.logger.Debug("TX OUTPUTS", "batchID", data.BatchNonceID,
-		"chain", cco.chainIDConverter.ToStrChainID(data.ChainID), "txOutputs.Outputs", getOutputsData.TxOutputs.Outputs)
+		"chain", cco.chainIDConverter.ToChainIDStr(data.ChainID), "txOutputs.Outputs", getOutputsData.TxOutputs.Outputs)
 
 	// Create Tx
 	txRaw, txHash, err := cardano.CreateTx(
@@ -404,7 +404,7 @@ func (cco *CardanoChainOperations) getPlutusMintData(
 	// Populate map of locked tokens from the addr0
 	addr0Address, ok := cco.bridgingAddressesManager.GetPaymentAddressFromIndex(data.ChainID, 0)
 	if !ok {
-		return nil, fmt.Errorf("failed to get address 0 for chain %s", cco.chainIDConverter.ToStrChainID(data.ChainID))
+		return nil, fmt.Errorf("failed to get address 0 for chain %s", cco.chainIDConverter.ToChainIDStr(data.ChainID))
 	}
 
 	addr0Utxos, err := cco.db.GetAllTxOutputs(addr0Address, true)
@@ -496,7 +496,7 @@ func (cco *CardanoChainOperations) prepareRefundInputsOutputs(
 			chainID, obj.Utxo.Output.Address)
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to get index for address %s on chain %s",
-				obj.Utxo.Output.Address, cco.chainIDConverter.ToStrChainID(chainID))
+				obj.Utxo.Output.Address, cco.chainIDConverter.ToChainIDStr(chainID))
 		}
 
 		refundUtxoInputs[index] = append(refundUtxoInputs[index], obj.Utxo)
@@ -579,12 +579,12 @@ func (cco *CardanoChainOperations) prepareCustodialInputsForNormalBatch(
 ) error {
 	custodialAddr, ok := cco.bridgingAddressesManager.GetCustodialAddress(chainID)
 	if !ok {
-		return fmt.Errorf("failed to get custodial address for chain: %s", cco.chainIDConverter.ToStrChainID(chainID))
+		return fmt.Errorf("failed to get custodial address for chain: %s", cco.chainIDConverter.ToChainIDStr(chainID))
 	}
 
 	custodialPolicyScript, ok := cco.bridgingAddressesManager.GetCustodialPolicyScript(chainID)
 	if !ok {
-		return fmt.Errorf("failed to get custodial policy script for chain: %s", cco.chainIDConverter.ToStrChainID(chainID))
+		return fmt.Errorf("failed to get custodial policy script for chain: %s", cco.chainIDConverter.ToChainIDStr(chainID))
 	}
 
 	custodialTxOutput, err := cco.findCustodialTxOutput(custodialAddr)
@@ -979,7 +979,7 @@ func (cco *CardanoChainOperations) createBatchInitialData(
 		BatchNonceID:   batchNonceID,
 		Metadata:       metadata,
 		ProtocolParams: protocolParams,
-		ChainID:        cco.chainIDConverter.ToNumChainID(chainID),
+		ChainID:        cco.chainIDConverter.ToChainIDNum(chainID),
 	}, nil
 }
 
