@@ -37,8 +37,7 @@ const (
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
-	nexusURLFlag        = "nexus-url"
-	currencyTokenIDFlag = "currency-token-id"
+	rpcURLFlag          = "rpc-url"
 	chainIDsConfigFlag  = "chain-ids-config"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
@@ -54,8 +53,7 @@ const (
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
-	nexusURLFlagDesc        = "nexus chain URL"
-	currencyTokenIDFlagDesc = "currency token ID on evm chain"
+	rpcURLFlagDesc          = "evm chain rpc url"
 	chainIDsConfigFlagDesc  = "path to the chain IDs config file"
 
 	ttlSlotNumberInc = 500
@@ -96,9 +94,8 @@ type sendTxParams struct {
 	ogmiosURLDst    string
 
 	// nexus
-	gatewayAddress  string
-	nexusURL        string
-	currencyTokenID uint16
+	gatewayAddress string
+	nexusURL       string
 
 	feeAmount        *big.Int
 	receiversParsed  []*receiverAmount
@@ -163,7 +160,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
 		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
@@ -194,7 +191,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
-			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
 		if ip.ogmiosURLDst != "" && !common.IsValidHTTPURL(ip.ogmiosURLDst) {
@@ -202,7 +199,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, ip.nexusURL)
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.nexusURL)
 		}
 	}
 
@@ -333,16 +330,9 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.nexusURL,
-		nexusURLFlag,
+		rpcURLFlag,
 		"",
-		nexusURLFlagDesc,
-	)
-
-	cmd.Flags().Uint16Var(
-		&ip.currencyTokenID,
-		currencyTokenIDFlag,
-		nexusCurrencyTokenID,
-		currencyTokenIDFlagDesc,
+		rpcURLFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
@@ -475,7 +465,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
 	chainID := ip.chainIDConverter.ToNumChainID(ip.chainIDDst)
-	receivers, totalAmount := toGatewayStruct(ip.receiversParsed, ip.currencyTokenID)
+	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 
 	minOperationFee := common.DfmToWei(new(big.Int).SetUint64(common.MinOperationFeeDefault))
@@ -610,9 +600,9 @@ func waitForTx(ctx context.Context, receivers []*receiverAmount,
 	return errors.Join(errs...)
 }
 
-func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
+func getTxHelper(rpcURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithNodeURL(rpcURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 }
 
@@ -629,7 +619,7 @@ func toCardanoMetadata(receivers []*receiverAmount) []sendtx.BridgingTxReceiver 
 	return metadataReceivers
 }
 
-func toGatewayStruct(receivers []*receiverAmount, currencyTokenID uint16) (
+func toGatewayStruct(receivers []*receiverAmount) (
 	[]contractbinding.IGatewayStructsReceiverWithdraw, *big.Int,
 ) {
 	total := big.NewInt(0)
@@ -639,7 +629,7 @@ func toGatewayStruct(receivers []*receiverAmount, currencyTokenID uint16) (
 		gatewayOutputs[idx] = contractbinding.IGatewayStructsReceiverWithdraw{
 			Receiver: rec.ReceiverAddr,
 			Amount:   rec.Amount,
-			TokenId:  currencyTokenID,
+			TokenId:  nexusCurrencyTokenID,
 		}
 
 		total.Add(total, rec.Amount)

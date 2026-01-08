@@ -136,6 +136,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 			metadata.DestinationChainID,
 			receiver,
 			currencySrcID,
+			destChainInfo.CurrencyTokenID,
 			&totalTokensAmount,
 		)
 	}
@@ -638,7 +639,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 	ethDestConfig *cCore.EthChainConfig,
 	destinationChainID string,
 	receiver *sendtx.BridgingRequestMetadataTransaction,
-	currencySrcID uint16,
+	currencySrcID, currencyDestID uint16,
 	totalTokensAmount *totalTokensAmount,
 ) (*cCore.BridgingRequestReceiver, error) {
 	receiverAddr := strings.Join(receiver.Address, "")
@@ -648,6 +649,28 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		destinationChainID, receiver.TokenID)
 	if err != nil {
 		return nil, err
+	}
+
+	var amount, amountWrapped uint64
+
+	// currency on destination
+	if tokenPair.DestinationTokenID == currencyDestID {
+		amount = receiver.Amount
+
+		if tokenPair.TrackDestinationToken {
+			trackDestTokenAmount(
+				totalTokensAmount, receiver.Amount, 0,
+			)
+		}
+	} else {
+		amountWrapped = receiver.Amount
+
+		// wrapped token on destination
+		if tokenPair.TrackDestinationToken && ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
+			trackDestTokenAmount(
+				totalTokensAmount, 0, receiver.Amount,
+			)
+		}
 	}
 
 	if tokenPair.TrackSourceToken {
@@ -660,16 +683,10 @@ func (p *BridgingRequestedProcessorSkylineImpl) processReceiverEth(
 		)
 	}
 
-	// wrapped token on destination
-	if tokenPair.TrackDestinationToken &&
-		ethDestConfig.Tokens[tokenPair.DestinationTokenID].IsWrappedCurrency {
-		trackDestTokenAmount(totalTokensAmount, 0, receiver.Amount)
-	}
-
 	return &cCore.BridgingRequestReceiver{
 		DestinationAddress: receiverAddr,
-		Amount:             new(big.Int).SetUint64(0),
-		AmountWrapped:      new(big.Int).SetUint64(receiver.Amount),
+		Amount:             new(big.Int).SetUint64(amount),
+		AmountWrapped:      new(big.Int).SetUint64(amountWrapped),
 		TokenId:            tokenPair.DestinationTokenID,
 	}, nil
 }
