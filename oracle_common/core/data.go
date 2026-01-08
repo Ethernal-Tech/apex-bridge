@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/binary"
 	"math"
+	"math/big"
 	"reflect"
 	"time"
 
@@ -139,4 +140,17 @@ func IsTxReady(triesCount uint32, lastTimeTried time.Time, settings RetryUnproce
 type BlocksSubmitterInfo struct {
 	BlockNumOrSlot uint64 `json:"blockNumOrSlot"`
 	CounterEmpty   int    `json:"counterEmpty"`
+}
+
+type ReceiverValidationContext struct {
+	CardanoDestConfig *CardanoChainConfig
+	EthDestConfig     *EthChainConfig
+
+	BridgingSettings *BridgingSettings
+	DestFeeAddress   string
+
+	CurrencySrcID  uint16
+	CurrencyDestID uint16
+
+	AmountsSums map[uint16]*big.Int
 }

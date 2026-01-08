@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/oracle_common/core"
@@ -63,4 +64,50 @@ func GetTokenPair(
 
 	return nil, fmt.Errorf("no bridging path from source chain %s to destination chain %s with token ID %d",
 		srcChainID, destChainID, tokenID)
+}
+
+type DestChainInfo struct {
+	FeeAddress         string
+	FeeAddrBridgingAmt uint64
+	CurrencyTokenID    uint16
+}
+
+func GetDestChainInfo(
+	destChainID string,
+	appConfig *core.AppConfig,
+	cardanoDestConfig *core.CardanoChainConfig,
+	ethDestConfig *core.EthChainConfig,
+) (*DestChainInfo, error) {
+	switch {
+	case cardanoDestConfig != nil:
+		currencyDestID, err := cardanoDestConfig.GetCurrencyID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", destChainID, err)
+		}
+
+		return &DestChainInfo{
+			FeeAddress:         appConfig.GetFeeMultisigAddress(destChainID),
+			FeeAddrBridgingAmt: cardanoDestConfig.FeeAddrBridgingAmount,
+			CurrencyTokenID:    currencyDestID,
+		}, nil
+	case ethDestConfig != nil:
+		currencyDestID, err := ethDestConfig.GetCurrencyID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get currency ID for destination chain %s: %w", destChainID, err)
+		}
+
+		return &DestChainInfo{
+			FeeAddress:         common.EthZeroAddr,
+			FeeAddrBridgingAmt: ethDestConfig.FeeAddrBridgingAmount,
+			CurrencyTokenID:    currencyDestID,
+		}, nil
+	default:
+		return nil, fmt.Errorf("destination chain not registered: %s", destChainID)
+	}
+}
+
+func NormalizeAddr(addr string) string {
+	addr = strings.ToLower(addr)
+
+	return strings.TrimPrefix(addr, "0x")
 }
