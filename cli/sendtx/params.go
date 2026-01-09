@@ -37,7 +37,7 @@ const (
 	ogmiosURLDstFlag    = "ogmios-dst"
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
-	nexusURLFlag        = "nexus-url"
+	rpcURLFlag          = "rpc-url"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -53,7 +53,7 @@ const (
 	ogmiosURLDstFlagDesc    = "destination chain ogmios url"
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
-	nexusURLFlagDesc        = "nexus chain URL"
+	rpcURLFlagDesc          = "evm chain rpc url"
 
 	ttlSlotNumberInc = 500
 
@@ -138,7 +138,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s flag", nexusURLFlag)
+			return fmt.Errorf("invalid --%s flag", rpcURLFlag)
 		}
 	} else {
 		if ip.feeAmount.Uint64() < common.MinFeeForBridgingDefault {
@@ -169,7 +169,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL == "" && ip.ogmiosURLDst == "" {
-			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, nexusURLFlag)
+			return fmt.Errorf("--%s and --%s not specified", ogmiosURLDstFlag, rpcURLFlag)
 		}
 
 		if ip.ogmiosURLDst != "" && !common.IsValidHTTPURL(ip.ogmiosURLDst) {
@@ -177,7 +177,7 @@ func (ip *sendTxParams) validateFlags() error {
 		}
 
 		if ip.nexusURL != "" && !common.IsValidHTTPURL(ip.nexusURL) {
-			return fmt.Errorf("invalid --%s: %s", nexusURLFlag, ip.nexusURL)
+			return fmt.Errorf("invalid --%s: %s", rpcURLFlag, ip.nexusURL)
 		}
 	}
 
@@ -308,9 +308,9 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&ip.nexusURL,
-		nexusURLFlag,
+		rpcURLFlag,
 		"",
-		nexusURLFlagDesc,
+		rpcURLFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
@@ -571,9 +571,9 @@ func waitForTx(ctx context.Context, receivers []*receiverAmount,
 	return errors.Join(errs...)
 }
 
-func getTxHelper(nexusURL string) (*ethtxhelper.EthTxHelperImpl, error) {
+func getTxHelper(rpcURL string) (*ethtxhelper.EthTxHelperImpl, error) {
 	return ethtxhelper.NewEThTxHelper(
-		ethtxhelper.WithNodeURL(nexusURL), ethtxhelper.WithGasFeeMultiplier(150),
+		ethtxhelper.WithNodeURL(rpcURL), ethtxhelper.WithGasFeeMultiplier(150),
 		ethtxhelper.WithZeroGasPrice(false), ethtxhelper.WithDefaultGasLimit(0))
 }
 

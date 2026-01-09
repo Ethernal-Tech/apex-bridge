@@ -153,7 +153,7 @@ func buildRefundTokenAmounts(
 
 	for _, receiver := range metadata.Transactions {
 		tokenPair, _ := oUtils.GetTokenPair(
-			chainConfig.DestinationChain,
+			chainConfig.DestinationChains,
 			chainConfig.ChainID,
 			metadata.DestinationChainID,
 			receiver.TokenID,

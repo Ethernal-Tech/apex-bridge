@@ -185,15 +185,14 @@ func printChainValidatorsDataInfo(
 	for _, x := range data {
 		var formattedData string
 
-		switch chainID {
-		case common.ChainIDStrNexus:
+		if common.IsEVMChainID(chainID) {
 			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
 			if err != nil {
 				return err
 			}
 
 			formattedData = fmt.Sprintf("BLSKey=%s", hex.EncodeToString(pub.Marshal()))
-		default:
+		} else {
 			formattedData = fmt.Sprintf(
 				"MultisigKey=%s, FeeKey=%s",
 				hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())),

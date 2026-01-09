@@ -155,7 +155,7 @@ func (p *BridgingRequestedProcessorImpl) validate(
 	}
 
 	_, err = oUtils.GetTokenPair(
-		ethSrcConfig.DestinationChain,
+		ethSrcConfig.DestinationChains,
 		ethSrcConfig.ChainID,
 		metadata.DestinationChainID,
 		currencySrcID,

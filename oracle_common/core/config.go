@@ -53,7 +53,7 @@ type EthChainConfig struct {
 	MinOperationFee         uint64                       `json:"minOperationFee"`
 	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
 	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
-	DestinationChain        map[string]common.TokenPairs `json:"destChain"`
+	DestinationChains       map[string]common.TokenPairs `json:"destChain"`
 	Tokens                  map[uint16]common.Token      `json:"tokens"`
 }
 

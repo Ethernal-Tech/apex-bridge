@@ -11,8 +11,8 @@ type DirectionConfigFile struct {
 }
 
 type DirectionConfig struct {
-	DestinationChain map[string]TokenPairs `json:"destChain"`
-	Tokens           map[uint16]Token      `json:"tokens"`
+	DestinationChains map[string]TokenPairs `json:"destChain"`
+	Tokens            map[uint16]Token      `json:"tokens"`
 }
 
 type TokenPairs = []TokenPair

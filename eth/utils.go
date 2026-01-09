@@ -140,15 +140,14 @@ func GetChainValidatorsDataInfoString(
 			sb.WriteString(", ")
 		}
 
-		switch chainID {
-		case common.ChainIDStrNexus:
+		if common.IsEVMChainID(chainID) {
 			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
 			if err != nil {
 				return fmt.Sprintf("failed to unmarshal bls key for %s, error: %s", chainID, err)
 			}
 
 			sb.WriteString(hex.EncodeToString(pub.Marshal()))
-		default:
+		} else {
 			sb.WriteRune('(')
 			sb.WriteString(hex.EncodeToString(wallet.PadKeyToSize(x.Key[0].Bytes())))
 
