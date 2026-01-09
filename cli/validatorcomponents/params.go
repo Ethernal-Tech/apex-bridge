@@ -3,19 +3,22 @@ package clivalidatorcomponents
 import "github.com/spf13/cobra"
 
 const (
-	configFlag    = "config"
-	dirConfigFlag = "direction-config"
-	runAPIFlag    = "run-api"
+	configFlag         = "config"
+	dirConfigFlag      = "direction-config"
+	chainIDsConfigFlag = "chain-ids-config"
+	runAPIFlag         = "run-api"
 
-	configFlagDesc    = "path to config json file"
-	dirConfigFlagDesc = "path to direction config json file"
-	runAPIFlagDesc    = "specifies whether the api should be run"
+	configFlagDesc         = "path to config json file"
+	dirConfigFlagDesc      = "path to direction config json file"
+	chainIDsConfigFlagDesc = "path to chain ids config json file"
+	runAPIFlagDesc         = "specifies whether the api should be run"
 )
 
 type validatorComponentsParams struct {
-	config    string
-	dirConfig string
-	runAPI    bool
+	config         string
+	dirConfig      string
+	chainIDsConfig string
+	runAPI         bool
 }
 
 func (ip *validatorComponentsParams) validateFlags() error {
@@ -35,6 +38,13 @@ func (ip *validatorComponentsParams) setFlags(cmd *cobra.Command) {
 		dirConfigFlag,
 		"",
 		dirConfigFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.Flags().BoolVar(

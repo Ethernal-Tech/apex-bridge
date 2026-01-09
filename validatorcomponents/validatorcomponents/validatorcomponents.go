@@ -104,10 +104,10 @@ func NewValidatorComponents(
 	)
 
 	oracleBridgeSmartContract := eth.NewOracleBridgeSmartContract(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
+		appConfig.Bridge.SmartContractAddress, ethHelper, appConfig.ChainIDConverter)
 
 	bridgeSmartContract := eth.NewBridgeSmartContract(
-		appConfig.Bridge.SmartContractAddress, ethHelper)
+		appConfig.Bridge.SmartContractAddress, ethHelper, appConfig.ChainIDConverter)
 
 	err = fixChainsInConfig(ctx, appConfig, bridgeSmartContract, logger)
 	if err != nil {
@@ -159,6 +159,7 @@ func NewValidatorComponents(
 	bridgingAddressesManager, err := bam.NewBridgingAdressesManager(
 		ctx,
 		appConfig.CardanoChains,
+		appConfig.ChainIDConverter,
 		bridgeSmartContract,
 		logger,
 	)
@@ -167,7 +168,7 @@ func NewValidatorComponents(
 	}
 
 	bridgingAddressesCoordinator := bac.NewBridgingAddressesCoordinator(
-		bridgingAddressesManager, cardanoIndexerDbs, appConfig.CardanoChains, logger)
+		bridgingAddressesManager, cardanoIndexerDbs, appConfig.CardanoChains, appConfig.ChainIDConverter, logger)
 
 	oracleConfig.BridgingAddressesManager = bridgingAddressesManager
 
@@ -239,7 +240,8 @@ func NewValidatorComponents(
 				getAddressesMap(oracleConfig), apiLogger.Named("oracle_state")),
 			controllers.NewSettingsController(appConfig, apiLogger.Named("settings_controller")),
 			controllers.NewBridgingAddressController(
-				bridgingAddressesCoordinator, bridgingAddressesManager, apiLogger.Named("bridging_address_controller")),
+				bridgingAddressesCoordinator, bridgingAddressesManager,
+				*appConfig.ChainIDConverter, apiLogger.Named("bridging_address_controller")),
 		}
 
 		apiObj, err = api.NewAPI(ctx, appConfig.APIConfig, apiControllers, apiLogger.Named("api"))
@@ -391,7 +393,7 @@ func fixChainsInConfig(
 
 	// handle config for oracles
 	for _, regChain := range allRegisteredChains {
-		chainID := common.ToStrChainID(regChain.Id)
+		chainID := config.ChainIDConverter.ToChainIDStr(regChain.Id)
 
 		logger.Debug("Registered chain received", "chainID", chainID, "type", regChain.ChainType,
 			"addr", regChain.AddressMultisig, "fee", regChain.AddressFeePayer)

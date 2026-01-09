@@ -18,9 +18,12 @@ const (
 
 type bridgingAddressesBalancesSkylineParams struct {
 	config               string
+	chainIDsConfig       string
 	primeWalletAddress   string
 	cardanoWalletAddress string
 	indexerDbsPath       string
+
+	appConfig *vcCore.AppConfig
 }
 
 func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
@@ -29,25 +32,25 @@ func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
 			primeWalletAddressFlag, cardanoWalletAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress) {
-		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
+	if err := validateConfigFilePath(b.config); err != nil {
+		return err
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrCardano, b.cardanoWalletAddress) {
-		return fmt.Errorf("invalid address: --%s", cardanoWalletAddressFlag)
+	if err := validateConfigFilePath(b.chainIDsConfig); err != nil {
+		return err
 	}
 
-	if b.config == "" {
-		return fmt.Errorf("--%s flag not specified", configFlag)
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](b.chainIDsConfig, "")
+	if err != nil {
+		return err
 	}
 
-	if _, err := os.Stat(b.config); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file does not exist: %s", b.config)
-		}
-
-		return fmt.Errorf("failed to check config file: %s. err: %w", b.config, err)
+	appConfig, err := loadConfig(b.config, chainIDsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %w", err)
 	}
+
+	b.appConfig = appConfig
 
 	if b.indexerDbsPath != "" {
 		if _, err := os.Stat(b.indexerDbsPath); err != nil {
@@ -59,6 +62,14 @@ func (b *bridgingAddressesBalancesSkylineParams) ValidateFlags() error {
 		}
 	}
 
+	if !common.IsValidAddress(common.ChainIDStrPrime, b.primeWalletAddress, appConfig.ChainIDConverter) {
+		return fmt.Errorf("invalid address: --%s", primeWalletAddressFlag)
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrCardano, b.cardanoWalletAddress, appConfig.ChainIDConverter) {
+		return fmt.Errorf("invalid address: --%s", cardanoWalletAddressFlag)
+	}
+
 	return nil
 }
 
@@ -68,6 +79,12 @@ func (b *bridgingAddressesBalancesSkylineParams) RegisterFlags(cmd *cobra.Comman
 		configFlag,
 		"",
 		configFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&b.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 	cmd.Flags().StringVar(
 		&b.primeWalletAddress,
@@ -91,13 +108,8 @@ func (b *bridgingAddressesBalancesSkylineParams) RegisterFlags(cmd *cobra.Comman
 
 func (b *bridgingAddressesBalancesSkylineParams) Execute(
 	outputter common.OutputFormatter) (common.ICommandResult, error) {
-	appConfig, err := common.LoadConfig[vcCore.AppConfig](b.config, "")
-	if err != nil {
-		return nil, err
-	}
-
-	if appConfig.RunMode != common.SkylineMode {
-		return nil, fmt.Errorf("running command for the wrong run mode: %s", appConfig.RunMode)
+	if b.appConfig.RunMode != common.SkylineMode {
+		return nil, fmt.Errorf("running command for the wrong run mode: %s", b.appConfig.RunMode)
 	}
 
 	chainWalletAddr := map[string]string{
@@ -105,7 +117,7 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 		common.ChainIDStrCardano: b.cardanoWalletAddress,
 	}
 
-	multisigUtxos, err := getAllUtxos(appConfig, chainWalletAddr, b.indexerDbsPath)
+	multisigUtxos, err := getAllUtxos(b.appConfig, chainWalletAddr, b.indexerDbsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +129,7 @@ func (b *bridgingAddressesBalancesSkylineParams) Execute(
 			filteredCount       int
 		)
 
-		chainConfig := appConfig.CardanoChains[chainID]
+		chainConfig := b.appConfig.CardanoChains[chainID]
 
 		knownTokens, err := cardanotx.GetKnownTokens(&chainConfig.CardanoChainConfig)
 		if err != nil {

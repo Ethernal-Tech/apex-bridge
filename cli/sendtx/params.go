@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,7 @@ const (
 	txTypeFlag          = "tx-type"
 	gatewayAddressFlag  = "gateway-addr"
 	rpcURLFlag          = "rpc-url"
+	chainIDsConfigFlag  = "chain-ids-config"
 
 	privateKeyFlagDesc      = "wallet payment signing key"
 	stakePrivateKeyFlagDesc = "wallet stake signing key"
@@ -52,6 +54,7 @@ const (
 	txTypeFlagDesc          = "type of transaction (evm, default: cardano)"
 	gatewayAddressFlagDesc  = "address of gateway contract"
 	rpcURLFlagDesc          = "evm chain rpc url"
+	chainIDsConfigFlagDesc  = "path to the chain IDs config file"
 
 	ttlSlotNumberInc = 500
 
@@ -81,6 +84,7 @@ type sendTxParams struct {
 	chainIDSrc         string
 	chainIDDst         string
 	feeString          string
+	chainIDsConfig     string
 
 	// apex
 	ogmiosURLSrc    string
@@ -93,9 +97,10 @@ type sendTxParams struct {
 	gatewayAddress string
 	nexusURL       string
 
-	feeAmount       *big.Int
-	receiversParsed []*receiverAmount
-	wallet          *cardanowallet.Wallet
+	feeAmount        *big.Int
+	receiversParsed  []*receiverAmount
+	wallet           *cardanowallet.Wallet
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *sendTxParams) validateFlags() error {
@@ -111,11 +116,30 @@ func (ip *sendTxParams) validateFlags() error {
 		return fmt.Errorf("--%s not specified", receiverFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDSrc) {
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
+	}
+
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDSrc) {
 		return fmt.Errorf("--%s flag not specified", srcChainIDFlag)
 	}
 
-	if !common.IsExistingReactorChainID(ip.chainIDDst) {
+	if !ip.chainIDConverter.IsExistingChainID(ip.chainIDDst) {
 		return fmt.Errorf("--%s flag not specified", dstChainIDFlag)
 	}
 
@@ -192,7 +216,7 @@ func (ip *sendTxParams) validateFlags() error {
 			return fmt.Errorf("--%s number %d has invalid amount: %s", receiverFlag, i, x)
 		}
 
-		if !common.IsValidAddress(ip.chainIDDst, vals[0]) {
+		if !common.IsValidAddress(ip.chainIDDst, vals[0], ip.chainIDConverter) {
 			return fmt.Errorf("--%s number %d has invalid address: %s", receiverFlag, i, x)
 		}
 
@@ -309,6 +333,13 @@ func (ip *sendTxParams) setFlags(cmd *cobra.Command) {
 		rpcURLFlag,
 		"",
 		rpcURLFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(gatewayAddressFlag, testnetMagicFlag)
@@ -433,7 +464,7 @@ func (ip *sendTxParams) executeEvm(ctx context.Context, outputter common.OutputF
 	common.ICommandResult, error,
 ) {
 	contractAddress := common.HexToAddress(ip.gatewayAddress)
-	chainID := common.ToNumChainID(ip.chainIDDst)
+	chainID := ip.chainIDConverter.ToChainIDNum(ip.chainIDDst)
 	receivers, totalAmount := toGatewayStruct(ip.receiversParsed)
 	totalAmount.Add(totalAmount, ip.feeAmount)
 

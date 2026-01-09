@@ -45,6 +45,7 @@ type registerGatewayTokenParams struct {
 	tokenSymbol       string
 
 	tokenSCAddress ethcommon.Address
+	chainIDsConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -57,11 +58,22 @@ func (g *registerGatewayTokenParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress) {
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+		return err
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	chainIDConverter := chainIDsConfig.ToChainIDConverter()
+
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.gatewayAddress, chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr) {
+	if !common.IsValidAddress(common.ChainIDStrNexus, g.tokenSCAddressStr, chainIDConverter) {
 		return fmt.Errorf("invalid address: --%s", tokenSCAddressFlag)
 	}
 
@@ -171,6 +183,12 @@ func (g *registerGatewayTokenParams) RegisterFlags(cmd *cobra.Command) {
 		tokSymbolFlag,
 		"",
 		tokSymbolFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

@@ -15,6 +15,42 @@ type DirectionConfig struct {
 	Tokens            map[uint16]Token      `json:"tokens"`
 }
 
+type ChainIDsConfigFile struct {
+	ChainIDConfig []ChainIDConfig `json:"chainIDs"`
+}
+
+type ChainIDConfig struct {
+	ChainID    string     `json:"chainID"`
+	ChainIDNum ChainIDNum `json:"chainIDNum"`
+	ChainType  string     `json:"chainType,omitempty"`
+}
+
+func (c *ChainIDsConfigFile) ToChainIDConverter() *ChainIDConverter {
+	intToStr := make(map[ChainIDNum]string, len(c.ChainIDConfig))
+	strToInt := make(map[string]ChainIDNum, len(c.ChainIDConfig))
+	cardanoChains := make([]string, 0)
+	evmChains := make([]string, 0)
+
+	for _, chainIDConfig := range c.ChainIDConfig {
+		intToStr[chainIDConfig.ChainIDNum] = chainIDConfig.ChainID
+		strToInt[chainIDConfig.ChainID] = chainIDConfig.ChainIDNum
+
+		switch chainIDConfig.ChainType {
+		case ChainTypeCardanoStr:
+			cardanoChains = append(cardanoChains, chainIDConfig.ChainID)
+		case ChainTypeEVMStr:
+			evmChains = append(evmChains, chainIDConfig.ChainID)
+		}
+	}
+
+	return &ChainIDConverter{
+		StrToInt:      strToInt,
+		IntToStr:      intToStr,
+		CardanoChains: cardanoChains,
+		EvmChains:     evmChains,
+	}
+}
+
 type TokenPairs = []TokenPair
 
 type TokenPair struct {

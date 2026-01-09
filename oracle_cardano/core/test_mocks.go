@@ -201,7 +201,9 @@ func (m *CardanoTxsProcessorDBMock) GetUnprocessedTxs(
 }
 
 // UpdateTxs implements CardanoTxsProcessorDB.
-func (m *CardanoTxsProcessorDBMock) UpdateTxs(data *CardanoUpdateTxsData) error {
+func (m *CardanoTxsProcessorDBMock) UpdateTxs(
+	data *CardanoUpdateTxsData, chainIDConverter *common.ChainIDConverter,
+) error {
 	args := m.Called(data)
 
 	return args.Error(0)

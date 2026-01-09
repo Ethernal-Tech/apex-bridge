@@ -120,8 +120,8 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 			b.config.Chain.ChainID)
 	}
 
-	b.logger.Debug("Successfully queried smart contract for confirmed transactions",
-		"batchID", batchID, "txs", eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions})
+	b.logger.Debug("Successfully queried smart contract for confirmed transactions", "batchID", batchID, "txs",
+		eth.ConfirmedTransactionsWrapper{Txs: confirmedTransactions, ChainIDConverter: b.config.ChainIDConverter})
 
 	// Generate batch transaction
 	generatedBatchData, err := b.operations.GenerateBatchTransaction(
@@ -157,7 +157,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 		batchID, generatedBatchData, signatures, confirmedTransactions)
 
 	b.logger.Debug("Submitting signed batch to smart contract", "batchID", batchID,
-		"signedBatch", eth.SignedBatchWrapper{SignedBatch: signedBatch})
+		"signedBatch", eth.SignedBatchWrapper{SignedBatch: signedBatch, ChainIDConverter: b.config.ChainIDConverter})
 
 	err = b.operations.Submit(ctx, b.bridgeSmartContract, *signedBatch)
 	if err != nil {
@@ -195,7 +195,7 @@ func (b *BatcherImpl) createSignedBatch(
 
 	return &eth.SignedBatch{
 		Id:                 batchID,
-		DestinationChainId: common.ToNumChainID(b.config.Chain.ChainID),
+		DestinationChainId: b.config.ChainIDConverter.ToChainIDNum(b.config.Chain.ChainID),
 		RawTransaction:     generatedBatchData.TxRaw,
 		Signature:          signatures.Multisig,
 		StakeSignature:     signatures.MultsigStake,
@@ -213,7 +213,7 @@ func (b *BatcherImpl) updateBatchTxsStates(
 		return nil
 	}
 
-	txsInBatch := getBridgingRequestStateKeys(txs, signedBatch.FirstTxNonceId, signedBatch.LastTxNonceId)
+	txsInBatch := b.getBridgingRequestStateKeys(txs, signedBatch.FirstTxNonceId, signedBatch.LastTxNonceId)
 
 	if err := b.bridgingRequestStateUpdater.IncludedInBatch(txsInBatch, b.config.Chain.ChainID); err != nil {
 		b.logger.Error("failed to update batch txs states", "batchID", batchID, "err", err)
@@ -238,7 +238,7 @@ func getFirstAndLastTxNonceID(confirmedTxs []eth.ConfirmedTransaction) (uint64, 
 	return first, last
 }
 
-func getBridgingRequestStateKeys(
+func (b *BatcherImpl) getBridgingRequestStateKeys(
 	txs []eth.ConfirmedTransaction, firstTxNonceID uint64, lastTxNonceID uint64,
 ) []common.BridgingRequestStateKey {
 	txsInBatch := make([]common.BridgingRequestStateKey, 0, lastTxNonceID-firstTxNonceID+1)
@@ -247,7 +247,7 @@ func getBridgingRequestStateKeys(
 		if firstTxNonceID <= confirmedTx.Nonce && confirmedTx.Nonce <= lastTxNonceID &&
 			!common.IsDirectlyConfirmedTransaction(confirmedTx.TransactionType) {
 			txsInBatch = append(txsInBatch, common.NewBridgingRequestStateKey(
-				common.ToStrChainID(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
+				b.config.ChainIDConverter.ToChainIDStr(confirmedTx.SourceChainId), confirmedTx.ObservedTransactionHash,
 				confirmedTx.TransactionType == uint8(common.RefundConfirmedTxType)))
 		}
 	}

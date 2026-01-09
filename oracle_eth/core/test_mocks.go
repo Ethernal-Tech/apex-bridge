@@ -202,7 +202,7 @@ func (m *EthTxsProcessorDBMock) GetUnprocessedTxs(
 }
 
 // UpdateTxs implements EthTxsProcessorDB.
-func (m *EthTxsProcessorDBMock) UpdateTxs(data *EthUpdateTxsData) error {
+func (m *EthTxsProcessorDBMock) UpdateTxs(data *EthUpdateTxsData, chainIDConverter *common.ChainIDConverter) error {
 	args := m.Called(data)
 
 	return args.Error(0)

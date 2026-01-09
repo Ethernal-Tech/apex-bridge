@@ -131,3 +131,26 @@ func (m *BridgingRequestStateUpdaterMock) ExecutedOnDestination(
 
 	return args.Error(0)
 }
+
+func NewTestChainIDConverter() *ChainIDConverter {
+	return &ChainIDConverter{
+		StrToInt: map[string]ChainIDNum{
+			ChainIDStrPrime:   ChainIDIntPrime,
+			ChainIDStrVector:  ChainIDIntVector,
+			ChainIDStrNexus:   ChainIDIntNexus,
+			ChainIDStrCardano: ChainIDIntCardano,
+			ChainIDStrPolygon: ChainIDIntPolygon,
+		},
+		IntToStr: map[ChainIDNum]string{
+			ChainIDIntPrime:   ChainIDStrPrime,
+			ChainIDIntVector:  ChainIDStrVector,
+			ChainIDIntNexus:   ChainIDStrNexus,
+			ChainIDIntCardano: ChainIDStrCardano,
+			ChainIDIntPolygon: ChainIDStrPolygon,
+		},
+		EvmChains: []string{
+			ChainIDStrNexus,
+			ChainIDStrPolygon,
+		},
+	}
+}

@@ -25,8 +25,9 @@ const (
 )
 
 type getChainTokenQuantityParams struct {
-	bridgeNodeURL string
-	chainIDs      []string
+	bridgeNodeURL  string
+	chainIDs       []string
+	chainIDsConfig string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -37,6 +38,10 @@ func (g *getChainTokenQuantityParams) ValidateFlags() error {
 
 	if len(g.chainIDs) == 0 {
 		return fmt.Errorf("--%s flag not specified", chainIDFlag)
+	}
+
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+		return err
 	}
 
 	return nil
@@ -56,15 +61,22 @@ func (g *getChainTokenQuantityParams) Execute(_ common.OutputFormatter) (common.
 		return nil, err
 	}
 
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
+	if err != nil {
+		return nil, err
+	}
+
+	chainIDConverter := chainIDsConfig.ToChainIDConverter()
+
 	results := make([]chainTokenQuantity, len(g.chainIDs))
 
 	for i, chainID := range g.chainIDs {
-		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+		amount, err := contract.GetChainTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 		if err != nil {
 			return nil, err
 		}
 
-		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, common.ToNumChainID(chainID))
+		wrappedAmount, err := contract.GetChainWrappedTokenQuantity(&bind.CallOpts{}, chainIDConverter.ToChainIDNum(chainID))
 		if err != nil {
 			return nil, err
 		}
@@ -94,6 +106,12 @@ func (g *getChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		nil,
 		chainIDFlagDesc,
 	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
 }
 
 type updateChainTokenQuantityParams struct {
@@ -103,6 +121,7 @@ type updateChainTokenQuantityParams struct {
 	bridgePrivateKey string
 	privateKeyConfig string
 	isWrappedToken   bool
+	chainIDsConfig   string
 }
 
 // ValidateFlags implements common.CliCommandValidator.
@@ -126,13 +145,25 @@ func (g *updateChainTokenQuantityParams) ValidateFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", privateKeyFlag, privateKeyConfigFlag)
 	}
 
+	if err := validateConfigFilePath(g.chainIDsConfig); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Execute implements common.CliCommandExecutor.
 func (g *updateChainTokenQuantityParams) Execute(outputter common.OutputFormatter) (common.ICommandResult, error) {
 	ctx := context.Background()
-	chainIDInt := common.ToNumChainID(g.chainID)
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](g.chainIDsConfig, "")
+	if err != nil {
+		return nil, err
+	}
+
+	chainIDConverter := chainIDsConfig.ToChainIDConverter()
+
+	chainIDInt := chainIDConverter.ToChainIDNum(g.chainID)
 	amount, _ := new(big.Int).SetString(g.amountStr, 0)
 	increment := amount.Sign() > 0
 	amount = amount.Abs(amount)
@@ -239,6 +270,12 @@ func (g *updateChainTokenQuantityParams) RegisterFlags(cmd *cobra.Command) {
 		isWrappedTokenFlag,
 		false,
 		isWrappedTokenFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&g.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, privateKeyFlag)

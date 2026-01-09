@@ -18,6 +18,7 @@ type AppConfig struct {
 	RefundEnabled                bool                                      `json:"refundEnabled"`
 	ValidatorDataDir             string                                    `json:"validatorDataDir"`
 	ValidatorConfigPath          string                                    `json:"validatorConfigPath"`
+	ChainIDConverter             *common.ChainIDConverter                  `json:"-"`
 	CardanoChains                map[string]*oracleCore.CardanoChainConfig `json:"cardanoChains"`
 	EthChains                    map[string]*oracleCore.EthChainConfig     `json:"ethChains"`
 	DirectionConfig              map[string]common.DirectionConfig         `json:"directionConfig"`
@@ -33,12 +34,16 @@ type AppConfig struct {
 	EcosystemTokens              []common.EcosystemToken                   `json:"ecosystemTokens"`
 }
 
+func (appConfig *AppConfig) SetupChainIDs(chainIDsConfig *common.ChainIDsConfigFile) {
+	appConfig.ChainIDConverter = chainIDsConfig.ToChainIDConverter()
+}
+
 func (appConfig *AppConfig) SetupDirectionConfig(directionConfig *common.DirectionConfigFile) error {
 	appConfig.DirectionConfig = directionConfig.Directions
 	appConfig.EcosystemTokens = directionConfig.EcosystemTokens
 
 	for chainID, directionConfig := range directionConfig.Directions {
-		if common.IsEVMChainID(chainID) {
+		if appConfig.ChainIDConverter.IsEVMChainID(chainID) {
 			if _, ok := appConfig.EthChains[chainID]; !ok {
 				return fmt.Errorf("invalid eth chain while setting up direction config. %s", chainID)
 			}
@@ -113,11 +118,13 @@ func (appConfig *AppConfig) SeparateConfigs() (
 		TryCountLimits:           appConfig.TryCountLimits,
 		CardanoChains:            oracleCardanoChains,
 		EthChains:                oracleEthChains,
+		ChainIDConverter:         appConfig.ChainIDConverter,
 	}
 
 	batcherConfig := &batcherCore.BatcherManagerConfiguration{
-		PullTimeMilis: appConfig.BatcherPullTimeMilis,
-		Chains:        batcherChains,
+		PullTimeMilis:    appConfig.BatcherPullTimeMilis,
+		Chains:           batcherChains,
+		ChainIDConverter: appConfig.ChainIDConverter,
 	}
 
 	return oracleConfig, batcherConfig

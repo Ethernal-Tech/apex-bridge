@@ -16,6 +16,7 @@ import (
 type BridgingAddressControllerImpl struct {
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator
 	bridgingAddressManager       common.BridgingAddressesManager
+	chainIDConverter             common.ChainIDConverter
 	logger                       hclog.Logger
 }
 
@@ -24,11 +25,13 @@ var _ apiCore.APIController = (*BridgingAddressControllerImpl)(nil)
 func NewBridgingAddressController(
 	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
 	bridgingAddressManager common.BridgingAddressesManager,
+	chainIDConverter common.ChainIDConverter,
 	logger hclog.Logger,
 ) *BridgingAddressControllerImpl {
 	return &BridgingAddressControllerImpl{
 		bridgingAddressesCoordinator: bridgingAddressesCoordinator,
 		bridgingAddressManager:       bridgingAddressManager,
+		chainIDConverter:             chainIDConverter,
 		logger:                       logger,
 	}
 }
@@ -76,7 +79,7 @@ func (c *BridgingAddressControllerImpl) getBridgingAddressToBridgeTo(w http.Resp
 	}
 
 	chainIDStr := chainIDArr[0]
-	chainID := common.ToNumChainID(chainIDStr)
+	chainID := c.chainIDConverter.ToChainIDNum(chainIDStr)
 
 	bridgingAddress, err := c.bridgingAddressesCoordinator.GetAddressToBridgeTo(chainID, containsNativeTokens)
 	if err != nil {
@@ -105,7 +108,7 @@ func (c *BridgingAddressControllerImpl) getAllBridgingAddresses(w http.ResponseW
 	}
 
 	chainIDStr := chainIDArr[0]
-	chainID := common.ToNumChainID(chainIDStr)
+	chainID := c.chainIDConverter.ToChainIDNum(chainIDStr)
 
 	bridgingAddresses := c.bridgingAddressManager.GetAllPaymentAddresses(chainID)
 
