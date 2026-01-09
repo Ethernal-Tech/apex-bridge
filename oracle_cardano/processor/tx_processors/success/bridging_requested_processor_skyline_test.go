@@ -1171,6 +1171,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		tokensOnSrc := []uint16{primeCurrencyID, primeWrappedTokenID}
 
@@ -1227,6 +1228,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		}
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim - eth destination - utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
