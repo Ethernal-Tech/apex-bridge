@@ -7,3 +7,7 @@
    - copy from `src/skyline-program/lib.rs` from `declare_id!(ID)` this id and paste it in `solana/skyline_program` in this project
 3. Run `anchor build` in `skyline-solana-programs`.
 4. Copy everything from `target/deploy` into `solana/test/program_build`.
+
+# Notice
+
+Do not push mainnet keypair anywhere due possibility to drain the program vault

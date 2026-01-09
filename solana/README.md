@@ -19,4 +19,4 @@ rustc --version && solana --version && anchor --version && surfpool --version &&
 
 ## How to run tests
 
-Copy program keypair & one fee payer keypair in tests folder
+Checkout `program_build/HOW_TO.md`. After doing those steps move run `go test -v -timeout=30m github.com/Ethernal-Tech/apex-bridge/solana/tests`.
