@@ -163,7 +163,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	// wTODO: think about whether we should always track all currency amounts,
 	// regardless of .TrackSource and .TrackDestination
 	totalTokensAmount.totalAmountCurrencyDst += destChainInfo.FeeAddrBridgingAmt
-	totalTokensAmount.totalAmountCurrencySrc += metadata.BridgingFee + metadata.OperationFee
+	totalTokensAmount.totalAmountCurrencySrc += metadata.BridgingFee
 
 	receivers = append(receivers, cCore.BridgingRequestReceiver{
 		DestinationAddress: destChainInfo.FeeAddress,
@@ -211,7 +211,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false)
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, true)
 	if err != nil {
 		return err
 	}
@@ -439,7 +439,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee += receiverCtx.feeSum
 	nativeCurrencySum.Add(nativeCurrencySum, new(big.Int).SetUint64(metadata.BridgingFee))
-	nativeCurrencySum.Add(nativeCurrencySum, new(big.Int).SetUint64(metadata.OperationFee))
 
 	minBridgingFee := cardanoSrcConfig.GetMinBridgingFee(
 		len(receiverCtx.AmountsSums) > 0 || len(multisigUtxo.Tokens) > 0,
@@ -493,7 +492,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 
 	minCurrency := srcMinUtxo + minBridgingFee
 	if new(big.Int).SetUint64(minCurrency).Cmp(nativeCurrencySum) == 1 {
-		return fmt.Errorf("sum of receiver amounts+fee+opFee is under the minimum allowed: min %v but got %v",
+		return fmt.Errorf("sum of receiver amounts+fee is under the minimum allowed: min %v but got %v",
 			minCurrency, nativeCurrencySum)
 	}
 
@@ -509,7 +508,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 
 	if nativeCurrencySum.Cmp(new(big.Int).SetUint64(multisigUtxo.Amount)) != 0 {
 		return fmt.Errorf(
-			"multisig amount is not equal to sum of receiver amounts+fee+opFee: expected %v but got %v",
+			"multisig amount is not equal to sum of receiver amounts+fee: expected %v but got %v",
 			multisigUtxo.Amount, nativeCurrencySum)
 	}
 

@@ -26,7 +26,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 	const (
 		utxoMinValue               = 1000000
 		defaultMinFeeForBridging   = 2000010
-		minFeeForBridgingTokens    = 1000010
+		minFeeForBridgingTokens    = 2000010
 		minOperationFee            = 1000010
 		minColCoinsAllowedToBridge = 100000
 		primeBridgingAddr          = "addr_test1vq6xsx99frfepnsjuhzac48vl9s2lc9awkvfknkgs89srqqslj660"
@@ -39,6 +39,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		nexusBridgingAddr          = "0xA4d1233A67776575425Ab185f6a9251aa00fEA25"
 		validNexusAddr             = "0xA4d1233A67776575425Ab185f6a9251aa00fEA26"
 		nexusBridgingFeeAddr       = common.EthZeroAddr
+
+		primeTreasuryAddress   = "addr_test1wrz24vv4tvfqsywkxn36rv6zagys2d7euafcgv50gmggqpq4ju9av"
+		cardanoTreasuryAddress = "addr_test1wrz14vv5tvfqsywkxn36rv5zagys2dscuafcgt50wdpgqpq4juzuv"
 
 		policyID    = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 		testChainID = "test"
@@ -112,6 +115,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
 					MinOperationFee: minOperationFee,
+					TreasuryAddress: primeTreasuryAddress,
 				},
 				common.ChainIDStrCardano: {
 					CardanoChainConfig: cardanotx.CardanoChainConfig{
@@ -135,6 +139,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						MinFeeForBridgingTokens:  minFeeForBridgingTokens,
 					},
 					MinOperationFee: minOperationFee,
+					TreasuryAddress: cardanoTreasuryAddress,
 				},
 			},
 			EthChains: map[string]*cCore.EthChainConfig{
@@ -491,6 +496,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, destinationChainNonRegisteredMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrCardano
+
 		multisigToken := indexer.TokenAmount{
 			PolicyID: wrappedTokenCardano.PolicyID,
 			Name:     wrappedTokenCardano.Name,
@@ -504,6 +513,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Amount:  1,
 				Tokens:  []indexer.TokenAmount{multisigToken},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -511,10 +524,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: destinationChainNonRegisteredMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrCardano,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -546,9 +558,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, destinationChainNonRegisteredMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -556,10 +573,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: destinationChainNonRegisteredMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -579,7 +595,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: destinationChainNonRegisteredMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "operation fee in metadata receivers is less than minimum")
@@ -677,6 +693,95 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, fmt.Sprintf("none of bridging addresses on %s", common.ChainIDStrPrime))
+	})
+
+	t.Run("ValidateAndAddClaim no treasury addrs in outputs", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1},
+			{Address: "addr2", Amount: 2},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: metadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		appConfig := getAppConfig(false)
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, fmt.Sprintf("treasury addresses on %s", common.ChainIDStrPrime))
+	})
+
+	t.Run("ValidateAndAddClaim treasury addrs amount less than min in outputs", func(t *testing.T) {
+		metadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
+			BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
+			DestinationChainID: common.ChainIDStrCardano,
+			SenderAddr:         sendtx.AddrToMetaDataAddr("addr1"),
+			Transactions:       []sendtx.BridgingRequestMetadataTransaction{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, metadata)
+
+		appConfig := getAppConfig(false)
+
+		claims := &cCore.BridgeClaims{}
+		txOutputs := []*indexer.TxOutput{
+			{Address: primeBridgingAddr, Amount: 1},
+			{Address: appConfig.CardanoChains[common.ChainIDStrPrime].TreasuryAddress, Amount: 2},
+		}
+
+		cardanoTx := &core.CardanoTx{
+			Tx: indexer.Tx{
+				Metadata: metadata,
+				Outputs:  txOutputs,
+			},
+			OriginChainID: common.ChainIDStrPrime,
+		}
+
+		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
+			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
+		}
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorError", claims, cardanoTx, appConfig).Return(nil)
+		refundRequestProcessorMock.On(
+			"HandleBridgingProcessorPreValidate", cardanoTx, appConfig).Return(nil)
+
+		proc := NewSkylineBridgingRequestedProcessor(
+			refundRequestProcessorMock,
+			hclog.NewNullLogger(),
+			chainInfos,
+		)
+
+		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "treasury output amount")
 	})
 
 	t.Run("ValidateAndAddClaim multiple utxos to different bridging addr", func(t *testing.T) {
@@ -834,9 +939,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -846,10 +956,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -888,11 +997,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
 				Amount:  utxoMinValue + 2_000_000 + (defaultMinFeeForBridging-1)*2,
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -903,10 +1020,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -945,11 +1061,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, feeAddrNotInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
 				Amount:  utxoMinValue + 2_000_000 + (minFeeForBridgingTokens-1)*2,
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -960,10 +1084,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1006,11 +1129,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, metadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  utxoMinValue + minOperationFee + defaultMinFeeForBridging*2 + 200,
+				Amount:  utxoMinValue + defaultMinFeeForBridging*2 + 200,
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -1019,10 +1150,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: metadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1041,10 +1171,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	//nolint:dupl
 	t.Run("ValidateAndAddClaim utxo value below minimum in receivers in metadata", func(t *testing.T) {
 		tokensOnSrc := []uint16{primeCurrencyID, primeWrappedTokenID}
 
-		//nolint:dupl
 		for _, tokenOnSrc := range tokensOnSrc {
 			utxoValueBelowMinInReceiversMetadata, err := common.SimulateRealMetadata(common.MetadataEncodingTypeCbor, common.BridgingRequestMetadata{
 				BridgingTxType:     sendtx.BridgingRequestType(common.BridgingTxTypeBridgingRequest),
@@ -1058,9 +1188,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, utxoValueBelowMinInReceiversMetadata)
 
+			appConfig := getAppConfig(false)
+
+			srcChain := common.ChainIDStrPrime
+
 			claims := &cCore.BridgeClaims{}
 			txOutputs := []*indexer.TxOutput{
 				{Address: primeBridgingAddr, Amount: utxoMinValue},
+				{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 			}
 
 			tx := indexer.Tx{
@@ -1070,10 +1205,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 			cardanoTx := &core.CardanoTx{
 				Tx:            tx,
-				OriginChainID: common.ChainIDStrPrime,
+				OriginChainID: srcChain,
 			}
 
-			appConfig := getAppConfig(false)
 			refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 				SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 			}
@@ -1108,9 +1242,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, utxoValueBelowMinInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrCardano
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: cardanoBridgingAddr, Amount: utxoMinValue},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		tx := indexer.Tx{
@@ -1120,10 +1262,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrCardano,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1166,9 +1307,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -1178,10 +1324,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1224,9 +1369,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -1236,10 +1386,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1282,9 +1431,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		tx := indexer.Tx{
@@ -1294,10 +1451,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1340,9 +1496,17 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		tx := indexer.Tx{
@@ -1352,10 +1516,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1402,6 +1565,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
@@ -1415,6 +1582,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -1423,10 +1594,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1471,6 +1641,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
@@ -1484,6 +1658,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -1492,10 +1670,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1540,6 +1717,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
@@ -1553,6 +1734,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -1561,10 +1746,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1609,6 +1793,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
@@ -1622,6 +1810,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -1630,10 +1822,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1673,9 +1864,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue + 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -1685,10 +1881,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1705,7 +1900,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts+fee+opFee")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts+fee")
 	})
 
 	t.Run("ValidateAndAddClaim receivers amounts and multisig amount missmatch more", func(t *testing.T) {
@@ -1730,9 +1925,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, invalidAddrInReceiversMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: utxoMinValue*2 + 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -1742,10 +1942,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1762,7 +1961,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts+fee+opFee")
+		require.ErrorContains(t, err, "multisig amount is not equal to sum of receiver amounts+fee")
 	})
 
 	t.Run("ValidateAndAddClaim fee in receivers less than minimum", func(t *testing.T) {
@@ -1782,9 +1981,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, feeInReceiversLessThanMinMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: defaultMinFeeForBridging - 1},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -1794,10 +1998,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1883,7 +2086,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Tx: indexer.Tx{
 					Hash:     [32]byte(common.NewHashFromHexString("0x2244FF")),
 					Metadata: validMetadata,
-					Outputs:  []*indexer.TxOutput{txOutput},
+					Outputs: []*indexer.TxOutput{
+						txOutput,
+						{Address: appConfig.CardanoChains[srcChainID].TreasuryAddress, Amount: minOperationFee},
+					},
 				},
 				OriginChainID: srcChainID,
 			}, newAppConfig)
@@ -1919,11 +2125,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + defaultMinFeeForBridging*2 + maxAmountAllowedToBridge.Uint64() + 1,
+				Amount:  defaultMinFeeForBridging*2 + maxAmountAllowedToBridge.Uint64() + 1,
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -1935,10 +2149,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -1986,6 +2199,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
@@ -1999,6 +2216,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -2007,10 +2225,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2051,11 +2268,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens,
+				Amount:  minFeeForBridgingTokens,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2063,6 +2284,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2072,10 +2297,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2090,7 +2314,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		err = proc.ValidateAndAddClaim(claims, cardanoTx, appConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "sum of receiver amounts+fee+opFee is under the minimum allowed")
+		require.ErrorContains(t, err, "sum of receiver amounts+fee is under the minimum allowed")
 	})
 
 	t.Run("ValidateAndAddClaim valid", func(t *testing.T) {
@@ -2125,11 +2349,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  minFeeForBridgingTokens * 2,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2143,6 +2371,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -2151,10 +2383,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2214,12 +2445,20 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  2*utxoMinValue + minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  2*utxoMinValue + minFeeForBridgingTokens*2,
 				Tokens:  []indexer.TokenAmount{},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2229,10 +2468,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2292,11 +2530,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  minFeeForBridgingTokens * 2,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2310,6 +2552,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
 
 		cardanoTx := &core.CardanoTx{
@@ -2318,10 +2564,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2376,11 +2621,19 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrCardano
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: cardanoBridgingAddr,
-				Amount:  utxoMinValue + minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  utxoMinValue + minFeeForBridgingTokens*2,
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2390,10 +2643,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrCardano,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2447,11 +2699,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr2,
-				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  minFeeForBridgingTokens * 2,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2460,9 +2716,11 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 					},
 				},
 			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
+			},
 		}
-
-		appConfig := getAppConfig(false)
 
 		cardanoTx := &core.CardanoTx{
 			Tx: indexer.Tx{
@@ -2470,7 +2728,7 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
@@ -2518,11 +2776,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  minFeeForBridgingTokens * 2,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2530,6 +2792,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2539,10 +2805,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2598,11 +2863,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*2,
+				Amount:  minFeeForBridgingTokens * 2,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2610,6 +2879,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2619,10 +2892,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2673,11 +2945,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: primeBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*3,
+				Amount:  minFeeForBridgingTokens * 3,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2685,6 +2961,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2694,10 +2974,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 				Metadata: validMetadata,
 				Outputs:  txOutputs,
 			},
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2748,9 +3027,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + utxoMinValue},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -2761,10 +3045,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2805,9 +3088,14 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrPrime
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{Address: primeBridgingAddr, Amount: minFeeForBridgingTokens + utxoMinValue},
+			{Address: appConfig.CardanoChains[srcChain].TreasuryAddress, Amount: minOperationFee},
 		}
 
 		tx := indexer.Tx{
@@ -2818,10 +3106,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrPrime,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}
@@ -2862,11 +3149,15 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, validMetadata)
 
+		appConfig := getAppConfig(false)
+
+		srcChain := common.ChainIDStrCardano
+
 		claims := &cCore.BridgeClaims{}
 		txOutputs := []*indexer.TxOutput{
 			{
 				Address: cardanoBridgingAddr,
-				Amount:  minOperationFee + minFeeForBridgingTokens*3,
+				Amount:  minFeeForBridgingTokens * 3,
 				Tokens: []indexer.TokenAmount{
 					{
 						PolicyID: policyID,
@@ -2874,6 +3165,10 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 						Amount:   utxoMinValue,
 					},
 				},
+			},
+			{
+				Address: appConfig.CardanoChains[srcChain].TreasuryAddress,
+				Amount:  minOperationFee,
 			},
 		}
 
@@ -2885,10 +3180,9 @@ func TestBridgingRequestedProcessorSkyline(t *testing.T) {
 
 		cardanoTx := &core.CardanoTx{
 			Tx:            tx,
-			OriginChainID: common.ChainIDStrCardano,
+			OriginChainID: srcChain,
 		}
 
-		appConfig := getAppConfig(false)
 		refundRequestProcessorMock := &core.CardanoTxSuccessRefundProcessorMock{
 			SuccessProc: &core.CardanoTxSuccessProcessorMock{},
 		}

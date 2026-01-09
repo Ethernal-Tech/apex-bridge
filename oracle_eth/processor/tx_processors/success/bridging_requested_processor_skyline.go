@@ -389,7 +389,6 @@ func (p *BridgingRequestedProcessorSkylineImpl) validateTokenAmounts(
 	// update fee amount if needed with sum of fee address receivers
 	metadata.BridgingFee.Add(metadata.BridgingFee, receiverCtx.feeSum)
 	nativeCurrencySum.Add(nativeCurrencySum, metadata.BridgingFee)
-	nativeCurrencySum.Add(nativeCurrencySum, metadata.OperationFee)
 
 	feeAmountDfm := common.WeiToDfm(metadata.BridgingFee)
 	if feeAmountDfm.Uint64() < receiverCtx.ethSrcConfig.MinFeeForBridging {
