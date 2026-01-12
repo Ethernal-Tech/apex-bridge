@@ -54,6 +54,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 			TryCountLimits: oCore.TryCountLimits{
 				MaxRefundTryCount: 3,
 			},
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 
 		appConfig.FillOut()
@@ -219,7 +220,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ToNumChainID(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
@@ -282,7 +283,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, claims.RefundRequestClaims, 1)
-		require.Equal(t, common.ToNumChainID(common.ChainIDStrNexus), claims.RefundRequestClaims[0].OriginChainId)
+		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, common.ChainIDIntPrime, claims.RefundRequestClaims[0].DestinationChainId)
 		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())

@@ -19,11 +19,9 @@ import (
 const (
 	apexBridgeSmartContracts = "apex-bridge-smartcontracts"
 
-	nodeFlag          = "url"
 	contractFlag      = "contract"
 	repositoryURLFlag = "repo"
 
-	nodeFlagDessc         = "node url"
 	contractFlagDesc      = "contractName:proxyAddr[:updateFunctionName:args] contract name is solidity file name, proxyAddr is address or proxy contract" //nolint:lll
 	repositoryURLFlagDesc = "smart contracts github repository url"
 )
@@ -156,7 +154,7 @@ func (ip *upgradeEVMParams) Execute(
 			return nil, fmt.Errorf("invalid contract name for --%s number %d", contractFlag, i)
 		}
 
-		if !common.IsValidAddress(common.ChainIDStrNexus, ss[1]) {
+		if !ethcommon.IsHexAddress(ss[1]) {
 			return nil, fmt.Errorf("invalid address for --%s number %d", contractFlag, i)
 		}
 

@@ -64,6 +64,7 @@ func TestHotWalletIncrementProcessor(t *testing.T) {
 				TreasuryAddress: vectorTreasuryAddress,
 			},
 		},
+		ChainIDConverter: common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 

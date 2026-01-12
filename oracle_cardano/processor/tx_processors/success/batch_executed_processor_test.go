@@ -23,6 +23,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 	appConfig := cCore.AppConfig{
 		BridgingAddressesManager: brAddrManagerMock,
 		CardanoChains:            map[string]*cCore.CardanoChainConfig{common.ChainIDStrPrime: {}},
+		ChainIDConverter:         common.NewTestChainIDConverter(),
 	}
 	appConfig.FillOut()
 
@@ -124,6 +125,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Bridge:                   cCore.BridgeConfig{},
 			Settings:                 cCore.AppSettings{},
 			BridgingSettings:         cCore.BridgingSettings{},
+			ChainIDConverter:         common.NewTestChainIDConverter(),
 		}
 
 		config.FillOut()
@@ -196,6 +198,7 @@ func TestBatchExecutedProcessor(t *testing.T) {
 			Bridge:                   cCore.BridgeConfig{},
 			Settings:                 cCore.AppSettings{},
 			BridgingSettings:         cCore.BridgingSettings{},
+			ChainIDConverter:         common.NewTestChainIDConverter(),
 		}
 
 		config.FillOut()

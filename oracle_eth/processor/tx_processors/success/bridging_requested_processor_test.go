@@ -84,7 +84,8 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 				MaxReceiversPerBridgingRequest: 3,
 				MaxAmountAllowedToBridge:       maxAmountAllowedToBridge,
 			},
-			RefundEnabled: refundEnabled,
+			RefundEnabled:    refundEnabled,
+			ChainIDConverter: common.NewTestChainIDConverter(),
 		}
 		config.FillOut()
 
@@ -751,7 +752,7 @@ func TestBridgingRequestedProcessor(t *testing.T) {
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BridgingRequestClaims, 1)
 		require.Equal(t, txHash, claims.BridgingRequestClaims[0].ObservedTransactionHash)
-		require.Equal(t, destinationChainID, common.ToStrChainID(claims.BridgingRequestClaims[0].DestinationChainId))
+		require.Equal(t, destinationChainID, appConfig.ChainIDConverter.ToChainIDStr(claims.BridgingRequestClaims[0].DestinationChainId))
 		require.Len(t, claims.BridgingRequestClaims[0].Receivers, len(receivers))
 		require.Equal(t, receivers[1].Address,
 			claims.BridgingRequestClaims[0].Receivers[0].DestinationAddress)

@@ -46,7 +46,7 @@ func GetBridgeAdminCommand() *cobra.Command {
 	}
 	defundCmd := &cobra.Command{
 		Use:   "defund",
-		Short: "dufund chain hot wallet",
+		Short: "defund chain hot wallet",
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return defundParamsData.ValidateFlags()
 		},

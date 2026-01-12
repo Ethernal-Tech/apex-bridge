@@ -115,6 +115,7 @@ type AppConfig struct {
 	RefundEnabled            bool                            `json:"refundEnabled"`
 	ValidatorDataDir         string                          `json:"validatorDataDir"`
 	ValidatorConfigPath      string                          `json:"validatorConfigPath"`
+	ChainIDConverter         *common.ChainIDConverter        `json:"chainIdConverter"`
 	CardanoChains            map[string]*CardanoChainConfig  `json:"cardanoChains"`
 	EthChains                map[string]*EthChainConfig      `json:"ethChains"`
 	Bridge                   BridgeConfig                    `json:"bridge"`
@@ -125,13 +126,13 @@ type AppConfig struct {
 }
 
 func (appConfig *AppConfig) GetFeeMultisigAddress(chainID string) string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetFeeMultisigAddress(chainIDNum)
 }
 
 func (appConfig *AppConfig) GetBridgingMultisigAddresses(chainID string) []string {
-	chainIDNum := common.ToNumChainID(chainID)
+	chainIDNum := appConfig.ChainIDConverter.ToChainIDNum(chainID)
 
 	return appConfig.BridgingAddressesManager.GetAllPaymentAddresses(chainIDNum)
 }

@@ -131,7 +131,7 @@ func GetSubmitClaimsEventSignatures() ([]ethgo.Hash, error) {
 }
 
 func GetChainValidatorsDataInfoString(
-	chainID string, data []ValidatorChainData,
+	chainID string, data []ValidatorChainData, chainIDConverter *common.ChainIDConverter,
 ) string {
 	var sb strings.Builder
 
@@ -140,7 +140,7 @@ func GetChainValidatorsDataInfoString(
 			sb.WriteString(", ")
 		}
 
-		if common.IsEVMChainID(chainID) {
+		if chainIDConverter.IsEVMChainID(chainID) {
 			pub, err := bn256.UnmarshalPublicKeyFromBigInt(x.Key)
 			if err != nil {
 				return fmt.Sprintf("failed to unmarshal bls key for %s, error: %s", chainID, err)

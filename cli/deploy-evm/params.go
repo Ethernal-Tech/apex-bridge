@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -45,6 +46,7 @@ const (
 	minTokenBridgingAmountFlag = "min-token-bridging-amount" //nolint:gosec
 	minOperationFeeFlag        = "min-operation-fee"
 	currencyTokIDFlag          = "currency-token-id"
+	chainIDsConfigFlag         = "chain-ids-config"
 
 	treasuryAddressFlag = "treasury-addr"
 
@@ -70,6 +72,7 @@ const (
 	minTokenBridgingAmountFlagDesc = "minimal amount to bridge tokens"
 	minOperationFeeFlagDesc        = "minimal operation fee"
 	currencyTokIDFlagDesc          = "token ID of the currency of the chain"
+	chainIDsConfigFlagDesc         = "path to the chain IDs config file"
 
 	treasuryAddressFlagDesc = "evm treasury address"
 
@@ -127,7 +130,10 @@ type deployEVMParams struct {
 
 	currencyTokenID uint16
 
-	gasLimit uint64
+	gasLimit       uint64
+	chainIDsConfig string
+
+	chainIDConverter *common.ChainIDConverter
 }
 
 func (ip *deployEVMParams) validateFlags() error {
@@ -135,7 +141,26 @@ func (ip *deployEVMParams) validateFlags() error {
 		return fmt.Errorf("invalid --%s flag", evmNodeURLFlag)
 	}
 
-	if !common.IsExistingSkylineChainID(ip.evmChainID) {
+	if ip.chainIDsConfig == "" {
+		return fmt.Errorf("--%s flag not specified", chainIDsConfigFlag)
+	}
+
+	if _, err := os.Stat(ip.chainIDsConfig); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", ip.chainIDsConfig)
+		}
+
+		return fmt.Errorf("failed to check config file: %s. err: %w", ip.chainIDsConfig, err)
+	}
+
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](ip.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	ip.chainIDConverter = chainIDsConfig.ToChainIDConverter()
+
+	if !ip.chainIDConverter.IsExistingChainID(ip.evmChainID) {
 		return fmt.Errorf("unexisting chain: %s", ip.evmChainID)
 	}
 
@@ -341,6 +366,13 @@ func (ip *deployEVMParams) setFlags(cmd *cobra.Command) {
 		gasLimitFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(bridgePrivateKeyFlag, privateKeyConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(evmPrivateKeyFlag, privateKeyConfigFlag)
 
@@ -407,7 +439,7 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, outputter)
+	validatorsData, err := ip.getValidatorsChainData(ctx, txHelperBridge, ip.chainIDConverter, outputter)
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +539,10 @@ func (ip *deployEVMParams) Execute(
 		return nil, err
 	}
 
-	if err := ip.setChainAdditionalData(ctx, addresses[Gateway], txHelperBridge, outputter); err != nil {
+	if err := ip.setChainAdditionalData(
+		ctx, addresses[Gateway], txHelperBridge,
+		ip.chainIDConverter, outputter,
+	); err != nil {
 		return nil, err
 	}
 
@@ -518,13 +553,13 @@ func (ip *deployEVMParams) Execute(
 
 func (ip *deployEVMParams) setChainAdditionalData(
 	ctx context.Context, gatewayProxyAddr ethcommon.Address,
-	txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
+	txHelper *eth.EthHelperWrapper, chainIDConverter *common.ChainIDConverter, outputter common.OutputFormatter,
 ) error {
 	if ip.bridgePrivateKey == "" && ip.privateKeyConfig == "" {
 		return nil
 	}
 
-	sc := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper)
+	sc := eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper, chainIDConverter)
 
 	_, _ = outputter.Write(fmt.Appendf(nil, "Configuring bridge smart contract at %s...", ip.bridgeSCAddr))
 	outputter.WriteOutput()
@@ -537,13 +572,20 @@ func (ip *deployEVMParams) setChainAdditionalData(
 }
 
 func (ip *deployEVMParams) getValidatorsChainData(
-	ctx context.Context, txHelper *eth.EthHelperWrapper, outputter common.OutputFormatter,
+	ctx context.Context, txHelper *eth.EthHelperWrapper,
+	chainIDConverter *common.ChainIDConverter, outputter common.OutputFormatter,
 ) ([]eth.ValidatorChainData, error) {
 	if ip.bridgeNodeURL != "" {
 		_, _ = outputter.Write(fmt.Appendf(nil, "Get data from bridge smart contract at %s...", ip.bridgeSCAddr))
 		outputter.WriteOutput()
 
-		return eth.NewBridgeSmartContract(ip.bridgeSCAddr, txHelper).GetValidatorsChainData(ctx, ip.evmChainID)
+		bridgeSC := eth.NewBridgeSmartContract(
+			ip.bridgeSCAddr,
+			txHelper,
+			chainIDConverter,
+		)
+
+		return bridgeSC.GetValidatorsChainData(ctx, ip.evmChainID)
 	}
 
 	result := make([]eth.ValidatorChainData, len(ip.evmBlsKeys))

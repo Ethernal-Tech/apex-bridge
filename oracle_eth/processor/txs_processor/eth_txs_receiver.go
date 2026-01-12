@@ -243,7 +243,7 @@ func (r *EthTxsReceiverImpl) processLog(log *ethgo.Log, parsedLog types.Log, log
 
 		bridgingRequestMetadata := core.BridgingRequestEthMetadata{
 			BridgingTxType:     common.BridgingTxTypeBridgingRequest,
-			DestinationChainID: common.ToStrChainID(withdraw.DestinationChainId),
+			DestinationChainID: r.appConfig.ChainIDConverter.ToChainIDStr(withdraw.DestinationChainId),
 			SenderAddr:         withdraw.Sender.String(),
 			Transactions:       txs,
 			BridgingFee:        withdraw.Fee,
