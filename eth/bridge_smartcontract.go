@@ -32,6 +32,7 @@ type IBridgeSmartContract interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	SetChainAdditionalData(ctx context.Context, chainID, multisigAddr, feeAddr string) error
 	GetBatchStatusAndTransactions(ctx context.Context, chainID string, batchID uint64) (uint8, []TxDataInfo, error)
+	GetBatchStatusAndType(ctx context.Context, chainID string, batchID uint64) (uint8, uint8, error)
 	IsNewValidatorSetPending() (bool, error)
 	GetPendingValidatorSetDelta() ([]ValidatorSet, []ethcommon.Address, error)
 	GetAddressValidatorIndex(validatorAddr ethcommon.Address) (uint8, error)
@@ -332,6 +333,31 @@ func (bsc *BridgeSmartContractImpl) GetBatchStatusAndTransactions(
 	}
 
 	return result.Status, result.Txs, nil
+}
+
+func (bsc *BridgeSmartContractImpl) GetBatchStatusAndType(
+	ctx context.Context, chainID string, batchID uint64,
+) (uint8, uint8, error) {
+	ethTxHelper, err := bsc.ethHelper.GetEthHelper()
+	if err != nil {
+		return 0, 0, fmt.Errorf("error while GetEthHelper: %w", err)
+	}
+
+	contract, err := contractbinding.NewBridgeContract(
+		bsc.smartContractAddress,
+		ethTxHelper.GetClient())
+	if err != nil {
+		return 0, 0, fmt.Errorf("error while NewBridgeContract: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	result, err := contract.GetBatchStatusAndType(&bind.CallOpts{
+		Context: ctx,
+	}, common.ToNumChainID(chainID), batchID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error while GetBatchStatusAndType: %w", bsc.ethHelper.ProcessError(err))
+	}
+
+	return result.Status, result.Type, nil
 }
 
 func (bsc *BridgeSmartContractImpl) IsNewValidatorSetPending() (bool, error) {

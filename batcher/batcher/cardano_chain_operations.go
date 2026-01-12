@@ -768,7 +768,6 @@ func (cco *CardanoChainOperations) GenerateMultisigAddress(
 // CreateValidatorSetChangeTx implements core.ChainOperations.
 func (cco *CardanoChainOperations) CreateValidatorSetChangeTx(ctx context.Context, chainID string, nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract, validatorsKeys validatorobserver.ValidatorsPerChain,
-	lastBatchID uint64, lastBatchType uint8,
 ) (*core.GeneratedBatchTxData, error) {
 	cco.checkVSUSync()
 

@@ -135,6 +135,16 @@ func (m *BridgeSmartContractMock) GetBatchStatusAndTransactions(
 	return status, txs, args.Error(2)
 }
 
+func (m *BridgeSmartContractMock) GetBatchStatusAndType(
+	ctx context.Context, chainID string, batchID uint64,
+) (uint8, uint8, error) {
+	args := m.Called(ctx, chainID, batchID)
+	status, _ := args.Get(0).(uint8)
+	btype, _ := args.Get(1).(uint8)
+
+	return status, btype, args.Error(2)
+}
+
 func (m *BridgeSmartContractMock) IsNewValidatorSetPending() (bool, error) {
 	args := m.Called()
 	if args.Get(0) != nil {

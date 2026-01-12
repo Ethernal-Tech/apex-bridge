@@ -491,6 +491,51 @@ func (_BridgeContract *BridgeContractCallerSession) GetBatchStatusAndTransaction
 	return _BridgeContract.Contract.GetBatchStatusAndTransactions(&_BridgeContract.CallOpts, _chainId, _batchId)
 }
 
+// GetBatchStatusAndType is a free data retrieval call binding the contract method 0x2df375e7.
+//
+// Solidity: function getBatchStatusAndType(uint8 _chainId, uint64 _batchId) view returns(uint8 status, uint8 type)
+func (_BridgeContract *BridgeContractCaller) GetBatchStatusAndType(opts *bind.CallOpts, _chainId uint8, _batchId uint64) (struct {
+	Status uint8
+	Type   uint8
+}, error) {
+	var out []interface{}
+	err := _BridgeContract.contract.Call(opts, &out, "getBatchStatusAndType", _chainId, _batchId)
+
+	outstruct := new(struct {
+		Status uint8
+		Type   uint8
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Status = *abi.ConvertType(out[0], new(uint8)).(*uint8)
+	outstruct.Type = *abi.ConvertType(out[1], new(uint8)).(*uint8)
+
+	return *outstruct, err
+
+}
+
+// GetBatchStatusAndType is a free data retrieval call binding the contract method 0x2df375e7.
+//
+// Solidity: function getBatchStatusAndType(uint8 _chainId, uint64 _batchId) view returns(uint8 status, uint8 type)
+func (_BridgeContract *BridgeContractSession) GetBatchStatusAndType(_chainId uint8, _batchId uint64) (struct {
+	Status uint8
+	Type   uint8
+}, error) {
+	return _BridgeContract.Contract.GetBatchStatusAndType(&_BridgeContract.CallOpts, _chainId, _batchId)
+}
+
+// GetBatchStatusAndType is a free data retrieval call binding the contract method 0x2df375e7.
+//
+// Solidity: function getBatchStatusAndType(uint8 _chainId, uint64 _batchId) view returns(uint8 status, uint8 type)
+func (_BridgeContract *BridgeContractCallerSession) GetBatchStatusAndType(_chainId uint8, _batchId uint64) (struct {
+	Status uint8
+	Type   uint8
+}, error) {
+	return _BridgeContract.Contract.GetBatchStatusAndType(&_BridgeContract.CallOpts, _chainId, _batchId)
+}
+
 // GetConfirmedBatch is a free data retrieval call binding the contract method 0x865e768e.
 //
 // Solidity: function getConfirmedBatch(uint8 _destinationChain) view returns((bytes[],bytes[],uint256,bytes,uint64,bool,uint8) _batch)

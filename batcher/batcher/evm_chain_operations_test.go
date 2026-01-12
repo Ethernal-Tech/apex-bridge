@@ -359,8 +359,10 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 	}
 
 	// 1. We have just started the validator set change process, send vsc tx batch
+	nextBatchID := uint64(20)
+	bsc.On("GetBatchStatusAndType", mock.Anything, "nexus", nextBatchID-1).Return(mock.Anything, uint8(Normal), nil)
 	batch, err := op.CreateValidatorSetChangeTx(
-		context.TODO(), "nexus", 20, bsc, make(validatorobserver.ValidatorsPerChain, 0), 19, uint8(Normal),
+		context.TODO(), "nexus", nextBatchID, bsc, make(validatorobserver.ValidatorsPerChain, 0),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
@@ -368,26 +370,31 @@ func Test_CreateValidatorSetChangeTxEVM(t *testing.T) {
 
 	// 2. vsc tx batch is sent and we should get a finalize batch/tx. However, the previous tx/batch
 	// was executed unsuccessfully, so we get a validator set change batch/tx again (retry).
-	bsc.On("GetBatchStatusAndTransactions", mock.Anything, "nexus", uint64(20)).Return(uint8(3), nil, nil)
+	nextBatchID++
+	bsc.On("GetBatchStatusAndType", mock.Anything, "nexus", nextBatchID-1).Return(uint8(3), uint8(ValidatorSet), nil)
 	batch, err = op.CreateValidatorSetChangeTx(
-		context.TODO(), "nexus", 21, bsc, make(validatorobserver.ValidatorsPerChain, 0), 20, uint8(ValidatorSet),
+		context.TODO(), "nexus", nextBatchID, bsc, make(validatorobserver.ValidatorsPerChain, 0),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 	require.EqualValues(t, ValidatorSet, batch.BatchType)
 
 	// 3. Since vsc tx batch is sent after retry, we should get a finalize batch/tx.
-	bsc.On("GetBatchStatusAndTransactions", mock.Anything, "nexus", uint64(21)).Return(uint8(2), nil, nil)
+	nextBatchID++
+	bsc.On("GetBatchStatusAndType", mock.Anything, "nexus", nextBatchID-1).Return(uint8(2), uint8(ValidatorSet), nil)
 	batch, err = op.CreateValidatorSetChangeTx(
-		context.TODO(), "nexus", 22, bsc, make(validatorobserver.ValidatorsPerChain, 0), 21, uint8(ValidatorSet),
+		context.TODO(), "nexus", nextBatchID, bsc, make(validatorobserver.ValidatorsPerChain, 0),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 	require.EqualValues(t, ValidatorSetFinal, batch.BatchType)
 
 	// 4. We enter a new cycle of validator set change, so we expect to get a validator set change tx/batch.
+	nextBatchID++
+	bsc.On("GetBatchStatusAndType", mock.Anything, "nexus", nextBatchID-1).Return(mock.Anything, uint8(Normal), nil)
 	batch, err = op.CreateValidatorSetChangeTx(
-		context.TODO(), "nexus", 23, bsc, make(validatorobserver.ValidatorsPerChain, 0), 22, uint8(Normal))
+		context.TODO(), "nexus", nextBatchID, bsc, make(validatorobserver.ValidatorsPerChain, 0),
+	)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 	require.EqualValues(t, ValidatorSet, batch.BatchType)

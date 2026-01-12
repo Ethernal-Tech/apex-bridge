@@ -38,7 +38,6 @@ type ChainOperations interface {
 		chainID string, nextBatchID uint64,
 		bridgeSmartContract eth.IBridgeSmartContract,
 		validatorsKeys validatorobserver.ValidatorsPerChain,
-		lastBatchID uint64, lastBatchType uint8,
 	) (*GeneratedBatchTxData, error)
 	GenerateMultisigAddress(validators *validatorobserver.ValidatorsPerChain, chainID string) error
 }
