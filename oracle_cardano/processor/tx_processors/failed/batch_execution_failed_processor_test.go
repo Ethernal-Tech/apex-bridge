@@ -12,6 +12,9 @@ import (
 
 func TestBatchExecutionFailedProcessor(t *testing.T) {
 	proc := NewBatchExecutionFailedProcessor(hclog.NewNullLogger())
+	appConfig := &cCore.AppConfig{
+		ChainIDConverter: common.NewTestChainIDConverter(),
+	}
 
 	t.Run("ValidateAndAddClaim empty tx", func(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
@@ -44,7 +47,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		claims := &cCore.BridgeClaims{}
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantButNotFullMetadata,
-		}, nil)
+		}, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)
@@ -66,7 +69,7 @@ func TestBatchExecutionFailedProcessor(t *testing.T) {
 		err = proc.ValidateAndAddClaim(claims, &core.BridgeExpectedCardanoTx{
 			Metadata: relevantFullMetadata,
 			Hash:     txHash,
-		}, nil)
+		}, appConfig)
 		require.NoError(t, err)
 		require.True(t, claims.Count() == 1)
 		require.Len(t, claims.BatchExecutionFailedClaims, 1)

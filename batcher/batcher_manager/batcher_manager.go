@@ -47,14 +47,15 @@ func NewBatcherManager(
 
 		switch strings.ToLower(chainConfig.ChainType) {
 		case common.ChainTypeCardanoStr:
-			operations, err = getCardanoOperations(
-				chainConfig,
-				cardanoIndexerDbs,
-				secretsManager,
-				bridgingAddressesManager,
-				bridgingAddressesCoordinator,
-				logger,
-			)
+			operations, err = getCardanoOperations(GetCardanoOpsParams{
+				Config:                       chainConfig,
+				ChainIDConverter:             config.ChainIDConverter,
+				CardanoIndexerDBs:            cardanoIndexerDbs,
+				SecretsManager:               secretsManager,
+				BridgingAddressesManager:     bridgingAddressesManager,
+				BridgingAddressesCoordinator: bridgingAddressesCoordinator,
+				Logger:                       logger,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -69,8 +70,9 @@ func NewBatcherManager(
 
 		batcher := batcher.NewBatcher(
 			&core.BatcherConfiguration{
-				Chain:         chainConfig,
-				PullTimeMilis: config.PullTimeMilis,
+				Chain:            chainConfig,
+				ChainIDConverter: config.ChainIDConverter,
+				PullTimeMilis:    config.PullTimeMilis,
 			},
 			operations,
 			bridgeSmartContract,
@@ -95,25 +97,33 @@ func (bm *BatchManagerImpl) Start() {
 	}
 }
 
-func getCardanoOperations(
-	config core.ChainConfig, cardanoIndexerDbs map[string]indexer.Database,
-	secretsManager secrets.SecretsManager, bridgingAddressesManager common.BridgingAddressesManager,
-	bridgingAddressesCoordinator common.BridgingAddressesCoordinator,
-	logger hclog.Logger,
-) (core.ChainOperations, error) {
-	db, exists := cardanoIndexerDbs[config.ChainID]
+type GetCardanoOpsParams struct {
+	Config                       core.ChainConfig
+	ChainIDConverter             *common.ChainIDConverter
+	CardanoIndexerDBs            map[string]indexer.Database
+	SecretsManager               secrets.SecretsManager
+	BridgingAddressesManager     common.BridgingAddressesManager
+	BridgingAddressesCoordinator common.BridgingAddressesCoordinator
+	Logger                       hclog.Logger
+}
+
+func getCardanoOperations(params GetCardanoOpsParams) (core.ChainOperations, error) {
+	chainID := params.Config.ChainID
+
+	db, exists := params.CardanoIndexerDBs[chainID]
 	if !exists {
-		return nil, fmt.Errorf("database not exists for chain: %s", config.ChainID)
+		return nil, fmt.Errorf("database not exists for chain: %s", chainID)
 	}
 
 	operations, err := batcher.NewCardanoChainOperations(
-		config.ChainSpecific,
+		params.Config.ChainSpecific,
+		params.ChainIDConverter,
 		db,
-		secretsManager,
-		config.ChainID,
-		bridgingAddressesManager,
-		bridgingAddressesCoordinator,
-		logger,
+		params.SecretsManager,
+		chainID,
+		params.BridgingAddressesManager,
+		params.BridgingAddressesCoordinator,
+		params.Logger,
 	)
 	if err != nil {
 		return nil, err

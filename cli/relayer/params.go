@@ -5,13 +5,16 @@ import (
 )
 
 const (
-	configFlag = "config"
+	configFlag         = "config"
+	chainIDsConfigFlag = "chain-ids-config"
 
-	configFlagDesc = "path to config json file"
+	configFlagDesc         = "path to config json file"
+	chainIDsConfigFlagDesc = "path to chain ids config json file"
 )
 
 type initParams struct {
-	config string
+	config         string
+	chainIDsConfig string
 }
 
 func (ip *initParams) validateFlags() error {
@@ -24,5 +27,11 @@ func (ip *initParams) setFlags(cmd *cobra.Command) {
 		configFlag,
 		"",
 		configFlagDesc,
+	)
+	cmd.Flags().StringVar(
+		&ip.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 }

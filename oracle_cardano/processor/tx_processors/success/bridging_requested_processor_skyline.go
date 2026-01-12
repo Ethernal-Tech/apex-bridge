@@ -95,6 +95,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	claims *cCore.BridgeClaims, tx *core.CardanoTx,
 	metadata *common.BridgingRequestMetadata, appConfig *cCore.AppConfig,
 ) error {
+	chainIDConverter := appConfig.ChainIDConverter
+
 	cardanoSrcConfig, _ := cUtils.GetChainConfig(appConfig, tx.OriginChainID)
 	cardanoDestConfig, ethDestConfig := cUtils.GetChainConfig(appConfig, metadata.DestinationChainID)
 
@@ -174,8 +176,8 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 
 	claim := cCore.BridgingRequestClaim{
 		ObservedTransactionHash:         tx.Hash,
-		SourceChainId:                   common.ToNumChainID(tx.OriginChainID),
-		DestinationChainId:              common.ToNumChainID(metadata.DestinationChainID),
+		SourceChainId:                   chainIDConverter.ToChainIDNum(tx.OriginChainID),
+		DestinationChainId:              chainIDConverter.ToChainIDNum(metadata.DestinationChainID),
 		Receivers:                       receivers,
 		NativeCurrencyAmountDestination: new(big.Int).SetUint64(totalTokensAmount.totalAmountCurrencyDst),
 		NativeCurrencyAmountSource:      new(big.Int).SetUint64(totalTokensAmount.totalAmountCurrencySrc),
@@ -187,7 +189,7 @@ func (p *BridgingRequestedProcessorSkylineImpl) addBridgingRequestClaim(
 	claims.BridgingRequestClaims = append(claims.BridgingRequestClaims, claim)
 
 	p.logger.Info("Added BridgingRequestClaim",
-		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim))
+		"txHash", tx.Hash, "metadata", metadata, "claim", cCore.BridgingRequestClaimString(claim, chainIDConverter))
 
 	return nil
 }
