@@ -211,7 +211,12 @@ func (p *BridgingRequestedProcessorSkylineImpl) validate(
 		return err
 	}
 
-	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, true)
+	validateTreasury := false
+	if appConfig.CardanoChains[tx.OriginChainID].MinOperationFee > 0 {
+		validateTreasury = true
+	}
+
+	multisigUtxo, err := utils.ValidateTxOutputs(tx, appConfig, false, validateTreasury)
 	if err != nil {
 		return err
 	}
