@@ -75,20 +75,19 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 	nextBatchID uint64,
 	bridgeSmartContract eth.IBridgeSmartContract,
 	validatorsKeys validatorobserver.ValidatorsPerChain,
-	lastBatchID uint64,
-	lastBatchType uint8,
 ) (*core.GeneratedBatchTxData, error) {
-	if lastBatchType != uint8(ValidatorSet) {
-		// vsc tx not sent, send it. It is not possible to get here otherwise.
-		return cco.createVSCTxFn(ctx, nextBatchID, validatorsKeys[chainID].Keys)
-	}
-
-	// vsc tx sent, check its status and resend if needed
-	status, _, err := cco.bridgeSC.GetBatchStatusAndTransactions(ctx, chainID, lastBatchID)
+	// get previous batch status & type
+	status, btype, err := cco.bridgeSC.GetBatchStatusAndType(ctx, chainID, nextBatchID-1)
 	if err != nil {
 		return nil, err
 	}
 
+	if btype != uint8(ValidatorSet) {
+		// vsc tx not sent yet to evm chain, send it. It is not possible to get here otherwise.
+		return cco.createVSCTxFn(ctx, nextBatchID, validatorsKeys[chainID].Keys)
+	}
+
+	// vsc tx sent, check status and act accordingly
 	switch status {
 	case ExecutedOnEVMChainStatus:
 		// vsc tx executed on evm chain, send final
@@ -107,7 +106,7 @@ func (cco *EVMChainOperations) CreateValidatorSetChangeTx(
 			TxHash:    txHash,
 		}, nil
 	default:
-		// vsc tx pending or failed on evm chain, resend
+		// vsc tx failed on evm chain, resend
 		return cco.createVSCTxFn(ctx, nextBatchID, validatorsKeys[chainID].Keys)
 	}
 }

@@ -16,9 +16,8 @@ import (
 )
 
 type lastBatchData struct {
-	id        uint64
-	txHash    string
-	batchType BatchType
+	id     uint64
+	txHash string
 }
 
 type validatorSetChange struct {
@@ -158,8 +157,7 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	if b.newValidatorSet.isValidatorPending() {
 		generatedBatchData, err = b.operations.CreateValidatorSetChangeTx(ctx,
-			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators,
-			b.lastBatch.id, uint8(b.lastBatch.batchType))
+			b.config.Chain.ChainID, batchID, b.bridgeSmartContract, *validators)
 	} else {
 		// Get confirmed transactions from smart contract
 		confirmedTransactions, err = b.bridgeSmartContract.GetConfirmedTransactions(ctx, b.config.Chain.ChainID)
@@ -237,9 +235,8 @@ func (b *BatcherImpl) execute(ctx context.Context) (uint64, error) {
 
 	// update last batch data
 	b.lastBatch = lastBatchData{
-		id:        batchID,
-		txHash:    generatedBatchData.TxHash,
-		batchType: BatchType(generatedBatchData.BatchType),
+		id:     batchID,
+		txHash: generatedBatchData.TxHash,
 	}
 
 	return batchID, nil

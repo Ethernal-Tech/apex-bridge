@@ -1339,7 +1339,7 @@ func Test_CreateValidatorSetChangeTx(t *testing.T) {
 					Keys:       newValidatorChainData,
 					SlotNumber: 0,
 				},
-			}, 0, 0)
+			})
 		require.NoError(t, err)
 
 		if generatedData.BatchType == uint8(ValidatorSetFinal) {
