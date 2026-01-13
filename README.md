@@ -157,6 +157,7 @@ $ apex-bridge generate-configs skyline \
 Cardano chain all options
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
+        --chain-ids-config <path to the chain IDs config file> \
         --network-address <address of the chain network> \
         --network-magic <network magic of the chain network> \
         --network-id <network id of the chain network> \
@@ -170,6 +171,7 @@ $ apex-bridge generate-configs cardano-chain \
         --utxo-min-amount <minimal UTXO value for the chain> \
         --min-fee-for-bridging <minimal bridging fee> \
         --block-confirmation-count <block confirmation count> \
+        --treasury-address <treasury address for the chain> \
         --min-operation-fee <minimal operation fee> \
         --chain-id <chain id> \
         --native-token-destination-chain-id <wrapped token destination chain id> \
@@ -191,12 +193,14 @@ $ apex-bridge generate-configs cardano-chain \
 Add cardano chain config minimal example
 ``` shell
 $ apex-bridge generate-configs cardano-chain \
+        --chain-ids-config ./chainIDsConfig.json \
         --network-address localhost:13001 \
         --network-magic 142 \
         --network-id 3 \
         --ogmios-url https://prime.ogmios.com \
         --ttl-slot-inc 6 \
         --min-fee-for-bridging 10000000 \
+        --treasury-address "addr_test1v25acu09yv4z2jc026ss5hhgfu5nunfp9z7gkamae43t6fc8gx3pf" \
         --min-operation-fee 1999999 \
         --block-confirmation-count 10 \
         --chain-id "prime" \
@@ -521,6 +525,7 @@ $ apex-bridge bridge-admin set-min-amounts \
 
 ```shell
 $ apex-bridge bridge-admin treasury-addr set \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --gateway-addr 0xeefcd00000000000000000000000000000000013 \
@@ -530,6 +535,7 @@ $ apex-bridge bridge-admin treasury-addr set \
 
 ```shell
 $ apex-bridge bridge-admin treasury-addr get \
+        --chain-ids-config ./chainIDsConfig.json \
         --url http://127.0.0.1:12001 \
         --key 922769e22b70614d4172fc899126785841f4de7d7c009fc338923ce50683023d \
         --gateway-addr 0xeefcd00000000000000000000000000000000013

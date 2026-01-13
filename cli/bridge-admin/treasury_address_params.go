@@ -27,6 +27,7 @@ type treasuryBaseParams struct {
 	privateKey       string
 	privateKeyConfig string
 	gatewayAddress   string
+	chainIDsConfig   string
 }
 
 func (bp *treasuryBaseParams) ValidateBaseFlags() error {
@@ -38,7 +39,12 @@ func (bp *treasuryBaseParams) ValidateBaseFlags() error {
 		return fmt.Errorf("specify at least one: --%s or --%s", evmPrivateKeyFlag, privateKeyConfigFlag)
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, bp.gatewayAddress) {
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](bp.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrNexus, bp.gatewayAddress, chainIDsConfig.ToChainIDConverter()) {
 		return fmt.Errorf("invalid address: --%s", gatewayAddressFlag)
 	}
 
@@ -74,6 +80,13 @@ func (bp *treasuryBaseParams) RegisterBaseFlags(cmd *cobra.Command) {
 		gatewayAddressFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&bp.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(privateKeyConfigFlag, evmPrivateKeyFlag)
 }
 
@@ -81,6 +94,7 @@ type setTreasuryAddressParams struct {
 	treasuryBaseParams
 	treasuryAddressStr string
 	treasuryAddress    ethcommon.Address
+	chainIDsConfig     string
 }
 
 func (sp *setTreasuryAddressParams) ValidateFlags() error {
@@ -88,7 +102,12 @@ func (sp *setTreasuryAddressParams) ValidateFlags() error {
 		return err
 	}
 
-	if !common.IsValidAddress(common.ChainIDStrNexus, sp.treasuryAddressStr) {
+	chainIDsConfig, err := common.LoadConfig[common.ChainIDsConfigFile](sp.chainIDsConfig, "")
+	if err != nil {
+		return fmt.Errorf("failed to load chain IDs config: %w", err)
+	}
+
+	if !common.IsValidAddress(common.ChainIDStrNexus, sp.treasuryAddressStr, chainIDsConfig.ToChainIDConverter()) {
 		return fmt.Errorf("invalid address: --%s", treasuryAddressFlag)
 	}
 
@@ -105,6 +124,13 @@ func (sp *setTreasuryAddressParams) RegisterFlags(cmd *cobra.Command) {
 		treasuryAddressFlag,
 		"",
 		treasuryAddressFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&sp.chainIDsConfig,
+		chainIDsConfigFlag,
+		"",
+		chainIDsConfigFlagDesc,
 	)
 }
 
