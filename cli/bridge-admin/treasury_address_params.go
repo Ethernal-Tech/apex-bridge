@@ -94,7 +94,6 @@ type setTreasuryAddressParams struct {
 	treasuryBaseParams
 	treasuryAddressStr string
 	treasuryAddress    ethcommon.Address
-	chainIDsConfig     string
 }
 
 func (sp *setTreasuryAddressParams) ValidateFlags() error {
@@ -124,13 +123,6 @@ func (sp *setTreasuryAddressParams) RegisterFlags(cmd *cobra.Command) {
 		treasuryAddressFlag,
 		"",
 		treasuryAddressFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&sp.chainIDsConfig,
-		chainIDsConfigFlag,
-		"",
-		chainIDsConfigFlagDesc,
 	)
 }
 
