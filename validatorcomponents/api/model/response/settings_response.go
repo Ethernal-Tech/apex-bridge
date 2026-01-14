@@ -2,6 +2,7 @@ package response
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
 	"github.com/Ethernal-Tech/apex-bridge/validatorcomponents/core"
@@ -10,12 +11,14 @@ import (
 type SettingsResponse struct {
 	// For each chain, the minimum fee required to cover the submission of the currency transaction
 	// on the destination chain
-	MinChainFeeForBridging map[string]uint64 `json:"minChainFeeForBridging"`
+	// TODO fix web
+	MinChainFeeForBridging map[string]*big.Int `json:"minChainFeeForBridging"`
 	// For each chain, the minimum fee required to cover the submission of the native token transaction
 	// on the destination chain
 	MinChainFeeForBridgingTokens map[string]uint64 `json:"minChainFeeForBridgingTokens"`
 	// For each chain, the minimum fee required to cover operational costs
-	MinOperationFee map[string]uint64 `json:"minOperationFee"`
+	// TODO fix web
+	MinOperationFee map[string]*big.Int `json:"minOperationFee"`
 	// For each chain, the minimum allowed UTXO value
 	MinUtxoChainValue map[string]uint64 `json:"minUtxoChainValue"`
 	// For each chain, the direction config
@@ -38,17 +41,17 @@ func NewSettingsResponse(
 	appConfig *core.AppConfig,
 ) *SettingsResponse {
 	minUtxoMap := make(map[string]uint64)
-	minFeeForBridgingMap := make(map[string]uint64)
+	minFeeForBridgingMap := make(map[string]*big.Int)
 	minFeeForBridgingTokensMap := make(map[string]uint64)
-	minOperationFeeMap := make(map[string]uint64)
+	minOperationFeeMap := make(map[string]*big.Int)
 
 	var maxUtxoValue uint64 = 0
 
 	for chainID, chainConfig := range appConfig.CardanoChains {
 		minUtxoMap[chainID] = chainConfig.UtxoMinAmount
-		minFeeForBridgingMap[chainID] = chainConfig.DefaultMinFeeForBridging
+		minFeeForBridgingMap[chainID] = new(big.Int).SetUint64(chainConfig.DefaultMinFeeForBridging)
 		minFeeForBridgingTokensMap[chainID] = chainConfig.MinFeeForBridgingTokens
-		minOperationFeeMap[chainID] = chainConfig.MinOperationFee
+		minOperationFeeMap[chainID] = new(big.Int).SetUint64(chainConfig.MinOperationFee)
 
 		if chainConfig.UtxoMinAmount > maxUtxoValue {
 			maxUtxoValue = chainConfig.UtxoMinAmount

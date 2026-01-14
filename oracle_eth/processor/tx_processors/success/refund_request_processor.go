@@ -77,20 +77,18 @@ func (p *RefundRequestProcessorImpl) addRefundRequestClaim(
 	metadata *core.RefundBridgingRequestEthMetadata,
 	chainIDConverter *common.ChainIDConverter,
 ) {
-	amount := common.WeiToDfm(tx.Value)
-
 	claim := cCore.RefundRequestClaim{
 		OriginChainId:            chainIDConverter.ToChainIDNum(tx.OriginChainID),
 		DestinationChainId:       chainIDConverter.ToChainIDNum(metadata.DestinationChainID), // unused for RefundRequestClaim
 		OriginTransactionHash:    tx.Hash,
 		OriginSenderAddress:      metadata.SenderAddr,
-		OriginAmount:             amount,
+		OriginAmount:             tx.Value,
 		OriginWrappedAmount:      big.NewInt(0),
 		OutputIndexes:            []byte{},
 		ShouldDecrementHotWallet: tx.BatchTryCount > 0,
 		RetryCounter:             uint64(tx.RefundTryCount),
 		TokenAmounts: []cCore.RefundTokenAmount{
-			{TokenId: 0, AmountCurrency: amount, AmountTokens: big.NewInt(0)},
+			{TokenId: 0, AmountCurrency: tx.Value, AmountTokens: big.NewInt(0)},
 		},
 	}
 
@@ -117,10 +115,10 @@ func (p *RefundRequestProcessorImpl) validate(
 		return fmt.Errorf("invalid sender addr: %s", metadata.SenderAddr)
 	}
 
-	if tx.Value.Cmp(new(big.Int).SetUint64(chainConfig.MinFeeForBridging)) != 1 {
+	if tx.Value.Cmp(chainConfig.MinFeeForBridging) != 1 {
 		return fmt.Errorf(
 			"tx.Value: %v is less than the minimum required for refund: %v",
-			tx.Value, chainConfig.MinFeeForBridging+1)
+			tx.Value, new(big.Int).Add(chainConfig.MinFeeForBridging, big.NewInt(1)))
 	}
 
 	return nil

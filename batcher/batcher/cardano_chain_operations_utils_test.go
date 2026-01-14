@@ -292,17 +292,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
-					Amount:             big.NewInt(100),
+					Amount:             common.DfmToWei(big.NewInt(100)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr128phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtupnz75xxcrtw79hu",
-					Amount:             big.NewInt(200),
+					Amount:             common.DfmToWei(big.NewInt(200)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-					Amount:             big.NewInt(400),
+					Amount:             common.DfmToWei(big.NewInt(400)),
 					TokenId:            1,
 				},
 			},
@@ -311,17 +311,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
-					Amount:             big.NewInt(50),
+					Amount:             common.DfmToWei(big.NewInt(50)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-					Amount:             big.NewInt(900),
+					Amount:             common.DfmToWei(big.NewInt(900)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh",
-					Amount:             big.NewInt(0),
+					Amount:             common.DfmToWei(big.NewInt(0)),
 					TokenId:            1,
 				},
 			},
@@ -330,13 +330,13 @@ func Test_reactorGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x",
-					Amount:             big.NewInt(3000),
+					Amount:             common.DfmToWei(big.NewInt(3000)),
 					TokenId:            1,
 				},
 				{
 					// this one will be skipped
 					DestinationAddress: "stake178phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcccycj5",
-					Amount:             big.NewInt(3000),
+					Amount:             common.DfmToWei(big.NewInt(3000)),
 					TokenId:            1,
 				},
 			},
@@ -345,17 +345,17 @@ func Test_reactorGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
-					Amount:             big.NewInt(2000),
+					Amount:             common.DfmToWei(big.NewInt(2000)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx",
-					Amount:             big.NewInt(170),
+					Amount:             common.DfmToWei(big.NewInt(170)),
 					TokenId:            1,
 				},
 				{
 					DestinationAddress: "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8",
-					Amount:             big.NewInt(10),
+					Amount:             common.DfmToWei(big.NewInt(10)),
 					TokenId:            1,
 				},
 			},
@@ -433,14 +433,14 @@ func Test_skylineGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr1,
-					Amount:             big.NewInt(100),
-					AmountWrapped:      big.NewInt(200),
+					Amount:             common.DfmToWei(big.NewInt(100)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(200)),
 					TokenId:            3,
 				},
 				{
 					DestinationAddress: addr2,
-					Amount:             big.NewInt(51),
-					AmountWrapped:      big.NewInt(102),
+					Amount:             common.DfmToWei(big.NewInt(51)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(102)),
 					TokenId:            3,
 				},
 			},
@@ -451,13 +451,13 @@ func Test_skylineGetOutputs(t *testing.T) {
 			Receivers: []eth.BridgeReceiver{
 				{
 					DestinationAddress: addr3,
-					Amount:             big.NewInt(8),
+					Amount:             common.DfmToWei(big.NewInt(8)),
 					TokenId:            2,
 				},
 				{
 					DestinationAddress: addr1,
-					Amount:             big.NewInt(2),
-					AmountWrapped:      big.NewInt(5),
+					Amount:             common.DfmToWei(big.NewInt(2)),
+					AmountWrapped:      common.DfmToWei(big.NewInt(5)),
 					TokenId:            3,
 				},
 			},

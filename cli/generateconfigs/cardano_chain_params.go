@@ -241,19 +241,19 @@ func (p *cardanoChainGenerateConfigsParams) setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&p.utxoMinAmount,
 		utxoMinAmountFlag,
-		common.MinUtxoAmountDefault,
+		common.MinUtxoAmountDefaultDfm,
 		utxoMinAmountFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.minFeeForBridging,
 		minFeeForBridgingFlag,
-		common.MinFeeForBridgingDefault,
+		common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
 		minFeeForBridgingFlagDesc,
 	)
 	cmd.Flags().Uint64Var(
 		&p.minFeeForBridgingTokens,
 		minFeeForBridgingTokensFlag,
-		common.MinFeeForBridgingDefault,
+		common.WeiToDfm(common.MinFeeForBridgingDefault).Uint64(),
 		minFeeForBridgingTokensFlagDesc,
 	)
 	cmd.Flags().Uint64Var(

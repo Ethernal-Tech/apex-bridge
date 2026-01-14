@@ -1,5 +1,9 @@
 package common
 
+import (
+	"math/big"
+)
+
 type EcosystemToken struct {
 	ID   uint16 `json:"id"`
 	Name string `json:"name"`
@@ -74,10 +78,14 @@ type MinConfig struct {
 }
 
 const (
-	MinOperationFeeDefault            = uint64(0)
-	MinFeeForBridgingDefault          = uint64(1_000_010)
-	MinUtxoAmountDefault              = uint64(1_000_000)
-	MinColCoinsAllowedToBridgeDefault = uint64(1)
+	MinUtxoAmountDefaultDfm = uint64(1_000_000)
+)
+
+// vaules in wei
+var (
+	MinOperationFeeDefault            *big.Int = DfmToWei(new(big.Int).SetUint64(0))
+	MinFeeForBridgingDefault          *big.Int = DfmToWei(new(big.Int).SetUint64(1_000_010))
+	MinColCoinsAllowedToBridgeDefault *big.Int = DfmToWei(new(big.Int).SetUint64(1))
 )
 
 var (
@@ -101,10 +109,10 @@ var (
 			MinColCoinsAllowedToBridge: uint64(1),
 		},
 		"default": {
-			MinOperationFee:            MinOperationFeeDefault,
-			MinFeeForBridging:          MinFeeForBridgingDefault,
-			MinUtxoAmount:              MinUtxoAmountDefault,
-			MinColCoinsAllowedToBridge: MinColCoinsAllowedToBridgeDefault,
+			MinOperationFee:            WeiToDfm(MinOperationFeeDefault).Uint64(),
+			MinFeeForBridging:          WeiToDfm(MinFeeForBridgingDefault).Uint64(),
+			MinUtxoAmount:              MinUtxoAmountDefaultDfm,
+			MinColCoinsAllowedToBridge: WeiToDfm(MinColCoinsAllowedToBridgeDefault).Uint64(),
 		},
 	}
 )

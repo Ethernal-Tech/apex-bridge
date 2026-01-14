@@ -36,7 +36,7 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		policyID = "29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8"
 	)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridge := common.DfmToWei(new(big.Int).SetUint64(100000000))
 
 	primeCurrencyID := uint16(1)
 	cardanoCurrencyID := uint16(2)
@@ -227,8 +227,8 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, appConfig.ChainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, uint8(0), claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(10_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
-		require.Equal(t, uint64(2_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(10_000_000)), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(2_000_000)), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens)
 		require.Equal(t, wrappedTokenPrimeID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginAmount.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
@@ -600,8 +600,10 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(1+1_000_000+1_000_000+1_000_000+3_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
-		require.Equal(t, uint64(1_000_000+2_000_000+3_000_000+2_000_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(1+1_000_000+1_000_000+1_000_000+3_000_000)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(1_000_000+2_000_000+3_000_000+2_000_000)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens)
 		require.Equal(t, wrappedTokenPrimeID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginAmount.Uint64())
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
@@ -654,11 +656,15 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(minFeeForBridgingTokens+1_500_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
-		require.Equal(t, wrappedTokenAmountPrime.Amount, claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens+1_500_000)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(wrappedTokenAmountPrime.Amount)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens)
 		require.Equal(t, wrappedTokenPrimeID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(minFeeForBridgingTokens+1_500_000), claims.RefundRequestClaims[0].OriginAmount.Uint64())
-		require.Equal(t, wrappedTokenAmountPrime.Amount, claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens+1_500_000)),
+			claims.RefundRequestClaims[0].OriginAmount)
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(wrappedTokenAmountPrime.Amount)),
+			claims.RefundRequestClaims[0].OriginWrappedAmount)
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})
 
@@ -701,10 +707,12 @@ func TestSkylineRefundRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrPrime), claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, chainIDConverter.ToChainIDNum(common.ChainIDStrCardano), claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(minFeeForBridgingTokens+2_500_000), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens+2_500_000)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, primeCurrencyID, claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(minFeeForBridgingTokens+2_500_000), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(minFeeForBridgingTokens+2_500_000)),
+			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})

@@ -49,10 +49,10 @@ type EthChainConfig struct {
 	NoBatchPeriodPercent    float64                      `json:"noBatchPeriodPercent"`
 	DynamicTx               bool                         `json:"dynamicTx"`
 	TestMode                uint8                        `json:"testMode"`
-	MinFeeForBridging       uint64                       `json:"minFeeForBridging"`
-	MinOperationFee         uint64                       `json:"minOperationFee"`
+	MinFeeForBridging       *big.Int                     `json:"minFeeForBridging"`
+	MinOperationFee         *big.Int                     `json:"minOperationFee"`
 	RestartTrackerPullCheck time.Duration                `json:"restartTrackerPullCheck"`
-	FeeAddrBridgingAmount   uint64                       `json:"feeAddressBridgingAmount"`
+	FeeAddrBridgingAmount   *big.Int                     `json:"feeAddressBridgingAmount"`
 	DestinationChains       map[string]common.TokenPairs `json:"destChain"`
 	Tokens                  map[uint16]common.Token      `json:"tokens"`
 }
@@ -94,7 +94,7 @@ type BridgingSettings struct {
 	MaxTokenAmountAllowedToBridge  *big.Int `json:"maxTokenAmountAllowedToBridge"`
 	MaxReceiversPerBridgingRequest int      `json:"maxReceiversPerBridgingRequest"`
 	MaxBridgingClaimsToGroup       int      `json:"maxBridgingClaimsToGroup"`
-	MinColCoinsAllowedToBridge     uint64   `json:"minColCoinsAllowedToBridge"`
+	MinColCoinsAllowedToBridge     *big.Int `json:"minColCoinsAllowedToBridge"`
 }
 
 type RetryUnprocessedSettings struct {

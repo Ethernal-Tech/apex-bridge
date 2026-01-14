@@ -34,7 +34,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		validVectorTestAddress = "vector_test1vgrgxh4s35a5pdv0dc4zgq33crn34emnk2e7vnensf4tezq3tkm9m"
 	)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridge := common.DfmToWei(new(big.Int).SetUint64(100000000))
 
 	token, _ := wallet.NewTokenWithFullNameTry("29f8873beb52e126f207a2dfd50f7cff556806b5b4cba9834a7b26a8.4b6173685f546f6b656e")
 	tokenAmount := wallet.NewTokenAmount(token, 2_000_000)

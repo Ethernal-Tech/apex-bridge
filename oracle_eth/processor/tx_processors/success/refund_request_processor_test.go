@@ -24,7 +24,8 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		validTestAddress     = "addr_test1vq6zkfat4rlmj2nd2sylpjjg5qhcg9mk92wykaw4m2dp2rqneafvl"
 	)
 
-	maxAmountAllowedToBridge := new(big.Int).SetUint64(100000000)
+	maxAmountAllowedToBridge := common.DfmToWei(new(big.Int).SetUint64(100000000))
+	minFeeForBridgingWei := common.DfmToWei(new(big.Int).SetUint64(minFeeForBridging))
 
 	getAppConfig := func(refundEnabled bool) *oCore.AppConfig {
 		appConfig := &oCore.AppConfig{
@@ -43,7 +44,7 @@ func TestRefundRequestedProcessor(t *testing.T) {
 					BridgingAddresses: oCore.EthBridgingAddresses{
 						BridgingAddress: nexusBridgingAddr,
 					},
-					MinFeeForBridging: minFeeForBridging,
+					MinFeeForBridging: minFeeForBridgingWei,
 				},
 			},
 			BridgingSettings: oCore.BridgingSettings{
@@ -221,10 +222,12 @@ func TestRefundRequestedProcessor(t *testing.T) {
 
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})
@@ -285,10 +288,12 @@ func TestRefundRequestedProcessor(t *testing.T) {
 		require.Len(t, claims.RefundRequestClaims, 1)
 		require.Equal(t, common.ChainIDIntNexus, claims.RefundRequestClaims[0].OriginChainId)
 		require.Equal(t, common.ChainIDIntPrime, claims.RefundRequestClaims[0].DestinationChainId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].TokenAmounts[0].AmountCurrency)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].TokenAmounts[0].AmountTokens.Uint64())
 		require.Equal(t, uint16(0), claims.RefundRequestClaims[0].TokenAmounts[0].TokenId)
-		require.Equal(t, uint64(utxoMinValue+minFeeForBridging+100), claims.RefundRequestClaims[0].OriginAmount.Uint64())
+		require.Equal(t, common.DfmToWei(new(big.Int).SetUint64(utxoMinValue+minFeeForBridging+100)),
+			claims.RefundRequestClaims[0].OriginAmount)
 		require.Equal(t, uint64(0), claims.RefundRequestClaims[0].OriginWrappedAmount.Uint64())
 		require.Empty(t, claims.RefundRequestClaims[0].OutputIndexes)
 	})

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/Ethernal-Tech/apex-bridge/common"
@@ -68,7 +69,7 @@ func GetTokenPair(
 
 type DestChainInfo struct {
 	FeeAddress         string
-	FeeAddrBridgingAmt uint64
+	FeeAddrBridgingWei *big.Int
 	CurrencyTokenID    uint16
 }
 
@@ -87,7 +88,7 @@ func GetDestChainInfo(
 
 		return &DestChainInfo{
 			FeeAddress:         appConfig.GetFeeMultisigAddress(destChainID),
-			FeeAddrBridgingAmt: cardanoDestConfig.FeeAddrBridgingAmount,
+			FeeAddrBridgingWei: common.DfmToWei(new(big.Int).SetUint64(cardanoDestConfig.FeeAddrBridgingAmount)),
 			CurrencyTokenID:    currencyDestID,
 		}, nil
 	case ethDestConfig != nil:
@@ -98,7 +99,7 @@ func GetDestChainInfo(
 
 		return &DestChainInfo{
 			FeeAddress:         common.EthZeroAddr,
-			FeeAddrBridgingAmt: ethDestConfig.FeeAddrBridgingAmount,
+			FeeAddrBridgingWei: ethDestConfig.FeeAddrBridgingAmount,
 			CurrencyTokenID:    currencyDestID,
 		}, nil
 	default:
